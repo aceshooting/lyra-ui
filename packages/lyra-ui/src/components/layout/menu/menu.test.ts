@@ -171,6 +171,21 @@ it('clicking an item fires the consolidated lr-menu-select and closes the menu',
   expect(el.open).to.be.false;
 });
 
+it('never leaks the item\'s own lr-menu-item-select past the menu alongside the consolidated lr-menu-select', async () => {
+  const el = (await fixture(basic())) as LyraMenu;
+  trigger(el).click();
+  await el.updateComplete;
+
+  const events: CustomEvent[] = [];
+  el.addEventListener('lr-menu-item-select', (e) => events.push(e as CustomEvent));
+  items(el)[1].shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(
+    events.length,
+    'the item\'s own lr-menu-item-select must never reach a listener on <lr-menu> -- only the consolidated lr-menu-select is the documented contract',
+  ).to.equal(0);
+});
+
 it('skips a disabled item during ArrowDown navigation', async () => {
   const el = (await fixture(html`
     <lr-menu>

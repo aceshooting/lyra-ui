@@ -286,16 +286,21 @@ describe('presentation', () => {
   });
 });
 
-it('forwards lr-chunk-open from a row\'s lr-chunk-inspector', async () => {
+it('forwards lr-chunk-open from a row\'s lr-chunk-inspector, and never leaks the original alongside the re-emit', async () => {
   const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
   el.chunks = [chunks[0]!];
   await el.updateComplete;
-  const listener = oneEvent(el, 'lr-chunk-open');
+  const events: CustomEvent[] = [];
+  el.addEventListener('lr-chunk-open', (e) => events.push(e as CustomEvent));
   // [part="open-button"] lives inside the nested <lr-chunk-inspector>'s own shadow root.
   const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
   (inspector.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
-  const event = await listener;
-  expect(event.detail).to.deep.equal({ id: 'c1', sourceId: 's1' });
+  await el.updateComplete;
+  expect(
+    events.length,
+    'exactly one lr-chunk-open must reach the host, not the re-emit plus the leaked original from lr-chunk-inspector',
+  ).to.equal(1);
+  expect(events[0]!.detail).to.deep.equal({ id: 'c1', sourceId: 's1' });
 });
 
 describe('pagination', () => {
@@ -337,6 +342,22 @@ describe('pagination', () => {
     const listener = oneEvent(el, 'lr-load-more');
     vlist(el).dispatchEvent(new CustomEvent('lr-load-more', { bubbles: true, composed: true }));
     await listener;
+  });
+
+  it('never leaks the internal virtual-list\'s own lr-load-more alongside the re-emit', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-results grouping="source" has-more></lr-retrieval-results>`,
+    )) as LyraRetrievalResults;
+    el.chunks = chunks;
+    await el.updateComplete;
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-load-more', (e) => events.push(e as CustomEvent));
+    vlist(el).dispatchEvent(new CustomEvent('lr-load-more', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(
+      events.length,
+      'exactly one lr-load-more must reach the host, not the re-emit plus the leaked original from lr-virtual-list',
+    ).to.equal(1);
   });
 });
 

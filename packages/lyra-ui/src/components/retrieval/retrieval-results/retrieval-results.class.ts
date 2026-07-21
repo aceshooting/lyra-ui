@@ -313,7 +313,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           ?compact=${this.presentation === 'compact'}
           active-id=${this.activeId}
           label=${rowLabel}
-          @lr-chunk-open=${(e: CustomEvent<{ id: string; sourceId: string }>) => this.emit('lr-chunk-open', e.detail)}
+          @lr-chunk-open=${(e: CustomEvent<{ id: string; sourceId: string }>) => {
+            // lr-chunk-inspector's own lr-chunk-open bubbles+composes (LyraElement.emit()'s
+            // defaults) -- without stopping it here it would keep bubbling straight through this
+            // component under the same name, right behind the correctly-shaped re-emit below.
+            e.stopPropagation();
+            this.emit('lr-chunk-open', e.detail);
+          }}
         ></lr-chunk-inspector>
         ${this.presentation === 'expanded' ? this.renderMetadata(chunk.metadata) : nothing}
       </div>
@@ -365,7 +371,13 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
               .activeId=${this.activeId || ''}
               ?loading=${this.loading}
               ?has-more=${this.hasMore}
-              @lr-load-more=${() => this.emit('lr-load-more')}
+              @lr-load-more=${(e: Event) => {
+                // lr-virtual-list's own lr-load-more bubbles+composes (LyraElement.emit()'s
+                // defaults) -- without stopping it here it would keep bubbling straight through
+                // this component under the same name, right behind the re-emit below.
+                e.stopPropagation();
+                this.emit('lr-load-more');
+              }}
             ></lr-virtual-list>`
           : html`<div role="list">
                 ${processed.chunks.map((c) => html`<div part="row" role="listitem">${this.renderRow(c)}</div>`)}

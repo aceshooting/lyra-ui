@@ -460,6 +460,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private onItemSelect = (e: Event): void => {
     const item = e.target;
     if (!(item instanceof LyraMenuItem)) return;
+    // The item's own lr-menu-item-select bubbles+composes (LyraElement.emit()'s defaults) --
+    // without stopping it here it would keep bubbling straight through this component under its
+    // own, undocumented name, right behind the consolidated lr-menu-select below.
+    e.stopPropagation();
     this.emit<MenuSelectDetail>('lr-menu-select', { value: item.value });
     this.hide({ focusTrigger: true });
   };
