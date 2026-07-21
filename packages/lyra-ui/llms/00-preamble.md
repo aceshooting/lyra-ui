@@ -7,7 +7,7 @@ Agent UI. Selected components retain documented Web Awesome-compatible public na
 prefix to make migration easier, but Lyra has its own implementation, design tokens, localization
 runtime, RTL behavior, and release surface. It has no runtime dependency on either project.
 
-**This file is the whole catalog concatenated — 249 components, several hundred thousand tokens.**
+**This file is the whole catalog concatenated — 251 components, several hundred thousand tokens.**
 Read it end to end only if you genuinely need everything. Otherwise:
 
 | To… | Read |
