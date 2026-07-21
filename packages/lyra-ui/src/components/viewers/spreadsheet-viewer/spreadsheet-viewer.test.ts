@@ -19,6 +19,15 @@ function fetchBuffer(value: ArrayBuffer): () => void {
   return () => { window.fetch = original; };
 }
 
+/** A promise plus its externally-callable resolve/reject, for precisely timing a stale in-flight
+ *  `load()` against a later superseding `src` change. */
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+
 const GRID_WORKBOOK = { Sheet1: [['Name', 'Role'], ['Ada', 'Mathematician'], ['Grace', 'Scientist'], ['Ada', 'Programmer']] };
 /** Shrinks `DocumentAnchorTarget`'s retry loop so a permanently-unresolvable `scrollToAnchor()` call
  *  resolves in milliseconds instead of waiting out the real 5s default timeout. */
@@ -120,6 +129,100 @@ describe('lr-spreadsheet-viewer', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Tableur');
   });
 
+  it('shows a localized url-not-allowed error for an unsafe src', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer .src=${'javascript:alert(1)'}></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+    expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+  });
+
+  it('surfaces a load error and emits lr-render-error when the fetch response is not ok', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({ ok: false, status: 404, statusText: 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) } as Response)) as typeof window.fetch;
+    try {
+      const listener = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/missing.xlsx';
+      const event = (await listener) as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.exist;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('loads without an abort signal when AbortController is unavailable', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+    const originalAbortController = window.AbortController;
+    (window as unknown as { AbortController?: unknown }).AbortController = undefined;
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="header-row"]')!.textContent).to.equal('NameRole');
+    } finally {
+      window.AbortController = originalAbortController;
+      restore();
+    }
+  });
+
+  it('shows the localized spreadsheet-unavailable error when the optional xlsx peer fails to load', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+    const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Spreadsheet preview is unavailable.');
+    } finally {
+      restore();
+    }
+  });
+
+  it('a src change while awaiting the sheetjs library import supersedes the earlier load (stale generation)', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    const lib = deferred<unknown>();
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => lib.promise;
+    const firstRestore = fetchBuffer(buffer({ Sheet1: [['First'], ['A']] }));
+    try {
+      el.src = 'https://example.test/first.xlsx';
+      await aTimeout(20); // let load() reach `await this.loadLibrary()` and suspend there
+      firstRestore();
+      const secondRestore = fetchBuffer(buffer({ Sheet1: [['Second'], ['B']] }));
+      try {
+        el.src = 'https://example.test/second.xlsx'; // bumps generation, superseding the first load
+        await aTimeout(20); // let the second load also reach and suspend on the same shared import
+        lib.resolve(XLSX); // release both suspended loads together
+        // The stale first load's library import now resolves late; it must bail silently instead of
+        // clobbering the second (current) document.
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="header-row"]')!.textContent).to.equal('Second');
+      } finally {
+        secondRestore();
+      }
+    } finally {
+      // firstRestore was already invoked above once load() had moved past the fetch step.
+    }
+  });
+
+  it('switches sheets when a tab is clicked directly (not just via scrollToAnchor/search)', async () => {
+    const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+    const restore = fetchBuffer(buffer({ Inventory: [['Name'], ['Widget']], Summary: [['Total'], [12]] }));
+    try {
+      el.src = 'https://example.test/book.xlsx';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-tabs') !== null);
+      const tabs = el.shadowRoot!.querySelector('lr-tabs')!;
+      await (tabs as HTMLElement & { updateComplete: Promise<boolean> }).updateComplete;
+      const tabButtons = tabs.shadowRoot!.querySelectorAll('[part="tab"]');
+      expect(tabButtons).to.have.lengthOf(2);
+      (tabButtons[1] as HTMLElement).click();
+      await el.updateComplete;
+      expect((el as unknown as { activeSheetIndex: number }).activeSheetIndex).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
   describe('cell-range anchor-target', () => {
     it('scrolls to a cell-range anchor addressing the raw grid (header included)', async () => {
       const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
@@ -165,6 +268,116 @@ describe('lr-spreadsheet-viewer', () => {
         highlighted.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('activates the cell highlight via the Enter key, matching the click behavior', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
+        const listener = oneEvent(el, 'lr-highlight-activate');
+        highlighted.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+        const event = (await listener) as CustomEvent<{ id: string }>;
+        expect(event.detail).to.deep.equal({ id: 'h1' });
+      } finally {
+        restore();
+      }
+    });
+
+    it('ignores a keydown for a key other than Enter/Space, leaving the highlight inert', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        el.highlights = [{ id: 'h1', anchor: { kind: 'cell-range', range: 'A2' }, label: 'First result' }];
+        await el.updateComplete;
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
+        let activated = false;
+        el.addEventListener('lr-highlight-activate', () => { activated = true; });
+        highlighted.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+        await aTimeout(10);
+        expect(activated).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('resolves false when a cell-range anchor targets the header row itself', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      shrinkAnchorRetry(el);
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        // Row 1 (raw, 1-based) is the header row -- not a virtualized data row -- so jumpToCell() must
+        // decline rather than scroll to a non-existent negative body index.
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A1' })).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('resolves false when scrollToAnchor is called before any document has loaded', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      shrinkAnchorRetry(el);
+      expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A2' })).to.be.false;
+    });
+
+    it('resolves false for a malformed cell-range anchor', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      shrinkAnchorRetry(el);
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'not-a-range' })).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('does not throw when a cell-range anchor targets a column beyond the sheet\'s rendered width', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK)); // only 2 rendered columns (Name, Role)
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        // Column K (index 10) is well beyond the sheet's 2 rendered columns -- the row itself is still
+        // found and scrolled into view, so this must still resolve true rather than throwing.
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'K2' })).to.be.true;
+      } finally {
+        restore();
+      }
+    });
+
+    it('jumpToCell resolves false when no document is loaded yet', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const result = await (
+        el as unknown as { jumpToCell: (sheetIndex: number, rawRow: number, col: number) => Promise<boolean> }
+      ).jumpToCell(0, 2, 0);
+      expect(result).to.be.false;
+    });
+
+    it('jumpToCell resolves false for a sheet index outside the loaded workbook', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const result = await (
+          el as unknown as { jumpToCell: (sheetIndex: number, rawRow: number, col: number) => Promise<boolean> }
+        ).jumpToCell(5, 2, 0);
+        expect(result).to.be.false;
       } finally {
         restore();
       }
@@ -216,6 +429,45 @@ describe('lr-spreadsheet-viewer', () => {
         const count = await el.search('ada');
         expect(count).to.equal(1);
         expect((el as unknown as { activeSheetIndex: number }).activeSheetIndex).to.equal(1);
+      } finally {
+        restore();
+      }
+    });
+
+    it('resolves 0 and leaves no active match for a query with no hits', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const count = await el.search('zzz-not-present');
+        expect(count).to.equal(0);
+        expect(await el.searchNext()).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('searchNext and searchPrevious resolve false when there is no active search', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      expect(await el.searchNext()).to.be.false;
+      expect(await el.searchPrevious()).to.be.false;
+    });
+
+    it('searchPrevious wraps to the last match, mirroring searchNext in reverse', async () => {
+      const el = (await fixture(html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`)) as LyraSpreadsheetViewer;
+      const restore = fetchBuffer(buffer(GRID_WORKBOOK));
+      try {
+        el.src = 'https://example.test/book.xlsx';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        const count = await el.search('ada');
+        expect(count).to.equal(2); // "Ada" appears in two data rows, column 0
+        let detail: { matchCount: number; activeIndex: number } | undefined;
+        el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
+        expect(await el.searchPrevious()).to.be.true;
+        expect(detail!.activeIndex).to.equal(1); // wraps backward from 0 to the last match
+        expect(await el.searchPrevious()).to.be.true;
+        expect(detail!.activeIndex).to.equal(0);
       } finally {
         restore();
       }

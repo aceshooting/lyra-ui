@@ -1,11 +1,21 @@
-import { aTimeout, expect, fixture, html } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './pptx-viewer.js';
 import type { LyraPptxViewer } from './pptx-viewer.js';
+import type { PptxRendererModule } from './pptx-loader.js';
 import { styles } from './pptx-viewer.styles.js';
 
 function response(ok = true): Response {
   return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)) } as unknown as Response;
+}
+
+/** A promise plus its externally-callable resolve/reject, for precisely timing a stale in-flight
+ *  `mount()` against a later superseding `src` change. */
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
 }
 
 function fakeModule(slideCount = 2) {
@@ -177,6 +187,180 @@ describe('lr-pptx-viewer', () => {
       el.src = 'https://example.test/deck.pptx';
       await aTimeout(20);
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Failed to render this presentation');
+    } finally {
+      restore();
+    }
+  });
+
+  it('loads without an abort signal when AbortController is unavailable', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch();
+    const originalAbortController = window.AbortController;
+    (window as unknown as { AbortController?: unknown }).AbortController = undefined;
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      const listener = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/deck.pptx';
+      expect((await listener).detail).to.deep.equal({ slideCount: 2 });
+    } finally {
+      window.AbortController = originalAbortController;
+      restore();
+    }
+  });
+
+  it('fails closed with a localized error when the pptx renderer peer fails to load', async () => {
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => { throw new Error('peer unavailable'); };
+      const listener = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/deck.pptx';
+      const event = (await listener) as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.exist;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows a failed-to-load error when the presentation fetch fails but the renderer peer loaded fine', async () => {
+    const fake = fakeModule();
+    const restore = stubFetch(false);
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/missing.pptx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
+    } finally {
+      restore();
+    }
+  });
+
+  it('shows the resource-too-large error when the presentation exceeds the size limit', async () => {
+    const fake = fakeModule();
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: { get: (name: string) => (name === 'content-length' ? String(30 * 1024 * 1024) : null) },
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    } as unknown as Response)) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      const listener = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/huge.pptx';
+      const event = (await listener) as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.exist;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('fails closed with a localized render error when opening the presentation throws', async () => {
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => ({
+        PptxViewer: { open: async () => { throw new Error('corrupt'); } },
+        RECOMMENDED_ZIP_LIMITS: {},
+      } as never);
+      const listener = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/corrupt.pptx';
+      const event = (await listener) as CustomEvent<{ error: unknown }>;
+      expect(event.detail.error).to.exist;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to render this presentation.');
+    } finally {
+      restore();
+    }
+  });
+
+  it('a src change while awaiting the renderer peer supersedes the earlier mount (stale generation)', async () => {
+    const restore = stubFetch();
+    const rendererLoad = deferred<PptxRendererModule>();
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = () => rendererLoad.promise;
+      el.src = 'https://example.test/first.pptx';
+      await aTimeout(20); // let mount() reach `await Promise.all(...)` and suspend on the renderer import
+      const fake = fakeModule(3);
+      el.loadRenderer = async () => fake.module;
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pptx'; // bumps generation, superseding the first mount
+      expect((await loadPromise).detail).to.deep.equal({ slideCount: 3 });
+      let extraLoadFired = false;
+      el.addEventListener('lr-load', () => { extraLoadFired = true; });
+      // The stale first mount's renderer import now resolves late; it must bail silently instead of
+      // clobbering the second (current) presentation.
+      rendererLoad.resolve(fake.module);
+      await aTimeout(20);
+      expect(extraLoadFired).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+    } finally {
+      restore();
+    }
+  });
+
+  it('a src change while awaiting the presentation bytes supersedes the earlier mount (stale generation)', async () => {
+    const fake = fakeModule(4);
+    const bufferGate = deferred<ArrayBuffer>();
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => bufferGate.promise } as unknown as Response)) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => fake.module;
+      el.src = 'https://example.test/first.pptx';
+      await aTimeout(20); // let mount() resolve Promise.all and suspend inside readResponseArrayBuffer()
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pptx'; // bumps generation, superseding the first mount
+      await aTimeout(20); // let the second mount also reach and suspend on the same gated read
+      bufferGate.resolve(new ArrayBuffer(8)); // release both suspended reads together
+      expect((await loadPromise).detail).to.deep.equal({ slideCount: 4 });
+      let extraLoadFired = false;
+      el.addEventListener('lr-load', () => { extraLoadFired = true; });
+      await aTimeout(20);
+      expect(extraLoadFired).to.be.false;
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('a src change while the presentation is opening supersedes the earlier mount and destroys the late viewer (stale generation)', async () => {
+    const restore = stubFetch();
+    const openGate = deferred<{ slideCount: number; currentSlideIndex: number; addEventListener: () => void; removeEventListener: () => void; goToSlide: () => Promise<void>; destroy: () => void }>();
+    let staleDestroyCalls = 0;
+    const staleViewer = {
+      slideCount: 1,
+      currentSlideIndex: 0,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      goToSlide: async () => {},
+      destroy: () => { staleDestroyCalls++; },
+    };
+    try {
+      const el = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      el.loadRenderer = async () => ({ PptxViewer: { open: async () => openGate.promise }, RECOMMENDED_ZIP_LIMITS: {} } as never);
+      el.src = 'https://example.test/first.pptx';
+      await aTimeout(20); // let mount() reach `await module.PptxViewer.open(...)` and suspend there
+      const fake = fakeModule(5);
+      el.loadRenderer = async () => fake.module;
+      const loadPromise = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.pptx'; // bumps generation, superseding the first mount
+      expect((await loadPromise).detail).to.deep.equal({ slideCount: 5 });
+      // The stale first mount's pending open() now resolves late; it must be torn down immediately
+      // instead of being adopted as the live viewer.
+      openGate.resolve(staleViewer);
+      await aTimeout(20);
+      expect(staleDestroyCalls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
     } finally {
       restore();
     }
