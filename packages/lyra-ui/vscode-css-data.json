@@ -394,6 +394,13 @@
       }
     },
     {
+      "name": "--lr-badge-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-badge>`, `<lr-tag>`** (default: `var(--lr-radius-pill)`) — Corner radius of the badge surface. Does not vary by `size` tier."
+      }
+    },
+    {
       "name": "--lr-breadcrumb-current-color",
       "description": {
         "kind": "markdown",
@@ -884,6 +891,13 @@
       }
     },
     {
+      "name": "--lr-chip-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip>`** (default: `var(--lr-radius-pill)`) — Corner radius of the pill and of the remove button, kept in sync so retuning one retunes both. Does not vary by `size` tier."
+      }
+    },
+    {
       "name": "--lr-chunk-inspector-current-bg",
       "description": {
         "kind": "markdown",
@@ -989,10 +1003,24 @@
       }
     },
     {
+      "name": "--lr-combobox-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-space-xs)`) — Gap between the start/end adornments, tags, and filter input inside the trigger row. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(combobox)` rule."
+      }
+    },
+    {
       "name": "--lr-combobox-option-active-bg",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-combobox>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered or keyboard-active option row."
+      }
+    },
+    {
+      "name": "--lr-combobox-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-radius)`) — Corner radius of the trigger row (`[part='combobox']`). Does not vary by `size` tier."
       }
     },
     {
@@ -1815,6 +1843,13 @@
       }
     },
     {
+      "name": "--lr-icon-button-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `var(--lr-radius)`) — Corner radius of the native button."
+      }
+    },
+    {
       "name": "--lr-icon-button-size",
       "description": {
         "kind": "markdown",
@@ -1878,6 +1913,13 @@
       }
     },
     {
+      "name": "--lr-input-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-space-xs)`) — Gap between the start/end adornments and the native input in the control row. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(input-wrapper)` rule."
+      }
+    },
+    {
       "name": "--lr-input-padding-block",
       "description": {
         "kind": "markdown",
@@ -1889,6 +1931,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** — Inline padding of the control row, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-input-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-input>`, `<lr-number-input>`, `<lr-time-input>`** (default: `var(--lr-radius)`) — Corner radius of the control row. Does not vary by `size` tier."
       }
     },
     {
@@ -2564,10 +2613,24 @@
       }
     },
     {
+      "name": "--lr-select-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Gap between the trigger's start adornment, label, end adornment, and expand icon. Doesn't vary by `size`."
+      }
+    },
+    {
       "name": "--lr-select-option-active-bg",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-select>`** (default: `var(--lr-color-brand-quiet)`) — Background of the hovered/keyboard-active option row. Not declared on `:host`, so a value set on any ancestor is never shadowed -- retheme just this row state without hijacking the shared `--lr-color-brand-quiet` token used by every other component's own hover/active state."
+      }
+    },
+    {
+      "name": "--lr-select-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** — Trigger corner radius. Doesn't vary by `size`."
       }
     },
     {
