@@ -1047,7 +1047,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   private onListboxClick = (e: MouseEvent): void => {
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const value = optionEl?.dataset.value;
+    const value = optionEl?.dataset['value'];
     if (value === undefined) return;
     const row = this._rowsByValue.get(value);
     if (row) this.pickRow(row);

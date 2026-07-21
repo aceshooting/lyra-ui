@@ -400,7 +400,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     const fields = new Map<string, HTMLElement & { value: string }>();
     for (const node of this.renderRoot.querySelectorAll('lr-input[data-filter-id]')) {
       const element = node as HTMLElement & { value: string };
-      const id = element.dataset.filterId;
+      const id = element.dataset['filterId'];
       if (id !== undefined) fields.set(id, element);
     }
     for (const def of this._filters) {

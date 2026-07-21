@@ -163,7 +163,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   private focusTab(slotName: string): void {
     const buttons = this.renderRoot.querySelectorAll('[part="tab"]');
     for (const button of Array.from(buttons)) {
-      if ((button as HTMLElement).dataset.slot === slotName) {
+      if ((button as HTMLElement).dataset['slot'] === slotName) {
         (button as HTMLElement).focus();
         return;
       }

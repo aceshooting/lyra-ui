@@ -738,7 +738,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private onResizePointerDown = (event: PointerEvent): void => {
     const handle = event.currentTarget as HTMLElement;
-    const key = handle.dataset.colKey;
+    const key = handle.dataset['colKey'];
     const column = key ? this.columnsByKey.get(key) : undefined;
     const header = handle.closest('th[data-col-key]') as HTMLElement | null;
     if (!key || !column || !header) return;
@@ -772,7 +772,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private onResizeKeyDown = (event: KeyboardEvent): void => {
     const handle = event.currentTarget as HTMLElement;
-    const key = handle.dataset.colKey;
+    const key = handle.dataset['colKey'];
     const column = key ? this.columnsByKey.get(key) : undefined;
     if (!column) return;
 
@@ -813,7 +813,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private syncResizeHandleValues(): void {
     for (const handle of this.renderRoot.querySelectorAll<HTMLElement>('[part="resize-handle"]')) {
-      const key = handle.dataset.colKey;
+      const key = handle.dataset['colKey'];
       if (!key) continue;
       const column = this.columnsByKey.get(key);
       if (
@@ -941,8 +941,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private rehomeFocusedColumn(): void {
     const visible = this.visibleHeaders();
     if (visible.length === 0 || this.activeColKey === null) return;
-    if (!visible.some((header) => header.dataset.colKey === this.activeColKey)) {
-      this.activeColKey = visible[0].dataset.colKey ?? null;
+    if (!visible.some((header) => header.dataset['colKey'] === this.activeColKey)) {
+      this.activeColKey = visible[0].dataset['colKey'] ?? null;
     }
   }
 
@@ -1067,12 +1067,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private focusedColKey(): string | null {
     const visible = this.visibleHeaders();
     const visibleKeys = new Set(
-      visible.map((el) => el.dataset.colKey).filter((key): key is string => key !== undefined && this.columnsByKey.has(key)),
+      visible.map((el) => el.dataset['colKey']).filter((key): key is string => key !== undefined && this.columnsByKey.has(key)),
     );
     if (this.activeColKey !== null && this.columnsByKey.has(this.activeColKey)) {
       if (visibleKeys.size === 0 || visibleKeys.has(this.activeColKey)) return this.activeColKey;
     }
-    return visible.find((el) => el.dataset.colKey !== undefined && this.columnsByKey.has(el.dataset.colKey))?.dataset.colKey ?? this.columns[0]?.key ?? null;
+    return visible.find((el) => el.dataset['colKey'] !== undefined && this.columnsByKey.has(el.dataset['colKey']))?.dataset['colKey'] ?? this.columns[0]?.key ?? null;
   }
 
   /** The body row that currently owns `tabindex="0"`. */
@@ -1133,7 +1133,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // matching a first-match linear scan over document order.
     const headerWidths = new Map<string, number>();
     for (const el of this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')) {
-      const key = el.dataset.colKey;
+      const key = el.dataset['colKey'];
       if (key !== undefined && !headerWidths.has(key)) headerWidths.set(key, el.offsetWidth);
     }
     const headerWidth = (key: string): number => headerWidths.get(key) ?? 0;
@@ -1196,7 +1196,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (!this.columns.some((c) => c.sticky)) return;
     const offsets = this.stickyOffsets();
     this.renderRoot.querySelectorAll<HTMLElement>('[data-col-key]').forEach((el) => {
-      const key = el.dataset.colKey;
+      const key = el.dataset['colKey'];
       if (key !== undefined && offsets.has(key)) {
         el.style.setProperty('--lr-table-sticky-offset', `${offsets.get(key)}px`);
       }
@@ -1311,10 +1311,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  prefix (`string:a`), so neither is safe to splat into CSS unescaped. */
   private editorElementFor(rowKey: string, columnKey: string): HTMLInputElement | null {
     const row = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')].find(
-      (el) => el.dataset.rowKey === rowKey,
+      (el) => el.dataset['rowKey'] === rowKey,
     );
     const cell = row
-      ? [...row.querySelectorAll<HTMLElement>('td[data-col-key]')].find((el) => el.dataset.colKey === columnKey)
+      ? [...row.querySelectorAll<HTMLElement>('td[data-col-key]')].find((el) => el.dataset['colKey'] === columnKey)
       : undefined;
     return (cell?.querySelector('[part="cell-editor"]') as HTMLInputElement | null) ?? null;
   }
@@ -1326,8 +1326,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const target = event.target as HTMLElement | null;
     const cell = target?.closest?.('td[data-col-key]') as HTMLElement | null;
     const row = target?.closest?.('[data-row-key]') as HTMLElement | null;
-    const columnKey = cell?.dataset.colKey;
-    const rowKey = row?.dataset.rowKey;
+    const columnKey = cell?.dataset['colKey'];
+    const rowKey = row?.dataset['rowKey'];
     this.focusedEditorCell =
       target?.getAttribute('part') === 'cell-editor' &&
       columnKey !== undefined &&
@@ -1381,8 +1381,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     if (closestInteractive(target, table)) return;
     const cell = target.closest('[part="cell"][data-col-key]') as HTMLElement | null;
     const row = target.closest('[data-row-key]') as HTMLElement | null;
-    if (cell && row?.dataset.rowKey && cell.dataset.colKey) {
-      this.startEditing(row.dataset.rowKey, cell.dataset.colKey);
+    if (cell && row?.dataset['rowKey'] && cell.dataset['colKey']) {
+      this.startEditing(row.dataset['rowKey'], cell.dataset['colKey']);
     }
   };
 
@@ -1404,14 +1404,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   private focusHeader(el: HTMLElement | null): void {
-    if (!el?.dataset.colKey) return;
-    this.activeColKey = el.dataset.colKey;
+    if (!el?.dataset['colKey']) return;
+    this.activeColKey = el.dataset['colKey'];
     el.focus();
   }
 
   private focusRow(el: HTMLElement | null): void {
-    if (!el?.dataset.rowKey) return;
-    this.activeRowKey = el.dataset.rowKey;
+    if (!el?.dataset['rowKey']) return;
+    this.activeRowKey = el.dataset['rowKey'];
     el.focus();
   }
 
@@ -1433,9 +1433,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // column-sort activation instead of falling through to the row check
     // below.
     const th = target.closest('th[data-col-key]') as HTMLElement | null;
-    if (th) return this.activateColumn(th.dataset.colKey!);
+    if (th) return this.activateColumn(th.dataset['colKey']!);
     const tr = target.closest('[data-row-key]') as HTMLElement | null;
-    if (tr) this.activateRow(tr.dataset.rowKey!);
+    if (tr) this.activateRow(tr.dataset['rowKey']!);
   };
 
   private onTableKeyDown = (e: KeyboardEvent): void => {
@@ -1455,7 +1455,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private onHeaderKeyDown(e: KeyboardEvent, th: HTMLElement): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      this.activateColumn(th.dataset.colKey!);
+      this.activateColumn(th.dataset['colKey']!);
       return;
     }
     const headers = this.visibleHeaders();
@@ -1488,7 +1488,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         e.preventDefault();
         const rows = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')];
         const key = this.focusedRowKey();
-        this.focusRow(rows.find((r) => r.dataset.rowKey === key) ?? rows[0] ?? null);
+        this.focusRow(rows.find((r) => r.dataset['rowKey'] === key) ?? rows[0] ?? null);
         return;
       }
       default:
@@ -1499,7 +1499,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private onRowKeyDown(e: KeyboardEvent, tr: HTMLElement): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      this.activateRow(tr.dataset.rowKey!);
+      this.activateRow(tr.dataset['rowKey']!);
       return;
     }
     const bodyRows = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-row-key]')];
@@ -1515,7 +1515,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         if (index === 0) {
           const headers = this.visibleHeaders();
           const key = this.focusedColKey();
-          this.focusHeader(headers.find((h) => h.dataset.colKey === key) ?? headers[0] ?? null);
+          this.focusHeader(headers.find((h) => h.dataset['colKey'] === key) ?? headers[0] ?? null);
         } else {
           this.focusRow(bodyRows[index - 1]);
         }

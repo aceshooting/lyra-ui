@@ -568,7 +568,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   private onListboxClick = (e: MouseEvent): void => {
     if (this.effectiveDisabled) return;
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const tag = optionEl?.dataset.value;
+    const tag = optionEl?.dataset['value'];
     if (tag === undefined) return;
     this.commit(tag);
   };

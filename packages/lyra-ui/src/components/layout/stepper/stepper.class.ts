@@ -295,7 +295,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const navigable = this.steps.filter((s) => s.state !== 'disabled');
     if (navigable.length === 0) return;
     const focused = (this.renderRoot as ShadowRoot).activeElement as HTMLElement | null;
-    const currentId = focused?.dataset.id;
+    const currentId = focused?.dataset['id'];
     const currentIndex = navigable.findIndex((s) => s.id === currentId);
     const vertical = this.effectiveOrientation === 'vertical';
     const rtl = !vertical && isRtl(this);

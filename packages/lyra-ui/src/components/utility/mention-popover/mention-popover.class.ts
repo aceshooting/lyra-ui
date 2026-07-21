@@ -482,7 +482,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
 
   private onListboxClick = (e: MouseEvent): void => {
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const id = optionEl?.dataset.id;
+    const id = optionEl?.dataset['id'];
     if (id === undefined) return;
     const item = this.filteredItems.find((i) => i.id === id);
     if (item) this.commit(item);

@@ -1119,7 +1119,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         stale.style.removeProperty('inset-inline-end');
         stale.style.removeProperty('inline-size');
         stale.hidden = false;
-        delete stale.dataset.collapseState;
+        delete stale.dataset['collapseState'];
       }
     }
     // Resolved once per pass rather than per panel: which physical index (if
@@ -1236,9 +1236,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       panel.style.order = String(i * 2);
 
       if (collapsingIndex === i) {
-        panel.dataset.collapseState = this.collapseState;
+        panel.dataset['collapseState'] = this.collapseState;
       } else {
-        delete panel.dataset.collapseState;
+        delete panel.dataset['collapseState'];
       }
     });
     this.stylizedPanels = current;

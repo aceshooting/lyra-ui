@@ -134,7 +134,7 @@ export class LyraFlowRunOverlay extends LyraElement {
     for (const [id, decoration] of Object.entries(this.decorations)) {
       if (previous[id]?.status === decoration.status) continue;
       const node = this.canvasEl?.nodes.find((n) => n.id === id);
-      const label = typeof node?.data?.label === 'string' ? node.data.label : id;
+      const label = typeof node?.data?.['label'] === 'string' ? node.data['label'] : id;
       this.announcer.announce(
         this.localize('flowRunStepStatus', undefined, { label, status: decoration.status }),
         { force: true },

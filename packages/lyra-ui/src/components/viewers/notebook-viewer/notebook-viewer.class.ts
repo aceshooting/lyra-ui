@@ -56,7 +56,7 @@ function joinText(text: string | string[] | undefined): string {
 function isNotebookShape(value: unknown): value is NotebookDoc {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  return typeof v.nbformat === 'number' && typeof v.nbformat_minor === 'number' && Array.isArray(v.cells);
+  return typeof v['nbformat'] === 'number' && typeof v['nbformat_minor'] === 'number' && Array.isArray(v['cells']);
 }
 
 type NotebookState =

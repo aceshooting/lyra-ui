@@ -101,9 +101,9 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   }
 
   private builtinStyle(node: ResolvedElement): Record<string, string> {
-    const gap = typeof node.props.gap === 'string' ? GAP_TOKEN[node.props.gap] : undefined;
-    const align = typeof node.props.align === 'string' ? node.props.align : undefined;
-    const justifyRaw = typeof node.props.justify === 'string' ? node.props.justify : undefined;
+    const gap = typeof node.props['gap'] === 'string' ? GAP_TOKEN[node.props['gap']] : undefined;
+    const align = typeof node.props['align'] === 'string' ? node.props['align'] : undefined;
+    const justifyRaw = typeof node.props['justify'] === 'string' ? node.props['justify'] : undefined;
     const justify = justifyRaw ? JUSTIFY_VALUE[justifyRaw] : undefined;
     return {
       display: 'flex',

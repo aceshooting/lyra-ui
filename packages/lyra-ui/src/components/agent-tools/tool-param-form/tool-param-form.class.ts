@@ -244,7 +244,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const firstInvalidKey = Object.keys(this._errors)[0];
     if (!firstInvalidKey || !this.renderRoot) return undefined;
     return Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="field"]')).find(
-      (candidate) => candidate.dataset.key === firstInvalidKey,
+      (candidate) => candidate.dataset['key'] === firstInvalidKey,
     );
   }
 

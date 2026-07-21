@@ -527,8 +527,8 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     const active = this.shadowRoot?.activeElement;
     const staysInsideControl =
       e.isTrusted &&
-      ((related instanceof HTMLInputElement && related.dataset.field !== undefined) ||
-        (active instanceof HTMLInputElement && active !== e.target && active.dataset.field !== undefined));
+      ((related instanceof HTMLInputElement && related.dataset['field'] !== undefined) ||
+        (active instanceof HTMLInputElement && active !== e.target && active.dataset['field'] !== undefined));
     if (staysInsideControl) return;
     this.touched = true;
     this.emit('blur');

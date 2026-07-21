@@ -282,7 +282,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     if (this.geometryProbe || !this.isVirtualized) return;
     const makeProbe = (name: string): HTMLDivElement => {
       const probe = document.createElement('div');
-      probe.dataset.probe = name;
+      probe.dataset['probe'] = name;
       return probe;
     };
     const root = makeProbe('root');
@@ -471,7 +471,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private onGridFocusIn = (event: FocusEvent): void => {
     const button = event.target;
     if (!(button instanceof HTMLButtonElement)) return;
-    const indexed = Number(button.dataset.index);
+    const indexed = Number(button.dataset['index']);
     const index = Number.isInteger(indexed) ? indexed : this.optionButtons().indexOf(button);
     if (index >= 0 && index !== this.activeIndex) this.setActiveIndex(index, false);
   };

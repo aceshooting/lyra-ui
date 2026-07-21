@@ -482,7 +482,7 @@ table.addEventListener('lr-row-click', (event) => {
 declare const form: LyraToolParamForm;
 form.addEventListener('lr-validity-change', (event) => {
   const valid: boolean = event.detail.valid;
-  const message: string | undefined = event.detail.errors.prompt;
+  const message: string | undefined = event.detail.errors['prompt'];
   void valid;
   void message;
 });

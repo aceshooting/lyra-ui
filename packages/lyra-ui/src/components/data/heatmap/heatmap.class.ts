@@ -2061,14 +2061,14 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (!pos) return;
     void this.updateComplete.then(() => {
       const button = [...(this.shadowRoot?.querySelectorAll<HTMLButtonElement>('[part="cell"]') ?? [])].find(
-        (candidate) => candidate.dataset.cellKey === this.accessibleCellKey(pos),
+        (candidate) => candidate.dataset['cellKey'] === this.accessibleCellKey(pos),
       );
       button?.focus();
     });
   }
 
   private onAccessibleCellFocus = (e: FocusEvent): void => {
-    const key = (e.currentTarget as HTMLElement).dataset.cellKey;
+    const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
     this.focusedCell = pos;
@@ -2076,7 +2076,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   };
 
   private onAccessibleCellClick = (e: MouseEvent): void => {
-    const key = (e.currentTarget as HTMLElement).dataset.cellKey;
+    const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
     this.focusedCell = pos;
@@ -2086,7 +2086,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private onAccessibleCellKeyDown = (e: KeyboardEvent): void => {
     if (!ARROW_KEYS.has(e.key)) return;
-    const key = (e.currentTarget as HTMLElement).dataset.cellKey;
+    const key = (e.currentTarget as HTMLElement).dataset['cellKey'];
     const pos = key ? this.accessibleCellAtKey(key) : null;
     if (!pos) return;
     e.preventDefault();

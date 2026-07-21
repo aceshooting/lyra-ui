@@ -451,8 +451,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       card.setAttribute('data-flow-canvas-default-card', '');
       card.setAttribute('slot', `node-${node.id}`);
       card.nodeId = node.id;
-      card.heading = typeof node.data?.label === 'string' ? node.data.label : node.id;
-      if (typeof node.data?.description === 'string') card.textContent = node.data.description;
+      card.heading = typeof node.data?.['label'] === 'string' ? node.data['label'] : node.id;
+      if (typeof node.data?.['description'] === 'string') card.textContent = node.data['description'];
       this.appendChild(card);
     }
   }
@@ -495,7 +495,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const edgesById = new Map(this.edges.map((edge) => [edge.id, edge]));
     const reducedMotion = prefersReducedMotion();
     for (const group of Array.from(this.renderRoot.querySelectorAll<SVGGElement>('[data-edge-id]'))) {
-      const edge = edgesById.get(group.dataset.edgeId ?? '');
+      const edge = edgesById.get(group.dataset['edgeId'] ?? '');
       const path = group.querySelector<SVGPathElement>('[part="edge"]');
       if (!edge || !path) continue;
       const running = this.edgeIsRunning(edge);
@@ -563,7 +563,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private nodeAccessibleText(node: FlowNode): string {
     if (node.accessibleLabel) return node.accessibleLabel;
-    const label = typeof node.data?.label === 'string' ? node.data.label : node.id;
+    const label = typeof node.data?.['label'] === 'string' ? node.data['label'] : node.id;
     return this.localize('flowNode', undefined, { label });
   }
 
@@ -584,7 +584,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onNodesResized(entries: ResizeObserverEntry[]): void {
     let changedAny = false;
     for (const entry of entries) {
-      const id = (entry.target as HTMLElement).dataset.nodeId;
+      const id = (entry.target as HTMLElement).dataset['nodeId'];
       if (!id) continue;
       const box = entry.borderBoxSize?.[0];
       const width = box ? box.inlineSize : entry.contentRect.width;
@@ -1350,8 +1350,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   private nodeIdFromComposedPath(path: EventTarget[]): string | null {
     for (const el of path) {
-      if (el instanceof HTMLElement && el.getAttribute('part') === 'node' && el.dataset.nodeId) {
-        return el.dataset.nodeId;
+      if (el instanceof HTMLElement && el.getAttribute('part') === 'node' && el.dataset['nodeId']) {
+        return el.dataset['nodeId'];
       }
     }
     return null;
@@ -1371,12 +1371,12 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private onWorldPointerDown = (e: PointerEvent): void => {
     if (!this.connectable || this.locked || this.connectState) return;
     const path = e.composedPath();
-    const handleEl = path.find((el) => el instanceof HTMLElement && el.dataset.handleKind === 'output') as
+    const handleEl = path.find((el) => el instanceof HTMLElement && el.dataset['handleKind'] === 'output') as
       | HTMLElement
       | undefined;
     if (!handleEl) return;
     const nodeId = this.nodeIdFromComposedPath(path);
-    const handleId = handleEl.dataset.handleId;
+    const handleId = handleEl.dataset['handleId'];
     if (!nodeId || !handleId) return;
     e.stopPropagation();
     this.startConnectGesture(nodeId, handleId, e.clientX, e.clientY);
@@ -1444,10 +1444,10 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       this.announcer.announce(this.localize('flowConnectCancelled'));
       return;
     }
-    const handleEl = path.find((el) => el instanceof HTMLElement && el.dataset.handleKind === 'input') as
+    const handleEl = path.find((el) => el instanceof HTMLElement && el.dataset['handleKind'] === 'input') as
       | HTMLElement
       | undefined;
-    const targetHandle = handleEl?.dataset.handleId ?? 'in';
+    const targetHandle = handleEl?.dataset['handleId'] ?? 'in';
     this.emit('lr-connect', { source: state.sourceId, target: targetNodeId, sourceHandle: state.sourceHandle, targetHandle });
     this.announcer.announce(this.localize('flowConnectCommitted', undefined, { source: state.sourceId, target: targetNodeId }));
   };

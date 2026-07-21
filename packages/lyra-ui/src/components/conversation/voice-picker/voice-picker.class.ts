@@ -648,7 +648,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private onListboxClick = (e: MouseEvent): void => {
     if (this.effectiveDisabled) return;
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const value = optionEl?.dataset.value;
+    const value = optionEl?.dataset['value'];
     if (value === undefined) return;
     const entry = (this.closedMode ? this.effectiveEntries : this.filteredEntries).find((e2) => e2.id === value);
     if (entry) this.selectEntry(entry);

@@ -81,7 +81,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
   private onClick = (event: MouseEvent): void => {
     const target = (event.target as HTMLElement).closest('[data-value]') as HTMLElement | null;
-    if (target) this.setValue(Number(target.dataset.value));
+    if (target) this.setValue(Number(target.dataset['value']));
   };
   private onKeyDown = (event: KeyboardEvent): void => {
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';

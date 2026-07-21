@@ -682,7 +682,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private onListboxClick = (e: MouseEvent): void => {
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const value = optionEl?.dataset.value;
+    const value = optionEl?.dataset['value'];
     if (value === undefined) return;
     const option = this.options.find((o) => o.value === value);
     if (option) this.selectOption(option);
