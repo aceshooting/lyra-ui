@@ -211,7 +211,7 @@ function tryFocus(target: HTMLElement | null): boolean {
   return active === target || composedContains(target, active);
 }
 
-function focusEntry(entry: OverlayEntry, backwards = false, preserveCurrent = true): void {
+function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
   const panel = entry.options.panel();
   if (!panel) return;
   const active = deepActiveElement(entry.state.document);
@@ -219,9 +219,7 @@ function focusEntry(entry: OverlayEntry, backwards = false, preserveCurrent = tr
 
   const preferred = entry.options.preferredInitialFocus?.() ?? null;
   if (preferred && composedContains(panel, preferred) && tryFocus(preferred)) return;
-  const focusable = collectFocusableElements(panel);
-  const ordered = backwards ? focusable.reverse() : focusable;
-  for (const target of ordered) {
+  for (const target of collectFocusableElements(panel)) {
     if (tryFocus(target)) return;
   }
   panel.focus();
@@ -270,7 +268,9 @@ function handleMutations(state: OverlayDocumentState, records: MutationRecord[])
       needsInertUpdate = true;
       continue;
     }
-    if (record.type !== 'attributes' || record.attributeName !== 'inert') continue;
+    // No other check needed: mutationObserverOptions below requests only 'childList' (handled
+    // above) and 'attributes' records (characterData is unset), and attributeFilter: ['inert']
+    // guarantees any 'attributes' record's attributeName is already 'inert'.
     const element = record.target as HTMLElement;
     let nextRecord: MutationRecord | undefined;
     for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
@@ -494,7 +494,7 @@ function rebaseReturnTargets(entry: OverlayEntry): void {
 function restoreEntryFocus(entry: OverlayEntry): void {
   if (tryFocus(entry.restoreFocusTo)) return;
   const next = entry.state.stack[entry.state.stack.length - 1];
-  if (next) focusEntry(next, false, false);
+  if (next) focusEntry(next, false);
 }
 
 function deactivateEntry(entry: OverlayEntry, restoreFocus: boolean): void {
