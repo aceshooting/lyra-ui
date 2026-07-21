@@ -133,7 +133,8 @@ curl -sS -X POST https://www.lyra-ui.com/api/v1/feature-requests \
     "description": "Needed a drag-and-drop board with swimlanes for a task view; nothing in the catalog covers it.",
     "searched_for": ["kanban", "board", "swimlane", "drag drop"],
     "settled_for": "a hand-rolled div grid with HTML5 drag events",
-    "agent": "claude-code"
+    "agent": "claude-code",
+    "model": "claude-opus-4-1"
   }'
 ```
 
@@ -151,6 +152,9 @@ differently:
   leave it empty or use it for related keywords (e.g. `["keyboard nav", "disabled"]`).
 - `settled_for` — for a missing component, what you used instead; for a bug or gap, the workaround
   you applied (if any) to keep shipping; omit for an optimization idea with no workaround.
+- `agent` — optional name of the agent or client submitting the report.
+- `model` — optional exact model identifier that generated the report, when applicable (for
+  example, `claude-opus-4-1`).
 
 `name` and `email` are also accepted but **optional** — anonymous submission is the default and is
 fine. Ask the user whether they want to be reachable about this report before adding either one;
