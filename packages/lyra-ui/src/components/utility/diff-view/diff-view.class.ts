@@ -19,6 +19,10 @@ export interface LyraDiffViewEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
 }
 
+/** The internal diff rendering layout -- `'unified'` (the default) is one interleaved column,
+ *  `'split'` is two side-by-side columns derived from the same `DiffOp[]`. */
+export type LyraDiffViewLayout = 'unified' | 'split';
+
 /**
  * `<lr-diff-view>` — a real two-string line diff (Myers/LCS-style alignment), rendered as
  * interleaved unified-diff output -- not diff-flavored syntax highlighting over an
@@ -52,7 +56,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   /** `'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two
    *  side-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`). */
-  @property({ reflect: true }) layout: 'unified' | 'split' = 'unified';
+  @property({ reflect: true }) layout: LyraDiffViewLayout = 'unified';
 
   /** A shiki-recognized language id. Highlighting activates only when this has a matching entry in
    *  `languages` -- there is deliberately no default full-table `lr-code-block`-style fallback, so

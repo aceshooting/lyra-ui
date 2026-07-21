@@ -49,6 +49,12 @@ export interface BrowserPing {
   kind: 'click' | 'type' | 'scroll' | 'move';
 }
 
+/** The `<lr-browser-frame>` connection/streaming lifecycle state. */
+export type BrowserFrameStatus = 'idle' | 'connecting' | 'streaming' | 'stalled';
+
+/** Who currently holds input control of the browser session. */
+export type BrowserFrameController = 'agent' | 'user';
+
 const STATUS_KEY = {
   idle: 'browserFrameStatusIdle',
   connecting: 'browserFrameStatusConnecting',
@@ -57,7 +63,7 @@ const STATUS_KEY = {
 } as const;
 
 export interface LyraBrowserFrameEventMap {
-  'lr-take-over': CustomEvent<{ controller: 'agent' | 'user' }>;
+  'lr-take-over': CustomEvent<{ controller: BrowserFrameController }>;
   'lr-stop': CustomEvent<undefined>;
 }
 
@@ -91,8 +97,8 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   @property({ attribute: 'frame-src' }) frameSrc = '';
   @property() url = '';
-  @property({ reflect: true }) status: 'idle' | 'connecting' | 'streaming' | 'stalled' = 'idle';
-  @property({ reflect: true }) controller: 'agent' | 'user' = 'agent';
+  @property({ reflect: true }) status: BrowserFrameStatus = 'idle';
+  @property({ reflect: true }) controller: BrowserFrameController = 'agent';
   @property({ attribute: false }) pings: BrowserPing[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) controls = true;
 

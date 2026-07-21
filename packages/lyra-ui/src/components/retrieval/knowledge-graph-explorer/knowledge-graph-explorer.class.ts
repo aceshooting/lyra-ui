@@ -3,7 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './knowledge-graph-explorer.styles.js';
-import type { GraphNode, GraphLink, GraphNodeType, GraphCommunity, LyraGraph } from '../graph/graph.class.js';
+import type { GraphNode, GraphLink, GraphNodeType, GraphCommunity, GraphRenderer, LyraGraph } from '../graph/graph.class.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
 import type { LyraPathElement } from '../path-strip/path-strip.class.js';
@@ -23,6 +23,10 @@ import '../../forms/button/button.class.js';
  *  renders fine: `degree` falls back to a live count derived from `links`, `description`/
  *  `properties` are simply omitted. */
 export type LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | 'properties' | 'degree'>;
+
+/** What drives `<lr-knowledge-graph-explorer>`'s own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on
+ *  top of the always-active search-match dimming -- see `highlight`'s own doc comment. */
+export type KnowledgeGraphHighlight = 'selection' | 'hover' | 'none';
 
 export interface LyraKnowledgeGraphExplorerEventMap {
   /** The user asked to find a path between the two currently pinned nodes (the "Find path" action,
@@ -142,14 +146,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   /** Forwarded to `lr-graph.renderer`. `renderer="canvas"` has no per-node DOM element, which
    *  narrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the
    *  class doc's anchoring note. */
-  @property() renderer: 'svg' | 'canvas' = 'svg';
+  @property() renderer: GraphRenderer = 'svg';
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   /** Accessible name for the root landmark; falls back to the localized `graphExplorerLabel`. */
   @property() label = '';
   /** What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the
    *  always-active search-match dimming -- see the class doc's dedicated paragraph. */
-  @property() highlight: 'selection' | 'hover' | 'none' = 'selection';
+  @property() highlight: KnowledgeGraphHighlight = 'selection';
 
   @state() private searchQuery = '';
   @state() private pinLiveText = '';

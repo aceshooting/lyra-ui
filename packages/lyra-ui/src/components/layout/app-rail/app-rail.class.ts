@@ -17,6 +17,11 @@ export type AppRailMode = 'full' | 'icon-only' | 'mobile';
 /** What can be *assigned* to `mode` -- `'auto'` is a write-only sentinel; see the `mode` accessor doc. */
 export type AppRailModeInput = AppRailMode | 'auto';
 
+/** The non-mobile axis of {@link AppRailMode} -- what `preferred-mode` can manually prefer between,
+ *  since the `mobile-breakpoint` continues to be tracked automatically regardless (see
+ *  `preferredMode`'s own doc). */
+export type AppRailPreferredMode = Exclude<AppRailMode, 'mobile'>;
+
 export interface AppRailModeChangeDetail {
   mode: AppRailMode;
 }
@@ -66,7 +71,7 @@ function menuIcon(): SVGTemplateResult {
 export function computeAppRailMode(
   iconOnlyMatches: boolean,
   mobileMatches: boolean,
-  preferredMode?: 'full' | 'icon-only' | null,
+  preferredMode?: AppRailPreferredMode | null,
 ): AppRailMode {
   if (mobileMatches) return 'mobile';
   if (preferredMode) return preferredMode;
@@ -212,7 +217,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
    *  viewport. Only consulted while `mode` isn't force-pinned via its own accessor (see the class
    *  doc) — that continues to take full priority, unchanged. Unset (the default, `null`)
    *  reproduces today's exact breakpoint-only behavior. */
-  @property({ attribute: 'preferred-mode' }) preferredMode?: 'full' | 'icon-only' | null;
+  @property({ attribute: 'preferred-mode' }) preferredMode?: AppRailPreferredMode | null;
 
   /** Suppresses the built-in mobile `[part='toggle']` hamburger/close button entirely -- for a
    *  consumer that already owns an external mobile-menu toggle wired to this rail's own `open`

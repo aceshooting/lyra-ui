@@ -53,6 +53,11 @@ const FALLBACK_SELECTED_COLOR = '#1a7f37';
 const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const MS_PER_DAY = 86_400_000;
 
+/** The heatmap's two layout modes — a plain row/col grid or a GitHub-style calendar grid. */
+export type HeatmapMode = 'matrix' | 'calendar';
+/** The value-to-color mapping applied within each mode — linear or square-root compressed. */
+export type HeatmapScale = 'linear' | 'sqrt';
+
 /** A cell cursor in matrix mode. */
 export interface MatrixCellPos {
   row: number;
@@ -430,7 +435,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * instead, in *both* modes, so one heavy cell/day doesn't wash out the
    * rest of a skewed dataset.
    */
-  @property() scale: 'linear' | 'sqrt' = 'linear';
+  @property() scale: HeatmapScale = 'linear';
   /**
    * When set, `cellSize` is derived from the host's measured `clientWidth`
    * on every draw (including ResizeObserver-triggered redraws) instead of
@@ -492,7 +497,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this._minCellSize = normalizeCellSizeClamp(value);
     this.requestUpdate('minCellSize', oldValue);
   }
-  @property() mode: 'matrix' | 'calendar' = 'matrix';
+  @property() mode: HeatmapMode = 'matrix';
   @property({ attribute: false }) days: CalendarDay[] = [];
   private _firstDayOfWeek = 0;
 

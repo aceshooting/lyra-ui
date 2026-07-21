@@ -13,9 +13,12 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import './tree-node.class.js';
 import type { LyraTreeNode } from './tree-node.class.js';
 
+/** Tone for a `TreeBadge` chip; the same closed set as `ButtonVariant`. */
+export type TreeBadgeTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+
 export interface TreeBadge {
   text: string;
-  tone?: 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
+  tone?: TreeBadgeTone;
   /** Accessible name override; falls back to `text` when omitted. */
   label?: string;
 }

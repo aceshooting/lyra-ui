@@ -39,6 +39,9 @@ export interface LibraryDocument extends DocumentRef {
 /** Column keys `sortKey` accepts. Not every column is sortable (`type`/`tags`/`select` are not). */
 export type LibraryDocumentSortKey = 'name' | 'version' | 'owner' | 'freshness' | 'updatedAt';
 
+/** Sort direction for `sortKey`/`sortDirection`. */
+export type DocumentLibrarySortDirection = 'ascending' | 'descending';
+
 export interface DocumentLibraryFilterChangeDetail {
   text: string;
   tags: string[];
@@ -46,7 +49,7 @@ export interface DocumentLibraryFilterChangeDetail {
 }
 export interface DocumentLibrarySortDetail {
   key: LibraryDocumentSortKey;
-  direction: 'ascending' | 'descending';
+  direction: DocumentLibrarySortDirection;
 }
 export interface DocumentLibrarySelectionChangeDetail {
   ids: string[];
@@ -132,7 +135,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   @property({ attribute: false }) filter?: (document: LibraryDocument, query: string) => boolean;
 
   @property({ attribute: 'sort-key' }) sortKey: LibraryDocumentSortKey = 'name';
-  @property({ attribute: 'sort-direction' }) sortDirection: 'ascending' | 'descending' = 'ascending';
+  @property({ attribute: 'sort-direction' }) sortDirection: DocumentLibrarySortDirection = 'ascending';
 
   @property({ type: Boolean, reflect: true }) loading = false;
 

@@ -29,6 +29,8 @@ export interface ChatThread {
 
 export type ThreadRowAction = 'pin' | 'archive' | 'delete';
 
+export type ThreadListGrouping = 'date' | 'custom' | 'none';
+
 export interface LyraThreadListEventMap {
   'lr-select': CustomEvent<{ id: string }>;
   'lr-thread-pin': CustomEvent<{ id: string; pinned: boolean }>;
@@ -226,7 +228,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use
    *  `'none'` for a flat list in host order. */
-  @property() grouping: 'date' | 'custom' | 'none' = 'date';
+  @property() grouping: ThreadListGrouping = 'date';
 
   /** `grouping="custom"`: derives an arbitrary controlled group id for every visible thread. */
   @property({ attribute: false }) groupBy?: (thread: ChatThread) => string;

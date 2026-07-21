@@ -26,6 +26,9 @@ export interface LyraRetrievalResultsEventMap {
   'lr-chunk-open': CustomEvent<{ id: string; sourceId: string }>;
 }
 
+export type RetrievalResultsGrouping = 'source' | 'none';
+export type RetrievalResultsPresentation = 'compact' | 'expanded';
+
 /** `RetrievalChunk` -> `lr-chunk-inspector`'s own `LyraChunk` display-row shape, per the mapping
  *  `RetrievalChunk`'s own doc comment (`src/ai/types.ts`) already specifies: `source.id -> sourceId`,
  *  `source.name -> title`. No `page`/`anchor` -- `RetrievalChunk`/`DocumentRef` carry neither, so
@@ -184,12 +187,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
   /** `'source'` buckets rows under a header per `source.id` (always rendered through the internal
    *  `<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list. */
-  @property() grouping: 'source' | 'none' = 'none';
+  @property() grouping: RetrievalResultsGrouping = 'none';
 
   /** `'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text
    *  preview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar
    *  only, on both. */
-  @property() presentation: 'compact' | 'expanded' = 'expanded';
+  @property() presentation: RetrievalResultsPresentation = 'expanded';
 
   /** Forwarded verbatim to every per-row `<lr-chunk-inspector>`'s own `thresholds`. */
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };

@@ -17,6 +17,11 @@ export interface LiteSeries {
 
 export type LyraLiteChartType = 'bar' | 'line';
 
+/** `type="bar"` only: `'linear'` (default) maps a bar's value to height via the standard
+ *  `niceDomain`-based fraction; `'sqrt'` compresses via `Math.sqrt(value / domainMax)`. See the
+ *  `scale` property's own doc comment below for the full rationale. */
+export type LyraLiteChartScale = 'linear' | 'sqrt';
+
 /**
  * `'fit'` (default) squeezes the whole plot into the measured host width,
  * exactly as this component always behaved. `'scroll'` gives every bar a
@@ -230,7 +235,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  matrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed
    *  dataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain
    *  either way — only the bar marks' own height mapping changes. */
-  @property() scale: 'linear' | 'sqrt' = 'linear';
+  @property() scale: LyraLiteChartScale = 'linear';
   /** Suppresses `renderGrid()` entirely — no gridlines, no y-axis tick labels. x-axis category
    *  labels (rendered separately) are unaffected. Default `false` preserves today's behavior. */
   @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;

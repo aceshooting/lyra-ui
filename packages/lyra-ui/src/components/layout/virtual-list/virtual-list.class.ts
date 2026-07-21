@@ -46,6 +46,10 @@ export interface VirtualListGroup {
   startIndex: number;
 }
 
+/** The ARIA role pairing each rendered row participates in -- see `itemRole`'s own doc for what
+ *  each value maps to. */
+export type VirtualListItemRole = 'listitem' | 'row';
+
 type VirtualListKey = string | number;
 
 /** A typed key is used in maps and active-row matching; this token is only for
@@ -262,7 +266,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  `aria-setsize`/`aria-posinset`. `'row'` maps to `role="rowgroup"`/`role="row"` with
    *  `aria-rowindex` instead -- for a consumer composing a virtualized `role="table"` (see
    *  `<lr-dataset-viewer>`). */
-  @property({ attribute: 'item-role' }) itemRole: 'listitem' | 'row' = 'listitem';
+  @property({ attribute: 'item-role' }) itemRole: VirtualListItemRole = 'listitem';
 
   /** Added to a row's 1-based index to compute `aria-rowindex` in `item-role="row"` mode (e.g. `1`
    *  when a consumer renders its own header row occupying `aria-rowindex="1"` outside this

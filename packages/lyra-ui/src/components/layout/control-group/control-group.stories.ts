@@ -36,7 +36,7 @@ export const Default: Story = {
 
 export const NarrowAllocation: Story = {
   render: () => html`<div style="inline-size: 220px; border: 1px dashed var(--lr-color-border); padding: var(--lr-space-s);">
-    <lr-control-group label="Chart controls">
+    <lr-control-group label="Chart controls" responsive>
       <lr-segmented
         size="s"
         .items=${[
@@ -51,5 +51,19 @@ export const NarrowAllocation: Story = {
       </lr-select>
       <lr-button size="s">Export</lr-button>
     </lr-control-group>
+  </div>`,
+};
+
+export const InShrinkToFitFlexRow: Story = {
+  render: () => html`<div style="display:flex; gap: var(--lr-space-s); border: 1px dashed var(--lr-color-border); padding: var(--lr-space-s);">
+    <span style="align-self:center;">Toolbar:</span>
+    <lr-control-group label="Chart controls">
+      <lr-select size="s" placeholder="Pick a range" style="max-width: 9rem">
+        <lr-option value="day">Day</lr-option>
+        <lr-option value="week">Week</lr-option>
+      </lr-select>
+      <lr-button size="s" variant="brand">Export</lr-button>
+    </lr-control-group>
+    <span style="align-self:center;">(end)</span>
   </div>`,
 };

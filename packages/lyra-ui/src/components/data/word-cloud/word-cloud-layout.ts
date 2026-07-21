@@ -27,11 +27,18 @@ export interface PlacedWord extends WordCloudWord {
   height: number;
 }
 
+/** Weight-to-font-size mapping curve. `sqrt` compresses it so one heavy word
+ *  doesn't dwarf the rest. */
+export type WordCloudScale = 'linear' | 'sqrt';
+
+/** Rotation mode for placed words. `mixed` lets some render rotated 90° for denser packing. */
+export type WordCloudOrientations = 'horizontal' | 'mixed';
+
 export interface WordCloudLayoutOptions {
   minFontSize: number;
   maxFontSize: number;
-  scale: 'linear' | 'sqrt';
-  orientations: 'horizontal' | 'mixed';
+  scale: WordCloudScale;
+  orientations: WordCloudOrientations;
   /** Measures the rendered width of `text` set at `fontSize`, e.g. via a canvas 2D
    *  context — the font string passed to the context must match the actual
    *  rendered `[part="word"]` font (weight included), or collision boxes end
@@ -100,7 +107,7 @@ function effectiveWeight(weight: number): number {
   return Number.isFinite(weight) ? Math.max(0, weight) : 0;
 }
 
-function scaledWeight(weight: number, minWeight: number, maxWeight: number, scale: 'linear' | 'sqrt'): number {
+function scaledWeight(weight: number, minWeight: number, maxWeight: number, scale: WordCloudScale): number {
   const span = maxWeight - minWeight || 1;
   const t = Math.min(1, Math.max(0, (weight - minWeight) / span));
   return scale === 'sqrt' ? Math.sqrt(t) : t;

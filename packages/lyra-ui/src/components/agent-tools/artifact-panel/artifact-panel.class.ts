@@ -13,8 +13,11 @@ export interface ArtifactVersion {
   label?: string;
 }
 
+/** Which slot is currently visible in `<lr-artifact-panel>`. */
+export type ArtifactPanelView = 'preview' | 'code';
+
 export interface LyraArtifactPanelEventMap {
-  'lr-view-change': CustomEvent<{ view: 'preview' | 'code' }>;
+  'lr-view-change': CustomEvent<{ view: ArtifactPanelView }>;
   'lr-version-change': CustomEvent<{ versionId: string }>;
   'lr-restore': CustomEvent<{ versionId: string }>;
   'lr-copy': CustomEvent<{ text: string }>;
@@ -76,7 +79,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   @property() kind = '';
 
   /** Which slot is currently visible. */
-  @property({ reflect: true }) view: 'preview' | 'code' = 'preview';
+  @property({ reflect: true }) view: ArtifactPanelView = 'preview';
 
   /** The artifact's version history, oldest first. The last entry is the latest version. */
   @property({ attribute: false }) versions: ArtifactVersion[] = [];
@@ -109,7 +112,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     this.hasCodeSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  private setView(view: 'preview' | 'code'): void {
+  private setView(view: ArtifactPanelView): void {
     this.view = view;
     this.emit('lr-view-change', { view });
   }

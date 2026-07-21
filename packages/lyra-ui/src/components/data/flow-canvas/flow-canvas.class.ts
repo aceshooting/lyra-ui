@@ -31,6 +31,9 @@ export interface FlowNode {
   outputs?: FlowHandle[];
 }
 
+/** Edge stroke tone; also `statusTone()`'s return type. */
+export type FlowEdgeTone = 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
+
 export interface FlowEdge {
   id: string;
   source: string;
@@ -39,7 +42,7 @@ export interface FlowEdge {
   targetHandle?: string;
   /** Drawn at the edge midpoint (unlike `lr-graph`'s `GraphLink.label`, which is spoken-only). */
   label?: string;
-  tone?: 'accent' | 'success' | 'warning' | 'danger' | 'neutral';
+  tone?: FlowEdgeTone;
 }
 
 /** The existing tool-lifecycle status enum, reused verbatim. */
@@ -1526,7 +1529,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   // Decoration paint
   // ---------------------------------------------------------------------
 
-  private statusTone(status: FlowRunStatus): 'accent' | 'success' | 'warning' | 'danger' | 'neutral' {
+  private statusTone(status: FlowRunStatus): FlowEdgeTone {
     if (status === 'running') return 'accent';
     if (status === 'success') return 'success';
     if (status === 'error') return 'danger';

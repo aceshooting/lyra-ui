@@ -3,12 +3,17 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
-    /* Query container so the @container rule below reacts to this group's own
-       allocated width, matching lr-button-group's own container-query approach. */
-    container-type: inline-size;
+    container-type: normal;
     min-inline-size: 0;
     max-inline-size: 100%;
     vertical-align: middle;
+  }
+
+  /* Query container so the @container rule below reacts to this group's own allocated width,
+     matching lr-button-group's own container-query approach -- opt-in only, see the class doc's
+     responsive property. */
+  :host([responsive]) {
+    container-type: inline-size;
   }
 
   [part='base'] {

@@ -67,4 +67,33 @@ describe('<lr-control-group>', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).flexWrap).to.equal('wrap');
   });
+
+  it('does not collapse to 0 width by default inside a shrink-to-fit flex row', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`
+      <div style="display:flex;">
+        <lr-control-group>
+          <lr-button size="s">Open</lr-button>
+          <lr-button size="s">Save</lr-button>
+        </lr-control-group>
+      </div>
+    `);
+    const group = wrapper.querySelector('lr-control-group') as LyraControlGroup;
+    expect(group.getBoundingClientRect().width).to.be.greaterThan(0);
+    expect(getComputedStyle(group).containerType).to.equal('normal');
+  });
+
+  it('opts back into container-query sizing (and its narrow-allocation breakpoint) via responsive', async () => {
+    const el = await fixture<LyraControlGroup>(html`
+      <lr-control-group responsive style="inline-size: 120px;">
+        <lr-button>Open</lr-button>
+        <lr-button>Save</lr-button>
+        <lr-button>Share</lr-button>
+      </lr-control-group>
+    `);
+    expect(el.responsive).to.be.true;
+    expect(el.hasAttribute('responsive')).to.be.true;
+    expect(getComputedStyle(el).containerType).to.equal('inline-size');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).inlineSize).to.equal('120px');
+  });
 });

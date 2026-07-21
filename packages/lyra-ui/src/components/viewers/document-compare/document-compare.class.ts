@@ -5,9 +5,18 @@ import type { DocumentRef } from '../../../ai/types.js';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
+import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
 import '../document-preview/document-preview.js';
 import '../../utility/diff-view/diff-view.js';
 import { styles } from './document-compare.styles.js';
+
+/** Which pane a comparison side identifies -- `'old'` is the "before" version, `'new'` is the
+ *  "after" version. */
+export type DocumentComparePaneSide = 'old' | 'new';
+
+/** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
+ *  independently-scrollable `<lr-document-preview>` panes. */
+export type LyraDocumentCompareView = 'diff' | 'side-by-side';
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
@@ -97,7 +106,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
    *  independently-scrollable `<lr-document-preview>` panes -- see the class doc's "Synchronized
    *  anchors" section for how the two panes are kept in sync. */
-  @property({ reflect: true }) view: 'diff' | 'side-by-side' = 'diff';
+  @property({ reflect: true }) view: LyraDocumentCompareView = 'diff';
 
   /** The "before" version. */
   @property({ attribute: false }) oldVersion?: DocumentCompareVersion;
@@ -106,7 +115,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   @property({ attribute: false }) newVersion?: DocumentCompareVersion;
 
   /** Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view="diff"`. */
-  @property({ attribute: 'diff-layout', reflect: true }) diffLayout: 'unified' | 'split' = 'unified';
+  @property({ attribute: 'diff-layout', reflect: true }) diffLayout: LyraDiffViewLayout = 'unified';
 
   /** Forwarded to the internal `<lr-diff-view>`'s own `copyable` property while `view="diff"`. */
   @property({ type: Boolean }) copyable = false;
@@ -147,7 +156,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     void this.previewNewEl?.scrollToAnchor(anchor);
   }
 
-  private onPaneScroll = (source: 'old' | 'new'): (() => void) => {
+  private onPaneScroll = (source: DocumentComparePaneSide): (() => void) => {
     return () => {
       if (!this.syncScroll || this.suppressSync) return;
       const from = source === 'old' ? this.paneOldEl : this.paneNewEl;
@@ -168,7 +177,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** Handles a pane's own `lr-highlight-activate` (not re-emitted -- the event bubbles through
    *  unchanged, see the class doc). When the other version has a highlight sharing this `id`,
    *  scrolls that pane to it too. */
-  private onHighlightActivate(side: 'old' | 'new', event: CustomEvent<{ id: string }>): void {
+  private onHighlightActivate(side: DocumentComparePaneSide, event: CustomEvent<{ id: string }>): void {
     const { id } = event.detail;
     const otherVersion = side === 'old' ? this.newVersion : this.oldVersion;
     if (!otherVersion?.highlights?.some((h) => h.id === id)) return;
@@ -194,7 +203,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     `;
   }
 
-  private renderVersionPane(version: DocumentCompareVersion | undefined, side: 'old' | 'new'): TemplateResult {
+  private renderVersionPane(version: DocumentCompareVersion | undefined, side: DocumentComparePaneSide): TemplateResult {
     if (!version) return html`<p part="pane-empty">${this.localize('documentCompareNoVersion')}</p>`;
     return html`
       <lr-document-preview

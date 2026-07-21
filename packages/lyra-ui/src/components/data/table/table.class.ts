@@ -73,6 +73,21 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
   },
 };
 
+/** Which inline-start/inline-end edge a column aligns or sticks to. Shared by
+ *  `TableColumn.align`, `TableColumn.sticky`'s non-boolean member, and
+ *  `stickyDirection()`'s return type. */
+export type TableEdgeAlign = 'start' | 'end';
+
+/** `TableColumn.editable`'s value shape: `true`/`false` for the legacy
+ *  double-click-to-edit toggle, `'always'` for a persistent editor in every
+ *  body cell of that column. Shared by `editTrigger()`'s parameter type. */
+export type TableColumnEditable = boolean | 'always';
+
+/** `<lr-table>`'s `selectionMode` property: `'none'` disables row selection,
+ *  `'single'` allows one selected row at a time, `'multiple'` allows any
+ *  number via checkboxes. */
+export type TableSelectionMode = 'none' | 'single' | 'multiple';
+
 export interface TableColumn<T> {
   key: string;
   label: string;
@@ -95,7 +110,7 @@ export interface TableColumn<T> {
    *  width internally and emits `lr-column-resize` on every resize step. */
   resizable?: boolean;
   sortable?: boolean;
-  align?: 'start' | 'end';
+  align?: TableEdgeAlign;
   /** Responsive priority — `undefined` (the default) means "always visible".
    *  `'low'` columns hide first (narrowest container), `'medium'` next, as
    *  `[part='base']`'s container-query width shrinks; both can be forced back
@@ -106,7 +121,7 @@ export interface TableColumn<T> {
    *  and `'start'` both pin to the inline-start edge; `'end'` pins to the
    *  inline-end edge (e.g. a trailing actions column in a narrow viewport).
    *  Both directions use CSS logical properties, so RTL flips automatically. */
-  sticky?: boolean | 'start' | 'end';
+  sticky?: boolean | TableEdgeAlign;
   /** Renders a sticky-bottom footer cell for this column, computed from every currently-rendered
    *  row (post-sort, pre-pagination) -- e.g. a column total. Omit for a column with no footer
    *  value; a `<tfoot>` renders at all only when at least one column defines this. */
@@ -154,7 +169,7 @@ export interface TableColumn<T> {
    *  one, an out-of-band `rows` update to that same cell no longer replaces
    *  what they are still editing. An untouched editor picks up a new `rows`
    *  value normally. */
-  editable?: boolean | 'always';
+  editable?: TableColumnEditable;
   /** Reads the value shown in the inline editor. When omitted, `row[key]` is
    *  used for record-like rows. */
   editValue?: (row: T) => string | number;
@@ -173,7 +188,7 @@ const INTERACTIVE_SELECTOR =
 /** Normalizes TableColumn.sticky's legacy boolean form (`true` == `'start'`,
  *  today's only supported direction) alongside the `'start'`/`'end'` union --
  *  `false`/`undefined` both resolve to "not sticky". */
-function stickyDirection(sticky: boolean | 'start' | 'end' | undefined): 'start' | 'end' | undefined {
+function stickyDirection(sticky: boolean | TableEdgeAlign | undefined): TableEdgeAlign | undefined {
   if (sticky === true) return 'start';
   if (sticky === 'start' || sticky === 'end') return sticky;
   return undefined;
@@ -185,7 +200,7 @@ function stickyDirection(sticky: boolean | 'start' | 'end' | undefined): 'start'
  *  resolve to "not editable". Sibling of `stickyDirection()` above, and the
  *  single place the widened union is interpreted, so no call site has to
  *  re-derive which of the two triggers a column is asking for. */
-function editTrigger(editable: boolean | 'always' | undefined): 'double-click' | 'always' | undefined {
+function editTrigger(editable: TableColumnEditable | undefined): 'double-click' | 'always' | undefined {
   if (editable === 'always') return 'always';
   if (editable === true) return 'double-click';
   return undefined;
@@ -493,7 +508,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  targets) can silently attach to the wrong row. */
   @property({ attribute: false }) rowKey?: (row: T) => string | number;
   @property({ attribute: false }) selectedKey: string | number | null = null;
-  @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: 'none' | 'single' | 'multiple' = 'none';
+  @property({ reflect: true, attribute: 'selection-mode' }) selectionMode: TableSelectionMode = 'none';
   @property({ attribute: false }) selectedKeys: Set<string | number> = new Set();
   @property({ type: Boolean, reflect: true }) filterable = false;
   @property({ attribute: 'filter-text' }) filterText = '';

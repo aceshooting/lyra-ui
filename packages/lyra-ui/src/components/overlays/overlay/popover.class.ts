@@ -12,6 +12,9 @@ import { styles } from './overlay.styles.js';
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware. */
 const DEFAULT_DISTANCE = 4;
 
+/** Semantic role vocabulary for the popup surface. Dropdown subclasses set this to `menu`. */
+export type LyraPopupRole = 'dialog' | 'menu';
+
 export interface LyraPopoverEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
@@ -39,7 +42,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   @property({ type: Number }) distance = DEFAULT_DISTANCE;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   /** Semantic role used by the popup. Dropdown subclasses set this to `menu`. */
-  @property({ attribute: 'popup-role' }) popupRole: 'dialog' | 'menu' = 'dialog';
+  @property({ attribute: 'popup-role' }) popupRole: LyraPopupRole = 'dialog';
   @state() private trigger?: HTMLElement;
   /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
    *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`

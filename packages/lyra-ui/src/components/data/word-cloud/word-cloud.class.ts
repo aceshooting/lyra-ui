@@ -12,6 +12,8 @@ import {
   MIN_SANE_FONT_SIZE,
   type PlacedWord,
   type WordCloudLayoutResult,
+  type WordCloudOrientations,
+  type WordCloudScale,
   type WordCloudWord,
 } from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
@@ -94,10 +96,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   @property({ attribute: 'max-font-size', type: Number }) maxFontSize = DEFAULT_MAX_FONT_SIZE;
 
   /** `sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest. */
-  @property() scale: 'linear' | 'sqrt' = 'linear';
+  @property() scale: WordCloudScale = 'linear';
 
   /** `mixed` lets some words render rotated 90° for denser packing. */
-  @property() orientations: 'horizontal' | 'mixed' = 'horizontal';
+  @property() orientations: WordCloudOrientations = 'horizontal';
 
   /** Custom categorical palette, cycled by word index (or by `group`, see `words`). Defaults to the `--lr-word-cloud-color-*` tokens. */
   @property({ attribute: false }) palette?: string[];

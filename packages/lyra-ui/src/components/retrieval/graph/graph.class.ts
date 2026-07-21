@@ -15,6 +15,11 @@ import { layeredLayout } from '../../../internal/layered-layout.js';
 import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
 import '../../overlays/skeleton/skeleton.class.js';
 
+export type GraphLayout = 'force' | 'layered';
+export type GraphRenderer = 'svg' | 'canvas';
+export type GraphSelectionMode = 'none' | 'single' | 'multiple';
+export type GraphPickKind = 'node' | 'link';
+
 export interface GraphNode {
   id: string;
   label?: string;
@@ -333,7 +338,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  animation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a
    *  documented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions
    *  without a tween. */
-  @property() layout: 'force' | 'layered' = 'force';
+  @property() layout: GraphLayout = 'force';
   /** `'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to
    *  a single `<canvas part="canvas">` -- the scale path (an honest ceiling for `'svg'`: dozens to
    *  low hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced
@@ -341,7 +346,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  cssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/
    *  props otherwise behave identically across renderers. Runtime changes tear down and rebuild
    *  the surface; positions survive via `prevById`/`lastPositionById`. */
-  @property() renderer: 'svg' | 'canvas' = 'svg';
+  @property() renderer: GraphRenderer = 'svg';
   @property({ type: Number }) width = 800;
   @property({ type: Number }) height = 600;
   @property({ type: Number, attribute: 'charge-strength' }) chargeStrength = -300;
@@ -376,7 +381,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  no `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component
    *  never mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns
    *  them back. */
-  @property({ attribute: 'selection-mode' }) selectionMode: 'none' | 'single' | 'multiple' = 'none';
+  @property({ attribute: 'selection-mode' }) selectionMode: GraphSelectionMode = 'none';
   @property({ attribute: false }) selectedNodeIds: string[] = [];
   @property({ attribute: false }) selectedLinkIds: string[] = [];
   /** Node ids to render dimmed (`data-dimmed` on the matching `[part="node"]`, themeable via
@@ -496,8 +501,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  decoded index always maps back to the exact item it was drawn for. */
   private pickItems: (
     | { kind: 'hull'; entry: { community: GraphCommunity; members: SimNode[] } }
-    | { kind: 'link'; link: SimLink }
-    | { kind: 'node'; node: SimNode }
+    | { kind: Extract<GraphPickKind, 'link'>; link: SimLink }
+    | { kind: Extract<GraphPickKind, 'node'>; node: SimNode }
   )[] = [];
   private canvasDragNode?: SimNode;
   private canvasPointerId?: number;
@@ -1397,11 +1402,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.canvasTooltipEl.removeAttribute('hidden');
   }
 
-  private isSelected(kind: 'node' | 'link', id: string): boolean {
+  private isSelected(kind: GraphPickKind, id: string): boolean {
     return kind === 'node' ? this.selectedNodeIds.includes(id) : this.selectedLinkIds.includes(id);
   }
 
-  private isDimmed(kind: 'node' | 'link', id: string): boolean {
+  private isDimmed(kind: GraphPickKind, id: string): boolean {
     return kind === 'node' ? this.dimmedNodeIds.includes(id) : this.dimmedLinkIds.includes(id);
   }
 
@@ -1413,7 +1418,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   /** Computes and emits the selection intent for activating `id`; never assigns
    *  `selectedNodeIds`/`selectedLinkIds` itself -- see the class doc's controlled-selection note. */
-  private emitSelectionIntent(kind: 'node' | 'link', id: string, toggle: boolean): void {
+  private emitSelectionIntent(kind: GraphPickKind, id: string, toggle: boolean): void {
     if (this.selectionMode === 'none') return;
     const selected = this.isSelected(kind, id);
     if (this.selectionMode === 'single' || !toggle) {

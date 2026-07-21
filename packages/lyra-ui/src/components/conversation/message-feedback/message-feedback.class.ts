@@ -12,9 +12,12 @@ export interface MessageFeedbackReason {
   label: string;
 }
 
+export type MessageFeedbackRating = 'up' | 'down';
+export type MessageFeedbackValue = MessageFeedbackRating | null;
+
 export interface LyraMessageFeedbackEventMap {
-  'lr-change': CustomEvent<{ value: 'up' | 'down' | null }>;
-  'lr-submit': CustomEvent<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>;
+  'lr-change': CustomEvent<{ value: MessageFeedbackValue }>;
+  'lr-submit': CustomEvent<{ value: MessageFeedbackRating; reasonIds: string[]; comment: string }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -24,7 +27,7 @@ export interface LyraMessageFeedbackEventMap {
 // icons, without adding a feedback-specific shape to that shared, general-purpose module. Same
 // approach several sibling chat components' own local glyphs take for the identical reason.
 // `filled` swaps the fill so the pressed state is never conveyed by aria-pressed/color alone.
-function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplateResult {
+function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTemplateResult {
   const cuff =
     direction === 'up'
       ? 'M7 11v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h3Z'
@@ -101,7 +104,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   static styles = [LyraElement.styles, styles];
 
   /** Current rating. Host-writable (e.g. to reflect a previously-recorded rating back). */
-  @property({ reflect: true }) value: 'up' | 'down' | null = null;
+  @property({ reflect: true }) value: MessageFeedbackValue = null;
 
   /** Categorical reasons offered as multi-select chips inside the detail panel. Empty renders no
    *  reason-chip group at all. */
@@ -144,11 +147,11 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     return this.reasons.length > 0 || this.commentable;
   }
 
-  private detailApplies(direction: 'up' | 'down'): boolean {
+  private detailApplies(direction: MessageFeedbackRating): boolean {
     return this.detailFor === 'both' || direction === 'down';
   }
 
-  private activateThumb(next: 'up' | 'down'): void {
+  private activateThumb(next: MessageFeedbackRating): void {
     if (this.disabled) return;
     if (this.value === next) {
       if (this.panelOpen) {
@@ -156,7 +159,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
-        this.emit<{ value: 'up' | 'down' | null }>('lr-change', { value: null });
+        this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: null });
         return;
       }
       if (this.detailApplies(next) && this.hasDetailContent) {
@@ -166,14 +169,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         return;
       }
       this.value = null;
-      this.emit<{ value: 'up' | 'down' | null }>('lr-change', { value: null });
+      this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: null });
       return;
     }
     this.selectedReasonIds = [];
     this.commentDraft = '';
     this.value = next;
     this.panelOpen = this.detailApplies(next) && this.hasDetailContent;
-    this.emit<{ value: 'up' | 'down' | null }>('lr-change', { value: next });
+    this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: next });
   }
 
   private focusActiveThumb(): void {
@@ -216,7 +219,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
 
   private onSubmit = (): void => {
     if (!this.value) return;
-    this.emit<{ value: 'up' | 'down'; reasonIds: string[]; comment: string }>('lr-submit', {
+    this.emit<{ value: MessageFeedbackRating; reasonIds: string[]; comment: string }>('lr-submit', {
       value: this.value,
       reasonIds: [...this.selectedReasonIds],
       comment: this.commentDraft.trim(),
@@ -226,7 +229,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.focusActiveThumb();
   };
 
-  private renderThumb(direction: 'up' | 'down'): TemplateResult {
+  private renderThumb(direction: MessageFeedbackRating): TemplateResult {
     const pressed = this.value === direction;
     const canExpand = this.detailApplies(direction) && this.hasDetailContent;
     return html`

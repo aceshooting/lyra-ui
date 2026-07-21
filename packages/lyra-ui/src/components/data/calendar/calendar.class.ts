@@ -12,6 +12,9 @@ export interface CalendarEvent { id?: string; date: string; title: string; start
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
 const monthStart = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
 
+/** The two display modes `view` accepts. */
+export type CalendarView = 'month' | 'agenda';
+
 /** `<lr-calendar>` — responsive month calendar with event markers and agenda mode.
  *
  * Month-view event markers are a mouse-only quick-select affordance layered on
@@ -49,7 +52,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   @property({ attribute: false }) events: CalendarEvent[] = [];
   @property() value = '';
   @property({ attribute: 'view-date' }) viewDate = formatISO(new Date()).slice(0, 7) + '-01';
-  @property({ reflect: true }) view: 'month' | 'agenda' = 'month';
+  @property({ reflect: true }) view: CalendarView = 'month';
   @property({ type: Number, attribute: 'first-day-of-week' }) firstDayOfWeek = 1;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private focusedDate = '';

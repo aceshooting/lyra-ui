@@ -11,6 +11,12 @@ import { styles } from './control-group.styles.js';
  * full height), this centers children of differing intrinsic heights and does not
  * assume any particular child type.
  *
+ * `container-type: inline-size` (needed for the `@container` breakpoint below) is opt-in via
+ * `responsive`, not automatic: unconditionally applying it made the group collapse to 0 inline
+ * size whenever it sat as an ordinary flex-basis:auto child of a shrink-to-fit flex row -- exactly
+ * this component's own toolbar-row use case. Set `responsive` when this group's own size instead
+ * comes from a percentage width, grid track, or block-level parent.
+ *
  * @customElement lr-control-group
  * @slot - Form controls, buttons, or any other action content.
  * @csspart base - The group wrapper (`role="group"`).
@@ -23,6 +29,17 @@ export class LyraControlGroup extends LyraElement {
    *  `role="group"` element. A plain `aria-label` attribute on the host itself is
    *  honored as a fallback when this is left unset, matching `<lr-button-group>`. */
   @property() label = '';
+
+  /** Opts into the group's own `@container` narrow-allocation breakpoint (see the class doc) by
+   *  making the host a CSS size-query container. Left unset (the default), the host uses
+   *  `container-type: normal` instead: `container-type: inline-size` forces this element's own
+   *  auto/content-based inline size to be computed as if it had no content, which silently
+   *  collapses it to 0 width whenever it sits as an ordinary (`flex-basis: auto`) child of a
+   *  shrink-to-fit flex row — exactly this component's own stated primary use case (a toolbar
+   *  row of mixed controls). Set `responsive` only when the group's own size instead comes from
+   *  somewhere else (a percentage width, a grid track, a block-level parent), where that failure
+   *  mode does not apply and the narrow-allocation breakpoint is wanted. */
+  @property({ type: Boolean, reflect: true }) responsive = false;
 
   render(): TemplateResult {
     const accessibleLabel = this.label || this.getAttribute('aria-label') || nothing;

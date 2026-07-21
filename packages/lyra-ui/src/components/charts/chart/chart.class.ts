@@ -80,6 +80,18 @@ function normalizeChartType(value: unknown): LyraChartType {
     : 'line';
 }
 
+/**
+ * The type `effectiveType()` actually returns: `LyraChartType`'s closed set, widened with
+ * `(string & {})` rather than plain `string` so every known member still autocompletes/narrows in
+ * an `===` comparison. The widening itself is required, not cosmetic — `effectiveType()` prefers
+ * `config.type` (the raw Chart.js passthrough documented on `LyraChart.config` above) over the
+ * `type` attribute's own `normalizeChartType()`-guaranteed value, and a consumer can set
+ * `config.type` to any Chart.js-recognized string, including a custom registered controller name
+ * beyond this library's own union (see `localizedChartType()`'s doc below, which already
+ * documents this same passthrough). A hard `LyraChartType` here would be a false guarantee.
+ */
+type EffectiveChartType = LyraChartType | (string & {});
+
 /** `true`-defaulting boolean attribute converter for `beginAtZero` -- identical shape/rationale to
  *  `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated locally per this library's
  *  convention of not sharing these tiny converters across independently-consumable component
@@ -460,7 +472,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.draw();
   }
 
-  private seriesToDataset(s: Series, index: number, palette: string[], effectiveType: string) {
+  private seriesToDataset(s: Series, index: number, palette: string[], effectiveType: EffectiveChartType) {
     const colors = Array.isArray(s.color) ? s.color : s.color ? [s.color] : undefined;
     // Default a color-less series to the categorical palette, keyed by dataset index (matching
     // <lr-lite-chart>). pie/doughnut carry one series whose *slices* each need a distinct color,
@@ -558,7 +570,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * labels retheme instead of sitting at Chart.js's own hardcoded defaults.
    */
   private buildScales(
-    effectiveType: OptionalPeerApi,
+    effectiveType: EffectiveChartType,
     theme: ThemeColors,
   ): OptionalPeerApi {
     if (effectiveType === 'pie' || effectiveType === 'doughnut') return {};
@@ -650,9 +662,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * *actually built* type, `this.builtType`, before the render pass that
    * would rebuild the `Chart` instance).
    */
-  private effectiveType(): OptionalPeerApi {
+  private effectiveType(): EffectiveChartType {
     return (
-      (this.config?.type as OptionalPeerApi | undefined) ?? normalizeChartType(this.type)
+      (this.config?.type as EffectiveChartType | undefined) ?? normalizeChartType(this.type)
     );
   }
 
