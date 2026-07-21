@@ -63,7 +63,7 @@ function normalizeSegment(raw: string): { text: string; rawOffsets: number[] } {
   const rawOffsets: number[] = [];
   let lastWasSpace = false;
   for (let i = 0; i < base.length; i++) {
-    const ch = base[i];
+    const ch = base[i]!; // safe: i < base.length
     if (ch === SOFT_HYPHEN) continue;
     if (WHITESPACE_CHAR_RE.test(ch)) {
       if (lastWasSpace) continue;
@@ -155,8 +155,8 @@ function locate(scope: TextQuoteScope, normalizedOffset: number): { node: Text; 
   let hi = scope.segments.length - 1;
   let found = -1;
   while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    if (scope.segments[mid].normalizedStart <= normalizedOffset) {
+    const mid = (lo + hi) >> 1; // safe below: lo <= mid <= hi keeps segments[mid] in bounds
+    if (scope.segments[mid]!.normalizedStart <= normalizedOffset) {
       found = mid;
       lo = mid + 1;
     } else {
@@ -164,7 +164,7 @@ function locate(scope: TextQuoteScope, normalizedOffset: number): { node: Text; 
     }
   }
   if (found === -1) return null;
-  const segment = scope.segments[found];
+  const segment = scope.segments[found]!; // safe: found is an in-bounds index (set from mid, != -1)
   const local = normalizedOffset - segment.normalizedStart;
   if (local >= segment.rawOffsets.length) {
     // The offset lands exactly at (or past) this segment's own end -- resolve to one past its last
@@ -173,7 +173,7 @@ function locate(scope: TextQuoteScope, normalizedOffset: number): { node: Text; 
     const lastRaw = segment.rawOffsets[segment.rawOffsets.length - 1] ?? 0;
     return { node: segment.node, offset: Math.min(segment.node.data.length, lastRaw + 1) };
   }
-  return { node: segment.node, offset: segment.rawOffsets[local] };
+  return { node: segment.node, offset: segment.rawOffsets[local]! }; // safe: local < rawOffsets.length checked above
 }
 
 function rangeFromOffsets(scope: TextQuoteScope, start: number, end: number): Range | null {
@@ -205,7 +205,7 @@ export function resolveTextQuote(
   if (candidates.length === 0) candidates = findAllOccurrences(scope.text, quote, true);
   if (candidates.length === 0) return null;
 
-  let best = candidates[0];
+  let best = candidates[0]!; // safe: candidates.length > 0 checked above
   let bestScore = -1;
   for (const start of candidates) {
     let score = 0;
@@ -267,7 +267,7 @@ function lastTextNodeDeep(node: Node): Text | null {
   if (node.nodeType === Node.TEXT_NODE) return node as Text;
   const children = node.childNodes;
   for (let i = children.length - 1; i >= 0; i--) {
-    const found = lastTextNodeDeep(children[i]);
+    const found = lastTextNodeDeep(children[i]!); // safe: 0 <= i < children.length
     if (found) return found;
   }
   return null;
@@ -294,7 +294,7 @@ function findRangeEndInScope(scope: TextQuoteScope, range: Range): number | null
   const segment = scope.segments.find((s) => s.node === boundary.node);
   if (!segment) return null;
   let local = 0;
-  while (local < segment.rawOffsets.length && segment.rawOffsets[local] < boundary.offset) local++;
+  while (local < segment.rawOffsets.length && segment.rawOffsets[local]! < boundary.offset) local++; // safe: index guarded by the length check in the same condition
   return segment.normalizedStart + local;
 }
 

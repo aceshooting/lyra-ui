@@ -22,8 +22,8 @@ export function binValues(values: number[], binCount: number): HistogramBucket[]
   const bins = normalizeHistogramBinCount(binCount);
   if (bins <= 0) return [];
 
-  let lo = finite[0];
-  let hi = finite[0];
+  let lo = finite[0]!; // safe: finite.length === 0 returned above
+  let hi = finite[0]!; // safe: finite.length === 0 returned above
   for (const v of finite) {
     if (v < lo) lo = v;
     if (v > hi) hi = v;
@@ -46,7 +46,7 @@ export function binValues(values: number[], binCount: number): HistogramBucket[]
 
   for (const v of finite) {
     const index = constant ? 0 : v === hi ? bins - 1 : Math.floor((v - lo) / width);
-    buckets[Math.min(bins - 1, Math.max(0, index))].count++;
+    buckets[Math.min(bins - 1, Math.max(0, index))]!.count++; // safe: index clamped to [0, bins-1], buckets has length bins
   }
   return buckets;
 }

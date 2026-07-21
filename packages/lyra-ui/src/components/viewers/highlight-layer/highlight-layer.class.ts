@@ -85,7 +85,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     if (this.items.length === 0) return null;
     if (this.focusedId && this.items.some((i) => i.id === this.focusedId)) return this.focusedId;
     if (this.activeId && this.items.some((i) => i.id === this.activeId)) return this.activeId;
-    return this.items[0].id;
+    return this.items[0]!.id; // safe: returns null above when items is empty
   }
 
   private onRectClick(id: string): void {
@@ -103,7 +103,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   private onRectKeyDown(e: KeyboardEvent, index: number): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      this.onRectClick(this.items[index].id);
+      this.onRectClick(this.items[index]!.id); // safe: index is a rendered-rect index into this.items
       return;
     }
     const rtl = this.effectiveDirection === 'rtl';
@@ -116,7 +116,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     else if (e.key === 'End') nextIndex = this.items.length - 1;
     if (nextIndex === undefined || nextIndex === index) return;
     e.preventDefault();
-    const nextId = this.items[nextIndex].id;
+    const nextId = this.items[nextIndex]!.id; // safe: nextIndex clamped to [0, this.items.length - 1]
     this.focusedId = nextId;
     this.scheduleAfterUpdate(() => this.focusRect(nextId));
   }

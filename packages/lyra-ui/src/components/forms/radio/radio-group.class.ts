@@ -77,7 +77,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     const backward = event.key === 'ArrowUp' || (rtl ? event.key === 'ArrowRight' : event.key === 'ArrowLeft');
     const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? radios.length - 1
       : forward ? (index + 1) % radios.length : backward ? (index - 1 + radios.length) % radios.length : index;
-    const next = radios[nextIndex];
+    // safe: radios is non-empty (guarded above) and nextIndex is a modulo/clamp into range.
+    const next = radios[nextIndex]!;
     next.focus();
     this.selectRadio(next);
   };

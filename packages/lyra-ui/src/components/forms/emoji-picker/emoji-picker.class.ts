@@ -350,7 +350,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     }
     const buttons = this.optionButtons();
     if (buttons.length === 0) return 1;
-    const firstTop = buttons[0].offsetTop;
+    const firstTop = buttons[0]!.offsetTop; // safe: length === 0 returned above
     let columns = 0;
     for (const button of buttons) {
       if (button.offsetTop !== firstTop) break;

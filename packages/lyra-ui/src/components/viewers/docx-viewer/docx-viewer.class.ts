@@ -421,7 +421,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  any DOM element to attach a click listener to, so this works identically on both paint paths. */
   private hitTestHighlightAt(x: number, y: number): string | null {
     for (let i = this.resolvedHighlightRanges.length - 1; i >= 0; i--) {
-      const { id, range } = this.resolvedHighlightRanges[i];
+      const { id, range } = this.resolvedHighlightRanges[i]!; // safe: i in [0, length)
       for (const rect of range.getClientRects()) {
         if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return id;
       }
@@ -536,7 +536,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const { entries } = buildTextIndex(root);
     const marks: HTMLElement[] = [];
     for (let i = this.searchMatches.length - 1; i >= 0; i--) {
-      const match = this.searchMatches[i];
+      const match = this.searchMatches[i]!; // safe: i in [0, length)
       const startPoint = pointAtOffset(entries, match.start);
       const endPoint = pointAtOffset(entries, match.end);
       if (!startPoint || !endPoint) continue;

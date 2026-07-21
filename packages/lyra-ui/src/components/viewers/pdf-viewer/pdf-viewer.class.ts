@@ -955,11 +955,13 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const xPct = ((e.clientX - pageRect.left) / pageRect.width) * 100;
     const yPct = ((e.clientY - pageRect.top) / pageRect.height) * 100;
     for (let i = items.length - 1; i >= 0; i--) {
-      const hit = items[i].rects.some(
+      const item = items[i];
+      if (!item) continue; // safe: counted loop over items — never undefined in-bounds
+      const hit = item.rects.some(
         (rect) => xPct >= rect.x && xPct <= rect.x + rect.width && yPct >= rect.y && yPct <= rect.y + rect.height,
       );
       if (hit) {
-        this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: items[i].id });
+        this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: item.id });
         return;
       }
     }

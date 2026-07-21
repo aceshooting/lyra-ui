@@ -236,8 +236,9 @@ function handleTab(state: OverlayDocumentState, entry: OverlayEntry, event: Keyb
   }
 
   const active = deepActiveElement(state.document);
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
+  // safe: focusable.length === 0 returns early above, so both ends exist.
+  const first = focusable[0]!;
+  const last = focusable[focusable.length - 1]!;
   const activeIndex = active ? focusable.indexOf(active as HTMLElement) : -1;
   if (activeIndex === -1) {
     event.preventDefault();
@@ -264,6 +265,7 @@ function handleMutations(state: OverlayDocumentState, records: MutationRecord[])
   let needsInertUpdate = false;
   for (let index = 0; index < records.length; index++) {
     const record = records[index];
+    if (!record) continue;
     if (record.type === 'childList') {
       needsInertUpdate = true;
       continue;
@@ -275,6 +277,7 @@ function handleMutations(state: OverlayDocumentState, records: MutationRecord[])
     let nextRecord: MutationRecord | undefined;
     for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
       const candidate = records[nextIndex];
+      if (!candidate) continue;
       if (candidate.type === 'attributes' && candidate.attributeName === 'inert' && candidate.target === element) {
         nextRecord = candidate;
         break;
@@ -416,7 +419,8 @@ function addAllowedPath(allowed: Map<ParentNode, Set<Element>>, host: HTMLElemen
 function applyTopmostInert(state: OverlayDocumentState): void {
   let modalIndex = -1;
   for (let index = state.stack.length - 1; index >= 0; index--) {
-    if (state.stack[index].options.modal !== false) {
+    const entry = state.stack[index];
+    if (entry && entry.options.modal !== false) {
       modalIndex = index;
       break;
     }

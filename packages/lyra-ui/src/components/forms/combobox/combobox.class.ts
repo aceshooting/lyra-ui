@@ -656,7 +656,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       const declared = this.options.filter((o) => o.selected).map((o) => o.value);
       this._defaultSelected = [...declared];
       if (declared.length && !this._restoredStateActive) {
-        this.value = this.multiple ? declared : declared[0];
+        // safe: declared.length is truthy, so declared[0] exists.
+        this.value = this.multiple ? declared : declared[0]!;
         return; // `value=`'s setter already called reflectSelected()
       }
     } else {
@@ -669,7 +670,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       if (newlySelected.length && !this._restoredStateActive) {
         this.value = this.multiple
           ? [...new Set([...this._selected, ...newlySelected])]
-          : newlySelected[newlySelected.length - 1];
+          // safe: newlySelected.length is truthy, so the last element exists.
+          : newlySelected[newlySelected.length - 1]!;
         return; // `value=`'s setter already called reflectSelected()
       }
     }
@@ -990,12 +992,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         if (!this.open) return this.show();
         this.activeIndex = Math.max(0, this.activeIndex - 1);
         break;
-      case 'Enter':
-        if (this.open && this.activeIndex >= 0 && navigable[this.activeIndex]) {
+      case 'Enter': {
+        const activeRow = navigable[this.activeIndex];
+        if (this.open && this.activeIndex >= 0 && activeRow) {
           e.preventDefault();
-          this.pickRow(navigable[this.activeIndex]);
+          this.pickRow(activeRow);
         }
         break;
+      }
       case 'Escape':
         if (this.open) {
           e.preventDefault();
@@ -1016,7 +1020,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         break;
       case 'Backspace':
         if (this.multiple && !this.query && this._selected.length) {
-          this.removeValue(this._selected[this._selected.length - 1]);
+          // safe: _selected.length is truthy, so the last element exists.
+          this.removeValue(this._selected[this._selected.length - 1]!);
         }
         break;
     }

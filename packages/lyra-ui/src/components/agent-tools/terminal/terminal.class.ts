@@ -260,7 +260,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private putChar(ch: string, styles: AnsiStyles): void {
     if (this.buffer.length === 0) this.appendLine();
-    const line = this.buffer[this.buffer.length - 1];
+    const line = this.buffer[this.buffer.length - 1]!; // safe: appendLine() above guarantees ≥1 line
     if (this.column < line.cells.length) {
       line.cells[this.column] = { char: ch, styles };
     } else {

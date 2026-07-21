@@ -161,7 +161,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     for (let index = from; index >= 0 && index < rows.length; index += step) if (!rows[index]!.disabled) return index;
     return -1;
   }
-  private onKeyDown = (event: KeyboardEvent): void => { const rows = this.filtered; if (event.key === 'ArrowDown') { event.preventDefault(); const next = this.seekEnabled(rows, this.activeIndex + 1, 1); if (next !== -1) this.activeIndex = next; } else if (event.key === 'ArrowUp') { event.preventDefault(); const previous = this.seekEnabled(rows, this.activeIndex - 1, -1); if (previous !== -1) this.activeIndex = previous; } else if (event.key === 'Enter' && rows[this.activeIndex]) { event.preventDefault(); this.select(rows[this.activeIndex]); } };
+  private onKeyDown = (event: KeyboardEvent): void => { const rows = this.filtered; if (event.key === 'ArrowDown') { event.preventDefault(); const next = this.seekEnabled(rows, this.activeIndex + 1, 1); if (next !== -1) this.activeIndex = next; } else if (event.key === 'ArrowUp') { event.preventDefault(); const previous = this.seekEnabled(rows, this.activeIndex - 1, -1); if (previous !== -1) this.activeIndex = previous; } else if (event.key === 'Enter') { const active = rows[this.activeIndex]; if (active) { event.preventDefault(); this.select(active); } } };
   private onInput = (event: Event): void => { this.queryText = (event.target as HTMLInputElement).value; this.activeIndex = Math.max(0, this.seekEnabled(this.filtered, 0, 1)); };
   override render(): TemplateResult {
     if (!this.open) return html``;

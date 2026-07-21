@@ -11,6 +11,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "useDefineForClassFields": false,

@@ -484,6 +484,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
     const item = which === 'first' ? navigable[0] : navigable[navigable.length - 1];
+    if (!item) return; // navigable is non-empty (checked above), so item is always defined
     this.setActiveItem(item);
   }
 
@@ -532,23 +533,25 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       case 'ArrowDown':
         e.preventDefault();
         if (navigable.length) {
-          this.setActiveItem(navigable[(currentNavIndex + 1 + navigable.length) % navigable.length]);
+          const next = navigable[(currentNavIndex + 1 + navigable.length) % navigable.length];
+          if (next) this.setActiveItem(next); // modulo navigable.length keeps the index in-bounds
         }
         break;
       case 'ArrowUp':
         e.preventDefault();
         if (navigable.length) {
           const prevIndex = currentNavIndex <= 0 ? navigable.length - 1 : currentNavIndex - 1;
-          this.setActiveItem(navigable[prevIndex]);
+          const prev = navigable[prevIndex];
+          if (prev) this.setActiveItem(prev); // prevIndex is in [0, navigable.length - 1]
         }
         break;
       case 'Home':
         e.preventDefault();
-        if (navigable.length) this.setActiveItem(navigable[0]);
+        if (navigable.length) this.setActiveItem(navigable[0]!); // safe: navigable non-empty
         break;
       case 'End':
         e.preventDefault();
-        if (navigable.length) this.setActiveItem(navigable[navigable.length - 1]);
+        if (navigable.length) this.setActiveItem(navigable[navigable.length - 1]!); // safe: navigable non-empty
         break;
       case 'Enter':
       case ' ':
@@ -656,6 +659,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const n = navigable.length;
     for (let step = 1; step <= n; step++) {
       const candidate = navigable[(currentIndex + step + n) % n];
+      if (!candidate) continue; // modulo n keeps the index in-bounds; guard satisfies the checker
       if ((candidate.textContent ?? '').trim().toLowerCase().startsWith(this.typeAheadBuffer)) {
         this.setActiveItem(candidate);
         return;

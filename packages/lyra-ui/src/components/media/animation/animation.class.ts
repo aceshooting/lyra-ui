@@ -125,7 +125,10 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
   const raw = getComputedStyle(el).getPropertyValue(`--lr-transition-${preset}`).trim();
   const match = /^([\d.]+)(ms|s)\s+(.+)$/.exec(raw);
   if (!match) return { duration: 1000, easing: 'linear' };
-  const [, num, unit, easing] = match;
+  // safe: all three capture groups are non-optional, so a successful match fills them.
+  const num = match[1]!;
+  const unit = match[2]!;
+  const easing = match[3]!;
   return { duration: unit === 's' ? parseFloat(num) * 1000 : parseFloat(num), easing: easing.trim() };
 }
 

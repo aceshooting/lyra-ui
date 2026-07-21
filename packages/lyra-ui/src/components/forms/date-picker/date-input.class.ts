@@ -459,7 +459,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const parts = this.value.split('/');
     // parts[0] always exists (String.split() on '/' never returns an empty array); only
     // parts[1] (the range end) can be missing when `value` has no '/' separator.
-    const from = parseISO(parts[0]);
+    const from = parseISO(parts[0]!);
     const to = parseISO(parts[1] ?? '');
     if (!from) return '';
     const formatter = dateTimeFormat(this.effectiveLocale, {});
@@ -634,9 +634,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
     const ambiguous = /^(\d{1,4})[/.-](\d{1,4})[/.-](\d{1,4})$/.exec(raw);
     if (ambiguous) {
+      // safe: g1/g2/g3 are mandatory (non-optional) capture groups, so a successful match populates all three
       const [, g1, g2, g3] = ambiguous;
-      if (g1.length === 4) {
-        return parseISO(`${g1}-${g2.padStart(2, '0')}-${g3.padStart(2, '0')}`);
+      if (g1!.length === 4) {
+        return parseISO(`${g1}-${g2!.padStart(2, '0')}-${g3!.padStart(2, '0')}`);
       }
       const order = localeDateOrder(this.effectiveLocale);
       const values = [Number(g1), Number(g2), Number(g3)];
@@ -668,9 +669,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  `commit()` already does for a UI-picked range. */
   private parseRangeText(raw: string): string | null {
     if (/^\d{4}-\d{2}-\d{2}\/\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      // safe: the regex above guarantees exactly one '/', so split yields two defined parts
       const [a, b] = raw.split('/');
-      const from = parseISO(a);
-      const to = parseISO(b);
+      const from = parseISO(a!);
+      const to = parseISO(b!);
       if (!from || !to) return null;
       return from <= to ? raw : `${b}/${a}`;
     }

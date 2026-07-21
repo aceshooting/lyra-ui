@@ -246,6 +246,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     if (rows.length === 0) return;
     const currentIndex = rows.findIndex((r) => r.span.id === this.focusedId);
     const current = currentIndex >= 0 ? rows[currentIndex] : rows[0];
+    if (!current) return; // rows is non-empty (checked above), so this never fires; narrows for the switch below
     const rtl = isRtl(this);
     const expandKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const collapseKey = rtl ? 'ArrowRight' : 'ArrowLeft';
@@ -283,8 +284,9 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
           this.toggleSpan(current.span.id);
         } else {
           for (let i = currentIndex - 1; i >= 0; i--) {
-            if (rows[i].depth < current.depth) {
-              this.focusRow(rows[i]);
+            const row = rows[i];
+            if (row && row.depth < current.depth) {
+              this.focusRow(row);
               break;
             }
           }

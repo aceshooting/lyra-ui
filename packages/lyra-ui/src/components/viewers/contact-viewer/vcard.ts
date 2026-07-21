@@ -17,8 +17,9 @@ function unescapeValue(value: string): string { return value.replace(/\\(\\|,|;|
 function splitUnescaped(value: string, separator: string): string[] {
   const parts: string[] = []; let current = '';
   for (let i = 0; i < value.length; i++) {
-    if (value[i] === '\\' && i + 1 < value.length) { current += value[i] + value[i + 1]; i++; continue; }
-    if (value[i] === separator) { parts.push(current); current = ''; } else current += value[i];
+    const ch = value[i]!; // safe: i < value.length
+    if (ch === '\\' && i + 1 < value.length) { current += ch + value[i + 1]!; i++; continue; } // safe: i + 1 < value.length checked
+    if (ch === separator) { parts.push(current); current = ''; } else current += ch;
   }
   parts.push(current); return parts;
 }
@@ -26,9 +27,11 @@ function splitUnescaped(value: string, separator: string): string[] {
 function parseProperty(line: string): { name: string; types: string[]; value: string } | null {
   const colon = line.indexOf(':'); if (colon < 0) return null;
   const head = line.slice(0, colon).split(';');
-  const namePart = head[0].slice(head[0].lastIndexOf('.') + 1).toUpperCase();
+  const first = head[0]!; // safe: String.prototype.split always returns ≥1 element
+  const namePart = first.slice(first.lastIndexOf('.') + 1).toUpperCase();
   const types = head.slice(1).flatMap((param) => {
-    const [key, value] = param.split(/=(.*)/s); return key.toUpperCase() === 'TYPE' ? value.split(',').map((item) => item.trim().toLowerCase()).filter(Boolean) : [];
+    const [key, value] = param.split(/=(.*)/s);
+    return key?.toUpperCase() === 'TYPE' && value !== undefined ? value.split(',').map((item) => item.trim().toLowerCase()).filter(Boolean) : [];
   });
   return { name: namePart, types, value: line.slice(colon + 1) };
 }
@@ -43,11 +46,11 @@ function parseBlock(block: string): VCardContact {
     const prop = parseProperty(line); if (!prop || ['BEGIN', 'END', 'VERSION'].includes(prop.name)) continue;
     switch (prop.name) {
       case 'FN': contact.fn = unescapeValue(prop.value); break;
-      case 'N': { const [familyNames, givenNames, additionalNames, honorificPrefixes, honorificSuffixes] = structured(prop.value, 5); contact.n = { familyNames, givenNames, additionalNames, honorificPrefixes, honorificSuffixes }; break; }
+      case 'N': { const [familyNames = '', givenNames = '', additionalNames = '', honorificPrefixes = '', honorificSuffixes = ''] = structured(prop.value, 5); contact.n = { familyNames, givenNames, additionalNames, honorificPrefixes, honorificSuffixes }; break; }
       case 'ORG': contact.org = splitUnescaped(prop.value, ';').map(unescapeValue).filter(Boolean); break;
       case 'TEL': contact.tel.push({ value: unescapeValue(prop.value), types: prop.types }); break;
       case 'EMAIL': contact.email.push({ value: unescapeValue(prop.value), types: prop.types }); break;
-      case 'ADR': { const [poBox, extendedAddress, streetAddress, locality, region, postalCode, country] = structured(prop.value, 7); contact.adr.push({ poBox, extendedAddress, streetAddress, locality, region, postalCode, country, types: prop.types }); break; }
+      case 'ADR': { const [poBox = '', extendedAddress = '', streetAddress = '', locality = '', region = '', postalCode = '', country = ''] = structured(prop.value, 7); contact.adr.push({ poBox, extendedAddress, streetAddress, locality, region, postalCode, country, types: prop.types }); break; }
       default: break;
     }
   }

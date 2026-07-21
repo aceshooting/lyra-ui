@@ -153,8 +153,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const n = Math.min(count, arr.length);
     for (let i = 0; i < n; i += 1) {
       const j = i + Math.floor(Math.random() * (arr.length - i));
-      const swap = arr[i];
-      arr[i] = arr[j];
+      const swap = arr[i]!; // safe: i < n <= arr.length
+      arr[i] = arr[j]!; // safe: j in [i, arr.length-1]
       arr[j] = swap;
     }
     return arr.slice(0, n);
@@ -184,7 +184,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     const start = this.sequenceCursor % total;
     const picked: HTMLElement[] = [];
     for (let k = 0; k < count; k += 1) {
-      picked.push(pool[(start + k) % total]);
+      // safe: pool is non-empty (reselect() returns early for an empty pool), so total >= 1 and (start + k) % total is in [0, total-1]
+      picked.push(pool[(start + k) % total]!);
     }
     this.sequenceCursor = (start + count) % total;
     return picked;

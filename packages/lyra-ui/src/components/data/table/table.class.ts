@@ -942,7 +942,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const visible = this.visibleHeaders();
     if (visible.length === 0 || this.activeColKey === null) return;
     if (!visible.some((header) => header.dataset['colKey'] === this.activeColKey)) {
-      this.activeColKey = visible[0].dataset['colKey'] ?? null;
+      this.activeColKey = visible[0]!.dataset['colKey'] ?? null; // safe: length === 0 returned above
     }
   }
 
@@ -1154,6 +1154,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     let runningEnd = 0;
     for (let i = this.columns.length - 1; i >= 0; i--) {
       const col = this.columns[i];
+      if (!col) continue; // safe: counted loop over this.columns — never undefined in-bounds
       if (stickyDirection(col.sticky) !== 'end') continue;
       offsets.set(col.key, runningEnd);
       runningEnd += headerWidth(col.key);
@@ -1470,19 +1471,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     switch (e.key) {
       case 'ArrowLeft':
         e.preventDefault();
-        this.focusHeader(headers[rtl ? Math.min(headers.length - 1, index + 1) : Math.max(0, index - 1)]);
+        this.focusHeader(headers[rtl ? Math.min(headers.length - 1, index + 1) : Math.max(0, index - 1)] ?? null);
         return;
       case 'ArrowRight':
         e.preventDefault();
-        this.focusHeader(headers[rtl ? Math.max(0, index - 1) : Math.min(headers.length - 1, index + 1)]);
+        this.focusHeader(headers[rtl ? Math.max(0, index - 1) : Math.min(headers.length - 1, index + 1)] ?? null);
         return;
       case 'Home':
         e.preventDefault();
-        this.focusHeader(headers[0]);
+        this.focusHeader(headers[0] ?? null);
         return;
       case 'End':
         e.preventDefault();
-        this.focusHeader(headers[headers.length - 1]);
+        this.focusHeader(headers[headers.length - 1] ?? null);
         return;
       case 'ArrowDown': {
         e.preventDefault();
@@ -1508,7 +1509,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        this.focusRow(bodyRows[Math.min(bodyRows.length - 1, index + 1)]);
+        this.focusRow(bodyRows[Math.min(bodyRows.length - 1, index + 1)] ?? null);
         return;
       case 'ArrowUp':
         e.preventDefault();
@@ -1517,16 +1518,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           const key = this.focusedColKey();
           this.focusHeader(headers.find((h) => h.dataset['colKey'] === key) ?? headers[0] ?? null);
         } else {
-          this.focusRow(bodyRows[index - 1]);
+          this.focusRow(bodyRows[index - 1] ?? null);
         }
         return;
       case 'Home':
         e.preventDefault();
-        this.focusRow(bodyRows[0]);
+        this.focusRow(bodyRows[0] ?? null);
         return;
       case 'End':
         e.preventDefault();
-        this.focusRow(bodyRows[bodyRows.length - 1]);
+        this.focusRow(bodyRows[bodyRows.length - 1] ?? null);
         return;
       default:
         return;

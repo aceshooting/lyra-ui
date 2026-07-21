@@ -91,7 +91,7 @@ export function formatFileSize(
     value /= 1024;
     unitIndex++;
   }
-  return `${value.toFixed(1)} ${unitLabel(BYTE_UNITS[unitIndex])}`;
+  return `${value.toFixed(1)} ${unitLabel(BYTE_UNITS[unitIndex]!)}`; // safe: unitIndex ∈ [0, BYTE_UNITS.length - 1]
 }
 
 /** Visible (not just color-coded) text for every non-resting status --

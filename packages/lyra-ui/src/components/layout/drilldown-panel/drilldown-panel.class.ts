@@ -305,7 +305,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
       return html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`;
     }
     if (categories.length === 1) {
-      const only = categories[0];
+      const only = categories[0]!; // safe: categories.length === 1 checked above
       return html`<div part="category" role="region" aria-label=${only.label}>${only.content}</div>`;
     }
     return html`

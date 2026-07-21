@@ -59,7 +59,8 @@ export function resolveCssLength(value: number | string | undefined, host?: Elem
   const match = BREAKPOINT_LENGTH_RE.exec(value.trim());
   if (match === null) return undefined;
 
-  const length = Number.parseFloat(match[1]);
+  // safe: capture group 1 (the numeric part) is non-optional, so it exists on any match.
+  const length = Number.parseFloat(match[1]!);
   if (!Number.isFinite(length)) return undefined;
 
   switch (match[2]?.toLowerCase()) {

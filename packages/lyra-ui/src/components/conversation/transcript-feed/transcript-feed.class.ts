@@ -145,7 +145,8 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
 
   private showSpeakerFor(list: LyraTranscriptEntry[], index: number): boolean {
     const prev = list[index - 1];
-    return !prev || prev.speaker !== list[index].speaker;
+    const current = list[index]!; // safe: called from list.map(), index is always in-bounds
+    return !prev || prev.speaker !== current.speaker;
   }
 
   private formatTs(epochMs: number): string {

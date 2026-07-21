@@ -220,7 +220,9 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                     ? html`<button
                         part="restore-button"
                         type="button"
-                        @click=${() => this.emit('lr-restore', { versionId: this.versions[index].id })}
+                        @click=${() =>
+                          // safe: inside the hasVersions branch, `index` is an in-bounds version index
+                          this.emit('lr-restore', { versionId: this.versions[index]!.id })}
                       >
                         ${this.localize('artifactPanelRestore')}
                       </button>`

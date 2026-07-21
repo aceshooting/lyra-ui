@@ -32,7 +32,8 @@ function indexToColumn(index: number): string {
 function parseCellRef(ref: string): { row: number; col: number } | null {
   const match = CELL_REF_RE.exec(ref.trim());
   if (!match) return null;
-  return { row: Number(match[2]) - 1, col: columnToIndex(match[1]) };
+  // safe: both capture groups are mandatory, so a successful match always has [1] and [2]
+  return { row: Number(match[2]) - 1, col: columnToIndex(match[1]!) };
 }
 
 /**

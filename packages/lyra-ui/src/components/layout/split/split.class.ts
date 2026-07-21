@@ -896,7 +896,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       terms.push(`${constraint.minPercent}%`);
     }
     if (terms.length === 0) return `${NO_MIN_PX}px`;
-    if (terms.length === 1) return terms[0];
+    if (terms.length === 1) return terms[0]!; // safe: exactly one term
     return `max(${this.safeMin}%, ${terms.join(', ')})`;
   }
 
@@ -911,13 +911,16 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       terms.push(`${constraint.maxPercent}%`);
     }
     if (terms.length === 0) return `${NO_MAX_PX}px`;
-    if (terms.length === 1) return terms[0];
+    if (terms.length === 1) return terms[0]!; // safe: exactly one term
     return `min(${terms.join(', ')})`;
   }
 
   private clampPair(sizes: number[], i: number, delta: number, containerSize = 0): number[] {
     const next = [...sizes];
-    const pairTotal = next[i] + next[i + 1];
+    const currentA = next[i];
+    const currentB = next[i + 1];
+    if (currentA === undefined || currentB === undefined) return next;
+    const pairTotal = currentA + currentB;
     const a = this.percentBounds(i, containerSize);
     const b = this.percentBounds(i + 1, containerSize);
     // Panel i's own bounds, further narrowed by panel i+1's bounds (its
@@ -931,7 +934,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // the same untouched starting sizes.
     const lo = Math.min(loRaw, pairTotal);
     const hi = Math.max(hiRaw, lo);
-    const clampedA = Math.min(Math.max(next[i] + delta, lo), hi);
+    const clampedA = Math.min(Math.max(currentA + delta, lo), hi);
     next[i] = clampedA;
     next[i + 1] = pairTotal - clampedA;
     return next;
@@ -1023,7 +1026,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // snapshot-based clamp would use).
     const incremental = cumulativeDelta - drag.appliedDelta;
     const priorValue = this.sizes[drag.index];
+    if (priorValue === undefined) return;
     const paired = this.clampPair(this.sizes, drag.index, incremental, total);
+    const pairedA = paired[drag.index];
+    const pairedB = paired[drag.index + 1];
+    if (pairedA === undefined || pairedB === undefined) return;
     // Accumulate this move's own *realized* increment (post-clamp) onto the
     // running total, rather than recomputing an absolute "total since
     // drag-start" diff against a fixed startSizes snapshot. clampPair can
@@ -1037,12 +1044,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // next incremental calculation. Summing only this move's own delta
     // (paired vs. the value immediately prior to this clamp) avoids both
     // bugs at once.
-    drag.appliedDelta += paired[drag.index] - priorValue;
+    drag.appliedDelta += pairedA - priorValue;
     // Merge only this drag's pair into the live sizes so a concurrent drag
     // on another divider (different pointerId) isn't clobbered.
     const next = [...this.sizes];
-    next[drag.index] = paired[drag.index];
-    next[drag.index + 1] = paired[drag.index + 1];
+    next[drag.index] = pairedA;
+    next[drag.index + 1] = pairedB;
     this.sizes = next;
     this.emit('lr-resize', { sizes: [...this.sizes] });
   };

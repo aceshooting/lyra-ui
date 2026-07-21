@@ -496,11 +496,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     const n = rows.length;
     for (let step = 1; step <= n; step++) {
       const idx = (currentIndex + step + n) % n;
-      if (rows[idx].label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
+      const row = rows[idx]; // modulo n keeps idx in-bounds; guard satisfies the checker
+      if (row && row.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
         if (this.open) {
           this.activeIndex = idx;
         } else {
-          this.commit(rows[idx].tag);
+          this.commit(row.tag);
         }
         return;
       }
@@ -526,8 +527,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         // (onTriggerClick) to open -- only intercept here to commit/dismiss while already open.
         if (this.open) {
           e.preventDefault();
-          if (this.activeIndex >= 0 && rows[this.activeIndex]) {
-            this.commit(rows[this.activeIndex].tag);
+          const activeRow = rows[this.activeIndex];
+          if (this.activeIndex >= 0 && activeRow) {
+            this.commit(activeRow.tag);
           } else {
             this.hide();
           }

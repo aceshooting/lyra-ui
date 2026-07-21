@@ -16,7 +16,8 @@ const MAX_POINTS = 500; // shared point-count cap for every render type (line/ar
 function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
   if (arr.length <= max) return [...arr];
   const step = (arr.length - 1) / (max - 1); // anchors both the first AND last sample exactly
-  return Array.from({ length: max }, (_, i) => arr[Math.round(i * step)]);
+  // safe: i in [0, max-1] and step maps i onto [0, arr.length-1], so every index is in bounds
+  return Array.from({ length: max }, (_, i) => arr[Math.round(i * step)]!);
 }
 
 /**
@@ -143,11 +144,12 @@ export class LyraSparkline extends LyraElement {
     // pts can end up empty even though `values` itself isn't -- e.g. every
     // entry was non-finite and got filtered out -- so the single-point
     // fallback below can't assume pts[0] exists.
+    const p0 = pts[0];
     const d =
       pts.length > 1
         ? pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ')
-        : pts.length === 1
-          ? `M${pts[0][0]},${pts[0][1]} L${pts[0][0]},${pts[0][1]}`
+        : p0
+          ? `M${p0[0]},${p0[1]} L${p0[0]},${p0[1]}`
           : '';
 
     return html`<svg

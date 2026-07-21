@@ -198,7 +198,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
         return;
     }
     e.preventDefault();
-    const target = navigable[targetIndex];
+    const target = navigable[targetIndex]!; // safe: navigable non-empty (checked) and targetIndex in [0, length)
     this.selectTab(target);
     this.focusTab(target.slotName);
   };

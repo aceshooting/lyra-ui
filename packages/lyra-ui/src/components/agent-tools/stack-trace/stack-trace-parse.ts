@@ -169,7 +169,8 @@ function parsePython(lines: string[], internalPatterns: (string | RegExp)[]): St
       const frame: StackFrame = {
         file,
         line: Number(ln),
-        functionName: fn.trimEnd(),
+        // safe: PYTHON_FRAME group 3 `(.+)` is required, always present on exec success
+        functionName: fn!.trimEnd(),
         internal: isInternal(file, internalPatterns),
         raw: line,
       };

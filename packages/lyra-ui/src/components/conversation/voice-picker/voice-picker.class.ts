@@ -426,8 +426,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   /** Enter in free-text mode: commit the highlighted suggestion, else the raw typed text. */
   private commitFreeText(): void {
     const rows = this.filteredEntries;
-    if (this.activeIndex >= 0 && rows[this.activeIndex]) {
-      this.commitValue(rows[this.activeIndex].id);
+    const activeRow = rows[this.activeIndex];
+    if (this.activeIndex >= 0 && activeRow) {
+      this.commitValue(activeRow.id);
       return;
     }
     this.commitValue(this.query.trim());
@@ -552,7 +553,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
       case ' ':
         if (this.open) {
           e.preventDefault();
-          if (this.activeIndex >= 0 && rows[this.activeIndex]) this.selectEntry(rows[this.activeIndex]);
+          const activeRow = rows[this.activeIndex];
+          if (this.activeIndex >= 0 && activeRow) this.selectEntry(activeRow);
           else this.hide();
         }
         break;

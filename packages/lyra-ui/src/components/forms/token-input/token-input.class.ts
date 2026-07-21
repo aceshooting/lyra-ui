@@ -292,7 +292,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (this.effectiveDisabled || !this.editable) return;
     if (index < 0 || index >= this.value.length) return;
     this.editingIndex = index;
-    this.editDraft = this.value[index];
+    this.editDraft = this.value[index]!; // safe: index bounds-checked above
     this.rovingIndex = index;
     this.focusEditorPending = true;
   }

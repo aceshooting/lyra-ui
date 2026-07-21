@@ -127,9 +127,10 @@ function mathExtension(renderMath: (token: MathToken) => string) {
     },
     tokenizer(src: string): MathToken | undefined {
       const block = MATH_BLOCK_RE.exec(src);
-      if (block) return { type: 'math', raw: block[0], tex: block[1].trim(), display: true };
+      // safe: both regexes have a single non-optional capture group, present on any match.
+      if (block) return { type: 'math', raw: block[0], tex: block[1]!.trim(), display: true };
       const inline = MATH_INLINE_RE.exec(src);
-      if (inline) return { type: 'math', raw: inline[0], tex: inline[1].replace(/\\\$/g, '$').trim(), display: false };
+      if (inline) return { type: 'math', raw: inline[0], tex: inline[1]!.replace(/\\\$/g, '$').trim(), display: false };
       return undefined;
     },
     renderer(token: OptionalPeerApi): string {

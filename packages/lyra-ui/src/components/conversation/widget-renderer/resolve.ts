@@ -65,9 +65,9 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
 function filterRowColProps(props: Record<string, unknown> | undefined): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (!props) return out;
-  for (const key of Object.keys(ROW_COL_PROP_ENUMS)) {
+  for (const [key, allowed] of Object.entries(ROW_COL_PROP_ENUMS)) {
     const value = props[key];
-    if (typeof value === 'string' && ROW_COL_PROP_ENUMS[key].includes(value)) out[key] = value;
+    if (typeof value === 'string' && allowed.includes(value)) out[key] = value;
   }
   return out;
 }

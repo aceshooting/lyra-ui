@@ -201,7 +201,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       case 'Enter':
       case ' ':
         e.preventDefault();
-        this.selectRow(rows[idx].id);
+        // safe: rows is non-empty (guarded above) and idx is clamped to [0, rows.length-1].
+        this.selectRow(rows[idx]!.id);
         break;
       default:
         return;

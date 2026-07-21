@@ -423,9 +423,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // set; picking an option later (the `value` setter) never redefines
       // the reset default.
       const declared = this.options.filter((o) => o.selected).map((o) => o.value);
-      this._defaultSelected = declared[0] ?? '';
-      if (declared.length && !this._restoredStateActive) {
-        this.value = declared[0];
+      const declaredFirst = declared[0];
+      this._defaultSelected = declaredFirst ?? '';
+      if (declaredFirst !== undefined && !this._restoredStateActive) {
+        this.value = declaredFirst;
         return; // `value=`'s setter already called reflectSelected()
       }
     } else {
@@ -435,8 +436,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // into the live selection instead of letting reflectSelected() below
       // strip its `selected` attribute back off.
       const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected).map((o) => o.value);
-      if (newlySelected.length && !this._restoredStateActive) {
-        this.value = newlySelected[newlySelected.length - 1];
+      const newest = newlySelected[newlySelected.length - 1];
+      if (newest !== undefined && !this._restoredStateActive) {
+        this.value = newest;
         return; // `value=`'s setter already called reflectSelected()
       }
     }
@@ -606,6 +608,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     for (let step = 1; step <= n; step++) {
       const idx = (currentIndex + step + n) % n;
       const candidate = navigable[idx];
+      if (candidate === undefined) continue;
       if (candidate.label.toLocaleLowerCase(this.effectiveLocale).startsWith(this.typeAheadBuffer)) {
         if (this.open) {
           this.activeIndex = idx;
@@ -640,8 +643,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         // click doesn't also re-toggle it shut.
         if (this.open) {
           e.preventDefault();
-          if (this.activeIndex >= 0 && navigable[this.activeIndex]) {
-            this.selectOption(navigable[this.activeIndex]);
+          const active = navigable[this.activeIndex];
+          if (this.activeIndex >= 0 && active) {
+            this.selectOption(active);
           } else {
             this.hide();
           }

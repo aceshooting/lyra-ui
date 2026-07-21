@@ -62,7 +62,7 @@ export function parseLengthPx(
   if (!trimmed) return undefined;
   const match = LENGTH_RE.exec(trimmed);
   if (!match) return undefined;
-  const value = parseFloat(match[1]);
+  const value = parseFloat(match[1]!); // safe: LENGTH_RE group 1 `(-?[\d.]+)` is required, always present on match
   switch (match[2]) {
     case '%':
       return (value / 100) * containerPx;

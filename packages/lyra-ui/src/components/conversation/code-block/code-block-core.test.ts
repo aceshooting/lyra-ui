@@ -2,6 +2,7 @@ import { fixture, expect, html, waitUntil, aTimeout, oneEvent } from '@open-wc/t
 import jsonGrammar from 'shiki/langs/json.mjs';
 import './code-block-core.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
+import { loadShikiHighlighterCore } from './code-loader.js';
 import { styles } from './code-block.styles.js';
 
 async function el2Ready(el: LyraCodeBlockCore): Promise<void> {
@@ -43,7 +44,7 @@ describe('lr-code-block-core', () => {
     expect(el.shadowRoot!.querySelector('.shiki')).to.exist;
   });
 
-  it('does not set highlighter/shikiReady when the element disconnects before loadShikiHighlighterCore() resolves in connectedCallback()', async function () {
+  it('does not set shikiReady when the element disconnects before loadShikiHighlighterCore() resolves in connectedCallback()', async function () {
     // `languages` must be non-empty *before* the element ever connects, so
     // connectedCallback() itself takes the loadShikiHighlighterCore().then()
     // branch under test (the other call site, inside syncHighlight(), is
@@ -59,10 +60,9 @@ describe('lr-code-block-core', () => {
     el.remove();
     await aTimeout(8000);
 
-    type Internals = { highlighter?: unknown; shikiReady: boolean };
+    type Internals = { shikiReady: boolean };
     const internals = el as unknown as Internals;
     expect(internals.shikiReady, 'must not become true on a disconnected instance').to.be.false;
-    expect(internals.highlighter, 'must not be set on a disconnected instance').to.equal(undefined);
   });
 
   it('renders the plain-text fallback for a language absent from the supplied languages map, never hanging waiting on a default highlighter', async () => {
@@ -83,7 +83,7 @@ describe('lr-code-block-core', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('sets highlighter and shikiReady from connectedCallback() when languages is populated before the element ever connects', async function () {
+  it('sets shikiReady and renders highlighted output from connectedCallback() when languages is populated before the element ever connects', async function () {
     // Mirrors the "does not set highlighter/shikiReady..." disconnect test's setup (languages
     // must be non-empty *before* the element ever connects so connectedCallback() itself takes
     // the loadShikiHighlighterCore().then() branch under test), but keeps the element connected
@@ -97,10 +97,10 @@ describe('lr-code-block-core', () => {
     document.body.appendChild(el);
     try {
       await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 15000 });
-      type Internals = { highlighter?: unknown; shikiReady: boolean };
+      type Internals = { shikiReady: boolean };
       const internals = el as unknown as Internals;
       expect(internals.shikiReady).to.be.true;
-      expect(internals.highlighter).to.exist;
+      expect(el.shadowRoot!.querySelector('.shiki'), 'the eager connectedCallback() load path highlights').to.exist;
     } finally {
       el.remove();
     }
@@ -130,17 +130,22 @@ describe('lr-code-block-core', () => {
   });
 
   it('falls back to plain text when the highlighter throws while tokenizing', async () => {
+    // Hold the exact `languages` object so we can reach the shared highlighter that
+    // loadShikiHighlighterCore() caches by object identity -- the same instance the
+    // component's tokenize() calls -- and make its codeToHtml throw.
+    const languages = { json: jsonGrammar };
     const el = (await fixture(
-      html`<lr-code-block-core language="json" .languages=${{ json: jsonGrammar }} .code=${'{"a":1}'}></lr-code-block-core>`,
+      html`<lr-code-block-core language="json" .languages=${languages} .code=${'{"a":1}'}></lr-code-block-core>`,
     )) as LyraCodeBlockCore;
     await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, undefined, { timeout: 8000 });
-    type Internals = { highlighter: { codeToHtml: () => string }; highlightedHtml: string | null };
-    const internals = el as unknown as Internals;
-    internals.highlighter.codeToHtml = () => {
+    const hl = await loadShikiHighlighterCore(languages);
+    hl!.codeToHtml = () => {
       throw new Error('malformed grammar');
     };
     el.code = '{"a":2}';
     await el2Ready(el);
+    type Internals = { highlightedHtml: string | null };
+    const internals = el as unknown as Internals;
     expect(internals.highlightedHtml).to.equal(null);
     expect(el.shadowRoot!.querySelector('.shiki')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="code"]')!.textContent).to.equal('{"a":2}');

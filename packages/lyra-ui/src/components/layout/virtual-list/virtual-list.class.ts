@@ -507,7 +507,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         liveKeys?.add(key);
         h = this.measuredHeights.get(key) ?? DEFAULT_ROW_ESTIMATE_PX;
       }
-      offsets[i + 1] = offsets[i] + h;
+      offsets[i + 1] = offsets[i]! + h; // safe: offsets[0] set above, offsets[i] written on the prior iteration
     }
     this.offsets = offsets;
     this.itemsChangedPendingPrune = false;
@@ -525,7 +525,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     let hi = offsets.length - 2;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (offsets[mid + 1] <= offset) lo = mid + 1;
+      // safe: mid < hi <= offsets.length - 2, so mid + 1 <= offsets.length - 1 is in bounds
+      if (offsets[mid + 1]! <= offset) lo = mid + 1;
       else hi = mid;
     }
     return lo;
@@ -538,7 +539,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     let hi = offsets.length - 2;
     while (lo < hi) {
       const mid = (lo + hi + 1) >> 1;
-      if (offsets[mid] < offset) lo = mid;
+      // safe: mid <= hi <= offsets.length - 2, so mid is in bounds
+      if (offsets[mid]! < offset) lo = mid;
       else hi = mid - 1;
     }
     return lo;
@@ -665,7 +667,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         // changes size. Otherwise auto-height measurement makes the viewport
         // jump as soon as an earlier row is laid out.
         const oldHeight = prev ?? DEFAULT_ROW_ESTIMATE_PX;
-        if (this.offsets[index + 1] <= oldScrollTop) scrollAdjustment += height - oldHeight;
+        // safe: index is a rendered row's item index, so index + 1 is within offsets (length items.length + 1)
+        if (this.offsets[index + 1]! <= oldScrollTop) scrollAdjustment += height - oldHeight;
         changed = true;
       }
     }
@@ -901,10 +904,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const scrollTop = this.containerScrollTop;
     let current = -1;
     for (let i = 0; i < groups.length; i++) {
-      if (this.offsetForIndex(groups[i].startIndex) > scrollTop) break;
+      if (this.offsetForIndex(groups[i]!.startIndex) > scrollTop) break; // safe: counted loop, i < groups.length
       current = i;
     }
-    if (current < 0) return { group: groups[0], shift: 0, active: false };
+    if (current < 0) return { group: groups[0]!, shift: 0, active: false }; // safe: groups.length === 0 returned above
     const next = groups[current + 1];
     let shift = 0;
     if (next && this.stickyHeight > 0) {
@@ -914,7 +917,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       const distance = this.offsetForIndex(next.startIndex) - scrollTop;
       if (distance < this.stickyHeight) shift = Math.min(0, distance - this.stickyHeight);
     }
-    return { group: groups[current], shift, active: true };
+    return { group: groups[current]!, shift, active: true }; // safe: 0 <= current < groups.length (set in the loop above)
   }
 
   private renderStickyLayer(): TemplateResult | typeof nothing {

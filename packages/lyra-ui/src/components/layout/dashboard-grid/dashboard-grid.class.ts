@@ -281,7 +281,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const cells = this.sortedLayout;
     if (index < 0 || index >= cells.length) return;
     this.activeCellIndex = index;
-    const cell = cells[index];
+    const cell = cells[index]!; // safe: bounds checked above (0 <= index < cells.length)
     this.announcer.announce(
       this.localize('flowItemAnnouncement', undefined, { item: this.cellLabel(cell), index: index + 1, total: cells.length }),
     );
@@ -388,7 +388,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   // Pointer drag (move)
   // ---------------------------------------------------------------------
 
-  private cellStyle(cell: DashboardCell): Record<string, string> {
+  private cellStyle(cell: DashboardCell): { 'grid-column': string; 'grid-row': string } {
     return {
       'grid-column': `${cell.x + 1} / span ${cell.w}`,
       'grid-row': `${cell.y + 1} / span ${cell.h}`,

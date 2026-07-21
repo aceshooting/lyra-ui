@@ -24,14 +24,20 @@ const MS_PER_DAY = 86_400_000;
 
 /** Parses a `yyyy-mm-dd` string as UTC midnight, avoiding local-timezone day-boundary drift. */
 export function parseIsoDate(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
+  // A malformed `iso` yields fewer than three parts; defaulting the missing
+  // ones to NaN preserves today's Invalid Date result (an absent element read
+  // as `undefined` already coerces to NaN in Date.UTC / the `m - 1` below).
+  const [y = NaN, m = NaN, d = NaN] = iso.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d));
 }
 
 /** Whether `iso` (already run through parseIsoDate) actually round-trips —
  *  Date.UTC silently rolls e.g. day 30 of a 28-day February into March. */
 function isCalendarValid(iso: string, parsed: Date): boolean {
-  const [y, m, d] = iso.split('-').map(Number);
+  // NaN defaults for missing parts mirror parseIsoDate: an absent element read
+  // as `undefined` compares/subtracts identically to NaN here (both make the
+  // corresponding `===`/`m - 1` check fail), so valid dates are unaffected.
+  const [y = NaN, m = NaN, d = NaN] = iso.split('-').map(Number);
   return parsed.getUTCFullYear() === y && parsed.getUTCMonth() === m - 1 && parsed.getUTCDate() === d;
 }
 

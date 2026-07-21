@@ -412,7 +412,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         // matching a native combobox with no highlighted suggestion.
         if (idx < 0) return false;
         e.preventDefault();
-        this.commit(rows[idx]);
+        this.commit(rows[idx]!); // safe: idx >= 0 here is clampedIndex()'s in-range result
         return true;
       }
       case 'Escape':

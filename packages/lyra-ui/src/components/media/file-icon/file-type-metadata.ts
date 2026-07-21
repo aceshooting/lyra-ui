@@ -84,7 +84,7 @@ for (const metadata of Object.values(catalog)) {
 }
 
 function normalizeMimeType(value: string): string {
-  return value.trim().toLowerCase().split(';', 1)[0];
+  return value.trim().toLowerCase().split(';', 1)[0] ?? ''; // split(';', 1) always yields ≥1 element; ?? '' is a no-op guard
 }
 
 /** Adds or replaces a custom MIME mapping used by future metadata lookups. */

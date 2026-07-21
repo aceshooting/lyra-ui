@@ -819,7 +819,9 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
    *  layer that intercepts most pointer events). */
   private hitTestHighlightAt(x: number, y: number): string | null {
     for (let i = this.resolvedHighlightRanges.length - 1; i >= 0; i--) {
-      const { id, range } = this.resolvedHighlightRanges[i];
+      const hit = this.resolvedHighlightRanges[i];
+      if (!hit) continue; // i is in [0, length - 1], so hit is always defined
+      const { id, range } = hit;
       for (const rect of range.getClientRects()) {
         if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return id;
       }

@@ -346,6 +346,7 @@ export class LyraTree extends LyraElement {
     if (visible.length === 0) return;
     const currentIndex = visible.findIndex((n) => n.item.id === this.activeId);
     const current = currentIndex >= 0 ? visible[currentIndex] : visible[0];
+    if (!current) return; // visible is non-empty (checked above), so current is always defined
     // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching
     // <lr-dashboard-grid>'s `cells-draggable` keyboard move. ArrowUp/ArrowDown
     // are not direction-sensitive, so this branch is deliberately *not*
@@ -394,8 +395,9 @@ export class LyraTree extends LyraElement {
           current.collapse();
         } else {
           for (let i = currentIndex - 1; i >= 0; i--) {
-            if (visible[i].depth < current.depth) {
-              this.focusNode(visible[i]);
+            const sibling = visible[i];
+            if (sibling && sibling.depth < current.depth) {
+              this.focusNode(sibling);
               break;
             }
           }

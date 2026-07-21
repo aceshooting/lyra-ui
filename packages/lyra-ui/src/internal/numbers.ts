@@ -63,7 +63,9 @@ export function isSliderKey(key: string): boolean {
  *  floating-point noise in place. */
 export function decimalPlaces(n: number): number {
   if (!Number.isFinite(n) || n === 0) return 0;
-  const [mantissa, exponentText] = n.toExponential().split('e');
+  // safe: toExponential() always yields `<mantissa>e<exp>`, so split()'s index 0
+  // (mantissa) is always present; the `= ''` default never actually fires.
+  const [mantissa = '', exponentText] = n.toExponential().split('e');
   const mantissaPlaces = mantissa.includes('.') ? mantissa.length - mantissa.indexOf('.') - 1 : 0;
   return Math.max(0, mantissaPlaces - Number(exponentText));
 }

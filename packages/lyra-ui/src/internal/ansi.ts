@@ -114,7 +114,7 @@ export function createAnsiParser(): AnsiParser {
     const list = params.length === 0 ? [0] : params;
     let i = 0;
     while (i < list.length) {
-      const p = list[i];
+      const p = list[i]!; // safe: i < list.length (loop condition)
       if (p === 0) styles = { ...RESET_STYLES };
       else if (p === 1) styles = { ...styles, bold: true };
       else if (p === 2) styles = { ...styles, dim: true };
@@ -132,14 +132,20 @@ export function createAnsiParser(): AnsiParser {
       else if (p === 38 || p === 48) {
         const isFg = p === 38;
         const mode = list[i + 1];
-        if (mode === 5 && list[i + 2] !== undefined) {
-          const color = ansi256ToColor(list[i + 2]);
+        const idx = list[i + 2];
+        if (mode === 5 && idx !== undefined) {
+          const color = ansi256ToColor(idx);
           styles = isFg ? { ...styles, fg: color } : { ...styles, bg: color };
           i += 2;
-        } else if (mode === 2 && list[i + 4] !== undefined) {
-          const color = `rgb(${clampByte(list[i + 2])}, ${clampByte(list[i + 3])}, ${clampByte(list[i + 4])})`;
-          styles = isFg ? { ...styles, fg: color } : { ...styles, bg: color };
-          i += 4;
+        } else if (mode === 2) {
+          const r = list[i + 2];
+          const g = list[i + 3];
+          const b = list[i + 4];
+          if (r !== undefined && g !== undefined && b !== undefined) {
+            const color = `rgb(${clampByte(r)}, ${clampByte(g)}, ${clampByte(b)})`;
+            styles = isFg ? { ...styles, fg: color } : { ...styles, bg: color };
+            i += 4;
+          }
         }
         // An unrecognized extended-color mode (anything other than 5 or 2) is left unapplied and
         // simply falls through to the next param, same as any other unrecognized SGR code below.
@@ -172,7 +178,8 @@ export function createAnsiParser(): AnsiParser {
       }
       if (next === '[') {
         let j = i + 2;
-        while (j < input.length && !CSI_FINAL_BYTE.test(input[j])) j++;
+        // safe: input[j] is read only while j < input.length (same && condition)
+        while (j < input.length && !CSI_FINAL_BYTE.test(input[j]!)) j++;
         if (j >= input.length) {
           carry = input.slice(i);
           return segments;

@@ -251,7 +251,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         <span part="test-status" id=${statusId} data-status=${test.status}>
           ${test.status === 'running'
             ? html`<span aria-hidden="true"><lr-spinner></lr-spinner></span>`
-            : html`<span aria-hidden="true">${test.status[0].toUpperCase()}</span>`}
+            : html`<span aria-hidden="true">${test.status.charAt(0).toUpperCase()}</span>`}
           ${this.localize(STATUS_LABEL_KEY[test.status])}
         </span>
         <button

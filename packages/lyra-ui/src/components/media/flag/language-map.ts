@@ -72,7 +72,7 @@ export const LANGUAGE_TO_COUNTRY: Record<string, string> = {
  */
 export function languageToCountry(language: string): string | undefined {
   const parts = language.toLowerCase().split(/[-_]/);
-  const base = parts[0];
+  const base = parts[0]!; // safe: String.split() always yields at least one element
   const region = parts.slice(1).find((part) => ALPHA2_RE.test(part));
   if (region) return region;
   return LANGUAGE_TO_COUNTRY[base];

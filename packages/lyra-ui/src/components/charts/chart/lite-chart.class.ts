@@ -320,7 +320,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private colorFor(index: number, series: LiteSeries): string {
-    return series.color ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length];
+    return series.color ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!; // safe: modulo a non-empty constant palette
   }
 
   /** Dispatches to the host-provided `pointText` formatter when set, otherwise `undefined` (the
@@ -678,7 +678,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           y1 = this.barValueToY(barValHi, plotY, plotH, lo, hi);
           y2 = this.barValueToY(barValLo, plotY, plotH, lo, hi);
         }
-        const label = this.labels[i];
+        const label = this.labels[i] ?? ''; // matches interactiveMarks(): a missing category label renders empty
         const custom = this.resolvePointText(label, v, di);
         const barText =
           custom ??
@@ -772,7 +772,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       });
       const dots = s.data.map((v, i) => {
         if (v == null || !Number.isFinite(v)) return nothing;
-        const label = this.labels[i];
+        const label = this.labels[i] ?? ''; // matches interactiveMarks(): a missing category label renders empty
         const custom = this.resolvePointText(label, v, di);
         const barText =
           custom ??

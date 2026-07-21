@@ -68,7 +68,8 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
    *  visible month itself (leading/trailing days from adjacent months fill out the fixed
    *  42-cell layout), so both the roving-tabindex anchor and arrow-key navigation must bound
    *  themselves against this, not just the shown month. */
-  private gridBounds(weeks: Date[][]): [Date, Date] { return [weeks[0][0], weeks[weeks.length - 1][6]]; }
+  // safe: `weeks` is monthMatrix()'s fixed 6×7 grid, so row 0 / its column 0 and the last row's column 6 always exist.
+  private gridBounds(weeks: Date[][]): [Date, Date] { return [weeks[0]![0]!, weeks[weeks.length - 1]![6]!]; }
   /** Arrow-key navigation that lands past the currently rendered 6-week grid (there is no
    *  7th row to step into) used to leave `focusedDate` pointing at a date with no matching
    *  cell anywhere on screen — a keyboard dead end, since neither the roving tab stop nor the

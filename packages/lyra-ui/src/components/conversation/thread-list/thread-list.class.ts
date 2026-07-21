@@ -538,7 +538,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const rows = this.rowElements();
     if (rows.length === 0) return;
     e.preventDefault();
-    this.optionEl(rows[0])?.focus();
+    this.optionEl(rows[0]!)?.focus(); // safe: rows.length > 0 checked above
   };
 
   // Native focus/blur on the shadow-DOM search <input> neither bubble nor cross the shadow
@@ -585,7 +585,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
     e.preventDefault();
     if (targetIndex >= 0 && targetIndex < rows.length) {
-      this.optionEl(rows[targetIndex])?.focus();
+      this.optionEl(rows[targetIndex]!)?.focus(); // safe: targetIndex in [0, rows.length) checked above
       return;
     }
     // Past the currently-rendered edge -- nudge the internal virtual list's scroll position by

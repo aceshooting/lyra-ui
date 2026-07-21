@@ -241,7 +241,9 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
 
   private onTriggerClick = (): void => {
-    this.activateCapability(this.capabilities[0]);
+    const capability = this.capabilities[0];
+    if (capability === undefined) return;
+    this.activateCapability(capability);
   };
 
   private onMenuSelect = (e: CustomEvent<MenuSelectDetail>): void => {
@@ -341,10 +343,10 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
 
   override render(): TemplateResult {
-    const single = this.capabilities.length === 1;
+    const single = this.capabilities.length === 1; // safe below: capabilities[0]! is guarded by this length === 1
     const multi = this.capabilities.length > 1;
     return html`
-      ${single ? this.renderSingleTrigger(this.capabilities[0]) : nothing}
+      ${single ? this.renderSingleTrigger(this.capabilities[0]!) : nothing}
       ${multi ? this.renderMenu() : nothing}
       ${this.hasFileCapability ? this.renderHiddenInput() : nothing}
     `;

@@ -278,7 +278,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   private resolveEffectiveValue(): Record<string, unknown> {
     const props = this.schemaProperties;
     const out: Record<string, unknown> = { ...this.value };
-    for (const key of Object.keys(props)) {
+    for (const [key, prop] of Object.entries(props)) {
       // `hasOwnProperty`, not `out[key] === undefined` — a number field the
       // user has explicitly cleared is `{ days: undefined }` (a real own
       // property, via the `{...this.value, [key]: val}` spread in
@@ -286,12 +286,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       // snapping back to its default just because its current value also
       // happens to be `undefined`. Only a key genuinely absent from `value`
       // (never touched, or reset back to `{}`) falls back to the default.
-      if (!Object.prototype.hasOwnProperty.call(this.value, key) && props[key].default !== undefined) {
+      if (!Object.prototype.hasOwnProperty.call(this.value, key) && prop.default !== undefined) {
         Object.defineProperty(out, key, {
           configurable: true,
           enumerable: true,
           writable: true,
-          value: props[key].default,
+          value: prop.default,
         });
       }
     }
@@ -386,8 +386,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       });
     };
 
-    for (const key of Object.keys(props)) {
-      const prop = props[key];
+    for (const [key, prop] of Object.entries(props)) {
       const type = (prop as unknown as { type?: unknown })?.type;
       if (type !== 'string' && type !== 'number' && type !== 'integer' && type !== 'boolean') {
         addError(key, this.localize('unsupportedFieldType', undefined, { type: String(type) }));
@@ -724,7 +723,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const errId = this._errors[key] ? `${fieldId}-err` : '';
     const describedBy = [descId, this.touchedFields.has(key) ? errId : ''].filter(Boolean).join(' ');
     const hasError = this.touchedFields.has(key) && Boolean(this._errors[key]);
-    const errorMessage = hasError ? this._errors[key] : '';
+    const errorMessage = hasError ? (this._errors[key] ?? '') : '';
     const effective = this._effectiveValue[key];
     const isBoolean = prop.type === 'boolean';
 
@@ -746,11 +745,11 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
 
   override render(): TemplateResult {
     const props = this.schemaProperties;
-    const keys = Object.keys(props);
+    const entries = Object.entries(props);
     return html`<div part="base">
-      ${keys.length === 0
+      ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`
-        : keys.map((key, i) => this.renderField(key, props[key], i))}
+        : entries.map(([key, prop], i) => this.renderField(key, prop, i))}
       ${this.showFormError && this._formError
         ? html`<p part="error" class="form-error" role="alert">${this._formError}</p>`
         : nothing}
