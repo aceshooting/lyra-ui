@@ -164,6 +164,38 @@ it('showFlags=false omits the flag element entirely, not just visually', async (
   expect(rows(el)[0].querySelectorAll('lr-flag').length).to.equal(0);
 });
 
+it('a locales entry with country overrides that row\'s flag; a row without it keeps deriving from the tag', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker
+      .locales=${[
+        { tag: 'ar', country: 'lb' },
+        { tag: 'fr' },
+      ]}
+    ></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+
+  const arFlag = rows(el)[0].querySelector('lr-flag') as HTMLElement;
+  expect(arFlag.getAttribute('country')).to.equal('lb');
+  expect(arFlag.hasAttribute('language')).to.be.false;
+
+  const frFlag = rows(el)[1].querySelector('lr-flag') as HTMLElement;
+  expect(frFlag.getAttribute('language')).to.equal('fr');
+  expect(frFlag.hasAttribute('country')).to.be.false;
+});
+
+it('a plain string[] locales catalog never emits a country attribute', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['ar']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const flag = rows(el)[0].querySelector('lr-flag') as HTMLElement;
+  expect(flag.getAttribute('language')).to.equal('ar');
+  expect(flag.hasAttribute('country')).to.be.false;
+});
+
 // Obligation 6: selecting a row commits value, fires lr-change, and applies setLyraLocale().
 it('selecting a row updates value, fires lr-change with {value, previousValue}, and calls setLyraLocale', async () => {
   setLyraLocale('en');

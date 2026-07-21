@@ -33,6 +33,20 @@ export const CustomCatalog: Story = {
   `,
 };
 
+export const CountryOverride: Story = {
+  name: 'Per-row flag override',
+  render: () => html`
+    <lr-locale-picker
+      label="Language"
+      .locales=${[
+        { tag: 'ar', country: 'lb', label: 'العربية' },
+        { tag: 'fr' },
+        { tag: 'en' },
+      ]}
+    ></lr-locale-picker>
+  `,
+};
+
 export const NoFlags: Story = {
   name: 'Flags off',
   render: () => html`

@@ -1966,11 +1966,15 @@ list, no filter/free-text mode.
 
 **Properties:**
 - `locales: LyraLocaleCatalog = []` (attribute: false) — `LyraLocaleCatalog = string[] |
-  LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string }`. Empty (the default)
-  auto-discovers the registry; a non-empty array (either form) overrides it entirely — a curated
-  subset, custom order, custom labels, or a locale offered before its strings are registered.
-- `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`;
-  `false` omits the flag element entirely (not just visually).
+  LyraLocaleEntry[]`, `LyraLocaleEntry { tag: string; label?: string; country?: string }`. Empty
+  (the default) auto-discovers the registry; a non-empty array (either form) overrides it
+  entirely — a curated subset, custom order, custom labels, or a locale offered before its
+  strings are registered. `country` (ISO 3166-1 alpha-2) overrides a row's derived flag — e.g.
+  showing Lebanon's flag for an `'ar'` row instead of the library's default Saudi Arabia mapping;
+  only available on the `{tag,label,country}` object form, not the bare `string[]` form.
+- `showFlags: boolean = true` — each row's leading `<lr-flag language={tag} variant="compact">`
+  (or `<lr-flag country={country} variant="compact">` when the entry sets `country`); `false`
+  omits the flag element entirely (not just visually).
 - `value: string = ''` — the **committed** selection (form value, drives `lr-change`). While `''`
   and untouched, the trigger *displays* `effectiveLocale` as a preview label, but
   `checkValidity()`/`required` are governed by the real `value`, which stays `''` until a real

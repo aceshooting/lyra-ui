@@ -61,21 +61,30 @@ function createNoopInternals(): ElementInternals {
 }
 
 /** One offered locale row. `label` overrides the derived `localeNativeName(tag)` endonym when
- *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)"). */
+ *  given -- e.g. offering a locale before its strings are registered ("Français (bientôt)").
+ *  `country` overrides the row's derived flag country when given -- e.g. showing Lebanon's flag
+ *  for an `'ar'` row instead of the library's default Saudi Arabia mapping. */
 export interface LyraLocaleEntry {
   /** BCP-47 locale tag, e.g. `'pt-BR'`. */
   tag: string;
   /** Overrides `localeNativeName(tag)` when given. */
   label?: string;
+  /** ISO 3166-1 alpha-2 country code (e.g. `'lb'`) overriding this row's `<lr-flag>` derivation
+   *  -- when given, the row renders `<lr-flag country={country}>` instead of the default
+   *  `<lr-flag language={tag}>`. Unset (the default) keeps today's tag-derived flag. Ignored
+   *  while `showFlags` is `false`. */
+  country?: string;
 }
 
-/** `locales` accepts either a plain array of BCP-47 tags (endonym label derived automatically)
- *  or `{ tag, label }` rows for custom labels/ordering/subsets. */
+/** `locales` accepts either a plain array of BCP-47 tags (endonym label derived automatically,
+ *  no per-row flag override available) or `{ tag, label, country }` rows for custom
+ *  labels/ordering/subsets/flag overrides. */
 export type LyraLocaleCatalog = string[] | LyraLocaleEntry[];
 
 interface NormalizedLocaleEntry {
   tag: string;
   label: string;
+  country?: string;
 }
 
 /** Visual size, same `2xs`–`xl` scale as `<lr-select>`'s `size`. */
@@ -378,7 +387,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
       return raw.map((entry): NormalizedLocaleEntry =>
         typeof entry === 'string'
           ? { tag: entry, label: localeNativeName(entry) }
-          : { tag: entry.tag, label: entry.label ?? localeNativeName(entry.tag) },
+          : { tag: entry.tag, label: entry.label ?? localeNativeName(entry.tag), country: entry.country },
       );
     }
     return getRegisteredLyraLocales().map((tag) => ({ tag, label: localeNativeName(tag) }));
@@ -578,7 +587,9 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
         ?data-active=${id === activeId}
       >
         ${this.showFlags
-          ? html`<lr-flag part="option-flag" language=${entry.tag} variant="compact" aria-hidden="true"></lr-flag>`
+          ? entry.country
+            ? html`<lr-flag part="option-flag" country=${entry.country} variant="compact" aria-hidden="true"></lr-flag>`
+            : html`<lr-flag part="option-flag" language=${entry.tag} variant="compact" aria-hidden="true"></lr-flag>`
           : ''}
         <span part="option-label">
           <span>${entry.label}</span>
