@@ -126,6 +126,49 @@ it('composes lr-grounding-summary with the example assessment and citations when
   expect((summary as unknown as { citations: Citation[] }).citations).to.deep.equal(citations);
 });
 
+it('renders every non-primary status label, including a title-cased fallback for an unrecognized kind', async () => {
+  const statusExamples: EvaluationExampleResult[] = [
+    { id: 's-idle', status: { kind: 'idle' }, input: 'a', output: '' },
+    { id: 's-wi', status: { kind: 'waiting-input' }, input: 'b', output: '' },
+    { id: 's-wa', status: { kind: 'waiting-approval' }, input: 'c', output: '' },
+    { id: 's-cancel', status: { kind: 'cancelled' }, input: 'd', output: '' },
+    { id: 's-unknown', status: { kind: 'custom_state-x' }, input: 'e', output: '' },
+  ];
+  const el = (await fixture(html`<lr-evaluation-run .examples=${statusExamples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
+  const texts = rows.map((row) => row.querySelector('[part="example-status"]')!.textContent!.trim());
+  expect(texts).to.deep.equal([
+    'Idle',
+    'Waiting for input',
+    'Waiting for approval',
+    'Cancelled',
+    'Custom State X',
+  ]);
+});
+
+it('falls back to an empty language attribute when a code-formatted example omits its language', async () => {
+  const noLanguage: EvaluationExampleResult[] = [
+    { id: 'ex-nolang', status: { kind: 'done' }, input: 'x = 1', inputFormat: 'code', output: '' },
+  ];
+  const el = (await fixture(html`<lr-evaluation-run .examples=${noLanguage}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+  expect(input.tagName.toLowerCase()).to.equal('lr-code-block');
+  expect(input.getAttribute('language')).to.equal('');
+});
+
+it('deletes the id from expandedIds (and reports expanded: false) when an example is collapsed', async () => {
+  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  const details = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
+  details.open = true;
+  await el.updateComplete;
+  const summary = details.shadowRoot!.querySelector('summary') as HTMLElement;
+
+  const firing = oneEvent(el, 'lr-example-toggle');
+  summary.click(); // was open -> collapses
+  const event = await firing;
+  expect((event as CustomEvent).detail).to.deep.equal({ id: 'ex-1', expanded: false });
+});
+
 it('renders no tool-trace section when the example has no toolTrace', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement;
@@ -216,6 +259,44 @@ describe('status-change announcements', () => {
     const region = el.shadowRoot!.querySelector('lr-live-region')!;
     expect((region as unknown as { mode: string }).mode).to.equal('assertive');
     expect(await getLiveRegionText(el)).to.equal('Example 2 failed');
+  });
+
+  it('announces an example starting (idle -> running), politely', async () => {
+    const startingExamples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'idle' as const } } : ex));
+    const el = (await fixture(html`<lr-evaluation-run .examples=${startingExamples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    el.examples = examples; // ex-2 idle -> running
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('lr-live-region')!;
+    expect((region as unknown as { mode: string }).mode).to.equal('polite');
+    expect(await getLiveRegionText(el)).to.equal('Example 2 started');
+  });
+
+  it('announces an example being cancelled (running -> cancelled), politely', async () => {
+    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'cancelled' as const } } : ex));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Example 2 cancelled');
+  });
+
+  it('announces an example needing input (running -> waiting-input), politely', async () => {
+    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'waiting-input' as const } } : ex));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Example 2 needs input');
+  });
+
+  it('announces an example needing approval (running -> waiting-approval), politely', async () => {
+    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'waiting-approval' as const } } : ex));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('Example 2 needs approval');
+  });
+
+  it('does not announce a transition to idle (a no-op status, unlike the other terminal/waiting kinds)', async () => {
+    const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+    el.examples = examples.map((ex) => (ex.id === 'ex-2' ? { ...ex, status: { kind: 'idle' as const } } : ex));
+    await el.updateComplete;
+    expect(await getLiveRegionText(el)).to.equal('');
   });
 });
 

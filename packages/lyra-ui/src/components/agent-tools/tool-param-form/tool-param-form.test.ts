@@ -36,6 +36,20 @@ describe('ElementInternals availability', () => {
       HTMLElement.prototype.attachInternals = original;
     }
   });
+
+  it('falls back to no-op internals (and a working reportValidity()) when attachInternals throws rather than being absent', async () => {
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (): ElementInternals {
+      throw new Error('attachInternals not supported in this environment');
+    };
+    try {
+      const el = document.createElement('lr-tool-param-form') as LyraToolParamForm;
+      expect(el.form).to.equal(null);
+      expect(el.reportValidity()).to.be.true;
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
 });
 
 it('renders one control per property, in schema key order, matched to its type', async () => {
@@ -436,6 +450,126 @@ it('localizes the unsupported-field-type and schema-shape messages via .strings,
     ></lr-tool-param-form>`,
   )) as LyraToolParamForm;
   expect(flatEl.formError).to.equal('Les propriétés du schéma doivent être un objet plat.');
+});
+
+it('falls back to the empty schema ({ type: "object", properties: {} }) when schema is set to null', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  expect(el.shadowRoot!.querySelectorAll('[part="field"]').length).to.equal(4);
+
+  el.schema = null as unknown as ToolParamFormSchema;
+  await el.updateComplete;
+  expect(el.schema).to.deep.equal({ type: 'object', properties: {} });
+  expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+});
+
+it('falls back to {} when value is set to null', async () => {
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${basicSchema} .value=${{ city: 'Paris' }}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  expect(el.value).to.deep.equal({ city: 'Paris' });
+
+  el.value = null as unknown as Record<string, unknown>;
+  await el.updateComplete;
+  expect(el.value).to.deep.equal({});
+  expect(el.errors.city).to.equal('This field is required.');
+});
+
+it('flags a non-numeric value on an integer field as a type mismatch, not merely a step mismatch', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { count: { type: 'integer' } },
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${schema} .value=${{ count: 'not-a-number' }}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  expect(el.errors.count).to.equal('Must be a whole number.');
+  expect(el.internals.validity.typeMismatch).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('surfaces a form-level required error for a key listed in required but absent from properties (a dangling reference)', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { city: { type: 'string' } },
+    required: ['city', 'ghost'],
+  };
+  const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  // No rendered field exists for "ghost" -- it isn't a schema property -- yet it still blocks validity.
+  expect(field(el, 'ghost')).to.be.null;
+  expect(el.errors.ghost).to.equal('This field is required.');
+  expect(el.checkValidity()).to.be.false;
+
+  el.value = { city: 'Paris', ghost: 'anything' };
+  expect(el.errors.ghost).to.be.undefined;
+  expect(el.checkValidity()).to.be.true;
+});
+
+it('formStateRestoreCallback recovers to {} on invalid persisted JSON, and restores valid JSON normally', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+
+  el.formStateRestoreCallback('{not valid json', 'restore');
+  await el.updateComplete;
+  expect(el.value).to.deep.equal({});
+
+  el.formStateRestoreCallback(JSON.stringify({ city: 'Rome' }), 'restore');
+  await el.updateComplete;
+  expect(el.value).to.deep.equal({ city: 'Rome' });
+});
+
+it('fails closed when a value key shadows toJSON such that JSON.stringify would return undefined', async () => {
+  const el = (await fixture(html`<lr-tool-param-form></lr-tool-param-form>`)) as LyraToolParamForm;
+  el.value = { toJSON: () => undefined } as unknown as Record<string, unknown>;
+  await el.updateComplete;
+  expect(el.formError).to.equal('Value must be JSON-serializable.');
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('ignores a checkbox change event while effectively disabled', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { confirm: { type: 'boolean' } },
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form disabled .schema=${schema}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
+  let inputFired = false;
+  el.addEventListener('lr-input', () => (inputFired = true));
+
+  checkbox.dispatchEvent(new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }));
+  await el.updateComplete;
+
+  expect(inputFired, 'setFieldValue must no-op while effectively disabled').to.be.false;
+  expect(el.value).to.deep.equal({});
+});
+
+it("folds the error into the select's aria-label once touched and invalid, leaving it plain otherwise", async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: { mode: { type: 'string', enum: ['fast', 'safe'], title: 'Mode' } },
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form .schema=${schema} .value=${{ mode: 'unknown' }}></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+  const select = field(el, 'mode').querySelector('lr-select') as HTMLElement;
+  expect(select.getAttribute('aria-label')).to.equal('Mode');
+
+  field(el, 'mode').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(select.getAttribute('aria-label')).to.equal('Mode. Must be one of: fast, safe.');
+});
+
+it('emits lr-input on a select field change, driven by the selected option value', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const select = field(el, 'units').querySelector('lr-select') as HTMLElement & { value: string };
+
+  setTimeout(() => {
+    select.value = 'fahrenheit';
+    select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+  });
+  const ev = await oneEvent(el, 'lr-input');
+  expect(ev.detail.value.units).to.equal('fahrenheit');
+  expect(el.value).to.deep.equal({ units: 'fahrenheit' });
 });
 
 it('rejects non-finite numbers and schema defaults that do not match their declared type', async () => {

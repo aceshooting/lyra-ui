@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './compare-panel.js';
 import type { LyraComparePanel } from './compare-panel.js';
 import { styles } from './compare-panel.styles.js';
@@ -35,6 +35,82 @@ describe('lr-compare-panel', () => {
     await el.updateComplete;
     expect(el.vote).to.equal('a');
     expect((buttons[0] as HTMLElement).getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('emits lr-vote for the B pane and marks the B button pressed', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-2"></lr-compare-panel>`)) as LyraComparePanel;
+    await el.updateComplete;
+    const buttons = el.shadowRoot!.querySelectorAll('[part="vote-button"]');
+    setTimeout(() => (buttons[1] as HTMLElement).click());
+    const ev = await oneEvent(el, 'lr-vote');
+    expect(ev.detail).to.deep.equal({ choice: 'b', itemId: 'pair-2' });
+    await el.updateComplete;
+    expect(el.vote).to.equal('b');
+    expect((buttons[1] as HTMLElement).getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('emits lr-vote for a tie and marks the tie button pressed', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-3"></lr-compare-panel>`)) as LyraComparePanel;
+    await el.updateComplete;
+    // Button order: A, B, tie, both-bad.
+    const tieButton = el.shadowRoot!.querySelectorAll('[part="vote-button"]')[2] as HTMLElement;
+    setTimeout(() => tieButton.click());
+    const ev = await oneEvent(el, 'lr-vote');
+    expect(ev.detail).to.deep.equal({ choice: 'tie', itemId: 'pair-3' });
+    await el.updateComplete;
+    expect(el.vote).to.equal('tie');
+    expect(tieButton.getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('emits lr-vote for both-bad and marks that button pressed', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-4"></lr-compare-panel>`)) as LyraComparePanel;
+    await el.updateComplete;
+    const bothBadButton = el.shadowRoot!.querySelectorAll('[part="vote-button"]')[3] as HTMLElement;
+    setTimeout(() => bothBadButton.click());
+    const ev = await oneEvent(el, 'lr-vote');
+    expect(ev.detail).to.deep.equal({ choice: 'both-bad', itemId: 'pair-4' });
+    await el.updateComplete;
+    expect(el.vote).to.equal('both-bad');
+    expect(bothBadButton.getAttribute('aria-pressed')).to.equal('true');
+  });
+
+  it('synchronizes the paired pane scroll position when sync-scroll is enabled and content overflows', async () => {
+    const el = (await fixture(html`
+      <lr-compare-panel sync-scroll style="--lr-compare-panel-max-height: 50px">
+        <div slot="a" style="block-size: 500px;">Tall A content</div>
+        <div slot="b" style="block-size: 500px;">Tall B content</div>
+      </lr-compare-panel>
+    `)) as LyraComparePanel;
+    await el.updateComplete;
+    expect(el.syncScroll).to.be.true;
+    const paneA = el.shadowRoot!.querySelector('[part="pane-a"]') as HTMLElement;
+    const paneB = el.shadowRoot!.querySelector('[part="pane-b"]') as HTMLElement;
+    expect(paneA.scrollHeight).to.be.greaterThan(paneA.clientHeight);
+
+    paneA.scrollTop = paneA.scrollHeight - paneA.clientHeight; // scroll to the very bottom
+    paneA.dispatchEvent(new Event('scroll'));
+    await aTimeout(50);
+
+    expect(paneB.scrollTop).to.be.greaterThan(0);
+  });
+
+  it('does not sync scroll between panes when sync-scroll is unset (the default)', async () => {
+    const el = (await fixture(html`
+      <lr-compare-panel style="--lr-compare-panel-max-height: 50px">
+        <div slot="a" style="block-size: 500px;">Tall A content</div>
+        <div slot="b" style="block-size: 500px;">Tall B content</div>
+      </lr-compare-panel>
+    `)) as LyraComparePanel;
+    await el.updateComplete;
+    expect(el.syncScroll).to.be.false;
+    const paneA = el.shadowRoot!.querySelector('[part="pane-a"]') as HTMLElement;
+    const paneB = el.shadowRoot!.querySelector('[part="pane-b"]') as HTMLElement;
+
+    paneA.scrollTop = paneA.scrollHeight - paneA.clientHeight;
+    paneA.dispatchEvent(new Event('scroll'));
+    await aTimeout(50);
+
+    expect(paneB.scrollTop).to.equal(0);
   });
 
   it('hides the tie/both-bad buttons when hide-tie/hide-both-bad are set', async () => {
