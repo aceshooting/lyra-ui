@@ -31,4 +31,7 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.
 The `columns`/`rowHeight`/`gap` properties write them inline on `[part='base']` on every render, so
-overriding them from a stylesheet has no effect — set the properties instead.
+overriding them from a stylesheet has no effect — set the properties instead. `--lr-dashboard-grid-cell-hover-outline-color`
+(default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
+preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
+draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.

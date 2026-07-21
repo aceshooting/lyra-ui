@@ -2389,8 +2389,9 @@ each emoji button's box; scaled by the `size` property), `--lr-emoji-picker-glyp
 `--lr-font-size-lg`, the font size of the emoji glyph; scaled by the `size` property to keep the glyph
 proportional to the item box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
 emoji within a windowed row), and `--lr-emoji-picker-row-height` (default
-`calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height). The first three
-are also read back in JS to derive columns-per-row and row offsets for the windowed layout,
+`calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height).
+`--lr-emoji-picker-item-size`, `--lr-emoji-picker-gap`, and `--lr-emoji-picker-row-height` are also
+read back in JS to derive columns-per-row and row offsets for the windowed layout,
 resolved to real pixels by measuring hidden probe boxes the component's own stylesheet sizes from
 those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` included, and the windowed
 geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
@@ -3772,7 +3773,13 @@ that reads it. The same restriction motivates three more state-scoped outline co
 a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-connect-target-outline-color`
 (default `var(--lr-color-brand)`) — outline of a node that is a valid connect-gesture drop target; and
 `--lr-flow-canvas-drop-active-outline-color` (default `var(--lr-color-brand)`) — outline of the
-viewport itself while a palette item is dragged over it (`droppable`).
+viewport itself while a palette item is dragged over it (`droppable`). A fifth,
+`--lr-flow-canvas-node-hover-outline-color` (default `var(--lr-color-border-strong)`) — the
+mouse-hover preview of a node's own `:focus-visible` ring — exists for a different reason than the
+four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` *is* valid
+CSS here, but the internal `[part='node']:hover` rule still out-specifies it ((0,2,0) vs. (0,1,1)),
+which this custom property sidesteps the same way. Set it to `transparent` to opt out of the hover
+treatment entirely.
 
 **Optional peer deps:** none.
 
@@ -5247,7 +5254,11 @@ content clickable, and it shows nothing while the viewport is above the first gr
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
 plus shared `--lr-focus-ring-width/-color/-offset` (inward-offset ring on `[part="base"]`, negative
-so it isn't clipped by the container's own `overflow: auto`).
+so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` also carries a
+mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
+always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
+`--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
+`transparent` to opt out of the hover treatment entirely.
 
 **Optional peer deps:** none.
 
@@ -6154,7 +6165,10 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.
 The `columns`/`rowHeight`/`gap` properties write them inline on `[part='base']` on every render, so
-overriding them from a stylesheet has no effect — set the properties instead.
+overriding them from a stylesheet has no effect — set the properties instead. `--lr-dashboard-grid-cell-hover-outline-color`
+(default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
+preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
+draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
 
 ## `lr-drilldown-panel`
 
