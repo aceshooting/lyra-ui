@@ -1447,3 +1447,256 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='popup']")).to.equal('10px');
 });
+
+// -- Coverage backfill: locale-order fallback paths, selection accessors before
+//    first render, setter edge cases, defensive validity guards, show/hide
+//    no-ops, parse fallbacks, and range-text edge cases. ---------------------
+
+describe('locale day/month/year order fallback', () => {
+  it('falls back to the runtime default locale order when locale resolution is empty', async () => {
+    const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+    Object.defineProperty(el, 'effectiveLocale', { get: () => '', configurable: true });
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = '03/04/2026';
+    input.dispatchEvent(new Event('change'));
+    expect(el.value).to.match(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('falls back to month/day/year field order when Intl.DateTimeFormat rejects the locale outright', async () => {
+    // "not_a_locale" is malformed enough that `new Intl.DateTimeFormat(...)` itself throws a
+    // RangeError -- localeDateOrder()'s own try/catch must fall back to its hardcoded default
+    // rather than letting that propagate out of a keystroke handler.
+    const el = (await fixture(html`<lr-date-input locale="not_a_locale"></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = '07/15/2026'; // month/day/year fallback order -> July 15, 2026
+    input.dispatchEvent(new Event('change'));
+    expect(el.value).to.equal('2026-07-15');
+  });
+
+  it('falls back to month/day/year field order when Intl reports fewer than three date fields', async () => {
+    const original = Intl.DateTimeFormat.prototype.formatToParts;
+    Intl.DateTimeFormat.prototype.formatToParts = function (...args: Parameters<typeof original>) {
+      return original.apply(this, args).filter((p) => p.type !== 'year');
+    };
+    try {
+      const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+      const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+      input.value = '07/15/2026'; // month/day/year under the forced fallback -> July 15, 2026
+      input.dispatchEvent(new Event('change'));
+      expect(el.value).to.equal('2026-07-15');
+    } finally {
+      Intl.DateTimeFormat.prototype.formatToParts = original;
+    }
+  });
+
+  it('expands a 2-digit year in an ambiguous locale-ordered date to the 2000s', async () => {
+    const el = (await fixture(html`<lr-date-input locale="en-GB"></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = '15/07/26'; // en-GB day/month/year -> 15 July, year 26 -> 2026
+    input.dispatchEvent(new Event('change'));
+    expect(el.value).to.equal('2026-07-15');
+  });
+});
+
+describe('selection accessors before the internal input has rendered', () => {
+  it('selectionStart/selectionEnd getters return null, and selectionDirection returns undefined, before the internal input exists', () => {
+    const el = document.createElement('lr-date-input') as LyraDateInput;
+    expect(el.selectionStart).to.equal(null);
+    expect(el.selectionEnd).to.equal(null);
+    // Unlike selectionStart/selectionEnd, the selectionDirection getter has no `?? null`
+    // fallback of its own -- optional chaining on a missing internal input short-circuits to
+    // `undefined` at runtime, even though its declared type says `| null`.
+    expect(el.selectionDirection).to.equal(undefined);
+  });
+
+  it('setRangeText() no-ops when the internal input has not rendered yet', () => {
+    const el = document.createElement('lr-date-input') as LyraDateInput;
+    expect(() => el.setRangeText('x')).to.not.throw();
+  });
+});
+
+it('selectionStart/selectionEnd/selectionDirection setters operate on the internal input', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  el.focus();
+
+  el.selectionStart = 1;
+  expect(el.input!.selectionStart).to.equal(1);
+
+  el.selectionEnd = 3;
+  expect(el.input!.selectionEnd).to.equal(3);
+
+  el.selectionDirection = 'backward';
+  expect(el.selectionDirection).to.equal('backward');
+});
+
+it('setRangeText() with only a replacement string uses the single-argument native overload', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  el.focus();
+  el.select(); // select the whole displayed text so a bare replacement covers it entirely
+  const displayed = el.input!.value;
+  const replaced = displayed.replace('15', '20');
+  el.setRangeText(replaced);
+  expect(el.value).to.equal('2026-07-20');
+});
+
+it('min/max setters tolerate a null assignment, normalizing to an empty string', async () => {
+  const el = (await fixture(
+    html`<lr-date-input value="2026-07-15" min="2026-01-01" max="2026-12-31"></lr-date-input>`,
+  )) as LyraDateInput;
+  (el as unknown as { min: string | null }).min = null;
+  expect(el.min).to.equal('');
+  (el as unknown as { max: string | null }).max = null;
+  expect(el.max).to.equal('');
+});
+
+it('value setter tolerates a null assignment, normalizing to an empty string', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  (el as unknown as { value: string | null }).value = null;
+  expect(el.value).to.equal('');
+});
+
+it('normalizes a malformed value with more than two slash-separated parts to empty', async () => {
+  const el = (await fixture(
+    html`<lr-date-input value="2026-07-15/2026-07-20/2026-07-25"></lr-date-input>`,
+  )) as LyraDateInput;
+  expect(el.value).to.equal('');
+});
+
+it('flags badInput defensively if a committed value fails a later strict-ISO re-check', async () => {
+  // valueDates() guards every part with parseStrictISO() again at validity-check time, even
+  // though normalizeCommittedValue() already rejects a bad value before it is ever committed --
+  // this proves that second guard actually does something if that invariant is ever violated.
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  expect(el.checkValidity()).to.be.true;
+
+  (el as unknown as { parseStrictISO(): null }).parseStrictISO = () => null;
+  el.min = '2026-01-01'; // re-runs updateValidity() without re-normalizing `value`
+  expect(el.internals.validity.badInput).to.be.true;
+  expect(el.checkValidity()).to.be.false;
+});
+
+it('ignores a visibilitychange event while the document is hidden', async () => {
+  const el = (await fixture(
+    html`<lr-date-input value="2026-07-14" disable-past></lr-date-input>`,
+  )) as LyraDateInput;
+  const clock = el as unknown as { now: () => Date };
+  clock.now = () => new Date(2026, 6, 14, 23, 59);
+  expect(el.checkValidity()).to.be.true;
+  clock.now = () => new Date(2026, 6, 15, 0, 1);
+
+  Object.defineProperty(el.ownerDocument, 'visibilityState', { value: 'hidden', configurable: true });
+  try {
+    el.ownerDocument.dispatchEvent(new Event('visibilitychange'));
+    await el.updateComplete;
+    expect(el.internals.validity.rangeUnderflow).to.be.false;
+  } finally {
+    delete (el.ownerDocument as unknown as { visibilityState?: unknown }).visibilityState;
+  }
+});
+
+it('does not track a focus-restore target when nothing was focused when the popup opened', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  Object.defineProperty(document, 'activeElement', { get: () => null, configurable: true });
+  try {
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  } finally {
+    delete (document as unknown as { activeElement?: unknown }).activeElement;
+  }
+});
+
+it('show() no-ops while already open or readonly; hide() no-ops when already closed', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  expect(el.open).to.be.false;
+  el.hide(); // already closed -- no-op
+  expect(el.open).to.be.false;
+
+  el.show();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  el.show(); // already open -- no-op
+  expect(el.open).to.be.true;
+  el.hide();
+  await el.updateComplete;
+
+  el.readonly = true;
+  await el.updateComplete;
+  el.show(); // readonly -- no-op
+  expect(el.open).to.be.false;
+});
+
+it('commits an empty typed value once its trimmed text is blank', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  input.value = '   '; // whitespace-only -- trims to empty
+  setTimeout(() => input.dispatchEvent(new Event('change')));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('');
+  expect(el.internals.validity.badInput).to.be.false;
+});
+
+it('parses a non-ambiguous, human-readable date string via Date.parse() as a last resort', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  input.value = 'July 15, 2026';
+  setTimeout(() => input.dispatchEvent(new Event('change')));
+  await oneEvent(el, 'change');
+  expect(el.value).to.equal('2026-07-15');
+});
+
+describe('range-text edge cases', () => {
+  // These three are rejected (unparseable) inputs -- applyTypedText() only emits
+  // input/change when a value actually commits, so a rejected parse fires neither
+  // event; awaiting oneEvent() here would hang forever. Dispatch synchronously
+  // (matching the existing "reverts an unparseable typed date" test above) instead.
+  it('rejects a raw ISO range containing a calendar-invalid date', async () => {
+    const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = '2026-02-30/2026-07-15';
+    input.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.internals.validity.badInput).to.be.true;
+  });
+
+  it('rejects a single date (no range separator) typed while in range mode', async () => {
+    const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = '2026-07-15';
+    input.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.internals.validity.badInput).to.be.true;
+  });
+
+  it('rejects a separator-joined range where one side fails to parse', async () => {
+    const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = 'not a date – 2026-07-15';
+    input.dispatchEvent(new Event('change'));
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.internals.validity.badInput).to.be.true;
+  });
+
+  it('normalizes a reversed range typed using the displayed en-dash separator format', async () => {
+    const el = (await fixture(html`<lr-date-input mode="range"></lr-date-input>`)) as LyraDateInput;
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+    input.value = 'July 20, 2026 – July 10, 2026'; // reversed, human-readable -> the separator branch
+    input.dispatchEvent(new Event('change'));
+    expect(el.value).to.equal('2026-07-10/2026-07-20');
+  });
+});
+
+it('formStateRestoreCallback clears the value for a non-string restored state', async () => {
+  const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
+  (el as unknown as { formStateRestoreCallback(state: FormData | null): void }).formStateRestoreCallback(
+    new FormData(),
+  );
+  expect(el.value).to.equal('');
+});

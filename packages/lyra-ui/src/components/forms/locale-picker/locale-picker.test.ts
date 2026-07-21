@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
 import './locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.js';
 import { getRegisteredLyraLocales, registerLyraLocale, setLyraLocale, getLyraLocale } from '../../../internal/localization.js';
@@ -384,4 +384,288 @@ it('unset (only locales, or nothing) renders deterministically with no other new
   expect(el.size).to.equal('m');
   expect(el.disabled).to.be.false;
   expect(trigger(el)).to.exist;
+});
+
+// -- Coverage backfill: attribute parsing, ElementInternals fallback/passthrough,
+//    setter edge cases, form-state restoration, type-ahead edge cases, keyboard
+//    edge cases, and aria/describedby wiring. -------------------------------
+
+it('parses a plain show-flags="false" HTML attribute via fromAttribute, not just the .showFlags property', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker show-flags="false" .locales=${['fr']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  await el.updateComplete;
+  expect(el.showFlags).to.be.false;
+  el.open = true;
+  await el.updateComplete;
+  expect(rows(el)[0].querySelectorAll('lr-flag').length).to.equal(0);
+});
+
+it('falls back to a no-op ElementInternals when attachInternals is unavailable', async () => {
+  const proto = HTMLElement.prototype as unknown as { attachInternals: unknown };
+  const original = proto.attachInternals;
+  proto.attachInternals = undefined;
+  try {
+    const el = document.createElement('lr-locale-picker') as LyraLocalePicker;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.form === null).to.be.true;
+    expect(el.labels.length).to.equal(0);
+    expect(el.willValidate).to.be.false;
+    el.remove();
+  } finally {
+    proto.attachInternals = original;
+  }
+});
+
+it('falls back to a no-op ElementInternals when attachInternals throws', async () => {
+  const proto = HTMLElement.prototype as unknown as { attachInternals: () => ElementInternals };
+  const original = proto.attachInternals;
+  proto.attachInternals = () => {
+    throw new Error('simulated attachInternals failure');
+  };
+  try {
+    const el = document.createElement('lr-locale-picker') as LyraLocalePicker;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.form === null).to.be.true;
+    expect(el.checkValidity()).to.be.true;
+    el.remove();
+  } finally {
+    proto.attachInternals = original;
+  }
+});
+
+it('exposes form/labels/validity/willValidate via ElementInternals passthrough getters', async () => {
+  const form = await fixture<HTMLFormElement>(html`
+    <form><lr-locale-picker name="locale" .locales=${['fr', 'de']}></lr-locale-picker></form>
+  `);
+  const el = form.querySelector('lr-locale-picker') as LyraLocalePicker;
+  expect(el.form === form).to.be.true;
+  expect(el.labels.length).to.equal(0);
+  expect(el.validity.valid).to.be.true;
+  expect(el.willValidate).to.be.true;
+});
+
+it('name setter removes the attribute when cleared, and tolerates a null assignment', async () => {
+  const el = (await fixture(html`<lr-locale-picker name="locale"></lr-locale-picker>`)) as LyraLocalePicker;
+  expect(el.getAttribute('name')).to.equal('locale');
+  el.name = '';
+  // Checked synchronously (before any pending Lit update flush): the hand-written setter calls
+  // removeAttribute() immediately. A later microtask can re-add it via Lit's own separate
+  // reflect:true property-to-attribute sync (using the default string converter, unrelated to
+  // this setter's own removeAttribute call), so this assertion intentionally does not await
+  // updateComplete first.
+  expect(el.hasAttribute('name')).to.be.false;
+
+  (el as unknown as { name: string | null }).name = null;
+  expect(el.name).to.equal('');
+});
+
+it('value setter tolerates a null assignment, normalizing to an empty string', async () => {
+  const el = (await fixture(html`<lr-locale-picker value="fr"></lr-locale-picker>`)) as LyraLocalePicker;
+  expect(el.value).to.equal('fr');
+  (el as unknown as { value: string | null }).value = null;
+  expect(el.value).to.equal('');
+});
+
+it('formStateRestoreCallback restores a string state and clears on a non-string state', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const restore = (
+    el as unknown as { formStateRestoreCallback(state: string | File | FormData | null): void }
+  ).formStateRestoreCallback;
+  restore.call(el, 'de');
+  expect(el.value).to.equal('de');
+
+  restore.call(el, null);
+  expect(el.value).to.equal('');
+});
+
+it('reportValidity() delegates to the internal ElementInternals', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker required .locales=${['fr']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  await el.updateComplete;
+  expect(el.reportValidity()).to.be.false;
+  el.value = 'fr';
+  await el.updateComplete;
+  expect(el.reportValidity()).to.be.true;
+});
+
+it('resets the type-ahead buffer once the debounce window elapses', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const btn = trigger(el);
+  const deFirstLetter = localeNativeName('de').charAt(0);
+  const itFirstLetter = localeNativeName('it').charAt(0);
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: itFirstLetter, bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  let active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+  expect(active.dataset.value).to.equal('it');
+
+  await aTimeout(600); // let the debounce timer clear the buffer
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: deFirstLetter, bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  active = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
+  // If the buffer had NOT been reset by the debounce timer, this keystroke would search for
+  // "<i-letter><d-letter>" (no match) and the active row would stay on "it" instead of moving.
+  expect(active.dataset.value).to.equal('de');
+});
+
+it('type-ahead while closed commits the matching row immediately', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const btn = trigger(el);
+  const firstLetter = localeNativeName('de').charAt(0);
+  setTimeout(() =>
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: firstLetter, bubbles: true, cancelable: true })),
+  );
+  await oneEvent(el, 'lr-change');
+  expect(el.value).to.equal('de');
+});
+
+it('type-ahead with no matching row leaves the active row unchanged', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const btn = trigger(el);
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option"][data-active]') === null).to.be.true;
+});
+
+it('typeAhead no-ops defensively when there are no offered rows', async () => {
+  const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
+  Object.defineProperty(el, 'normalizedEntries', { get: () => [], configurable: true });
+  expect(() => (el as unknown as { typeAhead(char: string): void }).typeAhead('a')).to.not.throw();
+  expect(el.value).to.equal('');
+});
+
+it('show()/hide() are no-ops in already-settled states (open, disabled, or already closed)', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const api = el as unknown as { show(): void; hide(): void };
+  api.hide(); // already closed -- no-op
+  expect(el.open).to.be.false;
+
+  api.show();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  api.show(); // already open -- no-op
+  expect(el.open).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.open).to.be.false; // the disabled setter itself hides
+  api.show(); // disabled -- no-op
+  expect(el.open).to.be.false;
+});
+
+it('the trigger-click handler no-ops while disabled even when invoked directly', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker disabled .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  (el as unknown as { onTriggerClick(): void }).onTriggerClick();
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('ignores listbox row clicks while disabled', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker disabled .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  rows(el)[0].click();
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+});
+
+it('clicking the listbox background (not a row) does not commit anything', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  listbox.click();
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+});
+
+it('ArrowDown/ArrowUp open a closed listbox instead of moving the active row', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const btn = trigger(el);
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.open = false;
+  await el.updateComplete;
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+});
+
+it('Enter with no active row hides the listbox without committing', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const btn = trigger(el);
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.value).to.equal('');
+});
+
+it('Home jumps to the first row while open', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  setTimeout(() =>
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })),
+  );
+  await oneEvent(el, 'lr-change');
+  expect(el.value).to.equal('fr');
+});
+
+it('wires aria-describedby to the visible hint/error text', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker hint="Pick one" error-text="Required"></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  await el.updateComplete;
+  const describedBy = trigger(el).getAttribute('aria-describedby') ?? '';
+  expect(describedBy).to.include('locale-picker-hint');
+  expect(describedBy).to.include('locale-picker-error');
+});
+
+it('reflects aria-invalid=true on the trigger once a required field is touched and empty', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker required .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-invalid')).to.equal('false');
+  trigger(el).dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(trigger(el).getAttribute('aria-invalid')).to.equal('true');
 });
