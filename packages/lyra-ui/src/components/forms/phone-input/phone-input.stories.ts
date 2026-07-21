@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import '../../media/flag/flag-peer.js';
-import type { LyraPhoneInput, PhoneNumberAdapter } from './phone-input.class.js';
+import type { LyraPhoneInput, PhoneNumberAdapter, LyraPhoneInputSize } from './phone-input.class.js';
 
 const demoAdapter: PhoneNumberAdapter = {
   countries: [
@@ -90,6 +90,26 @@ export const WithFlags: Story = {
       style="max-width: 24rem"
     ></lr-phone-input>
   `,
+};
+
+export const Sizes: Story = {
+  render: () => {
+    const sizes: LyraPhoneInputSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+        ${sizes.map(
+          (size) => html`
+            <lr-phone-input
+              size=${size}
+              label=${`Size "${size}"`}
+              default-country="LU"
+              .adapter=${demoAdapter}
+            ></lr-phone-input>
+          `,
+        )}
+      </div>
+    `;
+  },
 };
 
 export const Required: Story = {

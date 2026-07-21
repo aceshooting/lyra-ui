@@ -30,6 +30,7 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
 export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';
+export type LyraPhoneInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface PhoneCountry {
   /** ISO 3166-1 alpha-2 region code. */
@@ -246,6 +247,14 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @csspart input - The native telephone input.
  * @csspart hint - The hint message.
  * @csspart error - The error or validation message.
+ * @cssprop --lr-phone-input-padding-block - Input block-padding, scaled by `size`.
+ * @cssprop --lr-phone-input-font-size - Input/flag/country-code/calling-code font size, scaled by `size`.
+ * @cssprop --lr-phone-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
+ * @cssprop --lr-phone-input-control-height - Exact input-wrapper height. Unset by default, which
+ *   leaves `--lr-phone-input-control-min-height` as a floor only; set it to a length to both floor
+ *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
+ *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
+ *   as well as inline on the element.
  */
 export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   static styles = [LyraElement.styles, styles];
@@ -281,6 +290,8 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
+  /** Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`. */
+  @property({ reflect: true }) size: LyraPhoneInputSize = 'm';
   /** Accessible name for the telephone input. Takes precedence over `phoneLabel`, label, and placeholder. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Accessible name for the country selector. */

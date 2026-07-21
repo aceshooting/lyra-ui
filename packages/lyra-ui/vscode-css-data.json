@@ -2242,6 +2242,34 @@
       }
     },
     {
+      "name": "--lr-phone-input-control-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** — Exact input-wrapper height. Unset by default, which leaves `--lr-phone-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
+      }
+    },
+    {
+      "name": "--lr-phone-input-control-min-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** — Input-wrapper block-size floor, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-phone-input-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** — Input/flag/country-code/calling-code font size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-phone-input-padding-block",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** — Input block-padding, scaled by `size`."
+      }
+    },
+    {
       "name": "--lr-playback-icon-size",
       "description": {
         "kind": "markdown",

@@ -1567,6 +1567,9 @@ interface PhoneNumberAdapter {
   `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once; without that registration the
   trigger simply omits the image. The open popup list stays text-only — a native `<option>` cannot
   contain elements.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
+  `size`; scales input padding, font size, and wrapper min-height; `size="s"` shares its outer
+  control height with `lr-input`, `lr-select`, and `lr-combobox` without part overrides)
 - `country: string` — current uppercase ISO alpha-2 selection; falls back to `defaultCountry`, then
   the first explicit/adapter country. Changing the country reparses the editable number.
 - `label: string = ''`, `hint: string = ''`, `errorText: string = ''` (attribute `error-text`) —
@@ -1633,9 +1636,13 @@ such as a consumer-owned `<lr-flag>`; no flag package is imported automatically)
 `flags`), `country-code` (selected alpha-2 code, `data-placeholder` when no country exists),
 `expand-icon`, `calling-code`, `input`, `hint`, `error`.
 
-**Themeable custom properties:** shared tokens only. The phone-number input and calling code are
-deliberately `dir="ltr"`/isolated because telephone numbers are algorithmic content; surrounding
-form chrome and the country selector inherit LTR/RTL and use logical spacing/borders.
+**Themeable custom properties:** `--lr-phone-input-padding-block`, `--lr-phone-input-font-size`,
+and `--lr-phone-input-control-min-height` (each scaled by `size`), plus `--lr-phone-input-control-height`
+to pin an exact input-wrapper height (both floors and caps it — use it for pixel-matching an
+`<lr-input>` or `<lr-select>` in the same toolbar row; undeclared by default, leaving the min height
+as a floor only). The phone-number input and calling code are deliberately `dir="ltr"`/isolated
+because telephone numbers are algorithmic content; surrounding form chrome and the country selector
+inherit LTR/RTL and use logical spacing/borders.
 
 **Optional peer deps:** `libphonenumber-js` is declared optional but never imported by Lyra itself.
 For full national parsing/formatting, install it in the consuming app and pass it through the

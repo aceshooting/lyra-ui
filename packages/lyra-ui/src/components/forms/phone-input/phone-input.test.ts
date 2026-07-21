@@ -492,6 +492,30 @@ it('passes non-default country-label, incomplete-text, and invalid-text attribut
   expect(el.internals.validationMessage).to.equal('Not a number');
 });
 
+it('defaults to size "m" and reflects a size attribute', async () => {
+  const defaultEl = (await fixture(html`<lr-phone-input></lr-phone-input>`)) as LyraPhoneInput;
+  expect(defaultEl.size).to.equal('m');
+  const el = (await fixture(html`<lr-phone-input size="s"></lr-phone-input>`)) as LyraPhoneInput;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.size).to.equal('s');
+});
+
+it("matches lr-input's own row height at every shared size tier", async () => {
+  const expected: Record<string, string> = {
+    '2xs': '20px',
+    xs: '24px',
+    s: '30px',
+    m: '40px',
+    l: '48px',
+    xl: '56px',
+  };
+  for (const [size, px] of Object.entries(expected)) {
+    const el = await fixture(html`<lr-phone-input size=${size}></lr-phone-input>`);
+    const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(getComputedStyle(wrapper).minBlockSize, `size=${size}`).to.equal(px);
+  }
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`
     <lr-phone-input

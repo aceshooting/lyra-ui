@@ -11147,7 +11147,7 @@
         },
         {
           "name": "lr-phone-input",
-          "description": "`<lr-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction. A host\n`aria-label` names the internal telephone input and wins over every derived\nor component-specific fallback.\n\nThe country selector keeps the real, fully accessible native `<select>`\n(full country names in its popup, native mobile pickers, type-ahead) but\nrenders it invisibly over a compact visual trigger — selected alpha-2 code\nplus a design-system chevron — so long localized country names never clip\nthe closed control and the calling code isn't shown twice. With `flags`\nset, the trigger also shows the selected country's `<lr-flag>`; actual flag\nartwork still comes from the optional `@aceshooting/lyra-flags` peer,\nregistered by the consumer via `components/media/flag/flag-peer.js`\nexactly as for a standalone `<lr-flag>` (without that registration the\ntrigger simply omits the image). Native `<option>`s cannot contain\nelements, so the open popup remains text-only by platform design.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `country-prefix` | Optional visual displayed before the country selector, such as a flag. |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `calling-code` | The selected country's calling code. |\n| `country` | The country selector region (invisible native select over the visual trigger). |\n| `country-code` | The selected alpha-2 code (or placeholder text) inside the trigger. |\n| `country-prefix` | Optional country adornment slot wrapper. |\n| `country-select` | The native country selector, stretched invisibly over the trigger. |\n| `country-trigger` | The visible, decorative closed-state trigger. |\n| `error` | The error or validation message. |\n| `expand-icon` | The dropdown indicator inside the trigger. |\n| `flag` | The selected country's `<lr-flag>` inside the trigger (only with `flags`). |\n| `form-control` | The outer form-control wrapper. |\n| `form-control-label` | The visible label. |\n| `hint` | The hint message. |\n| `input` | The native telephone input. |\n| `input-wrapper` | The country selector and telephone input wrapper. |",
+          "description": "`<lr-phone-input>` — a country-aware telephone field whose form value is\ncanonical E.164. National formatting and numbering-plan validation are\nsupplied through `adapter`; without one, already-international E.164 input\nremains useful and national input stays editable with `incomplete` validity.\n\nUser edits emit native-style `input` and `change` events. Event detail\nexposes both the canonical `value` and editable `inputValue`; programmatic\nproperty changes are silent. Phone-number text is deliberately LTR while\nthe form chrome and country selector follow the inherited direction. A host\n`aria-label` names the internal telephone input and wins over every derived\nor component-specific fallback.\n\nThe country selector keeps the real, fully accessible native `<select>`\n(full country names in its popup, native mobile pickers, type-ahead) but\nrenders it invisibly over a compact visual trigger — selected alpha-2 code\nplus a design-system chevron — so long localized country names never clip\nthe closed control and the calling code isn't shown twice. With `flags`\nset, the trigger also shows the selected country's `<lr-flag>`; actual flag\nartwork still comes from the optional `@aceshooting/lyra-flags` peer,\nregistered by the consumer via `components/media/flag/flag-peer.js`\nexactly as for a standalone `<lr-flag>` (without that registration the\ntrigger simply omits the image). Native `<option>`s cannot contain\nelements, so the open popup remains text-only by platform design.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `country-prefix` | Optional visual displayed before the country selector, such as a flag. |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `calling-code` | The selected country's calling code. |\n| `country` | The country selector region (invisible native select over the visual trigger). |\n| `country-code` | The selected alpha-2 code (or placeholder text) inside the trigger. |\n| `country-prefix` | Optional country adornment slot wrapper. |\n| `country-select` | The native country selector, stretched invisibly over the trigger. |\n| `country-trigger` | The visible, decorative closed-state trigger. |\n| `error` | The error or validation message. |\n| `expand-icon` | The dropdown indicator inside the trigger. |\n| `flag` | The selected country's `<lr-flag>` inside the trigger (only with `flags`). |\n| `form-control` | The outer form-control wrapper. |\n| `form-control-label` | The visible label. |\n| `hint` | The hint message. |\n| `input` | The native telephone input. |\n| `input-wrapper` | The country selector and telephone input wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-phone-input-padding-block` — Input block-padding, scaled by `size`.\n- `--lr-phone-input-font-size` — Input/flag/country-code/calling-code font size, scaled by `size`.\n- `--lr-phone-input-control-min-height` — Input-wrapper block-size floor, scaled by `size`.\n- `--lr-phone-input-control-height` — Exact input-wrapper height. Unset by default, which leaves `--lr-phone-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element.",
           "attributes": [
             {
               "name": "aria-label",
@@ -11325,6 +11325,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "size",
+              "description": "Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`.\n\nType: `LyraPhoneInputSize`  \nDefault: `'m'`",
+              "value": {
+                "type": [
+                  "LyraPhoneInputSize"
                 ]
               }
             },
@@ -18599,6 +18608,22 @@
         {
           "name": "--lr-pdf-viewer-height",
           "description": "**`<lr-pdf-viewer>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized page list. Also settable via the `max-height` property."
+        },
+        {
+          "name": "--lr-phone-input-control-height",
+          "description": "**`<lr-phone-input>`** — Exact input-wrapper height. Unset by default, which leaves `--lr-phone-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
+        },
+        {
+          "name": "--lr-phone-input-control-min-height",
+          "description": "**`<lr-phone-input>`** — Input-wrapper block-size floor, scaled by `size`."
+        },
+        {
+          "name": "--lr-phone-input-font-size",
+          "description": "**`<lr-phone-input>`** — Input/flag/country-code/calling-code font size, scaled by `size`."
+        },
+        {
+          "name": "--lr-phone-input-padding-block",
+          "description": "**`<lr-phone-input>`** — Input block-padding, scaled by `size`."
         },
         {
           "name": "--lr-playback-icon-size",
