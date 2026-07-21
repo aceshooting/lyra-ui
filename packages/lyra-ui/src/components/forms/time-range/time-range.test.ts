@@ -1260,3 +1260,28 @@ it('defaults to size "m" and reflects a size attribute', async () => {
   expect(el.getAttribute('size')).to.equal('s');
   expect(el.size).to.equal('s');
 });
+
+it('floors the preset-button hit-area at 24px at the 2xs tier, without disturbing its natural (already-compliant) size at m', async () => {
+  // [part="preset-button"] is a real interactive <button>, not a decorative label. Before the
+  // size-scaling `min-block-size`/`min-inline-size` floor was added, the unfloored
+  // `calc(var(--lr-space-xs) * var(--lr-time-range-size-scale))`/font-size math shrank this
+  // button to ~15px tall at the 2xs tier -- well under the WCAG 2.5.8 24px minimum hit-area,
+  // even though the m/l/xl tiers already cleared it unaided (28px/33.6px/37.2px).
+  const el2xs = (await fixture(
+    html`<lr-time-range size="2xs"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el2xs.presets = PRESETS;
+  await el2xs.updateComplete;
+  const button2xs = el2xs.shadowRoot!.querySelector('[part="preset-button"]') as HTMLElement;
+  const rendered2xs = getComputedStyle(button2xs);
+  expect(parseFloat(rendered2xs.blockSize)).to.be.at.least(24);
+  expect(parseFloat(rendered2xs.inlineSize)).to.be.at.least(24);
+
+  const elM = (await fixture(html`<lr-time-range size="m"></lr-time-range>`)) as LyraTimeRange;
+  elM.presets = PRESETS;
+  await elM.updateComplete;
+  const buttonM = elM.shadowRoot!.querySelector('[part="preset-button"]') as HTMLElement;
+  // The default `m` tier was never part of the regression (28px, already above the floor) -- the
+  // added min-block-size must not change its rendered size.
+  expect(getComputedStyle(buttonM).blockSize).to.equal('28px');
+});

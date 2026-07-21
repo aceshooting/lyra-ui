@@ -35,6 +35,14 @@ export const styles = css`
   [part='preset-button'] {
     display: inline-flex;
     align-items: center;
+    /* Floors, not fixed sizes -- matches --lr-icon-button-size's contract elsewhere in the library:
+       at m/l/xl the scaled padding+font-size already clear 24px on their own (28px/33.6px/37.2px)
+       and these never engage, but at 2xs/xs/s the scale factor shrinks the button toward ~15-21px
+       tall, under the WCAG 2.5.8 24px minimum hit-area even though this is a real <button>, not a
+       decorative label. min-inline-size guards the same floor along the other axis: a short preset
+       label (e.g. "1h") measures under 24px wide at 2xs/xs once the padding shrinks with it. */
+    min-block-size: var(--lr-size-24px);
+    min-inline-size: var(--lr-size-24px);
     padding: calc(var(--lr-space-xs) * var(--lr-time-range-size-scale)) calc(var(--lr-space-s) * var(--lr-time-range-size-scale));
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -116,10 +124,15 @@ export const styles = css`
     transform: translateX(50%);
   }
   /*
-   * The visible dot stays var(--lr-size-14px) by design, but that's well under the ~var(--lr-size-24px)
-   * minimum touch target size despite \`touch-action: none\` signalling this
-   * is meant to be touch-dragged. Widen the actual hit/drag area with a
-   * transparent ::before instead of growing the handle box itself:
+   * The visible dot's base size is var(--lr-size-14px) by design, but only renders at that literal
+   * value at the default \`m\` tier (scale 1) -- at every other tier it scales proportionally with
+   * --lr-time-range-size-scale, from 7px at 2xs up to 19.6px at xl. Whatever the tier, the dot alone
+   * is well under the ~var(--lr-size-24px) minimum touch target size despite \`touch-action: none\`
+   * signalling this is meant to be touch-dragged. Widen the actual hit/drag area with a
+   * transparent ::before instead of growing the handle box itself -- and unlike the dot, the
+   * ::before is deliberately floored at 24px via max() below (see its own size declarations), so
+   * the drag hit-area never shrinks with the visible dot at the small tiers, only grows past 24px
+   * once the scaled 28px base overtakes the floor (m and up):
    * onPointerMove (time-range.ts) never reads the handle's own
    * getBoundingClientRect() — it only measures \`[part="base"]\`'s rect and
    * e.clientX/e.clientY — and a pointerdown inside the ::before still
