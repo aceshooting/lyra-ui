@@ -47,6 +47,7 @@ jobs:
       # exports, so a failure here is a genuinely orphaned file/script or an unused/unlisted
       # dependency -- not the whole library being flagged dead. See knip.jsonc's own header comment.
       - run: pnpm run check:dead-code
+      - run: pnpm run check:secrets
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
       - run: pnpm readme:check

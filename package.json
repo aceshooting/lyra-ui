@@ -25,6 +25,7 @@
     "skill:check": "node scripts/check-skill-manifest.mjs",
     "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
     "check:dead-code": "knip",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "provenance:check": "pnpm --filter @aceshooting/lyra-ui provenance-policy",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -35,6 +36,7 @@
     "@arethetypeswrong/cli": "^0.18.5",
     "@changesets/cli": "^2.31.1",
     "@codecov/vite-plugin": "^2.0.1",
+    "@secretlint/secretlint-rule-preset-recommend": "^13.0.2",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "@storybook/addon-a11y": "^10.5.2",
     "@storybook/addon-docs": "^10.5.2",
@@ -53,6 +55,7 @@
     "maplibre-gl": "^5.24.0",
     "playwright": "^1.61.1",
     "publint": "^0.3.21",
+    "secretlint": "^13.0.2",
     "storybook": "^10.5.2",
     "tailwindcss": "^4.3.3",
     "vite": "^8.1.5"

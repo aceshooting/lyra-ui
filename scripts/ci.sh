@@ -130,6 +130,9 @@ pnpm --filter '!@aceshooting/lyra-ui' -r test
 step "check:dead-code"
 pnpm run check:dead-code
 
+step "check:secrets"
+pnpm run check:secrets
+
 step "lyra-ui test:coverage"
 pnpm --filter @aceshooting/lyra-ui test:coverage
 

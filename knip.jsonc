@@ -16,6 +16,10 @@
         // tarball smoke test — none of that is a static import knip can trace.
         "publint",
         "@arethetypeswrong/cli",
+        // scripts/check-secrets.mjs spawns the secretlint bin over git-tracked files; the rule
+        // preset is referenced by id in .secretlintrc.json, not statically imported.
+        "secretlint",
+        "@secretlint/secretlint-rule-preset-recommend",
         "@sgratzl/chartjs-chart-boxplot",
         "chart.js",
         "chartjs-plugin-zoom",
