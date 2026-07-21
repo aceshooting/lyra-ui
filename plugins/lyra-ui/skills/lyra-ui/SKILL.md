@@ -86,7 +86,7 @@ absent from the tables has no documented counterpart — check `references/index
 component covering the same job under a different name.
 
 Run `/lyra-ui:migrate-from-wa` or `/lyra-ui:migrate-from-shoelace` to apply the rename across a
-project automatically, or `/lyra-ui:update-lyra` for the broader periodic audit (bump to latest,
+project automatically, or `/lyra-ui:update` for the broader periodic audit (bump to latest,
 sweep for remaining `wa-*`/hand-rolled UI, migrate what's adoptable, file genuine gaps upstream).
 
 ## Report gaps, bugs, and improvement ideas

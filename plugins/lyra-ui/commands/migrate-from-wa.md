@@ -35,5 +35,5 @@ Steps:
    only the "not mirrored" bucket's usages remain.
 5. Report: how many tags were migrated (grouped by component), the exact files touched, and the
    full list of any `wa-*` usages left behind because lyra-ui has no equivalent yet — suggest the
-   user run `/lyra-ui:update-lyra` to check whether a newer lyra-ui release has since closed that
+   user run `/lyra-ui:update` to check whether a newer lyra-ui release has since closed that
    gap, or file it upstream via that command.

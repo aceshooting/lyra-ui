@@ -137,7 +137,7 @@ from `custom-elements.json`.
 
 **Claude Code users:** this repo is also a plugin marketplace — installing the `lyra-ui` plugin gives
 Claude the same reference as a skill, plus `/lyra-ui:migrate-from-wa`,
-`/lyra-ui:migrate-from-shoelace` and `/lyra-ui:update-lyra` commands.
+`/lyra-ui:migrate-from-shoelace` and `/lyra-ui:update` commands.
 
 **Contributing to this repo itself?** See [`../../AGENTS.md`](../../AGENTS.md) instead — that's a
 contributor guide for agents working *on* lyra-ui, not the same document as the above.
