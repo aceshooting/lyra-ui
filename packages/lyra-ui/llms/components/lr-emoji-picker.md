@@ -67,8 +67,9 @@ each emoji button's box; scaled by the `size` property), `--lr-emoji-picker-glyp
 `--lr-font-size-lg`, the font size of the emoji glyph; scaled by the `size` property to keep the glyph
 proportional to the item box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
 emoji within a windowed row), and `--lr-emoji-picker-row-height` (default
-`calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height). The first three
-are also read back in JS to derive columns-per-row and row offsets for the windowed layout,
+`calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height).
+`--lr-emoji-picker-item-size`, `--lr-emoji-picker-gap`, and `--lr-emoji-picker-row-height` are also
+read back in JS to derive columns-per-row and row offsets for the windowed layout,
 resolved to real pixels by measuring hidden probe boxes the component's own stylesheet sizes from
 those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` included, and the windowed
 geometry matches what is painted without expressing the tokens in `px`. The measurement is cached

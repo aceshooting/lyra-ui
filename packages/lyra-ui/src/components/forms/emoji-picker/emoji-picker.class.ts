@@ -109,8 +109,9 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).
  * @csspart grid - The keyboard-navigable emoji grid.
  * @csspart group-label - Each group's heading, rendered above its emojis.
- * @csspart emoji - Each emoji's own `<button>`; meets the shared minimum tappable size
- *   (`--lr-icon-button-size`) without enlarging the rendered emoji glyph itself.
+ * @csspart emoji - Each emoji's own `<button>`; its box and glyph both scale with the `size`
+ *   property (`--lr-emoji-picker-item-size`/`-glyph-size`), with the hit area floored at a flat
+ *   24px (WCAG 2.5.8) rather than the shared `--lr-icon-button-size`.
  * @csspart empty - The empty-state message, shown when the search matches nothing.
  * @csspart virtual-spacer - The full-height scroll spacer that gives the grid its scrollbar while
  *   only the visible rows exist in the DOM. Rendered on the windowed path only.
