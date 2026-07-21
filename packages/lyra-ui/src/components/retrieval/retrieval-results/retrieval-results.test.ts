@@ -122,6 +122,20 @@ it('deduplicates by id, keeping the higher-scoring duplicate', async () => {
   expect(inspector.chunks[0]!.text).to.equal('high score copy');
 });
 
+it('uses finite normalized scores when sorting and deduplicating hostile result data', async () => {
+  const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+  el.chunks = [
+    { id: 'dup', text: 'invalid copy', score: Number.NaN, source: { id: 's1', name: 'a.pdf' } },
+    { id: 'dup', text: 'clamped copy', score: 2, source: { id: 's1', name: 'a.pdf' } },
+    { id: 'low', text: 'low', score: -1, source: { id: 's2', name: 'b.pdf' } },
+  ];
+  await el.updateComplete;
+  const inspectors = [...el.shadowRoot!.querySelectorAll('lr-chunk-inspector')];
+  expect(inspectors[0]!.chunks[0]!.text).to.equal('clamped copy');
+  expect(inspectors[0]!.shadowRoot!.querySelector('[part~="score"]')!.textContent).to.include('100%');
+  expect(inspectors[1]!.shadowRoot!.querySelector('[part~="score"]')!.textContent).to.include('0%');
+});
+
 it('keeps every duplicate when dedupe is false', async () => {
   // `.dedupe=` (a property binding), not `?dedupe=` -- `dedupe` defaults to `true`, and a boolean
   // attribute binding that evaluates to `false` on a freshly-created element never actually removes

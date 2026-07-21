@@ -2,7 +2,6 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './word-cloud.js';
 import type { LyraWordCloud } from './word-cloud.js';
 import { MAX_FONT_SIZE_PX, MAX_WORDS, MIN_SANE_FONT_SIZE } from './word-cloud-layout.js';
-import { styles } from './word-cloud.styles.js';
 
 const WORDS = [
   { text: 'alpha', weight: 10 },
@@ -489,25 +488,13 @@ it('announces the count of words actually rendered, not the raw input count', as
   expect(el.getAttribute('aria-label')).to.include('1 word');
 });
 
-it('defines a dark-mode palette with readable fallback colors', () => {
-  expect(styles.cssText).to.match(/prefers-color-scheme:\s*dark/);
-  expect(styles.cssText).to.match(/--lr-word-cloud-color-8:\s*var\(--lr-color-chart-8\)/);
-});
-
-it('does not redeclare colors 1-4 under dark mode -- they already flip via the token layer', () => {
-  // --lr-color-brand/-success/-warning/-danger (which colors 1-4 alias in
-  // the light-mode block) are themselves redefined for dark mode in
-  // tokens.styles.ts, so a second override here would just repeat the same
-  // resolved value rather than add a variant. Only the chart-ramp colors
-  // (5-8) need an explicit dark swap.
-  const darkBlockMatch = styles.cssText.match(/prefers-color-scheme:\s*dark\)\s*{\s*:host\s*{([\s\S]*?)}\s*}/);
-  expect(darkBlockMatch, 'expected a dark-mode :host block').to.exist;
-  const darkBlock = darkBlockMatch![1]!;
-  expect(darkBlock).to.not.match(/--lr-word-cloud-color-1:/);
-  expect(darkBlock).to.not.match(/--lr-word-cloud-color-2:/);
-  expect(darkBlock).to.not.match(/--lr-word-cloud-color-3:/);
-  expect(darkBlock).to.not.match(/--lr-word-cloud-color-4:/);
-  expect(darkBlock).to.match(/--lr-word-cloud-color-5:\s*var\(--lr-color-chart-5\)/);
+it('keeps the palette on theme tokens so explicit dark themes are not overridden by the OS preference', async () => {
+  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+  el.style.setProperty('--lr-word-cloud-color-1', 'rgb(1, 2, 3)');
+  el.refreshTheme();
+  await el.updateComplete;
+  const word = el.shadowRoot!.querySelector('[part="word"]') as SVGTextElement;
+  expect(word.getAttribute('fill')).to.equal('rgb(1, 2, 3)');
 });
 
 it("localizes the wordCloud aria-label's pluralized noun via this.localize()", async () => {

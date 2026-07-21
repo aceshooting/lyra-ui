@@ -35,7 +35,8 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
-**CSS parts:** `base`, `canvas`, `description`, `data-table`
+**CSS parts:** `base`, `canvas`, `description`, `data-table`, `error` (`role="alert"` message shown
+instead of `canvas` when the optional box-plot peer fails to load)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -62,6 +63,6 @@ independently of the base `chart-loader.ts`).
   logical start in RTL, canvas tooltip/axis colors are token-driven, and animation is disabled
   under reduced motion.
 - If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
-  resolves to no chart rather than throwing.
+  fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
 
 ---

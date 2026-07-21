@@ -19,6 +19,11 @@ const BAR_DATASETS = [
   { label: 'B', data: [4, 5, 6] },
 ];
 
+it('parses begin-at-zero="false" as false from plain HTML', async () => {
+  const el = await mount(html`<lr-lite-chart begin-at-zero="false"></lr-lite-chart>`);
+  expect(el.beginAtZero).to.be.false;
+});
+
 it('renders one bar per label per dataset (grouped, not stacked)', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"

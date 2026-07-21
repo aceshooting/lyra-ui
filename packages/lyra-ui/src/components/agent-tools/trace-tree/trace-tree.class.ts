@@ -373,14 +373,11 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     `;
   }
 
-  private renderRow(row: SpanRow): TemplateResult {
+  private renderRow(row: SpanRow, firstId: string | undefined, extent: number): TemplateResult {
     const { span, depth, hasChildren, posInSet, setSize } = row;
     const expanded = hasChildren && !this.collapsedIds.has(span.id);
     const isActive = this.activeSpanId === span.id;
-    const rows = this.buildRows();
-    const firstId = rows[0]?.span.id;
     const tabbable = this.focusedId === span.id || (this.focusedId == null && span.id === firstId);
-    const extent = this.traceExtent();
     const startPct = (span.startMs / extent) * 100;
     const endMs = span.endMs ?? (span.status === 'running' ? extent : span.startMs);
     const widthPct = Math.max(0, ((endMs - span.startMs) / extent) * 100);
@@ -446,6 +443,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
 
   override render(): TemplateResult {
     const rows = this.buildRows();
+    const firstId = rows[0]?.span.id;
+    const extent = this.traceExtent();
     return html`
       <div
         part="base"
@@ -455,7 +454,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       >
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : html`${this.showTokens || this.showCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row))}`}
+          : html`${this.showTokens || this.showCost ? this.renderHeader() : nothing}${rows.map((row) => this.renderRow(row, firstId, extent))}`}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

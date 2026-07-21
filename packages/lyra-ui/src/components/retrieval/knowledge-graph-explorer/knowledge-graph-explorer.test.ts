@@ -373,6 +373,21 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popover.open).to.be.false;
   });
 
+  it('clears a selected node and closes its details when hiddenTypes hides that node type', async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    popover.showAt({ x: 10, y: 10 });
+    expect(popover.open).to.be.true;
+
+    el.hiddenTypes = ['person'];
+    await el.updateComplete;
+
+    expect(el.selectedNodeId).to.equal(null);
+    expect(popover.open).to.be.false;
+  });
+
   it("the composed entity-card's own focus button re-activates the entity (lr-entity-activate), opening the popover", async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';

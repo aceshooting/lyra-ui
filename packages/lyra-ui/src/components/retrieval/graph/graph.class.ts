@@ -410,6 +410,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   // stubbed loader before the element ever connects -- matches map/docx-viewer's own
   // `loadLibrary` field/rationale exactly.
   private loadLibrary: () => Promise<D3Modules | null> = loadD3;
+  // Invalidates a lazy-load callback when this element disconnects/reconnects. A stale callback
+  // must not rebuild a freshly reconnected graph from the previous mount's lifecycle.
+  private loadGeneration = 0;
 
   @state() private simNodes: SimNode[] = [];
   @state() private simLinks: SimLink[] = [];
@@ -589,7 +592,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       }
       return;
     }
+    const generation = ++this.loadGeneration;
     void this.loadLibrary().then((mods) => {
+      if (generation !== this.loadGeneration || !this.isConnected) return;
       this.loading = false;
       // A null module means the optional `d3` peer isn't installed — fail closed into the
       // role="alert" branch rather than leaving a permanently blank surface. Guarded on
@@ -602,7 +607,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       // The element may have been removed from the DOM while the dynamic
       // d3 imports were in flight — don't spin up a simulation for a
       // detached instance (disconnectedCallback's cleanup already ran).
-      if (!this.isConnected) return;
       this.d3 = mods;
       this.rebuildSimulation();
     });
@@ -610,6 +614,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.loadGeneration += 1;
     this.simulation?.stop();
     // An in-flight focusNode()/fit() tween would otherwise keep scheduling frames and writing
     // zoom transforms against the detached tree -- cancel it (which also settles the caller's
@@ -1125,7 +1130,10 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         cs.getPropertyValue('--lr-graph-focus-halo-color').trim() || cs.getPropertyValue('--lr-color-brand').trim(),
       selectedColor:
         cs.getPropertyValue('--lr-graph-selected-color').trim() || cs.getPropertyValue('--lr-color-success').trim(),
-      dimmedOpacity: Number(cs.getPropertyValue('--lr-graph-dimmed-opacity').trim()) || 0.35,
+      dimmedOpacity: (() => {
+        const value = Number(cs.getPropertyValue('--lr-graph-dimmed-opacity').trim());
+        return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.35;
+      })(),
       labelColor: cs.getPropertyValue('--lr-color-text').trim(),
       labelHaloColor:
         cs.getPropertyValue('--lr-graph-edge-label-halo').trim() || cs.getPropertyValue('--lr-color-surface').trim(),
@@ -2146,9 +2154,16 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const raw = getComputedStyle(this).getPropertyValue('--lr-font-size-2xs').trim();
     const parsed = parseFloat(raw);
     if (!Number.isFinite(parsed)) return 10;
-    // rem tokens are resolved relative to the root font-size; this is a decluttering heuristic,
-    // not a pixel-perfect layout, so the standard 16px/rem approximation is sufficient.
-    return raw.endsWith('rem') ? parsed * 16 : parsed;
+    const unit = raw.toLowerCase();
+    if (unit.endsWith('rem')) {
+      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      return parsed * (Number.isFinite(rootFontSize) ? rootFontSize : 16);
+    }
+    if (unit.endsWith('em')) {
+      const ownFontSize = parseFloat(getComputedStyle(this).fontSize);
+      return parsed * (Number.isFinite(ownFontSize) ? ownFontSize : 16);
+    }
+    return parsed;
   }
 
   private edgeLabelWidth(text: string): number {

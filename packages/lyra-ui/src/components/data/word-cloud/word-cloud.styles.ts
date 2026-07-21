@@ -17,21 +17,6 @@ export const styles = css`
     --lr-word-cloud-color-7: var(--lr-color-chart-3);
     --lr-word-cloud-color-8: var(--lr-color-chart-4);
   }
-  @media (prefers-color-scheme: dark) {
-    :host {
-      /* Colors 1-4 alias the semantic tokens (--lr-color-brand/-success/-warning/-danger),
-         which already flip to their dark-mode fill in tokens.styles.ts -- redeclaring them
-         here would just repeat the same resolved value, not add a variant. Only the
-         chart-ramp colors (5-8) need an explicit dark swap: they draw from a fixed 4-color
-         segment of the categorical --lr-color-chart-* ramp, and the ramp's *next* segment
-         (5-8) is the one tuned for dark backgrounds, so the swap is a deliberate palette
-         change rather than a token-layer duplicate. */
-      --lr-word-cloud-color-5: var(--lr-color-chart-5);
-      --lr-word-cloud-color-6: var(--lr-color-chart-6);
-      --lr-word-cloud-color-7: var(--lr-color-chart-7);
-      --lr-word-cloud-color-8: var(--lr-color-chart-8);
-    }
-  }
   [part='base'] {
     display: flex;
     flex-direction: column;

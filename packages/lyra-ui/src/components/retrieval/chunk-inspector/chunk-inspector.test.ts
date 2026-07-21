@@ -46,6 +46,21 @@ it('renders score as visible percent text and a tone-mapped fill', async () => {
   expect(el.shadowRoot!.querySelector('[part="score-bar"]')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
+it('clamps hostile scores to the documented 0-100 display range and keeps sorting finite', async () => {
+  const el = (await fixture(html`<lr-chunk-inspector sort="score"></lr-chunk-inspector>`)) as LyraChunkInspector;
+  el.chunks = [
+    { id: 'nan', text: 'nan', score: Number.NaN, sourceId: 's1', title: 'nan' },
+    { id: 'high', text: 'high', score: 2, sourceId: 's1', title: 'high' },
+    { id: 'low', text: 'low', score: -1, sourceId: 's1', title: 'low' },
+  ];
+  await el.updateComplete;
+
+  const rows = [...el.shadowRoot!.querySelectorAll('[part~="chunk"]')];
+  expect(rows.map((row) => row.querySelector('[part~="title"]')!.textContent?.trim())).to.deep.equal(['high', 'nan', 'low']);
+  expect(el.shadowRoot!.querySelector('[part~="score"]')!.textContent).to.include('100%');
+  expect(el.shadowRoot!.querySelectorAll('[part~="score-fill"]')[2]!.getAttribute('style')).to.include('inline-size:0%');
+});
+
 it('maps score tiers per thresholds: high >= 0.75 success, medium >= 0.5 warning, else low danger', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;

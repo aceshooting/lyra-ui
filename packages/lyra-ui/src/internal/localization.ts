@@ -536,6 +536,7 @@ export type LyraMessageKey =
   | 'qrCodeGenerationFailed'
   | 'mapMissingLibrary'
   | 'chartMissingLibrary'
+  | 'boxPlotMissingLibrary'
   | 'graphMissingLibrary'
   | 'pdfViewerPageOf'
   | 'pdfViewerZoomIn'
@@ -1556,6 +1557,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   qrCodeGenerationFailed: 'This value could not be encoded as a QR code.',
   mapMissingLibrary: 'This component needs the optional "maplibre-gl" package installed to render the map.',
   chartMissingLibrary: 'This component needs the optional "chart.js" package installed to render charts.',
+  boxPlotMissingLibrary: 'This component needs the optional box-plot chart package installed to render box plots.',
   graphMissingLibrary: 'This component needs the optional "d3" package installed to render the graph.',
   pdfViewerPageOf: 'Page {page} of {total}',
   pdfViewerZoomIn: 'Zoom in',

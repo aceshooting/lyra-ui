@@ -90,6 +90,11 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
   expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
 });
 
+it('parses begin-at-zero="false" as false from plain HTML', async () => {
+  const el = (await fixture(html`<lr-box-plot begin-at-zero="false"></lr-box-plot>`)) as LyraBoxPlot;
+  expect(el.beginAtZero).to.be.false;
+});
+
 it('formats generated median-summary values with the effective locale', async () => {
   const el = (await fixture(html`<lr-box-plot locale="de-DE"></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [
@@ -192,6 +197,21 @@ it('does not wire up chart.js when the boxplot plugin fails to load, even though
 
   expect((el as any).chartJsModule).to.equal(undefined);
   expect((el as any).chart).to.equal(undefined);
+});
+
+it('fails closed with an accessible error when the boxplot peer fails after connect', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  // Let the real connectedCallback settle first. Calling the synthetic
+  // failure after that avoids racing the module-scoped successful peer
+  // promise, while still exercising the connected element's failure render.
+  await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+  await (el as any).onBoxPlotPluginLoaded(null);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(error).to.exist;
+  expect(error.getAttribute('role')).to.equal('alert');
+  expect(error.textContent!.trim()).to.not.equal('');
 });
 
 it('does not bundle lr-chart\'s unused reset-zoom-button styles', () => {

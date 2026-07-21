@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
@@ -33,6 +33,12 @@ const FALLBACK_TICK_COLOR = '#6b7280';
 const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
+
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+};
 
 
 // Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lr-chart-*` tokens)
@@ -81,6 +87,8 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
  * @csspart canvas - The box-plot canvas.
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
+ * @csspart error - `role="alert"` message shown instead of the canvas when the optional box-plot
+ *   peer dependency fails to load.
  * @slot data-table - An optional consumer-provided accessible table alternative.
  */
 export class LyraBoxPlot extends LyraElement {
@@ -91,7 +99,7 @@ export class LyraBoxPlot extends LyraElement {
   @property({ type: Boolean }) legend = false;
   @property() height = '280px';
   @property({ attribute: 'y-label' }) yLabel = '';
-  @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
+  @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Accessible name applied to the canvas. A host `aria-label` wins, then this falls back to the box labels. */
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   /** Accessible description for the canvas. When unset, a five-number summary is generated. */
@@ -105,6 +113,7 @@ export class LyraBoxPlot extends LyraElement {
    * `LyraChart`'s `loading` state.
    */
   @state() private loading = true;
+  @state() private loadFailed = false;
 
   @state() private visible = true;
   private intersectionObserver?: IntersectionObserver;
@@ -112,11 +121,13 @@ export class LyraBoxPlot extends LyraElement {
   @query('canvas') private canvasEl?: HTMLCanvasElement;
   private chart?: OptionalPeerApi;
   private chartJsModule?: OptionalPeerApi;
+  private loadGeneration = 0;
   private descriptionId = nextId('box-plot-description');
 
   override connectedCallback(): void {
     super.connectedCallback();
-    void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod));
+    const generation = ++this.loadGeneration;
+    void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod, generation));
     if (typeof IntersectionObserver !== 'undefined') {
       this.intersectionObserver = new IntersectionObserver((entries) => {
         const wasVisible = this.visible;
@@ -141,18 +152,27 @@ export class LyraBoxPlot extends LyraElement {
   // `Chart` bound to a (possibly detached) canvas.
   private async onBoxPlotPluginLoaded(
     boxMod: OptionalPeerApi | null,
+    generation = this.loadGeneration,
   ): Promise<void> {
-    if (!this.isConnected) return;
+    if (generation !== this.loadGeneration || !this.isConnected) return;
     this.loading = false;
-    if (!boxMod) return;
+    if (!boxMod) {
+      this.loadFailed = true;
+      this.chart?.destroy();
+      this.chart = undefined;
+      this.chartJsModule = undefined;
+      return;
+    }
+    this.loadFailed = false;
     const chartMod = await loadChartJs();
-    if (!this.isConnected) return;
+    if (generation !== this.loadGeneration || !this.isConnected) return;
     this.chartJsModule = chartMod ?? undefined;
     this.draw();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.loadGeneration += 1;
     this.chart?.destroy();
     this.chart = undefined;
     this.intersectionObserver?.disconnect();
@@ -267,9 +287,14 @@ export class LyraBoxPlot extends LyraElement {
     if (this.accessibleDescription) return this.accessibleDescription;
     const summaries = this.boxes.map((series) => {
       if (!series.data.length) return this.localize('chartSeriesNoData', undefined, { label: series.label });
-      const medians = series.data.map((point) => point.median);
-      const first = medians[0]!;
-      const last = medians[medians.length - 1]!;
+      const first = series.data[0]!.median;
+      const last = series.data[series.data.length - 1]!.median;
+      let min = first;
+      let max = first;
+      for (const point of series.data) {
+        min = Math.min(min, point.median);
+        max = Math.max(max, point.median);
+      }
       const trend =
         last > first
           ? this.localize('chartTrendIncreasing')
@@ -279,8 +304,8 @@ export class LyraBoxPlot extends LyraElement {
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
         count: series.data.length,
-        min: getNumberFormat(this.effectiveLocale).format(Math.min(...medians)),
-        max: getNumberFormat(this.effectiveLocale).format(Math.max(...medians)),
+        min: getNumberFormat(this.effectiveLocale).format(min),
+        max: getNumberFormat(this.effectiveLocale).format(max),
         trend,
       });
     });
@@ -334,6 +359,13 @@ export class LyraBoxPlot extends LyraElement {
       return html`
         <div part="base">
           <lr-skeleton variant="rect"></lr-skeleton>
+        </div>
+      `;
+    }
+    if (this.loadFailed) {
+      return html`
+        <div part="base">
+          <div part="error" role="alert">${this.localize('boxPlotMissingLibrary')}</div>
         </div>
       `;
     }

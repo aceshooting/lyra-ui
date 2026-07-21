@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
@@ -69,6 +69,10 @@ function formatMetadataValue(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+function safeScore(score: number): number {
+  return finiteRange(score, 0, 0, 1);
 }
 
 /**
@@ -230,14 +234,14 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const byId = new Map<string, RetrievalChunk>();
     for (const chunk of this.chunks) {
       const existing = byId.get(chunk.id);
-      if (!existing || chunk.score > existing.score) byId.set(chunk.id, chunk);
+      if (!existing || safeScore(chunk.score) > safeScore(existing.score)) byId.set(chunk.id, chunk);
     }
     return [...byId.values()];
   }
 
   private get processedChunks(): { chunks: RetrievalChunk[]; groups: VirtualListGroup[] } {
     const deduped = this.dedupedChunks;
-    const sorted = this.sort === 'score' ? [...deduped].sort((a, b) => b.score - a.score) : deduped;
+    const sorted = this.sort === 'score' ? [...deduped].sort((a, b) => safeScore(b.score) - safeScore(a.score)) : deduped;
     if (this.grouping !== 'source') return { chunks: sorted, groups: [] };
 
     const bySource = new Map<string, RetrievalChunk[]>();

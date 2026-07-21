@@ -1917,16 +1917,18 @@ describe('canvas renderer — static draw', () => {
     el.nodes = nodes;
     el.links = links;
     el.dimmedNodeIds = ['a'];
+    el.style.setProperty('--lr-graph-dimmed-opacity', '0');
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
     await aTimeout(50); // let the draw rAF fire
     await waitUntil(() => (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene?.nodes.length === 2, undefined, {
       timeout: NODE_COUNT_TIMEOUT,
     });
-    type Internals = { canvasScene?: { nodes: { dimmed?: boolean }[] } };
+    type Internals = { canvasScene?: { nodes: { dimmed?: boolean }[]; dimmedOpacity?: number } };
     const scene = (el as unknown as Internals).canvasScene!;
     expect(scene.nodes.some((n) => n.dimmed)).to.be.true;
     expect(scene.nodes.some((n) => !n.dimmed)).to.be.true;
+    expect(scene.dimmedOpacity).to.equal(0);
   });
 });
 
@@ -3255,11 +3257,24 @@ describe('coverage: private-helper direct branches', () => {
     expect(cache.has('label-512')).to.be.true;
   });
 
-  it('edgeLabelFontPx resolves a px token as-is, a rem token scaled by 16, and falls back to 10 for a non-finite value', async () => {
+  it('edgeLabelFontPx resolves px, rem, and em tokens against their live font sizes', async () => {
     const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
     const fontPx = (el as unknown as { edgeLabelFontPx: () => number }).edgeLabelFontPx.bind(el);
     el.style.setProperty('--lr-font-size-2xs', '12px');
     expect(fontPx()).to.equal(12);
+    const previousRootFontSize = document.documentElement.style.fontSize;
+    const previousOwnFontSize = el.style.fontSize;
+    try {
+      document.documentElement.style.fontSize = '20px';
+      el.style.setProperty('--lr-font-size-2xs', '0.5rem');
+      expect(fontPx()).to.equal(10);
+      el.style.fontSize = '24px';
+      el.style.setProperty('--lr-font-size-2xs', '0.5em');
+      expect(fontPx()).to.equal(12);
+    } finally {
+      document.documentElement.style.fontSize = previousRootFontSize;
+      el.style.fontSize = previousOwnFontSize;
+    }
     el.style.setProperty('--lr-font-size-2xs', 'not-a-number');
     expect(fontPx()).to.equal(10);
   });

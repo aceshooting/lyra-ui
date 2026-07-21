@@ -178,11 +178,21 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
-    // dangling selection/popover pointed at nothing.
-    if ((changed.has('nodes') || changed.has('hiddenTypes')) && this.selectedNodeId && !this.entityFor(this.selectedNodeId)) {
+    // dangling selection/popover pointed at nothing. `entityFor()` intentionally still resolves
+    // hidden nodes for neighbor/path data, so visibility must be checked separately here.
+    if (
+      (changed.has('nodes') || changed.has('hiddenTypes')) &&
+      this.selectedNodeId &&
+      !this.isVisibleNode(this.selectedNodeId)
+    ) {
       this.selectedNodeId = null;
       if (this.popoverEl) this.popoverEl.open = false;
     }
+  }
+
+  private isVisibleNode(id: string): boolean {
+    const node = this.nodes.find((candidate) => candidate.id === id);
+    return !!node && (node.type == null || !this.hiddenTypes.includes(node.type));
   }
 
   private nodeLabel(id: string): string {

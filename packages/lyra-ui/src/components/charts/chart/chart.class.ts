@@ -304,6 +304,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // `loadLibrary` field/rationale exactly.
   private loadLibrary: (withZoom: boolean) => ReturnType<typeof loadChartJs> = (withZoom) =>
     withZoom ? loadChartJsWithZoom() : loadChartJs();
+  // Invalidates a lazy-load callback when this element disconnects/reconnects. Without a
+  // generation token, two connectedCallback() calls around one in-flight import can both settle
+  // against the reconnected element and construct/reconfigure the chart from stale lifecycle
+  // state.
+  private loadGeneration = 0;
+  private zoomLoadGeneration = 0;
 
   @state() private zoomed = false;
 
@@ -343,9 +349,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.resizeObserver.observe(this);
     }
     this.updateAutoLegendPosition();
+    const generation = ++this.loadGeneration;
     const load = this.loadLibrary(this.zoom);
     void load.then((mod) => {
-      if (!this.isConnected) return;
+      if (generation !== this.loadGeneration || !this.isConnected) return;
       this.loading = false;
       if (!mod) {
         this.loadFailed = true;
@@ -369,6 +376,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
+    this.loadGeneration += 1;
+    this.zoomLoadGeneration += 1;
     this.chart?.destroy();
     this.chart = undefined;
     this.intersectionObserver?.disconnect();
@@ -436,11 +445,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // dynamic import is in flight — without this guard, `draw()` would
     // construct a new, leaked `Chart` bound to the now-detached canvas once
     // the import resolves.
-    if (changed.has('zoom') && this.zoom) {
-      void loadChartJsWithZoom().then(() => {
-        if (!this.isConnected) return;
-        this.draw();
-      });
+    if (changed.has('zoom')) {
+      const zoomGeneration = ++this.zoomLoadGeneration;
+      if (this.zoom) {
+        void loadChartJsWithZoom().then(() => {
+          if (zoomGeneration !== this.zoomLoadGeneration || !this.isConnected || !this.zoom) return;
+          this.draw();
+        });
+      }
     }
     const contentChanged = [
       'type',

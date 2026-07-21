@@ -244,11 +244,16 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     `;
   }
 
-  private renderRow(span: LyraSpan, view: ViewWindow, posInSet: number, setSize: number): TemplateResult {
+  private renderRow(
+    span: LyraSpan,
+    view: ViewWindow,
+    posInSet: number,
+    setSize: number,
+    firstId: string | undefined,
+  ): TemplateResult {
     const { startPct, widthPct } = this.barGeometry(span, view);
     const isActive = this.activeSpanId === span.id;
-    const rows = this.sortedSpans();
-    const tabbable = this.focusedId === span.id || (this.focusedId == null && rows[0]?.id === span.id);
+    const tabbable = this.focusedId === span.id || (this.focusedId == null && firstId === span.id);
     const durationLabel = span.endMs != null ? this.formatDuration(span.endMs - span.startMs) : '';
     const fragments = [
       span.name,
@@ -287,6 +292,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   override render(): TemplateResult {
     const rows = this.sortedSpans();
     const view = this.viewWindow();
+    const firstId = rows[0]?.id;
     return html`
       <div
         part="base"
@@ -297,7 +303,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
         ${!this.hideAxis && rows.length > 0 ? this.renderAxis(view) : nothing}
         ${rows.length === 0
           ? html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`
-          : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length))}
+          : rows.map((span, index) => this.renderRow(span, view, index + 1, rows.length, firstId))}
       </div>
       <lr-live-region part="live-region" mode="polite"></lr-live-region>
     `;

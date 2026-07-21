@@ -2,7 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
@@ -115,12 +115,19 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   }
 
   private sortedChunks(): LyraChunk[] {
-    return this.sort === 'score' ? [...this.chunks].sort((a, b) => b.score - a.score) : this.chunks;
+    return this.sort === 'score'
+      ? [...this.chunks].sort((a, b) => this.safeScore(b.score) - this.safeScore(a.score))
+      : this.chunks;
+  }
+
+  private safeScore(score: number): number {
+    return finiteRange(score, 0, 0, 1);
   }
 
   private tier(score: number): Tier {
-    if (score >= this.thresholds.high) return 'high';
-    if (score >= this.thresholds.medium) return 'medium';
+    const safeScore = this.safeScore(score);
+    if (safeScore >= this.thresholds.high) return 'high';
+    if (safeScore >= this.thresholds.medium) return 'medium';
     return 'low';
   }
 
@@ -151,7 +158,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   private chunkTemplate(chunk: LyraChunk, virtualized: boolean): TemplateResult {
     const tier = this.tier(chunk.score);
     const tone = this.tierTone(tier);
-    const percent = Math.round(chunk.score * 100);
+    const percent = Math.round(this.safeScore(chunk.score) * 100);
     const titleText = chunk.title || this.localize('untitledSource');
     const titleWithPage =
       chunk.page == null || chunk.page === '' ? titleText : this.localize('sourcePageSuffix', undefined, { base: titleText, page: chunk.page });

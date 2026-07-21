@@ -1,4 +1,4 @@
-import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, svg, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -42,6 +42,12 @@ const DEFAULT_PALETTE = [
   'var(--lr-chart-color-7)',
   'var(--lr-chart-color-8)',
 ];
+
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+};
 
 const PAD_LEFT = 36;
 const PAD_RIGHT = 8;
@@ -182,7 +188,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property() height = '280px';
   @property({ attribute: 'x-label' }) xLabel = '';
   @property({ attribute: 'y-label' }) yLabel = '';
-  @property({ type: Boolean, attribute: 'begin-at-zero' }) beginAtZero = true;
+  @property({ type: Boolean, attribute: 'begin-at-zero', converter: trueDefaultBooleanConverter }) beginAtZero = true;
   /** Stacks each category's bars into one segmented bar. Ignored for `type="line"`. */
   @property({ type: Boolean }) stacked = false;
   /** Formats a y-axis tick value for display (e.g. `(v) => \`$${v.toFixed(2)}\``). Falls back to the
