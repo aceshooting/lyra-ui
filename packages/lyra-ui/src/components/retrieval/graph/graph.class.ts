@@ -1575,8 +1575,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.canvasResizeObserver?.disconnect();
       this.canvasResizeObserver = undefined;
       this.zoomedEl = svgEl;
-      this.gEl = this.renderRoot.querySelector('g') ?? undefined;
-      this.focusHaloEl = (this.renderRoot.querySelector('[part="focus-halo"]') as SVGCircleElement) ?? undefined;
+      // Both queries always find a match here: the outer <g> and the focus-halo <circle> are
+      // unconditional parts of the same svg template that just produced svgEl above, not
+      // conditionally rendered.
+      this.gEl = this.renderRoot.querySelector('g') as SVGGElement;
+      this.focusHaloEl = this.renderRoot.querySelector('[part="focus-halo"]') as SVGCircleElement;
       this.zoomBehavior = this.d3
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([this.safeMinZoom, this.safeMaxZoom])
@@ -2009,8 +2012,11 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const offsetY = raw.size ? this.safeHeight / 2 - (minY + (maxY - minY) / 2) : this.safeHeight / 2;
 
     const nodes: SimNode[] = visible.map((n) => {
-      const p = raw.get(n.id);
-      return { ...n, x: (p?.x ?? this.safeWidth / 2) + offsetX, y: (p?.y ?? this.safeHeight / 2) + offsetY };
+      // layeredLayout() (above) assigns a position for every node id in its `nodes` input, and
+      // `boxes` (built from this same `visible` array) is exactly that input, so raw.get(n.id)
+      // always finds a match here.
+      const p = raw.get(n.id)!;
+      return { ...n, x: p.x + offsetX, y: p.y + offsetY };
     });
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const { resolved, dangling } = this.resolveLinksAgainst(byId);
