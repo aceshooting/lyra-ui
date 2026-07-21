@@ -1281,7 +1281,14 @@ it('floors the preset-button hit-area at 24px at the 2xs tier, without disturbin
   elM.presets = PRESETS;
   await elM.updateComplete;
   const buttonM = elM.shadowRoot!.querySelector('[part="preset-button"]') as HTMLElement;
-  // The default `m` tier was never part of the regression (28px, already above the floor) -- the
-  // added min-block-size must not change its rendered size.
-  expect(getComputedStyle(buttonM).blockSize).to.equal('28px');
+  // The default `m` tier was never part of the regression (already above the floor, unaided) --
+  // the added min-block-size must not change its rendered size. The exact px value depends on the
+  // platform's font metrics (line-height from `font: inherit`), so instead of hardcoding a literal
+  // that only holds for one font stack, compare against the same element with the floor disabled:
+  // if the floor were engaging at `m`, removing it would shrink the button; it must not.
+  const flooredHeight = parseFloat(getComputedStyle(buttonM).blockSize);
+  buttonM.style.setProperty('min-block-size', '0');
+  const unflooredHeight = parseFloat(getComputedStyle(buttonM).blockSize);
+  expect(flooredHeight).to.equal(unflooredHeight);
+  expect(flooredHeight).to.be.at.least(24);
 });
