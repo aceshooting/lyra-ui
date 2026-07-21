@@ -50,6 +50,8 @@ jobs:
       - run: pnpm run check:secrets
       - run: pnpm manifest
       - run: git diff --exit-code -- packages/lyra-ui/custom-elements.json
+      - run: pnpm --filter @aceshooting/lyra-ui run generate-editor-data
+      - run: git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
       - run: pnpm readme:check
       - run: ./package.sh
       - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/

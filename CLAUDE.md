@@ -90,12 +90,10 @@ pnpm docs        # Storybook (.storybook/), demos every component live at localh
   red check names the specific job to reproduce instead of "build-test". A separate
   `platform-contracts` matrix job runs `test:platform` on Firefox/WebKit × Node 20/22.
 - `prepack` (run by npm, not CI) determines tarball contents and regenerates the editor data
-  (`vscode-html-data.json`/`vscode-css-data.json`/`web-types.json`), which have NO CI freshness
-  gate — regenerate and commit them by hand whenever you touch the public surface.
-- `check:hit-area` (WCAG 2.5.8) and `check:numeric-guards` are deliberately NOT in the blocking
-  chain (both still report real findings) — run them by hand on any PR touching an icon-sized
-  control or a `type: Number` property. `ls packages/lyra-ui/scripts/check-*.mjs` is the real
-  check inventory; a green `pnpm lint` does not mean no check exists.
+  (`vscode-html-data.json`/`vscode-css-data.json`/`web-types.json`); CI now regenerates and
+  freshness-checks those files too.
+- `check:hit-area` (WCAG 2.5.8) and `check:numeric-guards` are blocking parts of `pnpm lint`.
+  `ls packages/lyra-ui/scripts/check-*.mjs` remains the real check inventory.
 
 ## Coding conventions — digest
 

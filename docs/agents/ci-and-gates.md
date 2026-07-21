@@ -12,7 +12,8 @@ AGENTS.md's own `contract-checklist.json` data), `check-component-coverage.mjs`,
 + `manifest:coverage`, `llms-freshness` + `llms:check`
 (`check-llms-freshness.mjs`/`check-llms-artifacts.mjs`), `test:architecture`
 (`check-registration-architecture.mjs`), `check-side-effects`, `check:form-associated`,
-`check:event-barrel`. The authoritative list is `packages/lyra-ui/package.json`'s
+`check:event-barrel`, `check:cycles`, `check:hit-area`, `check:numeric-guards`, and the tooling
+self-tests. The authoritative list is `packages/lyra-ui/package.json`'s
 `contract-policy` script entry — restatements here drift faster than this file gets updated.
 
 ## CI: `.github/workflows/ci.yml` is authoritative
@@ -88,15 +89,11 @@ Defer to `ci.yml` and `package.json#scripts` for when each runs:
   and the lyra-ui.com hero) cannot go stale — regenerate both files with `--write-budgets`.
 - `pnpm test:visual` runs the visual-regression screenshot suite against `visual-baselines/`.
 
-## Deliberately non-blocking gates — run them by hand
-
-`pnpm run check:hit-area` (WCAG 2.5.8 tappable-size floor) and `pnpm run check:numeric-guards`
-(finite-number guards on numeric properties) still report real, unfixed findings, so they're
-wired as named scripts for discoverability rather than into `contract-policy`. Run them on any PR
-touching an icon-sized control or a `type: Number` property. Don't assume a check doesn't exist
-just because `pnpm lint` stays green — `ls packages/lyra-ui/scripts/check-*.mjs` is the real
-inventory. `pnpm run check:script-paths` guards the inverse mistake (a `package.json` script
-naming a literal source path that no longer exists): it exists because `test:platform` kept 21
-hardcoded test paths across the 11-family restructure — 20 stopped resolving, `wtr` silently
-dropped them rather than erroring, and the Firefox/WebKit matrix reported green while running one
-test file out of 21 for an extended period.
+`check:hit-area` (WCAG 2.5.8 tappable-size floor) and `check:numeric-guards` (finite-number guards
+on numeric properties) are now blocking parts of `contract-policy`; both currently pass with all
+known exceptions explicit. Don't assume a check doesn't exist just because it is not listed here —
+`ls packages/lyra-ui/scripts/check-*.mjs` is the real inventory. `pnpm run check:script-paths` guards
+the inverse mistake (a `package.json` script naming a literal source path that no longer exists):
+it exists because `test:platform` kept 21 hardcoded test paths across the 11-family restructure —
+20 stopped resolving, `wtr` silently dropped them rather than erroring, and the Firefox/WebKit
+matrix reported green while running one test file out of 21 for an extended period.

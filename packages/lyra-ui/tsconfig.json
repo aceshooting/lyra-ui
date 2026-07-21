@@ -10,6 +10,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleDetection": "force",
+    "noUncheckedSideEffectImports": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "allowUnreachableCode": false,
@@ -19,6 +22,7 @@
     "declaration": true,
     "sourceMap": true,
     "declarationMap": true,
+    "noEmitOnError": true,
     // Strips `@internal`-tagged exports (e.g. flag.ts's test-only
     // __setFlagUrlResolverForTesting seam) from the emitted .d.ts, so a
     // consumer never sees them via autocomplete/type-checking even though

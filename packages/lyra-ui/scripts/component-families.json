@@ -45,7 +45,7 @@
 
     "button": "forms", "checkbox": "forms", "checkbox-group": "forms", "code-editor": "forms",
     "color-picker": "forms", "combobox": "forms", "date-picker": "forms", "emoji-picker": "forms",
-    "icon-button": "forms", "input": "forms", "phone-input": "forms", "radio": "forms",
+    "icon-button": "forms", "input": "forms", "locale-picker": "forms", "phone-input": "forms", "radio": "forms",
     "rubric-form": "forms", "select": "forms", "slider": "forms", "swatch-picker": "forms",
     "switch": "forms", "textarea": "forms", "time-range": "forms", "token-input": "forms",
 
@@ -62,7 +62,7 @@
     "carousel": "layout", "command-palette": "layout", "control-group": "layout",
     "dashboard-grid": "layout", "details": "layout", "dock-panel": "layout",
     "drilldown-panel": "layout", "filter-bar": "layout", "menu": "layout",
-    "responsive-panel": "layout", "scroller": "layout", "segmented": "layout", "split": "layout",
+    "reorder-list": "layout", "responsive-panel": "layout", "scroller": "layout", "segmented": "layout", "split": "layout",
     "stepper": "layout", "tabs": "layout", "virtual-list": "layout", "widget": "layout",
 
     "badge": "overlays", "callout": "overlays", "chip": "overlays", "dialog": "overlays",

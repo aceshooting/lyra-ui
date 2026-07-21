@@ -139,6 +139,9 @@ pnpm --filter @aceshooting/lyra-ui test:coverage
 step "manifest freshness"
 pnpm manifest
 git diff --exit-code -- packages/lyra-ui/custom-elements.json
+step "editor data freshness"
+pnpm --filter @aceshooting/lyra-ui run generate-editor-data
+git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
 
 step "readme:check"
 pnpm readme:check
