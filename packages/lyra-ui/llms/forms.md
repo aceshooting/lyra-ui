@@ -119,7 +119,10 @@ indicator from `maxRender`), `error`, `hint`
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
 `--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
-standard size supplies an aligned default), plus shared tokens.
+standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
+`--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
+`--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
+the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
 `--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
 a hovered or keyboard-active `[part='option']` row — the same per-component indirection
@@ -286,7 +289,10 @@ presentational `<div>`, not a `role="group"`; options with an empty `group` get 
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
-`lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use.
+`lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
+`--lr-space-xs`, the gap inside `[part='trigger']`) and `--lr-select-radius` (default `--lr-radius`,
+its corner radius) are both retunable without a `::part(trigger)` rule but, unlike the four above,
+do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
@@ -825,7 +831,10 @@ than it grows the button and keeps its own aspect ratio; a small glyph pads out 
 library-wide token (declared on `:root` by the token layer, and the shared minimum tappable size
 that several other components size their icon-only controls against), so overriding
 `--lr-theme-icon-button-size` globally resizes all of them together. Keep the resolved value at or
-above 24px — see `llms/shared.md`.
+above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
+`[part='button']` corner radius, retunable without a `::part(button)` rule — the same
+`--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
+counterpart to it.
 
 ## `lr-input`
 
@@ -892,7 +901,10 @@ input and built-in actions).
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
-grow.
+grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wrapper']`) and
+`--lr-input-radius` (default `--lr-radius`, its corner radius) are both retunable without a
+`::part(input-wrapper)` rule but, unlike the four properties above, do not vary by `size` — the same
+`--lr-button-gap`/`-radius` pattern; `lr-number-input`/`lr-time-input` inherit both unchanged.
 
 ### Exact-height hatches — the one rule that applies to all of them
 
@@ -957,8 +969,10 @@ alias ever renders.
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline` and `--lr-input-font-size` (all but `--lr-input-control-height` swap
-per `size`; that one stays undeclared until you pin an exact row height).
+`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, and `--lr-input-radius` (all
+but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
+row height, and `--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
+vary by `size` at all).
 
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
@@ -1001,8 +1015,10 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline` and `--lr-input-font-size` (all but `--lr-input-control-height` swap
-per `size`; that one stays undeclared until you pin an exact row height).
+`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, and `--lr-input-radius` (all
+but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
+row height, and `--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
+vary by `size` at all).
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
@@ -1722,7 +1738,8 @@ hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-dupl
 `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** `input`, `change`, `lr-add` (`detail: { value }`), `lr-remove`
-(`detail: { value, index }`), and `lr-token-edit`
+(`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
+unchanged), and `lr-token-edit`
 (`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),

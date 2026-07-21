@@ -472,6 +472,9 @@ back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-p
 `:host([size])` rule, so setting one directly on the element overrides that step of the scale; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
 `--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
+`--lr-chip-radius` (default `--lr-radius-pill`, the corner radius of both `[part='base']` and
+`[part='remove-button']` — retunable without a `::part()` rule, and unlike the density quintet
+above does not vary by `size`; the same `--lr-button-radius` pattern),
 plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-brand`/`-brand-quiet`, `--lr-color-success`/`-success-quiet`,
 `--lr-color-warning`/`-warning-quiet`, `--lr-color-danger`/`-danger-quiet`,
@@ -766,6 +769,9 @@ color for text and border). Set one directly on the element for a tint outside t
 `var(--lr-space-s)`), and `--lr-badge-min-height` (default `var(--lr-size-1-25rem)`) — the density
 trio each `:host([size])` rule rewrites to that step's font size, inline padding, and minimum block
 size; the `m` defaults above exactly reproduce the pre-`size` fixed badge treatment.
+`--lr-badge-radius` (default `--lr-radius-pill`) is `[part='base']`'s corner radius, retunable
+without a `::part(base)` rule and, unlike the density trio, does not vary by `size` — the same
+`--lr-button-radius` pattern; `lr-tag` inherits it unchanged, the same as `size`.
 
 ## `lr-callout`
 

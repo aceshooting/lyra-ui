@@ -1156,9 +1156,12 @@ role, matching `<lr-date-input>`'s `accessibleLabel`.
 **Events:** `lr-mode-change` (`detail: AppRailModeChangeDetail` = `{ mode: AppRailMode }`; the
 effective mode changed, whether from a breakpoint crossing or an explicit `mode` assignment — not
 fired for a redundant reassignment to the mode already in effect), `lr-toggle`
-(`detail: AppRailToggleDetail` = `{ open: boolean }`; the mobile overlay opened or closed — via the
-built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a breakpoint/forced
-mode change leaving `'mobile'` while open — not fired when a consumer sets `open` directly),
+(`detail: AppRailToggleDetail` = `{ open: boolean }`; the mobile overlay is opening or closing — via
+the built-in toggle button, Escape, a backdrop click, a nav-item click while open, or a
+breakpoint/forced mode change leaving `'mobile'` while open — not fired when a consumer sets `open`
+directly. Cancelable for every trigger except the forced mode-change close, which always applies —
+vetoing that one would leave `open` stuck `true` in a mode where it's meaningless; call
+`preventDefault()` to keep the overlay as it is for the other triggers),
 `lr-rail-resize` (`detail: AppRailResizeDetail` = `{ widthPx: number }`; the `resizable` rail's
 width changed via drag or keyboard stepping — not fired when a consumer sets `railWidthPx` directly).
 
