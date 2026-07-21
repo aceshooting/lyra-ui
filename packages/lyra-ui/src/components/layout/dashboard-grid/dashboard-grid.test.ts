@@ -522,6 +522,24 @@ it('gives cell (a real focusable, draggable/resizable target) a hover state matc
   expect(css).to.match(/\[part='cell'\]:hover\s*\{[^}]*outline:/);
 });
 
+it('themes the cell hover outline color via --lr-dashboard-grid-cell-hover-outline-color, falling back to --lr-color-border-strong', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const rule = css.match(/\[part='cell'\]:hover\s*\{([^}]+)\}/)?.[1] ?? '';
+  expect(rule).to.match(
+    /outline:[^;]*var\(--lr-dashboard-grid-cell-hover-outline-color,\s*var\(--lr-color-border-strong\)\)/,
+  );
+});
+
+it('cascades --lr-dashboard-grid-cell-hover-outline-color onto [part="cell"]', async () => {
+  const el = (await fixture(html`<lr-dashboard-grid .layout=${twoCells()}></lr-dashboard-grid>`)) as LyraDashboardGrid;
+  await el.updateComplete;
+  el.style.setProperty('--lr-dashboard-grid-cell-hover-outline-color', 'rgb(21, 43, 65)');
+  const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  expect(getComputedStyle(cell).getPropertyValue('--lr-dashboard-grid-cell-hover-outline-color').trim()).to.equal(
+    'rgb(21, 43, 65)',
+  );
+});
+
 it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run", async () => {
   // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
   // live (rather than grepping source text for the call) is to patch the base-class hook itself

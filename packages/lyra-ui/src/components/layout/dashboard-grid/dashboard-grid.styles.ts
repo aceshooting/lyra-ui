@@ -37,7 +37,8 @@ export const styles = css`
      own reliably-visible treatment for the exact same real, keyboard-navigable/draggable
      target. */
   [part='cell']:hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-dashboard-grid-cell-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
 

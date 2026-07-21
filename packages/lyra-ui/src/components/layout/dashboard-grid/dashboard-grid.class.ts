@@ -133,6 +133,9 @@ export interface LyraDashboardGridEventMap {
  *   on `[part="base"]` from the `rowHeight` property (in px) on every render.
  * @cssprop [--lr-dashboard-grid-gap=var(--lr-space-m)] - Gap between cells on both axes. Written
  *   inline on `[part="base"]` from the `gap` property (in px) on every render.
+ * @cssprop [--lr-dashboard-grid-cell-hover-outline-color=var(--lr-color-border-strong)] - Outline
+ *   color of a cell's mouse-hover preview of its own `:focus-visible` ring (shown because every
+ *   cell is a real focusable, draggable/resizable target). Set to `transparent` to opt out.
  */
 export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];
