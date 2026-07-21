@@ -199,6 +199,8 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  *   above wrap this component's own callback output and are a different surface. Styling row
  *   density here replaces the older `::part(row) { --lr-theme-*: … }` workaround, which retheme'd
  *   the whole row subtree (`renderActions` popups included).
+ * @csspart row-item-active-indicator - Data mode: the row item's decorative active indicator,
+ *   exported from `lr-conversation-item`.
  * @csspart row-item-option - Data mode: the row item's selectable `option` region.
  * @csspart row-item-leading - Data mode: the row item's `leading` wrapper.
  * @csspart row-item-content - Data mode: the row item's title/excerpt content column.
@@ -690,7 +692,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     const thread = item as ChatThread;
     const row = html`
       <lr-conversation-item
-        exportparts="base:row-item-base, option:row-item-option, leading:row-item-leading, content:row-item-content, title:row-item-title, title-input:row-item-title-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
+        exportparts="base:row-item-base, active-indicator:row-item-active-indicator, option:row-item-option, leading:row-item-leading, content:row-item-content, title:row-item-title, title-input:row-item-title-input, rename-button:row-item-rename-button, excerpt:row-item-excerpt, meta:row-item-meta, timestamp:row-item-timestamp, actions:row-item-actions"
         id=${thread.id}
         title=${thread.title}
         excerpt=${thread.excerpt ?? ''}
@@ -817,7 +819,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 this.searchText.trim() ? this.localize('noMatches') : this.localize('threadListEmpty')
               }</div>`
             : html`<lr-virtual-list
-                exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
+                exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-icon:group-icon, row-leading:row-leading, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-active-indicator:row-item-active-indicator, row-item-option:row-item-option, row-item-leading:row-item-leading, row-item-content:row-item-content, row-item-title:row-item-title, row-item-title-input:row-item-title-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
                 row-height="auto"
                 .items=${items}
                 .groups=${this.stickyGroups ? this.stickyAnchors(items) : undefined}

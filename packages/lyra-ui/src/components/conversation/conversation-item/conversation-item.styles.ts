@@ -14,12 +14,24 @@ export const styles = css`
      hovering anywhere across the row -- including over the trailing
      rename/actions controls -- highlights the whole thing as one row. */
   [part='base'] {
+    position: relative;
     display: flex;
     align-items: flex-start;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-s) var(--lr-space-m);
     border-radius: var(--lr-radius);
     transition: background-color var(--lr-transition-fast);
+  }
+  [part='active-indicator'] {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: var(--lr-conversation-item-active-indicator-inset-inline, 0 auto);
+    inline-size: var(--lr-conversation-item-active-indicator-width, var(--lr-size-2px));
+    box-sizing: border-box;
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-conversation-item-active-indicator-color, var(--lr-color-brand));
+    pointer-events: none;
+    z-index: var(--lr-layer-content);
   }
   /* Density escape -- same convention as lr-empty's compact. Conversation rows render in sidebar
      lists, so the tuned values sit behind inline var() fallbacks (rather than a :host declaration,

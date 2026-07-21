@@ -172,6 +172,7 @@ export interface LyraConversationItemEventMap {
  * @event blur - Re-dispatched from the in-place rename input as a bubbling, composed event.
  * @event focus - Re-dispatched from the in-place rename input as a bubbling, composed event.
  * @csspart base - The outer row wrapper (plain, no ARIA role) laying out `[part="option"]`, the rename button, and `actions`.
+ * @csspart active-indicator - A decorative inline indicator rendered only while the row is active.
  * @csspart option - The selectable region (`role="button"`, removed while renaming -- see the class doc). Wraps `content` and `timestamp`.
  * @csspart leading - The wrapper around the `leading` slot, inside `option`. Always rendered, but `hidden` while that slot is empty.
  * @csspart content - Wrapper around the title and excerpt.
@@ -191,6 +192,12 @@ export interface LyraConversationItemEventMap {
  *   `[part="excerpt"]` and `[part="timestamp"]` while `active`. **Contrast-sensitive:** it exists
  *   precisely because `--lr-color-text-quiet` only reaches ~4.25:1 against the active background;
  *   override it together with `--lr-conversation-item-active-bg`, never alone.
+ * @cssprop [--lr-conversation-item-active-indicator-color=var(--lr-color-brand)] - Color of the
+ *   decorative `[part="active-indicator"]` while `active`.
+ * @cssprop [--lr-conversation-item-active-indicator-width=var(--lr-size-2px)] - Inline size of
+ *   `[part="active-indicator"]` while `active`.
+ * @cssprop [--lr-conversation-item-active-indicator-inset-inline=0 auto] - Logical inline-start
+ *   and inline-end insets for `[part="active-indicator"]`; set `auto 0` to place it at inline-end.
  * @cssprop [--lr-conversation-item-compact-padding=var(--lr-space-xs) var(--lr-space-s)] -
  *   `[part="base"]` padding while `compact`.
  * @cssprop [--lr-conversation-item-compact-gap=var(--lr-space-2xs)] - Gap between `[part="base"]`'s
@@ -418,6 +425,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
     return html`
       <div part="base">
+        ${this.active ? html`<span part="active-indicator" aria-hidden="true"></span>` : nothing}
         <div
           part="option"
           role=${this.renaming ? nothing : 'button'}

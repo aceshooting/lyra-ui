@@ -778,8 +778,8 @@ in-place rename `<input>`'s own `focus`, for the same reason as `blur`)
 
 `leading`/`content`/`excerpt`/`meta` must all stay non-focusable — see the `role="button"` note below.
 
-**CSS parts:** `base`, `option`, `content`, `title`, `title-input`, `rename-button`, `excerpt`,
-`timestamp`, `actions`
+**CSS parts:** `base`, `active-indicator` (decorative, rendered only while `active`), `option`,
+`content`, `title`, `title-input`, `rename-button`, `excerpt`, `timestamp`, `actions`
 
 **Themeable custom properties:** `--lr-conversation-item-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the row's background while `active`. `--lr-conversation-item-active-color`
@@ -797,6 +797,13 @@ the default active background; keep any override at 4.5:1 or better against it. 
 `[part='title']` is *not* restyled by the pair — it keeps `--lr-color-text` regardless — so a dark
 custom active background needs its own title color set alongside them, or the title drops below
 contrast while the excerpt stays legible.
+
+`--lr-conversation-item-active-indicator-color` (default `var(--lr-color-brand)`) controls the
+decorative `active-indicator` part's color. `--lr-conversation-item-active-indicator-width`
+(default `var(--lr-size-2px)`) controls its inline width. `--lr-conversation-item-active-indicator-inset-inline`
+(default `0 auto`) controls its logical inline insets; set `auto 0` to move the indicator to
+inline-end. The indicator is `aria-hidden`, occupies the full row block-size, and is absent while
+the row is inactive.
 
 `--lr-conversation-item-compact-padding` (default `var(--lr-space-xs) var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`. `--lr-conversation-item-compact-gap` (default
@@ -1988,7 +1995,7 @@ reach callback-rendered descendants through these parts). `row-excerpt` wraps `r
 output, which is slotted into the row item's own `excerpt` slot.
 
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
-prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-content`,
+prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-item-leading`, `row-item-content`,
 `row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
 

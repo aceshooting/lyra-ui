@@ -278,3 +278,26 @@ export const ThemedActiveRow: Story = {
     </nav>
   `,
 };
+
+export const ActiveIndicator: Story = {
+  name: 'Active row indicator',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The active row renders an `active-indicator` part at logical inline-start. Retune its color, width, or inline placement through the component-scoped tokens, or style the part directly.',
+      },
+    },
+  },
+  render: () => html`
+    <nav style="display:flex;flex-direction:column;gap:0.125rem;max-width:22rem;">
+      <lr-conversation-item
+        title="Active with a custom indicator"
+        excerpt="The indicator is a supported part rather than host-generated row markup."
+        active
+        style="--lr-conversation-item-active-indicator-color: var(--lr-color-warning); --lr-conversation-item-active-indicator-width: var(--lr-size-4px);"
+      ></lr-conversation-item>
+      <lr-conversation-item title="Inactive row" excerpt="No indicator is rendered while inactive."></lr-conversation-item>
+    </nav>
+  `,
+};

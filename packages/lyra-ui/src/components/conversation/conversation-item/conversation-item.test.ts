@@ -198,8 +198,8 @@ describe('active indicator', () => {
     expect(indicator.getAttribute('aria-hidden')).to.equal('true');
     expect(computed.position).to.equal('absolute');
     expect(computed.inlineSize).to.equal('2px');
-    expect(computed.insetInlineStart).to.equal('0px');
-    expect(computed.insetInlineEnd).to.equal('auto');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(Math.abs(indicator.getBoundingClientRect().left - base.getBoundingClientRect().left)).to.be.lessThan(1);
     expect(computed.backgroundColor).to.not.equal('');
   });
 
@@ -215,8 +215,8 @@ describe('active indicator', () => {
     const computed = getComputedStyle(indicator);
     expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
     expect(computed.inlineSize).to.equal('7px');
-    expect(computed.insetInlineStart).to.equal('auto');
-    expect(computed.insetInlineEnd).to.equal('0px');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(Math.abs(indicator.getBoundingClientRect().right - base.getBoundingClientRect().right)).to.be.lessThan(1);
   });
 
   it('places the default indicator at logical inline-start under dir="rtl"', async () => {
