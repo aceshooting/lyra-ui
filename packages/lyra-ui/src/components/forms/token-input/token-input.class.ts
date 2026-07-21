@@ -72,7 +72,9 @@ const delimiterConverter = {
  * @slot hint - Supporting text.
  * @slot error - Validation message.
  * @event lr-add - A token was added; detail is `{ value }`.
- * @event lr-remove - A token was removed; detail is `{ value, index }`.
+ * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
+ *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
+ *   protected-token check) and the token stays in `value` unchanged.
  * @event lr-token-edit - An existing token was edited in place and committed; detail is `{ value, previousValue, index }`. Not emitted for a reverted, unchanged, emptied, or duplicate-colliding edit.
  * @csspart form-control - Outer control wrapper.
  * @csspart form-control-label - Label.
@@ -268,12 +270,13 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     this.draft = '';
   }
   private removeToken(index: number): void {
+    const removed = this.value[index];
+    const event = this.emit('lr-remove', { value: removed, index }, { cancelable: true });
+    if (event.defaultPrevented) return;
     // Removing a token reindexes every later one, so an editor left open over the old indices would
     // commit against the wrong token.
     if (this.editingIndex >= 0) { this.editingIndex = -1; this.editDraft = ''; }
-    const removed = this.value[index];
     this.updateValue(this.value.filter((_token, i) => i !== index));
-    this.emit('lr-remove', { value: removed, index });
   }
   /**
    * The token row's roving tab stop, clamped to the current token count. Derived rather than

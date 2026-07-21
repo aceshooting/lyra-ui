@@ -63,6 +63,24 @@ it('localizes the remove button accessible name via .strings', async () => {
   expect(removeBtn.getAttribute('aria-label')).to.equal('Retirer alpha');
 });
 
+it('fires lr-remove as cancelable and removes the token when not prevented', async () => {
+  const el = (await fixture(html`<lr-token-input .value=${['alpha', 'beta']}></lr-token-input>`)) as LyraTokenInput;
+  const listener = oneEvent(el, 'lr-remove');
+  (el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement).click();
+  const event = await listener;
+  expect(event.cancelable).to.be.true;
+  expect(event.detail).to.deep.equal({ value: 'alpha', index: 0 });
+  expect(el.value).to.deep.equal(['beta']);
+});
+
+it('keeps the token in place when a host calls preventDefault() on lr-remove', async () => {
+  const el = (await fixture(html`<lr-token-input .value=${['alpha', 'beta']}></lr-token-input>`)) as LyraTokenInput;
+  el.addEventListener('lr-remove', (e) => e.preventDefault());
+  (el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.value).to.deep.equal(['alpha', 'beta']);
+});
+
 it('defaults to size "m" and reflects a size attribute', async () => {
   const defaultEl = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
   expect(defaultEl.size).to.equal('m');
