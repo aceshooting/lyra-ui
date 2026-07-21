@@ -2861,7 +2861,7 @@
       "name": "--lr-swatch-picker-hit-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-2-5rem)`) — Hit-area size (min-block-size) for the swatch button, swapped per tier and floored at 24px."
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-2-5rem)`) — Hit-area size (both min-inline-size and min-block-size) for the swatch button, swapped per tier and floored at 24px."
       }
     },
     {

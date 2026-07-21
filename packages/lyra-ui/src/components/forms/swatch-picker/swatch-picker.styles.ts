@@ -62,9 +62,10 @@ export const styles = css`
   }
   [part='swatch'] {
     box-sizing: border-box;
-    /* The interactive hit target meets the shared minimum tappable size (same
-       --lr-icon-button-size floor as lr-code-block's/lr-json-viewer's [part='toggle']), while
-       the *visible* fill stays a compact --lr-size-1-5rem circle -- rendered on the separate
+    /* The interactive hit target is sized via the component-scoped --lr-swatch-picker-hit-size
+       (default --lr-size-2-5rem, swapped per size tier below, floored at 24px for WCAG 2.5.8),
+       while the *visible* fill is sized independently via --lr-swatch-picker-fill-size (default
+       --lr-size-1-5rem, also swapped per tier) -- rendered on the separate
        [part='swatch-fill']/[part='swatch-icon'] child below and centered via flex, not by resizing
        this button itself. A swatch's own fill/icon is what previously doubled as the clickable box;
        splitting them keeps the dense picker grid's visual density unchanged while still growing the

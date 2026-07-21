@@ -28,6 +28,9 @@ named colors, the shape apps otherwise hand-roll as a row of round accent-color 
   `<lr-segmented>`'s `SegmentedItem.icon`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
+  fill diameter proportionally, hit-area floored at 24px; not pixel-matched to `lr-input`'s
+  row-height scale)
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
 
@@ -37,11 +40,13 @@ changes via click or keyboard (re-selecting the current swatch is a no-op).
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `swatch` (a single `role="radio"` color
-swatch's interactive hit target, floored at the shared `--lr-icon-button-size` tap size; the
-selected one is `[part='swatch'][aria-checked='true']`), `swatch-fill` (the compact
-`--lr-size-1-5rem` filled circle inside it, rendered when the option has no `icon`), `swatch-icon`
-(the option's `icon` shape, rendered in its place when it has one). Exactly one of
-`swatch-fill`/`swatch-icon` is mounted per swatch, so the two never coexist.
+swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — defaults to
+`--lr-size-2-5rem`, swapped per `size` tier and floored at 24px; the selected one is
+`[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
+`--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
+rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
+place when it has one). Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the
+two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),
@@ -52,10 +57,11 @@ shape), `--lr-swatch-picker-shine-duration` (default `0s`, a no-op; set a durati
 for a looping brighten-and-settle pulse on the selected swatch. It drives a separate
 `filter: brightness()` keyframe rather than `box-shadow`, so it composes with the blur token and
 works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
-which also drops the hover/selection scale transition); plus
-shared tokens — `--lr-color-border`/`-brand`, `--lr-icon-button-size`, `--lr-space-xs`,
-`--lr-size-1-5rem`, `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`,
-`--lr-focus-ring-*`.
+which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
+size, swapped per `size` tier), `--lr-swatch-picker-fill-size` (visible fill/icon diameter, swapped
+per `size` tier); plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
+`--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
+and the per-tier `--lr-size-*` tokens.
 
 **Optional peer deps:** none.
 

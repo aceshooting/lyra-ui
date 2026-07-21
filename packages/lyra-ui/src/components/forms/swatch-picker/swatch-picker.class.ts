@@ -37,9 +37,10 @@ export interface LyraSwatchPickerEventMap {
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
  * @csspart base - The `role="radiogroup"` root.
- * @csspart swatch - A single `role="radio"` color swatch's interactive hit target; sized to the
- *   shared minimum tappable size (`--lr-icon-button-size`), independent of the smaller visible
- *   fill/icon rendered inside it. The selected one is `[part='swatch'][aria-checked='true']`.
+ * @csspart swatch - A single `role="radio"` color swatch's interactive hit target; sized via
+ *   `--lr-swatch-picker-hit-size` (defaults to `--lr-size-2-5rem`, swapped per `size` tier and
+ *   floored at 24px), independent of the smaller visible fill/icon rendered inside it. The
+ *   selected one is `[part='swatch'][aria-checked='true']`.
  * @csspart swatch-fill - The compact filled circle rendered when the option has no custom `icon`.
  * @csspart swatch-icon - Optional custom shape supplied by the option's `icon` field; when present it
  *   replaces `swatch-fill` and the swatch renders unfilled/unbordered behind it.
@@ -53,8 +54,8 @@ export interface LyraSwatchPickerEventMap {
  *   `prefers-reduced-motion: reduce`. Independent of `--lr-swatch-picker-selected-blur` (a separate
  *   `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works
  *   identically for a plain color circle and an icon swatch alike.
- * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (min-block-size)
- *   for the swatch button, swapped per tier and floored at 24px.
+ * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (both
+ *   min-inline-size and min-block-size) for the swatch button, swapped per tier and floored at 24px.
  * @cssprop [--lr-swatch-picker-fill-size=var(--lr-size-1-5rem)] - Visible fill/icon diameter
  *   for the swatch, swapped per tier.
  */
