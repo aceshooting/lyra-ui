@@ -1409,6 +1409,27 @@ describe('--lr-flow-canvas-node-current-outline-color', () => {
   });
 });
 
+describe('--lr-flow-canvas-node-hover-outline-color', () => {
+  it('references the cssprop with a fallback to --lr-color-border-strong in the :hover rule', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    const rule = css.match(/\[part='node'\]:hover\s*\{([^}]+)\}/)?.[1] ?? '';
+    expect(rule).to.match(
+      /outline:[^;]*var\(--lr-flow-canvas-node-hover-outline-color,\s*var\(--lr-color-border-strong\)\)/,
+    );
+  });
+
+  it('cascades the cssprop onto [part="node"]', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    el.style.setProperty('--lr-flow-canvas-node-hover-outline-color', 'rgb(77, 66, 55)');
+    const node = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    expect(getComputedStyle(node).getPropertyValue('--lr-flow-canvas-node-hover-outline-color').trim()).to.equal(
+      'rgb(77, 66, 55)',
+    );
+  });
+});
+
 describe('connect-gesture and drop-active outline cssprop indirection', () => {
   it('retints the connect-invalid node outline via --lr-flow-canvas-node-connect-invalid-outline-color', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;

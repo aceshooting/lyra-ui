@@ -170,6 +170,11 @@ interface FlowNodeCardEl extends HTMLElement {
  *   a node that is a valid connect-gesture drop target.
  * @cssprop [--lr-flow-canvas-drop-active-outline-color=var(--lr-color-brand)] - Outline color of the
  *   viewport while a palette item is dragged over it (`droppable`).
+ * @cssprop [--lr-flow-canvas-node-hover-outline-color=var(--lr-color-border-strong)] - Outline color
+ *   of a node's mouse-hover preview of its own `:focus-visible` ring. Unlike the four state-scoped
+ *   colors above this one is `:hover`-gated rather than attribute-gated, so a `::part(node):hover`
+ *   override would lose to this rule's own higher internal specificity rather than to the
+ *   `::part()[attr]` restriction those four work around. Set to `transparent` to opt out.
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   static styles = [LyraElement.styles, styles, srOnly];

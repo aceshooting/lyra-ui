@@ -136,7 +136,8 @@ export const styles = css`
     transform: scaleX(-1);
   }
   [part='node']:hover {
-    outline: var(--lr-size-1px) solid var(--lr-color-border-strong);
+    outline: var(--lr-size-1px) solid
+      var(--lr-flow-canvas-node-hover-outline-color, var(--lr-color-border-strong));
     outline-offset: var(--lr-size-2px);
   }
   [part='edge']:hover {

@@ -1242,7 +1242,13 @@ that reads it. The same restriction motivates three more state-scoped outline co
 a node that is an invalid connect-gesture drop target; `--lr-flow-canvas-node-connect-target-outline-color`
 (default `var(--lr-color-brand)`) — outline of a node that is a valid connect-gesture drop target; and
 `--lr-flow-canvas-drop-active-outline-color` (default `var(--lr-color-brand)`) — outline of the
-viewport itself while a palette item is dragged over it (`droppable`).
+viewport itself while a palette item is dragged over it (`droppable`). A fifth,
+`--lr-flow-canvas-node-hover-outline-color` (default `var(--lr-color-border-strong)`) — the
+mouse-hover preview of a node's own `:focus-visible` ring — exists for a different reason than the
+four above: it is `:hover`-gated rather than attribute-gated, so `::part(node):hover` *is* valid
+CSS here, but the internal `[part='node']:hover` rule still out-specifies it ((0,2,0) vs. (0,1,1)),
+which this custom property sidesteps the same way. Set it to `transparent` to opt out of the hover
+treatment entirely.
 
 **Optional peer deps:** none.
 
