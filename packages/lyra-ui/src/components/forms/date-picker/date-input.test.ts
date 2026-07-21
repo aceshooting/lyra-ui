@@ -1499,14 +1499,11 @@ describe('locale day/month/year order fallback', () => {
 });
 
 describe('selection accessors before the internal input has rendered', () => {
-  it('selectionStart/selectionEnd getters return null, and selectionDirection returns undefined, before the internal input exists', () => {
+  it('selectionStart/selectionEnd/selectionDirection getters all return null before the internal input exists', () => {
     const el = document.createElement('lr-date-input') as LyraDateInput;
     expect(el.selectionStart).to.equal(null);
     expect(el.selectionEnd).to.equal(null);
-    // Unlike selectionStart/selectionEnd, the selectionDirection getter has no `?? null`
-    // fallback of its own -- optional chaining on a missing internal input short-circuits to
-    // `undefined` at runtime, even though its declared type says `| null`.
-    expect(el.selectionDirection).to.equal(undefined);
+    expect(el.selectionDirection).to.equal(null);
   });
 
   it('setRangeText() no-ops when the internal input has not rendered yet', () => {

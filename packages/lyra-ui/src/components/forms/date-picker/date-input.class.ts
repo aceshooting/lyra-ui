@@ -70,11 +70,6 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute(value): boolean {
     return value !== 'false';
   },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting
-    // for it; only the non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
 };
 
 const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
@@ -341,7 +336,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   }
 
   get selectionDirection(): LyraDateInputSelectionDirection | null {
-    return this.inputElement?.selectionDirection as LyraDateInputSelectionDirection | null;
+    return (this.inputElement?.selectionDirection as LyraDateInputSelectionDirection | null) ?? null;
   }
 
   set selectionDirection(value: LyraDateInputSelectionDirection | null) {
@@ -462,7 +457,9 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   private get displayText(): string {
     const parts = this.value.split('/');
-    const from = parseISO(parts[0] ?? '');
+    // parts[0] always exists (String.split() on '/' never returns an empty array); only
+    // parts[1] (the range end) can be missing when `value` has no '/' separator.
+    const from = parseISO(parts[0]);
     const to = parseISO(parts[1] ?? '');
     if (!from) return '';
     const formatter = dateTimeFormat(this.effectiveLocale, {});
