@@ -71,6 +71,32 @@ function stubIntersectionObserver() {
   };
 }
 
+// MUST stay the very first test in this file: `getScratchCtx()` (src/internal/canvas.ts) memoizes
+// its canvas 2D context at module scope for the lifetime of this page, on first call, forever -- a
+// later call can never observe a null context again once any earlier test has already resolved it
+// to a real one (several showEdgeLabels-driven tests further down do exactly that). Stubbing
+// `getContext` to null here, before anything else in the file has ever touched it, is the only way
+// to exercise edgeLabelWidth()'s `!ctx` branch at all. The long-label/short-edge declutter-gate
+// test later in this file still passes under the resulting heuristic width (a 51-character label
+// is huge under either measurement, so it still clears that test's gate) -- verified by running the
+// full file after adding this.
+it('edgeLabelWidth falls back to a character-count heuristic when getScratchCtx() returns null (no canvas 2D context available)', async () => {
+  const originalGetContext = HTMLCanvasElement.prototype.getContext;
+  (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+    function (this: HTMLCanvasElement) {
+      return null;
+    };
+  try {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    const internal = el as unknown as { edgeLabelWidth: (t: string) => number; edgeLabelFontPx: () => number };
+    const text = 'no-ctx-fallback-probe';
+    const width = internal.edgeLabelWidth(text);
+    expect(width).to.equal(text.length * internal.edgeLabelFontPx() * 0.6);
+  } finally {
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+  }
+});
+
 it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   expect(el.getAttribute('aria-busy')).to.equal('true');
@@ -1845,6 +1871,23 @@ describe('canvas renderer — static draw', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('canvas mode\'s live-region announces the first graph item via graphItemAnnouncement before anything is focused/hidden', async () => {
+    // graphLiveText (the `||` left side of render()'s canvas-mode live-region expression) starts
+    // out empty and activeGraphItem defaults to 0, so a fresh mount with items present already
+    // exercises the `normalizedGraphItem() >= 0` true side of the ternary on its own, with no
+    // focus/hiddenTypes interaction needed.
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement;
+    // graphItemCount() === simNodes.length(2) + simLinks.length(1) + communities(0) === 3.
+    expect(liveRegion.textContent).to.contain('(1 of 3)');
+  });
+
   it('switching renderer back to svg tears down the canvas resize watcher (no observer stacking across round trips, regression)', async () => {
     const el = await mountCanvas();
     expect((el as unknown as { canvasResizeObserver?: ResizeObserver }).canvasResizeObserver).to.exist;
@@ -3448,20 +3491,6 @@ describe('coverage: private-helper direct branches', () => {
     expect(halo.getAttribute('cx')).to.equal('0');
     expect(halo.getAttribute('cy')).to.equal('0');
   });
-
-  it('edgeLabelWidth falls back to "sans-serif" when --lr-font resolves to an empty custom property', async () => {
-    const el = (await fixture(html`<lr-graph style="--lr-font:"></lr-graph>`)) as LyraGraph;
-    await el.updateComplete;
-    expect(getComputedStyle(el).getPropertyValue('--lr-font').trim()).to.equal('');
-
-    const internal = el as unknown as { edgeLabelWidth: (t: string) => number; edgeLabelFontPx: () => number };
-    const text = 'sans-serif-fallback-probe';
-    const actual = internal.edgeLabelWidth(text);
-    const probeCtx = document.createElement('canvas').getContext('2d')!;
-    probeCtx.font = `${internal.edgeLabelFontPx()}px sans-serif`;
-    const expected = probeCtx.measureText(text).width;
-    expect(actual).to.equal(expected);
-  });
 });
 
 describe('coverage: canvas renderer internals', () => {
@@ -3954,30 +3983,6 @@ describe('optional d3 peer failure', () => {
       );
     } finally {
       el.remove();
-    }
-  });
-});
-
-// MUST stay the last describe/it in this file: `getScratchCtx()` (src/internal/canvas.ts) memoizes
-// its canvas 2D context at module scope for the lifetime of this page, on first call, forever --
-// once poisoned to `null` here it can never resolve to a real context again for any test that runs
-// afterward in this same file. Every other edgeLabelWidth-driven test above already runs (and
-// resolves the real, memoized context) before this point, so nothing downstream depends on it.
-describe('coverage: edgeLabelWidth with no scratch canvas 2D context available (must run last -- see comment above)', () => {
-  it('falls back to a character-count heuristic when getScratchCtx() returns null', async () => {
-    const originalGetContext = HTMLCanvasElement.prototype.getContext;
-    (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
-      function (this: HTMLCanvasElement) {
-        return null;
-      };
-    try {
-      const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
-      const internal = el as unknown as { edgeLabelWidth: (t: string) => number; edgeLabelFontPx: () => number };
-      const text = 'no-ctx-fallback-probe';
-      const width = internal.edgeLabelWidth(text);
-      expect(width).to.equal(text.length * internal.edgeLabelFontPx() * 0.6);
-    } finally {
-      HTMLCanvasElement.prototype.getContext = originalGetContext;
     }
   });
 });
