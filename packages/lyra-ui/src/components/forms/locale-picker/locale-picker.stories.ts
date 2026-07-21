@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraLocalePickerSize } from './locale-picker.js';
 import './locale-picker.js';
 
 const meta: Meta = {
@@ -61,6 +62,21 @@ export const Narrow: Story = {
       <lr-locale-picker label="Language" .locales=${['fr', 'de', 'ja', 'es', 'pt-BR']}></lr-locale-picker>
     </div>
   `,
+};
+
+export const Sizes: Story = {
+  render: () => {
+    const sizes: LyraLocalePickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 20rem">
+        ${sizes.map(
+          (size) => html`
+            <lr-locale-picker size=${size} label=${`Size "${size}"`} .locales=${['fr', 'de']}></lr-locale-picker>
+          `,
+        )}
+      </div>
+    `;
+  },
 };
 
 export const RightToLeft: Story = {

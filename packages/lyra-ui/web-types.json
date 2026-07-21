@@ -9486,7 +9486,7 @@
             },
             {
               "name": "size",
-              "description": "Visual size — same `xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraLocalePickerSize`  \nDefault: `'m'`",
+              "description": "Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraLocalePickerSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
                   "LyraLocalePickerSize"

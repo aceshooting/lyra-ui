@@ -78,8 +78,8 @@ interface NormalizedLocaleEntry {
   label: string;
 }
 
-/** Visual size, same `xs`-`xl` scale as `<lr-select>`'s `size`. */
-export type LyraLocalePickerSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** Visual size, same `2xs`–`xl` scale as `<lr-select>`'s `size`. */
+export type LyraLocalePickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface LyraLocalePickerEventMap {
   'lr-change': CustomEvent<{ value: string; previousValue: string }>;
@@ -176,7 +176,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ type: Boolean, reflect: true }) open = false;
-  /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
+  /** Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`. */
   @property({ reflect: true }) size: LyraLocalePickerSize = 'm';
 
   @state() private activeIndex = -1;

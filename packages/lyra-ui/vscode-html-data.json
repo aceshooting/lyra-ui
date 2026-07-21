@@ -8488,7 +8488,7 @@
           "name": "size",
           "description": {
             "kind": "markdown",
-            "value": "Visual size — same `xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraLocalePickerSize`  \nDefault: `'m'`"
+            "value": "Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraLocalePickerSize`  \nDefault: `'m'`"
           }
         },
         {

@@ -1938,7 +1938,7 @@ list, no filter/free-text mode.
   same opt-in form-control chrome as `lr-select` (props + matching named slots + parts); unset
   renders none of it.
 - `open: boolean = false` (reflected).
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`).
 
 **Events:** `lr-change` (`detail: { value, previousValue }`, **cancelable**) — fired on every
 explicit pick; if not `defaultPrevented`, the component applies the pick itself via

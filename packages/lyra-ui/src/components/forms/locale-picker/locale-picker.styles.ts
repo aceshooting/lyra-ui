@@ -12,6 +12,12 @@ export const styles = css`
        var() fallback on [part='trigger'] below, so leaving it genuinely undeclared keeps that
        fallback arm live. */
   }
+  :host([size='2xs']) {
+    --lr-locale-picker-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
+    --lr-locale-picker-trigger-min-height: var(--lr-size-1-25rem);
+    --lr-locale-picker-font-size: var(--lr-font-size-2xs);
+    --lr-locale-picker-expand-size: var(--lr-size-1rem);
+  }
   :host([size='xs']) {
     --lr-locale-picker-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --lr-locale-picker-trigger-min-height: var(--lr-size-1-5rem);

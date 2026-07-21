@@ -330,6 +330,18 @@ it('mirrors row text-align via logical properties under dir="rtl", with no Left/
   expect(el.value).to.equal(before);
 });
 
+it('applies size="2xs" with a 20px trigger min-height', async () => {
+  const el = await fixture(html`<lr-locale-picker size="2xs"></lr-locale-picker>`);
+  const triggerEl = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  expect(getComputedStyle(triggerEl).minBlockSize).to.equal('20px');
+});
+
+it('reflects size="2xs" as a host attribute', async () => {
+  const el = (await fixture(html`<lr-locale-picker size="2xs"></lr-locale-picker>`)) as LyraLocalePicker;
+  expect(el.size).to.equal('2xs');
+  expect(el.getAttribute('size')).to.equal('2xs');
+});
+
 // Obligation 12: unset-regression.
 it('unset (only locales, or nothing) renders deterministically with no other new property touched', async () => {
   const el = (await fixture(html`<lr-locale-picker></lr-locale-picker>`)) as LyraLocalePicker;
