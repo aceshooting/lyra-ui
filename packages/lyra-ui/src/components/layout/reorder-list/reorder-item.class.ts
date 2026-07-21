@@ -11,8 +11,8 @@ export interface LyraReorderItemEventMap {
 /**
  * `<lr-reorder-item>` — one row inside `<lr-reorder-list>`. Renders arbitrary slotted content plus
  * move-up/move-down buttons. This item alone doesn't know whether it's first or last in the list,
- * so its boundary-disabled state (`atStart`/`atEnd`) and list-level cascade (`listDisabled`) are
- * both pushed down by the parent `<lr-reorder-list>` after every slot change or move — normally
+ * so its boundary-disabled state (`atStart`/`atEnd`), list-level cascade (`listDisabled`), and
+ * held-move state (`pending`) are all pushed down by the parent `<lr-reorder-list>` — normally
  * set internally, not by consumers.
  *
  * @customElement lr-reorder-item
@@ -52,6 +52,14 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
    *  `disabled` was already set to, the same cascade-without-mutation contract a native
    *  `<fieldset disabled>` has. Pushed down by `<lr-reorder-list>`; normally set internally. */
   @property({ type: Boolean, attribute: false }) listDisabled = false;
+
+  /** Whether this item's move is currently held pending host resolution, after an `lr-reorder`
+   *  listener on the parent `<lr-reorder-list>` called `preventDefault()`. Purely informational —
+   *  it does not itself disable this item's move buttons (the list already refuses to start any
+   *  further move while one is pending, so a second click here is already a no-op); style it via
+   *  `lr-reorder-item[pending]` if desired. Pushed down by `<lr-reorder-list>`; normally set
+   *  internally, not by consumers. */
+  @property({ type: Boolean, reflect: true }) pending = false;
 
   private get moveUpDisabled(): boolean {
     return this.disabled || this.listDisabled || this.atStart;

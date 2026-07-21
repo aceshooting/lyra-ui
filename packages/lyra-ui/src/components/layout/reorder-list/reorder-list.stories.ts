@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './reorder-list.js';
 import './reorder-item.js';
+import type { LyraReorderList } from './reorder-list.js';
 
 const meta: Meta = {
   title: 'Primitives/Reorder List',
@@ -48,6 +49,30 @@ export const ListDisabled: StoryObj = {
     <lr-reorder-list label="Form fields" disabled style="max-width: 20rem;">
       <lr-reorder-item value="name">Name</lr-reorder-item>
       <lr-reorder-item value="email">Email</lr-reorder-item>
+    </lr-reorder-list>
+  `,
+};
+
+export const CancelableMove: StoryObj = {
+  name: 'Cancelable move (async persistence)',
+  render: () => html`
+    <lr-reorder-list
+      label="Steps (async persist)"
+      style="max-width: 20rem;"
+      @lr-reorder=${(e: CustomEvent) => {
+        e.preventDefault();
+        const list = e.target as LyraReorderList;
+        // Simulate a network round trip: 50% chance of failure, so the story demonstrates both
+        // finalizePendingMove() and revertPendingMove().
+        setTimeout(() => {
+          if (Math.random() < 0.5) list.finalizePendingMove();
+          else list.revertPendingMove();
+        }, 800);
+      }}
+    >
+      <lr-reorder-item value="name">Name</lr-reorder-item>
+      <lr-reorder-item value="email">Email</lr-reorder-item>
+      <lr-reorder-item value="phone">Phone</lr-reorder-item>
     </lr-reorder-list>
   `,
 };

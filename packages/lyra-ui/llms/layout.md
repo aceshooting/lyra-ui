@@ -693,7 +693,9 @@ Ctrl/Cmd+ArrowUp/ArrowDown from focus anywhere inside a row — the same modifie
 `<lr-tree>`'s controlled `reorderable` mode, this list physically moves its own slotted
 `<lr-reorder-item>` light-DOM nodes itself (there is no `data` array prop to reconcile against),
 and emits `lr-reorder` with the full new order so the host can persist it without hand-rolling its
-own splice/resort logic.
+own splice/resort logic. `lr-reorder` is cancelable — a listener calling `preventDefault()` holds
+the move open (mirroring `lr-confirm-bar`'s cancelable approve/deny pattern) until the host calls
+`finalizePendingMove()`/`revertPendingMove()`.
 
 ### `lr-reorder-list`
 
@@ -703,9 +705,15 @@ own splice/resort logic.
 - `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
   Arrow shortcut, without mutating any item's own `disabled` attribute.
 
-**Events:** `lr-reorder` (`detail: { order: string[], fromIndex: number, toIndex: number }` — fired
-after every successful move; `order` is every current item's `value` (or its DOM-position-index
-fallback) in the new top-to-bottom order)
+**Events:** `lr-reorder` (`detail: { order: string[], fromIndex: number, toIndex: number }`,
+cancelable — fired before a move is applied; `order` is every item's `value` (or its
+DOM-position-index fallback) in the order the move WOULD produce. Uncanceled, the move applies
+synchronously right after. `preventDefault()` holds the move instead: the affected item reflects
+`pending`, and no other move can start until the host resolves it — see **Methods** below.
+
+**Methods:** `finalizePendingMove()` — applies a move held via `preventDefault()`.
+`revertPendingMove()` — discards a held move, restoring the prior order. Both no-op when nothing
+is pending.
 
 **Slots:** default — `<lr-reorder-item>` elements.
 
@@ -740,6 +748,9 @@ between rows.
 - `atStart: boolean = false`, `atEnd: boolean = false`, `listDisabled: boolean = false`
   (attribute: false) — pushed down by the parent `<lr-reorder-list>`; normally set internally, not
   by consumers.
+- `pending: boolean = false` (reflected) — set while this item's move is held via the parent's
+  `lr-reorder` `preventDefault()`. Informational only (doesn't itself disable the item's buttons);
+  style via `lr-reorder-item[pending]`. Pushed down by the parent; normally set internally.
 
 **Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
 while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)

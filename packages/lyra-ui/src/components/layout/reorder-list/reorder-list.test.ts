@@ -49,6 +49,98 @@ describe('<lr-reorder-list>', () => {
     expect(itemsOf(el)[1].atStart).to.be.false;
   });
 
+  it('lr-reorder is cancelable: preventDefault() holds the move, marks the item pending, and applies nothing yet', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const middle = itemsOf(el)[1];
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    upButton.click();
+    await el.updateComplete;
+
+    // Nothing moved yet.
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(middle.pending).to.be.true;
+  });
+
+  it('finalizePendingMove() applies a held move', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const middle = itemsOf(el)[1];
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    upButton.click();
+    await el.updateComplete;
+
+    el.finalizePendingMove();
+    await el.updateComplete;
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['b', 'a', 'c']);
+    expect(middle.pending).to.be.false;
+  });
+
+  it('revertPendingMove() discards a held move, leaving the list at its prior order', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const middle = itemsOf(el)[1];
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+    upButton.click();
+    await el.updateComplete;
+
+    el.revertPendingMove();
+    await el.updateComplete;
+
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+    expect(middle.pending).to.be.false;
+  });
+
+  it('finalizePendingMove()/revertPendingMove() are no-ops when nothing is pending', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    el.finalizePendingMove();
+    el.revertPendingMove();
+    await el.updateComplete;
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+  });
+
+  it('refuses to start a second move anywhere in the list while one is pending', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const items = itemsOf(el);
+    el.addEventListener('lr-reorder', (e) => e.preventDefault());
+
+    const middleUp = items[1].shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    middleUp.click();
+    await el.updateComplete;
+
+    let secondEventFired = false;
+    el.addEventListener('lr-reorder', () => {
+      secondEventFired = true;
+    });
+    const lastUp = itemsOf(el)[2].shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+    lastUp.click();
+    await el.updateComplete;
+
+    expect(secondEventFired, 'no second lr-reorder while one move is still pending').to.be.false;
+    expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+  });
+
+  it('event.detail.order reflects the move that WOULD happen, computed before any DOM change', async () => {
+    const el = await fixture<LyraReorderList>(threeItems);
+    const middle = itemsOf(el)[1];
+    const upButton = middle.shadowRoot!.querySelector('[part="move-up-button"]') as HTMLButtonElement;
+
+    let detail: { order: string[]; fromIndex: number; toIndex: number } | undefined;
+    el.addEventListener('lr-reorder', (e) => {
+      detail = (e as CustomEvent<{ order: string[]; fromIndex: number; toIndex: number }>).detail;
+      // The DOM must NOT have moved yet at the moment this listener runs.
+      expect(itemsOf(el).map((i) => i.value)).to.deep.equal(['a', 'b', 'c']);
+      e.preventDefault();
+    });
+    upButton.click();
+
+    expect(detail).to.deep.equal({ order: ['b', 'a', 'c'], fromIndex: 1, toIndex: 0 });
+  });
+
   it('moves the middle item down via Ctrl+ArrowDown from focus inside the row', async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const downButton = itemsOf(el)[1].shadowRoot!.querySelector('[part="move-down-button"]') as HTMLButtonElement;

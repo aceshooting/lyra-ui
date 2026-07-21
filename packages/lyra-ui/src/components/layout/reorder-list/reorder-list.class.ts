@@ -38,12 +38,22 @@ export interface LyraReorderListEventMap {
  * still tells the host the resulting order, so it can persist it without hand-rolling its own
  * splice/resort logic.
  *
+ * An `lr-reorder` listener can call `preventDefault()` to hold a move open while its own async
+ * work (e.g. a network call persisting the new order) is in flight -- the same
+ * cancelable-event-plus-host-resolvable-pending-state pattern `<lr-confirm-bar>` and
+ * `<lr-tool-approval-dialog>` already establish for their own approve/deny decisions.
+ *
  * @customElement lr-reorder-list
  * @slot - `<lr-reorder-item>` elements.
- * @event lr-reorder - `detail: { order, fromIndex, toIndex }` — fired after every successful move
- * (button click or Ctrl/Cmd+Arrow). `order` is every current item's `value` (or its
- * DOM-position-index fallback) in the new top-to-bottom order; `fromIndex`/`toIndex` are the moved
- * item's 0-based position before/after.
+ * @event lr-reorder - `detail: { order, fromIndex, toIndex }` — fired before a move is applied
+ * (button click or Ctrl/Cmd+Arrow). `order` is every item's `value` (or its DOM-position-index
+ * fallback) in the order the move WOULD produce; `fromIndex`/`toIndex` are the moved item's
+ * 0-based position before/after. Cancelable: a listener calling `preventDefault()` holds the move
+ * instead of applying it -- the affected `<lr-reorder-item>` reflects `pending`, and no other move
+ * can start anywhere in this list -- until the host calls `finalizePendingMove()` to apply it or
+ * `revertPendingMove()` to discard it and restore the prior order. Uncanceled (the default), the
+ * move applies synchronously in the same tick, unchanged from every release before this option
+ * existed.
  * @csspart base - The list's root wrapper (`role="list"`).
  * @cssprop [--lr-reorder-list-gap=var(--lr-space-2xs)] - Gap between rows.
  */
@@ -75,6 +85,12 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   private pendingFocusTarget: { item: LyraReorderItem; buttonPart: 'move-up-button' | 'move-down-button' } | null =
     null;
 
+  /** Set while an `lr-reorder` listener has called `preventDefault()`, holding a move until the
+   *  host calls `finalizePendingMove()` or `revertPendingMove()`. `moveItem()` refuses to start
+   *  any further move while this is set -- at most one move is ever held at a time. */
+  private pendingMove: { item: LyraReorderItem; direction: 'up' | 'down'; fromIndex: number; toIndex: number } | null =
+    null;
+
   private get itemElements(): LyraReorderItem[] {
     return [...this.querySelectorAll(tag('reorder-item'))] as LyraReorderItem[];
   }
@@ -97,6 +113,14 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     if (changed.has('disabled')) this.syncBoundaryState();
   }
 
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.pendingMove) {
+      this.pendingMove.item.pending = false;
+      this.pendingMove = null;
+    }
+  }
+
   private orderValues(items: LyraReorderItem[]): string[] {
     return items.map((item, i) => item.value ?? String(i));
   }
@@ -110,7 +134,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   //
   // The actual async work (awaiting the moved item's own `updateComplete`, then `.focus()`) lives
   // ONLY in `getUpdateComplete()` below, run lazily and exactly once per update cycle -- it is
-  // never started eagerly from `moveItem()`. That's deliberate: an eagerly-started promise chain
+  // never started eagerly from `applyMove()`. That's deliberate: an eagerly-started promise chain
   // per move would keep running independently even after a later move overwrites
   // `pendingFocusTarget`, uncancelled and orphaned, free to `.focus()` a stale target the moment
   // its own `await item.updateComplete` resolves -- which can lose the race against a *second*
@@ -118,7 +142,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   // Ctrl/Cmd+Arrow key-repeat outrunning a render tick reliably triggers exactly this). Storing
   // only the plain target VALUE here and deferring all the work to `getUpdateComplete()` is what
   // `<lr-tree>`'s `pendingFocusId` actually does -- no work starts until `getUpdateComplete()`
-  // itself runs, so a later `moveItem()` call before that point has no competing chain to race
+  // itself runs, so a later `applyMove()` call before that point has no competing chain to race
   // against, just a field to overwrite. Lit's own scheduler calls `getUpdateComplete()` as part of
   // resolving `updateComplete` on every update cycle regardless of whether any external caller
   // ever reads that promise, which is what makes this correct in real (non-test) usage too.
@@ -133,14 +157,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     return result;
   }
 
-  private moveItem(item: LyraReorderItem, direction: 'up' | 'down'): void {
-    if (this.disabled || item.disabled) return;
+  /** Physically moves `item` (already known to belong at `toIndex`) and runs the same
+   *  boundary-recompute / focus-restore / announce steps for both the immediate (uncanceled) path
+   *  and a later `finalizePendingMove()` call. */
+  private applyMove(item: LyraReorderItem, direction: 'up' | 'down', fromIndex: number, toIndex: number): void {
     const items = this.itemElements;
-    const fromIndex = items.indexOf(item);
-    if (fromIndex < 0) return;
-    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
-    if (toIndex < 0 || toIndex >= items.length) return;
-
     const target = items[toIndex];
     if (direction === 'up') this.insertBefore(item, target);
     else this.insertBefore(item, target.nextElementSibling);
@@ -167,7 +188,54 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       // window the way streaming status text is -- matches <lr-tree>'s identical reorder announcement.
       { force: true },
     );
-    this.emit<ReorderDetail>('lr-reorder', { order: this.orderValues(newItems), fromIndex, toIndex });
+  }
+
+  private moveItem(item: LyraReorderItem, direction: 'up' | 'down'): void {
+    if (this.disabled || item.disabled || this.pendingMove) return;
+    const items = this.itemElements;
+    const fromIndex = items.indexOf(item);
+    if (fromIndex < 0) return;
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= items.length) return;
+
+    // Compute the order the move WOULD produce, without touching the DOM yet -- the event fires
+    // before the move so a listener can still veto it.
+    const reordered = items.slice();
+    reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, item);
+
+    const event = this.emit<ReorderDetail>(
+      'lr-reorder',
+      { order: this.orderValues(reordered), fromIndex, toIndex },
+      { cancelable: true },
+    );
+    if (event.defaultPrevented) {
+      this.pendingMove = { item, direction, fromIndex, toIndex };
+      item.pending = true;
+      return;
+    }
+
+    this.applyMove(item, direction, fromIndex, toIndex);
+  }
+
+  /** Applies a move an `lr-reorder` listener held via `preventDefault()`, once the host's own
+   *  async work (e.g. persisting the new order) has succeeded. No-op if nothing is pending. */
+  finalizePendingMove(): void {
+    if (!this.pendingMove) return;
+    const { item, direction, fromIndex, toIndex } = this.pendingMove;
+    this.pendingMove = null;
+    item.pending = false;
+    this.applyMove(item, direction, fromIndex, toIndex);
+  }
+
+  /** Discards a move an `lr-reorder` listener held via `preventDefault()`, leaving the list at its
+   *  prior order -- e.g. once the host's own async work (e.g. persisting the new order) fails.
+   *  No-op if nothing is pending. */
+  revertPendingMove(): void {
+    if (!this.pendingMove) return;
+    const { item } = this.pendingMove;
+    this.pendingMove = null;
+    item.pending = false;
   }
 
   private onMoveRequest = (e: Event): void => {
