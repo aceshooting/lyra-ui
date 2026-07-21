@@ -70,7 +70,7 @@ export interface LyraTranscriptFeedEventMap {
  * @csspart empty - The empty-state wrapper.
  */
 export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) entries: LyraTranscriptEntry[] = [];
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
@@ -111,11 +111,11 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return this.renderedEntries.filter((e) => e.interim);
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     this._isFirstUpdate = !this.hasUpdated;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('entries') && this.follow) this.scrollToBottom();
     if (changed.has('follow')) {
       if (this.follow) this.scrollToBottom();
@@ -170,7 +170,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const finals = this.finalEntries;
     const interims = this.interimEntries;
     const empty = this.entries.length === 0;

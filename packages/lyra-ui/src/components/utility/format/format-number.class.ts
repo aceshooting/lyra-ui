@@ -18,7 +18,7 @@ const MAX_FRACTION_DIGITS = 100;
  * @slot - Fallback content when the value is not finite.
  */
 export class LyraFormatNumber extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
   @property() currency = '';
   @property() notation: 'standard' | 'compact' | 'scientific' | 'engineering' = 'standard';
@@ -45,7 +45,7 @@ export class LyraFormatNumber extends LyraElement {
     return { minimumFractionDigits, maximumFractionDigits };
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const options: Intl.NumberFormatOptions = { notation: this.notation };
     if (this.currency) { options.style = 'currency'; options.currency = this.currency; }
     const { minimumFractionDigits, maximumFractionDigits } = this.fractionDigits;

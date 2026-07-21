@@ -85,7 +85,7 @@ export interface LyraDatePickerEventMap {
  * @csspart day-placeholder - A non-day grid placeholder.
  */
 export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** ISO value: `YYYY-MM-DD` or `YYYY-MM-DD/YYYY-MM-DD`. */
   @property() value = '';
@@ -98,7 +98,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   /** Visual size — scales `--lr-cell-size` proportionally; not pixel-matched to
    *  `lr-input`'s row-height scale (a calendar cell isn't a text row). */
   @property({ reflect: true }) size: LyraDatePickerSize = 'm';
-  @property() locale = '';
+  @property() override locale = '';
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';
   @property({ type: Boolean, attribute: 'disable-past' }) disablePast = false;
@@ -149,7 +149,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return this.effectiveMode === 'single' ? this.selection.from : null;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     if (changed.has('value')) {
@@ -417,7 +417,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return firstMonth;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     if (this.focusPending && this.focusedDate) {
@@ -579,7 +579,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     </div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const selection = this.selection;
     const min = parseISO(this.min);
     const max = parseISO(this.max);

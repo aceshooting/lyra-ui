@@ -89,9 +89,9 @@ export interface LyraRubricFormEventMap {
  */
 export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     name: { reflect: true, noAccessor: true },
     keys: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
@@ -416,7 +416,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('value') || changed.has('keys') || changed.has('_errors')) {
       const valid = Object.keys(this._errors).length === 0;
@@ -543,7 +543,7 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this._keys.length === 0) {
       return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
     }

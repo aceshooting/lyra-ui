@@ -34,7 +34,7 @@ export interface LyraBranchPickerEventMap {
  * @csspart position - The visible "2 / 5" text.
  */
 export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** 0-based current branch, rendered 1-based ("2 / 5"). Controlled -- this component never writes
    *  to it itself. */
@@ -88,7 +88,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     this.nextButtonEl?.blur();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -113,7 +113,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
   // `chevronIcon()` -- it bakes in no direction/rotation of its own (see its doc comment) --
   // and the stylesheet owns 100% of the rotation, both the LTR base state and the RTL override,
   // via `transform` on those two parts.
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const count = this.normalizedCount;
     if (count < 2) return html``;
     const index = this.normalizedIndex;

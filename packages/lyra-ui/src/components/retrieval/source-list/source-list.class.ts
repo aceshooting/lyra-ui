@@ -44,7 +44,7 @@ export interface LyraSourceListEventMap {
  * @csspart list - The wrapper around the default slot, `hidden` while collapsed.
  */
 export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether the card list is currently shown. Starts collapsed by default
    *  so a message's sources don't eat vertical space until asked for. */
@@ -66,7 +66,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private readonly listId = nextId('source-list-region');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       // Must count only children assigned to the *default* slot -- same rule
@@ -81,7 +81,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time -- same idiom as
     // `<lr-empty>`'s `firstUpdated`.
@@ -106,7 +106,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     this.emit<SourceListToggleDetail>('lr-toggle', { expanded: this.expanded });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const headerText =
       this.labelPlural || this.label || this.localize('sourceListDefaultLabel');
 

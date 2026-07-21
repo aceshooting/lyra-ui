@@ -113,7 +113,7 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   `[part="highlight"]` matching `activeHighlightId`, independent of the per-tone border colors.
  */
 export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Image URL; validated with `safeMediaSrc` before it ever reaches the `<img>`. */
   @property() src = '';
@@ -150,7 +150,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   @property({ type: Boolean, reflect: true }) annotatable = false;
 
   /** From `DocumentAnchorTarget` — only `region` anchors resolve here. */
-  readonly anchorKinds: readonly LyraAnchorKind[] = ['region'];
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['region'];
 
   @state() private loadState: ImageLoadState = { kind: 'idle' };
   @state() private draft: AnnotationDraft | null = null;
@@ -172,7 +172,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     return ((((steps % 4) + 4) % 4) * 90) as ImageRotation;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       this.loadState = this.src && safeMediaSrc(this.src) ? { kind: 'loading' } : this.src ? { kind: 'error' } : { kind: 'idle' };
@@ -180,7 +180,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('rotation') && changed.get('rotation') !== undefined) this.emit('lr-rotation-change', { rotation: this.safeRotation });
     if (changed.has('fit') && changed.get('fit') !== undefined) this.emit('lr-fit-change', { fit: this.fit });
@@ -411,7 +411,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     </lr-zoomable-frame>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('imageViewerLabel');
     return html`<div part="base" aria-label=${label}>
       <div part="toolbar">

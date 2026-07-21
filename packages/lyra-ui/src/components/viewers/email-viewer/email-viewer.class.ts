@@ -115,7 +115,7 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string): string
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an RFC 822 message. */
   @property() src = '';
   /** Display name associated with the message. Used as the accessible name
@@ -132,7 +132,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   @state() private textQuoteExpanded = false;
   private generation = 0;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -245,7 +245,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('emailViewerLabel')}>${this.renderBody()}</div>`; }
+  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('emailViewerLabel')}>${this.renderBody()}</div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-email-viewer': LyraEmailViewer; } }

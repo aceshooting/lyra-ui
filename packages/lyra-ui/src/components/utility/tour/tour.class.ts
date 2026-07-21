@@ -224,7 +224,7 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  *   shared brand token.
  */
 export class LyraTour extends LyraElement<LyraTourEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether the tour is open. Set this (or call `start()`/`end()`) -- there is no separate
    *  `show()`/`hide()` pair. */
@@ -281,7 +281,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private readonly bodyId = nextId('tour-body');
   private readonly progressTextId = nextId('tour-progress-text');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // Normalizes a direct `activeIndex` assignment (property or `active-index` attribute) that
     // bypasses `goToStep()`'s own `clampIndex()` -- e.g. two-way-binding an external store, or a
     // non-numeric `active-index` attribute (NaN via the `type: Number` converter). Setting the
@@ -323,14 +323,14 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   // Runs after render so the manager can resolve the (possibly just-swapped, per keyed()) panel,
   // and so activateStep() can query the freshly-rendered popover/spotlight/mask elements.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if ((changed.has('open') && this.open) || changed.has('activeIndex')) {
       this.overlay?.focusInitial();
       if (this.open) this.activateStep();
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
@@ -356,7 +356,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.disposePositioning();
     this.releaseScrollLock?.();
@@ -572,7 +572,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const step = this.open ? this.steps[this.activeIndex] : undefined;
     if (!step) return html``;
 

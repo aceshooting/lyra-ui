@@ -157,9 +157,9 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  *   `field-input` while `:host([data-invalid])` is set.
  */
 export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     min: { noAccessor: true },
     max: { noAccessor: true },
     readonly: { type: Boolean, reflect: true, noAccessor: true },
@@ -173,7 +173,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
    *  back to `this.effectiveLocale` (inherited `lang`/ancestor), exactly like `lr-date-input`'s
    *  `locale`. Redeclared (non-reflecting) over `LyraElement`'s own reflecting `locale` for the
    *  same reason `lr-date-input` does. */
-  @property() locale = '';
+  @property() override locale = '';
   /** Forwarded to the internal day field as-is when non-empty. The special value `'bday'`
    *  expands into `'bday-day'`/`'bday-month'`/`'bday-year'` split across the three fields; any
    *  other non-empty value is forwarded verbatim to all three fields unmodified. */
@@ -258,7 +258,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.requestUpdate('readonly', old);
   }
 
-  get value(): string {
+  override get value(): string {
     return super.value;
   }
 
@@ -267,7 +267,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
    *  literal (`"2007-02-30"`) sanitizes to `''`, same strict-ISO gate as `lr-date-input`'s
    *  `parseStrictISO()`. Programmatic assignment stays silent (no `input`/`change`), matching every
    *  `FormAssociated` sibling's documented contract. */
-  set value(next: string) {
+  override set value(next: string) {
     const parsed = this.parseStrictISO(next ?? '');
     if (parsed) {
       this.dayText = String(parsed.getDate());
@@ -427,7 +427,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
@@ -436,7 +436,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     // Unconditional (not gated on `changed.has('value')`) -- `value` uses
     // `noAccessor` and its base setter is never invoked for a freshly
@@ -459,7 +459,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     }
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
   }
@@ -575,7 +575,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const validationError = this.touched ? this.validationMessage : '';
     const renderedError = this.errorText || validationError;

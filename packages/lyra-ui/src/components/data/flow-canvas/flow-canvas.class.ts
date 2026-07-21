@@ -177,7 +177,7 @@ interface FlowNodeCardEl extends HTMLElement {
  *   `::part()[attr]` restriction those four work around. Set to `transparent` to opt out.
  */
 export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) nodes: FlowNode[] = [];
   @property({ attribute: false }) edges: FlowEdge[] = [];
@@ -298,7 +298,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   private companionCallbacks = new Set<(snapshot: FlowStructureSnapshot) => void>();
   private companionRaf: number | null = null;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver((entries) => this.onNodesResized(entries));
     // updated() only runs on renders -- a disconnect/reconnect (e.g. a reparenting move) that
@@ -307,7 +307,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (this.hasUpdated) this.observeNodeWrappers();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -365,7 +365,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
   }
 
-  protected shouldUpdate(changed: PropertyValues): boolean {
+  protected override shouldUpdate(changed: PropertyValues): boolean {
     if (this.hasUpdated && changed.size === 1 && changed.has('decorations')) {
       this.pushCardPropsAll(changed);
       this.pushEdgeDecorationPropsAll();
@@ -375,7 +375,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return true;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('nodes')) {
       this.syncDefaultCards();
     }
@@ -384,7 +384,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('edges')) this.rebuildIncidentEdgesIndex();
     if (changed.has('nodes') || changed.has('edges')) {
       this.runAutoLayoutIfNeeded();
@@ -1635,7 +1635,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     )}`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.nodes.length === 0) {
       return html`<div part="base" role="region" aria-label=${this.localize('flowCanvasLabel')}>
         <lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>

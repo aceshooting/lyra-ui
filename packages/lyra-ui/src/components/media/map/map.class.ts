@@ -159,7 +159,7 @@ export interface LyraMapEventMap {
  * `mapStyle` in production.
  */
 export class LyraMap extends LyraElement<LyraMapEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Array }) center: [number, number] = [0, 0];
   @property({ type: Number }) zoom = 2;
@@ -259,7 +259,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return finiteRange(this.zoom, 2, 0, 22);
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
     // A reconnect always tears the map down in disconnectedCallback() below,
@@ -304,7 +304,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this._map?.remove();
     this._map = undefined;
@@ -366,7 +366,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     });
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
@@ -627,7 +627,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // Lit's own whitespace/comment marker nodes around the `${...}` binding mean
     // `[part="legend"]` is never truly `:empty` in CSS even with zero entries, so
     // the panel is omitted from the template entirely when `legend` is empty

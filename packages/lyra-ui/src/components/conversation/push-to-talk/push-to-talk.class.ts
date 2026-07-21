@@ -111,7 +111,7 @@ export interface LyraPushToTalkEventMap {
  *   every other danger-toned surface on the page untouched.
  */
 export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) mode: PushToTalkMode = 'hold';
   /** `> 0` requests periodic `lr-record-chunk` slices from `MediaRecorder` every this-many
@@ -164,12 +164,12 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private levelData?: Uint8Array<ArrayBuffer>;
   private levelRafId?: number;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (!this.hasAttribute('data-state')) this.setAttribute('data-state', this._state);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this._state === 'recording' || this._state === 'requesting') this.cancel();
   }
@@ -442,7 +442,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const supported = isPushToTalkSupported();
     const recording = this._state === 'recording';
     const status = this.statusText;

@@ -394,7 +394,7 @@ export interface LyraHeatmapEventMap {
  * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied, and removed again when it is not; the fallback is the two-endpoint scale ramp.
  */
 export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) rowLabels: string[] = [];
   @property({ attribute: false }) colLabels: string[] = [];
@@ -720,7 +720,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private authorSuppliedRole = false;
   private authorSuppliedAriaLabel = false;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver(this.scheduleDraw);
     this.resizeObserver.observe(this);
@@ -728,7 +728,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.watchTheme();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.dprQuery?.removeEventListener('change', this.onDprChange);
@@ -791,7 +791,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (
       changed.has('mode') ||
       changed.has('rowLabels') ||
@@ -938,7 +938,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     return getNumberFormat(this.effectiveLocale || undefined).format(value);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (
       [
         'values',
@@ -2163,7 +2163,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           <span part="legend-hi">${range ? this.formatNumericValue(range[1]) : ''}</span>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const range = this.cachedValueRange;
     const labeledAnnotations = this.annotations.filter((a) => a.label);
     return html`

@@ -110,7 +110,7 @@ export interface LyraJsonViewerEventMap {
  *   surrounding box-shadow) of a key/value that currently matches `search`.
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
   @property({ attribute: false }) data: unknown;
@@ -420,7 +420,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     `;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated || changed.has('data') || changed.has('search')) {
       const next = this.computeSearch();
@@ -504,7 +504,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     el?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base" style=${this.maxHeight ? `--lr-json-viewer-max-height:${this.maxHeight}` : nothing}>
         ${this.copyable

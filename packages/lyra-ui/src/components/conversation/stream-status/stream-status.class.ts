@@ -113,7 +113,7 @@ export interface LyraStreamStatusEventMap {
  *   reflected `phase`: `0.6` for `connecting`, `1` for `streaming` and `stalled`.
  */
 export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Current connection phase. Settable directly by the host at any time —
    *  see the class doc for how that interacts with the internal stall timer. */
@@ -136,7 +136,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = this.hasSlotted('actions');
       this.hasMessageContent = Array.from(this.childNodes).some(isRealMessageNode);
@@ -157,7 +157,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
   // (re)armed the timer with the current `stallThresholdMs`, so re-arming it
   // again here would just be redundant, not wrong, but the `else` skips that
   // double work.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('phase')) {
       this.onPhaseChanged(changed.get('phase') as StreamStatusPhase | undefined);
     } else if (changed.has('stallThresholdMs') && this.phase === 'streaming') {
@@ -170,7 +170,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A disconnect always disarms the timer (see disconnectedCallback()
     // below), but reparenting this element elsewhere in the page while still
@@ -182,7 +182,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     if (this.phase === 'streaming') this.armStallTimer();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.disarmStallTimer();
   }
@@ -278,7 +278,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
     this.hasMessageContent = (e.target as HTMLSlotElement).assignedNodes({ flatten: true }).some(isRealMessageNode);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <span part="indicator" aria-hidden="true"></span>

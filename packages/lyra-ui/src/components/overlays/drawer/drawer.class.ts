@@ -25,7 +25,7 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  *   when `prefers-reduced-motion` is `no-preference`.
  */
 export class LyraDrawer extends LyraDialog {
-  static styles = [LyraDialog.styles, styles];
+  static override styles = [LyraDialog.styles, styles];
 
   @property({ reflect: true }) placement: LyraDrawerPlacement = 'start';
 }

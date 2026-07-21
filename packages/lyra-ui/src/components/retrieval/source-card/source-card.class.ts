@@ -87,7 +87,7 @@ class LyraSourceCardBase extends LyraElement<LyraSourceCardEventMap> {}
  * ```
  */
 export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Stable identifier matching a `<lr-citation-badge>` elsewhere on the page. */
   @property({ attribute: 'source-id' }) sourceId = '';
@@ -98,7 +98,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
    *  synced it into this property, so the card never grows an unsolicited
    *  native tooltip repeating the same text. See `StripHostTitleAttribute`
    *  (`internal/strip-host-title.ts`). */
-  @property() title = '';
+  @property() override title = '';
 
   /** Optional page reference, e.g. `12` or `"iv"` — rendered as-is (never
    *  parsed/validated as a number), so a non-numeric page label works too. */
@@ -131,7 +131,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
 
   private readonly fullId = nextId('source-card-full');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasFullSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'full');
@@ -139,7 +139,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     const fullSlot = this.shadowRoot!.querySelector('slot[name="full"]') as HTMLSlotElement;
     const fullCount = fullSlot.assignedElements({ flatten: true }).length;
     this.hasFullSlot = fullCount > 0;
@@ -175,7 +175,7 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
     this.emit<SourceCardExpandDetail>('lr-expand', { sourceId: this.sourceId, expanded: this.fullExpanded });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <button part="title" type="button" @click=${this.onTitleClick}>${this.titleText}</button>

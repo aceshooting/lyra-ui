@@ -73,12 +73,12 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
  */
 export class LyraIconButton extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   // A button is form-associated so it is discoverable through form.elements, mirroring
   // <lr-button>'s identical rationale -- see the class doc above.
   static formAssociated = true;
 
-  static properties = {
+  static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
@@ -139,7 +139,7 @@ export class LyraIconButton extends LyraElement {
     this.hasBareGeometry = assigned.some((el) => needsSvgNamespaceFallback(el));
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     this.syncFallbackGeometry();
@@ -159,7 +159,7 @@ export class LyraIconButton extends LyraElement {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
     return html`<button part="button" type="button" ?disabled=${this.disabled} aria-label=${label} @click=${this.onClick}>${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
   }

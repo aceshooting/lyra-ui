@@ -74,14 +74,14 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   `var(--lr-color-warning, var(--lr-color-brand))`.
  */
 export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetViewerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
   /** Source filename or display name, used as the viewer's accessible name. */
   @property() name = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
-  readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: SpreadsheetState = { kind: 'idle' };
   /** Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lr-tabs>`'s own
@@ -97,7 +97,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
   private generation = 0;
   private loadLibrary: () => Promise<SheetJsApi | null> = loadSheetJsCached;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       // A new document invalidates every previous sheet/row/column coordinate -- reset silently
@@ -110,7 +110,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -317,7 +317,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const body = this.fetchState.kind === 'loaded' ? this.renderLoaded(this.fetchState.sheets) : this.fetchState.kind === 'loading' ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>` : this.fetchState.kind === 'error' ? html`<div part="error" role="alert">${this.fetchState.message}</div>` : html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
     return html`<div part="base" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('spreadsheetViewerLabel')}>${body}${this.renderAnchorLiveRegion()}</div>`;
   }

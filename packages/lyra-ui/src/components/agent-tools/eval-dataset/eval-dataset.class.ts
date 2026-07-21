@@ -97,7 +97,7 @@ export interface LyraEvalDatasetEventMap {
  * @csspart grid - The internal `<lr-table>`.
  */
 export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Controlled dataset: every example currently known to the host. This component never
    *  mutates its own copy of it -- add/remove/import/export are all *requests*; the host performs
@@ -131,7 +131,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @state() private activeTags = new Set<string>();
   @state() private selectedId: string | null = null;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!changed.has('examples')) return;
     // A host fulfilling `lr-example-remove-request` (or an import that replaces the whole array)
     // can hand back an `examples` array that no longer contains the previously-selected id, or no
@@ -301,7 +301,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.label || this.localize('evalDatasetLabel');
     const tags = this.allTags();
     const visible = this.visibleExamples;

@@ -38,7 +38,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop --lr-color-picker-swatch-size - The swatch's inline and block size, scaled by `size`.
  */
 export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -70,7 +70,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     if (slot.name === 'hint') this.hasHint = slot.assignedElements({ flatten: true }).length > 0;
     if (slot.name === 'error') this.hasError = slot.assignedElements({ flatten: true }).length > 0;
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = this.hasLabel || Boolean(this.label);
     const hasHint = this.hasHint || Boolean(this.hint);
     const hasError = this.hasError || Boolean(this.errorText);

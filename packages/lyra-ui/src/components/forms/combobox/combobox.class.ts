@@ -165,9 +165,9 @@ export interface LyraComboboxEventMap {
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     multiple: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
@@ -195,10 +195,10 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   /** Native editing-assistance attributes forwarded to the wrapped input. */
   @property() autocomplete = 'off';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
-  @property({ converter: spellcheckConverter }) spellcheck = true;
-  @property() autocapitalize = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
+  @property() override autocapitalize = '';
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   /** Status copy shown in the listbox when no rows match. Empty string falls back to a localized message. */
   @property({ attribute: 'empty-text' }) emptyText = '';
@@ -403,12 +403,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this.renderRoot?.querySelector('[part="combobox-input"]') ?? null;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     // `hasUpdated` flips to `true` before `updated()` even sees its first
@@ -624,7 +624,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return this.internals.reportValidity();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -789,7 +789,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     if (changed.has('open')) {
@@ -1088,7 +1088,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     return out;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const { rows, overflow } = this.renderedRows;
     this._rowsByValue = new Map(rows.map((r) => [r.value, r]));
     const navigable = rows.filter((r) => !r.disabled);

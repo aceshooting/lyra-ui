@@ -61,7 +61,7 @@ export interface StatRow {
  *   Background of the trend pill when its polarity is "bad".
  */
 export class LyraStat extends LyraElement {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() label = '';
   @property() value = '';
@@ -150,7 +150,7 @@ export class LyraStat extends LyraElement {
   // stable across unrelated re-renders.
   @state() private rowLabelIds: string[] = [];
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
       this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
@@ -179,7 +179,7 @@ export class LyraStat extends LyraElement {
     this.hasSubSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const href = safeLinkHref(this.href);
     const linked = Boolean(href);
     // `trend`'s own accessor above already normalizes a removed/absent attribute (which Lit's

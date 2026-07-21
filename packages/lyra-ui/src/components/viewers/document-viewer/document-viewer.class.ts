@@ -42,7 +42,7 @@ export interface LyraDocumentViewerEventMap {
  * @cssprop [--lr-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
  */
 export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether the viewer is open. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -81,7 +81,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private generation = 0;
   private resolvedLazy?: { def: DocumentRendererDefinition; resolved: DocumentRendererDefinition };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       !this.hasUpdated ||
@@ -210,7 +210,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const downloadHref = safeLinkHref(this.src);
     return html`
       <lr-dialog

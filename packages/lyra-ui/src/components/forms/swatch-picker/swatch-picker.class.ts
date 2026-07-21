@@ -60,7 +60,7 @@ export interface LyraSwatchPickerEventMap {
  *   for the swatch, swapped per tier.
  */
 export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The selectable color swatches, in display order. */
   @property({ attribute: false }) options: SwatchOption[] = [];
@@ -123,7 +123,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this.focusSwatch(target.value);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
     // WAI-ARIA APG radiogroup: exactly one radio is ever tabbable. That's normally the checked
     // swatch, but a fresh/cleared picker (value === null) has no checked swatch -- fall back to

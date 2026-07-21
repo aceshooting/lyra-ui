@@ -13,7 +13,7 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
  * @slot - Fallback content for an invalid date.
  */
 export class LyraFormatDate extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property() date: string | number | Date = '';
   @property() year: Intl.DateTimeFormatOptions['year'] = 'numeric';
   @property() month: Intl.DateTimeFormatOptions['month'] = 'long';
@@ -22,7 +22,7 @@ export class LyraFormatDate extends LyraElement {
   @property({ attribute: 'time-style' }) timeStyle?: Intl.DateTimeFormatOptions['timeStyle'];
   /** IANA time-zone name forwarded to `Intl.DateTimeFormat` (attribute `time-zone`). */
   @property({ attribute: 'time-zone' }) timeZone?: Intl.DateTimeFormatOptions['timeZone'];
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const value = this.date instanceof Date ? this.date : new Date(this.date);
     const options: Intl.DateTimeFormatOptions = this.dateStyle || this.timeStyle
       ? { dateStyle: this.dateStyle, timeStyle: this.timeStyle }

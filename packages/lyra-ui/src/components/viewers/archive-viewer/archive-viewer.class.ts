@@ -32,7 +32,7 @@ const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
  * @csspart error - The error region.
  */
 export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
   /** Display name used as the archive listing's accessible label. */
@@ -41,7 +41,7 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
   private generation = 0;
   private loadLibrary: () => Promise<ArchiveLibraryApi | null> = loadArchiveLibraryCached;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -101,7 +101,7 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // `name` (or a host-level aria-label) names the archive listing region; with neither set
     // there is nothing meaningful to announce, so the region role is only added once a name exists.
     const label = this.name || this.getAttribute('aria-label');

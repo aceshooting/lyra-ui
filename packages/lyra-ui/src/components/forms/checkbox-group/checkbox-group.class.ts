@@ -91,9 +91,9 @@ export interface LyraCheckboxGroupEventMap {
  */
 export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -270,7 +270,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.propagateDisabled();
   };
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('change', this.emitChange as EventListener);
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
@@ -278,12 +278,12 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.onSlotChange();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.removeEventListener('change', this.emitChange as EventListener);
     super.disconnectedCallback();
   }
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     this.addEventListener('blur', () => { this.touched = true; this.sync(); }, true);
   }
 
@@ -302,7 +302,7 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.requestUpdate();
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const described = [this.hasHintSlot || this.hint ? this.hintId : '', this.hasErrorSlot || this.errorText ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`<fieldset part="form-control" ?disabled=${this.effectiveDisabled} aria-describedby=${described}>
       <legend part="form-control-label" id=${this.labelId} ?hidden=${!this.label && !this.hasLabelSlot}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</legend>

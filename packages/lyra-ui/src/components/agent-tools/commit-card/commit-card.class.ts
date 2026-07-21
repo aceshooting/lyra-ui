@@ -82,7 +82,7 @@ export interface LyraCommitCardEventMap {
  *   `compact`.
  */
 export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property() hash = '';
   @property() message = '';
@@ -109,7 +109,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   @state() private justCopied = false;
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
   }
@@ -161,7 +161,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     this.emit('lr-toggle', { collapsed: this.filesCollapsed });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const { additions, deletions } = this.totals;
     const timestamp = this.validTimestamp;
     return html`

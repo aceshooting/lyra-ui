@@ -197,10 +197,10 @@ export interface LyraConversationItemEventMap {
  *   columns while `compact`.
  */
 export class LyraConversationItem extends LyraElement<LyraConversationItemEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The session's display title. */
-  @property() title = '';
+  @property() override title = '';
 
   /** A short preview snippet of the last message. Omit for no excerpt line. Ignored entirely when the
    *  `excerpt` slot has assigned content — see that slot's own description. Only non-focusable
@@ -241,11 +241,11 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   /** Forwarded to the in-place rename `<input>`'s own `spellcheck`. Defaults to `true`, matching
    *  the native element's own default. `spellcheck="false"` is parsed as false. */
-  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
 
   /** Forwarded to the in-place rename `<input>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
 
   /** Forwarded to the in-place rename `<input>`'s own `autocorrect` (Safari/WebKit-specific).
    *  Empty string omits the attribute (browser default). Named `autoCorrect` to avoid
@@ -263,7 +263,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
 
   @query('[part="title-input"]') private titleInput?: HTMLInputElement;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     if (!this.hasUpdated) {
@@ -282,7 +282,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     if (changed.has('renaming') && this.renaming) {
@@ -405,7 +405,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.hasExcerptSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
     const displayTitle = this.title || this.localize('untitledConversation');

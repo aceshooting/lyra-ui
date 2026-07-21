@@ -124,9 +124,9 @@ export interface LyraTimeRangeEventMap {
  */
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     // Hand-written accessor (see the `get`/`set disabled` pair below)
     // instead of a plain `@property({ reflect: true })`: this element is
     // form-associated, and the browser invokes `formDisabledCallback`
@@ -216,7 +216,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.requestUpdate();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     // Mirror lr-split's cleanup: if the element is removed mid-drag (or a
     // pointercancel/alt-tab means `pointerup` never reaches `window`), these
@@ -441,7 +441,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     }
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // A future mixin layered under LyraTimeRange would otherwise silently never run its own
     // willUpdate() -- mirrors this same file's disconnectedCallback(), which already calls
     // super.disconnectedCallback() for the identical reason.
@@ -483,7 +483,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const startPct = this.percentOf(this.start);
     const endPct = this.percentOf(this.end);
     const startBounds = this.reachableBounds('start');

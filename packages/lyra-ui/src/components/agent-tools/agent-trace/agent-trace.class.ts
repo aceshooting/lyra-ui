@@ -95,7 +95,7 @@ export interface LyraAgentTraceEventMap {
  *   `--lr-color-brand-quiet` token.
  */
 export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The full, unfiltered span array -- identical contract to `<lr-trace-tree>.spans`. Controlled
    *  and never mutated by this component. */
@@ -210,7 +210,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     return html`<div part="handoffs">${handoffs.map((span) => this.renderHandoff(span))}</div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         ${this.renderFilter()} ${this.renderHandoffs()}

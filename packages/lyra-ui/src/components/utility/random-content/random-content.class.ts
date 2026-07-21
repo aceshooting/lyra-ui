@@ -50,7 +50,7 @@ export interface LyraRandomContentEventMap {
  * @cssprop [--lr-random-content-animation-translate=var(--lr-size-0-5em)] - Translation distance for directional animations.
  */
 export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Entrance effect applied to a child the instant it becomes shown. */
   @property({ reflect: true }) animation: LyraRandomContentAnimation = 'none';
@@ -85,7 +85,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   // mode="sequence", double-advancing the cursor).
   private hasUpdatedOnce = false;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.mediaQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.reduceMotion = this.mediaQuery?.matches ?? false;
@@ -99,14 +99,14 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.restartAutoplay();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.stopAutoplay();
     this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.mediaQuery = undefined;
     super.disconnectedCallback();
   }
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     // Handles slotted content present at parse time: the slot's assigned
     // elements are already resolved synchronously once the shadow tree
     // renders, so this doesn't need to wait on the (async, and not
@@ -118,7 +118,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.restartAutoplay();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (this.hasUpdatedOnce) {
       if (changed.has('items')) this.reselect();
       if (changed.has('autoplay') || changed.has('autoplayInterval')) this.restartAutoplay();
@@ -261,7 +261,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }, interval);
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hostLabel = this.getAttribute('aria-label');
     return html`<div
       part="base"

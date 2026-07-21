@@ -252,7 +252,7 @@ export interface LyraAgentRunEventMap {
  *   and body while `compact`.
  */
 export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
-  static styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   /** The run to display. Controlled and never mutated by this component -- pass a new object to
    *  update it. `null` renders the shared `<lr-empty>` `noData` state. */
@@ -308,7 +308,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
   private previousRunId?: string;
   private previousStatusKind?: AgentStatusKind;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = this.hasSlotted('header');
       this.hasSummarySlot = this.hasSlotted('summary');
@@ -330,7 +330,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('run')) this.handleRunChange();
   }
 
@@ -418,7 +418,7 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     this.emit<RetryEventDetail>('lr-retry', { attempt: this.retryAttempt });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const run = this.run;
     if (!run) {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;

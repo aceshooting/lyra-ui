@@ -94,7 +94,7 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * vary by `size` tier. `appearance="link"` ignores it (it renders with zero radius).
  */
 export class LyraButton extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   // A button is form-associated so it is discoverable through form.elements. The generic
   // FormAssociated mixin is intentionally not used: action buttons do not have its value,
   // name, or required semantics. `disabled` is still hardened the same way the mixin-based
@@ -103,7 +103,7 @@ export class LyraButton extends LyraElement {
   // native `<button>` -- see `effectiveDisabled` below.
   static formAssociated = true;
 
-  static properties = {
+  static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
   };
 
@@ -204,7 +204,7 @@ export class LyraButton extends LyraElement {
     this.requestUpdate();
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ariaLabel = this.getAttribute('aria-label');
     return html`
       <button

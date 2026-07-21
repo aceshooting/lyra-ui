@@ -55,7 +55,7 @@ type ThumbnailState = 'pending' | 'ready' | 'unavailable';
  *   `[part="page-current"]` button for the current `page`.
  */
 export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) viewer: PageThumbnailSource | null = null;
   /** Id of a `PageThumbnailSource` in the same root, the label/`htmlFor`-style alternative to
@@ -88,12 +88,12 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.page = (e as CustomEvent<{ page: number }>).detail.page;
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated || changed.has('viewer') || changed.has('for')) this.resolveViewer();
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // disconnectedCallback unbinds the wired viewer on every disconnect, but willUpdate only
     // rebinds on the first update or when `viewer`/`for` themselves change -- a bare reconnect
@@ -102,7 +102,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     if (this.hasUpdated) this.resolveViewer();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unbindViewer();
     clearTimeout(this.digitTimer);
@@ -265,7 +265,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     `;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const count = this.effectivePageCount();
     const items = Array.from({ length: count }, (_unused, i) => i + 1);
     return html`

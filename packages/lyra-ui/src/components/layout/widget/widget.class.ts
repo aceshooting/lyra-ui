@@ -90,7 +90,7 @@ export interface LyraWidgetEventMap {
  * visible). `compact` tightens header/body padding — same convention as `lr-empty`'s `compact`.
  */
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property() label = '';
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
@@ -137,7 +137,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private explicitTrigger?: HTMLElement;
   private readonly bodyId = nextId('widget-body');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
       this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
@@ -171,7 +171,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // whatever was focused inside it, which the browser resolves by silently
   // moving focus outside the panel. The shared manager then reclaims it while
   // preserving focus that is still on one of the visible header controls.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('fullscreen') && this.fullscreen) {
       this.overlayHandle?.focusInitial();
     } else if (changed.has('collapsed') && this.fullscreen) {
@@ -184,7 +184,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent that keeps this same
     // element instance) fires disconnectedCallback then connectedCallback
@@ -202,7 +202,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -273,7 +273,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.overlayHandle?.dismissBackdrop();
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = this.label.length > 0;
     const hasSublabel = this.sublabel.length > 0;
     return html`

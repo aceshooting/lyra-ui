@@ -480,7 +480,7 @@ export interface LyraTableEventMap<T = unknown> {
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
  */
 export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) columns: TableColumn<T>[] = [];
   @property({ attribute: false }) rows: T[] = [];
@@ -519,10 +519,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  default) the inline cell-editor input's, native `spellcheck`. Defaults to `true`, matching
    *  the native element's own default. `spellcheck="false"` is parsed as `false` (see
    *  `spellcheckConverter` above). No effect on a `'number'` cell editor. */
-  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the same inputs' native `autocapitalize`. Empty string omits the attribute
    *  (browser default). */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
   /** Forwarded to the same inputs' native `autocorrect` (Safari/WebKit-specific). Empty string
    *  omits the attribute (browser default). Named `autoCorrect` (capital `C`), not `autocorrect`,
    *  to dodge a TS `lib.dom.d.ts` collision -- same fix as `<lr-textarea>`/`<lr-model-select>`. */
@@ -854,7 +854,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     });
   };
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver(this.scheduleLayoutSync);
     // A reconnect re-creates the observer above but the shadow root content
@@ -875,7 +875,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('pointermove', this.onResizePointerMove);
     window.removeEventListener('pointerup', this.onResizePointerEnd);
@@ -1088,7 +1088,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return first ? encodeKey(this.keyOf(first.row, first.index)) : null;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       changed.has('rows') ||
@@ -1218,7 +1218,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  when `hasSticky` is true (opt-in) and simply recomputes on every
    *  update; column widths are measured per update so the current layout
    *  reflects the rendered columns. */
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
     this.syncResizeHandleValues();
@@ -1626,7 +1626,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     );
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.columns.length === 0) {
       // Deliberately not wrapped in the `empty` slot: this branch reports a *configuration*
       // problem, with its own `noColumnsHeading` copy, rather than "this data set is empty" --

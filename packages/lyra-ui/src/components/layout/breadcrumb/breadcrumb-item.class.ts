@@ -16,14 +16,14 @@ import { styles } from './breadcrumb-item.styles.js';
  *   without hijacking the library-wide `--lr-color-text-quiet` token.
  */
 export class LyraBreadcrumbItem extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property() href = '';
   @property({ type: Boolean, reflect: true }) current = false;
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute('role', 'listitem');
   }
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const href = safeLinkHref(this.href);
     return href && !this.current
       ? html`<a part="base" href=${href}><slot></slot></a>`

@@ -46,7 +46,7 @@ export interface LyraProvenancePanelEventMap {
  * @csspart empty - The empty state, shown when every section is empty.
  */
 export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) provenance: LyraProvenance | null = null;
   /** `lr-graph` `nodeTypes` pass-through; resolves each `entity.type` for the entity chips' `typeLabel`. */
@@ -84,7 +84,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const p = this.provenance;
     const entities = p?.entities ?? [];
     const relationships = p?.relationships ?? [];

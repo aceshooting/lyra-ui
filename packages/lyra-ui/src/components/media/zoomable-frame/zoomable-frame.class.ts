@@ -36,7 +36,7 @@ export interface LyraZoomableFrameEventMap {
  *   than a consumer knob; set the `zoom` property instead.
  */
 export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Number, reflect: true }) zoom = 1;
   @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
@@ -111,7 +111,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const zoom = this.safeZoom;
     const min = this.safeMinZoom;
     const max = this.safeMaxZoom;

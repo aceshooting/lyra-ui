@@ -34,7 +34,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @csspart base - The non-layout wrapper around the observed slot.
  */
 export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, attribute: 'child-list', converter: trueDefaultBooleanConverter }) childList = true;
@@ -45,7 +45,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
   private observer?: MutationObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
@@ -60,12 +60,12 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     if (this.hasUpdated) this.scheduleAfterUpdate(this.observeTargets);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.disconnect();
     super.disconnectedCallback();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (['disabled', 'childList', 'observeAttributes', 'characterData', 'subtree', 'attributeFilter'].some((key) => changed.has(key))) {
       queueMicrotask(this.observeTargets);
     }
@@ -101,7 +101,7 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     for (const target of targets) this.observer.observe(target, options);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<span part="base"><slot @slotchange=${this.onSlotChange}></slot></span>`;
   }
 }

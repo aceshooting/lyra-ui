@@ -58,7 +58,7 @@ export interface LyraReorderListEventMap {
  * @cssprop [--lr-reorder-list-gap=var(--lr-space-2xs)] - Gap between rows.
  */
 export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Accessible name for the list, set as `aria-label` on the internal `role="list"` element. A
    *  plain `aria-label` attribute on the host itself is honored as a fallback when this is left
@@ -108,12 +108,12 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     this.syncBoundaryState();
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('disabled')) this.syncBoundaryState();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.pendingMove) {
       this.pendingMove.item.pending = false;
@@ -146,7 +146,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   // against, just a field to overwrite. Lit's own scheduler calls `getUpdateComplete()` as part of
   // resolving `updateComplete` on every update cycle regardless of whether any external caller
   // ever reads that promise, which is what makes this correct in real (non-test) usage too.
-  protected async getUpdateComplete(): Promise<boolean> {
+  protected override async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
     if (this.pendingFocusTarget) {
       const { item, buttonPart } = this.pendingFocusTarget;
@@ -254,7 +254,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     this.moveItem(item, e.key === 'ArrowDown' ? 'down' : 'up');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div
         part="base"

@@ -41,7 +41,7 @@ export interface LyraPptxViewerEventMap {
  * @csspart container - The renderer-owned output container.
  */
 export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** URL of the PPTX file. */
   @property() src = '';
@@ -66,12 +66,12 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
     this.emit('lr-slide-change', { index: event.detail.index, count: this.slideCount });
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
@@ -85,7 +85,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.mount(); });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.teardown();
     // Reset rather than leaving stale "mounted" state behind: without this,
     // a reconnect that isn't followed by a fresh mount (src unset, or the
@@ -188,7 +188,7 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ariaLabel = this.label || this.getAttribute('aria-label') || this.localize('pptxViewerLabel');
     return html`
       <div part="base" role="region" aria-label=${ariaLabel}>

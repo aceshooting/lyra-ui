@@ -143,7 +143,7 @@ interface ToolGroup {
  * @cssprop [--lr-tool-select-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
  */
 export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -168,11 +168,11 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   @property({ attribute: 'search-placeholder' }) searchPlaceholder = 'Search tools…';
   /** Native editing-assistance and virtual-keyboard hints forwarded to the search input. */
   @property() autocomplete = '';
-  @property({ converter: spellcheckConverter }) spellcheck = true;
-  @property() autocapitalize = '';
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
+  @property() override autocapitalize = '';
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
   /** Overrides the built-in case-insensitive name/description substring match. */
   @property({ attribute: false }) filter: ToolSelectFilter | null = null;
@@ -188,7 +188,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   // aria-labelledby target keeps the same id across re-renders.
   private readonly categoryIds = new Map<string, string>();
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
     }
@@ -213,13 +213,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   // have already landed in the DOM before the focus call below can rely on
   // them -- mirrors lr-dialog's/lr-tool-result-dialog's identical
   // ordering rationale.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.open) {
       this.releaseScrollLock ??= lockScroll(this.ownerDocument);
@@ -228,7 +228,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -375,7 +375,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const groups = this.groups;
     const hasTools = this.tools.length > 0;
     const label = this.localize('selectTools', this.label === 'Select tools' ? undefined : this.label);

@@ -25,7 +25,7 @@ import { styles } from './handoff-divider.styles.js';
  * @csspart label - The computed label text.
  */
 export class LyraHandoffDivider extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The agent now in control. With nothing else set, renders `'Transferred to {agent}'`. */
   @property() agent = '';
@@ -42,13 +42,13 @@ export class LyraHandoffDivider extends LyraElement {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasAvatarSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'avatar');
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.liveRegion?.announce(this.computedLabel, { force: true });
   }
 
@@ -67,7 +67,7 @@ export class LyraHandoffDivider extends LyraElement {
     return this.localize('handoffLabel');
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.computedLabel;
     const ariaLabel = this.getAttribute('aria-label') || label;
     return html`

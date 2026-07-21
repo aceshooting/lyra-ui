@@ -162,19 +162,19 @@ export interface LyraChatMessageEventMap {
  *   and timing function.
  */
 export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   // `status` needs a hand-written accessor (see `previousStatus` below) so
   // it's declared via `static properties` + `noAccessor` rather than
   // `@property()` directly -- the same pattern `lr-playback`'s `playing`
   // uses for the identical reason (a property whose setter must run real
   // logic on every assignment, not just on the next completed render).
-  static properties = {
+  static override properties = {
     status: { reflect: true, noAccessor: true },
   };
 
   /** Who authored the message. Reflects to `data-role` — see the class doc. */
-  @property({ reflect: true, attribute: 'data-role' }) role: ChatMessageRole = 'assistant';
+  @property({ reflect: true, attribute: 'data-role' }) override role: ChatMessageRole = 'assistant';
 
   /** Optional stable application-defined identifier for this message. Included in `lr-retry`
    *  detail when set. */
@@ -264,7 +264,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     this.requestUpdate('status', old);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasAvatarSlot = this.hasSlotted('avatar');
@@ -298,7 +298,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -384,7 +384,7 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
     this.emit('lr-retry', { messageId: this.messageId || undefined });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
     // Once the `failure` slot is populated it takes over full responsibility for presenting the

@@ -176,7 +176,7 @@ export interface LyraAttachmentTriggerEventMap {
  * does and doesn't affect.
  */
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Which attachment capabilities to offer, in display order. A single
    *  entry renders a plain button; more than one renders a menu. */
@@ -340,7 +340,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const single = this.capabilities.length === 1;
     const multi = this.capabilities.length > 1;
     return html`

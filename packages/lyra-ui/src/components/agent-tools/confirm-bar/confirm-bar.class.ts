@@ -117,7 +117,7 @@ function deniedIcon(): SVGTemplateResult {
  * `compact`.
  */
 export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Drives the default heading through the existing dialog keys. */
   @property({ attribute: 'tool-name' }) toolName = '';
@@ -160,7 +160,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
 
   private readonly headingId = nextId('confirm-bar-heading');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasBodySlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
     }
@@ -188,7 +188,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     this.decision = next;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('decision') && this.decision != null) {
       const key = this.decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
       this.liveRegion?.announce(this.localize(key), { force: true });
@@ -206,7 +206,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     return this.decision === 'approved' ? this.localize('confirmApproved') : this.localize('confirmDenied');
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const decided = this.decision != null;
     return html`
       <div part="base" role="group" aria-labelledby=${this.headingId}>

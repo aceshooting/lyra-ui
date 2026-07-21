@@ -208,7 +208,7 @@ function formatDuration(ms: number): {
  * @cssprop [--lr-tool-call-chip-border=var(--lr-color-border)] - Per-status chip border color. Reassigned by the same `:host([status="…"])` rules (`transparent` for every non-`pending` status).
  */
 export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The tool/function name, e.g. `web_search`. */
   @property() name = '';
@@ -255,13 +255,13 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
   private hovering = false;
   private focused = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasDetailSlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
@@ -273,7 +273,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
@@ -388,7 +388,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     return this.localize(duration.key, undefined, { value: duration.value });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasCategory = this.category.length > 0;
     const hasSummary = this.summary.length > 0;
     const durationMs = this.safeDurationMs;

@@ -137,7 +137,7 @@ interface DrilldownCategory {
  *   in any category.
  */
 export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The full breadcrumb trail, oldest first, current node last. Host-owned — see the class doc. */
   @property({ attribute: false }) path: DrilldownNode[] = [];
@@ -171,14 +171,14 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
 
   private mutationObserver?: MutationObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.syncRunsSlot();
     this.mutationObserver = new MutationObserver(this.syncRunsSlot);
     this.mutationObserver.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'] });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.mutationObserver?.disconnect();
     this.mutationObserver = undefined;
@@ -319,7 +319,7 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         ${this.renderBreadcrumb()}

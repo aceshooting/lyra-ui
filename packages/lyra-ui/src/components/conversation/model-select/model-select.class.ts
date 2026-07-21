@@ -140,9 +140,9 @@ export interface LyraModelSelectEventMap {
  */
 export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
@@ -174,10 +174,10 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   /** Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,
    *  matching the native element's own default. No effect in closed-dropdown mode (no native text
    *  input there). `spellcheck="false"` is parsed as `false` (see `spellcheckConverter` above). */
-  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits
    *  the attribute (browser default). */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
   /** Forwarded to the free-text mode's native `<input>`'s own `autocorrect` (Safari/WebKit-specific).
    *  Empty string omits the attribute (browser default). Named `autoCorrect` (capital `C`), not
    *  `autocorrect`, purely to dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a
@@ -187,8 +187,8 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
   @property() autocomplete = 'off';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   @property({ type: Boolean, reflect: true }) open = false;
   /** Visual size — same `xs`–`xl` scale as `lr-select`'s `size`. */
   @property({ reflect: true }) size: LyraModelSelectSize = 'm';
@@ -279,12 +279,12 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return this.renderRoot?.querySelector('[part="trigger"], [part="combobox-input"]') ?? null;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (this.hasUpdated) {
       const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
       this.suppressControlBlur = renderedClosedMode !== this.closedMode;
@@ -295,7 +295,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -308,7 +308,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.open = false;
   }
 
-  attributeChangedCallback(name: string, old: string | null, val: string | null): void {
+  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
     super.attributeChangedCallback(name, old, val);
     if (name === 'value') this._defaultValue = this._value;
   }
@@ -453,7 +453,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const reposition =
       changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
@@ -803,7 +803,7 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return this.closedMode ? this.renderClosed() : this.renderFreeText();
   }
 }

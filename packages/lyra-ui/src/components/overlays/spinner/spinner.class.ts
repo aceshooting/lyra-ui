@@ -19,12 +19,12 @@ export type SpinnerLabelPlacement = 'none' | 'after';
  *   `prefers-reduced-motion: reduce`, where the animation is disabled entirely.
  */
 export class LyraSpinner extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ attribute: 'label-placement', reflect: true }) labelPlacement: SpinnerLabelPlacement = 'none';
   /** Accessible name for the busy status, forwarded from a host `aria-label`. When unset, the
    *  localized "Loading…" default provides the name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.accessibleLabel || this.localize('loading');
     return html`<span part="base" role="status" aria-label=${label}>
       <span part="spinner" aria-hidden="true"></span>

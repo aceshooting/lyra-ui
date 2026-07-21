@@ -34,9 +34,9 @@ export interface LyraComparePanelEventMap {
  *   scroll region grows before it scrolls internally.
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     labelA: { attribute: 'label-a', noAccessor: true },
     labelB: { attribute: 'label-b', noAccessor: true },
     vote: { reflect: true, noAccessor: true },
@@ -182,7 +182,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     };
   };
 
-  protected updated(_changed: PropertyValues): void {
+  protected override updated(_changed: PropertyValues): void {
     if (this.pendingScrollReset) {
       this.pendingScrollReset = false;
       if (this.paneAEl) this.paneAEl.scrollTop = 0;
@@ -190,7 +190,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const labelAText = this.labelA || this.localize('compareResponseA');
     const labelBText = this.labelB || this.localize('compareResponseB');
     return html`

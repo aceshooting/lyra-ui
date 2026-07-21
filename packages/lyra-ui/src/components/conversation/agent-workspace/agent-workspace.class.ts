@@ -100,7 +100,7 @@ export interface LyraAgentWorkspaceEventMap {
  * @csspart composer-input - The built-in `<lr-chat-composer>`.
  */
 export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Accessible name and visible heading for the workspace. */
   @property() label = '';
@@ -284,7 +284,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     );
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('agentWorkspaceLabel');
     const heading = this.label || this.localize('agentWorkspaceLabel');
     const hasDetails = this.showDetails && (this.hasSlotted('details') || this.hasBuiltInDetails);

@@ -250,7 +250,7 @@ export interface LyraChartEventMap {
  *   doughnut and pie totals.
  */
 export class LyraChart extends LyraElement<LyraChartEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'line';
@@ -333,7 +333,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private suppressZoomComplete = false;
   private descriptionId = nextId('chart-description');
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => {
@@ -365,7 +365,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -388,14 +388,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * in progress. Same rationale as `toast-item.ts`'s `willUpdate()`-vs-
    * `updated()` split.
    */
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.zoomed) return;
     if (this.effectiveType() !== this.builtType) {
       this.zoomed = false;
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     // Disconnected between the property change that scheduled this update
     // and Lit's (microtask-deferred) processing of it — e.g. a property
     // changes and the element is removed in the same synchronous tick, so
@@ -1000,7 +1000,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.loading) {
       return html`
         <div part="base">

@@ -38,7 +38,7 @@ export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
  *   fixed size across every tier.
  */
 export class LyraAvatar extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Fallback text (typically 1-2 characters) shown when no icon/image is set, or the image
    *  fails to load. */
@@ -71,7 +71,7 @@ export class LyraAvatar extends LyraElement {
   // in JS instead.
   @state() private hasIcon = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     // Set from light-DOM children before the first render so the initial paint already reflects
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
     if (!this.hasUpdated) {
@@ -89,7 +89,7 @@ export class LyraAvatar extends LyraElement {
     this.hasIcon = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const showImage = !this.hasIcon && !!this.src && this.src !== this.failedSrc;
     const showInitials = !this.hasIcon && !showImage;
     const accessibleName = this.getAttribute('aria-label') ?? this.alt;

@@ -24,14 +24,14 @@ const PATHS: Record<string, string> = {
  * @cssprop [--lr-icon-size=var(--lr-size-1-25rem)] - Inline and block size of the icon box.
  */
 export class LyraIcon extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property() name = '';
   @property() path = '';
   @property() label = '';
   @query('svg') private svgEl?: SVGSVGElement;
   @query('slot') private customSlot?: HTMLSlotElement;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncCustomNodes();
   }
@@ -74,7 +74,7 @@ export class LyraIcon extends LyraElement {
     return copy;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const path = this.path || PATHS[this.name] || '';
     return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${this.label ? 'false' : 'true'} aria-label=${this.label || undefined} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}</svg>`;
   }

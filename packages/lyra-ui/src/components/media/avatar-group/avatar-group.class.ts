@@ -84,7 +84,7 @@ export interface LyraAvatarGroupEventMap {
  * it caps read at the same optical weight.
  */
 export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   private _max?: number;
   /** Maximum number of assigned children shown before the rest collapse behind a "+N" badge.
@@ -127,13 +127,13 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   // slotchange convention `<lr-chip-group>`'s `childCount` already establishes.
   @state() private childCount = 0;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.childCount = this.children.length;
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for
     // content present at parse time — same idiom as `<lr-chip-group>`'s identical
     // `firstUpdated`. `updated()` (below) always runs right after this and recomputes visibility
@@ -142,7 +142,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     this.childCount = slot.assignedElements({ flatten: true }).length;
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     this.syncChildVisibility();
   }
 
@@ -180,7 +180,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const overflowing = this.hasOverflow;
     const hiddenCount = this.hiddenCount;
     // The badge is the first *visible* element in the row only when every avatar is hidden

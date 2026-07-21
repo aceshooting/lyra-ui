@@ -59,7 +59,7 @@ function formatCount(n: number, locale: string): string {
  * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge.
  */
 export class LyraContextMeter extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Occupied segments, each an absolute quantity against `total` — never a percentage. */
   @property({ attribute: false }) segments: ContextMeterSegment[] = [];
@@ -123,7 +123,7 @@ export class LyraContextMeter extends LyraElement {
     return this.label ? `${this.label} — ${phrase}` : phrase;
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     // role="meter" + a real aria-valuenow/aria-valuemin/aria-valuemax trio
     // (rather than exposing the SVG/bar internals to the accessibility
     // tree) genuinely mirrors lr-gauge's "meter" role convention: the
@@ -220,7 +220,7 @@ export class LyraContextMeter extends LyraElement {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return this.variant === 'ring' ? this.renderRing() : this.renderBar();
   }
 }

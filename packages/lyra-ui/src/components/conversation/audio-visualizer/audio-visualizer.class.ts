@@ -38,7 +38,7 @@ const AMBIENT_REDUCED_MOTION_INTERVAL_MS = 500; // ~2 Hz snapshot cadence
  *   canvas fills at 100%.
  */
 export class LyraAudioVisualizer extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) stream: MediaStream | null = null;
   /** Externally-computed amplitude, `[0, 1]`, for a host that already derives its own level
@@ -98,7 +98,7 @@ export class LyraAudioVisualizer extends LyraElement {
     return finiteNumber(this.gain, 1);
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver((entries) => {
       const rect = entries[entries.length - 1]?.contentRect;
@@ -132,7 +132,7 @@ export class LyraAudioVisualizer extends LyraElement {
     this.scheduleDraw();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.hostSize = undefined;
@@ -271,7 +271,7 @@ export class LyraAudioVisualizer extends LyraElement {
     }
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('stream') || (changed.has('variant') && this.stream)) this.syncAnalyser();
     if (!this.hasUpdated) {
@@ -287,7 +287,7 @@ export class LyraAudioVisualizer extends LyraElement {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (['state', 'variant', 'barCount', 'gain', 'level', 'stream'].some((key) => changed.has(key))) {
       this.scheduleDraw();
     }
@@ -456,7 +456,7 @@ export class LyraAudioVisualizer extends LyraElement {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base"><canvas part="canvas" aria-hidden="true"></canvas></div>`;
   }
 }

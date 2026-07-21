@@ -57,7 +57,7 @@ const DEFAULT_TEMPERATURE = 1;
  * @csspart temperature-value - The visible current temperature readout.
  */
 export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Informational provider badge, passed straight through to the internal `lr-model-select`. */
   @property() provider = '';
@@ -143,14 +143,14 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     this.temperature = e.detail.value;
   };
 
-  protected willUpdate(changed: PropertyValues<this>): void {
+  protected override willUpdate(changed: PropertyValues<this>): void {
     if (changed.has('temperatureMin') || changed.has('temperatureMax') || changed.has('temperatureStep')) {
       const clamped = this.clampTemperature(this.temperature);
       if (clamped !== this.temperature) this.temperature = clamped;
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const temperatureLabel = this.localize('temperature');
     return html`
       <div part="base">

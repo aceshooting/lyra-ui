@@ -92,7 +92,7 @@ type Tier = 'high' | 'medium' | 'low';
  *   `--lr-chunk-inspector-current-bg`, never alone.
  */
 export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) chunks: LyraChunk[] = [];
   @property({ attribute: false }) thresholds: { high: number; medium: number } = { high: 0.75, medium: 0.5 };
@@ -194,7 +194,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   // which is an invalid ARIA containment.
   private renderVirtualChunk = (item: unknown): TemplateResult => this.chunkTemplate(item as LyraChunk, true);
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const sorted = this.sortedChunks();
     const label = this.label || this.localize('chunkInspectorLabel');
     if (sorted.length === 0) {

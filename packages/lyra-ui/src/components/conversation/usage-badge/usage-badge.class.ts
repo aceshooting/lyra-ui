@@ -56,7 +56,7 @@ function formatDuration(ms: number): FormattedDuration {
  * @csspart tooltip - The floating detail breakdown, only meaningful while open.
  */
 export class LyraUsageBadge extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Input tokens. Normalized to a non-negative integer, locale-formatted. Segment omitted
    *  entirely while unset or non-finite. */
@@ -89,13 +89,13 @@ export class LyraUsageBadge extends LyraElement {
   private hovering = false;
   private focused = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasDefaultSlot = Array.from(this.children).length > 0;
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('tooltipOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
@@ -107,7 +107,7 @@ export class LyraUsageBadge extends LyraElement {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
@@ -201,7 +201,7 @@ export class LyraUsageBadge extends LyraElement {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (!this.hasVisibleContent && !this.hasDefaultSlot) {
       // Nothing to show and nothing to describe -- render an inert shell (no tabindex, no
       // role/aria-label) rather than a pointless, empty focus stop. The default slot's own

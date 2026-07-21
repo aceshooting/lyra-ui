@@ -47,7 +47,7 @@ export interface LyraNeighborListEventMap {
  * @csspart empty - The empty-state message, shown when `rows` is empty.
  */
 export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) rows: LyraNeighborRow[] = [];
   /** Stable-sorts rows by relation and renders one group header per relation with a count. */
@@ -145,7 +145,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const sorted = this.sortedRows();
     const label = this.getAttribute('aria-label') || this.label || this.localize('neighborListLabel');
     if (sorted.length === 0) {

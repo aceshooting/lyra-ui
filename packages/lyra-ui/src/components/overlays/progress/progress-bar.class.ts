@@ -19,7 +19,7 @@ const DEFAULT_MAX = 100;
  * @csspart label - The label row.
  */
 export class LyraProgressBar extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
@@ -43,7 +43,7 @@ export class LyraProgressBar extends LyraElement {
     return (this.safeValue / this.safeMax) * 100;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const value = this.indeterminate ? nothing : String(Math.round(this.percent));
     const label = this.accessibleLabel || this.localize('progress');
     return html`<div part="base" role="progressbar" aria-label=${label}

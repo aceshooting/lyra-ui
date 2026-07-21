@@ -139,7 +139,7 @@ export interface LyraMenuEventMap {
  * outside `role="menu"`. `display: none` while the slot is unfilled.
  */
 export class LyraMenu extends LyraElement<LyraMenuEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether the menu is open. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -197,12 +197,12 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private typeAheadBuffer = '';
   private typeAheadTimer?: ReturnType<typeof setTimeout>;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
   }
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     // `slotchange` only fires when a slot's assigned nodes actually *change*,
     // so a slot that starts (and stays) empty never fires one at all. The
     // header/footer wrappers and the divider borders are driven off these
@@ -232,7 +232,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.toggleAttribute('data-list-empty', assigned('slot:not([name])') === 0);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open')) {
       this.cleanup?.();
@@ -289,7 +289,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -672,7 +672,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     return this.getAttribute('aria-label') || this.localize('menuLabel', this.label === 'Menu' ? undefined : this.label);
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>

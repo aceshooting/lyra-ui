@@ -12,15 +12,15 @@ export type RelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | '
  * @customElement lr-relative-time
  */
 export class LyraRelativeTime extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property() date: string | number | Date = '';
   @property() unit: RelativeTimeUnit | 'auto' = 'auto';
   @property() numeric: 'always' | 'auto' = 'auto';
   @property({ type: Boolean, attribute: 'sync' }) sync = false;
   private timer?: ReturnType<typeof setInterval>;
-  connectedCallback(): void { super.connectedCallback(); this.schedule(); }
-  disconnectedCallback(): void { clearInterval(this.timer); super.disconnectedCallback(); }
-  protected updated(changed: PropertyValues): void {
+  override connectedCallback(): void { super.connectedCallback(); this.schedule(); }
+  override disconnectedCallback(): void { clearInterval(this.timer); super.disconnectedCallback(); }
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('sync') || changed.has('date') || changed.has('locale') || changed.has('unit') || changed.has('numeric')) this.schedule();
   }
@@ -41,6 +41,6 @@ export class LyraRelativeTime extends LyraElement {
     const value = Math.round(seconds / divisors[selected]);
     return getRelativeTimeFormat(this.effectiveLocale || undefined, { numeric: this.numeric }).format(value, selected);
   }
-  render(): TemplateResult { return html`${this.relative()}`; }
+  override render(): TemplateResult { return html`${this.relative()}`; }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-relative-time': LyraRelativeTime; } }

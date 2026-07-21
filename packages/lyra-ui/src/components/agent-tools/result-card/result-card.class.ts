@@ -48,7 +48,7 @@ export type ResultCardAppearance = 'card' | 'plain';
  *   while `compact`.
  */
 export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Small heading for the card. Leave unset for an untitled card (e.g. a
    *  bare block of `<lr-result-field>` rows with no natural heading).
@@ -59,7 +59,7 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
    *  stripped once Lit has synced it into this property, so the card never
    *  grows an unsolicited native tooltip repeating the same text. See
    *  `StripHostTitleAttribute` (`internal/strip-host-title.ts`). */
-  @property() title = '';
+  @property() override title = '';
 
   /** Tighter header/body padding for dense contexts (a card rendered as a row in a transcript or
    *  result list) -- same convention as `lr-agent-run`'s `compact`. Defaults to `false`, i.e. the
@@ -81,7 +81,7 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
   // whether the header row itself has anything to show.
   @state() private hasActionsSlot = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
     }
@@ -91,7 +91,7 @@ export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) 
     this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasTitle = this.title.length > 0;
     const hasHeader = hasTitle || this.hasActionsSlot;
     return html`

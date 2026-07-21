@@ -65,7 +65,7 @@ const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df',
  * filtered-out (hidden) legend row's label/count, independent of the shared quiet-text token.
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The `lr-graph.nodeTypes` array, passed through verbatim. */
   @property({ attribute: false }) types: LyraGraphLegendType[] = [];
@@ -112,7 +112,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     return svg`<circle cx="6" cy="6" r="5" fill=${color}></circle>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('graphLegendLabel');
     return html`
       <div part="base" role="group" aria-label=${groupLabel}>

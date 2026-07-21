@@ -177,7 +177,7 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  *   the entry body's leading border while `data-pending-approval="true"`.
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The calls to render, in any order — see the class doc's ordering note. */
   @property({ attribute: false }) entries: ToolTimelineEntry[] = [];
@@ -194,7 +194,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
    *  while it's closed. */
   @state() private reviewingEntryId?: string;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('entries') && this.reviewingEntryId !== undefined) {
       const still = this.entries.find((entry) => entry.id === this.reviewingEntryId);
       if (!still || !(still.needsApproval && still.approved === undefined)) {
@@ -329,7 +329,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const entries = this.sortedEntries;
     const reviewing = this.reviewingEntry;
     const placeholder = this.localize('envListValueHidden');

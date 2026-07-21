@@ -100,9 +100,9 @@ const delimiterConverter = {
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -199,7 +199,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   }
 
   constructor() { super(); this.internals = createInternalsSafely(this); this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]()); }
-  connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
+  override connectedCallback(): void { super.connectedCallback(); this.syncValidity(); }
   get form(): HTMLFormElement | null { return this.internals.form; }
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
@@ -233,7 +233,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     if (this.effectiveDisabled) return;
     this.inputEl?.focus();
   }
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps a future mixin's willUpdate reachable
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
@@ -380,7 +380,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
    * Focus moves are deferred to here rather than run from the handlers themselves: the editor and
    * the token it replaces only exist after the render that this update produced.
    */
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op today, but keeps a future mixin's updated reachable
     if (this.focusEditorPending) {
       this.focusEditorPending = false;
@@ -404,7 +404,7 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     }
     return html`<span part="token"><span part="token-label" role="button" tabindex=${index === this.activeTokenIndex ? 0 : -1} aria-label=${this.localize('tokenInputEditWithContext', undefined, { label: token })} @click=${() => this.startEdit(index)} @focus=${() => { if (this.rovingIndex !== index) this.rovingIndex = index; }} @keydown=${(event: KeyboardEvent) => this.onTokenKeyDown(event, index)}>${token}</span>${this.renderRemoveButton(token, index)}</span>`;
   }
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;

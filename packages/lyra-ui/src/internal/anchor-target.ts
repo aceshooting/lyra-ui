@@ -107,14 +107,14 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
     private anchorRetryResolve?: () => void;
     private selectionCleanup?: () => void;
 
-    protected willUpdate(changed: PropertyValues): void {
+    protected override willUpdate(changed: PropertyValues): void {
       super.willUpdate(changed);
       if (changed.has('anchor') && this.anchor !== null) {
         void this.scrollToAnchor(this.anchor);
       }
     }
 
-    disconnectedCallback(): void {
+    override disconnectedCallback(): void {
       // Bump the generation first so an in-flight retry loop's post-cancel generation check (see
       // `resolveWithRetry`) reliably observes staleness and stops instead of scheduling another
       // retry against a detached element.

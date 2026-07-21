@@ -101,7 +101,7 @@ export interface DocumentCompareVersion extends DocumentRef {
  * @cssprop [--lr-document-compare-pane-max-height=var(--lr-size-24rem)] - Maximum block size of a side-by-side pane before it scrolls internally.
  */
 export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** `'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two
    *  independently-scrollable `<lr-document-preview>` panes -- see the class doc's "Synchronized
@@ -146,7 +146,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   // onPaneScroll() uses.
   private suppressSync = false;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const anchor = this.anchor;
     if (anchor == null) return;
@@ -233,7 +233,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('documentCompareLabel')}>
         ${this.view === 'side-by-side' ? this.renderSideBySide() : this.renderDiff()}

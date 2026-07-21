@@ -67,7 +67,7 @@ export interface TreeItem {
  * @slot - `<lr-tree-node>` elements (top-level tree items).
  */
 export class LyraTree extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) data: TreeItem[] = [];
   /**
@@ -172,7 +172,7 @@ export class LyraTree extends LyraElement {
     return id != null && this.visibleNodeElements().some((n) => n.item?.id === id) ? node : null;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('data')) {
       const focused = this.deepFocusedNode();
@@ -200,7 +200,7 @@ export class LyraTree extends LyraElement {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('activeId') || changed.has('data')) {
       const count = this.data.length;
@@ -287,7 +287,7 @@ export class LyraTree extends LyraElement {
    * whatever `updateComplete` promise every caller (this class's own
    * `focusNode()` included) is already waiting on.
    */
-  protected async getUpdateComplete(): Promise<boolean> {
+  protected override async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
     await cascadeUpdateComplete(this.nodeElements);
     if (this.pendingFocusId != null) {
@@ -455,7 +455,7 @@ export class LyraTree extends LyraElement {
     setAll(this.nodeElements);
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div
         part="base"

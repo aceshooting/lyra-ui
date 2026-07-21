@@ -20,14 +20,14 @@ export interface LyraResizeObserverEventMap {
  * @csspart base - The non-layout wrapper around the observed slot.
  */
 export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ reflect: true }) box: ResizeObserverBox = 'content-box';
 
   private observer?: ResizeObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.addEventListener('slotchange', this.onSlotChange);
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
@@ -43,13 +43,13 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     if (this.hasUpdated) this.scheduleAfterUpdate(this.observeTargets);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.removeEventListener('slotchange', this.onSlotChange);
     this.disconnect();
     super.disconnectedCallback();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     // Routed through the base class's connection-aware scheduler rather than
     // a bare queueMicrotask: Lit still runs a scheduled update (and this
     // method) even for an element that disconnects before that update's own
@@ -82,7 +82,7 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<span part="base"><slot @slotchange=${this.onSlotChange}></slot></span>`;
   }
 }

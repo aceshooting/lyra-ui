@@ -45,7 +45,7 @@ function starSolid(): SVGTemplateResult {
  * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Star size.
  */
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Number, reflect: true }) value = 0;
   @property({ type: Number, reflect: true }) max = 5;
   @property({ type: Number }) precision = 1;
@@ -91,7 +91,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (event.key === 'Home') { event.preventDefault(); this.setValue(0); }
     if (event.key === 'End') { event.preventDefault(); this.setValue(this.safeMax); }
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const safeMax = this.safeMax;
     const safeValue = this.safeValue;
     const count = Math.round(safeMax);

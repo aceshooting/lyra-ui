@@ -131,7 +131,7 @@ function detectKind(mimeType: string): MediaCardKind {
  * vocabulary.
  */
 export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The media URL. Always re-validated against a safe-scheme allowlist
    *  before use — see the class doc. */
@@ -271,7 +271,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     return html`<span part="base" style=${this.baseStyle}>${content}</span>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const kind = this.resolvedKind;
     if (kind === 'image') {
       const src = safeMediaSrc(this.src);

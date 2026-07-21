@@ -165,9 +165,9 @@ export interface LyraToolParamFormEventMap {
  */
 export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     name: { reflect: true, noAccessor: true },
     schema: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
@@ -248,7 +248,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     );
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Seed `errors`/`internals` validity synchronously at connect time —
     // `checkValidity()`/a wrapping `<form>`'s own `reportValidity()` must
@@ -567,7 +567,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.syncInternals(formValue);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('value') || changed.has('schema') || changed.has('_errors') || changed.has('_formError')) {
       const valid = Object.keys(this._errors).length === 0 && this._formError === '';
       const key = JSON.stringify({ valid, errors: this._errors, formError: this._formError });
@@ -744,7 +744,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const props = this.schemaProperties;
     const keys = Object.keys(props);
     return html`<div part="base">

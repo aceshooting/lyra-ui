@@ -172,7 +172,7 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @cssprop [--lr-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and convert as a DOCX document. */
   @property() src = '';
@@ -184,7 +184,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. Readonly. */
-  readonly anchorKinds = ['fragment', 'text-quote'] as const;
+  override readonly anchorKinds = ['fragment', 'text-quote'] as const;
 
   @state() private fetchState: FetchState = { kind: 'idle' };
   @state() private searchMatches: DocxSearchMatch[] = [];
@@ -208,13 +208,13 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private searchQuery = '';
   private paintedSearchMarks: HTMLElement[] = [];
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       // Search match offsets are only meaningful for the document they were found in -- reset
@@ -228,7 +228,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('fetchState')) {
@@ -572,7 +572,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div
         part="base"

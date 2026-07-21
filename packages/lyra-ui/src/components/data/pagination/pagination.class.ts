@@ -46,7 +46,7 @@ export interface LyraPaginationEventMap {
  * `--lr-pagination-control-size`, so this only adjusts the icon/digit inset).
  */
 export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The currently applied page. Controlled; this component never mutates it. */
   @property({ type: Number, reflect: true }) page = 1;
@@ -141,7 +141,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     });
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('page') || changed.has('pageSize') || changed.has('totalItems')) {
       this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
       this.invalidDraft = false;
@@ -204,7 +204,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.emit('blur');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const previousLabel = this.localizedProperty('previous', 'Previous', this.previousLabel);
     const nextLabel = this.localizedProperty('next', 'Next', this.nextLabel);
     const pageLabel = this.localizedProperty('paginationPage', 'Page', this.pageLabel);

@@ -40,7 +40,7 @@ export interface LyraChipGroupEventMap {
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
  */
 export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   private _maxVisible?: number;
   /** Maximum number of assigned children shown before the rest collapse behind a "+N"
@@ -68,7 +68,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
    *  revealed. Meaningless (and never rendered) while there's no overflow. */
   @state() private expanded = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.childCount = this.children.length;
     }
@@ -82,7 +82,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     if (this.expanded && !this.hasOverflow) this.expanded = false;
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time — same idiom as
     // `<lr-source-list>`'s identical `firstUpdated`. This can't move to
@@ -97,7 +97,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.childCount = slot.assignedElements({ flatten: true }).length;
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     this.syncChildVisibility();
   }
 
@@ -127,7 +127,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.emit<ChipGroupOverflowToggleDetail>('lr-overflow-toggle', { expanded: this.expanded });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const overflowing = this.hasOverflow;
     const hiddenCount = overflowing ? this.childCount - (this.maxVisible as number) : 0;
 

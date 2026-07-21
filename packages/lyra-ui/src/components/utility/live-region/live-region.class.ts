@@ -54,7 +54,7 @@ export type LiveRegionMode = 'polite' | 'assertive';
  * @csspart region - The visually-hidden element carrying `role`/`aria-live`.
  */
 export class LyraLiveRegion extends LyraElement {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** `polite` (role="status") waits for the user to be idle; `assertive`
    *  (role="alert") interrupts. Mirrors native `aria-live` semantics.
@@ -107,13 +107,13 @@ export class LyraLiveRegion extends LyraElement {
     });
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('throttleMs')) {
       this.announcer.throttleMs = this.safeThrottleMs;
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.regionEl = this.renderRoot.querySelector<HTMLElement>('[part="region"]') ?? undefined;
     if (this.pendingWrite !== undefined) {
       const text = this.pendingWrite;
@@ -122,7 +122,7 @@ export class LyraLiveRegion extends LyraElement {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.announcer.cancel();
     this.pendingWrite = undefined;
@@ -195,7 +195,7 @@ export class LyraLiveRegion extends LyraElement {
     this.reannounceView = undefined;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const assertive = this.mode === 'assertive';
     return html`<div
       part="region"

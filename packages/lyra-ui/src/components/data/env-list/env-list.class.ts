@@ -57,7 +57,7 @@ export interface LyraEnvListEventMap {
  *   library-wide brand tokens, since `::part(reveal-button)[aria-pressed]` is invalid CSS.
  */
 export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The name/value entries to render, in order. */
   @property({ attribute: false }) entries: EnvEntry[] = [];
@@ -73,7 +73,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
 
   @state() private revealed = new Map<string, boolean>();
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('entries')) {
       // Carry a row's reveal state forward only when that row's position still holds
       // the same name it held before this update -- reordering, inserting, or
@@ -109,7 +109,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     this.emit('lr-copy', { text: entry.value });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.entries.length === 0) {
       return html`<lr-empty heading=${this.localize('noData')}></lr-empty>`;
     }

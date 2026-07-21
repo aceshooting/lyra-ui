@@ -12,8 +12,8 @@ export type DividerOrientation = 'horizontal' | 'vertical';
  * @csspart base - The separator element.
  */
 export class LyraDivider extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ reflect: true }) orientation: DividerOrientation = 'horizontal';
-  render(): TemplateResult { return html`<hr part="base" role="separator" aria-orientation=${this.orientation}>`; }
+  override render(): TemplateResult { return html`<hr part="base" role="separator" aria-orientation=${this.orientation}>`; }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-divider': LyraDivider; } }

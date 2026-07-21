@@ -90,7 +90,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse. */
   @property() src = '';
   /** Source filename or display name, used as the viewer's accessible name. */
@@ -101,7 +101,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
-  readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['cell-range'];
 
   @state() private fetchState: CsvState = { kind: 'idle' };
   /** The virtualized body row currently scrolled into view via `scrollToAnchor()` or search
@@ -113,7 +113,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   private generation = 0;
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
       // A new document invalidates every previous row/column coordinate -- reset silently (no
@@ -125,7 +125,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -290,7 +290,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     let content: TemplateResult;
     if (this.fetchState.kind === 'loaded') {
       const rows = this.fetchState.rows;

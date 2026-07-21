@@ -163,7 +163,7 @@ export interface LyraCodeBlockEventMap {
  *   alone. Inherits, so it can also be set on an ancestor or at the theme level.
  */
 export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The raw source text. */
   @property() code = '';
@@ -276,7 +276,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
 
   private readonly bodyId = nextId('code-block-body');
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.isDarkTheme = resolveIsDarkTheme(this);
     this.stopWatchingTheme = watchDarkTheme(this, () => {
@@ -297,7 +297,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
     this.stopWatchingTheme?.();
@@ -416,7 +416,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // into this same update cycle instead of scheduling a second one, Lit's
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lr-markdown>'s `willUpdate` takes).
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
@@ -445,7 +445,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     // `languagesOnly` skips the default loader entirely (see connectedCallback()), so
@@ -617,7 +617,7 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // role) plus `aria-label` gives it an accessible name without claiming
   // landmark/navigation significance for what is, structurally, just one
   // small piece of a larger document.
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
     // See updated()'s identical condition for why languagesOnly is excluded here too.
     const showSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();

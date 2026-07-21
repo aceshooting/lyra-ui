@@ -176,7 +176,7 @@ export interface LyraDocumentPreviewEventMap {
  *   only). Distinct from the resting highlight border.
  */
 export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch (for `text`/`application/json`) or display (`image`, or as
    *  the generic fallback's download `href`). The value is validated against
@@ -234,14 +234,14 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   // same guard <lr-tool-result-view>'s resolve() uses.
   private generation = 0;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasUnsupportedSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'unsupported');
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
 
     const safeTextSrc = safeFetchUrl(this.src);
@@ -479,7 +479,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base" style=${this.maxHeight ? `--lr-document-preview-max-height:${this.maxHeight}` : nothing}>
         <div part="header" ?hidden=${!this.filename}>

@@ -70,7 +70,7 @@ export interface LyraArtifactPanelEventMap {
  *   the library-wide brand tokens, since `::part(view-button)[aria-pressed]` is invalid CSS.
  */
 export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The artifact's title, shown in the header. */
   @property() label = '';
@@ -102,7 +102,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
 
   @state() private hasCodeSlot = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
     }
@@ -155,7 +155,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     this.emit('lr-download', { filename: this.downloadName, src: safeSrc });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasVersions = this.versions.length > 0;
     const index = this.currentIndex;
     const isLatest = this.activeVersionId === null || index === this.versions.length - 1;

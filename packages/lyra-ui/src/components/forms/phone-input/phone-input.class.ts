@@ -257,8 +257,8 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  *   as well as inline on the element.
  */
 export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
-  static styles = [LyraElement.styles, styles];
-  static properties = {
+  static override styles = [LyraElement.styles, styles];
+  static override properties = {
     country: { noAccessor: true },
   };
 
@@ -309,10 +309,10 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
    *  native element's own default. Uses {@link spellcheckConverter} rather than Lit's default
    *  presence-based boolean converter so an explicit `spellcheck="false"` attribute is honored; a
    *  `.spellcheck=${false}` property binding can still turn this off directly. */
-  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the attribute,
    *  leaving the browser's own default behavior. */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
   /** Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty
    *  string omits the attribute. Named `autoCorrect` (capital `C`), not `autocorrect`, purely to
    *  dodge a TS `lib.dom.d.ts` collision: newer DOM typings declare a `boolean`-typed
@@ -391,11 +391,11 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     return this.inputElement ?? null;
   }
 
-  get value(): string {
+  override get value(): string {
     return super.value;
   }
 
-  set value(next: string) {
+  override set value(next: string) {
     const raw = next ?? '';
     const parsed = this.parse(raw);
     this.applyParsed(raw, parsed);
@@ -513,7 +513,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (this.flags && !LyraPhoneInput.flagRegistration) {
       // Dynamic (not static) so the flag/skeleton modules stay out of every bundle that never
@@ -538,7 +538,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (
       changed.has('touched') ||
@@ -645,13 +645,13 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.syncFormattedValue(input, digitsBeforeCaret);
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     this.country = normalizeCountry(this.defaultCountry || this.availableCountries[0]?.code || '');
     super.formResetCallback();
     this.touched = false;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = Boolean(this.label || this.hasLabelSlot);
     const validationError = this.touched ? this.validationMessage : '';
     const renderedError = this.errorText || validationError;

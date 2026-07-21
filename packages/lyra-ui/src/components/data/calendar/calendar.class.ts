@@ -48,7 +48,7 @@ export type CalendarView = 'month' | 'agenda';
  * @cssprop [--lr-calendar-day-selected-bg=var(--lr-color-brand-quiet)] - Background of a selected day cell, decoupled from the shared token also driving the nav-button/agenda-event hover background.
  */
 export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) events: CalendarEvent[] = [];
   @property() value = '';
   @property({ attribute: 'view-date' }) viewDate = formatISO(new Date()).slice(0, 7) + '-01';
@@ -77,7 +77,7 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
    *  always contains it. */
   private onDayKeyDown(event: KeyboardEvent, date: Date): void { let delta = 0; if (event.key === 'ArrowLeft') delta = this.effectiveDirection === 'rtl' ? 1 : -1; else if (event.key === 'ArrowRight') delta = this.effectiveDirection === 'rtl' ? -1 : 1; else if (event.key === 'ArrowUp') delta = -7; else if (event.key === 'ArrowDown') delta = 7; else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.selectDate(formatISO(date)); return; } else return; event.preventDefault(); const next = new Date(date); next.setDate(next.getDate() + delta); const [gridFirst, gridLast] = this.gridBounds(this.weeks()); if (next < gridFirst || next > gridLast) { this.viewDate = formatISO(monthStart(next)); this.emit('lr-view-change', { viewDate: this.viewDate }); } this.focusedDate = formatISO(next); queueMicrotask(() => this.renderRoot.querySelector<HTMLElement>(`[data-date="${this.focusedDate}"]`)?.focus()); }
   private weekdays(): string[] { return weekdayLabels(this.normalizedFirstDayOfWeek, 'short', this.effectiveLocale); }
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const start = this.viewStart; const weeks = this.weeks(); const monthTitle = getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(start); const today = formatISO(new Date()); const label = this.accessibleLabel || this.localize('calendarLabel');
     const dayLabelFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'full' });
     const agenda = this.events.filter((event) => event.date.startsWith(this.viewDate.slice(0, 7))).sort((a, b) => a.date.localeCompare(b.date));

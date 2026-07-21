@@ -315,7 +315,7 @@ export interface LyraGraphEventMap {
  *   group, avoiding a double-opacity seam at the fill/stroke boundary).
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) nodes: GraphNode[] = [];
   @property({ attribute: false }) links: GraphLink[] = [];
@@ -551,7 +551,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  onTick()'s own comment for why a stub needs this at all. */
   private danglingLinkEls: SVGLineElement[] = [];
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Observed unconditionally (both first mount and any reconnect below) -- visibility gating
     // applies regardless of whether renderer="canvas" is active yet or d3 has finished loading.
@@ -608,7 +608,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.simulation?.stop();
     // An in-flight focusNode()/fit() tween would otherwise keep scheduling frames and writing
@@ -1453,7 +1453,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.emit('lr-selection-change', { nodeIds: [], linkIds: [] });
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but a future shared mixin under LyraElement must still run
     // Gates the mount-time selection announcement below -- selectedNodeIds/selectedLinkIds both
     // default to `[]`, a non-undefined default, so Lit marks them "changed" on the very first
@@ -1493,7 +1493,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op today, but a future shared mixin under LyraElement must still run
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
@@ -2290,7 +2290,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.focusGraphItem(next);
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.loading) {
       return html`
         <div part="base">

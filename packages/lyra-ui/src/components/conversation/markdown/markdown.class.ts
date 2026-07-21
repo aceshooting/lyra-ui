@@ -219,7 +219,7 @@ class LyraMarkdownBase extends LyraElement<LyraMarkdownEventMap> {}
  *   render differently on a wrapped line, where tab stops restart.
  */
 export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The Markdown source to render. */
   @property() content = '';
@@ -323,7 +323,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   @property({ type: Boolean }) math = false;
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. Readonly. */
-  readonly anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote'];
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['fragment', 'text-quote'];
 
   // `null` covers both "the optional peers are still loading" and "a render
   // attempt just fell back after a failure" — the two states intentionally
@@ -392,7 +392,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
    *  `<lr-code-block>`). */
   private failedHighlightKeys = new Set<string>();
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.eagerLoad) {
       // Only takes this synchronous path when the shared module cache has
@@ -421,7 +421,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     if (this.streamingRenderRaf !== undefined) {
       cancelAnimationFrame(this.streamingRenderRaf);
@@ -437,7 +437,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
    *  part of `LyraAnchorTarget`'s public surface -- see `anchor-target.ts`'s class doc), so it's
    *  reached the same way that module's own tests do: through a cast, without declaring a no-op
    *  passthrough override just to satisfy the type checker. */
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     const contentRoot = this.renderRoot.querySelector('[part="content"]');
     if (!contentRoot) return;
     (this as unknown as { bindTextSelection(root: Element): void }).bindTextSelection(contentRoot);
@@ -447,7 +447,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   // property below is absorbed into the *same* update cycle instead of
   // scheduling a second one -- Lit's documented pattern for deriving one
   // reactive property from a change to others.
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('math')) this.mathFailureReported = false;
     if (!this.deps) {
@@ -486,14 +486,14 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     });
   }
 
-  protected async getUpdateComplete(): Promise<boolean> {
+  protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
     if (this.streamingRenderRaf === undefined) return complete;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     return super.getUpdateComplete();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.deps && !this.streaming) {
       this.removeAttribute('aria-busy');
@@ -858,7 +858,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     this.emit('lr-link-click', { href, internal: true });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const isFallback = this.renderedHtml === null;
     return html`
       <div part="content" ?data-fallback=${isFallback} @click=${this.onContentClick}>

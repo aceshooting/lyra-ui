@@ -18,7 +18,7 @@ const DEFAULT_MAX = 100;
  * @cssprop [--lr-progress-ring-size=var(--lr-size-2-5rem)] - Outer diameter of the ring.
  */
 export class LyraProgressRing extends LyraElement {
-  static styles = [LyraElement.styles, ringStyles];
+  static override styles = [LyraElement.styles, ringStyles];
   @property({ type: Number }) value = 0;
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
@@ -40,7 +40,7 @@ export class LyraProgressRing extends LyraElement {
     return (this.safeValue / this.safeMax) * 100;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - this.percent / 100);

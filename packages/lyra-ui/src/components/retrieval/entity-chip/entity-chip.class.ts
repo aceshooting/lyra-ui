@@ -38,7 +38,7 @@ function isRealPreviewNode(n: Node): boolean {
  * @cssprop [--lr-entity-chip-border=transparent] - Border color of the chip.
  */
 export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Echoed verbatim in both events, never validated -- the citation-badge `source-id` contract. */
   @property({ attribute: 'entity-id' }) entityId = '';
@@ -62,13 +62,13 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
   private hovering = false;
   private focused = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasPreviewSlot = Array.from(this.childNodes).some(isRealPreviewNode);
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
@@ -78,7 +78,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
@@ -168,7 +168,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     this.emit('lr-entity-open', { id: this.entityId });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <span
         class="wrapper"

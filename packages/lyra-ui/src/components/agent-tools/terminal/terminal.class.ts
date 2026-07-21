@@ -172,7 +172,7 @@ export interface LyraTerminalEventMap {
  *   `neutral`-tone highlighted line.
  */
 export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() content = '';
   /** Line-count scrollback buffer limit. NaN/negative/oversized (e.g. `Infinity`) all normalize
@@ -220,17 +220,17 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   private searchMatches: SearchMatch[] = [];
   private searchActiveIndex = -1;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
     this.announcer.cancel();
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.announceRegionEl = this.renderRoot.querySelector<HTMLElement>('[part="announcer"]') ?? undefined;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('content')) {
       this.resetBuffer();
       this.writeInternal(this.content);
@@ -588,7 +588,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     };
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasToolbar = this.copyable || this.downloadable;
     const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
     return html`

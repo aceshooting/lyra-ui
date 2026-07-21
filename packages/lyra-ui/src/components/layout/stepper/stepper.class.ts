@@ -103,7 +103,7 @@ function checkmarkGlyph() {
  *   step's numbered index chip.
  */
 export class LyraStepper extends LyraElement<LyraStepperEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Ordered step data. Never mutated by this component -- see the class doc's controlled-
    *  component contract. Empty (the default) renders nothing. Each step's optional `title`
@@ -179,7 +179,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     return this._effectiveOrientation;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the
     // very first render (and again on every reconnect) -- [part="base"] is a block-level flex
@@ -191,16 +191,16 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     if (this.orientationBreakpoints.containerObservationEnabled) this.armResizeObserver();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
   }
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     if (this.orientationBreakpoints.containerObservationEnabled) this.armResizeObserver();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('orientationBreakpoint') || changed.has('orientationBreakpointBasis')) {
       this.orientationBreakpoints.configure(this.orientationBreakpoint, this.orientationBreakpointBasis);
     }
@@ -229,7 +229,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('orientationBreakpoint') || changed.has('orientationBreakpointBasis')) {
       if (this.orientationBreakpoints.containerObservationEnabled) this.armResizeObserver();
       else this.resizeObserver?.disconnect();
@@ -332,7 +332,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     this.focusStep(target.id);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // Roving tabindex needs exactly one stop in the tab order at all times -- the `current` step
     // when there is one, otherwise the first step a keyboard user could actually land on. Without
     // this fallback, an all-`completed`/all-`pending`/no-`current` `steps` array would leave every

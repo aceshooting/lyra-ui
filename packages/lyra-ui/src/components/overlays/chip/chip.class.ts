@@ -90,7 +90,7 @@ export interface LyraChipEventMap {
  * is selected, independently themeable from the label/icon color.
  */
 export class LyraChip extends LyraElement<LyraChipEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Visual density. `m` preserves the original chip dimensions. */
   @property({ reflect: true }) size: ChipSize = 'm';
@@ -136,7 +136,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
   @state() private hasIconSlot = false;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
     }
@@ -197,7 +197,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // `toggleMode` is sticky (see `toggleable`'s doc comment) and gates the chip's structural
     // interactivity, so it survives `selected` toggling back to false. `pressed` tracks only the
     // *current* value, for `aria-pressed`.

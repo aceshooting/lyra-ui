@@ -50,7 +50,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  *   token.
  */
 export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Milliseconds until the next scheduled action, as of whenever this was last set -- setting it
    *  (re)starts the countdown from "now." Unset (the default) shows no countdown. */
@@ -78,7 +78,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A mount/reconnect with no scheduled deadline yet (nextInMs never set,
     // so targetAt is still its 0 default) must not start a ticker -- it
@@ -87,12 +87,12 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     if (this.active && !this.paused && this.nextInMs != null) this.armTicker();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.disarmTicker();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('nextInMs')) {
       if (this.nextInMs != null) {
         // A NaN/negative nextInMs (a bad attribute, or a stray programmatic assignment) must not
@@ -115,7 +115,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('nextInMs')) {
@@ -189,7 +189,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <span part="indicator" aria-hidden="true" ?data-due=${this.due}></span>

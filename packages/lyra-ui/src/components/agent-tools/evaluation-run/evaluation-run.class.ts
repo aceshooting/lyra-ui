@@ -164,7 +164,7 @@ function isTerminal(kind: AgentStatusKind): boolean {
  * @csspart live-region - The internal status-announcement live region.
  */
 export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The batch's examples so far. Controlled -- never mutated by this component; pass a new array
    *  to update it (e.g. as each example finishes, or as the whole batch streams in). */
@@ -193,7 +193,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
    *  update to decide what to announce. */
   private previousStatusById = new Map<string, AgentStatusKind>();
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('examples')) this.diffAndAnnounce(wasMounting);
@@ -362,7 +362,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const resolvedTotal = this.total != null ? finiteCount(this.total, this.examples.length) : this.examples.length;
     const counts = this.statusCounts();
     const completed = this.examples.filter((example) => isTerminal(example.status.kind)).length;

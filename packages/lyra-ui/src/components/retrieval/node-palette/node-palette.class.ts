@@ -54,7 +54,7 @@ export interface LyraNodePaletteEventMap {
  * @csspart live-region - The result-count announcement.
  */
 export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) items: PaletteItem[] = [];
   @property() label = '';
@@ -100,7 +100,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     return this.filtered.filter((i) => !i.disabled);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -202,7 +202,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     </div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const groups = this.categorized();
     const rovingList = this.rovingList();
     return html`<div part="base">

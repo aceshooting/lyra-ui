@@ -55,7 +55,7 @@ export interface LyraToastItemEventMap {
  *   transition used while hiding.
  */
 export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
   @property({ type: Number }) duration = 5000;
@@ -91,7 +91,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     return this.duration === Infinity ? Infinity : finiteDuration(this.duration, 5000, 0);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // `elapsedMs`/`duration` are re-read fresh every time the timer is
     // (re)scheduled, so a `duration` change while paused (hovering/focused)
     // or before the timer has ever started needs no action here -- the next
@@ -114,7 +114,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('variant')) {
       // Assertive for actionable severities, polite otherwise. Re-evaluated
       // on every `variant` change (not just the first render) so a toast
@@ -124,7 +124,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.showRafId = requestAnimationFrame(() => {
       this.showRafId = undefined;
       // hide() may have already run synchronously before this frame fired
@@ -140,7 +140,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.showRafId !== undefined) {
       cancelAnimationFrame(this.showRafId);
@@ -307,7 +307,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.remove();
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div
         part="toast-item"

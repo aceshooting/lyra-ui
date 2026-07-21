@@ -147,7 +147,7 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * low-confidence item's confidence indicator.
  */
 export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Ephemeral, working-context items. Controlled and never mutated by this component. */
   @property({ attribute: false }) shortTerm: LyraMemoryItem[] = [];
@@ -339,7 +339,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const allEmpty = this.shortTerm.length === 0 && this.longTerm.length === 0;
     const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('memoryPanelLabel');
 

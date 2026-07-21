@@ -124,7 +124,7 @@ export interface LyraRetrievalTraceEventMap {
  *   `[part="evidence-row"]` whose stage matches `activeStageId`.
  */
 export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The pipeline's stages, in any order -- the internal timeline sorts them by `startMs`. */
   @property({ attribute: false }) stages: RetrievalStage[] = [];
@@ -182,7 +182,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     }
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('stages')) {
       const ids = new Set(this.stages.map((s) => s.id));
@@ -239,7 +239,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const spans = this.toSpans();
     const hasAnyEvidence = this.stages.some((s) => hasEvidence(s.evidence));
     // Falls back to a host `aria-label` before the internal timeline's own localized default --

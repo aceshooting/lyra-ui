@@ -149,7 +149,7 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * @cssprop [--lr-qr-code-background=var(--lr-color-surface)] - Light/background module color, including the quiet zone.
  */
 export class LyraQrCode extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The data to encode. Empty renders `[part="empty"]` -- no encode is attempted. */
   @property() value = '';
@@ -226,7 +226,7 @@ export class LyraQrCode extends LyraElement {
   private themeObserver?: MutationObserver;
   private themeRefreshQueued = false;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.watchDpr();
     this.watchTheme();
@@ -240,7 +240,7 @@ export class LyraQrCode extends LyraElement {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.dprQuery?.removeEventListener('change', this.onDprChange);
     this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
@@ -299,7 +299,7 @@ export class LyraQrCode extends LyraElement {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('value') || changed.has('errorCorrection') || !this.hasUpdated) {
       this.scheduleAfterUpdate(() => {
@@ -427,7 +427,7 @@ export class LyraQrCode extends LyraElement {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base" style=${styleMap({ inlineSize: `${this.size}px`, blockSize: `${this.size}px` })}>
       ${this.renderBody()}
     </div>`;

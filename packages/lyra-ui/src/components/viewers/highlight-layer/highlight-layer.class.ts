@@ -47,7 +47,7 @@ export interface LyraHighlightLayerEventMap {
  * @csspart rect - One highlight rectangle (`data-tone`/`data-active`/`data-flash` state attributes).
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) items: HighlightLayerItem[] = [];
   @property({ attribute: 'active-id' }) activeId: string | null = null;
@@ -59,14 +59,14 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
   @state() private flashingId: string | null = null;
   private flashTimer?: ReturnType<typeof setTimeout>;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('items') && this.focusedId && !this.items.some((i) => i.id === this.focusedId)) {
       this.focusedId = null;
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.flashTimer);
   }
@@ -127,7 +127,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       : this.localize('highlightOfTotal', undefined, { index: index + 1, total: this.items.length });
   }
 
-  render(): TemplateResult | typeof nothing {
+  override render(): TemplateResult | typeof nothing {
     if (this.items.length === 0) return nothing;
     const tabStop = this.tabStopId();
     const ariaLabel = this.getAttribute('aria-label') || this.localize('highlightLayerLabel');

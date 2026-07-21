@@ -81,7 +81,7 @@ function editIcon(): SVGTemplateResult {
  * @csspart feedback - The embedded `lr-message-feedback`.
  */
 export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Which built-ins render, in display order. */
   @property({ attribute: false }) controls: MessageActionControl[] = [];
@@ -116,28 +116,28 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   private hoverTarget: HTMLElement | null = null;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.revealOnHover) this.bindHoverTarget();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.unbindHoverTarget();
     super.disconnectedCallback();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('revealOnHover')) {
       if (this.revealOnHover) this.bindHoverTarget();
       else this.unbindHoverTarget();
     }
   }
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     this.setActiveStop(this.focusableStops(), 0);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('controls')) {
       const stops = this.focusableStops();
       this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
@@ -260,7 +260,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('messageActionsLabel');
     return html`
       <div part="base" role="toolbar" aria-label=${label} @keydown=${this.onToolbarKeyDown}>

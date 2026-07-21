@@ -25,12 +25,12 @@ export function StripHostTitleAttribute<T extends Constructor<LitElement>>(Base:
   class StripHostTitleAttributeElement extends Base {
     private stripHostTitleAttr = false;
 
-    attributeChangedCallback(name: string, old: string | null, value: string | null): void {
+    override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
       if (name === 'title' && this.stripHostTitleAttr) return;
       super.attributeChangedCallback(name, old, value);
     }
 
-    protected updated(changed: PropertyValues): void {
+    protected override updated(changed: PropertyValues): void {
       super.updated(changed);
       if (changed.has('title') && this.hasAttribute('title')) {
         // The attribute has already been converted into the `title` property

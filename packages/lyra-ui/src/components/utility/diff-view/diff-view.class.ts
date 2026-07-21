@@ -42,7 +42,7 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
  */
 export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The "before" text. Default `''` renders an all-additions diff of `newText`. */
   @property({ attribute: false }) oldText = '';
@@ -90,7 +90,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   // label swap) reuses the same result instead of re-running the diff from scratch.
   private diffOps: DiffOp[] = [];
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('oldText') || changed.has('newText')) {
       this.diffOps = computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'));
@@ -100,7 +100,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
   }
@@ -300,7 +300,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     return html`<div part="line" data-type=${op.type}>${marker} ${highlighted !== undefined ? unsafeHTML(highlighted) : op.text}</div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         ${this.copyable

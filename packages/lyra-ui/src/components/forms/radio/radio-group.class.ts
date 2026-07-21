@@ -25,7 +25,7 @@ export interface LyraRadioGroupEventMap {
  * @csspart error - Validation text.
  */
 export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
-  static styles = [LyraElement.styles, groupStyles];
+  static override styles = [LyraElement.styles, groupStyles];
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -40,11 +40,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private readonly hintId = nextId('radio-group-hint');
   private readonly errorId = nextId('radio-group-error');
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.syncRadios();
   }
-  protected updated(): void { this.syncRadios(); }
+  protected override updated(): void { this.syncRadios(); }
   private radios(): LyraRadio[] {
     return [...this.querySelectorAll(tag('radio'))] as LyraRadio[];
   }
@@ -88,7 +88,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     if (slot.name === 'hint') this.hasHintSlot = elements.length > 0;
     if (slot.name === 'error') this.hasErrorSlot = elements.length > 0;
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label);
     const hasHint = this.hasHintSlot || Boolean(this.hint);
     const hasError = this.hasErrorSlot || Boolean(this.errorText);

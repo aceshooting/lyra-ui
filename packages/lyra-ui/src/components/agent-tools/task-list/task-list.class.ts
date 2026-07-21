@@ -153,7 +153,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  *   `[part="body"]` padding while `compact`.
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The plan. Controlled and never mutated by this component -- pass a new array to update it. */
   @property({ attribute: false }) items: TaskItem[] = [];
@@ -197,7 +197,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
    *  diffed against the incoming `items` on every update to decide what to announce. */
   private previousStatusById = new Map<string, TaskStatus>();
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('items')) {
       for (const item of this.items) {
         for (const child of item.children ?? []) {
@@ -211,7 +211,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('items')) this.diffAndAnnounce(wasMounting);
@@ -284,7 +284,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label === 'Tasks' ? this.localize('taskListLabel') : this.label;
     const ariaLabel = this.getAttribute('aria-label') || label;
     const total = this.items.length;

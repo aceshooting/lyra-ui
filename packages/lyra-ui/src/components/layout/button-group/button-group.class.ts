@@ -16,12 +16,12 @@ export type ButtonGroupOrientation = 'horizontal' | 'vertical';
  * @cssprop [--lr-button-group-gap=var(--lr-space-2xs)] - Gap between grouped controls.
  */
 export class LyraButtonGroup extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) orientation: ButtonGroupOrientation = 'horizontal';
   @property() label = '';
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const accessibleLabel = this.label || this.getAttribute('aria-label') || nothing;
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }

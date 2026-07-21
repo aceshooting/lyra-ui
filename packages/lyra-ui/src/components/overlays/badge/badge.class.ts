@@ -28,11 +28,11 @@ export type BadgeSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
  * not vary by `size` tier.
  */
 export class LyraBadge extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ reflect: true }) variant: BadgeVariant = 'neutral';
   /** Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original
    *  badge dimensions. */
   @property({ reflect: true }) size: BadgeSize = 'm';
-  render(): TemplateResult { return html`<span part="base"><slot></slot></span>`; }
+  override render(): TemplateResult { return html`<span part="base"><slot></slot></span>`; }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-badge': LyraBadge; } }

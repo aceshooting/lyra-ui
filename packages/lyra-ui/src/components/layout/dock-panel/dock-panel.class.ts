@@ -138,7 +138,7 @@ interface DragState {
  *   re-expands it.
  */
 export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) edge: DockPanelEdge = 'end';
   /** The current docked size along the resize axis, as a CSS length (e.g. `"320px"`). */
@@ -165,13 +165,13 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // instead of the component's own base.
   private containerResizeObserver?: ResizeObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.applyHostSize();
     this.armContainerResizeObserver();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.drag = null;
     window.removeEventListener('pointermove', this.onPointerMove);
@@ -198,7 +198,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // live getBoundingClientRect(), so the new inline-size/block-size has to
   // already be on the host *before* render runs, or aria-valuenow would
   // read back the size from one update cycle ago.
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('size') || changed.has('collapsed') || changed.has('edge')) {
       this.applyHostSize();
@@ -382,7 +382,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
     </button>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <div part="content" id=${this.contentId} ?hidden=${this.collapsed}>

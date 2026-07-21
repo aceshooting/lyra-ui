@@ -113,7 +113,7 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * @csspart header-cell - Exported from `<lr-table>`'s own `header-cell` part.
  */
 export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The full, unfiltered/unsorted inventory. */
   @property({ attribute: false }) documents: LibraryDocument[] = [];
@@ -145,7 +145,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
 
   @state() private searchText = '';
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('documents') && this.selectedIds.length > 0) {
       const existing = new Set(this.documents.map((doc) => doc.id));
       const pruned = this.selectedIds.filter((id) => existing.has(id));
@@ -383,7 +383,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     ];
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label || this.localize('documentLibraryLabel');
     const visible = this.visibleDocuments;
     const tags = this.allTags;

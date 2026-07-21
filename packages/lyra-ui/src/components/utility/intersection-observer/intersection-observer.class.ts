@@ -18,7 +18,7 @@ export interface LyraIntersectionObserverEventMap {
  * @csspart base - The non-layout wrapper around the observed slot.
  */
 export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserverEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'root-margin' }) rootMargin = '0px';
@@ -27,7 +27,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
 
   private observer?: IntersectionObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
@@ -42,13 +42,13 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     if (this.hasUpdated) this.scheduleAfterUpdate(this.observeTargets);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.observer?.disconnect();
     this.observer = undefined;
     super.disconnectedCallback();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     // Routed through the base class's connection-aware scheduler rather than
     // a bare queueMicrotask: Lit still runs a scheduled update (and this
@@ -76,7 +76,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     targets.forEach((target) => this.observer!.observe(target));
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<span part="base"><slot @slotchange=${this.onSlotChange}></slot></span>`;
   }
 }

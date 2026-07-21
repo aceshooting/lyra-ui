@@ -84,7 +84,7 @@ export interface LyraWordCloudEventMap {
  * @cssprop [--lr-word-cloud-color-8=var(--lr-color-chart-4)] - Eighth entry of the default categorical palette.
  */
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The words to lay out. Re-laid-out whenever this (or a sizing property) changes. */
   @property({ attribute: false }) words: WordCloudWord[] = [];
@@ -156,7 +156,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     return [...this.cachedLayout.placed].sort((a, b) => a.originalIndex - b.originalIndex);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (
       changed.has('words') ||
@@ -294,7 +294,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     };
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const layout = this.cachedLayout;
     if (layout.placed.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;

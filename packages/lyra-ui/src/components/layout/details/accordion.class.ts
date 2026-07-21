@@ -13,7 +13,7 @@ import type { LyraDetails } from './details.class.js';
  * @csspart base - The accordion wrapper.
  */
 export class LyraAccordion extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Boolean, reflect: true }) multiple = false;
   private onSlotChange = (): void => { this.bindPanels(); };
   private bindPanels(): void {
@@ -31,6 +31,6 @@ export class LyraAccordion extends LyraElement {
       if (panel !== source) panel.open = false;
     }
   };
-  render(): TemplateResult { return html`<div part="base"><slot @slotchange=${this.onSlotChange}></slot></div>`; }
+  override render(): TemplateResult { return html`<div part="base"><slot @slotchange=${this.onSlotChange}></slot></div>`; }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-accordion': LyraAccordion; } }

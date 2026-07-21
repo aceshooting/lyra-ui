@@ -116,7 +116,7 @@ function formatDuration(ms: number): string {
  *   expanded reasoning transcript grows before `[part="body"]` scrolls internally.
  */
 export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Header text. Localized (`thinkingPanelLabel`) when left at its default
    *  `'Thinking'`; any other value is shown as-is. */
@@ -149,7 +149,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   // before any scroll event has ever fired.
   private stickToBottom = true;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Watches this element's own light-DOM subtree, not the shadow-DOM
     // [part="body"] wrapper -- the slotted reasoning content actually lives
@@ -159,7 +159,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     this.contentObserver.observe(this, { childList: true, subtree: true, characterData: true });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.contentObserver?.disconnect();
     this.contentObserver = undefined;
@@ -169,7 +169,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Opening a live panel -- or a still-expanded panel later becoming
       // `'live'` -- always jumps straight to the newest content and resets
@@ -249,7 +249,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   // landmark role) plus `aria-label` gives it an accessible name without
   // claiming navigation significance for what is, structurally, just one
   // part of a larger message.
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const duration = this.durationDisplay;
     // `this.localize()` checks `.strings` overrides before any fallback, so
     // passing `this.label` as a fallback wouldn't stop a `.strings.thinkingPanelLabel`

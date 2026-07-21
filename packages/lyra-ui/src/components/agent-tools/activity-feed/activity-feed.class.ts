@@ -142,7 +142,7 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *   before it scrolls internally (non-virtualized mode); also sizes the internal virtual-list.
  */
 export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Append-only: stable ids, new entries at the end. Entries never change state once added. */
   @property({ attribute: false }) entries: ActivityEntry[] = [];
@@ -191,7 +191,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
 
   private scrollRafId?: number;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.scrollRafId !== undefined) {
       cancelAnimationFrame(this.scrollRafId);
@@ -211,7 +211,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     return this.entries.length >= this.effectiveVirtualizeThreshold;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if ((changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live') {
       // Resetting to "anchored" on expand/live-transition, in willUpdate (not updated) so this
       // stays part of the SAME update pass rather than scheduling a second one -- identical
@@ -220,7 +220,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const wasMounting = this.isMounting;
     this.isMounting = false;
 
@@ -315,7 +315,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label === 'Activity' ? this.localize('activityFeedLabel') : this.label;
     const ariaLabel = this.getAttribute('aria-label') || label;
     const headerText = this.mode === 'live' ? (this.entries[this.entries.length - 1]?.text ?? '') : this.completedStepsSummary();

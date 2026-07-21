@@ -123,7 +123,7 @@ function isRealPreviewNode(n: Node): boolean {
  * changes it, so it stays transparent unless a host overrides it.
  */
 export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   private _index = 1;
   /** The citation number shown, e.g. `3` renders as `[3]`. Renders directly as visible text (and
@@ -175,13 +175,13 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   private hovering = false;
   private focused = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasPreviewSlot = Array.from(this.childNodes).some(isRealPreviewNode);
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('popoverOpen')) {
       this.cleanupPositioner?.();
       this.cleanupPositioner = undefined;
@@ -191,7 +191,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupPositioner?.();
     this.cleanupPositioner = undefined;
@@ -332,7 +332,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
     });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <span
         class="wrapper"

@@ -77,7 +77,7 @@ export interface LyraRetrievalSearchEventMap {
  *   `loading` nor `errorText` is set.
  */
 export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The current query text. Controlled -- the internal `lr-input` updates this optimistically as
    *  the user types (mirroring every other Lyra input's controlled-value convention), and a host
@@ -202,7 +202,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
     this.submit();
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label =
       this.accessibleLabel || this.label || this.localize('retrievalSearchLabel');
     const hasFilters = Object.keys(this.filters).length > 0 || this.scope.length > 0;

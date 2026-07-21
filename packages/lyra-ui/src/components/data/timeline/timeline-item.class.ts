@@ -99,7 +99,7 @@ export type TimelineItemVariant = 'neutral' | 'brand' | 'success' | 'warning' | 
  *   `::slotted(:last-child)` rule so the final item has no trailing rail.
  */
 export class LyraTimelineItem extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** When this event happened. Accepts a `Date`, anything `new Date()` can parse (e.g. an ISO 8601
    *  string), or epoch milliseconds. Invalid/unparseable input normalizes to "unset" -- no timestamp
@@ -141,12 +141,12 @@ export class LyraTimelineItem extends LyraElement {
   @state() private hasTimestampSlot = false;
   @state() private hasDescriptionSlot = false;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.setAttribute('role', 'listitem');
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // aria-current lives on the host (role="listitem" does too -- see connectedCallback), so it's a
     // plain imperative attribute write here rather than part of render()'s shadow-DOM template.
@@ -174,7 +174,7 @@ export class LyraTimelineItem extends LyraElement {
     this.hasDescriptionSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ts = this.normalizedTimestamp;
     const showTimestampFallback = !this.hasTimestampSlot && ts !== undefined;
     const showTimestamp = this.hasTimestampSlot || ts !== undefined;

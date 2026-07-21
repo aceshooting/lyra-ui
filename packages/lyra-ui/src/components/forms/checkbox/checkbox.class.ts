@@ -141,10 +141,10 @@ export interface LyraCheckboxEventMap {
  * while `checked` or `indeterminate`.
  */
 export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   static formAssociated = true;
 
-  static properties = {
+  static override properties = {
     checked: { type: Boolean, reflect: true, noAccessor: true },
     indeterminate: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -305,7 +305,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     return this.renderRoot?.querySelector('[part="base"]') ?? null;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
@@ -316,13 +316,13 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.labelObserver.observe(this, { childList: true, subtree: true, characterData: true });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // keeps a future LyraElement/mixin lifecycle hook wired in
     // Seed `hasLabelSlot` from the light-DOM children synchronously before
     // the very first render (same `!hasUpdated` guard as combobox/date-input's
@@ -459,7 +459,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     this.emit('focus');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const mixed = this.indeterminate;
     return html`
       <span

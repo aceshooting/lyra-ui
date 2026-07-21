@@ -144,9 +144,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   calendar toggle — so consumer content never sits outboard of the calendar button.
  */
 export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     mode: { noAccessor: true },
     min: { noAccessor: true },
     max: { noAccessor: true },
@@ -170,10 +170,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
    *  `.spellcheck` property binding can still turn this off with `spellcheck="false"`; a Lit
    *  template can do the same with either that attribute string or a `.spellcheck=${false}`
    *  binding. */
-  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the internal `<input>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
   /** Forwarded to the internal `<input>`'s own `autocorrect` (Safari/WebKit-specific). Empty
    *  string omits the attribute (browser default).
    *  Named `autoCorrect` (capital `C`), not `autocorrect`, purely to dodge a TS `lib.dom.d.ts`
@@ -184,15 +184,15 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   /** Forwarded to the internal date text input. Empty strings preserve the browser default. */
   @property() autocomplete = '';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Overrides the internal `<input>`'s computed accessible name. Wins over
    *  `label`/`placeholder`/the localized `date` fallback in that order --
    *  see the `aria-label` binding in `render()`. Attribute-reflects from a
    *  host-level `aria-label` so a plain-markup consumer gets ARIA-name
    *  forwarding without setting a JS property. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  @property() locale = '';
+  @property() override locale = '';
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';
@@ -343,11 +343,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (this.inputElement) this.inputElement.selectionDirection = value ?? 'none';
   }
 
-  get value(): string {
+  override get value(): string {
     return super.value;
   }
 
-  set value(next: string) {
+  override set value(next: string) {
     this.setTypedBadInput(false);
     super.value = this.normalizeCommittedValue(next ?? '');
   }
@@ -439,12 +439,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this[SET_ANCHORED_VALIDITY](flags, message);
   }
 
-  checkValidity(): boolean {
+  override checkValidity(): boolean {
     this.updateValidity();
     return super.checkValidity();
   }
 
-  reportValidity(): boolean {
+  override reportValidity(): boolean {
     this.updateValidity();
     return super.reportValidity();
   }
@@ -467,7 +467,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     return this.mode === 'range' && to ? `${fmt(from)} – ${fmt(to)}` : fmt(from);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -512,7 +512,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.ownerDocument.addEventListener('visibilitychange', this.onVisibilityChange);
   }
@@ -530,7 +530,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.emit('lr-clear');
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanupFn?.();
     this.cleanupFn = undefined;
@@ -546,7 +546,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.open = false;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open')) {
       this.cleanupFn?.();
@@ -750,14 +750,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.applyTypedText(input.value);
   }
 
-  formStateRestoreCallback(
+  override formStateRestoreCallback(
     state: string | File | FormData | null,
     _mode?: 'restore' | 'autocomplete',
   ): void {
     this.value = typeof state === 'string' ? state : '';
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
   }
@@ -804,7 +804,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     this.hide(true);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasValue = this.value.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;

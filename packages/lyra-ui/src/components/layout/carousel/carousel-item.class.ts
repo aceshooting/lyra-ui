@@ -12,9 +12,9 @@ import { styles } from './carousel-item.styles.js';
  * @csspart base - The slide wrapper.
  */
 export class LyraCarouselItem extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base"><slot></slot></div>`;
   }
 }

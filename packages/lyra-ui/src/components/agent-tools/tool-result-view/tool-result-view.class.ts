@@ -57,7 +57,7 @@ export interface LyraToolResultViewEventMap {
  * @cssprop [--lr-tool-result-view-font=var(--lr-font-mono)] - Font family for the `fallback="text"` preformatted output.
  */
 export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Custom registry to dispatch against instead of the module-level default one (see `registry.ts`). */
   @property({ attribute: false }) registry?: ToolRendererRegistry;
@@ -92,7 +92,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
   // skeleton again for a load() that's already resolved and cached.
   private resolvedLazy?: { def: ToolRendererDefinition; resolved: ToolRendererDefinition };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (
       !this.hasUpdated ||
       changed.has('toolName') ||
@@ -162,7 +162,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
     this.renderState = FALLBACK_STATE;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const state = this.renderState;
     return html`
       <div part="base">

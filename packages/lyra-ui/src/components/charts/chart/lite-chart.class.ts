@@ -173,7 +173,7 @@ export interface LyraLiteChartEventMap {
  * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() type: LyraLiteChartType = 'bar';
   @property({ attribute: false }) labels: string[] = [];
@@ -270,7 +270,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver((entries) => {
       const box = entries[0]?.contentBoxSize?.[0];
@@ -292,7 +292,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     if (this.svgEl) this.resizeObserver.observe(this.svgEl);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
   }
@@ -309,11 +309,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   // svgEl) already exists from before the disconnect. Together the two
   // cover first-mount and reconnect without ever double-observing the same
   // element from the same callback path.
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     if (this.svgEl) this.resizeObserver?.observe(this.svgEl);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('height')) {
       this.style.setProperty('--lr-chart-height', this.height);
     }
@@ -804,7 +804,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // Lit already tracks every reactive input, including function-valued
     // properties such as `tickFormat` and `barX`. Returning a cached
     // TemplateResult here would make callback replacement invisible and

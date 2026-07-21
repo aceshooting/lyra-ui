@@ -59,7 +59,7 @@ export interface GroundingSummaryThresholds {
  * @csspart empty - The empty-state message, shown when `assessment` is `null`.
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The assessment to summarize. `null` (the default) renders the empty state. */
   @property({ attribute: false }) assessment: GroundingAssessment | null = null;
@@ -116,7 +116,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     `;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('groundingSummaryLabel');
     const a = this.assessment;
 

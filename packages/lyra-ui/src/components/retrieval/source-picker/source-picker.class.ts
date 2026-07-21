@@ -77,7 +77,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  *   Background of a partially-selected entry's `[part="checkbox"]`.
  */
 export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Flat (no `children`) or a tree. */
   @property({ attribute: false }) sources: LyraSourceEntry[] = [];
@@ -265,7 +265,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('sourceListDefaultLabel');
     if (this.sources.length === 0) {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;

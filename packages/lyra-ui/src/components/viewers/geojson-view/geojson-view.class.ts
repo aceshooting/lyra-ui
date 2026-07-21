@@ -97,7 +97,7 @@ export interface LyraGeojsonViewEventMap {
  * @csspart spinner - The loading status region.
  */
 export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
-  static styles = [LyraElement.styles, srOnly];
+  static override styles = [LyraElement.styles, srOnly];
 
   @property() src = '';
   @property() name = '';
@@ -109,7 +109,7 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
    *  uninstall `maplibre-gl` in this test environment. */
   forceMissingMaplibreForTesting = false;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -168,7 +168,7 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('geojsonViewLabel')}>${this.renderBody()}</div>`;
   }
 }

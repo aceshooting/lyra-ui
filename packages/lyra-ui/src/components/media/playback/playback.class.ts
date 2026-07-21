@@ -71,9 +71,9 @@ export interface LyraPlaybackEventMap {
  *   play/pause glyph, derived from the shared icon-button hit-target size.
  */
 export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     playing: { type: Boolean, reflect: true, noAccessor: true },
     loop: { type: Boolean, converter: trueDefaultBooleanConverter },
   };
@@ -102,7 +102,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
    * and the `willUpdate` auto-pause guard below can see it via `changed`.
    * `reflect: true` preserves the native attribute-reflection behavior.
    */
-  @property({ type: Boolean, reflect: true }) hidden = false;
+  @property({ type: Boolean, reflect: true }) override hidden = false;
 
   private timer?: number;
   private _playing = false;
@@ -137,12 +137,12 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     return Math.max(0, finiteCount(this.length) - 1);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.pause();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('hidden') && this.hidden) this.pause();
     // A non-finite `length`/`index` (e.g. externally assigned NaN) must not
@@ -265,7 +265,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     this.emit('blur');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const maxIndex = this.maxIndex;
     const index = finiteCount(this.index, 0, maxIndex);
     const disabled = finiteCount(this.length) <= 1;

@@ -68,7 +68,7 @@ export interface LyraTabsEventMap {
  *   Independent of the selected-state props above.
  */
 export class LyraTabs extends LyraElement<LyraTabsEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The active tab's `slot`/id. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
   @property({ reflect: true }) active = '';
@@ -86,7 +86,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
   private mutationObserver?: MutationObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.syncTabs();
     // Each child carries its own individual `slot` attribute (one named slot
@@ -117,7 +117,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.mutationObserver?.disconnect();
     this.mutationObserver = undefined;
@@ -145,7 +145,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   };
 
   /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tabs-change`): this corrects *invalid* state rather than responding to a user picking a different tab. */
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!changed.has('tabs') && !changed.has('active')) return;
     const current = this.tabs.find((t) => t.slotName === this.active);
     if (current && !current.disabled) return;
@@ -254,7 +254,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     </div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // Keyed by `slotName`, not a plain `.map()`: a plain array binding reuses
     // each rendered DOM node by *position*, so removing e.g. the first tab
     // would silently relabel the still-focused second button's DOM node into

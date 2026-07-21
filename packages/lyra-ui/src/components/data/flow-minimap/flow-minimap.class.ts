@@ -32,7 +32,7 @@ interface FlowCanvasLike extends HTMLElement {
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
  */
 export class LyraFlowMinimap extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Id of the target `lr-flow-canvas`. When empty, the nearest ancestor is used (the
    *  slotted-into-a-corner-slot case, the primary wiring). */
@@ -55,12 +55,12 @@ export class LyraFlowMinimap extends LyraElement {
    *  of leaving this element permanently blank. Disconnected once a canvas resolves. */
   private canvasWatcher?: MutationObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resolveAndAttach();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
@@ -81,7 +81,7 @@ export class LyraFlowMinimap extends LyraElement {
   // `for` always appears in `changed` alongside every other reactive property) should redo it.
   // Runs from `willUpdate()`, not `updated()`, so `snapshot`'s reset lands in the render this same
   // cycle produces instead of synchronously scheduling a second cycle from within `updated()`.
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (this.hasUpdated && changed.has('for')) {
       this.unsubscribe?.();
       this.unsubscribe = undefined;
@@ -257,7 +257,7 @@ export class LyraFlowMinimap extends LyraElement {
     )}`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label || this.getAttribute('aria-label') || this.localize('flowMinimapLabel');
     if (!this.canvasEl || !this.snapshot) {
       return html`<div part="base" aria-hidden="true"></div>`;

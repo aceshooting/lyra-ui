@@ -211,7 +211,7 @@ function defaultFilter(thread: ChatThread, query: string): boolean {
  * @csspart row-item-actions - Data mode: the row item's `actions` wrapper.
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Non-empty ⇒ data mode (the default slot is ignored). Empty with no slotted content ⇒ data mode
    *  with zero rows (the built-in empty state). Empty *with* slotted content ⇒ slotted mode. */
@@ -351,7 +351,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return this.threads.length > 0 || !this.hasDefaultSlotContent;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasEmptySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'empty');
       const defaultSlotted = Array.from(this.children).filter((el) => !el.hasAttribute('slot'));
@@ -793,7 +793,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label || this.localize('threadListLabel');
     if (!this.dataMode) {
       return html`

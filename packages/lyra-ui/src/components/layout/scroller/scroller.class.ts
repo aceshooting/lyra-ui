@@ -35,7 +35,7 @@ export interface LyraScrollerEventMap {
  * @cssprop [--lr-scroller-min-block-size=var(--lr-size-10rem)] - Minimum vertical scroller size.
  */
 export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ reflect: true }) orientation: ScrollerOrientation = 'horizontal';
   @property({ type: Boolean, reflect: true }) controls = false;
@@ -48,7 +48,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   @query('[part="viewport"]') private viewport?: HTMLElement;
   private resizeObserver?: ResizeObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(this.updateEdges);
     this.resizeObserver?.observe(this);
@@ -60,18 +60,18 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     if (this.viewport) this.resizeObserver?.observe(this.viewport);
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.resizeObserver?.observe(this.viewport!);
     queueMicrotask(this.updateEdges);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     super.disconnectedCallback();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('orientation') || changed.has('controls')) queueMicrotask(this.updateEdges);
   }
 
@@ -139,7 +139,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label || this.getAttribute('aria-label') || this.localize('scrollerLabel');
     const vertical = this.orientation === 'vertical';
     return html`<div part="base">

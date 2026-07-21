@@ -160,9 +160,9 @@ export interface LyraLocalePickerEventMap {
  */
 export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
@@ -258,7 +258,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     return this.renderRoot?.querySelector('[part="trigger"]') ?? null;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
     this.stopRegistrySubscription = subscribeLyraLocaleRegistry(() => {
@@ -266,7 +266,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -281,12 +281,12 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     this.open = false;
   }
 
-  attributeChangedCallback(name: string, old: string | null, val: string | null): void {
+  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
     super.attributeChangedCallback(name, old, val);
     if (name === 'value') this._defaultValue = this._value;
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -416,7 +416,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const reposition =
       changed.has('open') || (this.open && (changed.has('locales') || changed.has('registryTick')));
     if (reposition) {
@@ -598,7 +598,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const rows = this.normalizedEntries;
     const activeId = this.activeIndex >= 0 && rows[this.activeIndex] ? `${this.listId}-opt-${this.activeIndex}` : '';
     const hasLabel = this.hasLabelSlot || this.label.length > 0;

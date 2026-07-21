@@ -41,7 +41,7 @@ export interface LyraTreeNodeEventMap {
  *   `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  */
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) item!: TreeItem;
   @property({ type: Boolean, reflect: true }) expanded = false;
@@ -102,7 +102,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     return Boolean(this.item?.children?.length);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.setAttribute('role', 'treeitem');
     this.setAttribute('aria-level', String(this.depth + 1));
@@ -145,7 +145,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   }
 
   /** See `cascadeUpdateComplete` and the matching override on `<lr-tree>`. */
-  protected async getUpdateComplete(): Promise<boolean> {
+  protected override async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
     await cascadeUpdateComplete(
       [...(this.shadowRoot?.querySelectorAll(tag('tree-node')) ?? [])] as LyraTreeNode[],
@@ -168,7 +168,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     this.focus();
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // No item yet (see `hasChildren`): render nothing rather than dereferencing
     // `this.item` — the row appears as soon as the owner assigns the property.
     if (!this.item) return html``;

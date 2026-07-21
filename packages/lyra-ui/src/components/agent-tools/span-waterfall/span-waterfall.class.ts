@@ -94,7 +94,7 @@ export interface LyraSpanWaterfallEventMap {
  *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Identical contract to `<lr-trace-tree>.spans`; rows sort by `startMs` (ties keep array order). */
   @property({ attribute: false }) spans: LyraSpan[] = [];
@@ -208,7 +208,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('spans')) {
       const ids = new Set(this.spans.map((s) => s.id));
       if (this.focusedId == null || !ids.has(this.focusedId)) {
@@ -217,7 +217,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('activeSpanId') && this.activeSpanId) {
       this.focusedId = this.activeSpanId;
       const bar = this.renderRoot.querySelector(`[data-id="${CSS.escape(this.activeSpanId)}"]`) as HTMLElement | null;
@@ -281,7 +281,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const rows = this.sortedSpans();
     const view = this.viewWindow();
     return html`

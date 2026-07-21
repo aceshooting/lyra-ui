@@ -27,7 +27,7 @@ export interface LyraReorderItemEventMap {
  * @cssprop [--lr-reorder-item-gap=var(--lr-space-xs)] - Gap between the move buttons and content.
  */
 export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Stable identifier included in the parent list's emitted `lr-reorder` order array. Falls back
    *  to this item's live DOM-position index (stringified) when unset — a consumer that cares about
@@ -79,12 +79,12 @@ export class LyraReorderItem extends LyraElement<LyraReorderItemEventMap> {
     this.emit<{ direction: 'up' | 'down' }>('lr-move-request', { direction: 'down' });
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.setAttribute('role', 'listitem');
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <button

@@ -187,7 +187,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       return this.disabled || this._fieldsetDisabled;
     }
 
-    attributeChangedCallback(name: string, old: string | null, value: string | null): void {
+    override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
       super.attributeChangedCallback(name, old, value);
       if (name === 'value') {
         // Runs after the base class has already applied the attribute to
@@ -250,7 +250,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this.requestUpdate();
     }
 
-    connectedCallback(): void {
+    override connectedCallback(): void {
       super.connectedCallback();
       // `required` may already be set from an attribute by the time this
       // runs; reflect validity from the start, not only after the first

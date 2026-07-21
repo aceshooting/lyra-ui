@@ -24,7 +24,7 @@ export type LyraEventMap = Record<string, Event>;
  * RTL is handled by components using CSS logical properties rather than a forced `dir`.
  */
 export class LyraElement<Events = LyraEventMap> extends LitElement {
-  static styles: CSSResultGroup = [tokens];
+  static override styles: CSSResultGroup = [tokens];
 
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
   @property({ reflect: true }) locale = '';
@@ -37,7 +37,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private loadSchedulePending = false;
   private deferredLoad?: () => void;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnected element may sit under a different `lang`/`dir` ancestor,
     // and Lit schedules no update for a pure DOM move — the memo from the
@@ -52,7 +52,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
     this.stopLocaleSubscription?.();
@@ -69,7 +69,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * most once per update cycle no matter how many times a template loop calls
    * `localize()`/`effectiveLocale`/`effectiveDirection`.
    */
-  requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
+  override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
     invalidateLyraLocaleCache(this);
     super.requestUpdate(name, oldValue, options);
   }
@@ -116,17 +116,17 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return resolveLyraDirection(this);
   }
 
-  addEventListener<K extends keyof Events & string>(
+  override addEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
     options?: boolean | AddEventListenerOptions,
   ): void;
-  addEventListener(
+  override addEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | AddEventListenerOptions,
   ): void;
-  addEventListener(
+  override addEventListener(
     type: string,
     listener: unknown,
     options?: boolean | AddEventListenerOptions,
@@ -134,17 +134,17 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     super.addEventListener(type, listener as EventListenerOrEventListenerObject, options);
   }
 
-  removeEventListener<K extends keyof Events & string>(
+  override removeEventListener<K extends keyof Events & string>(
     type: K,
     listener: (this: this, event: Events[K]) => unknown,
     options?: boolean | EventListenerOptions,
   ): void;
-  removeEventListener(
+  override removeEventListener(
     type: string,
     listener: EventListenerOrEventListenerObject,
     options?: boolean | EventListenerOptions,
   ): void;
-  removeEventListener(
+  override removeEventListener(
     type: string,
     listener: unknown,
     options?: boolean | EventListenerOptions,

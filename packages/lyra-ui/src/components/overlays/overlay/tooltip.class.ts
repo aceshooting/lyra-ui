@@ -28,7 +28,7 @@ const DEFAULT_DISTANCE = 6;
  * @cssprop --lr-tooltip-color - Tooltip text color (default `--lr-color-on-neutral`).
  */
 export class LyraTooltip extends LyraElement {
-  static styles = [LyraElement.styles, tooltipStyles];
+  static override styles = [LyraElement.styles, tooltipStyles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean }) manual = false;
   /** Show/hide timer delay (ms) -- see `setOpen()`. NaN/negative/oversized all normalize through
@@ -56,7 +56,7 @@ export class LyraTooltip extends LyraElement {
   private overlayHandle?: OverlayHandle;
   private readonly tooltipId = nextId('tooltip');
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') || changed.has('placement') || changed.has('distance')) {
       this.cleanup?.();
       this.cleanup = undefined;
@@ -81,7 +81,7 @@ export class LyraTooltip extends LyraElement {
       this.syncTriggerA11y();
     }
   }
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
@@ -98,7 +98,7 @@ export class LyraTooltip extends LyraElement {
       }
     }
   }
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     clearTimeout(this.timer);
     this.cleanup?.();
     this.cleanup = undefined;
@@ -215,7 +215,7 @@ export class LyraTooltip extends LyraElement {
     clearTimeout(this.timer);
     this.open = false;
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.accessibleLabel || nothing;
     return html`
       <span part="trigger"><slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot></span>

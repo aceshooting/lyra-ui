@@ -55,7 +55,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * @cssprop [--lr-gauge-fill=var(--lr-color-brand)] - Fill stroke for radial, ring, and linear gauges.
  */
 export class LyraGauge extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
@@ -96,7 +96,7 @@ export class LyraGauge extends LyraElement {
     return this.valueLabel || (!Number.isFinite(this.value) ? '' : String(this.value));
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     this.setAttribute('role', 'meter');
     // Normalize a reversed min > max domain the same way `ratio` does, so the
     // announced aria-value* trio always agrees with the visual fill instead
@@ -196,7 +196,7 @@ export class LyraGauge extends LyraElement {
     </svg>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.type === 'linear') return this.renderLinear();
     if (this.type === 'ring') return this.renderRing();
     return this.renderRadial();

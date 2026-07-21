@@ -113,7 +113,7 @@ export interface LyraCodeBlockCoreEventMap {
  *   surface in the component alone.
  */
 export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The raw source text. */
   @property() code = '';
@@ -203,7 +203,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
 
   private readonly bodyId = nextId('code-block-body');
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.isDarkTheme = resolveIsDarkTheme(this);
     this.stopWatchingTheme = watchDarkTheme(this, () => {
@@ -223,7 +223,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
     this.stopWatchingTheme?.();
@@ -341,7 +341,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // into this same update cycle instead of scheduling a second one, Lit's
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lr-markdown>'s `willUpdate` takes).
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
     // options in tokenize() below -- any of them changing (even without code/language/languages
     // changing) means the cached highlightedHtml needs recomputing to stay in sync.
@@ -362,7 +362,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     }
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     const showingSkeleton = !this.shikiReady && !!this.language && !!this.preSuppliedGrammar();
     if (showingSkeleton) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
@@ -533,7 +533,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // role) plus `aria-label` gives it an accessible name without claiming
   // landmark/navigation significance for what is, structurally, just one
   // small piece of a larger document.
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
     const showSkeleton = !this.shikiReady && !!this.language && !!this.preSuppliedGrammar();
     const bodyHidden = this.collapsible && this.collapsed;

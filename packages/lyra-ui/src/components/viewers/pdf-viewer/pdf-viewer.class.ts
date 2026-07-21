@@ -153,7 +153,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   Also settable via the `max-height` property.
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as a PDF document. */
   @property() src = '';
@@ -170,7 +170,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves. */
-  readonly anchorKinds = ['page', 'text-quote', 'region'] as const;
+  override readonly anchorKinds = ['page', 'text-quote', 'region'] as const;
 
   @state() private loadState: PdfLoadState = { kind: 'idle' };
   /** True while `page` was last set by the user scrolling the page list rather than by
@@ -199,7 +199,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   private searchQuery = '';
   private searchGeneration = 0;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('page')) this.page = this.clampPage(this.page);
     if (changed.has('page') && !changed.has('scrollDrivenPage')) this.scrollDrivenPage = false;
@@ -221,7 +221,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) {
       this.scheduleAfterUpdate(() => {
@@ -245,12 +245,12 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     const base = this.shadowRoot?.querySelector('[part="base"]') as HTMLElement | null;
     if (base) this.bindTextSelection(base);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.textSelectionCleanup?.();
     this.textSelectionCleanup = undefined;
@@ -1125,7 +1125,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div
       part="base"
       style=${this.maxHeight ? `--lr-pdf-viewer-height:${this.maxHeight}` : nothing}

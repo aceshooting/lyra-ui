@@ -84,7 +84,7 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
  * @slot data-table - An optional consumer-provided accessible table alternative.
  */
 export class LyraBoxPlot extends LyraElement {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) boxes: BoxPlotSeries[] = [];
@@ -114,7 +114,7 @@ export class LyraBoxPlot extends LyraElement {
   private chartJsModule?: OptionalPeerApi;
   private descriptionId = nextId('box-plot-description');
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     void loadBoxPlotPlugin().then((boxMod) => this.onBoxPlotPluginLoaded(boxMod));
     if (typeof IntersectionObserver !== 'undefined') {
@@ -151,14 +151,14 @@ export class LyraBoxPlot extends LyraElement {
     this.draw();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.chart?.destroy();
     this.chart = undefined;
     this.intersectionObserver?.disconnect();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
@@ -329,7 +329,7 @@ export class LyraBoxPlot extends LyraElement {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.loading) {
       return html`
         <div part="base">

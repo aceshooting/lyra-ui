@@ -55,7 +55,7 @@ export interface LyraCarouselEventMap {
  *   the current slide's indicator dot.
  */
 export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Number, reflect: true }) index = 0;
   @property({ type: Boolean, reflect: true }) loop = false;
@@ -70,7 +70,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private reduceMotion = false;
   private mediaQuery?: MediaQueryList;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.mediaQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.reduceMotion = this.mediaQuery?.matches ?? false;
@@ -78,20 +78,20 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.restartAutoplay();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.stopAutoplay();
     this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.mediaQuery = undefined;
     super.disconnectedCallback();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('index') && this.slideSlot) {
       this.index = this.normalizedIndex();
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('index') || changed.has('loop') || changed.has('showIndicators')) this.syncSlides();
     if (changed.has('autoplay') || changed.has('autoplayInterval')) this.restartAutoplay();
   }
@@ -196,7 +196,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const count = this.slides().length;
     const current = this.normalizedIndex(count);
     const label = this.hostAccessibleLabel || this.accessibleLabel || this.localize('carouselLabel');

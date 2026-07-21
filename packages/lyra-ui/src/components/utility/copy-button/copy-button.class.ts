@@ -65,7 +65,7 @@ export interface LyraCopyButtonEventMap {
  * @csspart base - The button itself.
  */
 export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The plain text to copy. */
   @property() value = '';
@@ -86,7 +86,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
   }
@@ -125,7 +125,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     }, duration);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <button
         part="base"

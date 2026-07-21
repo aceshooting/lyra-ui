@@ -172,7 +172,7 @@ export interface LyraAppRailEventMap {
  * ```
  */
 export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   // `mode` needs a custom accessor (force/auto semantics below) rather than
   // the usual @property()-generated one -- registered here, alongside the
@@ -181,7 +181,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // LitElement's update loop reflects any `reflect`-flagged property to its
   // attribute generically by reading `this[name]` after render, regardless
   // of whether that property has a custom or auto-generated accessor.
-  static properties = {
+  static override properties = {
     mode: { reflect: true, noAccessor: true },
   };
 
@@ -346,7 +346,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return this.baseEl?.getBoundingClientRect().width ?? 240;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
@@ -376,7 +376,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   // content have already landed in the DOM before the focus call below can
   // rely on them -- mirrors lr-dialog's/lr-widget's identical ordering
   // rationale.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     this.syncSlottedItems();
     if (this.justOpened) {
       this.justOpened = false;
@@ -394,7 +394,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.setupMediaQueries();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
@@ -413,7 +413,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.teardownMediaQueries();
     this.releaseScrollLock?.();
@@ -588,7 +588,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const mobile = this._mode === 'mobile';
     return html`
       <button

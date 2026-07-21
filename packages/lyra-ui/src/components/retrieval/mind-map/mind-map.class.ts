@@ -46,7 +46,7 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  * feedback keyboard users get from the drawn focus ring.
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** A single root sits at the center; multiple roots hang off an implicit center hub whose
    *  visible text is `label`. */
@@ -108,7 +108,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     });
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('topics') || changed.has('expandDepth') || changed.has('expandedOverrides') || changed.has('label')) {
       this.relayout();
@@ -208,7 +208,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     };
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const layout = this.cachedLayout;
     if (layout.placed.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;

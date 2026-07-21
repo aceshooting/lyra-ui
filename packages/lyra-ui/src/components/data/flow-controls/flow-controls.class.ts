@@ -75,7 +75,7 @@ export type FlowControlsAppearance = 'card' | 'plain';
  * @csspart lock - Lock/unlock toggle button (omitted when `hideLock`).
  */
 export class LyraFlowControls extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Id of the `lr-flow-canvas` this cluster drives. Empty (the default) resolves to the nearest
    *  ancestor canvas -- the slotted-into-a-corner-slot case. Changing it at runtime re-resolves and
@@ -103,12 +103,12 @@ export class LyraFlowControls extends LyraElement {
    *  of leaving every button permanently disabled. Disconnected once a canvas resolves. */
   private canvasWatcher?: MutationObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.resolveAndAttach();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
@@ -124,7 +124,7 @@ export class LyraFlowControls extends LyraElement {
   // `for` always appears in `changed` alongside every other reactive property) should redo it.
   // Runs from `willUpdate()`, not `updated()`, so the reset lands in the render this same cycle
   // produces instead of synchronously scheduling a second cycle from within `updated()`.
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (this.hasUpdated && changed.has('for')) {
       this.unsubscribe?.();
       this.unsubscribe = undefined;
@@ -180,7 +180,7 @@ export class LyraFlowControls extends LyraElement {
     this.canvasEl.locked = !this.canvasEl.locked;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const disabled = !this.canvasEl;
     const zoom = this.snapshot?.viewport.zoom ?? 1;
     const atMin = this.canvasEl ? zoom <= this.canvasEl.minZoom : false;

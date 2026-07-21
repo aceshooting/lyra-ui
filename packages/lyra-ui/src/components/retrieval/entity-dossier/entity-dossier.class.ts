@@ -97,7 +97,7 @@ export interface LyraEntityDossierConfidence {
  * @csspart empty - The empty state shown when `entity` is `null`.
  */
 export class LyraEntityDossier extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the shared `lr-empty` `noData` state in place of the whole dossier. */
   @property({ attribute: false }) entity: LyraEntity | null = null;
@@ -141,7 +141,7 @@ export class LyraEntityDossier extends LyraElement {
     this.activeTab = e.detail.tabId as LyraEntityDossierTab;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (!this.entity) {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }

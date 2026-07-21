@@ -171,7 +171,7 @@ export interface LyraToolApprovalDialogEventMap {
  * @cssprop [--lr-tool-approval-dialog-mono-font=var(--lr-font-mono)] - Font family for the tool name and the raw-JSON args editor.
  */
 export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -200,13 +200,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   @property({ reflect: true }) pending: ToolApprovalDialogPending = null;
 
   /** Native editing-assistance attributes forwarded to the raw-JSON textarea. */
-  @property({ converter: spellcheckConverter }) spellcheck = false;
-  @property() autocapitalize = 'off';
+  @property({ converter: spellcheckConverter }) override spellcheck = false;
+  @property() override autocapitalize = 'off';
   @property({ attribute: 'autocorrect' }) autoCorrect = 'off';
   @property() autocomplete = 'off';
   @property() wrap: ToolApprovalDialogWrap = 'soft';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
   @state() private editing = false;
   /** The textarea's current raw text while editing — deliberately independent of `args` until Approve is pressed, so a malformed in-progress edit never overwrites it. */
@@ -219,7 +219,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   private readonly titleId = nextId('tool-approval-dialog-title');
   private readonly errorId = nextId('tool-approval-dialog-error');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('open')) {
       if (this.open) {
         this.releaseScrollLock ??= lockScroll(this.ownerDocument);
@@ -253,7 +253,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   // Runs after render (not willUpdate) so [part="panel"]/[part="deny-button"]
   // have already landed in the DOM before the focus calls below can rely on
   // them -- mirrors lr-dialog's identical ordering rationale.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
       return;
@@ -276,7 +276,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.open) {
       this.releaseScrollLock ??= lockScroll(this.ownerDocument);
@@ -285,7 +285,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -402,7 +402,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     this.close('deny');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasError = this.editing && this.draftError.length > 0;
     // Split (rather than interpolate outright) so `toolName` can still land in
     // its own `part="tool-name"` node -- the localized template supplies the

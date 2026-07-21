@@ -56,7 +56,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  *   panel, which shares the same default token).
  */
 export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ reflect: true }) variant: CalloutVariant = 'neutral';
   @property() heading = '';
   @property({ type: Boolean, reflect: true }) closable = false;
@@ -79,7 +79,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
     if (slot.name === 'icon') this.hasIcon = present;
     if (slot.name === 'heading') this.hasHeading = present;
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (!this.open) return html``;
     const label = this.accessibleLabel || this.getAttribute('aria-label') || undefined;
     return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}" aria-label=${label || nothing}>

@@ -17,7 +17,7 @@ export interface LyraOptionEventMap {
  * @customElement lr-option
  */
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The selection key submitted with the form. */
   @property() value = '';
@@ -48,7 +48,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
 
   private labelObserver?: MutationObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // `label` is derived from either the `label` attribute or `textContent` --
     // neither is a Lit reactive property, so a direct mutation of either
@@ -64,13 +64,13 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.labelObserver?.disconnect();
     this.labelObserver = undefined;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     // `selected` is deliberately excluded -- the parent combobox/select
     // already sets `selected` itself as *part of* rendering the current
     // selection, so echoing that back as a `lr-option-change` notification
@@ -88,7 +88,7 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<slot></slot>`;
   }
 }

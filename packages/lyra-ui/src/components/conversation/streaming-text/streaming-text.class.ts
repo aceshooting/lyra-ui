@@ -126,7 +126,7 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
  * @cssprop [--lr-streaming-text-cursor-height=var(--lr-size-1em)] - Height of the `cursor` bar.
  */
 export class LyraStreamingText extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The full current text so far -- always the complete string, never a
    *  delta to append. */
@@ -182,7 +182,7 @@ export class LyraStreamingText extends LyraElement {
     });
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('coalesceMs')) {
       this.coalescer.throttleMs = this.safeCoalesceMs;
     }
@@ -225,7 +225,7 @@ export class LyraStreamingText extends LyraElement {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.coalescer.cancel();
   }
@@ -238,7 +238,7 @@ export class LyraStreamingText extends LyraElement {
     return this.markdown ?? this.lastScannedResult;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         ${this.effectiveMarkdown

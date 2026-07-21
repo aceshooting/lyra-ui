@@ -55,7 +55,7 @@ export type TypingIndicatorSize = 'sm' | 'md';
  * @cssprop [--lr-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
  */
 export class LyraTypingIndicator extends LyraElement {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Which decorative presentation to render. */
   @property({ reflect: true }) variant: TypingIndicatorVariant = 'dots';
@@ -91,7 +91,7 @@ export class LyraTypingIndicator extends LyraElement {
     return this.localize('thinking', trimmed === '' || trimmed === 'Thinking…' ? undefined : trimmed);
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     this.setAttribute('role', 'status');
     const currentAriaLabel = this.getAttribute('aria-label');
     if (currentAriaLabel !== this.appliedAriaLabel) {
@@ -101,7 +101,7 @@ export class LyraTypingIndicator extends LyraElement {
     this.appliedAriaLabel = this.accessibleLabel;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <span part="base" aria-hidden="true">${this.renderShape()}</span>
       <span class="sr-only">${this.accessibleLabel}</span>

@@ -21,7 +21,7 @@ import { styles } from './result-field.styles.js';
  * content or the plain `value` prop text.
  */
 export class LyraResultField extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The field name, e.g. "Status". Leave unset to render a value with no label. */
   @property() label = '';
@@ -32,13 +32,13 @@ export class LyraResultField extends LyraElement {
 
   @state() private hasValueSlot = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasValueSlot = hasRealContent(Array.from(this.childNodes));
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     // Fallback reconciliation against the fully-resolved slot assignment,
     // the same belt-and-suspenders pass lr-source-card's hasFullSlot and
     // lr-empty's hasIcon/hasActions take -- a no-op in the common case
@@ -51,7 +51,7 @@ export class LyraResultField extends LyraElement {
     this.hasValueSlot = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasLabel = this.label.length > 0;
     return html`
       <div part="base">

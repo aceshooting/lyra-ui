@@ -48,7 +48,7 @@ export interface LyraWidgetRendererEventMap {
  * @csspart text - A built-in `text` node.
  */
 export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The declarative widget tree to render. `null` (the default) renders an empty base. */
   @property({ attribute: false }) tree: WidgetNode | null = null;
@@ -63,7 +63,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   private readonly elements = new Map<string, HTMLElement>();
   private readonly actionHandlers = new WeakMap<HTMLElement, ActionHandlerState>();
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated || changed.has('tree') || changed.has('registry')) {
       const registry = this.registry ?? getDefaultWidgetTypeRegistry();
       const next = resolveTree(this.tree, { registry, warned: this.warned });
@@ -76,7 +76,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     }
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     this.pruneElementCache();
   }
 
@@ -169,7 +169,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     </div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base">${this.resolved ? this.renderChildValue(this.resolved) : nothing}</div>`;
   }
 }

@@ -146,14 +146,14 @@ class LyraAvPlayerBase extends LyraElement<LyraAvPlayerEventMap> {}
  *   the shared warning token.
  */
 export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   // `playbackRate` is declared here (rather than via a plain `@property()` decorator, like the rest
   // of this class) with a hand-written accessor below -- mirrors lr-slider's identical
   // min/max/step pattern -- so an out-of-range/non-finite assignment self-heals synchronously
   // through `finiteRange` instead of leaving the native media element unsanitized until the next
   // `updated()` flush.
-  static properties = {
+  static override properties = {
     playbackRate: { type: Number, attribute: 'playback-rate', reflect: true, noAccessor: true },
   };
 
@@ -197,7 +197,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @property({ attribute: false }) tracks: LyraAvTrack[] = [];
 
   /** From `DocumentAnchorTarget` — only `time-range` anchors resolve here. */
-  readonly anchorKinds: readonly LyraAnchorKind[] = ['time-range'];
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['time-range'];
 
   @state() private duration = 0;
   @state() private currentTimeState = 0;
@@ -236,7 +236,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return this.mimeType.startsWith('audio/') ? 'audio' : 'video';
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('playbackRate')) {
       if (this.mediaEl) this.mediaEl.playbackRate = this.playbackRate;
@@ -245,7 +245,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (changed.has('peaks')) this.drawWaveform();
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Added here (not in firstUpdated) so it pairs symmetrically with disconnectedCallback's
     // removeEventListener: firstUpdated runs only once per element lifetime while
@@ -255,11 +255,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     window.addEventListener('resize', this.onWindowResize);
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.drawWaveform();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('resize', this.onWindowResize);
   }
@@ -527,7 +527,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('avPlayerLabel');
     const safeSrc = this.src ? safeMediaSrc(this.src) : null;
     const kind = this.detectedKind();

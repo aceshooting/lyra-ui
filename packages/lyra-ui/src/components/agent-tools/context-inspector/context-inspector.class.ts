@@ -128,7 +128,7 @@ function formatCount(n: number, locale: string): string {
  * @csspart empty - The empty state, shown when `segments` is empty.
  */
 export class LyraContextInspector extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn, ...). */
   @property({ attribute: false }) segments: ContextInspectorSegment[] = [];
@@ -220,7 +220,7 @@ export class LyraContextInspector extends LyraElement {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('contextInspectorLabel');
 
     if (this.segments.length === 0) {

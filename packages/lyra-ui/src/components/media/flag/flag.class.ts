@@ -125,7 +125,7 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * @cssprop --lr-flag-radius - Rectangular flag corner radius.
  */
 export class LyraFlag extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** ISO 3166-1 alpha-2 country code (e.g. `fr`, `us`). Takes precedence over `language`. */
   @property() country?: string;
@@ -258,12 +258,12 @@ export class LyraFlag extends LyraElement {
       });
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.loading) return html`<lr-skeleton variant="rect"></lr-skeleton>`;
     const url = this.src ?? this.resolvedSrc;
     if (!url) return html``;

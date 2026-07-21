@@ -143,9 +143,9 @@ export interface LyraSelectEventMap {
  */
 export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
@@ -273,12 +273,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return this.renderRoot?.querySelector('[part="trigger"]') ?? null;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     // `hasUpdated` flips to `true` before `updated()` even sees its first
@@ -393,7 +393,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return this.internals.reportValidity();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -489,7 +489,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     if (changed.has('open')) {
@@ -719,7 +719,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return out;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const options = this.options;
     const navigable = options.filter((o) => !o.disabled);
     const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;

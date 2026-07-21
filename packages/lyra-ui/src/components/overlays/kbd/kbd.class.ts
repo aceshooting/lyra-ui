@@ -190,7 +190,7 @@ const IS_MAC = detectIsMac();
  * @csspart key - Each rendered key cap (one per token in `keys`).
  */
 export class LyraKbd extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** A `+`-separated shortcut, e.g. `'mod+k'`. See the class doc for the
    *  full token grammar. */
@@ -203,7 +203,7 @@ export class LyraKbd extends LyraElement {
   // keys rendering for one frame before the first slotchange event.
   @state() private hasCustomContent = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasCustomContent = hasRealContent(this.childNodes);
     }
@@ -213,7 +213,7 @@ export class LyraKbd extends LyraElement {
     this.hasCustomContent = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const explicitLabel = this.getAttribute('aria-label');
 
     if (this.hasCustomContent) {

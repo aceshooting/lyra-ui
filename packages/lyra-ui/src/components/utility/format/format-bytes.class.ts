@@ -20,7 +20,7 @@ const MAX_DECIMALS = 10;
  * @slot - Fallback content when the value is not finite.
  */
 export class LyraFormatBytes extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Number }) value = 0;
   @property({ type: Number, attribute: 'unit-step' }) unitStep = DEFAULT_UNIT_STEP;
   @property({ type: Number }) decimals = DEFAULT_DECIMALS;
@@ -40,7 +40,7 @@ export class LyraFormatBytes extends LyraElement {
     return finiteInteger(this.decimals, DEFAULT_DECIMALS, 0, MAX_DECIMALS);
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // NaN/Infinity (a malformed attribute, or a missing value assigned programmatically) must
     // never reach Intl.NumberFormat: a NaN index would look up units[NaN] === undefined, and
     // Intl.NumberFormat throws when style: 'unit' is paired with an undefined unit.

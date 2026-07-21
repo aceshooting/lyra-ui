@@ -120,7 +120,7 @@ export interface LyraTraceTreeEventMap {
  *   stranded. See the pairing caveat on `--lr-trace-tree-row-active-bg`.
  */
 export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Flat span array. Hierarchy is derived from `parentId`; siblings order by `startMs`. */
   @property({ attribute: false }) spans: LyraSpan[] = [];
@@ -300,7 +300,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('activeSpanId') && this.activeSpanId) {
       this.focusedId = this.activeSpanId;
     }
@@ -332,7 +332,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('activeSpanId') && this.activeSpanId) {
       const row = this.renderRoot.querySelector(`[data-id="${CSS.escape(this.activeSpanId)}"]`) as HTMLElement | null;
       row?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
@@ -431,7 +431,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const rows = this.buildRows();
     return html`
       <div

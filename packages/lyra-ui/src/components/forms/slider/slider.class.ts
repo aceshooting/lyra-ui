@@ -72,13 +72,13 @@ class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
  * @csspart value - The visible numeric readout, rendered when `show-value` is true.
  */
 export class LyraSlider extends FormAssociated(LyraSliderBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   // These accessors sanitize the live value synchronously when a range
   // setting changes. Keeping the properties `noAccessor` prevents Lit's
   // default async field setter from leaving `.value`, `.valueAsNumber`, and
   // ElementInternals' form value disagreeing until the next update flush.
-  static properties = {
+  static override properties = {
     min: { type: Number, noAccessor: true },
     max: { type: Number, noAccessor: true },
     step: { type: Number, noAccessor: true },
@@ -158,7 +158,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   private dragTrackRect: DOMRect | null = null;
   private dragRtl = false;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.pendingValue !== undefined) {
       const pending = this.pendingValue;
@@ -169,7 +169,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     // Mirror lr-split/lr-time-range's cleanup: if the element is removed
     // mid-drag (or a pointercancel/alt-tab means pointerup never reaches
@@ -205,11 +205,11 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    * slider's native-range sanitization at the IDL boundary so invalid direct
    * assignments cannot briefly submit a literal `NaN`/`Infinity`.
    */
-  get value(): string {
+  override get value(): string {
     return super.value;
   }
 
-  set value(next: string) {
+  override set value(next: string) {
     const raw = next ?? '';
     if (!this.isConnected) {
       this.pendingValue = raw;
@@ -221,7 +221,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     super.value = String(sanitized);
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     super.formResetCallback();
     this.value = String(this.valueAsNumber);
   }
@@ -452,7 +452,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const num = this.valueAsNumber;
     const pct = this.percentOf(num);
     const text = this.formatValue(num);

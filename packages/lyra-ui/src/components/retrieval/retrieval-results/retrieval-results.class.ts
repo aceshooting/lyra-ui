@@ -165,7 +165,7 @@ function formatMetadataValue(value: unknown): string {
  *   styles file), so recoloring it carries no contrast risk for the row's own text.
  */
 export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The raw (not deduplicated/sorted/grouped) result set. Host-owned. */
   @property({ attribute: false }) chunks: RetrievalChunk[] = [];
@@ -339,7 +339,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label || this.localize('chunkInspectorLabel');
 
     if (this.error) {

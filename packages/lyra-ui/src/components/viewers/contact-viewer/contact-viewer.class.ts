@@ -28,7 +28,7 @@ export interface LyraContactViewerEventMap { 'lr-render-error': CustomEvent<{ er
  * @cssprop [--lr-contact-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  */
 export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
   /** Optional display name for the source document. Used as the accessible
@@ -41,7 +41,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
   @state() private fetchState: ContactFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -91,7 +91,7 @@ export class LyraContactViewer extends LyraElement<LyraContactViewerEventMap> {
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
+  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-contact-viewer': LyraContactViewer; } }

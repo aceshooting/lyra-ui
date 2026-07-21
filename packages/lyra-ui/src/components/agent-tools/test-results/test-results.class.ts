@@ -109,7 +109,7 @@ export interface LyraTestResultsEventMap {
  *   library-wide brand tokens, since `::part(filter-toggle)[aria-pressed]` is invalid CSS.
  */
 export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The suites to render, grouped in order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as a run streams in) to update it. */
@@ -141,7 +141,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
    *  has rendered (it may not exist yet on the very first update). */
   private pendingCompletionAnnouncement: string | null = null;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated || changed.has('suites')) {
       // Seed from light-DOM children up front, mirroring `<lr-widget>`'s `hasActionsSlot`
       // bootstrap: a `slotchange` event alone can't discover slotted detail content for a test
@@ -167,7 +167,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     }
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     if (this.pendingCompletionAnnouncement !== null) {
       const text = this.pendingCompletionAnnouncement;
       this.pendingCompletionAnnouncement = null;
@@ -304,7 +304,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ariaLabel = this.getAttribute('aria-label') || this.localize('testResultsLabel');
     return html`
       ${this.suites.length === 0

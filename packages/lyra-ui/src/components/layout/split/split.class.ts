@@ -160,7 +160,7 @@ export interface LyraSplitEventMap {
  * @cssprop [--lr-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
  */
 export class LyraSplit extends LyraElement<LyraSplitEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   // `collapseState` needs a custom accessor (force/auto semantics -- see the
   // class doc) rather than the usual @property()-generated one -- registered
@@ -172,7 +172,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   // spelled out (unlike `mode`, a single word whose Lit-default lowercase
   // form already reads fine) so the reflected attribute stays kebab-case,
   // matching this file's other attribute-reflected properties.
-  static properties = {
+  static override properties = {
     collapseState: { reflect: true, attribute: 'collapse-state', noAccessor: true },
   };
 
@@ -338,7 +338,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this.updateCollapseState(this.measuredInlineSize, true),
   );
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Seeds `measuredInlineSize` with a real reading of the host's own box, taken before the
     // very first render (and again on every reconnect) -- [part="base"] always spans the full
@@ -381,7 +381,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     // Clean up any remaining event listeners from an in-flight drag.
     this.drags.clear();
@@ -395,7 +395,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this.overlayHandle?.suspend();
   }
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     if (this.responsiveObservationEnabled) this.armCollapseObserver();
   }
 
@@ -414,7 +414,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  see `armCollapseObserver()`'s own doc comment for why *that* one is the
    *  documented exception instead (mirrors virtual-list.ts's
    *  `attachContainerListeners()`). */
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('sizes') || this.sizes.length === 0) this.ensureSizes();
     if (changed.has('orientationBreakpoint') || changed.has('orientationBreakpointBasis')) {
       this.orientationBreakpoints.configure(this.orientationBreakpoint, this.orientationBreakpointBasis);
@@ -1075,7 +1075,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     }
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (
       changed.has('collapse') ||
       changed.has('orientationBreakpoint') ||
@@ -1264,7 +1264,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const dividers: TemplateResult[] = [];
     const bounds = this.resolveConstraintBounds(this.getContainerSize()).bounds;
     for (let i = 0; i < this.panelCount - 1; i++) {

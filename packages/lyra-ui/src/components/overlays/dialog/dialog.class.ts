@@ -112,7 +112,7 @@ export interface LyraDialogEventMap {
  *   is not clipped by the 32rem default; the viewport (`100%`) is always a hard limit on top.
  */
 export class LyraDialog extends LyraElement<LyraDialogEventMap> {
-  static styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   /** Whether the dialog is open. Set this (or call `close()`) — there is no separate `show()`/`hide()` pair. */
   @property({ type: Boolean, reflect: true }) open = false;
@@ -152,7 +152,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private readonly srLabelId = nextId('dialog-label');
   private readonly headingId = nextId('dialog-heading');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
       this.detectHeading();
@@ -168,13 +168,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   // Runs after render so the manager can resolve the panel and its composed
   // focus targets, including controls projected through either slot.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
@@ -191,7 +191,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -282,7 +282,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     this.overlay = undefined;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // Priority order (see class doc): a host-level aria-label attribute always wins; only when
     // it's unset does a slotted heading get a turn; only when there isn't one of those either does
     // `heading` get a turn, then `label`'s sr-only fallback -- never more than one of the two below

@@ -31,7 +31,7 @@ function decimate<T>(arr: ReadonlyArray<T>, max: number): T[] {
  * @cssprop [--lr-sparkline-area-opacity=0.15] - Fill opacity of the area under the line (type="area").
  */
 export class LyraSparkline extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Accessible name forwarded to the internal SVG. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -106,7 +106,7 @@ export class LyraSparkline extends LyraElement {
     return this.localize('trendOf', undefined, { count: v.length, value: formattedLast });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const v = this.values;
     if (!v.length) {
       return html`<svg viewBox="0 0 ${VIEW} ${VIEW}" role="img" aria-label=${this.accessibleName()}></svg>`;

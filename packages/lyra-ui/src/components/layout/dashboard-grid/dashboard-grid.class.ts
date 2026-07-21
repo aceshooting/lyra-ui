@@ -138,7 +138,7 @@ export interface LyraDashboardGridEventMap {
  *   cell is a real focusable, draggable/resizable target). Set to `transparent` to opt out.
  */
 export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The grid's cells: position/size (grid units) + a widget descriptor per entry. Never mutated
    *  by this component -- every move/resize is an event the host applies (or ignores). */
@@ -183,7 +183,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private cellDrag?: CellDragState;
   private cellResize?: CellResizeState;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     // An in-flight drag/resize gesture holds window-level listeners; if the element is removed
     // mid-gesture nothing else ever detaches them, and a later unrelated pointerup would fire
@@ -200,7 +200,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     window.removeEventListener('lostpointercapture', this.onResizeHandlePointerUp);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (changed.has('layout')) this.syncDefaultCells();
   }
@@ -583,7 +583,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     </div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const cells = this.sortedLayout;
     const label = this.accessibleLabel || this.localize('dashboardGridLabel');
     if (cells.length === 0) {

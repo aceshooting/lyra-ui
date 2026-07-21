@@ -93,7 +93,7 @@ export interface LyraBrowserFrameEventMap {
  * @cssprop [--lr-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: 'frame-src' }) frameSrc = '';
   @property() url = '';
@@ -111,7 +111,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   private viewportResizeObserver?: ResizeObserver;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // The viewport observer is torn down on disconnect, and a reattached, already-rendered frame
     // <img> fires no new load event -- re-arm and re-measure here so the content rect keeps
@@ -122,7 +122,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.viewportResizeObserver?.disconnect();
     this.viewportResizeObserver = undefined;
@@ -171,7 +171,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.emit('lr-take-over', { controller: requested });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const safeSrc = safeMediaSrc(this.frameSrc);
     return html`
       <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || this.localize('browserFrameLabel')}>

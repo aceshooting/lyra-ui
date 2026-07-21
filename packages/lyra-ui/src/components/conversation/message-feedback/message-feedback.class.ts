@@ -101,7 +101,7 @@ function thumbIcon(direction: MessageFeedbackRating, filled: boolean): SVGTempla
  *   pressed thumbs-down button.
  */
 export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Current rating. Host-writable (e.g. to reflect a previously-recorded rating back). */
   @property({ reflect: true }) value: MessageFeedbackValue = null;
@@ -248,7 +248,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <div part="thumbs">${this.renderThumb('up')}${this.renderThumb('down')}</div>

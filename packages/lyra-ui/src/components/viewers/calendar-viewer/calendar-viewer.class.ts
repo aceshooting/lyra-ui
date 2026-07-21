@@ -38,7 +38,7 @@ function formatEventTime(start: Date | null, end: Date | null, locale: string): 
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
   /** Display name associated with the calendar. Used as the accessible name of `[part='base']`, falling back to a host `aria-label` and then the localized `calendarViewerLabel` default, matching the `csvViewerLabel`-style sibling document viewers. */
@@ -48,7 +48,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -101,7 +101,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
     }
   }
 
-  render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
+  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-calendar-viewer': LyraCalendarViewer; } }

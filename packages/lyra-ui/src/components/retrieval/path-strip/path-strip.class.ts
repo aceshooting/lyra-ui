@@ -34,7 +34,7 @@ export interface LyraPathStripEventMap {
  * @csspart empty - The empty-state message, shown when `path` is empty.
  */
 export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Rendered in array order; alternation is the intended shape but not enforced. */
   @property({ attribute: false }) path: LyraPathElement[] = [];
@@ -138,7 +138,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     </span>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.path.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
     }

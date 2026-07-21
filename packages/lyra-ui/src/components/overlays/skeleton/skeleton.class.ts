@@ -34,7 +34,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @cssprop [--lr-skeleton-h=var(--lr-size-1em)] - Block size of the placeholder.
  */
 export class LyraSkeleton extends LyraElement {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ reflect: true }) variant: SkeletonVariant = 'text';
   @property({ reflect: true }) effect: SkeletonEffect = 'pulse';
@@ -49,7 +49,7 @@ export class LyraSkeleton extends LyraElement {
    *  description of what is actually loading (e.g. "Loading chart"). */
   @property() label = 'Loading…';
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (this.announce) {
       this.setAttribute('role', 'status');
     } else {
@@ -57,7 +57,7 @@ export class LyraSkeleton extends LyraElement {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('width') || changed.has('height')) {
       if (this.width) {
         this.style.setProperty('--lr-skeleton-w', this.width);
@@ -72,7 +72,7 @@ export class LyraSkeleton extends LyraElement {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.localize('loading', this.label === 'Loading…' ? undefined : this.label);
     return html`<span part="base"
       >${this.announce ? html`<span class="sr-only">${label}</span>` : ''}</span

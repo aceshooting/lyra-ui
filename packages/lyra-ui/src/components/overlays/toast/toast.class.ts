@@ -44,7 +44,7 @@ export interface ToastCreateOptions {
  *   of a slotted item. Read by `<lr-toast-item>`, so set it on the item.
  */
 export class LyraToast extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Where the stack anchors on screen. */
   @property({ reflect: true }) placement: ToastPlacement = 'top-end';
@@ -67,7 +67,7 @@ export class LyraToast extends LyraElement {
     return item;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // Each toast item owns its own status/alert role. Keeping a live region on
     // the stack as well would nest assertive alerts inside a polite region and
     // can cause duplicate or out-of-order announcements.

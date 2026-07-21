@@ -90,10 +90,10 @@ export interface LyraSwitchEventMap {
  *   edges.
  */
 export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   static formAssociated = true;
 
-  static properties = {
+  static override properties = {
     checked: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
@@ -254,7 +254,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this[VALIDITY_ANCHOR]()?.blur();
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (!this._defaultCaptured) {
       this._defaultCaptured = true;
@@ -263,7 +263,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.updateValidity();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // A future mixin layered under LyraSwitch (e.g. a shared behavior applied the same way
     // FormAssociated is layered under lr-textarea) would otherwise silently never run its own
     // willUpdate() -- mirrors csv-viewer.ts's/docx-viewer.ts's identical super call.
@@ -366,7 +366,7 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
     this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const describedBy = [hasError ? 'switch-error' : '', hasHint ? 'switch-hint' : '']

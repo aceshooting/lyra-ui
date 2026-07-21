@@ -49,7 +49,7 @@ export interface LyraCommunityCardEventMap {
  * @csspart empty - The empty state shown when `community` is `null`.
  */
 export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the `noData` empty state. */
   @property({ attribute: false }) community: LyraCommunity | null = null;
@@ -77,7 +77,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     if (this.community) this.emit('lr-drill', { id: this.community.id });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (!this.community) {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }

@@ -119,7 +119,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @csspart detail-card - The default-content `lr-entity-card`, only present while `selectedNodeId` resolves to a node.
  */
 export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphExplorerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ attribute: false }) nodes: GraphNode[] = [];
   @property({ attribute: false }) links: GraphLink[] = [];
@@ -174,7 +174,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  popover keeps tracking a pan/zoom gesture or simulation tick while it stays open. */
   private trackedNodeEl?: Element;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
     // dangling selection/popover pointed at nothing.
@@ -396,7 +396,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     this.selectedNodeId = null;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('graphExplorerLabel');
     const matches = this.matchingNodes();
     const selectedEntity = this.selectedNodeId ? (this.entityFor(this.selectedNodeId) ?? null) : null;

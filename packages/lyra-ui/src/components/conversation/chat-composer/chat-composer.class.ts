@@ -157,7 +157,7 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @cssprop [--lr-chat-composer-busy-bg=var(--lr-color-text-quiet)] - `action-button` background while `status` is `"sending"` or `"streaming"`. Scoped separately from the shared `--lr-color-text-quiet` token, which the `textarea` part's placeholder also reads -- overriding this recolors only the busy button, not the placeholder text too.
  */
 export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property() placeholder = '';
   @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
@@ -200,10 +200,10 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  a `.spellcheck` property binding can still turn this off with `spellcheck="false"`; a Lit
    *  template can do the same with either that attribute string or a `.spellcheck=${false}`
    *  property binding. */
-  @property({ converter: trueDefaultBooleanConverter }) spellcheck = true;
+  @property({ converter: trueDefaultBooleanConverter }) override spellcheck = true;
   /** Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
   /** Forwarded to the internal `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty
    *  string omits the attribute (browser default).
    *
@@ -217,8 +217,8 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   /** Native editing-assistance attributes forwarded to the internal textarea. */
   @property() wrap: ChatComposerWrap = 'soft';
   @property() autocomplete = '';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
   @state() private hasLeadingSlot = false;
   @state() private hasChipsSlot = false;
@@ -314,7 +314,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.resizeTextarea();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLeadingSlot = this.hasSlotted('leading');
@@ -323,13 +323,13 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     }
   }
 
-  protected firstUpdated(changed: PropertyValues): void {
+  protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     this.resizeTextarea();
     this.armTextareaResizeObserver();
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-drop reparent, a repeat() re-key, or a tab
     // panel detaching and reattaching its content) leaves
@@ -346,7 +346,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.textareaResizeObserver?.disconnect();
     this.textareaResizeObserver = undefined;
@@ -354,14 +354,14 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.textareaResizeRaf = undefined;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('value') || changed.has('minRows') || changed.has('maxRows')) {
       this.resizeTextarea();
     }
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
   }
@@ -531,7 +531,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <div part="chips" ?hidden=${!this.hasChipsSlot}>

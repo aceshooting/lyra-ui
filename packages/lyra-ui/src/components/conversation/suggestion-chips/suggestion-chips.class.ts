@@ -35,7 +35,7 @@ export interface LyraSuggestionChipsEventMap {
  * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
  */
 export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The suggestions to render, in order. Empty renders nothing at all. */
   @property({ attribute: false }) suggestions: ChatSuggestion[] = [];
@@ -48,7 +48,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
 
   @state() private activeIndex = 0;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('suggestions')) {
       this.activeIndex = Math.min(this.activeIndex, Math.max(0, this.suggestions.length - 1));
     }
@@ -101,7 +101,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.suggestions.length === 0) return html``;
     const label = this.label || this.localize('suggestionsLabel');
     const ariaLabel = this.getAttribute('aria-label') || label;

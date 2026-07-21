@@ -43,10 +43,10 @@ export interface LyraRadioEventMap {
  * from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.
  */
 export class LyraRadio extends LyraElement<LyraRadioEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   static formAssociated = true;
 
-  static properties = {
+  static override properties = {
     checked: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
@@ -162,7 +162,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     return this.renderRoot?.querySelector('[part="base"]') ?? null;
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.hasLabel = Array.from(this.childNodes).some((node) => (node.textContent ?? '').trim().length > 0);
     if (!this._defaultCaptured) {
@@ -254,7 +254,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       .some((node) => (node.textContent ?? '').trim().length > 0);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <span part="base" role="radio" tabindex=${this.effectiveDisabled || !this._tabbable ? '-1' : '0'}
         aria-checked=${this.checked ? 'true' : 'false'}

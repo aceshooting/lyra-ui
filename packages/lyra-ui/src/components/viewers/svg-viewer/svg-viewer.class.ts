@@ -47,7 +47,7 @@ export interface LyraSvgViewerEventMap {
  *   resting highlight border, so the active region can be recolored without touching the rest.
  */
 export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as sanitized inline SVG. */
   @property() src = '';
@@ -71,7 +71,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   @state() private fetchState: SvgFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -187,7 +187,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     return true;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base" style=${this.maxHeight ? `--lr-svg-viewer-max-height:${this.maxHeight}` : nothing}>
       <div part="body">${this.renderBody()}</div>
     </div>`;

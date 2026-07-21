@@ -84,7 +84,7 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * @csspart announcer - The visually-hidden `role="status"` region search results announce through.
  */
 export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL fetched as an ArrayBuffer and rendered as an EPUB. */
   @property() src = '';
@@ -102,7 +102,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   /** Anchor kinds this viewer resolves: `cfi` displays directly via `rendition.display()`;
    *  `text-quote` resolves by scanning the book's spine with epub.js's own `item.find()`. */
-  readonly anchorKinds = ['cfi', 'text-quote'] as const;
+  override readonly anchorKinds = ['cfi', 'text-quote'] as const;
 
   @state() private ebookState: EbookState = { kind: 'idle' };
   @state() private searchMatches: EbookSearchMatch[] = [];
@@ -124,7 +124,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private searchAnnotationCfi?: string;
   private readonly announcer = new Announcer({ onFlush: (text) => this.announceViaLiveRegion(text) });
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed); // reaches DocumentAnchorTarget's own cleanup/live-region wiring
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('location')) {
@@ -137,7 +137,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent, a tab/panel re-hosting its
     // children, a virtualized list moving this same element instance) fires
@@ -150,7 +150,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     if (this.hasUpdated && this.src.trim()) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.generation++;
     this.teardown();
     // Reset rather than leaving a stale "ready" state: without this, a
@@ -450,7 +450,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     return nothing;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const disabled = this.ebookState.kind !== 'ready';
     return html`
       <div part="base">

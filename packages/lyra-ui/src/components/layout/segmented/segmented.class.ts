@@ -66,7 +66,7 @@ export interface LyraSegmentedEventMap {
  *   `size`; this default applies at the unset/`m` size.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The button row's items. */
   @property({ attribute: false }) items: SegmentedItem[] = [];
@@ -131,7 +131,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.focusItem(target.value);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no

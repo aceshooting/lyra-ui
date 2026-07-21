@@ -121,9 +121,9 @@ export interface LyraVoicePickerEventMap {
  */
 export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { noAccessor: true },
@@ -142,12 +142,12 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
-  @property({ converter: spellcheckConverter }) spellcheck = true;
-  @property() autocapitalize = '';
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
+  @property() override autocapitalize = '';
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
   @property() autocomplete = 'off';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   @property({ type: Boolean, reflect: true }) open = false;
 
   @state() private activeIndex = -1;
@@ -219,19 +219,19 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     (this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -240,7 +240,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.open = false;
   }
 
-  attributeChangedCallback(name: string, old: string | null, val: string | null): void {
+  override attributeChangedCallback(name: string, old: string | null, val: string | null): void {
     super.attributeChangedCallback(name, old, val);
     if (name === 'value') this._defaultValue = this._value;
   }
@@ -380,7 +380,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (!e.composedPath().includes(this)) this.hide();
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
       this.cleanup?.();
@@ -835,7 +835,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return this.closedMode ? this.renderClosed() : this.renderFreeText();
   }
 }

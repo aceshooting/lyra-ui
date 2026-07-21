@@ -84,7 +84,7 @@ export interface LyraChatViewportEventMap {
  * @csspart unread-divider - The "New messages" separator (slotted mode only).
  */
 export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Component-managed stick-to-bottom state, host-writable. Setting `true` scrolls to the end and
    *  re-engages following; setting `false` releases it. Uses {@link trueDefaultBooleanConverter}
@@ -159,12 +159,12 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     return this.unreadStartIndex == null ? null : finiteCount(this.unreadStartIndex);
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated) this.armObservers();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.teardownObservers();
     // Safety net for a drag still in progress (pointerdown fired, no matching pointerup/
@@ -177,11 +177,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.cancelPendingUserIntentExpiry();
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.armObservers();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const wasMounting = this.isMounting;
     this.isMounting = false;
@@ -521,7 +521,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('chatViewportLabel');
     // Virtual mode's own layout rules key off this marker rather than `:host(:has(> lr-virtual-list))`:
     // `:has()` is not supported inside `:host()` (Chromium reports

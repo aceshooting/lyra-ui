@@ -33,7 +33,7 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart live-region - The step-transition announcement.
  */
 export class LyraFlowRunOverlay extends LyraElement {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() for = '';
   @property({ attribute: false }) decorations: FlowRunDecorations = {};
@@ -53,13 +53,13 @@ export class LyraFlowRunOverlay extends LyraElement {
    *  else wrote a different value since" by identity, not deep equality. */
   private lastWrittenDecorations: FlowRunDecorations | null = null;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.canvasEl = this.resolveCanvas() ?? undefined;
     this.applyDecorations();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this.canvasEl && this.canvasEl.decorations === this.lastWrittenDecorations) {
       this.canvasEl.decorations = null;
@@ -79,13 +79,13 @@ export class LyraFlowRunOverlay extends LyraElement {
   // `willUpdate()` -- makes the announcement visible in the exact `render()` pass `updateComplete`
   // is already waiting on, with no extra cycle and no dev-mode "scheduled an update after an
   // update completed" warning.
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('decorations')) {
       this.announceTransitions(changed.get('decorations') as FlowRunDecorations | undefined);
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('decorations')) {
       this.applyDecorations();
     }
@@ -166,7 +166,7 @@ export class LyraFlowRunOverlay extends LyraElement {
     return { done, total, counts };
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.label || this.localize('flowRunOverlayLabel');
     const ariaLabel = this.getAttribute('aria-label') || label;
     const { done, total, counts } = this.summary();

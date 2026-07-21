@@ -49,7 +49,7 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  *   running-state ring around the card, and the pulse keyframes' peak color.
  */
 export class LyraFlowNode extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: 'node-id' }) nodeId = '';
   @property() heading = '';
@@ -71,7 +71,7 @@ export class LyraFlowNode extends LyraElement {
 
   @state() private hasHeaderSlot = false;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
     }
@@ -129,7 +129,7 @@ export class LyraFlowNode extends LyraElement {
     ></span>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const clampedProgress = this.safeProgress;
     return html`<div part="base">
       <div class="handles handles-input">${this.inputs.map((h) => this.handleTemplate('input', h))}</div>

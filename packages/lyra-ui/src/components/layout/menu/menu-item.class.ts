@@ -99,7 +99,7 @@ export interface LyraMenuItemEventMap {
  * @csspart checkmark - The checkmark glyph shown when a `type="checkbox"` item is `checked`. Not rendered at all for `type="normal"`.
  */
 export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** An id/value the parent `<lr-menu>`'s `lr-menu-select` detail keys off of. */
   @property() value = '';
@@ -121,7 +121,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   // own comment on that part. Same fix as lr-tool-call-chip's hasDetailSlot.
   @state() private hasIconSlot = false;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A safe, focusable-but-out-of-tab-order baseline before <lr-menu> ever
     // gets a chance to assign roving-tabindex state (e.g. a standalone
@@ -131,7 +131,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     if (this.tabIndex !== 0) this.tabIndex = -1;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // role/aria-disabled/aria-checked live on the host (see the class doc),
     // so they're plain imperative attribute writes here rather than part of
     // render()'s shadow-DOM template -- mirrors lr-tree-node's identical
@@ -184,7 +184,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
     this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <span part="base" @click=${() => this.select()}>
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>

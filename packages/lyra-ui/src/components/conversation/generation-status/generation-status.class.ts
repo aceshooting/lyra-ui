@@ -184,7 +184,7 @@ export interface LyraGenerationStatusEventMap {
  * @csspart stop-button - The built-in Stop button. Only rendered while `show-stop` is true.
  */
 export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether generation is currently in progress. The elapsed-time ticker
    *  runs only while this is `true` (see the class doc). */
@@ -232,7 +232,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // `active` (still `true`) says generation is ongoing. Restarting from
   // `computeElapsedMs()` (rather than resuming a stale in-flight interval)
   // matches how `startTicker()` already re-baselines on every fresh start.
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     if (this.active) {
       this.elapsedMs = this.computeElapsedMs();
@@ -240,7 +240,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.stopTicker();
   }
@@ -261,7 +261,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // arm its stall timer on a `phase="streaming"` mount, so mounting this
   // component already active correctly seeds `elapsedMs` with no separate
   // first-update special case needed.
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('active') && this.active) {
       if (this.validStartedAt == null) this.fallbackStartMs = Date.now();
       this.elapsedMs = this.computeElapsedMs();
@@ -276,7 +276,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
   // Starting/stopping the interval is a genuine side effect (not a reactive-
   // property write), so it belongs in `updated()`, unlike the `elapsedMs`
   // computation above.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('active')) {
       if (this.active) this.startTicker();
       else this.stopTicker();
@@ -350,7 +350,7 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
     this.emit('lr-stop');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const validTokenCount = this.validTokenCount;
     const hasTokens = validTokenCount !== undefined;
     const throughput = this.effectiveTokensPerSecond;

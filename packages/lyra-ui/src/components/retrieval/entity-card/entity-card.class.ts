@@ -102,7 +102,7 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  *   while `compact`.
  */
 export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the shared `lr-empty` `noData` state. */
   @property({ attribute: false }) entity: LyraEntity | null = null;
@@ -133,7 +133,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     if (this.entity) this.emit('lr-entity-activate', { id: this.entity.id });
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (!this.entity) {
       return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }

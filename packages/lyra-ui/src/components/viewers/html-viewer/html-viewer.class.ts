@@ -32,7 +32,7 @@ export interface LyraHtmlViewerEventMap {
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
 export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as sanitized inline HTML. */
   @property() src = '';
@@ -44,7 +44,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   @state() private fetchState: HtmlFetchState = { kind: 'idle' };
   private generation = 0;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
@@ -80,7 +80,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
     }
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<div part="base" style=${this.maxHeight ? `--lr-html-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div></div>`;
   }
 }

@@ -77,7 +77,7 @@ export interface LyraIncludeEventMap {
  * @csspart base - The non-layout (`display: contents`) wrapper around the default slot.
  */
 export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /**
    * URL of the HTML fragment to fetch, validated through the shared
@@ -100,7 +100,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
 
   private generation = 0;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src') || changed.has('mode')) {
       this.scheduleAfterUpdate(() => { void this.load(); });
@@ -154,7 +154,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
     this.emit('lr-include-error', { status, reason, error });
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<span part="base"><slot></slot></span>`;
   }
 }

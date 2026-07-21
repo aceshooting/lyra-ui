@@ -176,7 +176,7 @@ function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'
  * @cssprop [--lr-animation-shake-distance=4%] - Horizontal travel of the shake preset.
  */
 export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property() name: LyraAnimationPreset = 'none';
   @property({ attribute: false }) keyframes: Keyframe[] | undefined = undefined;
@@ -247,7 +247,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     return finiteNumber(this.playbackRate, 1);
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.motionQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.motionQuery?.addEventListener('change', this.onMotionPreferenceChange);
@@ -257,7 +257,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     });
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.destroyAnimation();
     this.visibilityObserver?.disconnect();
     this.visibilityObserver = undefined;
@@ -271,7 +271,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   // than routing through scheduleAfterUpdate.
   private onMotionPreferenceChange = (): void => this.createAnimation();
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     const rebuildKeys = [
       'name',
       'keyframes',
@@ -459,7 +459,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     this.animation?.finish();
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<slot @slotchange=${this.onSlotChange}></slot>`;
   }
 }

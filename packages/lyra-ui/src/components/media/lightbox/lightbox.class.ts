@@ -148,7 +148,7 @@ export interface LyraLightboxEventMap {
  * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
  */
 export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
-  static styles = [LyraElement.styles, srOnly, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   /** Whether the lightbox is open. Set this (or call `close()`) -- there is no separate
    *  `show()`/`hide()` pair, exactly mirrors `<lr-dialog>`. */
@@ -253,7 +253,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         : this.localize('lightboxImagePosition', undefined, { index: this.currentIndex() + 1, total: count });
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
@@ -281,7 +281,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   // Runs after render so the manager can resolve the panel and its composed focus targets, and
   // so [part="panel"]/the embedded frame have already landed in the DOM.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
@@ -293,7 +293,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
     // disconnectedCallback then connectedCallback synchronously with no update in between, so
@@ -309,7 +309,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -386,7 +386,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const count = this.images.length;
     const current = this.currentIndex();
     const image = count > 0 ? this.images[current] : undefined;

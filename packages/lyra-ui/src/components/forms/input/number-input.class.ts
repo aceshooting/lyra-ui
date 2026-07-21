@@ -11,7 +11,7 @@ export class LyraNumberInput extends LyraInput {
     super();
     this.type = 'number';
   }
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.type = 'number';
   }

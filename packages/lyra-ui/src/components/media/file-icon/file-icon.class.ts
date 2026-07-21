@@ -34,7 +34,7 @@ export type LyraFileIconVariant = 'icon' | 'label';
  * @cssprop [--lr-file-icon-size=var(--lr-size-2rem)] - Inline/block size of the format badge.
  */
 export class LyraFileIcon extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** MIME type used to resolve metadata. Also exposed as a `title` tooltip on the badge. */
   @property({ attribute: 'mime-type' }) mimeType = '';
@@ -49,7 +49,7 @@ export class LyraFileIcon extends LyraElement {
   /** Optional visible/accessibility label override. */
   @property() label = '';
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const metadata = getFileTypeMetadata(this.mimeType, this.name);
     const localizedLabel = this.label || this.localize(ICON_LABELS[metadata.icon]);
     // A NaN/negative `size` (e.g. an invalid `size` attribute) would otherwise make `size > 0`

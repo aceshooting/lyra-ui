@@ -70,7 +70,7 @@ const NESTED_CONTROL_SELECTOR = [
  * focusable), so a card can keep its own action buttons.
  */
 export class LyraCard extends LyraElement<LyraCardEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
    *  is a bordered surface -- the common "small bordered surface with padding" idiom. */
@@ -93,7 +93,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @state() private hasFooterSlot = false;
   @state() private hasActionsSlot = false;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasMediaSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'media');
@@ -148,7 +148,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     this.emit('lr-card-activate');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHeader = this.hasHeaderSlot || this.hasActionsSlot;
     const body = html`
       <div part="media" ?hidden=${!this.hasMediaSlot}>

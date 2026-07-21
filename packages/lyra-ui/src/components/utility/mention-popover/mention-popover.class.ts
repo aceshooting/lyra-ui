@@ -245,7 +245,7 @@ export interface LyraMentionPopoverEventMap {
  *   hovered or `[data-active]` (keyboard-highlighted) suggestion row.
  */
 export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The element to position the popup relative to. When this is a plain
    *  `<textarea>`/single-line text `<input>`, positioning is caret-precise
@@ -297,7 +297,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // apart from every other close and skip the event for that one case.
   private _suppressCloseEvent = false;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     this._isFirstUpdate = !this.hasUpdated;
     // A fresh query or candidate set re-highlights the top match, mirroring
     // how a filtering text field's own suggestion list re-anchors to the
@@ -306,7 +306,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (changed.has('query') || changed.has('items')) this.activeIndex = 0;
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open')) {
       if (this.open) {
         this.reposition();
@@ -336,7 +336,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -522,7 +522,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const rows = this.filteredItems;
     const idx = this.clampedIndex(rows);
     const activeId = idx >= 0 ? this.rowId(idx) : '';

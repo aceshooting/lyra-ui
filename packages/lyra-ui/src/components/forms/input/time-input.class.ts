@@ -27,16 +27,16 @@ export class LyraTimeInput extends LyraInput {
    *  whose own constraint validation reports `rangeUnderflow`. Defaults to `undefined` (no lower
    *  bound). Unlike `<lr-input type="number">`'s numeric `min`, the attribute form is *not*
    *  parsed as a number. */
-  @property({ converter: timeBoundConverter }) min?: string | number;
+  @property({ converter: timeBoundConverter }) override min?: string | number;
   /** Latest selectable time, in the same form as `min`, reported by the native input as
    *  `rangeOverflow`. Defaults to `undefined` (no upper bound). */
-  @property({ converter: timeBoundConverter }) max?: string | number;
+  @property({ converter: timeBoundConverter }) override max?: string | number;
 
   constructor() {
     super();
     this.type = 'time';
   }
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.type = 'time';
   }

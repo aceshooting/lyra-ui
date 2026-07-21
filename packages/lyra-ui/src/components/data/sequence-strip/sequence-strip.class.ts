@@ -51,7 +51,7 @@ export interface SequenceStripCategory {
  * @cssprop [--lr-sequence-strip-legend-marker-bg=var(--lr-color-surface-raised)] - Neutral chip background behind the marker legend row's bar; it stands in for "any cell", so it deliberately matches no category color.
  */
 export class LyraSequenceStrip extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) items: SequenceStripItem[] = [];
   @property({ attribute: false }) categories: SequenceStripCategory[] = [];
@@ -145,7 +145,7 @@ export class LyraSequenceStrip extends LyraElement {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const ariaLabel = this.accessibleLabel || this.autoSummary();
     const hovered = this.hoverIndex !== null ? this.items[this.hoverIndex] : undefined;
     return html`

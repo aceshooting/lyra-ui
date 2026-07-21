@@ -28,7 +28,7 @@ import { styles } from './app-rail-item.styles.js';
  *   `active`/`aria-current="page"` item.
  */
 export class LyraAppRailItem extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Optional destination. Without `href`, the item renders as a button. */
   @property() href = '';
@@ -82,7 +82,7 @@ export class LyraAppRailItem extends LyraElement {
     this.showTooltip = false;
   };
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('showTooltip')) {
       this.stopPositioning?.();
       this.stopPositioning = undefined;
@@ -99,12 +99,12 @@ export class LyraAppRailItem extends LyraElement {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.stopPositioning?.();
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.getAttribute('aria-label');
     const href = safeLinkHref(this.href);
     const content = html`

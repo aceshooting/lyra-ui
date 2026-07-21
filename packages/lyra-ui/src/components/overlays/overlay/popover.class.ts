@@ -34,7 +34,7 @@ export interface LyraPopoverEventMap {
  * @cssprop --lr-overlay-max-inline-size - Maximum inline size of the popup (default `--lr-size-20rem`).
  */
 export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ reflect: true }) placement: Placement = 'bottom-start';
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately
@@ -59,7 +59,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private readonly popupId = nextId('popover');
   private firstUpdate = true;
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') || changed.has('placement') || changed.has('distance')) {
       this.cleanup?.();
       this.cleanup = undefined;
@@ -92,7 +92,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     }
     this.firstUpdate = false;
   }
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
@@ -108,7 +108,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
       this.position();
     }
   }
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.cleanup?.();
     this.cleanup = undefined;
     document.removeEventListener('pointerdown', this.onDocumentPointer);
@@ -191,7 +191,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private onDocumentPointer = (event: PointerEvent): void => {
     if (!event.composedPath().includes(this)) this.open = false;
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     // The accessible-name fallback follows the popup's actual semantic role --
     // a `popupRole="menu"` popup (e.g. <lr-dropdown>) is announced as a menu,
     // not as a generic "Popover", so its translation is looked up under the

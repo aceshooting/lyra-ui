@@ -60,7 +60,7 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @cssprop [--lr-textarea-max-block-size=none] - Maximum auto-grown block size before the textarea scrolls.
  */
 export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Visible text rows. */
   // numeric-guard-exempt: forwarded only to the native <textarea rows> attribute (see the
@@ -80,10 +80,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   /** Forwarded to the native `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
    *  native element's own default. */
-  @property({ converter: spellcheckConverter }) spellcheck = true;
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
   /** Forwarded to the native `<textarea>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
-  @property() autocapitalize = '';
+  @property() override autocapitalize = '';
   /** Forwarded to the native `<textarea>`'s own `autocorrect` (Safari/WebKit-specific). Empty
    *  string omits the attribute (browser default). */
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
@@ -92,8 +92,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   /** Native editing-assistance attributes forwarded to the wrapped textarea. Empty strings omit
    *  the corresponding attribute and retain the browser default. */
   @property() autocomplete = '';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -175,7 +175,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.fitToContent();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     // A future mixin layered under LyraTextarea (beyond FormAssociated, which defines no
     // willUpdate of its own today) would otherwise silently never run -- mirrors this same file's
     // updated() override, which already calls super.updated(changed) for the identical reason.
@@ -187,7 +187,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-drop reparent, a repeat() re-key, or a tab panel detaching and
     // reattaching its content) leaves resizeObserver undefined from disconnectedCallback's own
@@ -200,7 +200,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     if (this.resizeRaf !== undefined) cancelAnimationFrame(this.resizeRaf);
@@ -208,7 +208,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     super.disconnectedCallback();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('resize')) {
       if (this.resize === 'auto') {
@@ -228,7 +228,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     }
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
   }
@@ -311,7 +311,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;

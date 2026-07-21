@@ -187,7 +187,7 @@ export interface LyraAttachmentChipEventMap {
  * while `compact`.
  */
 export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** A real `File`, e.g. fresh from `<lr-file-input>`'s `lr-files` event.
    *  When set, `name`/`size`/`mime-type`/the image thumbnail are all derived
@@ -328,7 +328,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     this.objectUrlFile = undefined;
   }
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     // Prepare or revoke the non-reactive cache before render. This keeps URL
     // allocation out of the render phase and also handles a file changing to
     // a non-image or to undefined, where no thumbnail render would otherwise
@@ -337,7 +337,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     else if (this.objectUrlFile) this.revokeObjectUrl();
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.revokeObjectUrl();
   }
@@ -378,7 +378,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     return this.thumbnailSrc ? html`<img src=${this.thumbnailSrc} alt="" />` : html`${fileIcon()}`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const name = this.effectiveName;
     // Only routed through `this.localize()` when left at its hardcoded
     // default -- an explicit `untitled-label` override always wins verbatim,

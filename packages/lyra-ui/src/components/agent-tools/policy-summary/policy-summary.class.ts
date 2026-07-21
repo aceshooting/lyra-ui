@@ -105,7 +105,7 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  *   status tokens, since `::part(count)[data-state]` is invalid CSS.
  */
 export class LyraPolicySummary extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The decisions to render, in the given order. Controlled and never mutated by this component
    *  -- pass a new array to update it. */
@@ -134,7 +134,7 @@ export class LyraPolicySummary extends LyraElement {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.decisions.length === 0) {
       return html`<lr-empty part="empty" heading=${this.localize('noData')}></lr-empty>`;
     }

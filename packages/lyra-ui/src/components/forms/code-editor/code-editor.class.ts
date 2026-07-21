@@ -53,7 +53,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.
  */
 export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property() language = '';
   @property({ converter: trueDefaultBooleanConverter, reflect: true, attribute: 'line-numbers' }) lineNumbers = true;
 
@@ -98,8 +98,8 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both';
   @property({ attribute: 'wrap' }) wrap: 'off' | 'soft' | 'hard' = 'off';
-  @property({ converter: { fromAttribute: (value: string | null) => value !== 'false', toAttribute: (value: boolean) => value ? 'true' : 'false' } }) spellcheck = false;
-  @property() autocapitalize = 'off';
+  @property({ converter: { fromAttribute: (value: string | null) => value !== 'false', toAttribute: (value: boolean) => value ? 'true' : 'false' } }) override spellcheck = false;
+  @property() override autocapitalize = 'off';
   @property({ attribute: 'autocorrect' }) autoCorrect = 'off';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
   @state() private touched = false;
@@ -143,7 +143,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   private onLabelSlotChange = (e: Event): void => { this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onHintSlotChange = (e: Event): void => { this.hasHintSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
   private onErrorSlotChange = (e: Event): void => { this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0; };
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'label');
@@ -151,14 +151,14 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
     }
   }
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (this.textarea && this.textarea.value !== this.value) this.textarea.value = this.value;
     if (changed.has('touched') || changed.has('required') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
   }
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const lineCount = Math.max(1, this.value.split('\n').length);
     // Write the token, not `tab-size` itself: the stylesheet's `tab-size: var(--lr-code-editor-tab-size)`
     // resolves it, so an untouched `tabSize` leaves a host-level override of that token in charge

@@ -77,7 +77,7 @@ export interface LyraFileInputEventMap {
  * Background of `[part="base"][data-drag-state="reject"]`.
  */
 export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property({ type: Boolean, reflect: true }) multiple = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -284,7 +284,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     );
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.effectiveLabel;
     const accessibleLabel = this.accessibleLabel || label;
     return html`

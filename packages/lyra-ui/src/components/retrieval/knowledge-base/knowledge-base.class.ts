@@ -172,7 +172,7 @@ function normalizeTimestamp(value: Date | string | undefined): Date | undefined 
  * @csspart actions-trigger - The kebab `<button>` opening a row's action menu.
  */
 export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The sources to list, in display order. */
   @property({ attribute: false }) sources: KnowledgeSource[] = [];
@@ -379,7 +379,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const heading = this.label || this.localize('knowledgeBaseHeading');
     const accessibleHeading = this.getAttribute('aria-label') || heading;
     return html`

@@ -120,7 +120,7 @@ export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint:
  *   `variant="bottom-sheet"` overlay panel (falls back to `85vh` where `dvh` is unsupported).
  */
 export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Whether the panel is open. In the inline presentation this just means visible/mounted; in
    *  the overlay presentation this is the actual modal open/closed state. */
@@ -170,7 +170,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private focusOverlayAfterUpdate = false;
   private isFirstUpdate = true;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.isFirstUpdate = !this.hasUpdated;
     if (this.isFirstUpdate) {
@@ -233,7 +233,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // Runs after render (not willUpdate) so [part="panel"] has already landed
   // in the DOM before the fallback .focus() call below can rely on it --
   // mirrors lr-dialog's identical ordering rationale.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.isFirstUpdate && changed.has('effectiveMode')) {
       this.emit<ResponsivePanelModeChangeDetail>('lr-mode-change', { mode: this.effectiveMode });
@@ -244,7 +244,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.setupMediaQuery();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
@@ -263,7 +263,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.mediaQuery?.removeEventListener('change', this.onMediaChange);
     this.mediaQuery = undefined;
@@ -364,7 +364,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     this.overlayHandle?.dismissBackdrop();
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const overlay = this.effectiveMode === 'overlay';
     const accessibleName = this.accessibleLabel ?? (this.label || this.headingText);
     return html`

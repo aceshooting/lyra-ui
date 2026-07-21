@@ -88,7 +88,7 @@ export interface LyraFileTreeEventMap {
  * @csspart base - The root wrapper.
  */
 export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) nodes: FileTreeNode[] = [];
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
@@ -96,7 +96,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
 
   private nodesByPath = new Map<string, FileTreeNode>();
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('nodes')) {
       this.nodesByPath = new Map();
       const index = (list: FileTreeNode[]) => {
@@ -234,7 +234,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     (this.renderRoot.querySelector(tag('tree')) as LyraTree | null)?.collapseAll();
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base">
         <lr-tree

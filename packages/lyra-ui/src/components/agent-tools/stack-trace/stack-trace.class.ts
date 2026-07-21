@@ -61,7 +61,7 @@ export interface LyraStackTraceEventMap {
  *   verbatim raw fallback.
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The raw stack trace text to parse and render. */
   @property() trace = '';
@@ -94,12 +94,12 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('trace') || changed.has('internalPatterns')) {
       this.groups = parseStackTrace(this.trace, this.internalPatterns);
       this.expandedGroups = new Set();
@@ -184,7 +184,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     return html`<div part="group">${rendered}</div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div
         part="base"

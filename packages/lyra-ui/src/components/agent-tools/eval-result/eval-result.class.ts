@@ -80,7 +80,7 @@ export interface LyraEvalResultEventMap {
  * @csspart diff-view - The `<lr-diff-view>` comparing the baseline and selected runs' output.
  */
 export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The runs (one per model or prompt version) being compared for this evaluation example. */
   @property({ attribute: false }) runs: EvalRunResult[] = EMPTY_RUNS;
@@ -159,7 +159,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
     </div>`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (this.runs.length === 0) {
       return html`<div part="base"><p part="empty">${this.localize('noData')}</p></div>`;
     }

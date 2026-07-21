@@ -123,7 +123,7 @@ export interface LyraNotebookViewerEventMap {
  *   `[part="cell"]` currently targeted by an anchor.
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
-  static styles = [LyraElement.styles, styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and parse as a notebook. Ignored once `notebook` is set. */
   @property() src = '';
@@ -155,7 +155,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
-  readonly anchorKinds: readonly LyraAnchorKind[] = ['node-path', 'fragment'];
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['node-path', 'fragment'];
 
   @state() private loadState: NotebookState = { kind: 'idle' };
   @state() private expandedOutputs = new Set<number>();
@@ -174,7 +174,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     return finiteCount(this.outputCollapseLines, 40);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src') && !this._notebook) this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
   }
@@ -459,7 +459,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       : '';
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('notebookViewerLabel');
     return html`<div
       part="base"

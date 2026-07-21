@@ -169,9 +169,9 @@ function isSet(value: FilterBarFieldValue): boolean {
  * @csspart chip - One active-filter `<lr-chip>`.
  */
 export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     filters: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
   };
@@ -387,7 +387,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
   /** Every `'text'` filter's debounce dies with the element. Without this a detached filter bar
    *  would still fire its timer and emit `lr-input` after teardown; a re-parent (which also runs
    *  this) simply drops the uncommitted keystroke, which the next keystroke or blur re-commits. */
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cancelDebounce();
   }
@@ -413,7 +413,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncTextControls();
     if (changed.has('value') || changed.has('filters')) {
@@ -523,7 +523,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     >`;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const accessibleLabel = this.label || this.getAttribute('aria-label') || nothing;
     const active = this.activeEntries;
     return html`

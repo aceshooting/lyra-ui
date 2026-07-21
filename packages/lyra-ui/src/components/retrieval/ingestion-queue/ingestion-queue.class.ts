@@ -168,7 +168,7 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  *   if needed).
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The queue to render, in display order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as ingestion progresses) to update it. */
@@ -312,7 +312,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     `;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const computedLabel = this.label || this.localize('ingestionQueueLabel');
     const ariaLabel = this.getAttribute('aria-label') || computedLabel;
 

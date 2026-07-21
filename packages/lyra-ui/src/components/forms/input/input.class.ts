@@ -87,7 +87,7 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * by `size` tier.
  */
 export class LyraInput extends FormAssociated(LyraInputBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property() type: LyraInputType = 'text';
   /** Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is
@@ -105,11 +105,11 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    *  `label` and `placeholder` when set, matching `<lr-textarea>`'s `accessibleLabel`. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @property() autocomplete = '';
-  @property({ converter: spellcheckConverter }) spellcheck = true;
-  @property() autocapitalize = '';
+  @property({ converter: spellcheckConverter }) override spellcheck = true;
+  @property() override autocapitalize = '';
   @property({ attribute: 'autocorrect' }) autoCorrect = '';
-  @property({ attribute: 'inputmode' }) inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) enterKeyHint = '';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** `type="number"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`
    *  and consulted by that same native input's constraint validation (see `updateValidity()`).
    *  Defaults to `undefined` (no lower bound). The `min` attribute is parsed as a number here; the
@@ -143,7 +143,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.addEventListener('invalid', () => { this.touched = true; });
   }
 
-  formResetCallback(): void {
+  override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
   }
@@ -258,14 +258,14 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     );
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('type') || changed.has('min') || changed.has('max') || changed.has('step') || changed.has('readonly')) {
       this.updateValidity();
     }
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasStartSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'start');
@@ -332,7 +332,7 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     this.hasLabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;

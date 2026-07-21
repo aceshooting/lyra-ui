@@ -23,7 +23,7 @@ import { styles } from './control-group.styles.js';
  * @cssprop [--lr-control-group-gap=var(--lr-space-xs)] - Gap between grouped controls.
  */
 export class LyraControlGroup extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Accessible name for the group, set as `aria-label` on the internal
    *  `role="group"` element. A plain `aria-label` attribute on the host itself is
@@ -41,7 +41,7 @@ export class LyraControlGroup extends LyraElement {
    *  mode does not apply and the narrow-allocation breakpoint is wanted. */
   @property({ type: Boolean, reflect: true }) responsive = false;
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const accessibleLabel = this.label || this.getAttribute('aria-label') || nothing;
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }

@@ -90,7 +90,7 @@ export interface LyraAnimatedImageEventMap {
  * @cssprop --lr-animated-image-max-height - Caps the rendered media's block-size. Defaults to `var(--lr-size-20rem)`.
  */
 export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The path to the image to load. Always re-validated against a
    *  safe-scheme allowlist before use -- see the class doc. */
@@ -149,14 +149,14 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   // effect, per the class doc; control playback via `.play` instead.
   set playing(_value: boolean) {}
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.mediaQuery =
       typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.mediaQuery = undefined;
     super.disconnectedCallback();
@@ -168,7 +168,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     this.requestUpdate();
   };
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('src')) {
       this.hasLoaded = false;
       this.hasError = false;
@@ -260,7 +260,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     this.emit('blur');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const src = safeMediaSrc(this.src);
     const alt = this.effectiveAlt;
     // The single condition both the stylesheet's [data-loaded]:not([playing])

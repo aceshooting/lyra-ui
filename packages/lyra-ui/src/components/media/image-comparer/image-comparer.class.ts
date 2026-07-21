@@ -27,7 +27,7 @@ export interface LyraImageComparerEventMap {
  * @csspart handle - The native range interaction surface.
  */
 export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ type: Number, reflect: true }) position = 50;
   @property({ reflect: true }) orientation: LyraImageComparerOrientation = 'horizontal';
@@ -53,7 +53,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     this.emit('blur');
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const position = `${this.normalizedPosition}%`;
     const label = this.accessibleLabel || this.localize('imageComparerLabel');
     return html`<div

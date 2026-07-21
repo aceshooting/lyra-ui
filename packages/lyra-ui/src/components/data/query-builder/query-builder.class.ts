@@ -177,9 +177,9 @@ function isMultiOperator(op: QueryBuilderOperator | ''): boolean {
  * @csspart empty - The message shown when there are no fields, or no conditions yet.
  */
 export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     fields: { attribute: false, noAccessor: true },
     value: { attribute: false, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -322,7 +322,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     this.commit({ ...this._value, conditions });
   }
 
-  protected updated(): void {
+  protected override updated(): void {
     if (this.pendingFocusAdd) {
       this.pendingFocusAdd = false;
       (this.renderRoot.querySelector('[part="add-button"]') as (HTMLElement & { focus(): void }) | null)?.focus();
@@ -487,7 +487,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasFields = this._fields.length > 0;
     const value = this._value;
     return html`

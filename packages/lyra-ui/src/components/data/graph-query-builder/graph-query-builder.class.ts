@@ -165,9 +165,9 @@ export interface LyraGraphQueryBuilderEventMap {
  */
 export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEventMap> {
   static formAssociated = true;
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
-  static properties = {
+  static override properties = {
     name: { reflect: true, noAccessor: true },
     value: { attribute: false, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
@@ -432,7 +432,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     this.emit('lr-query-delete', { id: item.id });
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('value') || changed.has('_errors')) {
       const valid = Object.keys(this._errors).length === 0;
       const key = JSON.stringify({ valid, errors: this._errors });
@@ -497,7 +497,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const disabled = this.effectiveDisabled;
     const hops = this.hopOptions();
     const value = this._value;

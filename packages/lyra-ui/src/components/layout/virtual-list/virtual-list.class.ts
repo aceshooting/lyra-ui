@@ -225,7 +225,7 @@ export interface LyraVirtualListEventMap {
  *   own `:focus-visible` ring). Set to `transparent` to opt out of the hover treatment entirely.
  */
 export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The full (non-windowed) item collection. */
   @property({ attribute: false }) items: unknown[] = [];
@@ -402,7 +402,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private scrollRafId?: number;
   private pendingScrollTop: number | null = null;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     this.rowResizeObserver = new ResizeObserver(this.onRowsResized);
     this.stickyResizeObserver = new ResizeObserver(this.onStickyResized);
@@ -421,7 +421,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.rowResizeObserver?.disconnect();
     this.rowResizeObserver = undefined;
@@ -439,11 +439,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.scrollContainer?.removeEventListener('scroll', this.onScroll);
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     this.attachContainerListeners();
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     this.isFirstUpdate = !this.hasUpdated;
     if (changed.has('items') || changed.has('rowHeight') || changed.has('keyFunction')) {
       this.offsetsDirty = true;
@@ -463,7 +463,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.computeRange();
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncRowObservers();
     this.syncStickyOverlay();
@@ -963,7 +963,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (Math.abs(this.stickyHeight - height) > 0.5) this.stickyHeight = height;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const n = this.items.length;
     const totalHeight = this.offsets[n] ?? 0;
     const windowed: { item: unknown; index: number }[] = [];

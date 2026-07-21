@@ -25,7 +25,7 @@ import { styles } from './empty.styles.js';
  * description in compact mode.
  */
 export class LyraEmpty extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Short heading, e.g. "No results". */
   @property() heading = '';
@@ -49,7 +49,7 @@ export class LyraEmpty extends LyraElement {
   @state() private hasHeadingSlot = false;
   @state() private hasDescriptionSlot = false;
 
-  protected willUpdate(): void {
+  protected override willUpdate(): void {
     // Set from light-DOM children before the first render so the initial
     // paint is already correct — setting `hasIcon`/`hasActions` from
     // `firstUpdated` (after the update completes) would schedule a second,
@@ -67,7 +67,7 @@ export class LyraEmpty extends LyraElement {
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     // Fallback reconciliation against the fully-resolved slot assignment
     // (handles slot-forwarding — where `this.children` in `willUpdate` above
     // are forwarding `<slot>` elements rather than the real projected
@@ -127,7 +127,7 @@ export class LyraEmpty extends LyraElement {
     this.hasDescriptionSlot = slot.assignedElements({ flatten: true }).length > 0;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const hasHeading = this.hasHeadingSlot || this.heading.length > 0;
     const hasDescription = this.hasDescriptionSlot || this.description.length > 0;
     return html`

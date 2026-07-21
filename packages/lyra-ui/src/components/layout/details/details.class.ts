@@ -19,7 +19,7 @@ export interface LyraDetailsEventMap { 'lr-toggle': CustomEvent<{ open: boolean 
  * @csspart content - The panel content.
  */
 export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property() summary = '';
@@ -31,7 +31,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   // even with a `slot="summary"` child present).
   @state() private hasSummarySlot = false;
 
-  protected willUpdate(changed: PropertyValues<this>): void {
+  protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (!this.hasUpdated) {
       this.hasSummarySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'summary');
@@ -50,7 +50,7 @@ export class LyraDetails extends LyraElement<LyraDetailsEventMap> {
   private onSummarySlotChange = (e: Event): void => {
     this.hasSummarySlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`<details part="base" .open=${this.open} @toggle=${this.onToggle}>
       <summary
         part="summary"

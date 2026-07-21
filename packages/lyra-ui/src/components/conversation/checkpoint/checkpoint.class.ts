@@ -80,7 +80,7 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
  *   (stopped under reduced motion).
  */
 export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** Opaque id echoed in the `lr-restore` event detail. */
   @property({ attribute: 'checkpoint-id' }) checkpointId = '';
@@ -167,7 +167,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
     if (group && (!next || !group.contains(next))) this.revertToRestore(false);
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.computedLabel;
     const ariaLabel = this.getAttribute('aria-label') || label;
     const ts = this.normalizedTimestamp;

@@ -46,7 +46,7 @@ export interface LyraExportButtonEventMap {
  * @csspart format-description - A custom format option's optional secondary text.
  */
 export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) rows: Record<string, unknown>[] = [];
   /** Column allow-list (and CSV header labels) for both export formats. Left
@@ -81,7 +81,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** Which menu item to focus the next time `open` flips true; reset after use. */
   private pendingMenuFocusIndex = 0;
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.cleanup?.();
     this.cleanup = undefined;
@@ -169,19 +169,19 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     }
   };
 
-  protected firstUpdated(): void {
+  protected override firstUpdated(): void {
     // Single delegated listener catches Escape/Arrow/Home/End from the
     // trigger button or any menu-item inside this shadow root.
     this.renderRoot.addEventListener('keydown', this.onKeyDown as EventListener);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     this.toggleAttribute('aria-busy', this.loading);
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('open')) {
       this.cleanup?.();
@@ -287,7 +287,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     return this.localize('exportButtonLabel', this.label === 'Export' ? undefined : this.label);
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const label = this.effectiveLabel;
     const accessibleLabel = this.accessibleLabel || label;
     return html`

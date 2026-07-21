@@ -52,7 +52,7 @@ export interface LyraCommandPaletteEventMap { 'lr-select': CustomEvent<{ command
  *   without hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ attribute: false }) commands: LyraCommand[] = [];
   @property() shortcut = 'mod+k';
@@ -82,7 +82,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     return this.haystacks;
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('open')) {
       if (this.open) {
         this.releaseScrollLock ??= lockScroll(this.ownerDocument);
@@ -98,7 +98,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   // Runs after render so the manager can resolve the rendered [part="dialog"] panel -- mirrors
   // lr-dialog's/lr-tool-select-dialog's identical ordering rationale.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
@@ -110,7 +110,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     window.addEventListener('keydown', this.onGlobalKeyDown);
     if (this.hasUpdated && this.open) {
@@ -120,7 +120,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     window.removeEventListener('keydown', this.onGlobalKeyDown);
     this.releaseScrollLock?.();
@@ -163,7 +163,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   }
   private onKeyDown = (event: KeyboardEvent): void => { const rows = this.filtered; if (event.key === 'ArrowDown') { event.preventDefault(); const next = this.seekEnabled(rows, this.activeIndex + 1, 1); if (next !== -1) this.activeIndex = next; } else if (event.key === 'ArrowUp') { event.preventDefault(); const previous = this.seekEnabled(rows, this.activeIndex - 1, -1); if (previous !== -1) this.activeIndex = previous; } else if (event.key === 'Enter' && rows[this.activeIndex]) { event.preventDefault(); this.select(rows[this.activeIndex]); } };
   private onInput = (event: Event): void => { this.queryText = (event.target as HTMLInputElement).value; this.activeIndex = Math.max(0, this.seekEnabled(this.filtered, 0, 1)); };
-  render(): TemplateResult {
+  override render(): TemplateResult {
     if (!this.open) return html``;
     const rows = this.filtered;
     const activeId = rows.length ? `${this.listId}-opt-${this.activeIndex}` : nothing;

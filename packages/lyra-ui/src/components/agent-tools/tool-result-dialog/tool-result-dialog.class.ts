@@ -234,7 +234,7 @@ function formatDuration(ms: number): {
  * @cssprop [--lr-tool-result-dialog-spin=1s linear] - Running-status animation duration and timing.
  */
 export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventMap> {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /**
    * Whether the dialog is open. Set this (or call `close()`) — there is no
@@ -272,7 +272,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
   private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-result-dialog-title');
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
     }
@@ -287,13 +287,13 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   // Runs after render so the manager can resolve the panel and its composed
   // focus targets, including controls projected through either slot.
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     if (changed.has('open') && this.open) {
       this.overlay?.focusInitial();
     }
   }
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
@@ -310,7 +310,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     }
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -387,7 +387,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
     return this.durationMs != null && Number.isFinite(this.durationMs) ? finiteRange(this.durationMs, 0, 0) : null;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const durationMs = this.safeDurationMs;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>

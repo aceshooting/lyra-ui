@@ -137,7 +137,7 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  *   hijacking the library-wide `--lr-color-brand-quiet` token.
  */
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** The full, ungrouped data set to search/render. Consumer-supplied — this component ships no
    *  emoji data of its own. Empty (the default) renders no groups/emojis at all, just the search
@@ -176,7 +176,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
    *  `LyraPdfViewer`'s `loadLibrary` field / `LyraQrCode`'s `loadLibrary` field). */
   private loadGroups: () => Promise<EmojiPickerGroup[] | null> = loadEmojiDataCached;
 
-  connectedCallback(): void {
+  override connectedCallback(): void {
     super.connectedCallback();
     // Re-arms the geometry sensor after a reconnect; the cache is deliberately kept across the
     // disconnect, so the first delivery here still re-renders if the tokens moved while detached.
@@ -501,7 +501,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.gridResizeObserver.observe(grid);
   }
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.syncGeometryProbe();
     if (!this.hasUpdated) {
@@ -511,7 +511,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     }
   }
 
-  protected updated(changed: PropertyValues): void {
+  protected override updated(changed: PropertyValues): void {
     this.syncGridObserver();
     if (!changed.has('queryText') && !changed.has('groups')) return;
     const buttons = this.optionButtons();
@@ -526,7 +526,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.setActiveIndex(this.activeIndex, false);
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.observedGrid?.removeEventListener('scroll', this.onGridScroll);
     this.gridResizeObserver?.disconnect();
@@ -587,7 +587,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     `;
   }
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     const items = this.flatItems;
     let index = -1;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;

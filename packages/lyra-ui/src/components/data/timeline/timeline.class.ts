@@ -35,7 +35,7 @@ export type TimelineOrientation = 'vertical' | 'horizontal';
  *   stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.
  */
 export class LyraTimeline extends LyraElement {
-  static styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles];
 
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
@@ -55,7 +55,7 @@ export class LyraTimeline extends LyraElement {
   // kept live afterward via slotchange) rather than re-deriving it.
   @state() private slottedCount = 0;
 
-  protected willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!this.hasUpdated) {
       // Must count only children assigned to the *default* slot -- an explicit slot="" attribute
@@ -66,7 +66,7 @@ export class LyraTimeline extends LyraElement {
     }
   }
 
-  firstUpdated(): void {
+  override firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for content
     // present at parse time.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
@@ -83,7 +83,7 @@ export class LyraTimeline extends LyraElement {
     this.slottedCount = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
   };
 
-  render(): TemplateResult {
+  override render(): TemplateResult {
     return html`
       <div part="base" role="list" aria-label=${this.accessibleLabel || this.localize('timeline')}>
         <slot @slotchange=${this.onSlotChange}></slot>
