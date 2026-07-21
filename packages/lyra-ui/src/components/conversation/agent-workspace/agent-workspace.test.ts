@@ -92,6 +92,28 @@ it('forwards a stable message id with retry events', async () => {
   expect((await event).detail).to.deep.equal({ messageId: 'message-7' });
 });
 
+it('forwards a controlled retrieval selection as lr-retrieval-select, without leaking the raw lr-select', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace .retrievalChunks=${[chunk]}></lr-agent-workspace>
+  `);
+  const results = el.shadowRoot!.querySelector('lr-retrieval-results')!;
+
+  let rawLeaked = false;
+  el.addEventListener('lr-select', () => {
+    rawLeaked = true;
+  });
+
+  const listener = oneEvent(el, 'lr-retrieval-select');
+  results.dispatchEvent(
+    new CustomEvent('lr-select', { detail: { ids: ['chunk-1'], chunks: [chunk] }, bubbles: true, composed: true }),
+  );
+  const event = (await listener) as CustomEvent<{ ids: string[]; chunks: (typeof chunk)[] }>;
+
+  expect(event.detail).to.deep.equal({ ids: ['chunk-1'], chunks: [chunk] });
+  expect(el.selectedRetrievalIds).to.deep.equal(['chunk-1']);
+  expect(rawLeaked, 'the raw lr-select from lr-retrieval-results must not leak past agent-workspace').to.be.false;
+});
+
 it('lets named slots replace the data-driven transcript and details', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`
     <lr-agent-workspace .messages=${messages}>

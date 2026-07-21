@@ -187,7 +187,12 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   };
 
   private onRetrievalSelect = (event: CustomEvent<RetrievalResultsSelectDetail>): void => {
+    // `<lr-retrieval-results>`'s own `lr-select` bubbles/composes (LyraElement.emit()'s defaults),
+    // so without stopping it here it would keep bubbling straight through this component under the
+    // wrong, undocumented name -- this component's own contract is `lr-retrieval-select` below.
+    event.stopPropagation();
     this.selectedRetrievalIds = event.detail.ids;
+    this.emit<RetrievalResultsSelectDetail>('lr-retrieval-select', event.detail);
   };
 
   private onMessageRetry = (event: CustomEvent<{ messageId?: string }>): void => {
