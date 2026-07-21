@@ -22,18 +22,21 @@ export interface LyraThinkingPanelEventMap {
  *  mistaken for having deliberately scrolled away to read earlier content. */
 const NEAR_BOTTOM_PX = 48;
 
-/** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Identical
+/** `820` -> a localized millisecond value; `1500` -> a localized seconds value. Identical
  *  algorithm to lr-tool-call-chip's and lr-tool-result-dialog's own
  *  `formatDuration` -- duplicated rather than imported (three independent,
  *  separately-consumable components) but kept in lockstep so the same
  *  elapsed time reads identically everywhere it's shown in this library. */
-function formatDuration(ms: number): string {
+function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSeconds'; value: string } {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return `${Math.round(Math.max(0, ms))}ms`;
+    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, Number.isFinite(ms) ? ms : 0))) };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
-  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}s`;
+  return {
+    key: 'durationSeconds',
+    value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1),
+  };
 }
 
 /**
@@ -232,8 +235,11 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
   private get durationDisplay(): { text: string; pending: boolean } | null {
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
+      const duration = formatDuration(durationMs);
       return {
-        text: this.localize('thoughtFor', undefined, { duration: formatDuration(durationMs) }),
+        text: this.localize('thoughtFor', undefined, {
+          duration: this.localize(duration.key, undefined, { value: duration.value }),
+        }),
         pending: false,
       };
     }
@@ -278,7 +284,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
           part="body"
           id=${this.bodyId}
           role="group"
-          aria-label=${label}
+          aria-label=${this.getAttribute('aria-label') || label}
           tabindex="0"
           ?hidden=${!this.expanded}
           @scroll=${this.onScroll}
@@ -296,4 +302,3 @@ declare global {
     'lr-thinking-panel': LyraThinkingPanel;
   }
 }
-

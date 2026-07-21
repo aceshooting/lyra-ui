@@ -419,6 +419,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
+    if (changed.has('code')) {
+      this.focusedLine = Math.min(Math.max(1, this.focusedLine), this.lineCount());
+    }
     // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
     // options in tokenize() below -- any of them changing (even without code/language/languages
     // changing) means the cached highlightedHtml needs recomputing to stay in sync.

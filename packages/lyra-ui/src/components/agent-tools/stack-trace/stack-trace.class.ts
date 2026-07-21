@@ -189,7 +189,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
       <div
         part="base"
         role="group"
-        aria-label=${this.localize('stackTraceLabel')}
+        aria-label=${this.getAttribute('aria-label') || this.localize('stackTraceLabel')}
         style=${this.maxHeight ? `--lr-stack-trace-max-height:${this.maxHeight}` : nothing}
       >
         ${this.copyable

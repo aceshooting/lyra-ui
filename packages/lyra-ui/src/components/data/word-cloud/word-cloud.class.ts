@@ -47,6 +47,12 @@ function warnSkippedWords(count: number): void {
 export interface LyraWordCloudEventMap {
   'lr-word-click': CustomEvent<{ text: string; weight: number; group?: string }>;
 }
+
+/** A named color override shown by the optional word-cloud legend. */
+export interface WordCloudLegendItem {
+  label: string;
+  color: string;
+}
 /**
  * `<lr-word-cloud>` — a zero-dependency SVG word/tag cloud. First-party
  * invention (no Web Awesome equivalent). Each word's rendered size is scaled
@@ -71,6 +77,10 @@ export interface LyraWordCloudEventMap {
  * @csspart base - The word-cloud wrapper.
  * @csspart svg - The word-cloud SVG.
  * @csspart word - A rendered word.
+ * @csspart legend - The optional color key below the cloud.
+ * @csspart legend-item - One named color entry.
+ * @csspart legend-swatch - The color swatch for a legend entry.
+ * @csspart legend-label - The visible legend label.
  * @csspart focus-ring - The keyboard focus ring.
  * @csspart live-region - The visually hidden announcement region.
  * @csspart empty - The empty-state message.
@@ -103,6 +113,15 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** Custom categorical palette, cycled by word index (or by `group`, see `words`). Defaults to the `--lr-word-cloud-color-*` tokens. */
   @property({ attribute: false }) palette?: string[];
+
+  /** Named color overrides shown in the optional legend. When omitted, `show-legend` derives
+   *  entries from grouped words and explicitly colored words. This is useful when `words[].color`
+   *  or grouped colors carry semantic meaning that should not be discoverable only by visual inspection. */
+  @property({ attribute: false }) legend: WordCloudLegendItem[] = [];
+
+  /** Renders the supplied or derived legend entries below the cloud. It is non-interactive and
+   *  does not alter word activation or palette selection. */
+  @property({ type: Boolean, reflect: true, attribute: 'show-legend' }) showLegend = false;
 
   @query('[part="svg"]') private svgEl?: SVGSVGElement;
 
@@ -282,6 +301,22 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.announce(order[next]!);
   };
 
+  private renderLegend(entries: WordCloudLegendItem[]): TemplateResult | typeof nothing {
+    if (!this.showLegend || entries.length === 0) return nothing;
+    return html`
+      <div part="legend" role="list" aria-label=${this.localize('wordCloudLegend')}>
+        ${entries.map(
+          (item) => html`
+            <span part="legend-item" role="listitem">
+              <span part="legend-swatch" aria-hidden="true" style=${`background-color:${item.color}`}></span>
+              <span part="legend-label">${item.label}</span>
+            </span>
+          `,
+        )}
+      </div>
+    `;
+  }
+
   /** Axis-aligned focus-ring rect for `w`, already accounting for its rotation. */
   private focusRingRect(w: PlacedWord): { x: number; y: number; width: number; height: number } {
     const boxW = w.rotated ? w.height : w.width;
@@ -310,6 +345,15 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       }
       return colors[word.originalIndex % colors.length]!;
     };
+    const legendItems = this.legend.length
+      ? this.legend
+      : layout.placed.reduce<WordCloudLegendItem[]>((items, word) => {
+          if (!word.group && !word.color) return items;
+          const label = word.group || word.text;
+          const color = colorFor(word);
+          if (!items.some((item) => item.label === label && item.color === color)) items.push({ label, color });
+          return items;
+        }, []);
 
     const order = this.navOrder();
     const focused = this.focusedIndex !== null ? order[this.focusedIndex] : undefined;
@@ -342,6 +386,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
             : ''}
         </svg>
         <div id="live-region" part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
+        ${this.renderLegend(legendItems)}
       </div>
     `;
   }

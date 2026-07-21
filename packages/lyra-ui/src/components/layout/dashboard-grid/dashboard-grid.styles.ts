@@ -70,6 +70,8 @@ export const styles = css`
     inset-inline-end: 0;
     inline-size: var(--lr-space-l);
     block-size: var(--lr-space-l);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
     background: transparent;

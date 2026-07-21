@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type ComplexAttributeConverter } fr
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import type { ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { AgentRunMetric } from '../../agent-tools/agent-run/agent-run.class.js';
 import type { ContextInspectorSegment } from '../../agent-tools/context-inspector/context-inspector.class.js';
@@ -178,6 +179,22 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     return Array.from(this.children).some((element) => element.getAttribute('slot') === name);
   }
 
+  private get safeContextTotal(): number {
+    return finiteCount(this.contextTotal);
+  }
+
+  private get safeUnreadStartIndex(): number | null {
+    return this.unreadStartIndex == null ? null : finiteCount(this.unreadStartIndex);
+  }
+
+  private get safeComposerMinRows(): number {
+    return Math.max(1, finiteCount(this.composerMinRows, 1));
+  }
+
+  private get safeComposerMaxRows(): number {
+    return Math.max(this.safeComposerMinRows, finiteCount(this.composerMaxRows, 8));
+  }
+
   private onComposerInput = (event: CustomEvent<{ value: string }>): void => {
     this.composerValue = event.detail.value;
   };
@@ -263,7 +280,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               <h3 part="section-heading">${this.localize('agentWorkspaceContext')}</h3>
               <lr-context-inspector
                 .segments=${this.contextSegments}
-                .total=${this.contextTotal}
+                .total=${this.safeContextTotal}
               ></lr-context-inspector>
             </section>`
           : nothing}
@@ -299,7 +316,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
             <lr-chat-viewport
               part="viewport"
               .follow=${this.follow}
-              .unreadStartIndex=${this.unreadStartIndex}
+              .unreadStartIndex=${this.safeUnreadStartIndex}
               aria-label=${this.localize('agentWorkspaceConversation')}
               @lr-follow-change=${this.onFollowChange}
             >
@@ -321,8 +338,8 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                   part="composer-input"
                   .value=${this.composerValue}
                   .status=${this.composerStatus}
-                  .minRows=${this.composerMinRows}
-                  .maxRows=${this.composerMaxRows}
+                  .minRows=${this.safeComposerMinRows}
+                  .maxRows=${this.safeComposerMaxRows}
                   placeholder=${this.composerPlaceholder || this.localize('composerPlaceholder')}
                   @lr-input=${this.onComposerInput}
                 ></lr-chat-composer>

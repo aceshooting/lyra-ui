@@ -71,11 +71,11 @@ async function connectEmojiPicker(
   return el;
 }
 
-it('scales the emoji item box across every tier, floored at 24px', async () => {
+it('scales the emoji item box across every tier, floored at the shared 40px hit area', async () => {
   const expected: Record<string, string> = {
-    '2xs': '24px',
-    xs: '28px',
-    s: '32px',
+    '2xs': '40px',
+    xs: '40px',
+    s: '40px',
     m: '40px',
     l: '48px',
     xl: '56px',
@@ -268,8 +268,8 @@ it('gives each emoji button the shared minimum hit area without enlarging the gl
   el.groups = groups;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
-  expect(getComputedStyle(button).minInlineSize).to.equal('24px');
-  expect(getComputedStyle(button).minBlockSize).to.equal('24px');
+  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
 });
 
 describe('search filtering', () => {

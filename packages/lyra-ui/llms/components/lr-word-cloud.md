@@ -42,6 +42,12 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
   90° for denser packing
 - `palette?: string[]` (attribute: false) — custom categorical colors, cycled by word index (or by
   `group`); defaults to the `--lr-word-cloud-color-1..8` tokens
+- `legend: WordCloudLegendItem[] = []` (attribute: false) — optional named `{ label, color }`
+  entries for explaining explicit `words[].color`/group color overrides; when omitted, the
+  component derives entries from grouped and explicitly colored words
+- `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
+  derived legend below the cloud; the color key is an accessible list and does not change word
+  activation or palette selection
 
 **Methods:** `refreshTheme(): void` — forces a relayout so the `--lr-font` custom property is
 re-read from computed style (font-family affects the canvas text measurement layout depends on);
@@ -55,8 +61,8 @@ the currently-focused word — a no-op if nothing is focused yet)
 
 **CSS parts:** `base`, `svg`, `word` (each `<text>`), `focus-ring` (the rect around the roving-focus
 cursor's word), `live-region` (visually-hidden `role="status" aria-live="polite"` announcement text),
-`empty` (the no-data placeholder — hardcoded `"No data"` text, no property to customize it, unlike
-`lr-empty`/`lr-table`)
+`legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
+(the no-data placeholder)
 
 **Themeable custom properties:** `--lr-word-cloud-color-1`, `--lr-word-cloud-color-2`,
 `--lr-word-cloud-color-3`, `--lr-word-cloud-color-4`, `--lr-word-cloud-color-5`,

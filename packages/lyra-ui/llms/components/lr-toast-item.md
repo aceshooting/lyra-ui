@@ -83,7 +83,7 @@ From the `toaster` controller — the ergonomic entry point, no manual `<lr-toas
 needed:
 
 ```ts
-import { toast } from '@aceshooting/lyra-ui';
+import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
 
 toast('Saved');
 toast({ message: 'Deleted', variant: 'danger', action: { label: 'Undo', onClick: (item) => {/*...*/} } });
@@ -98,7 +98,7 @@ at another, since `placement` is a per-call option rather than a single global r
 
 ```html
 <script type="module">
-  import { toast } from '@aceshooting/lyra-ui';
+  import { toast } from '@aceshooting/lyra-ui/components/overlays/toast/toaster.js';
   document.getElementById('save-btn').addEventListener('click', () => toast('Saved!'));
 </script>
 ```

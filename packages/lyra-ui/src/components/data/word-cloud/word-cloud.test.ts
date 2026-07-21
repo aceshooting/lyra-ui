@@ -48,6 +48,31 @@ it('renders one labeled [part="word"] per word, as a single tab stop on [part="s
   expect(svgEl(el).getAttribute('aria-describedby')).to.equal('live-region');
 });
 
+it('renders named color overrides in an optional legend', async () => {
+  const el = (await fixture(html`<lr-word-cloud
+    show-legend
+    .words=${[{ text: 'alpha', weight: 1, color: 'rgb(1, 2, 3)' }]}
+    .legend=${[{ label: 'Important', color: 'rgb(1, 2, 3)' }]}
+  ></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
+  expect(legend.querySelector('[part="legend-label"]')!.textContent).to.equal('Important');
+  expect(legend.querySelector('[part="legend-swatch"]')!.getAttribute('style')).to.contain('rgb(1, 2, 3)');
+});
+
+it('derives legend entries for grouped and explicitly colored words', async () => {
+  const el = (await fixture(html`<lr-word-cloud
+    show-legend
+    .words=${[
+      { text: 'alpha', weight: 2, group: 'Group A' },
+      { text: 'beta', weight: 1, group: 'Group A' },
+      { text: 'gamma', weight: 1, color: 'rgb(4, 5, 6)' },
+    ]}
+  ></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  expect(Array.from(el.shadowRoot!.querySelectorAll('[part="legend-label"]')).map((node) => node.textContent)).to.deep.equal(['Group A', 'gamma']);
+});
+
 it('sizes the heaviest word larger than the lightest', async () => {
   const el = (await fixture(
     html`<lr-word-cloud .words=${WORDS} min-font-size="10" max-font-size="40"></lr-word-cloud>`,

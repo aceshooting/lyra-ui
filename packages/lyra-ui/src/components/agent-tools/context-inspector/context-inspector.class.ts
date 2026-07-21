@@ -149,6 +149,10 @@ export class LyraContextInspector extends LyraElement {
     return this.segments.map((s) => ({ label: s.label, value: s.tokens, ...(s.tone ? { tone: s.tone } : {}) }));
   }
 
+  private get safeTotal(): number {
+    return finiteCount(this.total);
+  }
+
   /** Every segment's `label` + `text`, in order — the `<lr-copy-button>`'s `value`. */
   private get assembledText(): string {
     return this.segments.map((s) => `${s.label}\n${s.text}`).join('\n\n');
@@ -234,7 +238,7 @@ export class LyraContextInspector extends LyraElement {
     let citationIndex = 0;
     return html`
       <div part="base" role="group" aria-label=${groupLabel}>
-        <lr-context-meter part="meter" .segments=${this.meterSegments} .total=${this.total} label=${this.label}></lr-context-meter>
+        <lr-context-meter part="meter" .segments=${this.meterSegments} .total=${this.safeTotal} label=${this.label}></lr-context-meter>
         <div part="toolbar">
           <lr-copy-button
             part="copy-button"

@@ -116,6 +116,9 @@ export interface LyraCheckboxEventMap {
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an
  * accessible name.
+ * A host `aria-describedby` attribute is forwarded to the internal
+ * `role="checkbox"` so externally-owned descriptions can be associated with
+ * this individual control.
  * @event input - The user toggled the checkbox; bubbling and composed like a native form event.
  * @event change - Fired immediately after `input` for the same user toggle.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click or Space).
@@ -312,8 +315,21 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
       this._defaultChecked = this.hasAttribute('checked');
     }
     this.updateValidity();
-    this.labelObserver = new MutationObserver(() => this.recomputeHasLabelSlot());
-    this.labelObserver.observe(this, { childList: true, subtree: true, characterData: true });
+    this.labelObserver = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.type === 'attributes')) {
+        this.requestUpdate();
+      }
+      if (mutations.some((mutation) => mutation.type !== 'attributes')) {
+        this.recomputeHasLabelSlot();
+      }
+    });
+    this.labelObserver.observe(this, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['aria-describedby'],
+    });
   }
 
   override disconnectedCallback(): void {
@@ -471,6 +487,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
         aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
         aria-label=${this.getAttribute('aria-label') || nothing}
+        aria-describedby=${this.getAttribute('aria-describedby') || nothing}
         @click=${this.onClick}
         @keydown=${this.onKeyDown}
         @focus=${this.onFocus}

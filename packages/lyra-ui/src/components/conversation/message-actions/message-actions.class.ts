@@ -189,12 +189,16 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   private focusableStops(): HTMLElement[] {
     const base = this.renderRoot.querySelector('[part="base"]');
     if (!base) return [];
+    const isDisabled = (el: HTMLElement): boolean =>
+      el.matches(':disabled, [aria-disabled="true"]') ||
+      el.hasAttribute('disabled') ||
+      (el as HTMLElement & { disabled?: boolean }).disabled === true;
     const direct = [...base.children].filter(
-      (el): el is HTMLElement => el instanceof HTMLElement && el.tagName !== 'SLOT',
+      (el): el is HTMLElement => el instanceof HTMLElement && el.tagName !== 'SLOT' && !isDisabled(el),
     );
     const slotEl = base.querySelector('slot') as HTMLSlotElement | null;
     const slotted =
-      slotEl?.assignedElements({ flatten: true }).filter((el): el is HTMLElement => el instanceof HTMLElement) ?? [];
+      slotEl?.assignedElements({ flatten: true }).filter((el): el is HTMLElement => el instanceof HTMLElement && !isDisabled(el)) ?? [];
     return [...direct, ...slotted];
   }
 

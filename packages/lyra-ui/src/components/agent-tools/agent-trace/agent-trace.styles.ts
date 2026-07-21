@@ -33,6 +33,8 @@ export const styles = css`
   [part='handoff'] {
     display: block;
     inline-size: 100%;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: 0;

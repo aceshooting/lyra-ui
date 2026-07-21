@@ -366,7 +366,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     const resolvedTotal = this.total != null ? finiteCount(this.total, this.examples.length) : this.examples.length;
     const counts = this.statusCounts();
     const completed = this.examples.filter((example) => isTerminal(example.status.kind)).length;
-    const headerLabel = this.label || this.getAttribute('aria-label') || this.localize('evaluationRunLabel');
+    const headerLabel = this.getAttribute('aria-label') || this.label || this.localize('evaluationRunLabel');
 
     return html`
       <div part="base" role="region" aria-label=${headerLabel}>

@@ -185,6 +185,48 @@ describe('active', () => {
   });
 });
 
+describe('active indicator', () => {
+  it('does not render an indicator while inactive', async () => {
+    const el = await fixtureItem(html`<lr-conversation-item title="A"></lr-conversation-item>`);
+    expect(el.shadowRoot!.querySelectorAll('[part="active-indicator"]').length).to.equal(0);
+  });
+
+  it('renders a decorative indicator with tokenized default geometry while active', async () => {
+    const el = await fixtureItem(html`<lr-conversation-item title="A" active></lr-conversation-item>`);
+    const indicator = el.shadowRoot!.querySelector('[part="active-indicator"]') as HTMLElement;
+    const computed = getComputedStyle(indicator);
+    expect(indicator.getAttribute('aria-hidden')).to.equal('true');
+    expect(computed.position).to.equal('absolute');
+    expect(computed.inlineSize).to.equal('2px');
+    expect(computed.insetInlineStart).to.equal('0px');
+    expect(computed.insetInlineEnd).to.equal('auto');
+    expect(computed.backgroundColor).to.not.equal('');
+  });
+
+  it('supports color, width, and logical inline placement tokens', async () => {
+    const el = await fixtureItem(html`
+      <lr-conversation-item
+        title="A"
+        active
+        style="--lr-conversation-item-active-indicator-color: rgb(1, 2, 3); --lr-conversation-item-active-indicator-width: 7px; --lr-conversation-item-active-indicator-inset-inline: auto 0;"
+      ></lr-conversation-item>
+    `);
+    const indicator = el.shadowRoot!.querySelector('[part="active-indicator"]') as HTMLElement;
+    const computed = getComputedStyle(indicator);
+    expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(computed.inlineSize).to.equal('7px');
+    expect(computed.insetInlineStart).to.equal('auto');
+    expect(computed.insetInlineEnd).to.equal('0px');
+  });
+
+  it('places the default indicator at logical inline-start under dir="rtl"', async () => {
+    const el = await fixtureItem(html`<lr-conversation-item dir="rtl" title="A" active></lr-conversation-item>`);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const indicator = el.shadowRoot!.querySelector('[part="active-indicator"]') as HTMLElement;
+    expect(Math.abs(indicator.getBoundingClientRect().right - base.getBoundingClientRect().right)).to.be.lessThan(1);
+  });
+});
+
 describe('selection', () => {
   it('fires a bubbling, composed lr-select on click', async () => {
     const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;

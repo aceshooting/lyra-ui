@@ -63,7 +63,7 @@ export class LyraAudioVisualizer extends LyraElement {
   private rafId?: number;
   private lastAmbientDrawMs = 0;
   private authorSuppliedRole = false;
-  private authorSuppliedAriaLabel = false;
+  private generatedAriaLabel = '';
   /** Host size cached from the `ResizeObserver` so `draw()` never forces a per-frame layout read. */
   private hostSize?: { width: number; height: number };
   /** Token colors resolved once per theme change so `draw()` never calls `getComputedStyle` per frame. */
@@ -276,14 +276,16 @@ export class LyraAudioVisualizer extends LyraElement {
     if (changed.has('stream') || (changed.has('variant') && this.stream)) this.syncAnalyser();
     if (!this.hasUpdated) {
       this.authorSuppliedRole = this.hasAttribute('role');
-      this.authorSuppliedAriaLabel = this.hasAttribute('aria-label');
     }
     if (!this.authorSuppliedRole) this.setAttribute('role', 'img');
-    if (!this.authorSuppliedAriaLabel) {
-      this.setAttribute(
-        'aria-label',
-        this.label || this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() }),
-      );
+    const currentAriaLabel = this.getAttribute('aria-label');
+    const consumerSuppliedAriaLabel = currentAriaLabel !== null && currentAriaLabel !== this.generatedAriaLabel;
+    if (consumerSuppliedAriaLabel) {
+      this.generatedAriaLabel = '';
+    } else {
+      const generated = this.label || this.localize('audioVisualizerLabel', undefined, { state: this.stateLabel() });
+      if (currentAriaLabel !== generated) this.setAttribute('aria-label', generated);
+      this.generatedAriaLabel = generated;
     }
   }
 

@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -14,9 +15,11 @@ type HtmlFetchState =
   | { kind: 'loaded'; markup: string }
   | { kind: 'error'; message: string };
 
-export interface LyraHtmlViewerEventMap {
+export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
+
+class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
 
 /**
  * Fetches and safely renders an inline HTML document.
@@ -31,7 +34,7 @@ export interface LyraHtmlViewerEventMap {
  * @cssprop [--lr-html-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
-export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
+export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as sanitized inline HTML. */
@@ -40,6 +43,11 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+  /** Shared text search and anchor-target API for sanitized HTML output. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
 
   @state() private fetchState: HtmlFetchState = { kind: 'idle' };
   private generation = 0;
@@ -72,7 +80,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return html`<div part="html" role="document" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('htmlViewerLabel')}>${unsafeHTML(this.fetchState.markup)}</div>`;
+      case 'loaded': return html`<div part="html" role="document" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('htmlViewerLabel')}>${unsafeHTML(this.fetchState.markup)}</div>`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle':
@@ -81,7 +89,7 @@ export class LyraHtmlViewer extends LyraElement<LyraHtmlViewerEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" style=${this.maxHeight ? `--lr-html-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div></div>`;
+    return html`<div part="base" style=${this.maxHeight ? `--lr-html-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -497,7 +497,7 @@ describe('hit area', () => {
     }
   });
 
-  it('shrinks retry-button/preview-button/remove-button to match the compact thumbnail size, not the full icon-button floor', async () => {
+  it('keeps compact retry-button/preview-button/remove-button at the shared icon-button floor', async () => {
     const el = (await fixture(html`
       <lr-attachment-chip
         compact
@@ -508,10 +508,10 @@ describe('hit area', () => {
     `)) as LyraAttachmentChip;
     for (const part of ['retry-button', 'preview-button', 'remove-button']) {
       const btn = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
-      // Same size the compact thumbnail renders at (--lr-attachment-chip-compact-thumbnail-size,
-      // 1.75rem/28px) -- not the unshrunk 40px --lr-icon-button-size floor a non-compact chip uses.
-      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('28px');
-      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('28px');
+      // The compact thumbnail is smaller, but every interactive action still keeps the shared
+      // --lr-icon-button-size hit-area floor.
+      expect(getComputedStyle(btn).minInlineSize, `${part} minInlineSize`).to.equal('40px');
+      expect(getComputedStyle(btn).minBlockSize, `${part} minBlockSize`).to.equal('40px');
     }
   });
 });

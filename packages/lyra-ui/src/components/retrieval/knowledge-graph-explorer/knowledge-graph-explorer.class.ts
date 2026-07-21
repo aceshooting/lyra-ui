@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './knowledge-graph-explorer.styles.js';
 import type { GraphNode, GraphLink, GraphNodeType, GraphCommunity, GraphRenderer, LyraGraph } from '../graph/graph.class.js';
@@ -466,8 +467,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
           .dimmedNodeIds=${this.computedDimmedNodeIds}
           .dimmedLinkIds=${this.computedDimmedLinkIds}
           renderer=${this.renderer}
-          width=${this.width}
-          height=${this.height}
+          width=${finiteRange(this.width, 800, 1)}
+          height=${finiteRange(this.height, 600, 1)}
           @lr-node-click=${this.onGraphNodeClick}
           @click=${this.onGraphNativeClick}
           @lr-node-enter=${this.onGraphNodeEnter}

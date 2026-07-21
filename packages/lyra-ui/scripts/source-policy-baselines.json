@@ -1,7 +1,6 @@
 {
   "keyboard-test-coverage": [
     "src/components/viewers/document-preview/document-preview.class.ts",
-    "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
     "src/components/viewers/svg-viewer/svg-viewer.class.ts"
   ],
   "strings-test-coverage": [

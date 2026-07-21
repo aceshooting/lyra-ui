@@ -31,6 +31,57 @@ export interface FormAssociatedInterface {
 }
 
 /**
+ * Minimal, inert ElementInternals substitute for DOM implementations that expose
+ * form-associated custom elements but do not implement `attachInternals()` yet.
+ * Keeping the shape here means components remain constructible in SSR/test DOMs;
+ * native browsers still use their real internals and form participation.
+ */
+function createFallbackInternals(): ElementInternals {
+  let flags: ValidityStateFlags = {};
+  let message = '';
+  const validity = {} as ValidityState;
+  const validityKeys: (keyof ValidityStateFlags)[] = [
+    'badInput',
+    'customError',
+    'patternMismatch',
+    'rangeOverflow',
+    'rangeUnderflow',
+    'stepMismatch',
+    'tooLong',
+    'tooShort',
+    'typeMismatch',
+    'valueMissing',
+  ];
+  for (const key of validityKeys) {
+    Object.defineProperty(validity, key, { enumerable: true, get: () => Boolean(flags[key]) });
+  }
+  Object.defineProperty(validity, 'valid', {
+    enumerable: true,
+    get: () => validityKeys.every((key) => !flags[key]),
+  });
+  const states = {
+    add(): void {},
+    delete(): boolean { return false; },
+    has(): boolean { return false; },
+  } as unknown as CustomStateSet;
+  return {
+    form: null,
+    labels: [] as unknown as NodeList,
+    validity,
+    get validationMessage(): string { return message; },
+    willValidate: false,
+    states,
+    setFormValue(): void {},
+    setValidity(next: ValidityStateFlags = {}, nextMessage = ''): void {
+      flags = { ...next };
+      message = nextMessage;
+    },
+    checkValidity(): boolean { return validity.valid; },
+    reportValidity(): boolean { return validity.valid; },
+  } as unknown as ElementInternals;
+}
+
+/**
  * Mixin that turns a Lit component into a form-associated custom element via
  * `ElementInternals`, so it participates in native `<form>` submission,
  * validation, and reset — matching Web Awesome's free form controls.
@@ -84,7 +135,12 @@ export function FormAssociated<T extends Constructor<LitElement>>(
 
     constructor(...args: any[]) {
       super(...args);
-      this.internals = this.attachInternals();
+      try {
+        const internals = this.attachInternals();
+        this.internals = internals ?? createFallbackInternals();
+      } catch {
+        this.internals = createFallbackInternals();
+      }
       this.validityController = new AnchoredValidityController(
         this,
         this.internals,

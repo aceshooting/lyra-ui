@@ -115,6 +115,8 @@ export const styles = css`
     inset-block: 0;
     inset-inline-end: 0;
     inline-size: var(--lr-size-0-5rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     cursor: col-resize;
     touch-action: none;
   }

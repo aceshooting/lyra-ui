@@ -25,3 +25,15 @@ it('renders custom SVG nodes inside the shadow SVG', async () => {
   expect(el.shadowRoot!.querySelector('svg > path')).to.exist;
   expect(el.shadowRoot!.querySelector('svg > circle')).to.exist;
 });
+
+it('does not clone hyphenated light-DOM custom elements into the SVG namespace', async () => {
+  const el = await fixture(html`
+    <lr-icon>
+      <x-icon-test-node><path d="M0 0"></path></x-icon-test-node>
+      <path d="M4 12h16"></path>
+    </lr-icon>
+  `);
+  await (el as LyraIcon).updateComplete;
+  expect(el.shadowRoot!.querySelector('svg > x-icon-test-node')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('svg > path')).to.exist;
+});

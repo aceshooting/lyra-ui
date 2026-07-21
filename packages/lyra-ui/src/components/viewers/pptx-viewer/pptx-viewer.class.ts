@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
@@ -11,11 +12,13 @@ import '../../overlays/skeleton/skeleton.js';
 
 type PptxPhase = 'idle' | 'loading' | 'mounted' | 'error';
 
-export interface LyraPptxViewerEventMap {
+export interface LyraPptxViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ slideCount: number }>;
   'lr-slide-change': CustomEvent<{ index: number; count: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
+
+class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
 
 /**
  * Best-effort client-side PPTX viewer backed by `@aiden0z/pptx-renderer`.
@@ -40,7 +43,7 @@ export interface LyraPptxViewerEventMap {
  * @csspart next-icon - Next-slide icon.
  * @csspart container - The renderer-owned output container.
  */
-export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
+export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   static override styles = [LyraElement.styles, styles];
 
   /** URL of the PPTX file. */
@@ -49,6 +52,11 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
   @property() name = '';
   /** Accessible-name override for the viewer region. */
   @property() label = '';
+  /** Shared text search and anchor-target API for renderer output when it exposes DOM text. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
 
   @state() private phase: PptxPhase = 'idle';
   @state() private errorMessage = '';
@@ -60,6 +68,10 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
   loadRenderer: () => Promise<PptxRendererModule | null> = getPptxRenderer;
   private viewer?: OptionalPeerApi;
   private generation = 0;
+
+  protected textContentRoot(): Element | null {
+    return this.renderRoot.querySelector('[part="container"]') ?? this.renderRoot.querySelector('[part="base"]');
+  }
 
   private onSlideChange = (event: OptionalPeerApi): void => {
     this.currentSlideIndex = event.detail.index;
@@ -189,12 +201,12 @@ export class LyraPptxViewer extends LyraElement<LyraPptxViewerEventMap> {
   }
 
   override render(): TemplateResult {
-    const ariaLabel = this.label || this.getAttribute('aria-label') || this.localize('pptxViewerLabel');
+    const ariaLabel = this.getAttribute('aria-label') || this.label || this.localize('pptxViewerLabel');
     return html`
       <div part="base" role="region" aria-label=${ariaLabel}>
         <div part="header" ?hidden=${!this.name}><span part="name">${this.name}</span></div>
         <p part="notice" role="note">${this.localize('pptxViewerFidelityNotice')}</p>
-        ${this.renderBody()}
+        ${this.renderBody()}${this.renderAnchorLiveRegion()}
       </div>
     `;
   }

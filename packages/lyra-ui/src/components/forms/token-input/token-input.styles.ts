@@ -53,7 +53,12 @@ export const styles = css`
   [part='remove']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   /* Only rendered while [editable] is set, so the non-editable token row keeps its plain,
      non-focusable text span and its exact current metrics. */
-  [part='token-label'] { border-radius: var(--lr-radius); cursor: pointer; }
+  [part='token-label'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border-radius: var(--lr-radius);
+    cursor: pointer;
+  }
   [part='token-label']:hover { background: var(--lr-color-brand-quiet); }
   [part='token-label']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   :host(:disabled) [part='token-label'] { cursor: default; }

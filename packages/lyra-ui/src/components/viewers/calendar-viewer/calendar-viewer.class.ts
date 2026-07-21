@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
 import { loadIcal } from './calendar-loader.js';
@@ -10,13 +11,15 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 
 export interface ParsedCalendarEvent { uid: string; summary: string; start: Date | null; end: Date | null; location: string; description: string; }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
-export interface LyraCalendarViewerEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
   if (!start) return '';
   const formatter = getDateTimeFormat(locale || undefined, { dateStyle: 'medium', timeStyle: 'short' });
   return end ? `${formatter.format(start)} – ${formatter.format(end)}` : formatter.format(start);
 }
+
+class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
 
 /**
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
@@ -37,7 +40,7 @@ function formatEventTime(start: Date | null, end: Date | null, locale: string): 
  * @cssprop [--lr-calendar-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
-export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> {
+export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
@@ -45,6 +48,11 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
   @property() name = '';
   /** CSS length that caps the scrollable event body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+  /** Shared text search and anchor-target API for the rendered calendar body. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
   private generation = 0;
 
@@ -101,7 +109,7 @@ export class LyraCalendarViewer extends LyraElement<LyraCalendarViewerEventMap> 
     }
   }
 
-  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div></div>`; }
+  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-calendar-viewer': LyraCalendarViewer; } }

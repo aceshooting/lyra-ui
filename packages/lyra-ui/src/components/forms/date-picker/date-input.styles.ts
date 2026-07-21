@@ -99,7 +99,7 @@ export const styles = css`
   [part='input-wrapper']:focus-within {
     border-color: var(--lr-color-brand);
   }
-  :host([disabled]) [part='input-wrapper'] {
+  :host(:disabled) [part='input-wrapper'] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }

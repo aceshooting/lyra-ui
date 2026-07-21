@@ -218,7 +218,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
           part="tree"
           .spans=${this.filteredSpans}
           .activeSpanId=${this.activeSpanId}
-          .label=${this.label}
+          .label=${this.getAttribute('aria-label') || this.label}
           ?show-tokens=${this.showTokens}
           ?show-cost=${this.showCost}
           ?hide-bars=${this.hideBars}

@@ -164,16 +164,15 @@ export const styles = css`
   [part='emoji'] {
     /* The item box and its glyph both scale with --lr-emoji-picker-item-size/-glyph-size (unlike
        a small icon in a padded button, the glyph fills most of the box, so it has to track the
-       box or it clips/looks lost) -- min-inline-size/min-block-size hold a flat 24px WCAG floor
-       (not --lr-icon-button-size) so the smaller size tiers can actually shrink the box below the
-       old unconditional 40px floor while still refusing to go below the true minimum. */
+       box or it clips/looks lost). Keep the complete interactive target at the shared icon-button
+       floor even when a consumer selects a smaller visual size. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     inline-size: var(--lr-emoji-picker-item-size);
     block-size: var(--lr-emoji-picker-item-size);
-    min-inline-size: var(--lr-size-1-5rem);
-    min-block-size: var(--lr-size-1-5rem);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     border-radius: var(--lr-radius-xs);
     background: transparent;

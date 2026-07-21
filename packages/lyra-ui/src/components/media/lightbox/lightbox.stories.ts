@@ -60,3 +60,11 @@ export const NarrowAllocation: Story = {
     style="position: static; inset: auto; display: flex; inline-size: 20rem; block-size: 24rem;"
   ></lr-lightbox>`,
 };
+
+export const NarrowLongCaptions: Story = {
+  render: (_args, context) => html`<lr-lightbox
+    .images=${images.map((image) => ({ ...image, caption: 'A deliberately long caption that wraps at the narrow 320px allocation.' }))}
+    .open=${context.viewMode !== 'docs'}
+    style="position: static; inset: auto; display: flex; inline-size: 20rem; block-size: 30rem;"
+  ></lr-lightbox>`,
+};

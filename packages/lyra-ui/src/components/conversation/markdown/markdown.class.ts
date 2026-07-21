@@ -2,6 +2,7 @@ import { html, type TemplateResult, type PropertyValues, type ComplexAttributeCo
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteInteger } from '../../../internal/numbers.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -698,7 +699,7 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
       // The default '_blank' is already truthy, so this preserves today's
       // exact output when the property is left unset.
       linkTarget: this.linkTarget,
-      headingOffset: this.headingOffset,
+      headingOffset: finiteInteger(this.headingOffset, 0, 0, 6),
       escapeHtmlOption: this.escapeHtml,
       highlightCodeOption: this.highlightCode && !this.streaming,
       // Bound method reference (not the raw map): reads must go through the LRU accessor so a hit

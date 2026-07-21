@@ -315,7 +315,12 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `foldQuotes:
 boolean = false` (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
-localized show/hide toggle. `false` (the default) preserves the full body rendering.
+localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
+`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
+`scrollToAnchor()` operate on rendered message text and emit the shared search/anchor events.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 `lr-attachment-open` — `detail: { attachment: { filename, mimeType, content? } }`, `content` a
@@ -345,7 +350,12 @@ contract: an absent `postal-mime` renders `[part="error"]` with the localized
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. No HTML is injected.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
+`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
+`scrollToAnchor()` operate on rendered event text and emit `lr-search-change`/`lr-anchor-result`.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 
@@ -369,12 +379,17 @@ read straight from JSZip's local file header (`uncompressedSize`) when available
 fully decompressing only the rare entry missing that header field. The list composes
 `<lr-virtual-list>` for large archives.
 
-**Properties:** `src` and `name` are strings — `name` (or a host-level `aria-label`) names the
-listing region as `role="region"`; with neither set, the region is unnamed.
+**Properties:** `src` and `name` are strings — a host-level `aria-label` takes precedence over
+`name` when naming the `role="region"` listing. The viewer also exposes the shared text-viewer
+contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
+case-insensitive text search over rendered entry names; `scrollToAnchor()` resolves text-quote and
+fragment anchors and emits `lr-anchor-result`.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 
-**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
+**CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
 `spinner`, and `error`. A directory row's name element carries both `entry-name` and
 `entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
 `::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
@@ -447,10 +462,14 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` also names the viewer
-region when `label` is unset.
+**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` takes precedence over
+`label` and `name`. `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds`
+(`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
+DOM text.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation.
+`search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()` are
+available for renderer output that exposes DOM text.
 
 **Events:** `lr-load` (`detail: { slideCount }`), `lr-slide-change` (`detail: { index, count }`),
 and `lr-render-error` with `detail.error`.
@@ -514,7 +533,12 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
 inside a bounded, scrollable body.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
+`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
+`scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 
@@ -590,7 +614,12 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings.
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
+`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
+`scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 
@@ -805,6 +834,11 @@ removed once it settles either way. Build error UI from `lr-include-error`.
   cross-origin fetching is opt-in; an invalid value is normalized back to `same-origin` rather than
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
+
+The shared text-viewer contract is also available for the sanitized light-DOM fragment:
+`highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
+`search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()`
+operate on the included text.
 
 **Events:**
 - `lr-load` — `detail: { src }` — the fragment was sanitized and written into the light DOM.
@@ -1049,7 +1083,10 @@ collapsed-depth="2">` of the raw value instead of the map.
 
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
-`geojsonViewLabel` when unset).
+`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`. The shared
+text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
+`clearSearch()`, and `scrollToAnchor()` for rendered feature metadata and status text.
 
 **Events:** `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
 

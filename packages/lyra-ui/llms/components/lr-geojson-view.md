@@ -28,7 +28,10 @@ collapsed-depth="2">` of the raw value instead of the map.
 
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
-`geojsonViewLabel` when unset).
+`geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`. The shared
+text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
+`anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
+`clearSearch()`, and `scrollToAnchor()` for rendered feature metadata and status text.
 
 **Events:** `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
 

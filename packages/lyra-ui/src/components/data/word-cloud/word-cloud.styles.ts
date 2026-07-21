@@ -69,6 +69,24 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
   }
+  [part='legend'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-s);
+    align-items: center;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part='legend-item'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-2xs);
+  }
+  [part='legend-swatch'] {
+    inline-size: var(--lr-size-0-75rem);
+    block-size: var(--lr-size-0-75rem);
+    border-radius: var(--lr-radius-xs);
+  }
   @media (prefers-reduced-motion: reduce) {
     [part='word'] {
       transition: none !important;

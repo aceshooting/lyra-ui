@@ -95,6 +95,7 @@ export type LyraMessageKey =
   | 'item'
   | 'trendOf'
   | 'wordCloud'
+  | 'wordCloudLegend'
   | 'notInCatalog'
   | 'sendMessage'
   | 'stopGenerating'
@@ -469,6 +470,7 @@ export type LyraMessageKey =
   | 'valueMustBeSerializable'
   | 'valueInvalid'
   | 'phoneInputIncomplete'
+  | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
   | 'selectTools'
@@ -1106,6 +1108,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   item: 'item',
   trendOf: 'Trend of {count} values, last {value}',
   wordCloud: 'Word cloud of {count} {word}',
+  wordCloudLegend: 'Word cloud color key',
   notInCatalog: 'not in catalog',
   sendMessage: 'Send message',
   stopGenerating: 'Stop generating',
@@ -1487,6 +1490,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   valueMustBeSerializable: 'Value must be JSON-serializable.',
   valueInvalid: 'The value is invalid.',
   phoneInputIncomplete: 'This phone number is incomplete.',
+  accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   selectTools: 'Select tools',

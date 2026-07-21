@@ -380,7 +380,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     if (durationMs != null) {
       parts.push(this.localizedDuration(durationMs));
     }
-    return parts.join(' — ');
+    return parts.join(this.localize('accessibleLabelSeparator'));
   }
 
   private localizedDuration(ms: number): string {

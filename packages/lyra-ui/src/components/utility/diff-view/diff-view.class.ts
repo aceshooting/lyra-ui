@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteCount } from '../../../internal/numbers.js';
 import { computeLineDiff, pairOpsForSplit, type DiffOp, type DiffSplitRow } from './diff-line-diff.js';
 import {
   loadShikiHighlighterCore,
@@ -160,8 +161,8 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     const visible = new Set<DiffOp>(ops);
     const foldBefore = new Map<DiffOp, number>();
     let trailingFold = 0;
-    const ctx = this.contextLines;
-    if (ctx === undefined || !Number.isFinite(ctx) || ctx < 0) return { visible, foldBefore, trailingFold };
+    const ctx = this.contextLines == null ? undefined : finiteCount(this.contextLines);
+    if (ctx === undefined) return { visible, foldBefore, trailingFold };
     let i = 0;
     while (i < ops.length) {
       if (ops[i]!.type !== 'equal') {

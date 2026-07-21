@@ -35,7 +35,7 @@ describe('lr-html-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Q3 report');
     } finally { window.fetch = original; }
   });
-  it('prefers the name property over a host aria-label, which in turn wins over the localized default', async () => {
+  it('lets a host aria-label override the name property and localized default', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
     try {
@@ -43,7 +43,7 @@ describe('lr-html-viewer', () => {
         html`<lr-html-viewer src="https://example.test/a.html" name="Named report" aria-label="Q3 report"></lr-html-viewer>`,
       )) as LyraHtmlViewer;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Named report');
+      expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Q3 report');
     } finally { window.fetch = original; }
   });
   it('rejects unsafe URLs and emits lr-render-error with a rendered failure message for a failed fetch', async () => {

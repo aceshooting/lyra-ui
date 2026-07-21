@@ -165,10 +165,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       span.name,
       this.localize(KIND_LABEL_KEY[span.kind]),
       this.localize(STATUS_LABEL_KEY[span.status]),
-      this.localize('spanStartedAtOffset', undefined, { value: this.formatDuration(span.startMs) || '0ms' }),
+      this.localize('spanStartedAtOffset', undefined, {
+        value: this.formatDuration(span.startMs) || this.localize('durationMilliseconds', undefined, { value: 0 }),
+      }),
     ];
     if (span.endMs != null) parts.push(this.formatDuration(span.endMs - span.startMs));
-    this.liveRegion?.announce(parts.join(' — '), { force: true });
+    this.liveRegion?.announce(parts.join(this.localize('accessibleLabelSeparator')), { force: true });
   }
 
   private selectRow(id: string): void {
@@ -266,7 +268,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
             data-status=${span.status}
             tabindex=${tabbable ? '0' : '-1'}
             aria-current=${isActive ? 'true' : nothing}
-            aria-label=${fragments.join(' — ')}
+            aria-label=${fragments.join(this.localize('accessibleLabelSeparator'))}
             style=${`inset-inline-start:${startPct}%;inline-size:${widthPct}%`}
             @click=${() => this.selectRow(span.id)}
             @focus=${() => {
@@ -289,7 +291,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${this.label || this.getAttribute('aria-label') || this.localize('spanWaterfall')}
+        aria-label=${this.getAttribute('aria-label') || this.label || this.localize('spanWaterfall')}
         @keydown=${this.onKeyDown}
       >
         ${!this.hideAxis && rows.length > 0 ? this.renderAxis(view) : nothing}

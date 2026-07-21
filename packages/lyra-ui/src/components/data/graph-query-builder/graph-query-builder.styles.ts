@@ -154,6 +154,8 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-space-2xl);
     block-size: var(--lr-space-2xl);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     color: var(--lr-color-text-quiet);
     background: none;

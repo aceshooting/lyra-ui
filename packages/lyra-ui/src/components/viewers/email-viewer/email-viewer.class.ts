@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/attachment-chip.class.js';
@@ -13,7 +14,7 @@ export interface ParsedEmailAttachment { filename: string; mimeType: string; siz
 export interface ParsedEmail { from: string; to: string; subject: string; date: string; bodyHtml: string | null; bodyText: string | null; attachments: ParsedEmailAttachment[]; }
 type EmailFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; email: ParsedEmail } | { kind: 'error'; message: string };
 
-export interface LyraEmailViewerEventMap {
+export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-attachment-open': CustomEvent<{ attachment: { filename: string; mimeType: string; content?: Uint8Array } }>;
 }
@@ -32,6 +33,8 @@ function normalizeAttachmentContent(content: ArrayBuffer | Uint8Array | string):
   if (content instanceof ArrayBuffer) return new Uint8Array(content);
   return new TextEncoder().encode(content);
 }
+
+class LyraEmailViewerBase extends LyraElement<LyraEmailViewerEventMap> {}
 
 /** The maximal trailing run of lines that are empty or start with `>`, split off only when that
  *  run contains at least 3 actual `>`-quoted lines (a short quote-looking tail -- padded by blank
@@ -114,7 +117,7 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string): string
  * @cssprop [--lr-email-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  */
-export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
+export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an RFC 822 message. */
   @property() src = '';
@@ -128,6 +131,11 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
   /** Collapses trailing quoted-reply text/HTML behind a localized toggle. `false` (the default)
    *  preserves today's exact body rendering. */
   @property({ type: Boolean, attribute: 'fold-quotes' }) foldQuotes = false;
+  /** Shared text search and anchor-target API for message headers/body text. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: EmailFetchState = { kind: 'idle' };
   @state() private textQuoteExpanded = false;
   private generation = 0;
@@ -245,7 +253,7 @@ export class LyraEmailViewer extends LyraElement<LyraEmailViewerEventMap> {
     }
   }
 
-  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.name || this.getAttribute('aria-label') || this.localize('emailViewerLabel')}>${this.renderBody()}</div>`; }
+  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('emailViewerLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-email-viewer': LyraEmailViewer; } }

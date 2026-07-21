@@ -18,12 +18,17 @@ read straight from JSZip's local file header (`uncompressedSize`) when available
 fully decompressing only the rare entry missing that header field. The list composes
 `<lr-virtual-list>` for large archives.
 
-**Properties:** `src` and `name` are strings — `name` (or a host-level `aria-label`) names the
-listing region as `role="region"`; with neither set, the region is unnamed.
+**Properties:** `src` and `name` are strings — a host-level `aria-label` takes precedence over
+`name` when naming the `role="region"` listing. The viewer also exposes the shared text-viewer
+contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
+
+**Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
+case-insensitive text search over rendered entry names; `scrollToAnchor()` resolves text-quote and
+fragment anchors and emits `lr-anchor-result`.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
 
-**CSS parts:** `base`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
+**CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
 `spinner`, and `error`. A directory row's name element carries both `entry-name` and
 `entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
 `::part(entry-name)` still selects every name. Entry rows are rendered into the embedded

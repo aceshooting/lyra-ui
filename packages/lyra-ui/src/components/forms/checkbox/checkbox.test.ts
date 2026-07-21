@@ -139,6 +139,41 @@ it('does not set an empty aria-label on the inner element when the host has none
   expect(base.hasAttribute('aria-label')).to.be.false;
 });
 
+describe('aria-describedby forwarding', () => {
+  it('forwards the host description ids to the inner role="checkbox" element', async () => {
+    const el = (await fixture(html`
+      <div>
+        <span id="description">This option is unavailable during maintenance.</span>
+        <lr-checkbox aria-describedby="description">Advanced mode</lr-checkbox>
+      </div>
+    `)) as HTMLElement;
+    const checkbox = el.querySelector('lr-checkbox') as LyraCheckbox;
+    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-describedby')).to.equal('description');
+  });
+
+  it('updates forwarding when the host description attribute is added, changed, or removed', async () => {
+    const checkbox = (await fixture(html`<lr-checkbox>Advanced mode</lr-checkbox>`)) as LyraCheckbox;
+    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.hasAttribute('aria-describedby')).to.be.false;
+
+    checkbox.setAttribute('aria-describedby', 'first-description');
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await checkbox.updateComplete;
+    expect(base.getAttribute('aria-describedby')).to.equal('first-description');
+
+    checkbox.setAttribute('aria-describedby', 'second-description');
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await checkbox.updateComplete;
+    expect(base.getAttribute('aria-describedby')).to.equal('second-description');
+
+    checkbox.removeAttribute('aria-describedby');
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await checkbox.updateComplete;
+    expect(base.hasAttribute('aria-describedby')).to.be.false;
+  });
+});
+
 describe('indeterminate', () => {
   it('reflects aria-checked="mixed" regardless of the underlying checked value', async () => {
     const el = (await fixture(html`<lr-checkbox indeterminate>Label</lr-checkbox>`)) as LyraCheckbox;

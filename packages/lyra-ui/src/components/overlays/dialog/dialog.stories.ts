@@ -132,3 +132,13 @@ export const ConfirmHelper: Story = {
     </div>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  render: (_args, context) => html`<div style="inline-size: 20rem; min-block-size: 34rem;">
+    <lr-dialog .open=${context.viewMode !== 'docs'} heading="A deliberately long dialog heading that wraps at 320px" closable>
+      <p>Long content remains readable when the allocation is narrow. This paragraph is intentionally verbose so the dialog must scroll rather than overflow its panel.</p>
+      <p>Repeatable details, validation messages, and action labels should remain usable at the smallest supported allocation.</p>
+      <div slot="footer"><button type="button">Cancel changes</button><button type="button">Save and continue</button></div>
+    </lr-dialog>
+  </div>`,
+};

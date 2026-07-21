@@ -194,6 +194,7 @@ describe('data mode', () => {
     await nextFrame();
     const activeRow = dataRow(el, 't1');
     expect(activeRow.active).to.be.true;
+    expect(activeRow.shadowRoot!.querySelectorAll('[part="active-indicator"]').length).to.equal(1);
   });
 
   it('re-emits lr-select/lr-thread-rename with the thread id attached, and never leaks the original bare lr-select', async () => {
@@ -755,6 +756,7 @@ it('exports the real viewport and hook wrappers as externally styleable parts', 
   expect(list.getAttribute('exportparts')).to.contain('row-content:row-content');
   expect(list.getAttribute('exportparts')).to.contain('row-actions:row-actions');
   expect(list.getAttribute('exportparts')).to.contain('row-excerpt:row-excerpt');
+  expect(list.getAttribute('exportparts')).to.contain('row-item-active-indicator:row-item-active-indicator');
 });
 
 it('allows group labels and month dates to be formatted by the host', async () => {

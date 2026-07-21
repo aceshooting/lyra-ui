@@ -35,14 +35,13 @@ export const styles = css`
     inline-size: var(--lr-attachment-chip-compact-thumbnail-size);
     block-size: var(--lr-attachment-chip-compact-thumbnail-size);
   }
-  /* The action buttons must shrink alongside the thumbnail under compact -- otherwise their
-     unshrunk full --lr-icon-button-size footprint (below) ends up dictating the compact chip's
-     visible height instead of the smaller thumbnail. */
+  /* The action buttons remain at the shared hit-area floor in compact mode, even though the
+     thumbnail itself is smaller. */
   :host([compact]) [part='retry-button'],
   :host([compact]) [part='preview-button'],
   :host([compact]) [part='remove-button'] {
-    min-inline-size: var(--lr-attachment-chip-compact-thumbnail-size);
-    min-block-size: var(--lr-attachment-chip-compact-thumbnail-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='meta'][hidden] {
     display: none;
@@ -194,9 +193,9 @@ export const styles = css`
     color: var(--lr-color-brand);
     font-size: var(--lr-font-size-md-sm);
   }
-  [part='retry-button']:hover,
-  [part='preview-button']:hover,
-  [part='remove-button']:hover {
+  :where([part='retry-button']):hover,
+  :where([part='preview-button']):hover,
+  :where([part='remove-button']):hover {
     background: color-mix(in srgb, var(--lr-color-text) 8%, transparent);
   }
   [part='retry-button']:focus-visible,

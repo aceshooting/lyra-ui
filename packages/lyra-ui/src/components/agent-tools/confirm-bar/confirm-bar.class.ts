@@ -189,7 +189,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('decision') && this.decision != null) {
+    if (changed.has('decision') && changed.get('decision') !== undefined && this.decision != null) {
       const key = this.decision === 'approved' ? 'confirmApprovedAnnounce' : 'confirmDeniedAnnounce';
       this.liveRegion?.announce(this.localize(key), { force: true });
     }
@@ -209,7 +209,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   override render(): TemplateResult {
     const decided = this.decision != null;
     return html`
-      <div part="base" role="group" aria-labelledby=${this.headingId}>
+      <div part="base" role="group" aria-label=${this.getAttribute('aria-label') || nothing} aria-labelledby=${this.getAttribute('aria-label') ? nothing : this.headingId}>
         <div part="heading" id=${this.headingId}>${this.renderHeading()}</div>
         <div part="body" ?hidden=${!this.hasBodySlot}><slot @slotchange=${this.onBodySlotChange}></slot></div>
         ${this.args !== undefined

@@ -291,7 +291,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       const last = this.buffer[this.buffer.length - 1];
       this.scrollTargetLineNumber = last ? last.number : null;
     }
-    if (this.announceOutput && raw !== '') {
+    if (this.hasUpdated && this.announceOutput && raw !== '') {
       // Always hand the *cumulative* not-yet-spoken text to announce() -- Announcer.announce()
       // overwrites (never appends) its own pending text, and only the onFlush callback above
       // (fired at most once per throttle window) clears pendingAnnounceText, so a burst of small

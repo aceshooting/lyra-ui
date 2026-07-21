@@ -56,6 +56,23 @@ export const GroupedColors: Story = {
     ></lr-word-cloud>`,
 };
 
+export const GroupedColorsWithLegend: Story = {
+  render: () => html`<lr-word-cloud
+    show-legend
+    style="height: 20rem"
+    .words=${[
+      { text: 'React', weight: 80, group: 'framework' },
+      { text: 'Playwright', weight: 55, group: 'testing' },
+      { text: 'Vite', weight: 45, group: 'tooling' },
+    ]}
+    .legend=${[
+      { label: 'Framework', color: storyColor('brand') },
+      { label: 'Testing', color: storyColor('success') },
+      { label: 'Tooling', color: storyColor('warning') },
+    ]}
+  ></lr-word-cloud>`,
+};
+
 export const CustomPalette: Story = {
   render: () =>
     html`<lr-word-cloud

@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { fileIcon, folderIcon } from '../../../internal/icons.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
@@ -12,10 +13,11 @@ import { styles } from './archive-viewer.styles.js';
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
 type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: string };
-export interface LyraArchiveViewerEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
+export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 const MAX_ARCHIVE_ENTRIES = 10_000;
 const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
+class LyraArchiveViewerBase extends LyraElement<LyraArchiveViewerEventMap> {}
 
 /** Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. File sizes
  * are measured through JSZip's public async API, so opening an archive decompresses each file once.
@@ -23,6 +25,7 @@ const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
  * @customElement lr-archive-viewer
  * @event lr-render-error - Fired when fetching or parsing the archive fails.
  * @csspart base - The root container.
+ * @csspart body - The archive listing body.
  * @csspart entry - An archive entry row.
  * @csspart entry-icon - The decorative folder or file icon.
  * @csspart entry-name - The entry path.
@@ -31,12 +34,19 @@ const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
  */
-export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
+export class LyraArchiveViewer extends TextViewerTarget(LyraArchiveViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
   /** Display name used as the archive listing's accessible label. */
   @property() name = '';
+
+  /** Case-insensitive text search with next/previous navigation, plus text-quote/fragment anchors
+   *  and highlights supplied by the shared text-viewer target contract. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: ArchiveState = { kind: 'idle' };
   private generation = 0;
   private loadLibrary: () => Promise<ArchiveLibraryApi | null> = loadArchiveLibraryCached;
@@ -104,10 +114,10 @@ export class LyraArchiveViewer extends LyraElement<LyraArchiveViewerEventMap> {
   override render(): TemplateResult {
     // `name` (or a host-level aria-label) names the archive listing region; with neither set
     // there is nothing meaningful to announce, so the region role is only added once a name exists.
-    const label = this.name || this.getAttribute('aria-label');
+    const label = this.getAttribute('aria-label') || this.name;
     return label
-      ? html`<div part="base" role="region" aria-label=${label}>${this.renderBody()}</div>`
-      : html`<div part="base">${this.renderBody()}</div>`;
+      ? html`<div part="base" role="region" aria-label=${label}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`
+      : html`<div part="base"><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

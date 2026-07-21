@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseText } from '../../../internal/resource-loader.js';
 import { loadHtmlSanitizer } from '../html-viewer/dompurify-loader.js';
@@ -24,10 +25,12 @@ const VALID_MODES: ReadonlySet<string> = new Set<LyraIncludeMode>(['cors', 'no-c
  */
 export type LyraIncludeErrorReason = 'blocked-url' | 'network' | 'http' | 'missing-sanitizer' | 'resource-too-large';
 
-export interface LyraIncludeEventMap {
+export interface LyraIncludeEventMap extends LyraTextViewerTargetEventMap {
   'lr-load': CustomEvent<{ src: string }>;
   'lr-include-error': CustomEvent<{ status: number; reason: LyraIncludeErrorReason; error?: unknown }>;
 }
+
+class LyraIncludeBase extends LyraElement<LyraIncludeEventMap> {}
 
 /**
  * `<lr-include>` fetches an HTML fragment from `src` and transcludes it into
@@ -76,7 +79,7 @@ export interface LyraIncludeEventMap {
  * @event lr-include-error - Fetching or sanitizing the fragment failed; see `LyraIncludeErrorReason` for `detail.reason`.
  * @csspart base - The non-layout (`display: contents`) wrapper around the default slot.
  */
-export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
+export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   static override styles = [LyraElement.styles, styles];
 
   /**
@@ -98,7 +101,17 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
    */
   @property({ reflect: true }) mode: LyraIncludeMode = 'same-origin';
 
+  /** Shared text search and anchor-target API for sanitized light-DOM includes. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
+
   private generation = 0;
+
+  protected textContentRoot(): Element | null {
+    return this;
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -155,7 +168,7 @@ export class LyraInclude extends LyraElement<LyraIncludeEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`<span part="base"><slot></slot></span>`;
+    return html`<span part="base"><slot></slot></span>${this.renderAnchorLiveRegion()}`;
   }
 }
 

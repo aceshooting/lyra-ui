@@ -46,6 +46,18 @@ export const NoLabelSlot: Story = {
   render: () => html`<lr-checkbox aria-label="Subscribe to updates"></lr-checkbox>`,
 };
 
+export const ExternalDescription: Story = {
+  name: 'External description (aria-describedby)',
+  render: () => html`
+    <div style="display:flex; flex-direction:column; gap:0.25rem; align-items:flex-start;">
+      <lr-checkbox aria-describedby="maintenance-description">Enable advanced mode</lr-checkbox>
+      <p id="maintenance-description" style="margin:0; color:var(--lr-color-text-muted); font-size:var(--lr-font-size-sm);">
+        This option is unavailable during scheduled maintenance.
+      </p>
+    </div>
+  `,
+};
+
 export const Required: Story = {
   render: () => html`
     <form

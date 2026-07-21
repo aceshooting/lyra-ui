@@ -303,9 +303,6 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   };
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('activeSpanId') && this.activeSpanId) {
-      this.focusedId = this.activeSpanId;
-    }
     if (changed.has('spans')) {
       const ids = new Set(this.spans.map((s) => s.id));
       let pruned: Set<string> | null = null;
@@ -331,6 +328,20 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         }
       }
       this.previousStatuses = new Map(this.spans.map((s) => [s.id, s.status]));
+    }
+    if (changed.has('spans') || changed.has('activeSpanId') || changed.has('collapsedIds')) {
+      const rows = this.buildRows();
+      const visibleIds = new Set(rows.map((row) => row.span.id));
+      const byId = new Map(this.spans.map((span) => [span.id, span] as const));
+      const visibleAncestor = (id: string | null): string | null => {
+        let current = id ? byId.get(id) : undefined;
+        while (current) {
+          if (visibleIds.has(current.id)) return current.id;
+          current = current.parentId ? byId.get(current.parentId) : undefined;
+        }
+        return null;
+      };
+      this.focusedId = visibleAncestor(this.activeSpanId) ?? visibleAncestor(this.focusedId) ?? rows[0]?.span.id ?? null;
     }
   }
 
@@ -392,7 +403,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
         aria-setsize=${setSize}
         aria-expanded=${hasChildren ? String(expanded) : nothing}
         aria-current=${isActive ? 'true' : nothing}
-        aria-label=${fragments.join(' — ')}
+        aria-label=${fragments.join(this.localize('accessibleLabelSeparator'))}
         ?data-active=${isActive}
         style=${`padding-inline-start:calc(${depth} * var(--lr-space-l))`}
         @click=${() => this.selectRow(span.id)}
@@ -439,7 +450,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       <div
         part="base"
         role="tree"
-        aria-label=${this.label || this.getAttribute('aria-label') || this.localize('traceTree')}
+        aria-label=${this.getAttribute('aria-label') || this.label || this.localize('traceTree')}
         @keydown=${this.onKeyDown}
       >
         ${rows.length === 0

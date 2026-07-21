@@ -124,11 +124,11 @@ describe('aria-label forwarding', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Zones');
   });
 
-  it('prefers the name property over a host aria-label', async () => {
+  it('lets a host aria-label override the name property', async () => {
     const el = (await fixture(
       html`<lr-geojson-view name="Named zones" aria-label="Zones"></lr-geojson-view>`,
     )) as LyraGeojsonView;
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Named zones');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Zones');
   });
 });
 

@@ -34,6 +34,11 @@ removed once it settles either way. Build error UI from `lr-include-error`.
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
 
+The shared text-viewer contract is also available for the sanitized light-DOM fragment:
+`highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
+`search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()`
+operate on the included text.
+
 **Events:**
 - `lr-load` — `detail: { src }` — the fragment was sanitized and written into the light DOM.
 - `lr-include-error` — `detail: { status, reason, error? }`. `reason` is a `LyraIncludeErrorReason`:

@@ -443,7 +443,13 @@ function lastCompound(selector) {
 }
 
 function partSelectorMatches(compound, partName) {
-  if (compound.includes('::')) return false; // pseudo-element -- a different box than the element itself
+  // A selector can guard a local part (`[part="x"]`) or an exposed part on a
+  // composed child (`lr-virtual-list::part(x)`). The latter still styles the
+  // interactive box represented by this component's public part contract; it
+  // must not be treated like an unrelated pseudo-element such as `::before`.
+  if (compound.includes('::')) {
+    return new RegExp(`::part\\(\\s*${partName.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}\\s*\\)`).test(compound);
+  }
   const re = new RegExp(`\\[part(?:~=|=)(['"])${partName}\\1\\]`);
   return re.test(compound);
 }

@@ -62,6 +62,10 @@ export class LyraIcon extends LyraElement {
 
   private cloneSvgNode(node: Node): SVGElement | null {
     if (!(node instanceof Element)) return null;
+    // A hyphenated light-DOM child is a custom element, not an SVG primitive.
+    // Creating it with the SVG namespace produces an inert node that can never
+    // upgrade; skip it rather than silently changing its semantics.
+    if (node.localName.includes('-')) return null;
     const copy = document.createElementNS('http://www.w3.org/2000/svg', node.localName);
     for (const attribute of node.attributes) {
       copy.setAttribute(attribute.name, attribute.value);

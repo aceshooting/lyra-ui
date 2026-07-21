@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseText } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -79,9 +80,11 @@ type GeojsonViewState =
   | { kind: 'loaded'; value: GeoJsonLike; center: [number, number]; zoom: number; peerAvailable: boolean }
   | { kind: 'error'; message: string };
 
-export interface LyraGeojsonViewEventMap {
+export interface LyraGeojsonViewEventMap extends LyraTextViewerTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
+
+class LyraGeojsonViewBase extends LyraElement<LyraGeojsonViewEventMap> {}
 
 /**
  * `<lr-geojson-view>` — internal document-registry bridge rendering a fetched GeoJSON file through
@@ -96,11 +99,16 @@ export interface LyraGeojsonViewEventMap {
  * @csspart error - The error region.
  * @csspart spinner - The loading status region.
  */
-export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
+export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
   static override styles = [LyraElement.styles, srOnly];
 
   @property() src = '';
   @property() name = '';
+  /** Shared search/anchor surface for rendered feature metadata and status text. */
+  override async search(query: string): Promise<number> { return super.search(query); }
+  override async searchNext(): Promise<boolean> { return super.searchNext(); }
+  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
+  override clearSearch(): void { super.clearSearch(); }
 
   @state() private loadState: GeojsonViewState = { kind: 'idle' };
   private generation = 0;
@@ -108,6 +116,10 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
   /** @internal test-only hook forcing the missing-peer fallback path without needing to actually
    *  uninstall `maplibre-gl` in this test environment. */
   forceMissingMaplibreForTesting = false;
+
+  protected textContentRoot(): Element | null {
+    return this.renderRoot.querySelector('[part="base"]');
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -169,7 +181,7 @@ export class LyraGeojsonView extends LyraElement<LyraGeojsonViewEventMap> {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" aria-label=${this.name || this.getAttribute('aria-label') || this.localize('geojsonViewLabel')}>${this.renderBody()}</div>`;
+    return html`<div part="base" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('geojsonViewLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

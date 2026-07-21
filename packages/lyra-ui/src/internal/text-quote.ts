@@ -227,6 +227,25 @@ export function resolveTextQuote(
   return rangeFromOffsets(scope, best, best + quote.length);
 }
 
+/** Returns every DOM range matching a normalized text query, in document order. Used by
+ * text-oriented viewers to implement search navigation without losing the normalized-to-DOM
+ * offset mapping that text-quote anchors already use. */
+export function findTextQuoteRanges(scope: TextQuoteScope, query: string): Range[] {
+  const needle = normalizeQuoteText(query);
+  if (!needle) return [];
+  const haystack = scope.text.toLocaleLowerCase();
+  const normalizedNeedle = needle.toLocaleLowerCase();
+  const ranges: Range[] = [];
+  for (let from = 0; ; ) {
+    const index = haystack.indexOf(normalizedNeedle, from);
+    if (index < 0) break;
+    const range = rangeFromOffsets(scope, index, index + needle.length);
+    if (range) ranges.push(range);
+    from = index + 1;
+  }
+  return ranges;
+}
+
 /** Finds the first Text node descendant of `node` in document order, e.g. to resolve a boundary
  *  point whose container is an Element (a Range from `selectNodeContents()` reports its container as
  *  the element itself, not the text node it contains). */

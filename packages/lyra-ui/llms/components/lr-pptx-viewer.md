@@ -16,10 +16,14 @@ Best-effort client-side PPTX viewer backed by the optional `@aiden0z/pptx-render
 localized fidelity notice is always visible because animations, equations, embedded objects,
 speaker notes, and several advanced effects are not rendered.
 
-**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` also names the viewer
-region when `label` is unset.
+**Properties:** `src`, `name`, and `label` are strings. A host `aria-label` takes precedence over
+`label` and `name`. `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds`
+(`['text-quote', 'fragment']`) provide the shared text-viewer contract when the renderer exposes
+DOM text.
 
 **Methods:** `goToSlide(index)` returns a promise and navigates the mounted presentation.
+`search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()` are
+available for renderer output that exposes DOM text.
 
 **Events:** `lr-load` (`detail: { slideCount }`), `lr-slide-change` (`detail: { index, count }`),
 and `lr-render-error` with `detail.error`.

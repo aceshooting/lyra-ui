@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -27,6 +27,15 @@ import '../../overlays/skeleton/skeleton.class.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
 const COPY_CONFIRM_MS = 1500;
+
+const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
+  fromAttribute(value): boolean {
+    return value !== 'false';
+  },
+  toAttribute(value): string | null {
+    return value ? null : 'false';
+  },
+};
 
 export interface LyraCodeBlockCoreEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
@@ -140,7 +149,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   @property({ type: Boolean, reflect: true }) collapsed = false;
 
   /** Shows a copy-to-clipboard button in the header. */
-  @property({ type: Boolean, reflect: true }) copyable = true;
+  @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) copyable = true;
 
   /** A CSS length (e.g. `"20rem"`); once set, the code scrolls internally
    *  past this height instead of growing the page. */
@@ -342,6 +351,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   // documented pattern for deriving one reactive property from a change to
   // others (same approach <lr-markdown>'s `willUpdate` takes).
   protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('code')) {
+      this.focusedLine = Math.min(Math.max(1, this.focusedLine), this.lineCount());
+    }
     // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
     // options in tokenize() below -- any of them changing (even without code/language/languages
     // changing) means the cached highlightedHtml needs recomputing to stay in sync.
