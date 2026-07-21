@@ -521,6 +521,26 @@ it('does not schedule a second streaming raf while one is already pending (sched
   internals.streamingRenderRaf = undefined; // cleanup so no stray renderMarkdown() fires later
 });
 
+it('firstUpdated() no-ops (never calls bindTextSelection) when the render output has no [part="content"] wrapper', async () => {
+  // render() always emits [part="content"] today, so this defensive guard needs an instance-level
+  // override to actually exercise -- same "unreachable via default rendering, reachable via a
+  // deliberate override" shape as the other fixtureSync()-based lifecycle-guard tests in this file.
+  const el = document.createElement('lr-markdown') as LyraMarkdown;
+  let bindCalled = false;
+  (el as unknown as { bindTextSelection(root: Element): void }).bindTextSelection = () => {
+    bindCalled = true;
+  };
+  (el as unknown as { render(): unknown }).render = () => html`<div>no content part here</div>`;
+  document.body.appendChild(el);
+  await el.updateComplete;
+  try {
+    expect(el.shadowRoot!.querySelector('[part="content"]')).to.not.exist;
+    expect(bindCalled, 'bindTextSelection must not be called when there is no content root to bind').to.be.false;
+  } finally {
+    el.remove();
+  }
+});
+
 describe('fallback matrix', () => {
   it('renderMarkdown() no-ops when deps has not been set yet', () => {
     const el = fixtureSync(html`<lr-markdown content="# hi"></lr-markdown>`) as LyraMarkdown;
@@ -863,6 +883,62 @@ describe('shiki highlighting (real peer)', () => {
       { timeout: 8000 },
     );
     await expect(el).to.be.accessible();
+  });
+
+  it('markdownCodeTransformer.code() wraps an existing array class list, and a lone non-array class value, in the language class -- captured from a real shiki codeToHtml call', async () => {
+    // markdownCodeTransformer() (the shiki `transformers` hook that stamps `language-${lang}` onto
+    // the rendered <code>) is module-private, so it can't be imported directly -- instead this
+    // temporarily wraps the shared, already-warm loadShikiHighlighter() singleton's own codeToHtml()
+    // to capture the exact transformer object markdown.ts passes it, then exercises both branches of
+    // its class-normalization ternary directly with synthetic hast nodes. Mirrors code-block.test.ts's
+    // own "the patch must be undone afterward" convention for monkey-patching this shared singleton.
+    const { loadShikiHighlighter } = await import('../code-block/code-loader.js');
+    const hl = await loadShikiHighlighter();
+    if (!hl) return; // shiki peer not installed in this environment -- covered elsewhere
+    const originalCodeToHtml = hl.codeToHtml;
+    let captured: { code(node: { properties: { class?: unknown } }): void } | undefined;
+    try {
+      hl.codeToHtml = (code: string, opts: { transformers: Array<{ code(node: unknown): void }> }) => {
+        captured = opts.transformers[0];
+        return originalCodeToHtml(code, opts);
+      };
+      const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+      el.content = '```ts\nconst x = 1;\n```';
+      await el.updateComplete;
+      await waitUntil(() => captured !== undefined);
+    } finally {
+      hl.codeToHtml = originalCodeToHtml;
+    }
+
+    const arrayNode = { properties: { class: ['existing'] as unknown[] } };
+    captured!.code(arrayNode);
+    expect(arrayNode.properties.class).to.deep.equal(['existing', 'language-ts']);
+
+    const stringNode = { properties: { class: 'existing' as unknown } };
+    captured!.code(stringNode);
+    expect(stringNode.properties.class).to.deep.equal(['existing', 'language-ts']);
+  });
+
+  it('marks a fenced block as permanently failed (no cache entry, plain fallback) when codeToHtml throws mid-tokenization', async () => {
+    const { loadShikiHighlighter } = await import('../code-block/code-loader.js');
+    const hl = await loadShikiHighlighter();
+    if (!hl) return; // shiki peer not installed in this environment -- covered elsewhere
+    const originalCodeToHtml = hl.codeToHtml;
+    try {
+      hl.codeToHtml = () => {
+        throw new Error('malformed grammar');
+      };
+      const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
+      el.content = '```ts\nconst x = 1;\n```';
+      await el.updateComplete;
+      await aTimeout(300); // long enough that a wrongly-cached highlight would have appeared
+      expect(el.shadowRoot!.querySelector('[part="code-block"] span')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part="code-block"] code')!.textContent).to.equal('const x = 1;\n');
+      type Internals = { failedHighlightKeys: Set<string> };
+      expect((el as unknown as Internals).failedHighlightKeys.has('ts\nconst x = 1;\n')).to.be.true;
+    } finally {
+      hl.codeToHtml = originalCodeToHtml;
+    }
   });
 });
 
@@ -1213,6 +1289,36 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
     expect(event.detail.text).to.equal('brown');
     selection.removeAllRanges();
+  });
+});
+
+// The tests above never actually exercise repaintHighlights()'s <mark>-wrap fallback stamping
+// (only meaningful when the CSS Custom Highlight API is unavailable), since this project's
+// Chromium test target supports it -- mirrors text-highlights.test.ts's own
+// "forced via a hidden Highlight global" convention, applied here at the <lr-markdown> level.
+describe('repaintHighlights <mark>-wrap fallback (forced via a hidden Highlight global)', () => {
+  let originalHighlight: unknown;
+
+  beforeEach(() => {
+    originalHighlight = (globalThis as unknown as { Highlight?: unknown }).Highlight;
+    (globalThis as unknown as { Highlight?: unknown }).Highlight = undefined;
+  });
+
+  afterEach(() => {
+    (globalThis as unknown as { Highlight?: unknown }).Highlight = originalHighlight;
+  });
+
+  it('stamps part="highlight" on every <mark>-wrapped highlight when the CSS Custom Highlight API is unavailable', async () => {
+    expect(supportsCustomHighlights()).to.be.false;
+    const el = (await fixture(
+      html`<lr-markdown content=${'The quick brown fox jumps over the lazy dog.'}></lr-markdown>`,
+    )) as LyraMarkdown;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'brown fox' } }];
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="paragraph"]') !== null);
+    await el.updateComplete;
+    const mark = el.shadowRoot!.querySelector('[part="content"] mark[data-lr-highlight-tone="accent"]');
+    expect(mark).to.exist;
+    expect(mark!.getAttribute('part')).to.equal('highlight');
   });
 });
 
