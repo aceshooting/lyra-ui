@@ -57,9 +57,11 @@ const BAR_CORNER_RADIUS = 4; // px, used only when roundedBars is true
  * Picks a "nice" (1/2/5 × 10^n) step size for an axis spanning `span` over
  * roughly `count` ticks — the standard Heckbert nice-numbers approach, so
  * axis labels read as 0/25/50/75/100 rather than 0/23.4/46.8/70.2/93.6.
+ * `span` is always positive here: niceDomain() (the only caller) guarantees
+ * `lo < hi` before calling this, either from its own lo===hi widening or
+ * from its own caller's Math.min/max-accumulated data domain.
  */
 function niceStep(span: number, count: number): number {
-  if (span <= 0) return 1;
   const rough = span / Math.max(1, count);
   const magnitude = 10 ** Math.floor(Math.log10(rough));
   const residual = rough / magnitude;
@@ -639,9 +641,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             y2 = zeroY - shareLo * posCompressedH;
             stackPos += v;
           } else {
+            // Unlike the positive-side `total > 0` guard above (reachable: an included v === 0
+            // segment can leave `pos` at exactly 0), `total` here can never be 0 or negative --
+            // this branch only runs for a strictly negative v, and that same v already
+            // contributed to negTotals[i] in the pre-pass above, making it strictly negative too.
             const total = -negTotals[i]!;
-            const shareLo = total > 0 ? -stackNeg / total : 0;
-            const shareHi = total > 0 ? (-stackNeg - v) / total : 0;
+            const shareLo = -stackNeg / total;
+            const shareHi = (-stackNeg - v) / total;
             y1 = zeroY + shareLo * negCompressedH;
             y2 = zeroY + shareHi * negCompressedH;
             stackNeg += v;
@@ -916,7 +922,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         </svg>
         <lr-live-region part="live-region"></lr-live-region>
         <ul part="data-list" class="sr-only" aria-label=${this.localize('chartData')}>
-          ${marksForA11y.map((mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
+          ${marksForA11y.map((_mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
         </ul>
         ${this.legend
           ? html`<div part="legend">
