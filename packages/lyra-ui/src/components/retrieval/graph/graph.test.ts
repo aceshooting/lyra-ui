@@ -292,6 +292,52 @@ describe('hover events', () => {
     expect(fired).to.be.false;
     expect(stub.hasAttribute('data-hovered')).to.be.false;
   });
+
+  it('suppresses lr-link-enter/lr-link-leave and data-hovered while dragging (onLinkEnter/onLinkLeave twin of the node guard)', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
+
+    (el as unknown as { isDragging: boolean }).isDragging = true;
+    let fired = false;
+    el.addEventListener('lr-link-enter', () => (fired = true));
+    el.addEventListener('lr-link-leave', () => (fired = true));
+
+    linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(fired).to.be.false;
+    expect(linkEl.hasAttribute('data-hovered')).to.be.false;
+
+    linkEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(fired).to.be.false;
+    expect(linkEl.hasAttribute('data-hovered')).to.be.false;
+  });
+
+  it('includes the link\'s explicit id in lr-link-enter/lr-link-leave detail when the link has one', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = [{ id: 'e1', source: 'a', target: 'b' }];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const linkEl = el.shadowRoot!.querySelector('[part="link"]') as SVGElement;
+
+    let enterDetail: { source: string; target: string; id?: string } | undefined;
+    let leaveDetail: { source: string; target: string; id?: string } | undefined;
+    el.addEventListener('lr-link-enter', (e) => (enterDetail = (e as CustomEvent).detail));
+    el.addEventListener('lr-link-leave', (e) => (leaveDetail = (e as CustomEvent).detail));
+
+    linkEl.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(enterDetail).to.deep.equal({ source: 'a', target: 'b', id: 'e1' });
+
+    linkEl.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(leaveDetail).to.deep.equal({ source: 'a', target: 'b', id: 'e1' });
+  });
 });
 
 it('renders directed links with arrowheads shortened to the target radius', async () => {
@@ -3018,6 +3064,28 @@ describe('canvas visibility gating (perf)', () => {
       io.restore();
     }
   });
+
+  it('treats an empty IntersectionObserver entries array as visible (entries[0]?.isIntersecting ?? true fallback)', async () => {
+    const io = stubIntersectionObserver();
+    try {
+      const el = (await fixture(html`<lr-graph renderer="canvas"></lr-graph>`)) as LyraGraph;
+      await el.updateComplete;
+      const latest = io.instances[io.instances.length - 1];
+      const internal = el as unknown as { visible: boolean };
+
+      // Force it false first so the `?? true` fallback's result is actually observable as a flip,
+      // not indistinguishable from the field's own `true` initial default.
+      latest.callback([{ isIntersecting: false } as unknown as IntersectionObserverEntry], latest as unknown as IntersectionObserver);
+      expect(internal.visible).to.be.false;
+
+      // A real IntersectionObserver never invokes its callback with an empty entries array for an
+      // observed target, so this can only be exercised by driving the fake observer directly.
+      latest.callback([], latest as unknown as IntersectionObserver);
+      expect(internal.visible).to.be.true;
+    } finally {
+      io.restore();
+    }
+  });
 });
 
 describe('lifecycle: super calls', () => {
@@ -3217,6 +3285,182 @@ describe('coverage: private-helper direct branches', () => {
     expect(() =>
       (el as unknown as { updateEdgeLabelZoomGate: (k: number) => void }).updateEdgeLabelZoomGate(5),
     ).to.not.throw();
+  });
+
+  it('graphItemText returns an empty string for a negative index (simNodes[-1] is undefined despite -1 < simNodes.length)', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    const text = (el as unknown as { graphItemText: (i: number) => string }).graphItemText(-1);
+    expect(text).to.equal('');
+  });
+
+  it('graphItemText returns an empty string for a fractional index landing past simNodes but short of simLinks.length', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    // simNodes.length === 2, simLinks.length === 1 -- index 2.5 skips the node branch (2.5 is not
+    // < 2) but its linkIndex (0.5) is still < simLinks.length(1), so `this.simLinks[0.5]` (a
+    // non-integer array index, always undefined) is what's actually exercised here.
+    const text = (el as unknown as { graphItemText: (i: number) => string }).graphItemText(2.5);
+    expect(text).to.equal('');
+  });
+
+  it('onNodeClick emits a fallback (0,0) position for a node with no settled x/y yet', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    let detail: { id: string; x: number; y: number } | undefined;
+    el.addEventListener('lr-node-click', (e) => (detail = (e as CustomEvent).detail));
+    (el as unknown as { onNodeClick: (n: { id: string }) => void }).onNodeClick({ id: 'unsettled' });
+    expect(detail).to.deep.equal({ id: 'unsettled', x: 0, y: 0 });
+  });
+
+  it('applyInteractions skips (re)binding a stale node element with no matching simNodes entry (data shrinking ahead of a re-render)', async () => {
+    const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+      { id: 'c', label: 'C' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 3, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    type Internals = {
+      simNodes: { id: string }[];
+      boundNodeEls: WeakSet<Element>;
+      applyInteractions: (changed: Map<string, unknown>) => void;
+    };
+    const internal = el as unknown as Internals;
+    const fullSimNodes = internal.simNodes;
+    // Reset first, the same way rebuildSimulation() itself does, then spy on `.add` to count how
+    // many of the 3 already-rendered elements actually get (re)bound.
+    internal.boundNodeEls = new WeakSet();
+    const originalAdd = internal.boundNodeEls.add.bind(internal.boundNodeEls);
+    let addCalls = 0;
+    internal.boundNodeEls.add = (value: Element) => {
+      addCalls++;
+      return originalAdd(value);
+    };
+    try {
+      // The DOM still has 3 <circle> elements (this direct assignment bypasses Lit's own
+      // re-render) while `simNodes` has been shrunk to 1 -- the exact "data shrinking below an
+      // index" scenario applyInteractions()'s `if (!n) return;` guards against.
+      internal.simNodes = fullSimNodes.slice(0, 1);
+      internal.applyInteractions(new Map([['simNodes', fullSimNodes]]));
+      expect(addCalls).to.equal(1);
+    } finally {
+      internal.simNodes = fullSimNodes;
+      delete (internal.boundNodeEls as unknown as { add?: unknown }).add;
+    }
+  });
+
+  it('rebuildSimulation defaults a neighbor-jitter spawn anchor\'s missing y to 0 (x is guarded by the search predicate, y is not)', async () => {
+    const el = (await fixture(html`<lr-graph link-distance="100"></lr-graph>`)) as LyraGraph;
+    el.nodes = [{ id: 'existing', label: 'Existing' }];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 1, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    // Corrupt the settled neighbor's y (keep x) -- the neighbor-jitter spawn path for a brand-new
+    // linked node only guards `neighbor.x ?? 0` from a genuinely undefined x, which is structurally
+    // impossible here (the search predicate that finds `neighbor` already requires `x != null`);
+    // `neighbor.y` has no equivalent guarantee, so corrupting only y is the one way to exercise its
+    // `?? 0` twin.
+    const existing = el.simNodes.find((n) => n.id === 'existing')!;
+    existing.y = undefined;
+
+    el.nodes = [
+      { id: 'existing', label: 'Existing' },
+      { id: 'newbie', label: 'Newbie' },
+    ];
+    el.links = [{ source: 'existing', target: 'newbie' }];
+    await el.updateComplete;
+
+    const newbie = el.simNodes.find((n) => n.id === 'newbie')!;
+    expect(Number.isFinite(newbie.y)).to.be.true;
+  });
+
+  it("onTick/linkCoordinates/updateFocusHalo default a node's still-undefined x/y to 0 (seeded settle, then corrupted mid-flight state)", async () => {
+    const el = (await fixture(html`<lr-graph seed="7" focus-id="a"></lr-graph>`)) as LyraGraph;
+    el.nodeTypes = [{ id: 'sq', label: 'Square', shape: 'square' }];
+    el.nodes = [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B', type: 'sq' },
+    ];
+    el.links = [
+      { source: 'a', target: 'b' },
+      { source: 'a', target: 'ghost' }, // dangling -- "ghost" has no matching node
+    ];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    // `seed` converges the settle synchronously and stops the simulation (see this file's own
+    // "gates canvas redraw..." precedent comment) -- corrupting positions here is safe from a real
+    // background tick racing in and overwriting them before the manual onTick() call below runs.
+    const nodeA = el.simNodes.find((n) => n.id === 'a')!;
+    const nodeB = el.simNodes.find((n) => n.id === 'b')!;
+    nodeA.x = undefined;
+    nodeA.y = undefined;
+    nodeB.x = undefined;
+    nodeB.y = undefined;
+    (el as unknown as { onTick: () => void }).onTick();
+
+    const circleA = el.shadowRoot!.querySelector('[part="node"]') as SVGCircleElement;
+    expect(circleA.getAttribute('cx')).to.equal('0');
+    expect(circleA.getAttribute('cy')).to.equal('0');
+
+    const nodeEls = Array.from(el.shadowRoot!.querySelectorAll('[part="node"]'));
+    const pathB = nodeEls[1] as SVGPathElement; // shape="square" renders <path>, positioned via transform
+    expect(pathB.getAttribute('transform')).to.equal('translate(0,0)');
+
+    const labelA = el.shadowRoot!.querySelector('[part="label"]') as SVGTextElement;
+    const radiusA = (el as unknown as { nodeRadius: (n: unknown) => number }).nodeRadius(nodeA);
+    expect(labelA.getAttribute('x')).to.equal(String(radiusA + 2));
+    expect(labelA.getAttribute('y')).to.equal('0');
+
+    const realLink = el.shadowRoot!.querySelector('[part="link"]:not([data-dangling])') as SVGLineElement;
+    expect(realLink.getAttribute('x1')).to.equal('0');
+    expect(realLink.getAttribute('y1')).to.equal('0');
+    expect(realLink.getAttribute('x2')).to.equal('0');
+    expect(realLink.getAttribute('y2')).to.equal('0');
+
+    const danglingLine = el.shadowRoot!.querySelector('[part="link"][data-dangling]') as SVGLineElement;
+    expect(danglingLine.getAttribute('x1')).to.equal('0');
+    expect(danglingLine.getAttribute('y1')).to.equal('0');
+    expect(danglingLine.getAttribute('x2')).to.equal('14'); // source.x??0 (0) + STUB_OFFSET_PX (14)
+    expect(danglingLine.getAttribute('y2')).to.equal('14');
+
+    const halo = el.shadowRoot!.querySelector('[part="focus-halo"]') as SVGCircleElement;
+    expect(halo.getAttribute('cx')).to.equal('0');
+    expect(halo.getAttribute('cy')).to.equal('0');
+  });
+
+  it('edgeLabelWidth falls back to "sans-serif" when --lr-font resolves to an empty custom property', async () => {
+    const el = (await fixture(html`<lr-graph style="--lr-font:"></lr-graph>`)) as LyraGraph;
+    await el.updateComplete;
+    expect(getComputedStyle(el).getPropertyValue('--lr-font').trim()).to.equal('');
+
+    const internal = el as unknown as { edgeLabelWidth: (t: string) => number; edgeLabelFontPx: () => number };
+    const text = 'sans-serif-fallback-probe';
+    const actual = internal.edgeLabelWidth(text);
+    const probeCtx = document.createElement('canvas').getContext('2d')!;
+    probeCtx.font = `${internal.edgeLabelFontPx()}px sans-serif`;
+    const expected = probeCtx.measureText(text).width;
+    expect(actual).to.equal(expected);
   });
 });
 
@@ -3710,6 +3954,30 @@ describe('optional d3 peer failure', () => {
       );
     } finally {
       el.remove();
+    }
+  });
+});
+
+// MUST stay the last describe/it in this file: `getScratchCtx()` (src/internal/canvas.ts) memoizes
+// its canvas 2D context at module scope for the lifetime of this page, on first call, forever --
+// once poisoned to `null` here it can never resolve to a real context again for any test that runs
+// afterward in this same file. Every other edgeLabelWidth-driven test above already runs (and
+// resolves the real, memoized context) before this point, so nothing downstream depends on it.
+describe('coverage: edgeLabelWidth with no scratch canvas 2D context available (must run last -- see comment above)', () => {
+  it('falls back to a character-count heuristic when getScratchCtx() returns null', async () => {
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    (HTMLCanvasElement.prototype as unknown as { getContext: (...args: unknown[]) => unknown }).getContext =
+      function (this: HTMLCanvasElement) {
+        return null;
+      };
+    try {
+      const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
+      const internal = el as unknown as { edgeLabelWidth: (t: string) => number; edgeLabelFontPx: () => number };
+      const text = 'no-ctx-fallback-probe';
+      const width = internal.edgeLabelWidth(text);
+      expect(width).to.equal(text.length * internal.edgeLabelFontPx() * 0.6);
+    } finally {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
     }
   });
 });

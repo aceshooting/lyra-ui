@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import type { TextQuoteScope } from './text-quote.js';
 import {
   normalizeQuoteText,
   scopeFromElement,
@@ -112,6 +113,100 @@ describe('scopeFromElement + resolveTextQuote', () => {
       root.remove();
     }
   });
+
+  it('strips a soft hyphen appearing inside DOM text content when building the scope', () => {
+    const root = makeContent('<p>super­conductor works.</p>');
+    try {
+      const scope = scopeFromElement(root);
+      expect(scope.text).to.include('superconductor');
+      expect(scope.text).to.not.include('­');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('keeps original codepoints for a text node where NFC composition changes length', () => {
+    const decomposed = 'café'; // "e" + combining acute accent -- 5 UTF-16 units
+    const root = makeContent(`<p>${decomposed} society</p>`);
+    try {
+      const scope = scopeFromElement(root);
+      // NFC-composing "café" changes its length (4 vs 5), so normalizeSegment keeps the raw
+      // decomposed codepoints for this node rather than the shorter precomposed form.
+      expect(scope.text).to.equal(`${decomposed} society`);
+      expect(scope.text.normalize('NFC')).to.equal('café society');
+      const range = resolveTextQuote(scope, { quote: 'society' });
+      expect(range).to.exist;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('skips a text node whose content collapses entirely to nothing', () => {
+    const root = document.createElement('div');
+    root.appendChild(document.createTextNode('Hello '));
+    root.appendChild(document.createTextNode('­­')); // entirely soft hyphens -> empty segment
+    root.appendChild(document.createTextNode('World'));
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      expect(scope.text).to.equal('Hello World');
+      expect(scope.segments).to.have.length(2);
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('returns null immediately for an empty (whitespace-only) query', () => {
+    const root = makeContent('<p>Some content here.</p>');
+    try {
+      const scope = scopeFromElement(root);
+      expect(resolveTextQuote(scope, { quote: '   ' })).to.be.null;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('does not boost score when a supplied prefix does not match the text preceding a candidate', () => {
+    const root = makeContent('<p>Alpha: revenue grew steadily.</p>');
+    try {
+      const scope = scopeFromElement(root);
+      const range = resolveTextQuote(scope, { quote: 'revenue grew', prefix: 'Wrong prefix' });
+      expect(range).to.exist;
+      expect(range!.toString()).to.equal('revenue grew');
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('resolveTextQuote defensive edge cases against hand-built scopes', () => {
+  it('resolves an end offset landing exactly at a segment boundary gap without stepping into the next segment', () => {
+    // A hand-built scope whose `text` has an unmapped character ('X' at index 2) between two
+    // segments -- exactly the shape produced by `scopeFromItems`' synthetic joining space, which no
+    // legitimate (trimmed) search needle can ever start or end on. Constructing it directly exercises
+    // `locate`'s defensive "offset lands at this segment's own end" branch.
+    const node1 = document.createTextNode('ab');
+    const node2 = document.createTextNode('cd');
+    const scope: TextQuoteScope = {
+      text: 'abXcd',
+      segments: [
+        { node: node1, normalizedStart: 0, rawOffsets: [0, 1] },
+        { node: node2, normalizedStart: 3, rawOffsets: [0, 1] },
+      ],
+    };
+    const range = resolveTextQuote(scope, { quote: 'abX' });
+    expect(range).to.exist;
+    // Resolved to one past segment 0's last mapped character (offset 2, i.e. the end of "ab") rather
+    // than incorrectly landing inside segment 1.
+    expect(range!.toString()).to.equal('ab');
+    expect(range!.endOffset).to.equal(2);
+    expect(range!.endContainer === node1).to.be.true;
+  });
+
+  it('returns null when the scope text matches but has no segments to map the match to', () => {
+    const scope: TextQuoteScope = { text: 'hello world', segments: [] };
+    expect(resolveTextQuote(scope, { quote: 'hello' })).to.be.null;
+  });
 });
 
 describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', () => {
@@ -160,6 +255,151 @@ describe('scopeFromItems + resolveTextQuote (simulated pdf text-layer items)', (
       expect(scope.segments).to.have.length(0);
     } finally {
       container.remove();
+    }
+  });
+
+  it('skips an item whose own text collapses entirely to nothing', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    try {
+      const makeSpan = (content: string) => {
+        const span = document.createElement('span');
+        span.textContent = content;
+        container.appendChild(span);
+        return span;
+      };
+      const items = [
+        { text: 'Hello', element: makeSpan('Hello') },
+        // The item's authoritative `text` collapses to empty even though its element has real content.
+        { text: '­­', element: makeSpan('x') },
+        { text: 'World', element: makeSpan('World') },
+      ];
+      const scope = scopeFromItems(items);
+      expect(scope.text).to.equal('Hello World');
+      expect(scope.segments).to.have.length(2);
+    } finally {
+      container.remove();
+    }
+  });
+});
+
+describe('buildQuoteAnchor boundary resolution edge cases', () => {
+  function makeContent(html: string): HTMLElement {
+    const el = document.createElement('div');
+    el.innerHTML = html;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it('resolves start/end boundaries whose container element requires descending into nested elements', () => {
+    const root = makeContent('<p>Intro <span><em>bold</em> tail</span></p>');
+    try {
+      const scope = scopeFromElement(root);
+      // `p`'s children are [textNode "Intro ", <span>]; starting at offset 1 makes the boundary
+      // container the <span> element itself, forcing `firstTextNodeDeep`/`lastTextNodeDeep` to
+      // descend through <em> to find the actual start/end text nodes.
+      const p = root.querySelector('p')!;
+      const range = document.createRange();
+      range.setStart(p, 1);
+      range.setEnd(p, 2);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('bold tail');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('maps a start boundary positioned past a trailing soft hyphen to the segment end', () => {
+    const root = makeContent('<p>super­<em>conductor</em></p>');
+    try {
+      const scope = scopeFromElement(root);
+      const p = root.querySelector('p')!;
+      const leadTextNode = p.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(leadTextNode, leadTextNode.data.length); // past the trailing soft hyphen
+      range.setEnd(p, p.childNodes.length);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('conductor');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('falls back to range.toString() when the range boundaries live outside the scoped content', () => {
+    const outside = document.createElement('div');
+    outside.textContent = 'Unrelated content here';
+    document.body.appendChild(outside);
+    const root = makeContent('<p>Some scoped text.</p>');
+    try {
+      const scope = scopeFromElement(root);
+      const range = document.createRange();
+      range.selectNodeContents(outside);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('Unrelated content here');
+      expect(anchor.prefix).to.be.undefined;
+      expect(anchor.suffix).to.be.undefined;
+    } finally {
+      root.remove();
+      outside.remove();
+    }
+  });
+
+  it('returns a null boundary when a container offset points past its last child', () => {
+    const root = makeContent('<p>Some text</p><div id="empty"></div>');
+    try {
+      const scope = scopeFromElement(root);
+      const emptyDiv = root.querySelector('#empty')!;
+      const range = document.createRange();
+      range.setStart(emptyDiv, 0);
+      range.setEnd(emptyDiv, 0);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('');
+      expect(anchor.prefix).to.be.undefined;
+      expect(anchor.suffix).to.be.undefined;
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('returns a null boundary when an offset child has no text descendants at all', () => {
+    const root = makeContent('<p>Lead in <span></span></p>');
+    try {
+      const scope = scopeFromElement(root);
+      const p = root.querySelector('p')!;
+      const range = document.createRange();
+      range.setStart(p, 1);
+      range.setEnd(p, 2);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('falls back to range.toString() for a collapsed (zero-length) range inside the scope', () => {
+    const root = makeContent('<p>Some scoped text here.</p>');
+    try {
+      const scope = scopeFromElement(root);
+      const textNode = root.querySelector('p')!.firstChild as Text;
+      const range = document.createRange();
+      range.setStart(textNode, 5);
+      range.setEnd(textNode, 5);
+      const anchor = buildQuoteAnchor(range, scope);
+      expect(anchor.kind).to.equal('text-quote');
+      if (anchor.kind !== 'text-quote') throw new Error('unreachable');
+      expect(anchor.quote).to.equal('');
+    } finally {
+      root.remove();
     }
   });
 });

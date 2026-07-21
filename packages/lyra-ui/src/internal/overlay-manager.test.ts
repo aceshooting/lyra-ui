@@ -535,3 +535,244 @@ it('does not traverse slot fallback content when assigned text suppresses it', (
   expect(focusable.length).to.equal(0);
   host.remove();
 });
+
+it('excludes an inert focus candidate from the collected list', () => {
+  const root = document.createElement('div');
+  const visible = document.createElement('button');
+  visible.textContent = 'visible';
+  const inertButton = document.createElement('button');
+  inertButton.textContent = 'inert';
+  inertButton.inert = true;
+  root.append(visible, inertButton);
+  document.body.append(root);
+
+  const focusable = collectFocusableElements(root);
+
+  expect(focusable.map((el) => el.textContent)).to.deep.equal(['visible']);
+  root.remove();
+});
+
+it('falls back to getClientRects when checkVisibility is unavailable on the element', () => {
+  const root = document.createElement('div');
+  const button = document.createElement('button');
+  button.textContent = 'target';
+  root.append(button);
+  document.body.append(root);
+  const original = button.checkVisibility;
+  (button as unknown as { checkVisibility: typeof button.checkVisibility | undefined }).checkVisibility = undefined;
+  try {
+    const focusable = collectFocusableElements(root);
+    expect(focusable.length).to.equal(1);
+    expect(focusable[0].textContent).to.equal('target');
+  } finally {
+    button.checkVisibility = original;
+    root.remove();
+  }
+});
+
+it('no-ops focusInitial and ignores Tab when the panel is not yet rendered', () => {
+  const host = document.createElement('section');
+  document.body.append(host);
+  const handle = activateOverlay({ host, panel: () => null, onEscape: () => undefined });
+
+  expect(() => handle.focusInitial()).to.not.throw();
+
+  const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+  document.dispatchEvent(event);
+  expect(event.defaultPrevented).to.be.false;
+
+  handle.deactivate({ restoreFocus: false });
+  host.remove();
+});
+
+it('wraps Tab (and Shift+Tab) to an edge focusable target when nothing is currently focused', () => {
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({
+    host: overlay.host,
+    panel: () => overlay.panel,
+    onEscape: () => undefined,
+    modal: false,
+  });
+
+  const dispatchWithNoActiveElement = (shiftKey: boolean) => {
+    Object.defineProperty(document, 'activeElement', { configurable: true, get: () => null });
+    try {
+      const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+      document.dispatchEvent(event);
+      return event;
+    } finally {
+      delete (document as unknown as { activeElement?: unknown }).activeElement;
+    }
+  };
+
+  const forwardEvent = dispatchWithNoActiveElement(false);
+  expect(forwardEvent.defaultPrevented).to.be.true;
+  expect(deepActiveElement(document)?.textContent).to.equal('dialog first');
+
+  overlay.first.blur();
+  const backwardEvent = dispatchWithNoActiveElement(true);
+  expect(backwardEvent.defaultPrevented).to.be.true;
+  expect(deepActiveElement(document)?.textContent).to.equal('dialog last');
+
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('coalesces a second inert-update mutation batch that arrives before the first is applied', async () => {
+  const background = document.createElement('main');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  const originalQueueMicrotask = globalThis.queueMicrotask;
+  const captured: Array<() => void> = [];
+  globalThis.queueMicrotask = (callback: () => void) => {
+    captured.push(callback);
+  };
+  try {
+    // A live mutation schedules the coalesced update, but since queueMicrotask is stubbed to only
+    // capture (not run) it, the update never actually applies during this window.
+    background.inert = false;
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(captured.length).to.equal(1);
+
+    // A second, independent mutation batch (a childList change) arrives while the first update is
+    // still pending -- it must find the update already queued and fold into it rather than scheduling
+    // a second one.
+    const second = document.createElement('aside');
+    second.dataset.overlayBackground = '';
+    document.body.append(second);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(captured.length).to.equal(1);
+  } finally {
+    globalThis.queueMicrotask = originalQueueMicrotask;
+  }
+
+  // Manually flush the single captured update now that real scheduling is restored, so the module's
+  // internal "update queued" flag and the background's inert state settle correctly for later tests.
+  captured.forEach((callback) => callback());
+  expect(background.inert).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('coalesces two rapid same-element inert attribute changes into their final settled value', async () => {
+  const background = document.createElement('main');
+  background.dataset.overlayBackground = '';
+  document.body.append(background);
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  // Two synchronous, same-tick toggles on the SAME element land in one MutationObserver batch as two
+  // records; handleMutations must look ahead to the second record's outcome rather than react to the
+  // (already-superseded) first one.
+  background.inert = false;
+  background.inert = true;
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  expect(background.inert).to.be.true;
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('falls back to the global MutationObserver constructor for a document with no defaultView', () => {
+  const detachedDoc = document.implementation.createHTMLDocument('detached');
+  const host = detachedDoc.createElement('section');
+  const panel = detachedDoc.createElement('div');
+  panel.tabIndex = -1;
+  host.append(panel);
+  detachedDoc.body.append(host);
+
+  expect(detachedDoc.defaultView).to.be.null;
+
+  const handle = activateOverlay({ host, panel: () => panel, onEscape: () => undefined });
+  expect(handle.isActive()).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+});
+
+it('skips inerting a non-HTMLElement sibling such as an SVG element', () => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  expect('inert' in svg).to.be.false;
+  expect((svg as unknown as { inert?: boolean }).inert).to.not.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  svg.remove();
+});
+
+it('walks composed children through a slot when the overlay host is distributed light DOM', () => {
+  const hostName = `overlay-slot-host-${Math.random().toString(36).slice(2)}`;
+  customElements.define(
+    hostName,
+    class extends HTMLElement {
+      constructor() {
+        super();
+        const shadow = this.attachShadow({ mode: 'open' });
+        const slot = document.createElement('slot');
+        shadow.append(slot);
+      }
+    },
+  );
+  const wrapper = document.createElement(hostName);
+  const sibling = document.createElement('button');
+  sibling.textContent = 'sibling';
+  const overlay = createOverlay(document, 'dialog');
+  wrapper.append(sibling, overlay.host);
+  document.body.append(wrapper);
+
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+
+  expect(sibling.inert).to.be.true;
+
+  handle.deactivate({ restoreFocus: false });
+  wrapper.remove();
+});
+
+it('does not throw when restoring focus fails and no overlay remains in the stack', () => {
+  const trigger = document.createElement('button');
+  document.body.append(trigger);
+  trigger.focus();
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  handle.focusInitial();
+
+  trigger.remove(); // the captured restore-focus target is no longer connected/focusable
+
+  expect(() => handle.deactivate()).to.not.throw();
+});
+
+it('captures no return-focus target when nothing is focused at activation', () => {
+  const overlay = createOverlay(document, 'dialog');
+  Object.defineProperty(document, 'activeElement', { configurable: true, get: () => null });
+  let handle: ReturnType<typeof activateOverlay>;
+  try {
+    handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  } finally {
+    delete (document as unknown as { activeElement?: unknown }).activeElement;
+  }
+  expect(() => handle.deactivate()).to.not.throw();
+});
+
+it('no-ops suspend on an already-deactivated handle', () => {
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  handle.deactivate({ restoreFocus: false });
+
+  expect(() => handle.suspend()).to.not.throw();
+  expect(handle.isActive()).to.be.false;
+});
+
+it('no-ops a second consecutive suspend call while still active but unregistered', () => {
+  const overlay = createOverlay(document, 'dialog');
+  const handle = activateOverlay({ host: overlay.host, panel: () => overlay.panel, onEscape: () => undefined });
+  handle.suspend();
+
+  expect(() => handle.suspend()).to.not.throw();
+  expect(handle.isActive()).to.be.true;
+
+  handle.resume();
+  handle.deactivate({ restoreFocus: false });
+});

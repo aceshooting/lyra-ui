@@ -1,7 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './knowledge-graph-explorer.js';
 import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
-import type { LyraGraph, GraphNode, GraphLink, GraphNodeType } from '../graph/graph.class.js';
+import type { LyraGraph, GraphNode, GraphLink, GraphNodeType, GraphCommunity } from '../graph/graph.class.js';
 import type { LyraGraphLegend } from '../graph-legend/graph-legend.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
 import type { LyraEntityCard } from '../entity-card/entity-card.class.js';
@@ -351,6 +351,228 @@ describe('lr-knowledge-graph-explorer', () => {
     });
     await aTimeout(0);
     await expect(el).to.be.accessible();
+  });
+
+  it('clears a dangling selection and force-closes the popover when the selected node disappears from nodes', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    popover.showAt({ x: 10, y: 10 });
+    await el.updateComplete;
+    expect(popover.open).to.be.true;
+
+    // marie disappears from `nodes` -- the selection would otherwise dangle, pointing the open
+    // popover at an entity that no longer exists.
+    el.nodes = nodes.filter((n) => n.id !== 'marie');
+    await el.updateComplete;
+    expect(el.selectedNodeId).to.equal(null);
+    expect(popover.open).to.be.false;
+  });
+
+  it("the composed entity-card's own focus button re-activates the entity (lr-entity-activate), opening the popover", async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    expect(popover.open).to.be.false;
+    // The built-in focus button is rendered inside lr-entity-card's own shadow root (unlike the
+    // slotted pin lr-button used elsewhere in this file), so it must be resolved through the
+    // entity-card's shadowRoot rather than a single cross-boundary selector -- and, since this is
+    // a freshly-created grandchild (entity-card only starts existing once selectedNodeId is set),
+    // both entity-card's own update and lr-button's nested update (its internal `buttonEl` --
+    // `click()` is overridden to forward to it) need to have actually run before `.click()` does
+    // anything.
+    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    await card.updateComplete;
+    const focusButton = card.shadowRoot!.querySelector('[part="focus-button"]') as HTMLElement & { updateComplete: Promise<unknown> };
+    expect(focusButton).to.exist;
+    await focusButton.updateComplete;
+    focusButton.click();
+    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    expect(el.selectedNodeId).to.equal('polonium');
+  });
+
+  it('a direct click with renderer="canvas" anchors the popover using the click\'s own clientX/clientY (no per-node DOM element to find)', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer renderer="canvas" .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    // Simulates the real gesture order: lr-graph's own lr-node-click fires first (setting the
+    // pending node id), then the native click that bubbles out of it -- both dispatched
+    // synchronously so the native click consumes pendingNodeId before the queued microtask does.
+    graph.dispatchEvent(new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } }));
+    graph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 123, clientY: 45 }));
+    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.selectedNodeId).to.equal('marie');
+  });
+
+  it('a direct click whose composedPath has no [part="node"] element falls back to clientX/clientY (renderer="svg")', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const graph = graphEl(el);
+    // Dispatched straight on the <lr-graph> host itself (not on a rendered node circle inside its
+    // shadow root), so `event.composedPath()` never contains a `[part="node"]` element.
+    graph.dispatchEvent(new CustomEvent('lr-node-click', { detail: { id: 'marie', x: 0, y: 0 } }));
+    graph.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, clientX: 77, clientY: 88 }));
+    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(el.selectedNodeId).to.equal('marie');
+  });
+
+  it('a native click on the graph with no prior lr-node-click leaves the popover untouched (no pending node id)', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    expect(popover.open).to.be.false;
+    graphEl(el).dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(popover.open).to.be.false;
+    expect(el.selectedNodeId).to.equal(null);
+  });
+
+  it('neighborRowsFor skips dangling link endpoints (no matching node) in both directions', async () => {
+    const testNodes: GraphNode[] = [
+      { id: 'marie', label: 'Marie Curie' },
+      { id: 'pierre', label: 'Pierre Curie' },
+    ];
+    const testLinks: GraphLink[] = [
+      { source: 'marie', target: 'pierre', label: 'married_to' },
+      { source: 'pierre', target: 'marie', label: 'friend_of' },
+      { source: 'marie', target: 'ghost-out', label: 'ghost_out' }, // dangling target
+      { source: 'ghost-in', target: 'marie', label: 'ghost_in' }, // dangling source
+    ];
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${testNodes} .links=${testLinks}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    const neighborList = el.shadowRoot!.querySelector('[part="detail-card"] lr-neighbor-list') as LyraNeighborList;
+    expect(neighborList.rows.length).to.equal(2);
+    expect(neighborList.rows.map((r) => r.relation).sort()).to.deep.equal(['friend_of', 'married_to']);
+  });
+
+  it('entityFor falls back to the node id as the label when the node has no label', async () => {
+    const testNodes: GraphNode[] = [{ id: 'unlabeled-entity' }];
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${testNodes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    el.selectedNodeId = 'unlabeled-entity';
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    expect(card.entity?.label).to.equal('unlabeled-entity');
+  });
+
+  it('entityFor merges entityDetails (description, properties, explicit degree) for a matching node id', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .entityDetails=${{ marie: { description: 'A physicist', properties: { field: 'Physics' }, degree: 42 } }}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    expect(card.entity?.description).to.equal('A physicist');
+    expect(card.entity?.properties).to.deep.equal({ field: 'Physics' });
+    expect(card.entity?.degree).to.equal(42);
+  });
+
+  it('communityLabelFor resolves a known label, falls back to the raw id when unknown, and to empty when absent', async () => {
+    const testCommunities: GraphCommunity[] = [{ id: 'sci', label: 'Scientists', memberIds: ['marie'] }];
+    const testNodes: GraphNode[] = [
+      { id: 'marie', label: 'Marie Curie', communityId: 'sci' },
+      { id: 'pierre', label: 'Pierre Curie', communityId: 'ghost-community' },
+      { id: 'polonium', label: 'Polonium' },
+    ];
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${testNodes} .communities=${testCommunities}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('Scientists');
+
+    el.selectedNodeId = 'pierre';
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('ghost-community');
+
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('');
+  });
+
+  it('requestPath is a no-op unless exactly two nodes are pinned', async () => {
+    const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    let fired = false;
+    el.addEventListener('lr-path-request', () => {
+      fired = true;
+    });
+    const priv = el as unknown as { requestPath(): void };
+
+    el.pinnedNodeIds = [];
+    priv.requestPath();
+    expect(fired).to.be.false;
+
+    el.pinnedNodeIds = ['marie'];
+    priv.requestPath();
+    expect(fired).to.be.false;
+
+    el.pinnedNodeIds = ['marie', 'pierre', 'polonium'];
+    priv.requestPath();
+    expect(fired).to.be.false;
+  });
+
+  it('activateEntity/openDetailAt no-op before the component has ever rendered (graphEl/popoverEl unresolved)', async () => {
+    // Not yet connected: Lit creates `renderRoot` lazily on first connect/update (see
+    // av-player.test.ts's identical "seeking before the media element mounts" precedent), so both
+    // `@query`-backed `graphEl`/`popoverEl` genuinely resolve to nothing here.
+    const el = document.createElement('lr-knowledge-graph-explorer') as LyraKnowledgeGraphExplorer;
+    const priv = el as unknown as {
+      activateEntity(id: string): Promise<void>;
+      openDetailAt(id: string, rect: { x: number; y: number }): void;
+    };
+    await priv.activateEntity('marie');
+    expect(el.selectedNodeId).to.equal('marie');
+    expect(() => priv.openDetailAt('marie', { x: 10, y: 10 })).to.not.throw();
+  });
+
+  it('openDetailAt falls back to an empty accessible label when the given id has no matching entity', async () => {
+    const el = await settledFixture();
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    const priv = el as unknown as { openDetailAt(id: string, rect: { x: number; y: number }): void };
+    priv.openDetailAt('does-not-exist', { x: 10, y: 10 });
+    await el.updateComplete;
+    expect(popover.accessibleLabel).to.equal('');
+    expect(popover.open).to.be.true;
+  });
+
+  it('a search result with no label falls back to displaying the node id', async () => {
+    const testNodes: GraphNode[] = [{ id: 'unlabeled-node' }];
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${testNodes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    const native = searchInput.shadowRoot!.querySelector('input') as HTMLInputElement;
+    native.value = 'unlabeled';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="search-result"] button') as HTMLButtonElement;
+    expect(button.textContent?.trim()).to.equal('unlabeled-node');
   });
 });
 
