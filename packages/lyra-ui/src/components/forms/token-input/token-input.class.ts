@@ -6,6 +6,8 @@ import { nextId } from '../../../internal/a11y.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { styles } from './token-input.styles.js';
 
+export type LyraTokenInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
  *  `attachInternals()` is browser-only, and calling it unconditionally in the constructor would
@@ -85,6 +87,14 @@ const delimiterConverter = {
  * @cssprop [--lr-token-input-input-inline-size=var(--lr-size-8rem)] - `flex-basis` of the native text input within the token row.
  * @cssprop [--lr-token-input-min-input-inline-size=var(--lr-size-4rem)] - Inline-size floor of the native text input, so it stays usable once tokens wrap.
  * @cssprop [--lr-token-input-editor-inline-size=var(--lr-size-6rem)] - Inline size of the inline token editor opened by `editable`.
+ * @cssprop --lr-token-input-padding - Input-wrapper padding, scaled by `size`.
+ * @cssprop --lr-token-input-font-size - Input-wrapper/token font size, scaled by `size`.
+ * @cssprop --lr-token-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
+ * @cssprop --lr-token-input-control-height - Exact input-wrapper height. Unset by default, which
+ *   leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor
+ *   and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is
+ *   never declared by the component itself, it can be set from an ancestor or an outer-tree rule
+ *   as well as inline on the element.
  */
 export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   static formAssociated = true;
@@ -101,6 +111,8 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`. */
+  @property({ reflect: true }) size: LyraTokenInputSize = 'm';
   @property({ attribute: 'allow-duplicates', type: Boolean }) allowDuplicates = false;
   /** Allow editing an existing token in place: each token becomes a roving tab stop that opens an
    *  inline editor on click, Enter, or F2. Defaults to `false`, in which case the token row renders

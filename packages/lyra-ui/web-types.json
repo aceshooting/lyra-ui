@@ -15828,7 +15828,7 @@
         },
         {
           "name": "lr-token-input",
-          "description": "`<lr-token-input>` — an editable, form-associated list of removable tokens.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Validation message. |\n| `hint` | Supporting text. |\n| `label` | Visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | Validation message. |\n| `form-control` | Outer control wrapper. |\n| `form-control-label` | Label. |\n| `hint` | Supporting text. |\n| `input` | Native text input. |\n| `input-wrapper` | Token and input row. |\n| `remove` | Token remove button. |\n| `token` | Individual token. |\n| `token-editor` | The inline text field replacing a token's text while it is being edited. Rendered only while `editable` is set and that token is open for editing. |\n| `token-label` | The token's text, as the roving-focus edit trigger. Rendered only while `editable` is set. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-token-input-input-inline-size` (default: `var(--lr-size-8rem)`) — `flex-basis` of the native text input within the token row.\n- `--lr-token-input-min-input-inline-size` (default: `var(--lr-size-4rem)`) — Inline-size floor of the native text input, so it stays usable once tokens wrap.\n- `--lr-token-input-editor-inline-size` (default: `var(--lr-size-6rem)`) — Inline size of the inline token editor opened by `editable`.",
+          "description": "`<lr-token-input>` — an editable, form-associated list of removable tokens.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Validation message. |\n| `hint` | Supporting text. |\n| `label` | Visible label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | Validation message. |\n| `form-control` | Outer control wrapper. |\n| `form-control-label` | Label. |\n| `hint` | Supporting text. |\n| `input` | Native text input. |\n| `input-wrapper` | Token and input row. |\n| `remove` | Token remove button. |\n| `token` | Individual token. |\n| `token-editor` | The inline text field replacing a token's text while it is being edited. Rendered only while `editable` is set and that token is open for editing. |\n| `token-label` | The token's text, as the roving-focus edit trigger. Rendered only while `editable` is set. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-token-input-input-inline-size` (default: `var(--lr-size-8rem)`) — `flex-basis` of the native text input within the token row.\n- `--lr-token-input-min-input-inline-size` (default: `var(--lr-size-4rem)`) — Inline-size floor of the native text input, so it stays usable once tokens wrap.\n- `--lr-token-input-editor-inline-size` (default: `var(--lr-size-6rem)`) — Inline size of the inline token editor opened by `editable`.\n- `--lr-token-input-padding` — Input-wrapper padding, scaled by `size`.\n- `--lr-token-input-font-size` — Input-wrapper/token font size, scaled by `size`.\n- `--lr-token-input-control-min-height` — Input-wrapper block-size floor, scaled by `size`.\n- `--lr-token-input-control-height` — Exact input-wrapper height. Unset by default, which leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element.",
           "attributes": [
             {
               "name": "allow-duplicates",
@@ -15930,6 +15930,15 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            },
+            {
+              "name": "size",
+              "description": "Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`.\n\nType: `LyraTokenInputSize`  \nDefault: `'m'`",
+              "value": {
+                "type": [
+                  "LyraTokenInputSize"
                 ]
               }
             }
@@ -19170,8 +19179,20 @@
           "description": "**`<lr-toast>`** (default: `var(--lr-size-28rem)`) — Inline size of the stack, capped by the viewport minus the placement insets."
         },
         {
+          "name": "--lr-token-input-control-height",
+          "description": "**`<lr-token-input>`** — Exact input-wrapper height. Unset by default, which leaves `--lr-token-input-control-min-height` as a floor only; set it to a length to both floor and cap the row (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element."
+        },
+        {
+          "name": "--lr-token-input-control-min-height",
+          "description": "**`<lr-token-input>`** — Input-wrapper block-size floor, scaled by `size`."
+        },
+        {
           "name": "--lr-token-input-editor-inline-size",
           "description": "**`<lr-token-input>`** (default: `var(--lr-size-6rem)`) — Inline size of the inline token editor opened by `editable`."
+        },
+        {
+          "name": "--lr-token-input-font-size",
+          "description": "**`<lr-token-input>`** — Input-wrapper/token font size, scaled by `size`."
         },
         {
           "name": "--lr-token-input-input-inline-size",
@@ -19180,6 +19201,10 @@
         {
           "name": "--lr-token-input-min-input-inline-size",
           "description": "**`<lr-token-input>`** (default: `var(--lr-size-4rem)`) — Inline-size floor of the native text input, so it stays usable once tokens wrap."
+        },
+        {
+          "name": "--lr-token-input-padding",
+          "description": "**`<lr-token-input>`** — Input-wrapper padding, scaled by `size`."
         },
         {
           "name": "--lr-tool-approval-dialog-mono-font",

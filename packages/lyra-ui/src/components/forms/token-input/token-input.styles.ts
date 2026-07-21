@@ -1,10 +1,44 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: block; --lr-token-input-min-input-inline-size: var(--lr-size-4rem); }
+  :host {
+    display: block;
+    --lr-token-input-min-input-inline-size: var(--lr-size-4rem);
+    --lr-token-input-padding: var(--lr-space-xs);
+    --lr-token-input-font-size: var(--lr-font-size-md-sm);
+    --lr-token-input-control-min-height: var(--lr-size-2-5rem);
+    /* --lr-token-input-control-height is intentionally NOT declared here -- same convention as
+       lr-input/lr-select/lr-combobox: a consumer-facing exact-height escape hatch consumed only
+       through the var() fallback on [part='input-wrapper'] below. */
+  }
+  :host([size='2xs']) {
+    --lr-token-input-padding: var(--lr-size-0-0625rem);
+    --lr-token-input-font-size: var(--lr-font-size-2xs);
+    --lr-token-input-control-min-height: var(--lr-size-1-25rem);
+  }
+  :host([size='xs']) {
+    --lr-token-input-padding: var(--lr-size-0-125rem);
+    --lr-token-input-font-size: var(--lr-font-size-xs);
+    --lr-token-input-control-min-height: var(--lr-size-1-5rem);
+  }
+  :host([size='s']) {
+    --lr-token-input-padding: var(--lr-space-xs);
+    --lr-token-input-font-size: var(--lr-font-size-sm);
+    --lr-token-input-control-min-height: var(--lr-size-1-875rem);
+  }
+  :host([size='l']) {
+    --lr-token-input-padding: var(--lr-space-m);
+    --lr-token-input-font-size: var(--lr-font-size-lg);
+    --lr-token-input-control-min-height: var(--lr-size-3rem);
+  }
+  :host([size='xl']) {
+    --lr-token-input-padding: var(--lr-space-l);
+    --lr-token-input-font-size: var(--lr-font-size-xl);
+    --lr-token-input-control-min-height: var(--lr-size-3-5rem);
+  }
   [part='form-control'] { display: grid; gap: var(--lr-space-xs); }
   [part='form-control-label'] { color: var(--lr-color-text); font-weight: var(--lr-font-weight-semibold); }
-  [part='input-wrapper'] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-xs); min-block-size: var(--lr-size-2-5rem); padding: var(--lr-space-xs); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); }
+  [part='input-wrapper'] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-xs); min-block-size: var(--lr-token-input-control-height, var(--lr-token-input-control-min-height)); block-size: var(--lr-token-input-control-height, auto); padding: var(--lr-token-input-padding); font-size: var(--lr-token-input-font-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); }
   [part='input-wrapper']:focus-within { border-color: var(--lr-color-brand); outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='input'] { flex: 1 1 var(--lr-token-input-input-inline-size, var(--lr-size-8rem)); min-inline-size: var(--lr-token-input-min-input-inline-size); border: 0; outline: 0; background: transparent; color: var(--lr-color-text); font: inherit; }
   [part='input']::placeholder { color: var(--lr-color-text-quiet); }

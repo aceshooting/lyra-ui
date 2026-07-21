@@ -1692,8 +1692,11 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 
 **Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `allowDuplicates` (`allow-duplicates`, default `false`), `editable` (reflected, default
-`false` — see below), and `delimiter: string | null` (default `','` — see below).
+input), `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
+`size`, scaling the input-wrapper's row height and text size across six tiers; the remove button's
+hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-duplicates`, default
+`false`), `editable` (reflected, default `false` — see below), and `delimiter: string | null` (default
+`','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** `input`, `change`, `lr-add` (`detail: { value }`), `lr-remove`
 (`detail: { value, index }`), and `lr-token-edit`
@@ -1726,10 +1729,15 @@ does not work** — that is the four-character string `null`. Use `delimiter="no
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
-**Themeable custom properties:** `--lr-token-input-input-inline-size` (the editable input's
-`flex-basis` inside the wrapped token row; undeclared by default, falling back inline to
-`--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the floor
-that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
+**Themeable custom properties:** `--lr-token-input-padding` (the input-wrapper padding, scaled by
+`size`), `--lr-token-input-font-size` (the input-wrapper and token font size, scaled by `size`),
+`--lr-token-input-control-min-height` (the input-wrapper's block-size floor, scaled by `size`),
+`--lr-token-input-control-height` (exact input-wrapper height — undeclared by default, leaving the
+`--lr-token-input-control-min-height` floor only; set it to a length to both floor and cap the row,
+e.g. to pixel-match a sibling field in the same toolbar row), `--lr-token-input-input-inline-size`
+(the editable input's `flex-basis` inside the wrapped token row; undeclared by default, falling back
+inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the
+floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
 (default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).
 
 ## `lr-code-editor`

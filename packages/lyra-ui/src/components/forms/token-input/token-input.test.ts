@@ -63,6 +63,41 @@ it('localizes the remove button accessible name via .strings', async () => {
   expect(removeBtn.getAttribute('aria-label')).to.equal('Retirer alpha');
 });
 
+it('defaults to size "m" and reflects a size attribute', async () => {
+  const defaultEl = (await fixture(html`<lr-token-input></lr-token-input>`)) as LyraTokenInput;
+  expect(defaultEl.size).to.equal('m');
+  const el = (await fixture(html`<lr-token-input size="s"></lr-token-input>`)) as LyraTokenInput;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.size).to.equal('s');
+});
+
+it("matches lr-input's own row height at every shared size tier when empty", async () => {
+  const expected: Record<string, string> = {
+    '2xs': '20px',
+    xs: '24px',
+    s: '30px',
+    m: '40px',
+    l: '48px',
+    xl: '56px',
+  };
+  for (const [size, px] of Object.entries(expected)) {
+    const el = await fixture(html`<lr-token-input size=${size}></lr-token-input>`);
+    const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+    expect(getComputedStyle(wrapper).minBlockSize, `size=${size}`).to.equal(px);
+  }
+});
+
+it('keeps the remove-button hit-area fixed across every size tier', async () => {
+  const sizes = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+  for (const size of sizes) {
+    const el = (await fixture(
+      html`<lr-token-input size=${size} .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    const remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
+    expect(getComputedStyle(remove).minBlockSize, `size=${size}`).to.equal('40px');
+  }
+});
+
 it('gives the per-token remove button the shared minimum hit area', async () => {
   const el = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
