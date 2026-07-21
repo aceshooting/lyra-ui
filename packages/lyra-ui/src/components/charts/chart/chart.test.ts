@@ -1261,3 +1261,343 @@ it('routes the chart.js peer-missing error through a .strings override', async (
     el.remove();
   }
 });
+
+// --- deepMerge(): an explicit `undefined` override key keeps the generated base unchanged --------
+
+it('deep-merges an explicit `undefined` override value by keeping the generated base, instead of nulling it out', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  el.config = { options: { scales: { x: undefined as never } } };
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const config = (el as any).buildConfig();
+  // An explicit `undefined` at this key must not clobber the generated `x` scale -- it should
+  // survive exactly as buildConfig() would have generated it with no override at all.
+  expect(config.options.scales.x.type).to.equal('category');
+  expect(config.options.scales.x.grid).to.exist;
+});
+
+// --- IntersectionObserver callback: isIntersecting fallback -------------------------------------
+
+it('falls back to visible=true when an IntersectionObserver entry lacks isIntersecting (defensive fallback)', async () => {
+  const callbacks: IntersectionObserverCallback[] = [];
+  const OriginalIO = window.IntersectionObserver;
+  class SpyIntersectionObserver extends OriginalIO {
+    constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      super(callback, options);
+      callbacks.push(callback);
+    }
+  }
+  (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver =
+    SpyIntersectionObserver;
+  try {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = 'line';
+    el.labels = ['A'];
+    el.datasets = [{ label: 'x', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    (el as any).visible = false;
+    const callback = callbacks[callbacks.length - 1];
+    // An empty entries array -- entries[0] is undefined, so `entries[0]?.isIntersecting` is
+    // undefined too, forcing the `?? true` fallback rather than a real observed boolean.
+    callback([], new OriginalIO(() => {}));
+    expect((el as any).visible).to.equal(true);
+  } finally {
+    (window as unknown as { IntersectionObserver: typeof IntersectionObserver }).IntersectionObserver = OriginalIO;
+  }
+});
+
+// --- zoom-plugin dynamic import racing a disconnect (distinct timing from the leak test above) --
+
+it('skips drawing when the element disconnects after zoom starts loading but before loadChartJsWithZoom() resolves', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  el.zoom = true;
+  // Let `updated()` actually run (and kick off `loadChartJsWithZoom().then(...)`) while still
+  // connected -- unlike the "does not leak..." test above, which disconnects in the same
+  // synchronous tick and never reaches that `.then()` registration at all.
+  await el.updateComplete;
+  el.remove();
+  await aTimeout(200);
+
+  expect((el as any).chart).to.be.undefined;
+});
+
+// --- seriesToDataset(): array color passthrough, empty-palette fallback, dash ---------------------
+
+it('passes an explicit per-slice color array through unchanged instead of wrapping it', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'pie';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'Share', data: [1, 2], color: ['#111111', '#222222'] }];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.backgroundColor).to.deep.equal(['#111111', '#222222']);
+  expect(ds.borderColor).to.equal('#111111');
+});
+
+it('seriesToDataset leaves the palette fallback color undefined when given an empty palette', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const ds = (el as any).seriesToDataset({ label: 'A', data: [1] }, 0, [], 'bar');
+  expect(ds.backgroundColor).to.equal(undefined);
+  expect(ds.borderColor).to.equal(undefined);
+});
+
+it('defaults a series with neither data nor points to an empty array instead of throwing', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'pie';
+  el.labels = [];
+  el.datasets = [{ label: 'Empty' } as never];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.data).to.deep.equal([]);
+  expect(ds.backgroundColor).to.deep.equal([]);
+});
+
+it('sets a dashed borderDash for a series with dash: true', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2], dash: true }];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.borderDash).to.deep.equal([4, 4]);
+});
+
+// --- handlePointClick(): value fallback for a dangling index -------------------------------------
+
+it('emits a null value (not throwing) when the resolved click hits an index with no backing data', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [10, 20] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const chart = (el as any).chart;
+  const original = chart.getElementsAtEventForMode;
+  chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 99 }];
+  try {
+    const onClick = (el as any).buildConfig().options.onClick;
+    let event: CustomEvent | undefined;
+    el.addEventListener('lr-point-click', (e) => (event = e as CustomEvent), { once: true });
+    onClick({} as never, [], chart);
+    expect(event!.detail.value).to.equal(null);
+  } finally {
+    chart.getElementsAtEventForMode = original;
+  }
+});
+
+// --- localizedChartType(): unrecognized effective type falls back to the raw string --------------
+
+it('falls back to the raw type string when the effective type has no known message-key mapping', () => {
+  // Direct unit call, not connected/loaded -- an unregistered Chart.js controller name would throw
+  // if it ever reached a real `new Chart()` construction, which isn't what this line is about.
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.config = { type: 'customController' as never };
+  const text = (el as any).localizedChartType();
+  expect(text).to.equal('customController');
+});
+
+// --- formatValue(): non-numeric raw value is left unformatted -----------------------------------
+
+it('leaves a non-numeric raw value unformatted instead of calling valueFormatter with NaN', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [10] }];
+  el.valueFormatter = (value, context) => `${context}:${value}`;
+
+  const config = (el as any).buildConfig();
+  const result = config.options.scales.y.ticks.callback('not-a-number');
+  expect(result).to.equal('not-a-number');
+});
+
+// --- legendValue(): no matching dataset, indexed slice value, empty-series fallback --------------
+
+it('legendValue returns undefined for a legend item whose dataset index has no matching dataset', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const value = (el as any).legendValue({ datasetIndex: 5 }, { data: { datasets: [{ label: 'A', data: [1, 2] }] } });
+  expect(value).to.equal(undefined);
+});
+
+it('legendValue returns the value at a specific integer item.index instead of summing the whole series (per-slice pie/doughnut legend items)', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const value = (el as any).legendValue(
+    { datasetIndex: 0, index: 1 },
+    { data: { datasets: [{ label: 'A', data: [10, 20, 30] }] } },
+  );
+  expect(value).to.equal(20);
+});
+
+it('legendValue returns undefined (not zero) for a whole-dataset legend item whose series has no finite values', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const value = (el as any).legendValue({ datasetIndex: 0 }, { data: { datasets: [{ label: 'Empty', data: [] }] } });
+  expect(value).to.equal(undefined);
+});
+
+// --- legendLabels(): no datasets array, and a dataset with no explicit label ---------------------
+
+it('legendLabels falls back to an empty items array when chart.data.datasets is undefined, instead of throwing', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const labels = (el as any).legendLabels({ data: {} });
+  expect(labels).to.deep.equal([]);
+});
+
+it('legendLabels labels a dataset by its 1-based index when it has no explicit label', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const labels = (el as any).legendLabels({ data: { datasets: [{ data: [1, 2] }] } });
+  expect(labels[0].text).to.equal('1');
+});
+
+// --- tooltipLabel(): non-object parsed value, r/x fallbacks, unchanged-format guard --------------
+
+it('reads the radar/polarArea parsed.r value when .y is absent, and omits the series-label prefix when the dataset has no label', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.valueFormatter = (value, context) => `${context}:${value}`;
+  const text = (el as any).tooltipLabel({ parsed: { r: 5 }, dataset: {} });
+  expect(text).to.equal('tooltip:5');
+});
+
+it('reads a non-object parsed value directly for pie/doughnut-style tooltips', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.valueFormatter = (value, context) => `${context}:${value}`;
+  const text = (el as any).tooltipLabel({ parsed: 42, dataset: { label: 'Share' } });
+  expect(text).to.equal('Share: tooltip:42');
+});
+
+it('returns undefined (letting Chart.js render its own default) when the formatted value is unchanged from the raw value', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  // No valueFormatter set -- formatValue() returns the raw value unchanged.
+  const text = (el as any).tooltipLabel({ parsed: { y: 5 }, dataset: { label: 'S' } });
+  expect(text).to.equal(undefined);
+});
+
+// --- updateAutoLegendPosition(): clientWidth fallback when getBoundingClientRect is zeroed out ---
+
+it('falls back to clientWidth for auto legend sizing when getBoundingClientRect width is zeroed out (e.g. a zero-scale transform)', async () => {
+  const wrapper = await fixture(html`
+    <div style="display: flex; width: 300px;">
+      <lr-chart style="transform: scale(0);"></lr-chart>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-chart') as LyraChart;
+  (el as any).updateAutoLegendPosition();
+  expect(el.getBoundingClientRect().width).to.equal(0);
+  expect(el.clientWidth).to.be.greaterThan(0);
+  expect((el as any).autoLegendPosition).to.equal('bottom');
+});
+
+// --- updateChartArea(): non-finite geometry guard ------------------------------------------------
+
+it('ignores a chartArea update whose geometry is non-finite instead of corrupting the cached area', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  (el as any).updateChartArea({ chartArea: { top: NaN, left: 0, right: 100, bottom: 100, width: 100, height: 100 } });
+  expect(el.chartArea).to.equal(undefined);
+});
+
+// --- draw()'s in-place-update branch: prior/current dataset-count and options fallbacks ----------
+
+it('treats a Chart.js instance with no prior datasets array as having zero prior datasets, instead of throwing', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.data.datasets = undefined; // simulate a corrupted/never-initialized prior data.datasets
+
+  el.datasets = [{ label: 'y', data: [3, 4] }];
+  await el.updateComplete;
+
+  expect(chart.isDatasetVisible(0)).to.be.true;
+});
+
+it('defaults chart.options to an empty object if buildConfig() ever produces a config with no options (defensive fallback)', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const originalBuildConfig = (el as any).buildConfig.bind(el);
+  (el as any).buildConfig = () => ({ ...originalBuildConfig(), options: undefined });
+  try {
+    // Chart.js's own `options` setter re-resolves whatever it's assigned against its internal
+    // per-type defaults, so the exact resulting shape isn't ours to assert on -- what this line
+    // guards is that assigning `undefined` doesn't reach Chart.js at all (which throws) by
+    // substituting `{}` first.
+    expect(() => (el as any).draw()).to.not.throw();
+    expect((el as any).chart.options).to.be.an('object');
+  } finally {
+    (el as any).buildConfig = originalBuildConfig;
+  }
+});
+
+it('treats a rebuilt config with no datasets array as having zero current datasets, instead of throwing on an out-of-range restore', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'bar';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.setDatasetVisibility(0, false); // a legend-hidden dataset before the corrupted redraw
+
+  const originalUpdate = chart.update.bind(chart);
+  const originalSetDatasetVisibility = chart.setDatasetVisibility.bind(chart);
+  const calledIndexes: number[] = [];
+  // Chart.js's own `data` setter re-normalizes a missing `datasets` back to `[]` immediately, so
+  // corrupting `config.data.datasets` before assignment never leaves it unset by the time draw()
+  // reads it back. Instead, corrupt it as a side effect of the (stubbed) update() call itself --
+  // exactly where draw() reads `this.chart.data.datasets` afterward -- to exercise the `?? 0`
+  // fallback for `currentDatasetCount`.
+  chart.update = () => {
+    chart.data.datasets = undefined;
+  };
+  chart.setDatasetVisibility = (datasetIndex: number, visible: boolean) => {
+    calledIndexes.push(datasetIndex);
+    return originalSetDatasetVisibility(datasetIndex, visible);
+  };
+  try {
+    expect(() => (el as any).draw()).to.not.throw();
+    // currentDatasetCount fell back to 0, so index 0's restore attempt (0 >= 0) is skipped --
+    // if the fallback didn't engage, this stub would come back with `[0]`.
+    expect(calledIndexes).to.deep.equal([]);
+  } finally {
+    chart.update = originalUpdate;
+    chart.setDatasetVisibility = originalSetDatasetVisibility;
+    // The stubbed update() left chart.data.datasets undefined -- restore real Chart.js-managed
+    // data via a normal draw cycle so fixture cleanup's disconnectedCallback()/chart.destroy()
+    // doesn't crash on the next test (Chart.js's own teardown reads data.datasets.length).
+    el.datasets = [{ label: 'x', data: [1, 2] }];
+    await el.updateComplete;
+  }
+});
+
+// --- seriesValues(): a series with neither data nor points reports "no data" ---------------------
+
+it('reports "no data" for a series with neither data nor points, instead of throwing on an undefined data array', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = [];
+  el.datasets = [{ label: 'Empty' } as never];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  const description = el.shadowRoot!.querySelector('[part="description"]')!;
+  expect(description.textContent).to.contain('Empty: no data');
+});

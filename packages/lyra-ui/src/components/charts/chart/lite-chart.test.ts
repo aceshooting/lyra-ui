@@ -1445,3 +1445,310 @@ describe('selectedIndex', () => {
     expect(bars.some((b) => b.hasAttribute('data-selected'))).to.be.false;
   });
 });
+
+// --- ResizeObserver entry without contentBoxSize (falls back to getBoundingClientRect) --------
+
+it('falls back to getBoundingClientRect() for plotWidth/plotHeight when a ResizeObserver entry has no contentBoxSize', async () => {
+  const callbacks: ResizeObserverCallback[] = [];
+  const OriginalRO = window.ResizeObserver;
+  class SpyResizeObserver extends OriginalRO {
+    constructor(callback: ResizeObserverCallback) {
+      super(callback);
+      callbacks.push(callback);
+    }
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = SpyResizeObserver;
+  try {
+    const el = await mount(html`<lr-lite-chart
+      type="bar"
+      .labels=${['a']}
+      .datasets=${[{ label: 's', data: [1] }]}
+    ></lr-lite-chart>`);
+    const svgEl = el.shadowRoot!.querySelector('svg')!;
+    const rectBefore = svgEl.getBoundingClientRect();
+    const callback = callbacks[callbacks.length - 1];
+    // No `contentBoxSize` on the entry at all -- forces the `box` lookup to be falsy so the
+    // callback takes its getBoundingClientRect() fallback branch instead.
+    callback([{} as unknown as ResizeObserverEntry], new OriginalRO(() => {}));
+    await el.updateComplete;
+    expect((el as unknown as { plotWidth: number }).plotWidth).to.be.closeTo(rectBefore.width, 1);
+    expect((el as unknown as { plotHeight: number }).plotHeight).to.be.closeTo(rectBefore.height, 1);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalRO;
+  }
+});
+
+// --- interactiveMarks() label fallback for a hole in the labels array ---------------------------
+
+it('falls back to an empty label in bar mark data when the labels array has a hole at that index', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    .labels=${[undefined as unknown as string, 'b']}
+    .datasets=${[{ label: 'S', data: [1, 2] }]}
+  ></lr-lite-chart>`);
+  const items = el.shadowRoot!.querySelectorAll('[part="data-list"] li');
+  expect(items[0].textContent).to.equal('S, : 1 (1 of 2)');
+});
+
+it('falls back to an empty label in line mark data when the labels array has a hole at that index', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="line"
+    .labels=${[undefined as unknown as string]}
+    .datasets=${[{ label: 'S', data: [1, 2] }]}
+  ></lr-lite-chart>`);
+  const items = el.shadowRoot!.querySelectorAll('[part="data-list"] li');
+  expect(items[0].textContent).to.equal('S, : 1 (1 of 2)');
+});
+
+// --- markAnnouncement() defensive guards --------------------------------------------------------
+
+it('markAnnouncement returns an empty string for an out-of-range mark index (defensive guard)', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`);
+  expect((el as unknown as { markAnnouncement: (i: number) => string }).markAnnouncement(99)).to.equal('');
+});
+
+it('markAnnouncement falls back to the localized generic series label when the mark references a dataset index that no longer exists', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`);
+  const text = (
+    el as unknown as {
+      markAnnouncement: (i: number, marks: { datasetIndex: number; index: number; label: string; value: number }[]) => string;
+    }
+  ).markAnnouncement(0, [{ datasetIndex: 5, index: 0, label: 'a', value: 1 }]);
+  expect(text).to.contain('Series');
+});
+
+// --- onMarkFocus()/focusMark() defensive guards -------------------------------------------------
+
+it('onMarkFocus is a no-op for an out-of-range mark index (defensive guard)', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`);
+  const before = (el as unknown as { activeMarkIndex: number }).activeMarkIndex;
+  (el as unknown as { onMarkFocus: (i: number) => void }).onMarkFocus(99);
+  expect((el as unknown as { activeMarkIndex: number }).activeMarkIndex).to.equal(before);
+});
+
+it('focusMark is a no-op for an out-of-range mark index (defensive guard)', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [1] }]}></lr-lite-chart>`);
+  const before = (el as unknown as { activeMarkIndex: number }).activeMarkIndex;
+  (el as unknown as { focusMark: (i: number) => void }).focusMark(99);
+  await el.updateComplete;
+  expect((el as unknown as { activeMarkIndex: number }).activeMarkIndex).to.equal(before);
+});
+
+// --- barValueToY() scale="sqrt" domainMax fallback for a non-positive hi ------------------------
+
+it('scale="sqrt" falls back to a domainMax of 1 instead of dividing by a non-positive hi, for an all-negative domain', async () => {
+  const el = (await fixture(
+    html`<lr-lite-chart type="bar" scale="sqrt" .beginAtZero=${false} .labels=${['a']} .datasets=${[{ label: 's', data: [-50] }]}></lr-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  expect(bar.getAttribute('height')).to.not.contain('NaN');
+  expect(bar.getAttribute('height')).to.not.contain('Infinity');
+});
+
+// --- roundedBarPath() zero-height degrades to a plain rect path ---------------------------------
+
+it('roundedBars degrades to a plain rectangle path for a zero-height bar instead of self-intersecting', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" rounded-bars .labels=${['a']} .datasets=${[{ label: 's', data: [0] }]}></lr-lite-chart>`);
+  const mark = el.shadowRoot!.querySelector('[part="bar"]')!;
+  expect(mark.tagName.toLowerCase()).to.equal('path');
+  expect(mark.getAttribute('d')).to.not.include('Q');
+});
+
+// --- domain() stacked extent skips null/non-finite values ---------------------------------------
+
+it('skips a null/non-finite value when computing the stacked domain extent, without throwing', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    stacked
+    .labels=${['a']}
+    .datasets=${[
+      { label: 'A', data: [null] },
+      { label: 'B', data: [10] },
+    ]}
+  ></lr-lite-chart>`);
+  const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  expect(bars.length).to.equal(1);
+  expect(bars[0].getAttribute('height')).to.not.contain('NaN');
+});
+
+// --- emitPoint() value fallback for a dangling index -----------------------------------------
+
+it('emits null (not undefined, and without throwing) for a point-click index that has no backing data value', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${['a', 'b']} .datasets=${[{ label: 's', data: [1, 2] }]}></lr-lite-chart>`);
+  const detailPromise = new Promise<CustomEvent>((resolve) =>
+    el.addEventListener('lr-point-click', (e) => resolve(e as CustomEvent), { once: true }),
+  );
+  (el as unknown as { emitPoint: (di: number, i: number) => void }).emitPoint(0, 99);
+  const { detail } = await detailPromise;
+  expect(detail.value).to.equal(null);
+});
+
+// --- onPointKeyDown() empty-marks guard ----------------------------------------------------------
+
+it('onPointKeyDown is a no-op when there are no interactive marks at all', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar"></lr-lite-chart>`);
+  expect(() =>
+    (
+      el as unknown as { onPointKeyDown: (e: KeyboardEvent, di: number, i: number, mi: number) => void }
+    ).onPointKeyDown(new KeyboardEvent('keydown', { key: 'ArrowRight' }), 0, 0, 0),
+  ).to.not.throw();
+});
+
+// --- RTL forward/backward key swap + ArrowUp/ArrowDown ------------------------------------------
+
+it('swaps ArrowLeft/ArrowRight semantics under RTL so "forward" still advances to the next mark visually', async () => {
+  const el = await mount(html`<lr-lite-chart
+    style="direction: rtl"
+    type="bar"
+    .labels=${BAR_LABELS}
+    .datasets=${BAR_DATASETS}
+  ></lr-lite-chart>`);
+  const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  marks()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  await el.updateComplete;
+  expect(marks()[1]!.getAttribute('tabindex')).to.equal('0');
+});
+
+it('moves to the previous mark on ArrowUp and the next mark on ArrowDown (vertical-axis key aliases)', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" .labels=${BAR_LABELS} .datasets=${BAR_DATASETS}></lr-lite-chart>`);
+  const marks = () => [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGRectElement[];
+  marks()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  expect(marks()[1]!.getAttribute('tabindex')).to.equal('0');
+  marks()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+  await el.updateComplete;
+  expect(marks()[0]!.getAttribute('tabindex')).to.equal('0');
+});
+
+// --- degenerate lo===hi domain: span fallback in renderGrid()/renderBars()/barValueToY() --------
+
+it('falls back to a span of 1 instead of dividing by zero when the resolved domain lo equals hi (defensive floor around niceDomain\'s own invariant)', async () => {
+  const el = (await fixture(
+    html`<lr-lite-chart type="bar" .labels=${['a']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  // domain() itself can never actually produce lo === hi (niceDomain() guarantees a nonzero span) --
+  // monkeypatch it directly to exercise the defensive `|| 1` fallbacks in renderGrid()/renderBars()/
+  // barValueToY() that guard against that invariant ever being violated.
+  (el as unknown as { domain: () => { lo: number; hi: number; ticks: number[] } }).domain = () => ({
+    lo: 5,
+    hi: 5,
+    ticks: [5],
+  });
+  el.requestUpdate();
+  await el.updateComplete;
+  const gridLine = el.shadowRoot!.querySelector('[part="grid-line"]') as SVGLineElement;
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  expect(gridLine.getAttribute('y1')).to.not.contain('NaN');
+  expect(gridLine.getAttribute('y1')).to.not.contain('Infinity');
+  expect(bar.getAttribute('y')).to.not.contain('NaN');
+  expect(bar.getAttribute('height')).to.not.contain('NaN');
+  expect(bar.getAttribute('height')).to.not.contain('Infinity');
+});
+
+it('falls back to a span of 1 for type="line" too, when the resolved domain lo equals hi', async () => {
+  const el = (await fixture(
+    html`<lr-lite-chart type="line" .labels=${['a']} .datasets=${[{ label: 's', data: [5] }]}></lr-lite-chart>`,
+  )) as LyraLiteChart;
+  (el as unknown as { plotWidth: number; plotHeight: number }).plotWidth = 300;
+  (el as unknown as { plotHeight: number }).plotHeight = 150;
+  (el as unknown as { domain: () => { lo: number; hi: number; ticks: number[] } }).domain = () => ({
+    lo: 5,
+    hi: 5,
+    ticks: [5],
+  });
+  el.requestUpdate();
+  await el.updateComplete;
+  const path = el.shadowRoot!.querySelector('[part="line"]') as SVGPathElement;
+  expect(path.getAttribute('d') ?? '').to.not.include('NaN');
+  expect(path.getAttribute('d') ?? '').to.not.include('Infinity');
+});
+
+// --- stacked + scale="sqrt": totals pre-pass skips null/skip-zero values, and a zero-only ------
+// --- category's share falls back to 0 instead of dividing by a zero total ----------------------
+
+it('excludes null and skip-zero values from the stacked+sqrt per-category totals pre-pass, without throwing', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    stacked
+    scale="sqrt"
+    skip-zero
+    .labels=${['a']}
+    .datasets=${[
+      { label: 'A', data: [null] },
+      { label: 'B', data: [0] },
+      { label: 'C', data: [50] },
+    ]}
+  ></lr-lite-chart>`);
+  const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  expect(bars.length).to.equal(1);
+  expect(bars[0].getAttribute('height')).to.not.contain('NaN');
+});
+
+it('handles a stacked+sqrt category whose only positive-side value is exactly zero without dividing by zero', async () => {
+  const el = (await fixture(html`
+    <lr-lite-chart type="bar" stacked scale="sqrt" .labels=${['a']} .datasets=${[{ label: 's', data: [0] }]}></lr-lite-chart>
+  `)) as LyraLiteChart;
+  el.style.height = '300px';
+  await el.updateComplete;
+  await aTimeout(0);
+  const bar = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
+  expect(bar).to.exist;
+  expect(bar.getAttribute('height')).to.not.contain('NaN');
+  expect(Number(bar.getAttribute('height'))).to.equal(0);
+});
+
+// --- minBarHeight: negative-side plain-stacked floor, and the separate non-stacked path ---------
+
+it('floors a tiny negative stacked segment to at least minBarHeight px too (mirrors the positive-side floor)', async () => {
+  const el = (await fixture(html`
+    <lr-lite-chart
+      type="bar"
+      stacked
+      min-bar-height="4"
+      .labels=${['a']}
+      .datasets=${[
+        { label: 'big', data: [-1000] },
+        { label: 'tiny', data: [-1] },
+      ]}
+    ></lr-lite-chart>
+  `)) as LyraLiteChart;
+  el.style.height = '300px';
+  await el.updateComplete;
+  await aTimeout(0);
+  const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  expect(bars).to.have.length(2);
+  const bigHeight = Number(bars[0]!.getAttribute('height'));
+  const tinyHeight = Number(bars[1]!.getAttribute('height'));
+  expect(tinyHeight).to.be.at.least(4);
+  expect(bigHeight).to.be.greaterThan(tinyHeight);
+});
+
+it('floors a tiny non-stacked bar to at least minBarHeight px (separate code path from the plain-stacked floor above)', async () => {
+  const el = (await fixture(html`
+    <lr-lite-chart type="bar" min-bar-height="40" .labels=${['tiny', 'big']} .datasets=${[{ label: 's', data: [1, 1000] }]}></lr-lite-chart>
+  `)) as LyraLiteChart;
+  el.style.height = '300px';
+  await el.updateComplete;
+  await aTimeout(0);
+  const bars = el.shadowRoot!.querySelectorAll('[part="bar"]');
+  expect(bars).to.have.length(2);
+  const tinyHeight = Number(bars[0]!.getAttribute('height'));
+  const bigHeight = Number(bars[1]!.getAttribute('height'));
+  expect(tinyHeight).to.be.at.least(40);
+  expect(bigHeight).to.be.greaterThan(tinyHeight);
+});
+
+// --- roundedBars: only the active mark carries tabindex=0 among several marks --------------------
+
+it('gives only the active mark tabindex=0 among multiple roundedBars marks, the rest tabindex=-1', async () => {
+  const el = await mount(html`<lr-lite-chart type="bar" rounded-bars .labels=${['a', 'b']} .datasets=${[{ label: 's', data: [1, 2] }]}></lr-lite-chart>`);
+  const marks = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGPathElement[];
+  expect(marks).to.have.length(2);
+  expect(marks.filter((m) => m.getAttribute('tabindex') === '0')).to.have.length(1);
+  expect(marks.filter((m) => m.getAttribute('tabindex') === '-1')).to.have.length(1);
+});
