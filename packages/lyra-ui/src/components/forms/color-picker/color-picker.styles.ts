@@ -1,7 +1,25 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: inline-block; }
+  :host {
+    display: inline-block;
+    --lr-color-picker-swatch-size: var(--lr-size-2-5rem);
+  }
+  :host([size='2xs']) {
+    --lr-color-picker-swatch-size: var(--lr-size-1-25rem);
+  }
+  :host([size='xs']) {
+    --lr-color-picker-swatch-size: var(--lr-size-1-5rem);
+  }
+  :host([size='s']) {
+    --lr-color-picker-swatch-size: var(--lr-size-1-875rem);
+  }
+  :host([size='l']) {
+    --lr-color-picker-swatch-size: var(--lr-size-3rem);
+  }
+  :host([size='xl']) {
+    --lr-color-picker-swatch-size: var(--lr-size-3-5rem);
+  }
   [part='form-control'] { display: inline-flex; flex-direction: column; gap: var(--lr-space-xs); }
   [part~='label'] { color: var(--lr-color-text); font-size: var(--lr-font-size-md-sm); }
   /* [part]:empty never matches -- the part always contains a literal <slot> child element
@@ -16,7 +34,7 @@ export const styles = css`
     content: ' *';
     color: var(--lr-color-danger);
   }
-  [part='input'] { inline-size: var(--lr-size-2-5rem); block-size: var(--lr-size-2-5rem); padding: var(--lr-size-2px); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); cursor: pointer; }
+  [part='input'] { inline-size: var(--lr-color-picker-swatch-size); block-size: var(--lr-color-picker-swatch-size); padding: var(--lr-size-2px); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); cursor: pointer; }
   [part='input']:hover { border-color: var(--lr-color-brand); }
   [part='input']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='hint'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }

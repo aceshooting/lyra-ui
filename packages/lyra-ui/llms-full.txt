@@ -2295,11 +2295,17 @@ spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 
 A form-associated native color picker with label, hint, and error chrome. **Properties:** the shared
 form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
-(`error-text`), and `accessibleLabel` (`aria-label`). **Slots:** `label`, `hint`, `error`. **Events:**
+(`error-text`), `accessibleLabel` (`aria-label`), and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'`
+(reflected — same scale as `lr-input`'s `size`, for compact swatch rendering at every density tier).
+**Slots:** `label`, `hint`, `error`. **Events:**
 composed `input` and `change`, `lr-change` with `{ value }`, and `focus`/`blur` (re-dispatched from
 the internal `<input>`'s own `focus`/`blur`, bubbling and composed unlike the native events). **CSS
 parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for back-compat),
 `input`, `hint`, `error`.
+
+**Themeable custom properties:** `--lr-color-picker-swatch-size` — the swatch's inline and block size,
+auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
+the size ladder `lr-input` uses.
 
 ## `lr-emoji-picker`
 

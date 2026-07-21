@@ -84,3 +84,28 @@ it('gives the native color swatch its own hover and focus-visible treatment', ()
   expect(css).to.match(/\[part='input'\]:hover\s*\{[^}]*border-color:/);
   expect(css).to.match(/\[part='input'\]:focus-visible\s*\{[^}]*outline:/);
 });
+
+it('defaults to size "m" and reflects a size attribute', async () => {
+  const defaultEl = (await fixture(html`<lr-color-picker></lr-color-picker>`)) as LyraColorPicker;
+  expect(defaultEl.size).to.equal('m');
+  const el = (await fixture(html`<lr-color-picker size="s"></lr-color-picker>`)) as LyraColorPicker;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.size).to.equal('s');
+});
+
+it("scales the swatch across every tier, matching lr-input's own min-height ladder", async () => {
+  const expected: Record<string, string> = {
+    '2xs': '20px',
+    xs: '24px',
+    s: '30px',
+    m: '40px',
+    l: '48px',
+    xl: '56px',
+  };
+  for (const [size, px] of Object.entries(expected)) {
+    const el = await fixture(html`<lr-color-picker size=${size} aria-label="Color"></lr-color-picker>`);
+    const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+    expect(getComputedStyle(input).blockSize, `size=${size}`).to.equal(px);
+    expect(getComputedStyle(input).inlineSize, `size=${size}`).to.equal(px);
+  }
+});

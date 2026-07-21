@@ -5,6 +5,8 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './color-picker.styles.js';
 
+export type LyraColorPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 export interface LyraColorPickerEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
@@ -40,6 +42,8 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  /** Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`'s own `size`. */
+  @property({ reflect: true }) size: LyraColorPickerSize = 'm';
   @state() private hasLabel = false;
   @state() private hasHint = false;
   @state() private hasError = false;
