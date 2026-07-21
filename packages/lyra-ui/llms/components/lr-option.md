@@ -132,7 +132,10 @@ indicator from `maxRender`), `error`, `hint`
 **Themeable custom properties:** `--lr-combobox-trigger-padding`,
 `--lr-combobox-trigger-min-height`, `--lr-combobox-font-size`, `--lr-combobox-tag-padding`,
 `--lr-combobox-tag-font-size`, and `--lr-combobox-expand-size` (the decorative icon box; each
-standard size supplies an aligned default), plus shared tokens.
+standard size supplies an aligned default), plus shared tokens. `--lr-combobox-gap` (default
+`--lr-space-xs`, the gap inside `[part='combobox']`) and `--lr-combobox-radius` (default
+`--lr-radius`, its corner radius) are both retunable without a `::part(combobox)` rule but, unlike
+the properties above, do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
 `--lr-combobox-option-active-bg` (default `var(--lr-color-brand-quiet)`) recolors the background of
 a hovered or keyboard-active `[part='option']` row — the same per-component indirection

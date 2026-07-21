@@ -75,7 +75,10 @@ input and built-in actions).
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
-grow.
+grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wrapper']`) and
+`--lr-input-radius` (default `--lr-radius`, its corner radius) are both retunable without a
+`::part(input-wrapper)` rule but, unlike the four properties above, do not vary by `size` — the same
+`--lr-button-gap`/`-radius` pattern; `lr-number-input`/`lr-time-input` inherit both unchanged.
 
 ### Exact-height hatches — the one rule that applies to all of them
 

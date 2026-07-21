@@ -44,8 +44,10 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline` and `--lr-input-font-size` (all but `--lr-input-control-height` swap
-per `size`; that one stays undeclared until you pin an exact row height).
+`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, and `--lr-input-radius` (all
+but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
+row height, and `--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
+vary by `size` at all).
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the
