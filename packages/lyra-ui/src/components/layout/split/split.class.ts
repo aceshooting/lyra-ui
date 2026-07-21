@@ -1287,8 +1287,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       // this pair still has room. Keep max >= min for imperfect persisted or
       // consumer-supplied starting sizes.
       const pairTotal = (this.sizes[i] ?? 0) + (this.sizes[i + 1] ?? 0);
-      const a = bounds[i] ?? { min: 0, max: Infinity };
-      const b = bounds[i + 1] ?? { min: 0, max: Infinity };
+      // resolveConstraintBounds() always returns a bounds array of exactly this.panelCount
+      // entries (computed synchronously, in the same render() call, from the same panelCount),
+      // so every index up to panelCount - 2 -- this loop's max -- is always in range.
+      const a = bounds[i]!;
+      const b = bounds[i + 1]!;
       const valueMin = Math.max(a.min, pairTotal - b.max);
       const valueMax = Math.max(valueMin, Math.min(a.max, pairTotal - b.min));
       const disabled = this.isDividerDisabled(i);
