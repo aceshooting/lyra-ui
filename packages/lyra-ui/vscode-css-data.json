@@ -3131,6 +3131,13 @@
       }
     },
     {
+      "name": "--lr-time-range-size-scale",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `1`) — Unitless multiplier applied proportionally to the handle, track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored at 24px (WCAG 2.5.8)."
+      }
+    },
+    {
       "name": "--lr-timeline-gap",
       "description": {
         "kind": "markdown",

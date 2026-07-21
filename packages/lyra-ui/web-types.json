@@ -15618,7 +15618,7 @@
         },
         {
           "name": "lr-time-range",
-          "description": "`<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated only for the `<fieldset disabled>` cascade, not for a\nsubmitted value: it attaches `ElementInternals` (like `<lr-combobox>`'s\nminimal pattern, rather than the single-string-value `FormAssociated`\nmixin, which doesn't fit a two-handle range) purely so an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.\nUnlike `<lr-combobox>`, it never calls `internals.setFormValue()` and\nhas no `name` — the selected range is not included in the owning form's\n`FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`)\ninstead of relying on native form submission.\n\nDeliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle\naccessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for\nits own single-handle `label`; a labeled-field consumer wraps this element in their own layout.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The time-range wrapper. |\n| `handle-end` | The end handle. |\n| `handle-start` | The start handle. |\n| `preset-button` | A preset button. |\n| `presets` | The preset controls wrapper. |\n| `range` | The selected range. |\n| `track` | The complete range track. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-time-range-preset-active-bg` (default: `var(--lr-color-brand)`) — Background of the active preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active preset without hijacking the library-wide `--lr-color-brand` token.\n- `--lr-time-range-preset-active-border-color` (default: `var(--lr-color-brand)`) — Border color of the active preset button.\n- `--lr-time-range-preset-active-color` (default: `var(--lr-color-on-brand)`) — Text color of the active preset button.",
+          "description": "`<lr-time-range>` — a two-handle brush/scrubber over a numeric domain.\nCallers map their own time axis to `[min, max]`; no date logic lives here\n(matches the no-date-library constraint used elsewhere in this library).\n\nOptionally paired with a row of discrete presets (`presets`) — e.g. \"Last\n7 days\" / \"Last 30 days\" — rendered above the track; picking one is just a\nshortcut that sets both handles at once, the continuous brush underneath\nis unaffected and both interaction modes coexist.\n\nForm-associated only for the `<fieldset disabled>` cascade, not for a\nsubmitted value: it attaches `ElementInternals` (like `<lr-combobox>`'s\nminimal pattern, rather than the single-string-value `FormAssociated`\nmixin, which doesn't fit a two-handle range) purely so an ancestor\n`<fieldset disabled>` disables both handles and every preset button\nthrough `effectiveDisabled`, the same way it would a native `<input>`,\nwithout touching the consumer-facing `disabled` property/attribute itself.\nUnlike `<lr-combobox>`, it never calls `internals.setFormValue()` and\nhas no `name` — the selected range is not included in the owning form's\n`FormData` on submit; read `start`/`end` directly (e.g. from `lr-change`)\ninstead of relying on native form submission.\n\nDeliberately no label/hint/error chrome -- `startLabel`/`endLabel` here are per-handle\naccessible-name overrides, not visible label text, the same carve-out `<lr-slider>` states for\nits own single-handle `label`; a labeled-field consumer wraps this element in their own layout.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The time-range wrapper. |\n| `handle-end` | The end handle. |\n| `handle-start` | The start handle. |\n| `preset-button` | A preset button. |\n| `presets` | The preset controls wrapper. |\n| `range` | The selected range. |\n| `track` | The complete range track. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-time-range-preset-active-bg` (default: `var(--lr-color-brand)`) — Background of the active preset button (`[data-active]`, i.e. the preset whose range matches the current value). Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active preset without hijacking the library-wide `--lr-color-brand` token.\n- `--lr-time-range-preset-active-border-color` (default: `var(--lr-color-brand)`) — Border color of the active preset button.\n- `--lr-time-range-preset-active-color` (default: `var(--lr-color-on-brand)`) — Text color of the active preset button.\n- `--lr-time-range-size-scale` (default: `1`) — Unitless multiplier applied proportionally to the handle, track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored at 24px (WCAG 2.5.8).",
           "attributes": [
             {
               "name": "disabled",
@@ -15671,6 +15671,15 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            },
+            {
+              "name": "size",
+              "description": "Visual size — proportionally scales the handle, track, and preset buttons via a single\nmultiplier; the drag hit-area never shrinks below 24px (WCAG 2.5.8). Not pixel-matched to\n`lr-input`'s row-height scale -- this component's own dimensions aren't on that ladder.\n\nType: `LyraTimeRangeSize`  \nDefault: `'m'`",
+              "value": {
+                "type": [
+                  "LyraTimeRangeSize"
                 ]
               }
             },
@@ -19152,6 +19161,10 @@
         {
           "name": "--lr-time-range-preset-active-color",
           "description": "**`<lr-time-range>`** (default: `var(--lr-color-on-brand)`) — Text color of the active preset button."
+        },
+        {
+          "name": "--lr-time-range-size-scale",
+          "description": "**`<lr-time-range>`** (default: `1`) — Unitless multiplier applied proportionally to the handle, track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored at 24px (WCAG 2.5.8)."
         },
         {
           "name": "--lr-timeline-gap",
