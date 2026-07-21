@@ -698,7 +698,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         ?active=${thread.id === this.activeId}
         ?compact=${this.compact}
         .editable=${this.editable}
-        @lr-select=${() => this.emit('lr-select', { id: thread.id })}
+        @lr-select=${(e: Event) => {
+          // conversation-item's own lr-select bubbles+composes with no detail (LyraElement.emit()'s
+          // defaults) -- without stopping it here it would keep bubbling straight through this
+          // component under the same name, right behind the correctly-shaped re-emit below.
+          e.stopPropagation();
+          this.emit('lr-select', { id: thread.id });
+        }}
         @lr-rename=${(e: CustomEvent<{ title: string }>) =>
           this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title })}
       >
@@ -820,7 +826,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 .keyFunction=${this.itemKey}
                 .activeId=${this.activeId}
               ></lr-virtual-list>`}
-          <slot name="empty" @slotchange=${this.onEmptySlotChange}></slot>
+          <slot
+            name="empty"
+            ?hidden=${!(visible.length === 0 && this.hasEmptySlot)}
+            @slotchange=${this.onEmptySlotChange}
+          ></slot>
         </div>
         <lr-live-region></lr-live-region>
       </div>

@@ -196,7 +196,7 @@ describe('data mode', () => {
     expect(activeRow.active).to.be.true;
   });
 
-  it('re-emits lr-select/lr-thread-rename with the thread id attached', async () => {
+  it('re-emits lr-select/lr-thread-rename with the thread id attached, and never leaks the original bare lr-select', async () => {
     const el = (await fixture(
       html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
     )) as LyraThreadList;
@@ -204,15 +204,76 @@ describe('data mode', () => {
     await nextFrame();
     const row = dataRow(el, 't1');
 
-    const selectPromise = oneEvent(el, 'lr-select');
+    const selectEvents: CustomEvent[] = [];
+    el.addEventListener('lr-select', (e) => selectEvents.push(e as CustomEvent));
     row.dispatchEvent(new CustomEvent('lr-select', { bubbles: true, composed: true }));
-    expect((await selectPromise).detail).to.deep.equal({ id: 't1' });
+    await el.updateComplete;
+    expect(
+      selectEvents.length,
+      'exactly one lr-select must reach the list, not the re-emit plus a leaked original',
+    ).to.equal(1);
+    expect(selectEvents[0]!.detail).to.deep.equal({ id: 't1' });
 
     const renamePromise = oneEvent(el, 'lr-thread-rename');
     row.dispatchEvent(
       new CustomEvent('lr-rename', { detail: { title: 'New title' }, bubbles: true, composed: true }),
     );
     expect((await renamePromise).detail).to.deep.equal({ id: 't1', title: 'New title' });
+  });
+
+  describe('empty slot', () => {
+    it('never renders slotted empty content while threads are populated (zero footprint, not merely styled away)', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}>
+          <div slot="empty" id="custom-empty">No conversations.</div>
+        </lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+      const custom = el.querySelector('#custom-empty')!;
+      const box = custom.getBoundingClientRect();
+      expect(box.width).to.equal(0);
+      expect(box.height).to.equal(0);
+      expect(dataRows(el).length).to.be.greaterThan(0);
+    });
+
+    it('renders slotted empty content (not the built-in state) once threads is empty', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list>
+          <div slot="empty" id="custom-empty">No conversations.</div>
+        </lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      const custom = el.querySelector('#custom-empty')!;
+      expect(custom.getBoundingClientRect().height).to.be.greaterThan(0);
+      expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+    });
+
+    it('still renders the built-in empty state when nothing is slotted', async () => {
+      const el = (await fixture(html`<lr-thread-list></lr-thread-list>`)) as LyraThreadList;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+    });
+
+    it('keeps hasEmptySlot accurate for content slotted after connect even while threads stay populated', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list style="block-size:400px" .threads=${threads}></lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      const custom = document.createElement('div');
+      custom.setAttribute('slot', 'empty');
+      custom.id = 'late-empty';
+      custom.textContent = 'No conversations.';
+      el.append(custom);
+      await el.updateComplete;
+      // Still populated -- must stay invisible, but the slot must have registered the addition.
+      expect(custom.getBoundingClientRect().height).to.equal(0);
+      el.threads = [];
+      await el.updateComplete;
+      // Now empty -- the late-added slotted content must be picked up, not the built-in state.
+      expect(custom.getBoundingClientRect().height).to.be.greaterThan(0);
+      expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+    });
   });
 
   it('forwards editable via a property binding so editable=false actually disables row rename', async () => {
