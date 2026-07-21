@@ -118,6 +118,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-resize-observer',
   'lr-relative-time',
   'lr-reorder-item',
+  'lr-reorder-list',
   'lr-rating',
   'lr-random-content',
   'lr-segmented',

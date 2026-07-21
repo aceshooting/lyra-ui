@@ -1009,7 +1009,8 @@ export type LyraMessageKey =
   | 'localePickerLabel'
   | 'localePickerRequired'
   | 'moveUp'
-  | 'moveDown';
+  | 'moveDown'
+  | 'reorderItemMoved';
 
 export type LyraLocaleStrings = Partial<Record<LyraMessageKey, string>> & Record<string, string | undefined>;
 
@@ -2021,6 +2022,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   localePickerRequired: 'Please choose a language.',
   moveUp: 'Move up',
   moveDown: 'Move down',
+  reorderItemMoved: 'Moved to position {index} of {total}',
 };
 
 const locales = new Map<string, LyraLocaleStrings>();

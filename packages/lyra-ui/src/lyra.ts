@@ -54,6 +54,7 @@ import './components/retrieval/source-card/source-card.js';
 import './components/layout/app-rail/app-rail.js';
 import './components/layout/app-rail/app-rail-item.js';
 import './components/layout/reorder-list/reorder-item.js';
+import './components/layout/reorder-list/reorder-list.js';
 import './components/layout/responsive-panel/responsive-panel.js';
 import './components/utility/mention-popover/mention-popover.js';
 import './components/conversation/streaming-text/streaming-text.js';
@@ -566,6 +567,7 @@ export type {
   AppRailResizeDetail,
 } from './components/layout/app-rail/app-rail.js';
 export { LyraReorderItem } from './components/layout/reorder-list/reorder-item.js';
+export { LyraReorderList } from './components/layout/reorder-list/reorder-list.js';
 export {
   LyraResponsivePanel,
   resolveEffectiveMode as resolveResponsivePanelEffectiveMode,
@@ -894,6 +896,7 @@ export type { LyraPaginationEventMap } from './components/data/pagination/pagina
 export type { LyraPollStatusEventMap } from './components/utility/poll-status/poll-status.js';
 export type { LyraPhoneInputEventMap } from './components/forms/phone-input/phone-input.js';
 export type { LyraReorderItemEventMap } from './components/layout/reorder-list/reorder-item.js';
+export type { LyraReorderListEventMap, ReorderDetail } from './components/layout/reorder-list/reorder-list.js';
 export type { LyraResponsivePanelEventMap } from './components/layout/responsive-panel/responsive-panel.js';
 export type { LyraSegmentedEventMap } from './components/layout/segmented/segmented.js';
 export type { LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.js';
