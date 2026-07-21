@@ -53,6 +53,33 @@ async function connectEmojiPicker(
   return el;
 }
 
+it('scales the emoji item box across every tier, floored at 24px', async () => {
+  const expected: Record<string, string> = {
+    '2xs': '24px',
+    xs: '28px',
+    s: '32px',
+    m: '40px',
+    l: '48px',
+    xl: '56px',
+  };
+  for (const [size, px] of Object.entries(expected)) {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    el.setAttribute('size', size);
+    await el.updateComplete;
+    const emoji = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
+    expect(getComputedStyle(emoji).blockSize, `size=${size}`).to.equal(px);
+  }
+});
+
+it('defaults to size "m" and reflects a size attribute', async () => {
+  const el = await connectEmojiPicker();
+  expect(el.size).to.equal('m');
+  el.setAttribute('size', 's');
+  await el.updateComplete;
+  expect(el.size).to.equal('s');
+});
+
 it('defaults to value "" (unset, matching FormAssociated\'s native-<input>-like contract) and empty groups', async () => {
   const el = await connectEmojiPicker();
   expect(el.value).to.equal('');

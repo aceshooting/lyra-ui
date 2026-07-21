@@ -40,11 +40,13 @@ changes via click or keyboard (re-selecting the current swatch is a no-op).
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `swatch` (a single `role="radio"` color
-swatch's interactive hit target, floored at the shared `--lr-icon-button-size` tap size; the
-selected one is `[part='swatch'][aria-checked='true']`), `swatch-fill` (the compact
-`--lr-size-1-5rem` filled circle inside it, rendered when the option has no `icon`), `swatch-icon`
-(the option's `icon` shape, rendered in its place when it has one). Exactly one of
-`swatch-fill`/`swatch-icon` is mounted per swatch, so the two never coexist.
+swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — defaults to
+`--lr-size-2-5rem`, swapped per `size` tier and floored at 24px; the selected one is
+`[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
+`--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
+rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
+place when it has one). Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the
+two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the
 selected swatch, defaults to `--lr-color-brand`, themeable independently of the focus ring),

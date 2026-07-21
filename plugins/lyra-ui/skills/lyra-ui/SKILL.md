@@ -10,7 +10,7 @@ description: >
 # lyra-ui
 
 `@aceshooting/lyra-ui` is a free, MIT-licensed, framework-agnostic Lit 3 web-component library — an
-independent alternative to Shoelace and Web Awesome. 249 custom elements under the `lr-` prefix,
+independent alternative to Shoelace and Web Awesome. 251 custom elements under the `lr-` prefix,
 each shipping its own design tokens, localization, RTL support and (for form controls) native form
 association. No runtime dependency on Shoelace or Web Awesome.
 
