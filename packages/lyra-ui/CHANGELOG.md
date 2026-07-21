@@ -1,5 +1,50 @@
 # Changelog
 
+## 6.1.0
+
+### Minor Changes
+
+- f9e1e18: Make `lr-app-rail`'s `lr-toggle` event cancelable: a listener calling `preventDefault()` keeps the
+  rail open/closed as it was. The one exception is the forced close that fires when `mode` leaves
+  `'mobile'` while open, which stays unconditional since it's a consistency fix-up rather than a
+  user dismissal.
+- f9e1e18: Add themeable `--*-gap`/`--*-radius` CSS custom properties to `lr-input`, `lr-select`, and
+  `lr-combobox` (gap + radius), `lr-chip`/`lr-badge`/`lr-tag` (radius), and `lr-icon-button`
+  (radius) — extending the pattern `lr-button` already shipped, so these values can be retuned
+  without a `::part()` override. Every default is unchanged.
+- f6d966e: Add an optional `country` field to `lr-locale-picker`'s `locales` catalog entries, letting a
+  consumer override a row's derived flag (e.g. showing Lebanon's flag for an `ar` row instead of
+  the library's default Saudi Arabia mapping).
+- 3c9f478: Make `lr-reorder-list`'s `lr-reorder` event cancelable: a listener calling `preventDefault()`
+  holds the move (reflecting `pending` on the affected `lr-reorder-item`) until the host calls the
+  new `finalizePendingMove()`/`revertPendingMove()` methods — mirroring `lr-confirm-bar`'s cancelable
+  approve/deny pattern, for hosts that persist the new order asynchronously.
+- f9e1e18: Make `lr-token-input`'s `lr-remove` event cancelable: a listener calling `preventDefault()` (for
+  example to run async removal validation, or to protect a token) keeps the token in place instead
+  of it being removed unconditionally. Scoped to direct removal; multi-candidate paste/edit flows
+  are unaffected.
+
+### Patch Changes
+
+- a4c4825: Fix `lr-agent-workspace` never emitting its documented `lr-retrieval-select` event when a row is
+  selected in the built-in retrieval results, and leaking the internal `lr-retrieval-results`'s raw
+  `lr-select` event through under the wrong name instead.
+- f9e1e18: Fix `lr-date-input`'s `selectionDirection` getter returning `undefined` instead of `null` before
+  the internal input has rendered, despite its declared `LyraDateInputSelectionDirection | null`
+  return type.
+- 2dabe8e: Fix `lr-icon-button`'s bare-SVG-geometry fallback rendering slotted stroke-style icon path data
+  (no fill/stroke of its own) as a solid black shape instead of an outline, by giving
+  `[part="fallback"]` the same `fill`/`stroke`/`stroke-width`/`stroke-linecap`/`stroke-linejoin`
+  defaults `lr-icon`'s own wrapper svg already has.
+- f9e1e18: Fix `lr-retrieval-results` and `lr-menu` leaking a wrapped child's own event under the wrong
+  name alongside the documented, consolidated one: `lr-retrieval-results` leaked `lr-virtual-list`'s
+  `lr-load-more` and `lr-chunk-inspector`'s `lr-chunk-open` (the latter also carrying an
+  undocumented extra `anchor` field); `lr-menu` leaked `lr-menu-item`'s raw `lr-menu-item-select`
+  alongside the documented `lr-menu-select`.
+- cc90b3a: Fix two `lr-thread-list` bugs: a row click fired `lr-select` twice (the correct re-emit plus the
+  original bare event leaking through unstopped), and content slotted into `slot="empty"` rendered
+  unconditionally instead of only when the list has zero visible threads.
+
 ## 6.0.0
 
 ### Major Changes
