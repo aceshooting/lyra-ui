@@ -5,6 +5,21 @@ export const styles = css`
     display: inline-block;
     --lr-cell-size: var(--lr-size-2-25rem);
   }
+  :host([size='2xs']) {
+    --lr-cell-size: var(--lr-size-1-5rem);
+  }
+  :host([size='xs']) {
+    --lr-cell-size: var(--lr-size-1-75rem);
+  }
+  :host([size='s']) {
+    --lr-cell-size: var(--lr-size-2rem);
+  }
+  :host([size='l']) {
+    --lr-cell-size: var(--lr-size-2-5rem);
+  }
+  :host([size='xl']) {
+    --lr-cell-size: var(--lr-size-3rem);
+  }
   :host([disabled]) {
     opacity: var(--lr-opacity-disabled);
     pointer-events: none;

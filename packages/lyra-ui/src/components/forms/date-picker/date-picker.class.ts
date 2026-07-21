@@ -30,6 +30,8 @@ import {
   type WeekdayFormat,
 } from './calendar-core.js';
 
+export type LyraDatePickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 export interface DateRange {
   from: Date | null;
   to: Date | null;
@@ -93,6 +95,9 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property({ converter: monthsConverter }) months: 1 | 2 = 1;
+  /** Visual size — scales `--lr-cell-size` proportionally; not pixel-matched to
+   *  `lr-input`'s row-height scale (a calendar cell isn't a text row). */
+  @property({ reflect: true }) size: LyraDatePickerSize = 'm';
   @property() locale = '';
   @property({ attribute: 'first-day-of-week' }) firstDayOfWeek = 'auto';
   @property({ attribute: 'weekday-format', converter: weekdayFormatConverter }) weekdayFormat: WeekdayFormat = 'short';

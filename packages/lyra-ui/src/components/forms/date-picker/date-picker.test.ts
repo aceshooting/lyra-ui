@@ -5,6 +5,38 @@ import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-picker.styles.js';
 import { weekdayLabels, monthTitle, resolveFirstDayOfWeek } from './calendar-core.js';
 
+it('scales day-cell size across every tier, floored at the 24px WCAG minimum', async () => {
+  const expected: Record<string, string> = {
+    '2xs': '24px',
+    xs: '28px',
+    s: '32px',
+    m: '36px',
+    l: '40px',
+    xl: '48px',
+  };
+  for (const [size, px] of Object.entries(expected)) {
+    const el = await fixture(
+      html`<lr-date-picker size=${size} value="2026-07-15"></lr-date-picker>`,
+    );
+    const day = el.shadowRoot!.querySelector('[part~="day"]') as HTMLElement;
+    expect(getComputedStyle(day).blockSize, `size=${size}`).to.equal(px);
+    expect(getComputedStyle(day).inlineSize, `size=${size}`).to.equal(px);
+  }
+});
+
+it('defaults to size "m" and reflects a size attribute', async () => {
+  const defaultEl = (await fixture(
+    html`<lr-date-picker value="2026-07-15"></lr-date-picker>`,
+  )) as LyraDatePicker;
+  expect(defaultEl.size).to.equal('m');
+  const el = (await fixture(
+    html`<lr-date-picker size="s" value="2026-07-15"></lr-date-picker>`,
+  )) as LyraDatePicker;
+  expect(el.getAttribute('size')).to.equal('s');
+  expect(el.size).to.equal('s');
+});
+
+
 it('selects a day and emits change with an ISO value', async () => {
   const el = (await fixture(html`<lr-date-picker value="2026-07-15"></lr-date-picker>`)) as LyraDatePicker;
   await el.updateComplete;

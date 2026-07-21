@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraDatePickerSize } from './date-picker.js';
 
 const meta: Meta = {
   title: 'DatePicker/Inline',
@@ -60,4 +61,18 @@ export const Localized: Story = {
       next-label="Mois suivant"
     ></lr-date-picker>
   `,
+};
+
+/** `size` scales calendar cell density proportionally — `2xs`–`xl` range, default `m`.
+ * Unlike `lr-input`'s row-height scale (rows are text containers), this scales cell
+ * density itself (fewer/more days per visual unit); neither label nor nav buttons rescale. */
+export const Sizes: Story = {
+  render: () => {
+    const sizes: LyraDatePickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        ${sizes.map((size) => html`<lr-date-picker size=${size} value="2026-07-15"></lr-date-picker>`)}
+      </div>
+    `;
+  },
 };
