@@ -37,6 +37,10 @@ Inline month-grid calendar, not form-associated (used standalone or embedded ins
 - `disablePast: boolean = false` (attribute `disable-past`)
 - `disableFuture: boolean = false` (attribute `disable-future`)
 - `withOutsideDays: boolean = false` (attribute `with-outside-days`)
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — scales calendar cell density
+  proportionally; unlike `lr-input`'s row-height scale (text containers), this scales cell density
+  itself (fewer/more days per visual unit). Month title, weekday labels, and nav buttons stay fixed
+  across tiers.
 - `previousLabel: string = 'Previous month'` (attribute `previous-label` — accessible label for the
   previous-month nav button; override for a non-English `locale`)
 - `nextLabel: string = 'Next month'` (attribute `next-label` — accessible label for the next-month
@@ -58,7 +62,7 @@ mode only)
 `day-range-end`, `day-range-inner`, `day-placeholder`
 
 **Themeable custom properties:** `--lr-cell-size` (default `2.25rem`, controls day-cell/grid-column
-size).
+size; auto-scaled per `size` tier — `2xs`/`xs`/`s`/`l`/`xl`; `m` keeps the `:host` default).
 
 **Optional peer deps:** none.
 
