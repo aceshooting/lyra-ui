@@ -968,6 +968,13 @@
       }
     },
     {
+      "name": "--lr-color-picker-swatch-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** — The swatch's inline and block size, scaled by `size`."
+      }
+    },
+    {
       "name": "--lr-combobox-expand-size",
       "description": {
         "kind": "markdown",

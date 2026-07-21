@@ -3173,7 +3173,7 @@
       "name": "lr-color-picker",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-color-picker>` — a form-associated native color picker with label, hint and error chrome.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom validation-error content. |\n| `hint` | Supporting text. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | The validation message. |\n| `form-control` | The field wrapper. |\n| `form-control-label` | The label. Also carries the `label` part token for back-compat. |\n| `hint` | Supporting text. |\n| `input` | The native color input. |\n| `label` | Alias of `form-control-label`, kept for back-compat. |"
+        "value": "`<lr-color-picker>` — a form-associated native color picker with label, hint and error chrome.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom validation-error content. |\n| `hint` | Supporting text. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | The validation message. |\n| `form-control` | The field wrapper. |\n| `form-control-label` | The label. Also carries the `label` part token for back-compat. |\n| `hint` | Supporting text. |\n| `input` | The native color input. |\n| `label` | Alias of `form-control-label`, kept for back-compat. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-color-picker-swatch-size` — The swatch's inline and block size, scaled by `size`."
       },
       "attributes": [
         {

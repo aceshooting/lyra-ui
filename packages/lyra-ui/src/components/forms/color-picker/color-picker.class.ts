@@ -35,6 +35,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart input - The native color input.
  * @csspart hint - Supporting text.
  * @csspart error - The validation message.
+ * @cssprop --lr-color-picker-swatch-size - The swatch's inline and block size, scaled by `size`.
  */
 export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   static styles = [LyraElement.styles, styles];
