@@ -2,7 +2,7 @@
 
 # Component index
 
-249 custom elements, grouped by the source family they live in.
+251 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -74,7 +74,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-graph-query-builder` · data/graph-query-builder/graph-query-builder.js — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-query-builder` · data/query-builder/query-builder.js — a composable structured-query builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with one AN...
 
-## Layout, navigation & structure — `components/layout/` (28)
+## Layout, navigation & structure — `components/layout/` (30)
 
 - `lr-split` · layout/split/split.js — resizable panels for dashboard layouts.
 - `lr-widget` · layout/widget/widget.js — a titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
@@ -85,6 +85,8 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-tabs` · layout/tabs/tabs.js — a tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab...
 - `lr-stepper` · layout/stepper/stepper.js — ordered multi-step wizard/form navigation: label + index per step, current/completed/locked/error state, click-to-jump.
 - `lr-control-group` · layout/control-group/control-group.js — a responsive layout primitive for a row of mixed form controls and action buttons (e.g.
+- `lr-reorder-list` · layout/reorder-list/reorder-list.js — a generic vertical list of `<lr-reorder-item>` rows, reorderable via per-row move-up/move-down buttons (always available) or Ctrl/Cmd+Arr...
+- `lr-reorder-item` · layout/reorder-list/reorder-item.js — one row inside `<lr-reorder-list>`.
 - `lr-segmented` · layout/segmented/segmented.js — a single-select button row with the WAI-ARIA APG `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex, aut...
 - `lr-virtual-list` · layout/virtual-list/virtual-list.js — a generic windowed/virtualized list host.
 - `lr-app-rail` · layout/app-rail/app-rail.js — a responsive navigation rail that adapts across three presentations as the *viewport* narrows (not this element's own inline size — see t...

@@ -33,7 +33,7 @@ family and entry point.
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 26 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 24 tags in `components/data/`
-- **Layout, navigation & structure** — 28 tags in `components/layout/`
+- **Layout, navigation & structure** — 30 tags in `components/layout/`
 - **Overlays, status & feedback** — 19 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 19 tags in `components/utility/`
 - **Media, files & maps** — 18 tags in `components/media/`
@@ -513,7 +513,7 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
-- `size: 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
   also scales the "+N" overflow tag and decorative expand icon; `size="s"` shares its outer
   control height with `lr-input`, `lr-select`, and `lr-segmented` without part overrides)
 - `placeholder: string = ''`
@@ -757,8 +757,8 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `errorText: string = ''` (attribute `error-text` — static error copy shown below the hint;
   overridden by slotted `error` content when provided)
 - `open: boolean = false` (reflected)
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-toast-item`'s `size`, for
-  compact toolbar placements that don't fit the default trigger height)
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-input`/`lr-combobox`'s
+  `size`, for compact toolbar placements that don't fit the default trigger height)
 - `autoCommitSingleOption: boolean = false` (attribute `auto-commit-single-option`) — opts in to the
   single-option auto-commit behavior described above
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)
@@ -4921,6 +4921,75 @@ between grouped controls; shared spacing and layout tokens apply as well.
   `responsive` while this group also sits as a shrink-to-fit flex child re-introduces the 0-width
   collapse this default is designed to avoid — only opt in when the group's own size comes from
   somewhere else (a percentage width, a grid track, a block-level parent).
+
+---
+
+## `lr-reorder-list` / `lr-reorder-item`
+
+A generic flat-list reorder primitive: per-row move-up/move-down buttons (always available), plus
+Ctrl/Cmd+ArrowUp/ArrowDown from focus anywhere inside a row — the same modifier convention
+`<lr-tree>`'s `reorderable` and `<lr-dashboard-grid>`'s `cells-draggable` already establish. Unlike
+`<lr-tree>`'s controlled `reorderable` mode, this list physically moves its own slotted
+`<lr-reorder-item>` light-DOM nodes itself (there is no `data` array prop to reconcile against),
+and emits `lr-reorder` with the full new order so the host can persist it without hand-rolling its
+own splice/resort logic.
+
+### `lr-reorder-list`
+
+**Properties:**
+- `label: string = ''` — accessible name for the internal `role="list"`; when empty, a host
+  `aria-label` is forwarded as a fallback.
+- `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
+  Arrow shortcut, without mutating any item's own `disabled` attribute.
+
+**Events:** `lr-reorder` (`detail: { order: string[], fromIndex: number, toIndex: number }` — fired
+after every successful move; `order` is every current item's `value` (or its DOM-position-index
+fallback) in the new top-to-bottom order)
+
+**Slots:** default — `<lr-reorder-item>` elements.
+
+**CSS parts:** `base` — the internal `role="list"` wrapper.
+
+**Themeable custom properties:** `--lr-reorder-list-gap` (default `var(--lr-space-2xs)`) — gap
+between rows.
+
+```html
+<lr-reorder-list label="Form fields" @lr-reorder=${(e) => console.log(e.detail.order)}>
+  <lr-reorder-item value="name">Name</lr-reorder-item>
+  <lr-reorder-item value="email">Email</lr-reorder-item>
+  <lr-reorder-item value="phone">Phone</lr-reorder-item>
+</lr-reorder-list>
+```
+
+**Known gotchas:**
+- Boundary-disabled state (`atStart`/`atEnd`) and the `listDisabled` cascade are computed and
+  pushed onto each `<lr-reorder-item>` by this list, on every slot change and every move — an item
+  alone can't know its own position.
+- No pointer drag-and-drop; move-up/move-down buttons and the keyboard shortcut only.
+
+---
+
+### `lr-reorder-item`
+
+**Properties:**
+- `value?: string` — stable identifier included in the parent's `lr-reorder` order array; falls
+  back to this item's live DOM-position index when unset.
+- `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
+  hide its slotted content.
+- `atStart: boolean = false`, `atEnd: boolean = false`, `listDisabled: boolean = false`
+  (attribute: false) — pushed down by the parent `<lr-reorder-list>`; normally set internally, not
+  by consumers.
+
+**Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
+while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)
+
+**Slots:** default — arbitrary row content.
+
+**CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`, `content` (default-slot
+wrapper).
+
+**Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
+between the move buttons and the row content.
 
 ---
 

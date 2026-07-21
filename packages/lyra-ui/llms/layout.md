@@ -685,6 +685,75 @@ between grouped controls; shared spacing and layout tokens apply as well.
 
 ---
 
+## `lr-reorder-list` / `lr-reorder-item`
+
+A generic flat-list reorder primitive: per-row move-up/move-down buttons (always available), plus
+Ctrl/Cmd+ArrowUp/ArrowDown from focus anywhere inside a row — the same modifier convention
+`<lr-tree>`'s `reorderable` and `<lr-dashboard-grid>`'s `cells-draggable` already establish. Unlike
+`<lr-tree>`'s controlled `reorderable` mode, this list physically moves its own slotted
+`<lr-reorder-item>` light-DOM nodes itself (there is no `data` array prop to reconcile against),
+and emits `lr-reorder` with the full new order so the host can persist it without hand-rolling its
+own splice/resort logic.
+
+### `lr-reorder-list`
+
+**Properties:**
+- `label: string = ''` — accessible name for the internal `role="list"`; when empty, a host
+  `aria-label` is forwarded as a fallback.
+- `disabled: boolean = false` (reflected) — disables every item's move buttons and the Ctrl/Cmd+
+  Arrow shortcut, without mutating any item's own `disabled` attribute.
+
+**Events:** `lr-reorder` (`detail: { order: string[], fromIndex: number, toIndex: number }` — fired
+after every successful move; `order` is every current item's `value` (or its DOM-position-index
+fallback) in the new top-to-bottom order)
+
+**Slots:** default — `<lr-reorder-item>` elements.
+
+**CSS parts:** `base` — the internal `role="list"` wrapper.
+
+**Themeable custom properties:** `--lr-reorder-list-gap` (default `var(--lr-space-2xs)`) — gap
+between rows.
+
+```html
+<lr-reorder-list label="Form fields" @lr-reorder=${(e) => console.log(e.detail.order)}>
+  <lr-reorder-item value="name">Name</lr-reorder-item>
+  <lr-reorder-item value="email">Email</lr-reorder-item>
+  <lr-reorder-item value="phone">Phone</lr-reorder-item>
+</lr-reorder-list>
+```
+
+**Known gotchas:**
+- Boundary-disabled state (`atStart`/`atEnd`) and the `listDisabled` cascade are computed and
+  pushed onto each `<lr-reorder-item>` by this list, on every slot change and every move — an item
+  alone can't know its own position.
+- No pointer drag-and-drop; move-up/move-down buttons and the keyboard shortcut only.
+
+---
+
+### `lr-reorder-item`
+
+**Properties:**
+- `value?: string` — stable identifier included in the parent's `lr-reorder` order array; falls
+  back to this item's live DOM-position index when unset.
+- `disabled: boolean = false` (reflected) — disables this row's own move buttons only; does not
+  hide its slotted content.
+- `atStart: boolean = false`, `atEnd: boolean = false`, `listDisabled: boolean = false`
+  (attribute: false) — pushed down by the parent `<lr-reorder-list>`; normally set internally, not
+  by consumers.
+
+**Events:** `lr-move-request` (`detail: { direction: 'up' | 'down' }` — a move button was activated
+while not disabled; handled by the parent `<lr-reorder-list>`, which performs the actual move)
+
+**Slots:** default — arbitrary row content.
+
+**CSS parts:** `base` (row wrapper), `move-up-button`, `move-down-button`, `content` (default-slot
+wrapper).
+
+**Themeable custom properties:** `--lr-reorder-item-gap` (default `var(--lr-space-xs)`) — gap
+between the move buttons and the row content.
+
+---
+
 ## `lr-segmented`
 
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:

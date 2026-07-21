@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 249 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 251 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -354,7 +354,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 250 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 251 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -598,6 +598,7 @@ each one-liner below.
 | `<lr-carousel-item>` | `wa-carousel-item` | Optional semantic slide wrapper for carousel content |
 | `<lr-button-group>` | `wa-button-group` | Responsive semantic grouping for related action controls |
 | `<lr-control-group>` | — (extra) | Responsive layout wrapper for a row of mixed form controls and action buttons, centered rather than stretched (unlike `<lr-button-group>`) |
+| `<lr-reorder-list>` + `<lr-reorder-item>` | — (extra) | Generic flat-list reorder primitive: per-row move-up/move-down buttons plus a Ctrl/Cmd+Arrow keyboard shortcut, emitting the full new order on every move |
 | `<lr-image-comparer>` | `wa-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
 | `<lr-zoomable-frame>` | `wa-zoomable-frame` | Bounded zoom and scrollable panning for slotted content or an image source |
 | `<lr-tabs>` | — (extra) | Tab strip over direct light-DOM panels; WAI-ARIA APG automatic-activation keyboard pattern |
