@@ -266,4 +266,44 @@ describe('lr-swatch-picker', () => {
     // .focus(), so the target swatch never receives focus even though `value` updated.
     expect(el.shadowRoot!.activeElement!.getAttribute('data-value')).to.equal('b"c');
   });
+
+  it('scales the swatch hit-area and fill diameter across every tier, hit-area floored at 24px', async () => {
+    const expectedHit: Record<string, string> = {
+      '2xs': '24px',
+      xs: '28px',
+      s: '32px',
+      m: '40px',
+      l: '48px',
+      xl: '56px',
+    };
+    const expectedFill: Record<string, string> = {
+      '2xs': '12px',
+      xs: '16px',
+      s: '20px',
+      m: '24px',
+      l: '28px',
+      xl: '32px',
+    };
+    for (const size of Object.keys(expectedHit)) {
+      const el = await fixture(
+        html`<lr-swatch-picker size=${size} .options=${options()}></lr-swatch-picker>`,
+      );
+      const swatch = el.shadowRoot!.querySelector('[part="swatch"]') as HTMLElement;
+      const fill = el.shadowRoot!.querySelector('[part="swatch-fill"]') as HTMLElement;
+      expect(getComputedStyle(swatch).minBlockSize, `hit size=${size}`).to.equal(expectedHit[size]);
+      expect(getComputedStyle(fill).blockSize, `fill size=${size}`).to.equal(expectedFill[size]);
+    }
+  });
+
+  it('defaults to size "m" and reflects a size attribute', async () => {
+    const defaultEl = (await fixture(
+      html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    expect(defaultEl.size).to.equal('m');
+    const el = (await fixture(
+      html`<lr-swatch-picker size="s" .options=${options()}></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    expect(el.getAttribute('size')).to.equal('s');
+    expect(el.size).to.equal('s');
+  });
 });

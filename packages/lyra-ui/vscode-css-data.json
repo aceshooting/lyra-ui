@@ -2851,6 +2851,20 @@
       }
     },
     {
+      "name": "--lr-swatch-picker-fill-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-1-5rem)`) — Visible fill/icon diameter for the swatch, swapped per tier."
+      }
+    },
+    {
+      "name": "--lr-swatch-picker-hit-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-2-5rem)`) — Hit-area size (min-block-size) for the swatch button, swapped per tier and floored at 24px."
+      }
+    },
+    {
       "name": "--lr-swatch-picker-selected-blur",
       "description": {
         "kind": "markdown",

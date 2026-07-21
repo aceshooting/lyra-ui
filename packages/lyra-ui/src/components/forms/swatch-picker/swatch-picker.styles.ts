@@ -31,6 +31,28 @@ export const styles = css`
        with no icon-specific branching needed (unlike the box-shadow/drop-shadow split below, which
        needs one precisely because box-shadow doesn't reach into a transparent box's own content). */
     --lr-swatch-picker-shine-duration: 0s;
+    --lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
+    --lr-swatch-picker-fill-size: var(--lr-size-1-5rem);
+  }
+  :host([size='2xs']) {
+    --lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
+    --lr-swatch-picker-fill-size: var(--lr-size-0-75rem);
+  }
+  :host([size='xs']) {
+    --lr-swatch-picker-hit-size: var(--lr-size-1-75rem);
+    --lr-swatch-picker-fill-size: var(--lr-size-1rem);
+  }
+  :host([size='s']) {
+    --lr-swatch-picker-hit-size: var(--lr-size-2rem);
+    --lr-swatch-picker-fill-size: var(--lr-size-1-25rem);
+  }
+  :host([size='l']) {
+    --lr-swatch-picker-hit-size: var(--lr-size-3rem);
+    --lr-swatch-picker-fill-size: var(--lr-size-1-75rem);
+  }
+  :host([size='xl']) {
+    --lr-swatch-picker-hit-size: var(--lr-size-3-5rem);
+    --lr-swatch-picker-fill-size: var(--lr-size-2rem);
   }
   [part='base'] {
     display: inline-flex;
@@ -50,8 +72,8 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-swatch-picker-hit-size);
+    min-block-size: var(--lr-swatch-picker-hit-size);
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -64,8 +86,8 @@ export const styles = css`
   [part='swatch-fill'] {
     box-sizing: border-box;
     display: block;
-    inline-size: var(--lr-size-1-5rem);
-    block-size: var(--lr-size-1-5rem);
+    inline-size: var(--lr-swatch-picker-fill-size);
+    block-size: var(--lr-swatch-picker-fill-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: 50%;
     /* Per-swatch fill from the option's color, set inline by swatch-picker.class.ts.
@@ -78,8 +100,8 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-size-1-5rem);
-    block-size: var(--lr-size-1-5rem);
+    inline-size: var(--lr-swatch-picker-fill-size);
+    block-size: var(--lr-swatch-picker-fill-size);
     transition: transform var(--lr-transition-fast);
   }
   [part='swatch']:hover [part='swatch-fill'],

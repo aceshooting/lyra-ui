@@ -19,6 +19,8 @@ export interface SwatchOption {
   icon?: unknown;
 }
 
+export type LyraSwatchPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 export interface LyraSwatchPickerEventMap {
   'lr-change': CustomEvent<{ value: string }>;
 }
@@ -51,6 +53,10 @@ export interface LyraSwatchPickerEventMap {
  *   `prefers-reduced-motion: reduce`. Independent of `--lr-swatch-picker-selected-blur` (a separate
  *   `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works
  *   identically for a plain color circle and an icon swatch alike.
+ * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (min-block-size)
+ *   for the swatch button, swapped per tier and floored at 24px.
+ * @cssprop [--lr-swatch-picker-fill-size=var(--lr-size-1-5rem)] - Visible fill/icon diameter
+ *   for the swatch, swapped per tier.
  */
 export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   static styles = [LyraElement.styles, styles];
@@ -60,6 +66,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   /** The currently selected option's `value`, or `null` when nothing is selected. */
   @property() value: string | null = null;
+
+  /** Visual size — scales the swatch hit-area and fill diameter proportionally, hit-area
+   *  floored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. */
+  @property({ reflect: true }) size: LyraSwatchPickerSize = 'm';
 
   /** Accessible name for the radiogroup, used when no visible label context
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set

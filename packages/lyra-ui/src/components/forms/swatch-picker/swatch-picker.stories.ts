@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import type { LyraSwatchPickerSize } from './swatch-picker.js';
 import './swatch-picker.js';
 
 const accents = () => [
@@ -93,6 +94,18 @@ export const Default: Story = {
   render: () => html`
     <lr-swatch-picker label="Accent color" .options=${accents()} value="purple"></lr-swatch-picker>
   `,
+};
+
+/** `size` spans the same `2xs`–`xl` scale as `lr-input`, default `m`. */
+export const Sizes: Story = {
+  render: () => {
+    const sizes: LyraSwatchPickerSize[] = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
+    return html`
+      <div style="display: flex; flex-direction: column; gap: 1rem">
+        ${sizes.map((size) => html`<lr-swatch-picker size=${size} label=${`Size "${size}"`} .options=${accents()} value="purple"></lr-swatch-picker>`)}
+      </div>
+    `;
+  },
 };
 
 export const CustomIcon: Story = {
