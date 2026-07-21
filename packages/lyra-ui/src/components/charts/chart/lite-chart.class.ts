@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
@@ -29,6 +30,8 @@ export type LyraLiteChartScale = 'linear' | 'sqrt';
  * host's, making the host horizontally scrollable.
  */
 export type LyraLiteChartLayout = 'fit' | 'scroll';
+
+export type LyraLiteChartExportFormat = 'csv' | 'svg';
 
 // The semantic variables are resolved by SVG/CSS at paint time, so changing a
 // theme or color-scheme does not require a second JS-side draw pass.
@@ -275,6 +278,36 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @query('svg') private svgEl?: SVGSVGElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
+
+  /**
+   * Appends one streamed category to every series and optionally keeps only the newest `maxPoints`
+   * categories. This is a controlled convenience method: it replaces `labels`/`datasets` with new
+   * arrays, so a host can listen for the property update or continue treating the chart as a normal
+   * controlled component. Missing series values become `null` rather than shifting alignment.
+   */
+  appendData(label: string, values: (number | null)[], maxPoints = 0): void {
+    const limit = Math.max(0, finiteCount(maxPoints, 0));
+    const labels = [...this.labels, label];
+    const datasets = this.datasets.map((series, index) => ({
+      ...series,
+      data: [...series.data, values[index] ?? null],
+    }));
+    this.labels = limit > 0 ? labels.slice(-limit) : labels;
+    this.datasets = limit > 0 ? datasets.map((series) => ({ ...series, data: series.data.slice(-limit) })) : datasets;
+  }
+
+  /** Returns a spreadsheet-safe CSV snapshot of the visible labels and series values. */
+  exportData(format: LyraLiteChartExportFormat): string {
+    if (format === 'svg') {
+      if (!this.svgEl || typeof XMLSerializer === 'undefined') return '';
+      return new XMLSerializer().serializeToString(this.svgEl);
+    }
+    const header = ['label', ...this.datasets.map((series) => series.label)].map(escapeCsvField).join(',');
+    const rows = this.labels.map((label, index) =>
+      [label, ...this.datasets.map((series) => series.data[index] ?? '')].map(escapeCsvField).join(','),
+    );
+    return [header, ...rows].join('\r\n');
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();

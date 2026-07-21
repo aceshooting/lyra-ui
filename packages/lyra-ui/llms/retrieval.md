@@ -1619,3 +1619,53 @@ falls back to that token, so rendering is unchanged. Plus shared tokens otherwis
 **Known gotchas:**
 - Every stage starts collapsed; expansion state is internal `@state` keyed by stage id, not a
   controlled property.
+## `lr-rag-answer`
+
+Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
+assessment, and expandable source previews. It performs no model call, retrieval, citation parsing,
+or source fetching.
+
+**Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
+`sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
+(attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+**Events:** `lr-citation-select` (`{ citation }`) and `lr-retry`.
+
+**Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
+source list.
+
+**CSS parts:** `base`, `answer`, `loading`, `error`, `retry`, `grounding`, `citations`,
+`citation-list`, `sources`, `source-list`, `section-heading`.
+
+## `lr-embedding-explorer`
+
+Dependency-free accessible 2D embedding projection viewer. Coordinates are projected by the host;
+the component only normalizes them into SVG, colors optional clusters, and emits selection events.
+
+**Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
+y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
+`accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
+omitted.
+
+**Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
+
+**CSS parts:** `base`, `plot`, `point`, `empty`.
+
+## `lr-knowledge-base-admin`
+
+Tabbed operations shell composing `lr-knowledge-base` and `lr-ingestion-queue`. It forwards source
+and ingestion actions under namespaced events; host-owned controls such as chunking, embedding,
+permissions, and connector settings go in the `settings` slot.
+
+**Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
+IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
+`label: string = ''`; `hideIngestion: boolean = false`.
+
+**Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
+`lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
+correlated ids/details from their composed primitives).
+
+**Slots:** `settings` — host-owned KB configuration controls.
+
+**CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.

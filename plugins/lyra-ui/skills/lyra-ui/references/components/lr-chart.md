@@ -58,8 +58,12 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
+- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
+  keeps only the newest `maxPoints`; point-based scatter/bubble series are left unchanged
 
-**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`
+**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`, and
+`exportData('csv' | 'png')` (returns a spreadsheet-safe CSV snapshot or the current PNG data URL
+when Chart.js is loaded)
 (forces a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style —
 the escape hatch for a consumer's own theme-toggle handler to call when it flips something, e.g. a
 `data-theme` attribute, that doesn't otherwise change any `lr-chart` property)

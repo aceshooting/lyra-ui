@@ -213,6 +213,8 @@ import './components/retrieval/source-picker/source-picker.js';
 import './components/retrieval/provenance-panel/provenance-panel.js';
 import './components/retrieval/mind-map/mind-map.js';
 import './components/agent-tools/agent-run/agent-run.js';
+import './components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js';
+import './components/agent-tools/approval-queue/approval-queue.js';
 import './components/conversation/agent-workspace/agent-workspace.js';
 import './components/agent-tools/agent-trace/agent-trace.js';
 import './components/agent-tools/context-inspector/context-inspector.js';
@@ -229,6 +231,9 @@ import './components/data/graph-query-builder/graph-query-builder.js';
 import './components/retrieval/grounding-summary/grounding-summary.js';
 import './components/retrieval/ingestion-queue/ingestion-queue.js';
 import './components/retrieval/knowledge-base/knowledge-base.js';
+import './components/retrieval/knowledge-base-admin/knowledge-base-admin.js';
+import './components/retrieval/rag-answer/rag-answer.js';
+import './components/retrieval/embedding-explorer/embedding-explorer.js';
 import './components/retrieval/memory-panel/memory-panel.js';
 import './components/agent-tools/policy-summary/policy-summary.js';
 import './components/data/query-builder/query-builder.js';
@@ -421,10 +426,11 @@ export type {
   LiteSeries,
   LyraLiteChartType,
   LyraLiteChartLayout,
+  LyraLiteChartExportFormat,
 } from './components/charts/chart/lite-chart.js';
 export { binValues } from './components/charts/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/charts/chart/histogram-bin.js';
-export type { Series, LyraChartType } from './components/charts/chart/chart.js';
+export type { Series, LyraChartType, LyraChartExportFormat } from './components/charts/chart/chart.js';
 export type { BoxPlotSeries, BoxPlotPoint } from './components/charts/chart/box-plot.js';
 export type { GraphNode, GraphLink } from './components/retrieval/graph/graph.js';
 export type { LegendEntry, ChoroplethLayer, MapMarker, GeoJsonDataLayer } from './components/media/map/map.js';
@@ -840,6 +846,8 @@ export * from './components/retrieval/source-picker/source-picker.js';
 export * from './components/retrieval/provenance-panel/provenance-panel.js';
 export * from './components/retrieval/mind-map/mind-map.js';
 export * from './components/agent-tools/agent-run/agent-run.js';
+export * from './components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.js';
+export * from './components/agent-tools/approval-queue/approval-queue.js';
 export * from './components/conversation/agent-workspace/agent-workspace.js';
 export * from './components/agent-tools/agent-trace/agent-trace.js';
 export * from './components/agent-tools/context-inspector/context-inspector.js';
@@ -856,6 +864,9 @@ export * from './components/data/graph-query-builder/graph-query-builder.js';
 export * from './components/retrieval/grounding-summary/grounding-summary.js';
 export * from './components/retrieval/ingestion-queue/ingestion-queue.js';
 export * from './components/retrieval/knowledge-base/knowledge-base.js';
+export * from './components/retrieval/knowledge-base-admin/knowledge-base-admin.js';
+export * from './components/retrieval/rag-answer/rag-answer.js';
+export * from './components/retrieval/embedding-explorer/embedding-explorer.js';
 export * from './components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js';
 export * from './components/retrieval/memory-panel/memory-panel.js';
 export * from './components/agent-tools/policy-summary/policy-summary.js';

@@ -142,6 +142,57 @@
           ]
         },
         {
+          "name": "lr-agent-eval-dashboard",
+          "description": "`<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,\nand run-status history. It never launches or scores evaluations.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root dashboard wrapper. |\n| `chart` | The trend chart. |\n| `empty` | The empty history message. |\n| `heading` | The visible heading. |\n| `metric` | One metric card. |\n| `metrics` | The metric-card grid. |\n| `run` | One run row. |\n| `run-label` | A run label. |\n| `run-meta` | Status and metric value. |\n| `run-status` | A run status badge. |\n| `runs` | The run history. |\n| `runs-heading` | The run history heading. |",
+          "attributes": [
+            {
+              "name": "chart-height",
+              "description": "Type: `string`  \nDefault: `'220px'`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "metric-id",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "show-chart",
+              "description": "Type: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lr-agent-run",
           "description": "`<lr-agent-run>` — the top-level shell for one `AgentRun`: lifecycle-status badge, elapsed\ntime, current step, model/cost summary, and built-in Cancel/Retry controls in a header, plus\nfour named composition slots (`tasks`/`tools`/`reasoning`/`output`) for the run's actual\ncontent. This is deliberately a SHELL, not a new step-rendering surface — every piece of\nper-step or per-invocation rendering routes through an existing primitive:\n\n- **Elapsed time**: composes `<lr-generation-status>` (`active`/`started-at`, its own built-in\n  Stop button hidden via `show-stop=\"false\"` since this component renders its own Cancel/Retry\n  pair instead) for the *live, ticking* readout while the run is genuinely in progress\n  (`running`/`collecting`/`waiting-input`/`waiting-approval`). `<lr-stream-status>` doesn't fit:\n  its `phase` vocabulary\n  (`idle`/`connecting`/`streaming`/`stalled`) models transport/connection health, not an agent\n  run's nine built-in lifecycle statuses (plus application-defined extensions), and it exposes no elapsed-time readout at all — exactly the\n  distinction `<lr-generation-status>`'s own class doc already draws between the two. Once the\n  run reaches a terminal state (`done`/`error`/`cancelled`) with both a `startedAt` and an\n  `endedAt`, this component instead renders a small locally-formatted static duration\n  (`endedAt - startedAt`): `<lr-generation-status>`'s freeze-on-`active=false` semantics only\n  ever freeze at whatever it last computed *live*, so mounting it directly against a completed\n  run loaded from history (e.g. `startedAt` yesterday, `endedAt` five minutes later, loaded\n  today) would either show a stale zero or the wrong multi-hour span — it has no way to render a\n  fixed historical span on demand. That static fallback reuses the same small `formatDuration()`\n  algorithm `<lr-usage-badge>` and `<lr-tool-call-chip>` already duplicate locally for the same\n  reason (see this file's own copy).\n- **Model + cost summary**: composes `<lr-usage-badge>`, fed `run.costEstimate` (formatted via\n  `formatCost`, or a plain `Intl.NumberFormat` by default — this library never assumes a\n  currency, see `<lr-format-number>`'s own explicit `currency` prop) as its `cost-text`.\n  `run.model` (a plain string with no analogous `<lr-usage-badge>` property) renders alongside\n  as plain text.\n- **Current step**: a single-line summary of whichever `run.steps` entry currently has\n  `status.kind === 'running'` (the last such entry, if more than one) — a plain text line, not a\n  list, so it doesn't duplicate `<lr-task-list>`'s own per-item rendering.\n- **Tasks slot default content**: when the host doesn't slot anything into `tasks` and\n  `run.steps` is non-empty, this component's own `<slot>` fallback renders a `<lr-task-list>`\n  populated by mapping every `AgentStep` to a `TaskItem` (see `toTaskItem()`) — a plain data\n  adapter between the two existing shapes, not new rendering.\n- **Status badge**: composes `<lr-badge>`. **Empty state**: composes `<lr-empty>` when `run` is\n  `null`.\n\n`tools`/`reasoning`/`output` are plain named slots with no default content — entirely the\nhost's own composition (typically `<lr-tool-call-chip>`/`<lr-tool-result-view>` rows,\nreasoning/streaming text, and final output respectively). An `actions` slot adds extra header\ncontrols alongside the built-in Cancel/Retry pair. The `header` and `summary` slots replace the\nbuilt-in lifecycle header and model/usage/metrics summary respectively. `statusLabels` and\n`statusVariants` make application-defined lifecycle kinds first-class, while `metrics` renders\narbitrary labeled values such as prompt and completion token counts.\n\nThe built-in Cancel button renders while `showCancel` is true and the run's status is one of\n`TICKING_KINDS` (still genuinely in progress); Retry renders while `showRetry` is true and the\nstatus is `error` or `cancelled`. Clicking either fires `lr-cancel`/`lr-retry` with\n`CancelEventDetail`/`RetryEventDetail` from `src/ai/types.ts` — this component never cancels or\nretries anything itself, it only requests. `RetryEventDetail.attempt` is a 1-based counter\nlocal to this component, incremented on every `lr-retry` click and reset to `0` whenever\n`run.id` changes (a genuinely new run replacing the old one, as opposed to the same run's status\nmerely updating in place).\n\nLifecycle transitions into an attention-needing or terminal state (`waiting-input`,\n`waiting-approval`, `done`, `error`, `cancelled`) are announced through an internal\n`<lr-live-region>`, mirroring `<lr-stream-status>`'s own stall/recover announcements —\n`running`/`idle` transitions are frequent and not independently actionable, so they stay\nsilent, and whatever status a freshly-assigned `run` (a new `run.id`) happens to already carry\nis never itself treated as an eventful transition, only a later in-place change is.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Extra header actions alongside the built-in Cancel/Retry buttons. |\n| `header` | Replaces the built-in lifecycle header and its built-in actions. |\n| `output` | The run's final output content. No default content. |\n| `reasoning` | Reasoning/thinking content. No default content. |\n| `summary` | Replaces the built-in model, usage, and metrics summary. |\n| `tasks` | Task/plan content. Falls back to a `<lr-task-list>` built from `run.steps` when nothing is slotted and `run.steps` is non-empty. |\n| `tools` | Tool-call content (e.g. `<lr-tool-call-chip>`/`<lr-tool-result-view>` rows). No default content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Wrapper around the `actions` slot and the built-in Cancel/Retry buttons. |\n| `base` | The root container. |\n| `body` | Wrapper around the four composition slots. |\n| `cancel-button` | The built-in Cancel button. Only rendered while cancelable (see the class doc). |\n| `current-step` | Wrapper around the current-step icon and label. Only rendered while a step has `status.kind === 'running'`. |\n| `current-step-icon` | The spinning current-step icon. |\n| `current-step-label` | The current step's `label` text. |\n| `elapsed` | The composed `<lr-generation-status>`, only rendered while the run is actively ticking (see the class doc). |\n| `elapsed-static` | The static formatted duration for a terminal run with both `startedAt` and `endedAt`. |\n| `empty` | The `<lr-empty>` shown when `run` is `null`. |\n| `header` | The header row wrapping status, elapsed time, current step, summary, and actions. |\n| `metric` | One arbitrary metric in the built-in summary. |\n| `metric-label` | The metric's label. |\n| `metric-value` | The metric's value. |\n| `model` | `run.model`, when set. |\n| `output` | The `output` slot. |\n| `reasoning` | The `reasoning` slot. |\n| `retry-button` | The built-in Retry button. Only rendered while retryable. |\n| `status` | Wrapper around the status badge and optional status message. |\n| `status-badge` | The resolved `<lr-badge>` lifecycle-status pill. |\n| `status-message` | `run.status.message`, when set. |\n| `summary` | Wrapper around the model text and the composed `<lr-usage-badge>`. Only rendered while `run.model` or a valid `run.costEstimate` is present. |\n| `tasks` | The `tasks` slot. |\n| `tools` | The `tools` slot. |\n| `usage` | The composed `<lr-usage-badge>`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-agent-run-spin` (default: `1s linear`) — Current-step icon spin animation duration and timing.\n- `--lr-agent-run-compact-padding` (default: `var(--lr-space-s)`) — `[part=\"base\"]` padding while `compact`.\n- `--lr-agent-run-compact-gap` (default: `var(--lr-space-s)`) — Gap between `[part=\"base\"]`'s header and body while `compact`.",
           "attributes": [
@@ -773,6 +824,57 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lr-approval-queue",
+          "description": "`<lr-approval-queue>` — a controlled queue of tool calls that need human approval, with a\nkeyboard-accessible request list and a single reused `<lr-tool-approval-dialog>`. It never\nexecutes tools, applies permissions, or persists decisions; the host owns those operations.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root queue wrapper. |\n| `count` | The pending-count text. |\n| `empty` | The empty state. |\n| `heading` | The visible queue heading. |\n| `heading-row` | The heading and pending-count row. |\n| `list` | The request list. |\n| `request` | One selectable request row. |\n| `request-id` | The stable request id. |\n| `request-info` | Request name and id wrapper. |\n| `status` | The request status badge. |\n| `tool-name` | The proposed tool name. |",
+          "attributes": [
+            {
+              "name": "editable",
+              "description": "Allows argument editing in the nested approval dialog.\n\nType: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name and visible heading.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "open",
+              "description": "Whether the decision dialog is open.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "selected-id",
+              "description": "The request currently shown in the dialog.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -6132,6 +6234,43 @@
           ]
         },
         {
+          "name": "lr-embedding-explorer",
+          "description": "`<lr-embedding-explorer>` — a dependency-free, accessible 2D embedding projection viewer. It\nnormalizes host-provided coordinates into an SVG plot, colors optional clusters, and exposes\nclick/keyboard selection. It does not run PCA/UMAP/t-SNE, fetch chunks, or mutate points.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `empty` | The empty state. |\n| `plot` | The SVG projection plot. |\n| `point` | One focusable embedding point. |",
+          "attributes": [
+            {
+              "name": "aria-label",
+              "description": "Accessible name for the plot.\n\nType: `string | null`  \nDefault: `null`"
+            },
+            {
+              "name": "height",
+              "description": "SVG block size.\n\nType: `string`  \nDefault: `'360px'`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "selected-id",
+              "description": "The selected point id. Controlled by the host.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lr-emoji-picker",
           "description": "`<lr-emoji-picker>` — a searchable, keyboard-navigable, form-associated emoji picker. In the\nsame \"zero/optional-peer dependency\" spirit as `<lr-lite-chart>`/`<lr-heatmap>`: `groups` is\nfully consumer-suppliable (this component ships no emoji data of its own), with an *optional*\nconvenience auto-loader for a default set — see `emoji-data-loader.ts` and the class doc there for\nexactly what that covers.\n\nKeyboard model: the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji\nis tabbable). Arrow keys move the active option (Left/Right follow reading direction and swap\nunder RTL; Up/Down move by one visual row, measured from the live wrap layout), Home/End jump to\nthe first/last option, and Enter/Space picks. The search input doubles as a `role=\"combobox\"`\nover the same listbox: the arrow keys and Enter also work there while focus stays in the input,\nwith `aria-activedescendant` tracking the active option. Large data sets automatically window\ntheir visible rows so scrolling does not create one button per supplied emoji in the DOM.\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-select>`/\n`<lr-color-picker>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/\n`error` parts) — left unset, the chrome stays hidden. When `label` (or the `label` slot) is set\nand `aria-label`/`accessibleLabel` is not, the grid's accessible name switches from the\nlocalized default to `aria-labelledby` pointing at the visible label, mirroring\n`<lr-checkbox-group>`'s identical `accessibleLabel`-wins-over-`aria-labelledby` precedence.\n\n`disabled` (from the `FormAssociated` mixin) gates every self-rendered interactive\nsub-control — the search input and every emoji button — not just one of them.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The wrapper around the search input and grid. |\n| `emoji` | Each emoji's own `<button>`; its box and glyph both scale with the `size` property (`--lr-emoji-picker-item-size`/`-glyph-size`), with the hit area floored at a flat 24px (WCAG 2.5.8) rather than the shared `--lr-icon-button-size`. |\n| `empty` | The empty-state message, shown when the search matches nothing. |\n| `error` | The error message. |\n| `form-control` | The outer wrapper around label, base, error and hint. |\n| `form-control-label` | The visible label. |\n| `grid` | The keyboard-navigable emoji grid. |\n| `group-label` | Each group's heading, rendered above its emojis. |\n| `hint` | The hint message. |\n| `search` | The search/filter `<input>` (`role=\"combobox\"` over the grid). |\n| `virtual-items` | The flex row holding one windowed row's emoji buttons. |\n| `virtual-label` | The `aria-hidden` placeholder that reserves a row's group-label band when that row has no label, keeping every row the same height. Rendered on the windowed path only. |\n| `virtual-row` | One windowed row, absolutely positioned at the `--lr-emoji-picker-row-height` pitch. Rendered on the windowed path only. |\n| `virtual-spacer` | The full-height scroll spacer that gives the grid its scrollbar while only the visible rows exist in the DOM. Rendered on the windowed path only. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-emoji-picker-item-size` (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button.\n- `--lr-emoji-picker-glyph-size` (default: `var(--lr-font-size-lg)`) — Font size of the emoji glyph, scaled by the `size` property to keep the glyph proportional to the item box.\n- `--lr-emoji-picker-gap` (default: `var(--lr-space-2xs)`) — Gap between emoji within a windowed row.\n- `--lr-emoji-picker-row-height` (default: `calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`) — One windowed row's height. Must stay at or above the item size plus the group-label band, or consecutive absolutely-positioned rows overlap.\n- `--lr-emoji-picker-active-bg` (default: `var(--lr-color-brand-quiet)`) — Background of the keyboard-active (`data-active`) **and** hovered emoji button — the two share a single rule, so this one hook retints both consistently. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without hijacking the library-wide `--lr-color-brand-quiet` token.",
           "attributes": [
@@ -8774,6 +8913,48 @@
             {
               "name": "label",
               "description": "Heading text and the table's accessible name (unless overridden by a host `aria-label`).\nFalls back to a localized default.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lr-knowledge-base-admin",
+          "description": "`<lr-knowledge-base-admin>` — a responsive operations shell composing the existing controlled\nsource inventory and ingestion queue into one tabbed knowledge-base view. It forwards every\nsource/ingestion action under a namespaced event and never creates connectors, uploads files, or\nchanges indexing configuration itself. Put configuration controls in the `settings` slot.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `settings` | Optional host-owned ingestion, chunking, embedding, or permissions controls. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root admin wrapper. |\n| `heading` | The visible heading. |\n| `panel` | The active panel. |\n| `settings` | The settings slot wrapper. |\n| `tab` | One tab button. |\n| `tabs` | The tablist. |",
+          "attributes": [
+            {
+              "name": "active-tab",
+              "description": "Active tab. Controlled by the host after `lr-tab-change` if desired.\n\nType: `KnowledgeBaseAdminTab`  \nDefault: `'sources'`",
+              "value": {
+                "type": [
+                  "KnowledgeBaseAdminTab"
+                ]
+              }
+            },
+            {
+              "name": "hide-ingestion",
+              "description": "Hides the ingestion tab and queue.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Accessible name and visible heading.\n\nType: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
@@ -12479,6 +12660,70 @@
             {
               "name": "required",
               "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lr-rag-answer",
+          "description": "`<lr-rag-answer>` — a controlled grounded-answer surface combining sanitized Markdown, citation\nbadges, a grounding assessment, and source previews. It performs no model call, retrieval,\ncitation parsing, or source fetching.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `answer` | Replaces the data-driven Markdown answer body. |\n| `sources` | Replaces the data-driven source list. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `answer` | The answer content wrapper. |\n| `base` | The root answer wrapper. |\n| `citation-list` | The citation badge row. |\n| `citations` | The citation section. |\n| `error` | The caller-supplied error message. |\n| `grounding` | The grounding assessment. |\n| `loading` | The loading indicator. |\n| `retry` | The retry button. |\n| `section-heading` | A localized section heading. |\n| `source-list` | The data-driven source list. |\n| `sources` | The source section. |",
+          "attributes": [
+            {
+              "name": "answer",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "aria-label",
+              "description": "Type: `string | null`  \nDefault: `null`"
+            },
+            {
+              "name": "error",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "loading",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "show-sources",
+              "description": "Type: `boolean`  \nDefault: `true`",
               "value": {
                 "type": [
                   "boolean"

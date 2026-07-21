@@ -2,7 +2,7 @@
 
 # Component index
 
-251 custom elements, grouped by the source family they live in.
+256 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -243,7 +243,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-voice-picker` · conversation/voice-picker/voice-picker.js — a TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s closed-dropdown/free-text-combobox dual mode, stale-va...
 - `lr-agent-workspace` · conversation/agent-workspace/agent-workspace.js — a responsive, controlled shell for an AI conversation and its supporting agent state.
 
-## Agent tooling, tool calls & evaluation — `components/agent-tools/` (29)
+## Agent tooling, tool calls & evaluation — `components/agent-tools/` (31)
 
 - `lr-tool-call-chip` · agent-tools/tool-call-chip/tool-call-chip.js — a compact inline pill representing one tool/ function call an agent made mid-conversation, e.g.
 - `lr-tool-result-view` · agent-tools/tool-result-view/tool-result-view.js — renders a tool call's result via whichever custom renderer a host app has registered for it (see `registerToolRenderer()` in `registry.ts...
@@ -274,8 +274,10 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-evaluation-run` · agent-tools/evaluation-run/evaluation-run.js — an evaluation batch's live progress: an overall `<lr-progress-bar>` counting terminal (done/error/cancelled) examples against the batch t...
 - `lr-policy-summary` · agent-tools/policy-summary/policy-summary.js — a read-only list of guardrail, permission, privacy, and tool-policy decisions, each carrying an `allow` / `deny` / `needs-review` state a...
 - `lr-tool-timeline` · agent-tools/tool-timeline/tool-timeline.js — a chronological list of an agent run's tool/function calls, each rendered through `<lr-tool-call-chip>` (name/status/duration) and `<lr-t...
+- `lr-agent-eval-dashboard` · agent-tools/agent-eval-dashboard/agent-eval-dashboard.js — a controlled evaluation overview with metric cards, a trend chart, and run-status history.
+- `lr-approval-queue` · agent-tools/approval-queue/approval-queue.js — a controlled queue of tool calls that need human approval, with a keyboard-accessible request list and a single reused `<lr-tool-approval...
 
-## Retrieval, knowledge graph & grounding — `components/retrieval/` (24)
+## Retrieval, knowledge graph & grounding — `components/retrieval/` (27)
 
 - `lr-graph` · retrieval/graph/graph.js — a force-directed node-link diagram with pan/zoom/drag.
 - `lr-node-palette` · retrieval/node-palette/node-palette.js — the searchable, categorized node library for workflow editors: drag an item onto a canvas, or place it by keyboard.
@@ -301,3 +303,6 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-retrieval-results` · retrieval/retrieval-results/retrieval-results.js — the orchestration-level ranked-chunk-list surface: takes raw `RetrievalChunk[]` (the shared retrieval-and-grounding type from `src/ai/typ...
 - `lr-retrieval-search` · retrieval/retrieval-search/retrieval-search.js — - the query bar for a retrieval/RAG surface: query text, an active- filter/scope chip row, a vector/keyword/hybrid mode selector, and loa...
 - `lr-retrieval-trace` · retrieval/retrieval-trace/retrieval-trace.js — a retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering), rendered through `<lr-span-waterfall...
+- `lr-rag-answer` · retrieval/rag-answer/rag-answer.js — a controlled grounded-answer surface combining sanitized Markdown, citation badges, a grounding assessment, and source previews.
+- `lr-embedding-explorer` · retrieval/embedding-explorer/embedding-explorer.js — a dependency-free, accessible 2D embedding projection viewer.
+- `lr-knowledge-base-admin` · retrieval/knowledge-base-admin/knowledge-base-admin.js — a responsive operations shell composing the existing controlled source inventory and ingestion queue into one tabbed knowledge-base view.

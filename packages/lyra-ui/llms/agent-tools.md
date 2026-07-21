@@ -1813,3 +1813,34 @@ per-entry timeline marker dot's size, which also sets the entry grid's leading c
 retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
+## `lr-agent-eval-dashboard`
+
+Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
+history. It never launches or scores evaluations.
+
+**Properties:** `metrics: AgentEvaluationMetric[] = []` (attribute: false), where each metric is
+`{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `runs:
+AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status,
+metrics?: Record<string, number> }`; `metricId: string = ''`; `label: string = ''`; `showChart:
+boolean = true`; `chartHeight: string = '220px'`.
+
+**Events:** `lr-metric-change` (`{ metricId }`, reserved for host-controlled metric selectors) and
+`lr-run-select` (`{ runId }`).
+
+**CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
+`run-label`, `run-meta`, `run-status`, `empty`.
+
+## `lr-approval-queue`
+
+Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
+It never executes tools or persists decisions.
+
+**Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
+`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string = ''`;
+`open: boolean = false`; `editable: boolean = true`; `label: string = ''`.
+
+**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
+approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+
+**CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
+`tool-name`, `request-id`, `status`, `empty`.

@@ -23,7 +23,7 @@
     "transcript-feed": "conversation", "typing-indicator": "conversation", "usage-badge": "conversation",
     "voice-picker": "conversation", "widget-renderer": "conversation",
 
-    "activity-feed": "agent-tools", "agent-run": "agent-tools", "agent-trace": "agent-tools",
+    "activity-feed": "agent-tools", "agent-run": "agent-tools", "agent-eval-dashboard": "agent-tools", "approval-queue": "agent-tools", "agent-trace": "agent-tools",
     "artifact-panel": "agent-tools", "browser-frame": "agent-tools", "commit-card": "agent-tools",
     "compare-panel": "agent-tools", "confirm-bar": "agent-tools", "context-inspector": "agent-tools",
     "eval-dataset": "agent-tools", "eval-result": "agent-tools", "evaluation-run": "agent-tools",
@@ -36,8 +36,8 @@
 
     "chunk-inspector": "retrieval", "citation-badge": "retrieval", "community-card": "retrieval",
     "entity-card": "retrieval", "entity-chip": "retrieval", "entity-dossier": "retrieval",
-    "graph": "retrieval", "graph-legend": "retrieval", "grounding-summary": "retrieval",
-    "ingestion-queue": "retrieval", "knowledge-base": "retrieval", "knowledge-graph-explorer": "retrieval",
+    "graph": "retrieval", "graph-legend": "retrieval", "grounding-summary": "retrieval", "rag-answer": "retrieval", "embedding-explorer": "retrieval",
+    "ingestion-queue": "retrieval", "knowledge-base": "retrieval", "knowledge-base-admin": "retrieval", "knowledge-graph-explorer": "retrieval",
     "memory-panel": "retrieval", "mind-map": "retrieval", "neighbor-list": "retrieval",
     "node-palette": "retrieval", "path-strip": "retrieval", "provenance-panel": "retrieval",
     "retrieval-results": "retrieval", "retrieval-search": "retrieval", "retrieval-trace": "retrieval",

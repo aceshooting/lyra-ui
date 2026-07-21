@@ -406,6 +406,25 @@ export type LyraMessageKey =
   | 'agentWorkspaceGrounding'
   | 'agentWorkspaceContext'
   | 'agentWorkspaceEmpty'
+  | 'ragAnswerLabel'
+  | 'ragAnswerCitations'
+  | 'ragAnswerSources'
+  | 'ragAnswerRetry'
+  | 'evaluationDashboardLabel'
+  | 'evaluationDashboardMetricLabel'
+  | 'evaluationDashboardRunsLabel'
+  | 'evaluationDashboardNoRuns'
+  | 'approvalQueueLabel'
+  | 'approvalQueueEmpty'
+  | 'approvalQueueOpen'
+  | 'approvalQueuePendingCount'
+  | 'approvalQueuePending'
+  | 'embeddingExplorerLabel'
+  | 'embeddingExplorerEmpty'
+  | 'embeddingExplorerPoint'
+  | 'knowledgeBaseAdminLabel'
+  | 'knowledgeBaseAdminSourcesTab'
+  | 'knowledgeBaseAdminIngestionTab'
   | 'resizeDivider'
   | 'trendUnchanged'
   | 'trendIncreased'
@@ -1427,6 +1446,25 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   agentWorkspaceGrounding: 'Grounding',
   agentWorkspaceContext: 'Context',
   agentWorkspaceEmpty: 'No messages yet',
+  ragAnswerLabel: 'Grounded answer',
+  ragAnswerCitations: 'Citations',
+  ragAnswerSources: 'Sources',
+  ragAnswerRetry: 'Retry answer',
+  evaluationDashboardLabel: 'Evaluation dashboard',
+  evaluationDashboardMetricLabel: 'Metric',
+  evaluationDashboardRunsLabel: 'Evaluation runs',
+  evaluationDashboardNoRuns: 'No evaluation runs yet',
+  approvalQueueLabel: 'Tool approval queue',
+  approvalQueueEmpty: 'No tool approvals pending',
+  approvalQueueOpen: 'Review approval for {tool}',
+  approvalQueuePendingCount: '{count} pending approvals',
+  approvalQueuePending: 'Pending',
+  embeddingExplorerLabel: 'Embedding explorer',
+  embeddingExplorerEmpty: 'No embedding points',
+  embeddingExplorerPoint: '{label}, embedding point {index}',
+  knowledgeBaseAdminLabel: 'Knowledge base administration',
+  knowledgeBaseAdminSourcesTab: 'Sources',
+  knowledgeBaseAdminIngestionTab: 'Ingestion',
   resizeDivider: 'Resize divider between panel {a} and panel {b}',
   trendUnchanged: 'unchanged',
   trendIncreased: 'increased {value}%',

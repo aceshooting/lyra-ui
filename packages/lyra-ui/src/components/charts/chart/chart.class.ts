@@ -10,6 +10,7 @@ import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { escapeCsvField } from '../../utility/export-button/csv.js';
 
 export interface Series {
   label: string;
@@ -42,6 +43,8 @@ export type LyraChartValueFormatter = (
   value: number,
   context: LyraChartValueFormatterContext,
 ) => string;
+
+export type LyraChartExportFormat = 'csv' | 'png';
 
 export interface LyraChartArea {
   readonly top: number;
@@ -289,6 +292,38 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * who need full Chart.js control beyond the simplified `Series` shape.
    */
   @property({ attribute: false }) config?: OptionalPeerApi;
+
+  /**
+   * Appends one streamed category to numeric `data` series and optionally keeps only the newest
+   * `maxPoints` categories. Point-based scatter/bubble series are left unchanged because their
+   * x/y coordinates need a richer host-defined append contract.
+   */
+  appendData(label: string, values: (number | null)[], maxPoints = 0): void {
+    const limit = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
+    const labels = [...this.labels, label];
+    const datasets = this.datasets.map((series, index) =>
+      series.points
+        ? series
+        : { ...series, data: [...(series.data ?? []), values[index] ?? null] },
+    );
+    this.labels = limit > 0 ? labels.slice(-limit) : labels;
+    this.datasets = limit > 0
+      ? datasets.map((series) => (series.points ? series : { ...series, data: series.data?.slice(-limit) }))
+      : datasets;
+  }
+
+  /** Returns a spreadsheet-safe CSV snapshot of the chart's label/data series. */
+  exportData(format: LyraChartExportFormat): string {
+    if (format === 'png') return this.chart?.toBase64Image?.() ?? '';
+    const header = ['label', ...this.datasets.map((series) => series.label)].map(escapeCsvField).join(',');
+    const rowCount = Math.max(this.labels.length, ...this.datasets.map((series) => series.data?.length ?? series.points?.length ?? 0), 0);
+    const rows = Array.from({ length: rowCount }, (_, index) =>
+      [this.labels[index] ?? '', ...this.datasets.map((series) => series.points?.[index]?.y ?? series.data?.[index] ?? '')]
+        .map(escapeCsvField)
+        .join(','),
+    );
+    return [header, ...rows].join('\r\n');
+  }
 
   /** True until the lazy-loaded `chart.js` peer dependency has settled (success or failure). */
   @state() private loading = true;

@@ -83,10 +83,15 @@ passthrough). Not a subclass of `LyraChart`.
   small non-zero values
 - `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
   `aria-label` wins
+- `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
+  oldest categories
 
 **Events:** `lr-point-click` — fired when a bar/point is activated (click, or Enter/Space while
 focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
 | null }` — same shape as `lr-chart`'s `lr-point-click`.
+
+**Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
+markup. The method does not download a file; pair it with `lr-export-button` for download UX.
 
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.

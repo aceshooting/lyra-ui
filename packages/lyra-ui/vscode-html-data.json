@@ -120,6 +120,50 @@
       ]
     },
     {
+      "name": "lr-agent-eval-dashboard",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-agent-eval-dashboard>` — a controlled evaluation overview with metric cards, a trend chart,\nand run-status history. It never launches or scores evaluations.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root dashboard wrapper. |\n| `chart` | The trend chart. |\n| `empty` | The empty history message. |\n| `heading` | The visible heading. |\n| `metric` | One metric card. |\n| `metrics` | The metric-card grid. |\n| `run` | One run row. |\n| `run-label` | A run label. |\n| `run-meta` | Status and metric value. |\n| `run-status` | A run status badge. |\n| `runs` | The run history. |\n| `runs-heading` | The run history heading. |"
+      },
+      "attributes": [
+        {
+          "name": "chart-height",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `'220px'`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "metric-id",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-chart",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `true`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-agent-run",
       "description": {
         "kind": "markdown",
@@ -668,6 +712,50 @@
           "description": {
             "kind": "markdown",
             "value": "Opt-in hover/focus flyout showing this item's label text while `icon-only` (set externally by\nthe parent `<lr-app-rail>` as the viewport narrows) hides it from view -- an explicit,\ndocumented property instead of an unverified cross-browser `::part()` + `::after` + `attr()`\ncomposition. No effect outside icon-only mode, since the label is already visible there.\n`false` (the default) reproduces today's exact output.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-approval-queue",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-approval-queue>` — a controlled queue of tool calls that need human approval, with a\nkeyboard-accessible request list and a single reused `<lr-tool-approval-dialog>`. It never\nexecutes tools, applies permissions, or persists decisions; the host owns those operations.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root queue wrapper. |\n| `count` | The pending-count text. |\n| `empty` | The empty state. |\n| `heading` | The visible queue heading. |\n| `heading-row` | The heading and pending-count row. |\n| `list` | The request list. |\n| `request` | One selectable request row. |\n| `request-id` | The stable request id. |\n| `request-info` | Request name and id wrapper. |\n| `status` | The request status badge. |\n| `tool-name` | The proposed tool name. |"
+      },
+      "attributes": [
+        {
+          "name": "editable",
+          "description": {
+            "kind": "markdown",
+            "value": "Allows argument editing in the nested approval dialog.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name and visible heading.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "open",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the decision dialog is open.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "selected-id",
+          "description": {
+            "kind": "markdown",
+            "value": "The request currently shown in the dialog.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -5385,6 +5473,43 @@
       ]
     },
     {
+      "name": "lr-embedding-explorer",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-embedding-explorer>` — a dependency-free, accessible 2D embedding projection viewer. It\nnormalizes host-provided coordinates into an SVG plot, colors optional clusters, and exposes\nclick/keyboard selection. It does not run PCA/UMAP/t-SNE, fetch chunks, or mutate points.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `empty` | The empty state. |\n| `plot` | The SVG projection plot. |\n| `point` | One focusable embedding point. |"
+      },
+      "attributes": [
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name for the plot.\n\nType: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "height",
+          "description": {
+            "kind": "markdown",
+            "value": "SVG block size.\n\nType: `string`  \nDefault: `'360px'`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "selected-id",
+          "description": {
+            "kind": "markdown",
+            "value": "The selected point id. Controlled by the host.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-emoji-picker",
       "description": {
         "kind": "markdown",
@@ -7873,6 +7998,43 @@
           "description": {
             "kind": "markdown",
             "value": "Heading text and the table's accessible name (unless overridden by a host `aria-label`).\nFalls back to a localized default.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-knowledge-base-admin",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-knowledge-base-admin>` — a responsive operations shell composing the existing controlled\nsource inventory and ingestion queue into one tabbed knowledge-base view. It forwards every\nsource/ingestion action under a namespaced event and never creates connectors, uploads files, or\nchanges indexing configuration itself. Put configuration controls in the `settings` slot.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `settings` | Optional host-owned ingestion, chunking, embedding, or permissions controls. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root admin wrapper. |\n| `heading` | The visible heading. |\n| `panel` | The active panel. |\n| `settings` | The settings slot wrapper. |\n| `tab` | One tab button. |\n| `tabs` | The tablist. |"
+      },
+      "attributes": [
+        {
+          "name": "active-tab",
+          "description": {
+            "kind": "markdown",
+            "value": "Active tab. Controlled by the host after `lr-tab-change` if desired.\n\nType: `KnowledgeBaseAdminTab`  \nDefault: `'sources'`"
+          }
+        },
+        {
+          "name": "hide-ingestion",
+          "description": {
+            "kind": "markdown",
+            "value": "Hides the ingestion tab and queue.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Accessible name and visible heading.\n\nType: `string`  \nDefault: `''`"
           }
         },
         {
@@ -11102,6 +11264,64 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-rag-answer",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-rag-answer>` — a controlled grounded-answer surface combining sanitized Markdown, citation\nbadges, a grounding assessment, and source previews. It performs no model call, retrieval,\ncitation parsing, or source fetching.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `answer` | Replaces the data-driven Markdown answer body. |\n| `sources` | Replaces the data-driven source list. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `answer` | The answer content wrapper. |\n| `base` | The root answer wrapper. |\n| `citation-list` | The citation badge row. |\n| `citations` | The citation section. |\n| `error` | The caller-supplied error message. |\n| `grounding` | The grounding assessment. |\n| `loading` | The loading indicator. |\n| `retry` | The retry button. |\n| `section-heading` | A localized section heading. |\n| `source-list` | The data-driven source list. |\n| `sources` | The source section. |"
+      },
+      "attributes": [
+        {
+          "name": "answer",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "aria-label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string | null`  \nDefault: `null`"
+          }
+        },
+        {
+          "name": "error",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "loading",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "show-sources",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`  \nDefault: `true`"
           }
         }
       ]

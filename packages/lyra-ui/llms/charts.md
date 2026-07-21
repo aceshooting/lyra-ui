@@ -46,8 +46,12 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
+- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
+  keeps only the newest `maxPoints`; point-based scatter/bubble series are left unchanged
 
-**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`
+**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`, and
+`exportData('csv' | 'png')` (returns a spreadsheet-safe CSV snapshot or the current PNG data URL
+when Chart.js is loaded)
 (forces a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style —
 the escape hatch for a consumer's own theme-toggle handler to call when it flips something, e.g. a
 `data-theme` attribute, that doesn't otherwise change any `lr-chart` property)
@@ -209,10 +213,15 @@ passthrough). Not a subclass of `LyraChart`.
   small non-zero values
 - `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
   `aria-label` wins
+- `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
+  oldest categories
 
 **Events:** `lr-point-click` — fired when a bar/point is activated (click, or Enter/Space while
 focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
 | null }` — same shape as `lr-chart`'s `lr-point-click`.
+
+**Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
+markup. The method does not download a file; pair it with `lr-export-button` for download UX.
 
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.
@@ -444,3 +453,11 @@ independently of the base `chart-loader.ts`).
   fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
 
 ---
+## Chart streaming and export
+
+`lr-lite-chart` and `lr-chart` expose additive imperative helpers for live dashboards:
+`appendData(label, values, maxPoints?)` appends one aligned category and optionally trims the oldest
+points. `lr-lite-chart.exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the
+current SVG markup. `lr-chart.exportData('csv' | 'png')` returns a CSV snapshot or Chart.js's current
+PNG data URL when the optional peer is loaded. These helpers do not download files; compose them
+with `lr-export-button` so the host owns filenames and download policy.

@@ -12,11 +12,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aceshooting.github.io/lyra-ui/</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/activityfeed--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agentevaldashboard--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/agentrun--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/ai-agent-workspace--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/animatedimage--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/animation--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/apprail--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/approvalqueue--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/archiveviewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/artifact-panel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/attachmentchip--docs</loc></url>
@@ -101,6 +103,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/drawer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/drilldown-panel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/emailviewer--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/embeddingexplorer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/emoji-picker--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/empty--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/entity-card--docs</loc></url>
@@ -152,6 +155,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledge-base--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledge-graph-explorer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledge-graph-graph-query-builder--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledgebaseadmin--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-divider--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-scroller--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/lightbox--docs</loc></url>
@@ -200,6 +204,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/push-to-talk--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/qr-code--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/query-builder--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/raganswer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/random-content--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/responsivepanel--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/resultcard--docs</loc></url>

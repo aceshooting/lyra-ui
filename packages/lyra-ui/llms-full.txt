@@ -40,8 +40,8 @@ family and entry point.
 - **Charts** — 12 tags in `components/charts/`
 - **Document & file viewers** — 22 tags in `components/viewers/`
 - **Conversation & chat UI** — 28 tags in `components/conversation/`
-- **Agent tooling, tool calls & evaluation** — 29 tags in `components/agent-tools/`
-- **Retrieval, knowledge graph & grounding** — 24 tags in `components/retrieval/`
+- **Agent tooling, tool calls & evaluation** — 31 tags in `components/agent-tools/`
+- **Retrieval, knowledge graph & grounding** — 27 tags in `components/retrieval/`
 - **Reference tables** — design tokens (`llms/tokens.md`), optional peers (`llms/peers.md`), `wa-*`/`sl-*` migration (`llms/migration.md`)
 
 ---
@@ -9437,8 +9437,12 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `chartArea: LyraChartArea | undefined` (readonly) — current Chart.js chart-area geometry in
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
+- `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
+  keeps only the newest `maxPoints`; point-based scatter/bubble series are left unchanged
 
-**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`
+**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`, and
+`exportData('csv' | 'png')` (returns a spreadsheet-safe CSV snapshot or the current PNG data URL
+when Chart.js is loaded)
 (forces a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style —
 the escape hatch for a consumer's own theme-toggle handler to call when it flips something, e.g. a
 `data-theme` attribute, that doesn't otherwise change any `lr-chart` property)
@@ -9600,10 +9604,15 @@ passthrough). Not a subclass of `LyraChart`.
   small non-zero values
 - `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
   `aria-label` wins
+- `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
+  oldest categories
 
 **Events:** `lr-point-click` — fired when a bar/point is activated (click, or Enter/Space while
 focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
 | null }` — same shape as `lr-chart`'s `lr-point-click`.
+
+**Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
+markup. The method does not download a file; pair it with `lr-export-button` for download UX.
 
 The axis gutter/title and y-axis labels mirror to logical start under RTL. Built-in mark summaries
 are complete localized templates and format values with `effectiveLocale`.
@@ -9835,6 +9844,15 @@ independently of the base `chart-loader.ts`).
   fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
 
 ---
+
+## Chart streaming and export
+
+`lr-lite-chart` and `lr-chart` expose additive imperative helpers for live dashboards:
+`appendData(label, values, maxPoints?)` appends one aligned category and optionally trims the oldest
+points. `lr-lite-chart.exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the
+current SVG markup. `lr-chart.exportData('csv' | 'png')` returns a CSV snapshot or Chart.js's current
+PNG data URL when the optional peer is loaded. These helpers do not download files; compose them
+with `lr-export-button` so the host owns filenames and download policy.
 
 # Document & file viewers (`components/viewers/`)
 
@@ -15119,6 +15137,38 @@ retinted independently; `--lr-tool-timeline-pending-approval-border-color` (defa
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
 
+## `lr-agent-eval-dashboard`
+
+Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
+history. It never launches or scores evaluations.
+
+**Properties:** `metrics: AgentEvaluationMetric[] = []` (attribute: false), where each metric is
+`{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `runs:
+AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status,
+metrics?: Record<string, number> }`; `metricId: string = ''`; `label: string = ''`; `showChart:
+boolean = true`; `chartHeight: string = '220px'`.
+
+**Events:** `lr-metric-change` (`{ metricId }`, reserved for host-controlled metric selectors) and
+`lr-run-select` (`{ runId }`).
+
+**CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
+`run-label`, `run-meta`, `run-status`, `empty`.
+
+## `lr-approval-queue`
+
+Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
+It never executes tools or persists decisions.
+
+**Properties:** `requests: ToolApprovalRequest[] = []` (attribute: false), where each request is
+`{ id, toolName, args, status?: 'pending' | 'approved' | 'denied' }`; `selectedId: string = ''`;
+`open: boolean = false`; `editable: boolean = true`; `label: string = ''`.
+
+**Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
+approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+
+**CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
+`tool-name`, `request-id`, `status`, `empty`.
+
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
 
 ## `lr-graph`
@@ -16742,3 +16792,54 @@ falls back to that token, so rendering is unchanged. Plus shared tokens otherwis
 **Known gotchas:**
 - Every stage starts collapsed; expansion state is internal `@state` keyed by stage id, not a
   controlled property.
+
+## `lr-rag-answer`
+
+Controlled grounded-answer surface combining sanitized Markdown, citation badges, grounding
+assessment, and expandable source previews. It performs no model call, retrieval, citation parsing,
+or source fetching.
+
+**Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
+`sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
+(attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+**Events:** `lr-citation-select` (`{ citation }`) and `lr-retry`.
+
+**Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
+source list.
+
+**CSS parts:** `base`, `answer`, `loading`, `error`, `retry`, `grounding`, `citations`,
+`citation-list`, `sources`, `source-list`, `section-heading`.
+
+## `lr-embedding-explorer`
+
+Dependency-free accessible 2D embedding projection viewer. Coordinates are projected by the host;
+the component only normalizes them into SVG, colors optional clusters, and emits selection events.
+
+**Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
+y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
+`accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
+omitted.
+
+**Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
+
+**CSS parts:** `base`, `plot`, `point`, `empty`.
+
+## `lr-knowledge-base-admin`
+
+Tabbed operations shell composing `lr-knowledge-base` and `lr-ingestion-queue`. It forwards source
+and ingestion actions under namespaced events; host-owned controls such as chunking, embedding,
+permissions, and connector settings go in the `settings` slot.
+
+**Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
+IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
+`label: string = ''`; `hideIngestion: boolean = false`.
+
+**Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
+`lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the
+correlated ids/details from their composed primitives).
+
+**Slots:** `settings` — host-owned KB configuration controls.
+
+**CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.
