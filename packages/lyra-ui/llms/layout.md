@@ -973,7 +973,11 @@ content clickable, and it shows nothing while the viewport is above the first gr
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
 plus shared `--lr-focus-ring-width/-color/-offset` (inward-offset ring on `[part="base"]`, negative
-so it isn't clipped by the container's own `overflow: auto`).
+so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` also carries a
+mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
+always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
+`--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
+`transparent` to opt out of the hover treatment entirely.
 
 **Optional peer deps:** none.
 
@@ -1880,7 +1884,10 @@ false` (reflected — disables every gesture grid-wide), `accessibleLabel: strin
 **Themeable custom properties:** `--lr-dashboard-grid-columns`, `--lr-dashboard-grid-row-height`,
 and `--lr-dashboard-grid-gap` back the CSS Grid's `grid-template-columns`/`grid-auto-rows`/`gap`.
 The `columns`/`rowHeight`/`gap` properties write them inline on `[part='base']` on every render, so
-overriding them from a stylesheet has no effect — set the properties instead.
+overriding them from a stylesheet has no effect — set the properties instead. `--lr-dashboard-grid-cell-hover-outline-color`
+(default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
+preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
+draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
 
 ## `lr-drilldown-panel`
 
