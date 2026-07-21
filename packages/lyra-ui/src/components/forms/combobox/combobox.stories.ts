@@ -35,6 +35,9 @@ export const Multiple: Story = {
 export const Sizes: Story = {
   render: () => html`
     <div style="display: grid; gap: 1rem; max-width: 24rem">
+      <lr-combobox size="2xs" label="2xs" placeholder="Choose a value…">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>
       <lr-combobox size="xs" label="Extra small" placeholder="Choose a value…">
         <lr-option value="a">Alpha</lr-option>
       </lr-combobox>

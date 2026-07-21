@@ -17,6 +17,14 @@ export const styles = css`
        setting the property from anywhere (inline style, an ancestor, an outer-tree rule) pins an
        exact height. */
   }
+  :host([size='2xs']) {
+    --lr-combobox-trigger-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
+    --lr-combobox-trigger-min-height: var(--lr-size-1-25rem);
+    --lr-combobox-font-size: var(--lr-font-size-2xs);
+    --lr-combobox-tag-padding: 0 var(--lr-size-0-25rem);
+    --lr-combobox-tag-font-size: var(--lr-font-size-2xs);
+    --lr-combobox-expand-size: var(--lr-size-1rem);
+  }
   :host([size='xs']) {
     --lr-combobox-trigger-padding: var(--lr-size-0-125rem) var(--lr-space-xs);
     --lr-combobox-trigger-min-height: var(--lr-size-1-5rem);

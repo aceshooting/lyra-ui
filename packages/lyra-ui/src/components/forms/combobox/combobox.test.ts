@@ -1772,6 +1772,18 @@ describe('size', () => {
     expect(el.getAttribute('size')).to.equal('m');
   });
 
+  it('applies size="2xs" with a 20px trigger min-height', async () => {
+    const el = await fixture(html`<lr-combobox size="2xs" label="Tags"></lr-combobox>`);
+    const trigger = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+    expect(getComputedStyle(trigger).minBlockSize).to.equal('20px');
+  });
+
+  it('reflects size="2xs" as a host attribute', async () => {
+    const el = (await fixture(html`<lr-combobox size="2xs"></lr-combobox>`)) as LyraCombobox;
+    expect(el.size).to.equal('2xs');
+    expect(el.getAttribute('size')).to.equal('2xs');
+  });
+
   it('a non-default size changes the trigger min-block-size', async () => {
     const mEl = (await fixture(basic())) as LyraCombobox;
     const xsEl = (await fixture(html`

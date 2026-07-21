@@ -46,7 +46,7 @@ function createNoopInternals(): ElementInternals {
 }
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
-export type LyraComboboxSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+export type LyraComboboxSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 
 export interface ComboboxSourceRow {
   value: string;
