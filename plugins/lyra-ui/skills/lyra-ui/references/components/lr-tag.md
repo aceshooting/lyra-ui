@@ -30,3 +30,6 @@ color for text and border). Set one directly on the element for a tint outside t
 `var(--lr-space-s)`), and `--lr-badge-min-height` (default `var(--lr-size-1-25rem)`) — the density
 trio each `:host([size])` rule rewrites to that step's font size, inline padding, and minimum block
 size; the `m` defaults above exactly reproduce the pre-`size` fixed badge treatment.
+`--lr-badge-radius` (default `--lr-radius-pill`) is `[part='base']`'s corner radius, retunable
+without a `::part(base)` rule and, unlike the density trio, does not vary by `size` — the same
+`--lr-button-radius` pattern; `lr-tag` inherits it unchanged, the same as `size`.

@@ -79,7 +79,10 @@ presentational `<div>`, not a `role="group"`; options with an empty `group` get 
 
 **Themeable custom properties:** `--lr-select-trigger-padding`, `--lr-select-trigger-min-height`,
 `--lr-select-font-size`, `--lr-select-expand-size` — all four auto-swapped per `size` (`xs`…`xl`), the same pattern
-`lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use.
+`lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
+`--lr-space-xs`, the gap inside `[part='trigger']`) and `--lr-select-radius` (default `--lr-radius`,
+its corner radius) are both retunable without a `::part(trigger)` rule but, unlike the four above,
+do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls

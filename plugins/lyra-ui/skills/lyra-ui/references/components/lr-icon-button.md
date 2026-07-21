@@ -62,4 +62,7 @@ than it grows the button and keeps its own aspect ratio; a small glyph pads out 
 library-wide token (declared on `:root` by the token layer, and the shared minimum tappable size
 that several other components size their icon-only controls against), so overriding
 `--lr-theme-icon-button-size` globally resizes all of them together. Keep the resolved value at or
-above 24px — see `llms/shared.md`.
+above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
+`[part='button']` corner radius, retunable without a `::part(button)` rule — the same
+`--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
+counterpart to it.

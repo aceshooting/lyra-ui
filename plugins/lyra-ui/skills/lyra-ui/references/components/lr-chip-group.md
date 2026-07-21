@@ -73,6 +73,9 @@ back to `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-p
 `:host([size])` rule, so setting one directly on the element overrides that step of the scale; the
 `m` defaults are `--lr-font-size-sm` / `--lr-size-0-25rem` / `--lr-space-s` / `--lr-space-xs` /
 `--lr-font-size-sm`), the height pair `--lr-chip-min-height` / `--lr-chip-height` (below),
+`--lr-chip-radius` (default `--lr-radius-pill`, the corner radius of both `[part='base']` and
+`[part='remove-button']` — retunable without a `::part()` rule, and unlike the density quintet
+above does not vary by `size`; the same `--lr-button-radius` pattern),
 plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-brand`/`-brand-quiet`, `--lr-color-success`/`-success-quiet`,
 `--lr-color-warning`/`-warning-quiet`, `--lr-color-danger`/`-danger-quiet`,

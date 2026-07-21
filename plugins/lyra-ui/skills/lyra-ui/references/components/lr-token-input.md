@@ -24,7 +24,8 @@ hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-dupl
 `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** `input`, `change`, `lr-add` (`detail: { value }`), `lr-remove`
-(`detail: { value, index }`), and `lr-token-edit`
+(`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
+unchanged), and `lr-token-edit`
 (`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `token`, `token-label` (the
 token's text, doubling as the roving-focus edit trigger — rendered only while `editable`),
