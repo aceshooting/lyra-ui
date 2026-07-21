@@ -257,6 +257,14 @@ it('persists sizes to localStorage when storageKey is set', async () => {
   expect(parsed.length).to.equal(2);
 });
 
+it('honors a valid pre-set sizes property at connect, without regenerating an equal split', async () => {
+  const el = (await fixture(
+    html`<lr-split .sizes=${[30, 70]}><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([30, 70]);
+});
+
 it('uses defaultSizes only for initialization, below valid persistence and above equal distribution', async () => {
   const firstVisitKey = 'test-split-default-first-' + Math.random();
   const firstVisit = (await fixture(
@@ -286,6 +294,16 @@ it('falls back from invalid persisted sizes to defaultSizes through the initiali
   )) as LyraSplit;
   await elementUpdated(el);
   expect(el.sizes).to.deep.equal([25, 75]);
+});
+
+it('falls back to an equal split when the persisted localStorage value is malformed JSON, without throwing', async () => {
+  const storageKey = 'test-split-malformed-json-' + Math.random();
+  localStorage.setItem(`lr-split:${storageKey}:2`, 'not-json{');
+  const el = (await fixture(
+    html`<lr-split storage-key=${storageKey}><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.sizes).to.deep.equal([50, 50]);
 });
 
 it('switches the resize axis from its own inline-size breakpoint and reports the effective orientation', async () => {
@@ -326,6 +344,22 @@ it('keeps the authored orientation and no effective marker when no breakpoint is
   await elementUpdated(el);
   expect(el.effectiveOrientation).to.equal('vertical');
   expect(el.hasAttribute('data-effective-orientation')).to.be.false;
+});
+
+it('exposes the resolved container-basis orientation breakpoint in pixels via the private accessor', async () => {
+  const el = (await fixture(
+    html`<lr-split orientation-breakpoint="500"><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(
+    (el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint,
+  ).to.equal(500);
+
+  el.orientationBreakpoint = 'abc'; // unresolvable
+  await elementUpdated(el);
+  expect((el as unknown as { resolvedOrientationBreakpoint: number | undefined }).resolvedOrientationBreakpoint).to.equal(
+    undefined,
+  );
 });
 
 it('accepts a rem orientation breakpoint, crossing at the same width as the equivalent px number', async () => {
@@ -554,6 +588,41 @@ it('reconciles panelCount and sizes when a panel is removed after connect (slotc
   expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(1);
 });
 
+it('clears sizes to an empty array when every panel is removed (panelCount drops to 0)', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  expect(el.sizes.length).to.equal(2);
+
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  while (el.firstElementChild) el.removeChild(el.firstElementChild);
+  await slotChanged;
+  await elementUpdated(el);
+
+  expect(el.sizes).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('[part="divider"]').length).to.equal(0);
+});
+
+it('avoids a NaN redistribution divide-by-zero when every kept panel starts at 0% after a panel removal', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div><div>C</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  el.sizes = [0, 0, 100];
+  await elementUpdated(el);
+
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const slotChanged = oneEvent(slot, 'slotchange');
+  el.removeChild(el.lastElementChild!); // removes the one panel holding all the size
+  await slotChanged;
+  await elementUpdated(el);
+
+  expect(el.sizes.length).to.equal(2);
+  el.sizes.forEach((size) => expect(Number.isFinite(size)).to.be.true);
+});
+
 it('computes aria-valuemax per divider from its two adjacent panels for 3+ panels', async () => {
   const el = (await fixture(
     html`<lr-split min="10"><div>A</div><div>B</div><div>C</div></lr-split>`,
@@ -566,6 +635,18 @@ it('computes aria-valuemax per divider from its two adjacent panels for 3+ panel
   expect(dividers[0].getAttribute('aria-valuemax')).to.equal('70');
   // divider 1 sits between panels 1 and 2: max = 30 + 20 - 10 = 40 (not 90)
   expect(dividers[1].getAttribute('aria-valuemax')).to.equal('40');
+});
+
+it('falls back to 0 for a divider\'s sizes-derived values when sizes is momentarily shorter than panelCount, without throwing', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  // Bypasses the normal willUpdate()->ensureSizes() reconciliation: render() is called directly
+  // (below) before Lit's own update cycle has a chance to correct the mismatch.
+  el.sizes = [];
+  expect(() => el.render()).to.not.throw();
+  await elementUpdated(el);
 });
 
 it('does not throw when localStorage.getItem/setItem are unavailable (e.g. blocked or quota-exceeded)', async () => {
@@ -917,6 +998,40 @@ it('redistributes an unconstrained sibling into space freed by a maxPx-clamped p
   expect(Number(match![1])).to.be.closeTo(50 + freedPercent, 1e-3);
 });
 
+it('falls back to 0 for a not-yet-reconciled extra light-DOM panel\'s own clamp bounds instead of throwing (transient panelCount/sizes mismatch)', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  await elementUpdated(el);
+  // Pre-supplies a clamp constraint keyed to an index beyond the currently-reconciled
+  // panelCount(2) -- as if a consumer is about to append a third, already-constrained panel.
+  el.panelConstraints = [null, null, { minPx: 40, maxPx: 100 }];
+  await elementUpdated(el);
+  const panelC = document.createElement('div');
+  el.appendChild(panelC); // el.children.length is now 3; panelCount/sizes (still length 2) haven't
+  // reconciled yet -- no slotchange has fired -- so updated()'s redistribution pass sees more
+  // light-DOM panels than `sizes`/`resolveConstraintBounds()` currently know about.
+  expect(() => {
+    (el as unknown as { updated(changed: Map<string, unknown>): void }).updated(new Map());
+  }).to.not.throw();
+});
+
+it('redistributes 0% to a not-yet-reconciled extra unconstrained light-DOM panel instead of throwing (transient panelCount/sizes mismatch)', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 1920);
+  el.sizes = [50, 50];
+  el.panelConstraints = [{ minPx: 150, maxPx: 440 }, null]; // panel A clamps down -> freedPercent > 0
+  await elementUpdated(el);
+  const panelC = document.createElement('div'); // unconstrained; no panelConstraints[2] entry
+  el.appendChild(panelC); // panelCount/sizes still length 2 -- panel C is not yet reconciled
+  expect(() => {
+    (el as unknown as { updated(changed: Map<string, unknown>): void }).updated(new Map());
+  }).to.not.throw();
+});
+
 it('does not redistribute when the container is too narrow to measure (containerSize <= 0)', async () => {
   const el = (await fixture(
     html`<lr-split><div>A</div><div>B</div></lr-split>`,
@@ -1051,6 +1166,29 @@ it('combines px and percent bounds using the stricter lower and upper limits', a
   expect((el.children[0] as HTMLElement).style.flex).to.include('max(10%, 280px, 20%)');
 });
 
+it('combines maxPx and maxPercent using the stricter (smaller) of the two effective bounds', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  // 60px of a 200px container is 30%, stricter than the directly-specified 50% maximum.
+  el.panelConstraints = [{ maxPx: 60, maxPercent: 50 }, null];
+  await elementUpdated(el);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  mockWidth(base, 200);
+  const divider = el.shadowRoot!.querySelector('[part="divider"]') as HTMLElement;
+  divider.setPointerCapture = () => {};
+
+  divider.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 100 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 1000 }));
+  expect(el.sizes[0]).to.equal(30);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+  await elementUpdated(el);
+
+  expect((el.children[0] as HTMLElement).style.flex).to.include('min(60px, 50%)');
+});
+
 it('reports an invalid percent range through lr-split-constraints-invalid', async () => {
   const el = (await fixture(
     html`<lr-split><div>A</div><div>B</div></lr-split>`,
@@ -1058,6 +1196,32 @@ it('reports an invalid percent range through lr-split-constraints-invalid', asyn
   const invalid = oneEvent(el, 'lr-split-constraints-invalid');
   el.panelConstraints = [{ minPercent: 60, maxPercent: 40 }, null];
   expect((await invalid).detail.reason).to.equal('minimum-exceeds-maximum');
+});
+
+it('reports minimum-exceeds-maximum for a genuinely invalid (negative) constraint value, independent of any min>max comparison', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  const invalid = oneEvent(el, 'lr-split-constraints-invalid');
+  el.panelConstraints = [{ minPx: -10 }, null];
+  expect((await invalid).detail.reason).to.equal('minimum-exceeds-maximum');
+});
+
+it('reports maximum-total when every panel has a finite max that together fall short of 100%', async () => {
+  const el = (await fixture(
+    html`<lr-split><div>A</div><div>B</div></lr-split>`,
+  )) as LyraSplit;
+  const invalid = oneEvent(el, 'lr-split-constraints-invalid');
+  el.panelConstraints = [{ maxPercent: 40 }, { maxPercent: 40 }];
+  const event = (await invalid) as CustomEvent<{
+    reason: string;
+    panelCount: number;
+    minimumTotal: number;
+    maximumTotal: number | null;
+  }>;
+  expect(event.detail.reason).to.equal('maximum-total');
+  expect(event.detail.panelCount).to.equal(2);
+  expect(event.detail.maximumTotal).to.equal(80);
 });
 
 it('keeps a constrained panel pinned between its px bounds when the container is resized', async () => {
@@ -1896,6 +2060,70 @@ it('closes the floating drawer on backdrop click', async () => {
     await elementUpdated(el);
 
     (el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement).click();
+    await elementUpdated(el);
+    expect(el.open).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('restores the still-active floating overlay and its scroll lock across a disconnect/reconnect (e.g. a drag-and-drop reparent)', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(null);
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el); // synchronous disconnect + reconnect, no update in between
+    await elementUpdated(el);
+
+    // The drawer is still open and still rendered after the reconnect -- nothing was torn down.
+    expect(el.open).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(null);
+    const [panelA] = [...el.children] as HTMLElement[];
+    expect(panelA.style.position).to.equal('absolute');
+
+    // Escape still dismisses it post-reconnect, proving the overlay's document-level listener was
+    // actually restored (not just the DOM/style state).
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await elementUpdated(el);
+    expect(el.open).to.be.false;
+  } finally {
+    spy.restore();
+  }
+});
+
+it('re-registers a fresh floating overlay on reconnect instead of resuming when no handle is active (e.g. already deactivated)', async () => {
+  const spy = installResizeObserverSpy();
+  try {
+    const el = (await fixture(
+      html`<lr-split collapse="start" style="inline-size: 300px; block-size: 200px"><div>A</div><div>B</div></lr-split>`,
+    )) as LyraSplit;
+    await elementUpdated(el);
+    fireCollapseResize(spy.callbacks[0], 300); // floating
+    el.open = true;
+    await elementUpdated(el);
+
+    const parent = el.parentElement!;
+    el.remove();
+    // Simulates the handle having already fully deactivated (e.g. its own suspend->deactivate
+    // microtask already ran) by the time connectedCallback checks it -- `isActive()` on `undefined`
+    // is falsy via optional chaining, taking the `activateFloatingOverlay()` branch, not `resume()`.
+    (el as unknown as { overlayHandle?: unknown }).overlayHandle = undefined;
+    parent.append(el);
+    await elementUpdated(el);
+
+    expect(el.open).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="backdrop"]')).to.not.equal(null);
+    // A fresh handle was registered: Escape still dismisses the drawer post-reconnect.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     await elementUpdated(el);
     expect(el.open).to.be.false;
   } finally {

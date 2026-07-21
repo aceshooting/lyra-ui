@@ -92,6 +92,76 @@ describe('lr-qr-code', () => {
     expect(error.textContent).to.equal('This value could not be encoded as a QR code.');
   });
 
+  it('ignores a pending peer-load result if the element is disconnected before it resolves', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    let resolveLoad!: (api: FakeQrCodeApi | null) => void;
+    const pending = new Promise<FakeQrCodeApi | null>((resolve) => {
+      resolveLoad = resolve;
+    });
+    (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => pending;
+    el.value = 'hello';
+    await waitForPart(el, 'loading');
+    el.remove();
+    resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
+    await aTimeout(20);
+    expect(el.isConnected).to.be.false;
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  });
+
+  it('ignores a stale generate() call if the generation advances while the peer loader is still pending', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    let createCalls = 0;
+    (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => {
+      // Simulates a second generate() call (e.g. a rapid `value` change) winning the race and
+      // advancing the generation counter before this call's own peer load resolves.
+      (el as unknown as { generation: number }).generation++;
+      return Promise.resolve(
+        fakeApi(() => {
+          createCalls++;
+          return { modules: fakeModules(true) };
+        }),
+      );
+    };
+    el.value = 'hello';
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(createCalls).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="loading"]')).to.exist;
+  });
+
+  it('discards a successful create() result if the generation advances synchronously while create() runs', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => {
+        // The injectable `create()` seam is the only thing that runs between the two
+        // post-await generation checks (there's no `await` in between), so a stale
+        // generation there has to come from `create()` itself mutating it.
+        (el as unknown as { generation: number }).generation++;
+        return { modules: fakeModules(true) };
+      }),
+    );
+    el.value = 'hello';
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  });
+
+  it('discards an error result if the generation advances synchronously while create() throws', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => {
+        (el as unknown as { generation: number }).generation++;
+        throw new Error('boom');
+      }),
+    );
+    el.value = 'hello';
+    await el.updateComplete;
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
+  });
+
   it('renders a canvas sized to `size` CSS px with a DPR-scaled backing store', async () => {
     const el = (await fixture(html`
       <lr-qr-code
@@ -122,6 +192,14 @@ describe('lr-qr-code', () => {
 
     lower.errorCorrection = 'q' as LyraQrCodeErrorCorrection;
     expect(lower.errorCorrection).to.equal('Q');
+  });
+
+  it('falls back to the default error-correction level when the attribute is removed', async () => {
+    const el = (await fixture(html`<lr-qr-code error-correction="l"></lr-qr-code>`)) as LyraQrCode;
+    expect(el.errorCorrection).to.equal('L');
+    el.removeAttribute('error-correction');
+    await el.updateComplete;
+    expect(el.errorCorrection).to.equal('H');
   });
 
   it('clamps radius and size to their documented ranges', async () => {
@@ -209,6 +287,73 @@ describe('lr-qr-code', () => {
     expect(createCalls).to.equal(1);
   });
 
+  it('re-arms the DPR media query and redraws when the DPR change handler fires', async () => {
+    const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(parseInt(canvas.style.width, 10)).to.equal(90);
+    expect(() => (el as unknown as { onDprChange(): void }).onDprChange()).to.not.throw();
+    expect(parseInt(canvas.style.width, 10)).to.equal(90);
+  });
+
+  it('redraws via refreshTheme() when the color-scheme change handler fires', async () => {
+    const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    expect(() => (el as unknown as { onColorSchemeChange(): void }).onColorSchemeChange()).to.not.throw();
+  });
+
+  it('coalesces repeated queueThemeRefresh() calls into a single refreshTheme() before the next microtask', async () => {
+    const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    let refreshCalls = 0;
+    const originalRefreshTheme = el.refreshTheme.bind(el);
+    el.refreshTheme = () => {
+      refreshCalls++;
+      originalRefreshTheme();
+    };
+    const queueThemeRefresh = (el as unknown as { queueThemeRefresh(): void }).queueThemeRefresh.bind(el);
+    queueThemeRefresh();
+    queueThemeRefresh(); // must be swallowed by the in-flight guard, not double-fire
+    await aTimeout(20);
+    expect(refreshCalls).to.equal(1);
+  });
+
+  it('does nothing when watchTheme() runs against a document with no defaultView (e.g. a detached document)', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    Object.defineProperty(el, 'ownerDocument', { value: { defaultView: null }, configurable: true });
+    try {
+      expect(() => (el as unknown as { watchTheme(): void }).watchTheme()).to.not.throw();
+    } finally {
+      delete (el as unknown as { ownerDocument?: unknown }).ownerDocument;
+    }
+  });
+
+  it('skips MutationObserver theme-watching setup when the global is unavailable, without throwing', async () => {
+    const originalMutationObserver = window.MutationObserver;
+    try {
+      (window as unknown as { MutationObserver?: unknown }).MutationObserver = undefined;
+      const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+      expect((el as unknown as { themeObserver?: unknown }).themeObserver).to.equal(undefined);
+    } finally {
+      window.MutationObserver = originalMutationObserver;
+    }
+  });
+
   it('warns once and falls back to #000000 for an invalid --lr-qr-code-fill override', async () => {
     const el = (await fixture(
       html`<lr-qr-code style="--lr-qr-code-fill: not-a-color"></lr-qr-code>`,
@@ -264,6 +409,32 @@ describe('lr-qr-code', () => {
     // Top-left corner is always inside the quiet zone (background).
     const bgPixel = ctx.getImageData(1, 1, 1, 1).data;
     expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+  });
+
+  it('falls back to the default fill/background hex when the CSS custom property resolves empty', async () => {
+    const el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = ((target: Element, pseudo?: string | null) => {
+      if (target === el) return { getPropertyValue: () => '' } as unknown as CSSStyleDeclaration;
+      return originalGetComputedStyle(target, pseudo);
+    }) as typeof window.getComputedStyle;
+    try {
+      el.value = 'hello';
+      await waitForPart(el, 'canvas');
+      const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+      const ctx = canvas.getContext('2d')!;
+      const center = Math.round(canvas.width / 2);
+      const darkPixel = ctx.getImageData(center, center, 1, 1).data;
+      expect([...darkPixel.slice(0, 3)]).to.deep.equal([0, 0, 0]);
+      const bgPixel = ctx.getImageData(1, 1, 1, 1).data;
+      expect([...bgPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+    } finally {
+      window.getComputedStyle = originalGetComputedStyle;
+    }
   });
 
   it('is accessible in the ready state', async () => {
@@ -358,6 +529,104 @@ describe('lr-qr-code', () => {
     (el as unknown as { draw(): void }).draw();
     await el.updateComplete;
     expect(parseInt(canvas.style.width, 10)).to.equal(150);
+  });
+
+  it('no-ops draw() while the load state is not ready', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    await el.updateComplete;
+    expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+  });
+
+  it('no-ops draw() when the canvas element has not rendered yet for the current load state', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    await el.updateComplete;
+    // Bypasses the normal generate()/Lit-render flow: forces `ready` state directly, then calls
+    // draw() synchronously before Lit's async render has had a chance to create the <canvas>.
+    (el as unknown as { loadState: unknown }).loadState = { kind: 'ready', modules: fakeModules(true) };
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect(() => (el as unknown as { draw(): void }).draw()).to.not.throw();
+  });
+
+  it('falls back to a DPR of 1 when window.devicePixelRatio is falsy', async () => {
+    const el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    Object.defineProperty(window, 'devicePixelRatio', { value: 0, configurable: true });
+    try {
+      (el as unknown as { draw(): void }).draw();
+      expect(canvas.width).to.equal(40);
+      expect(canvas.height).to.equal(40);
+    } finally {
+      delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+  });
+
+  it('no-ops without throwing when the rendering canvas cannot produce a 2D context', async () => {
+    const el = (await fixture(html`<lr-qr-code size="40"></lr-qr-code>`)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: fakeModules(true) })),
+    );
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    (HTMLCanvasElement.prototype as unknown as { getContext: () => null }).getContext = () => null;
+    try {
+      el.value = 'hello';
+      await waitForPart(el, 'canvas');
+    } finally {
+      HTMLCanvasElement.prototype.getContext = originalGetContext;
+    }
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    expect(canvas.width).to.be.greaterThan(0);
+    // Sanity: the real context works again now that the stub is restored.
+    expect(canvas.getContext('2d')).to.exist;
+  });
+
+  it('paints only the background when the encoded symbol has zero modules', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code size="40" style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({ modules: { size: 0, get: () => 0 } })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const pixel = ctx.getImageData(1, 1, 1, 1).data;
+    expect([...pixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
+  });
+
+  it('draws rounded modules via roundRect and skips light modules when radius > 0 on a mixed symbol', async () => {
+    const el = (await fixture(html`
+      <lr-qr-code size="40" radius="0.5" style="--lr-qr-code-fill: #000; --lr-qr-code-background: #fff;"></lr-qr-code>
+    `)) as LyraQrCode;
+    installFakeLoader(
+      el,
+      fakeApi(() => ({
+        modules: { size: 2, get: (row: number, col: number) => (row === 1 && col === 1 ? 1 : 0) },
+      })),
+    );
+    el.value = 'hello';
+    await waitForPart(el, 'canvas');
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    // size=40, moduleCount=2, quiet zone 4 modules/side => moduleSize = 40/10 = 4px; offset = 16px.
+    // Module (1,1) (dark) spans [20,24)x[20,24), center (22,22). Module (0,0) (light) spans
+    // [16,20)x[16,20), center (18,18).
+    const darkCenter = Math.round(22 * dpr);
+    const darkPixel = ctx.getImageData(darkCenter, darkCenter, 1, 1).data;
+    expect([...darkPixel.slice(0, 3)]).to.deep.equal([0, 0, 0]);
+    const lightCenter = Math.round(18 * dpr);
+    const lightPixel = ctx.getImageData(lightCenter, lightCenter, 1, 1).data;
+    expect([...lightPixel.slice(0, 3)]).to.deep.equal([255, 255, 255]);
   });
 
   it('fits comfortably inside a 320px-narrow container at the default size', async () => {
