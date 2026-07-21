@@ -54,9 +54,9 @@ export const OpenInitially: Story = {
  *  `:host` rule) to confine it to a narrow, in-flow box for this story only -- mirrors
  *  pagination.stories.ts's `NarrowAllocation` story, adapted for a fixed-position host. */
 export const NarrowAllocation: Story = {
-  render: () => html`<lr-lightbox
+  render: (_args, context) => html`<lr-lightbox
     .images=${images}
-    open
+    .open=${context.viewMode !== 'docs'}
     style="position: static; inset: auto; display: flex; inline-size: 20rem; block-size: 24rem;"
   ></lr-lightbox>`,
 };
