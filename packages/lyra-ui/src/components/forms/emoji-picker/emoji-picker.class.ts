@@ -55,6 +55,8 @@ export interface EmojiPickerGroup {
   emojis: EmojiPickerItem[];
 }
 
+export type LyraEmojiPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
 export interface LyraEmojiPickerEventMap {
   input: CustomEvent<undefined>;
   change: CustomEvent<undefined>;
@@ -121,6 +123,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart error - The error message.
  * @cssprop [--lr-emoji-picker-item-size=var(--lr-icon-button-size)] - Each emoji button's box.
  *   Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button.
+ * @cssprop [--lr-emoji-picker-glyph-size=var(--lr-font-size-lg)] - Font size of the emoji glyph,
+ *   scaled by the `size` property to keep the glyph proportional to the item box.
  * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
  * @cssprop [--lr-emoji-picker-row-height=calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))] -
  *   One windowed row's height. Must stay at or above the item size plus the group-label band, or
@@ -142,6 +146,10 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   /** Accessible name forwarded from the host to the internal emoji listbox. Empty falls back to
    *  the localized default grid label. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+
+  /** Visual size — scales the emoji grid item box proportionally, floored at 24px
+   *  (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. */
+  @property({ reflect: true }) size: LyraEmojiPickerSize = 'm';
 
   /** Visible label content, rendered above the search/grid. Empty (the default) renders no label
    *  chrome at all -- see the class doc above for the full label/hint/error contract. */

@@ -5,8 +5,29 @@ export const styles = css`
     display: block;
     inline-size: 100%;
     --lr-emoji-picker-item-size: var(--lr-icon-button-size);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-lg);
     --lr-emoji-picker-gap: var(--lr-space-2xs);
     --lr-emoji-picker-row-height: calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l));
+  }
+  :host([size='2xs']) {
+    --lr-emoji-picker-item-size: var(--lr-size-1-5rem);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-sm);
+  }
+  :host([size='xs']) {
+    --lr-emoji-picker-item-size: var(--lr-size-1-75rem);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-md-sm);
+  }
+  :host([size='s']) {
+    --lr-emoji-picker-item-size: var(--lr-size-2rem);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-md);
+  }
+  :host([size='l']) {
+    --lr-emoji-picker-item-size: var(--lr-size-3rem);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-xl);
+  }
+  :host([size='xl']) {
+    --lr-emoji-picker-item-size: var(--lr-size-3-5rem);
+    --lr-emoji-picker-glyph-size: var(--lr-font-size-2xl);
   }
   [part='form-control'] {
     display: flex;
@@ -107,7 +128,7 @@ export const styles = css`
     /* Mirrors [part='emoji']'s inline box, shared minimum included, so the resolved item size is
        the size actually painted. */
     inline-size: var(--lr-emoji-picker-item-size);
-    min-inline-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-size-1-5rem);
   }
   [data-probe='gap'] {
     inline-size: var(--lr-emoji-picker-gap);
@@ -141,20 +162,22 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='emoji'] {
-    /* Keep the glyph compact (font-size is unaffected by the box growing) while giving the
-       interactive box the shared minimum target size -- same "small glyph, padded hit box"
-       pattern as lr-code-block's/lr-json-viewer's [part='toggle']. */
+    /* The item box and its glyph both scale with --lr-emoji-picker-item-size/-glyph-size (unlike
+       a small icon in a padded button, the glyph fills most of the box, so it has to track the
+       box or it clips/looks lost) -- min-inline-size/min-block-size hold a flat 24px WCAG floor
+       (not --lr-icon-button-size) so the smaller size tiers can actually shrink the box below the
+       old unconditional 40px floor while still refusing to go below the true minimum. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     inline-size: var(--lr-emoji-picker-item-size);
     block-size: var(--lr-emoji-picker-item-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
     border: none;
     border-radius: var(--lr-radius-xs);
     background: transparent;
-    font-size: var(--lr-font-size-lg);
+    font-size: var(--lr-emoji-picker-glyph-size);
     cursor: pointer;
   }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any

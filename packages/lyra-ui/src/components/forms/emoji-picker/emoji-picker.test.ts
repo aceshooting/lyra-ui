@@ -250,8 +250,8 @@ it('gives each emoji button the shared minimum hit area without enlarging the gl
   el.groups = groups;
   await el.updateComplete;
   const button = el.shadowRoot!.querySelector('[part="emoji"]') as HTMLElement;
-  expect(getComputedStyle(button).minInlineSize).to.equal('40px');
-  expect(getComputedStyle(button).minBlockSize).to.equal('40px');
+  expect(getComputedStyle(button).minInlineSize).to.equal('24px');
+  expect(getComputedStyle(button).minBlockSize).to.equal('24px');
 });
 
 describe('search filtering', () => {

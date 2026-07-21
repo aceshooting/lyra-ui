@@ -1395,6 +1395,13 @@
       }
     },
     {
+      "name": "--lr-emoji-picker-glyph-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-font-size-lg)`) — Font size of the emoji glyph, scaled by the `size` property to keep the glyph proportional to the item box."
+      }
+    },
+    {
       "name": "--lr-emoji-picker-item-size",
       "description": {
         "kind": "markdown",

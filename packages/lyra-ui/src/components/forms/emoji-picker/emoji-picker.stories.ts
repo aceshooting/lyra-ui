@@ -83,3 +83,20 @@ export const WindowedWithRemGeometry: Story = {
 export const WithAutoLoadedData: Story = {
   render: () => html`<lr-emoji-picker></lr-emoji-picker>`,
 };
+
+export const Sizes: Story = {
+  render: () => html`
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+      ${(['2xs', 'xs', 's', 'm', 'l', 'xl'] as const).map(
+        (size) => html`
+          <div>
+            <p style="margin: 0 0 0.5rem 0; font-size: var(--lr-font-size-sm); color: var(--lr-color-text-quiet);">
+              size="${size}"
+            </p>
+            <lr-emoji-picker size=${size} .groups=${groups}></lr-emoji-picker>
+          </div>
+        `,
+      )}
+    </div>
+  `,
+};
