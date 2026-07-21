@@ -114,9 +114,6 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute(value): boolean {
     return value !== 'false';
   },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
 };
 
 export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {

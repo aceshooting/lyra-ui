@@ -19,11 +19,6 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute(value): boolean {
     return value !== 'false';
   },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting for it; only the
-    // non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
 };
 
 /** Visual size, same `xs`-`xl` scale as `<lr-select>`'s `size`. */

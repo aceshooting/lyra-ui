@@ -103,9 +103,6 @@ const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute(value): boolean {
     return value !== 'false';
   },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

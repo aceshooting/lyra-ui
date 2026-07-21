@@ -17,13 +17,12 @@ import { styles } from './locale-picker.styles.js';
  *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
  *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library. */
+ *  matching this exact converter's repeated per-component convention elsewhere in this library.
+ *  `showFlags` (the only property using this converter) doesn't set `reflect: true`, so there's
+ *  no `toAttribute` half -- Lit only calls it when reflecting. */
 const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
   fromAttribute(value): boolean {
     return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
   },
 };
 

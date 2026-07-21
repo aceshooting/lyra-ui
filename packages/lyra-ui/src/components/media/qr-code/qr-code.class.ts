@@ -58,9 +58,6 @@ const errorCorrectionConverter = {
   fromAttribute(value: string | null): LyraQrCodeErrorCorrection {
     return value === null ? DEFAULT_ERROR_CORRECTION : normalizeErrorCorrection(value);
   },
-  toAttribute(value: LyraQrCodeErrorCorrection): string {
-    return normalizeErrorCorrection(value);
-  },
 };
 
 const warnedInvalidColors = new Set<string>();
