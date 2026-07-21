@@ -1185,6 +1185,27 @@
       }
     },
     {
+      "name": "--lr-conversation-item-active-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-color-brand)`) — Color of the decorative `[part=\"active-indicator\"]` while `active`."
+      }
+    },
+    {
+      "name": "--lr-conversation-item-active-indicator-inset-inline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `0 auto`) — Logical inline-start and inline-end insets for `[part=\"active-indicator\"]`; set `auto 0` to place it at inline-end."
+      }
+    },
+    {
+      "name": "--lr-conversation-item-active-indicator-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-conversation-item>`** (default: `var(--lr-size-2px)`) — Inline size of `[part=\"active-indicator\"]` while `active`."
+      }
+    },
+    {
       "name": "--lr-conversation-item-compact-gap",
       "description": {
         "kind": "markdown",

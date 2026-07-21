@@ -109,7 +109,7 @@ reach callback-rendered descendants through these parts). `row-excerpt` wraps `r
 output, which is slotted into the row item's own `excerpt` slot.
 
 Data mode additionally forwards each row `<lr-conversation-item>`'s own parts under a `row-item-`
-prefix: `row-item-base`, `row-item-option`, `row-item-leading`, `row-item-content`,
+prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-item-leading`, `row-item-content`,
 `row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
 
