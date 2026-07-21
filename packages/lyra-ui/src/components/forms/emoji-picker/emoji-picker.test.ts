@@ -23,6 +23,24 @@ const groups: EmojiPickerGroup[] = [
 // from `fixture()`'s own automatic wrapper cleanup -- track and remove them here instead.
 const created: Element[] = [];
 
+/** A single large group, for tests that need the windowed (virtualized) rendering path. */
+function manyEmojis(count = 500): EmojiPickerGroup[] {
+  return [
+    {
+      key: 'large',
+      label: 'Large set',
+      emojis: Array.from({ length: count }, (_, index) => ({ emoji: `😀${index}`, name: `emoji ${index}` })),
+    },
+  ];
+}
+
+/** Each windowed row's `translateY` offset, in the order they are rendered. */
+function rowOffsets(el: LyraEmojiPicker): number[] {
+  return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="virtual-row"]')].map((row) =>
+    Number.parseFloat(/translateY\((-?[\d.]+)px\)/.exec(row.style.transform)?.[1] ?? 'NaN'),
+  );
+}
+
 afterEach(() => {
   for (const el of created) el.remove();
   created.length = 0;
@@ -648,4 +666,214 @@ describe('active/hover cssprop', () => {
 it('resets the native search-cancel glyph on the search field', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='search'\]::-webkit-search-cancel-button/);
+});
+
+describe('windowed geometry fallbacks', () => {
+  it('falls back to the token-mirrored default geometry when the measurement probe is unavailable, ignoring any token override', async () => {
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(null);
+    // Neutralizes the probe-creation step so `this.geometryProbe` never gets set, forcing
+    // geometry()'s coarse `!probe` branch, which returns the token-mirrored constants outright
+    // without ever reading this override -- unlike the per-probe fallback in `probePixels()`
+    // (covered by the next test), which still measures whatever probes *do* exist.
+    (el as unknown as { syncGeometryProbe: () => void }).syncGeometryProbe = () => {};
+    el.style.inlineSize = '320px';
+    el.style.setProperty('--lr-emoji-picker-row-height', '8rem'); // would render 128px if actually measured
+    el.groups = manyEmojis();
+    created.push(el);
+    document.body.append(el);
+    await el.updateComplete;
+
+    const offsets = rowOffsets(el);
+    expect(offsets.length).to.be.greaterThan(1);
+    expect(offsets[1] - offsets[0]).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, not the overridden 128px
+  });
+
+  it('falls back to the default row height when its token resolves to an invalid length while unlaid-out, without disturbing a sibling token that is still valid', async () => {
+    const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+    (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = () => Promise.resolve(null);
+    // display: none removes the probes' layout box entirely, so getComputedStyle can only report
+    // each one's *computed* value rather than a *used* pixel size -- a syntactically invalid
+    // override resolves to `auto` there (NaN once parsed), while a valid one still resolves
+    // normally (unit conversion doesn't need layout).
+    el.style.display = 'none';
+    el.style.setProperty('--lr-emoji-picker-item-size', '6rem');
+    el.style.setProperty('--lr-emoji-picker-row-height', 'not-a-length');
+    el.groups = manyEmojis();
+    created.push(el);
+    document.body.append(el);
+    await el.updateComplete;
+
+    const offsets = rowOffsets(el);
+    expect(offsets[1] - offsets[0]).to.equal(56); // VIRTUAL_ROW_HEIGHT_FALLBACK, from the NaN guard
+
+    el.style.display = '';
+    await el.updateComplete;
+    const item = el.shadowRoot!.querySelector<HTMLElement>('[part="emoji"]')!;
+    expect(getComputedStyle(item).blockSize).to.equal('96px'); // the sibling item-size token still resolved
+  });
+
+  it('accepts a genuinely zero gap token rather than treating it as an unmeasured probe', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.style.setProperty('--lr-emoji-picker-gap', '0');
+    el.groups = manyEmojis();
+    await el.updateComplete;
+
+    const itemsRow = el.shadowRoot!.querySelector<HTMLElement>('[part="virtual-items"]')!;
+    expect(getComputedStyle(itemsRow).columnGap).to.equal('0px');
+  });
+});
+
+describe('setActiveIndex beyond the rendered window', () => {
+  it('scrolls the windowed grid to the active row when End jumps past the currently rendered rows', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis();
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    await el.updateComplete;
+
+    expect(grid.scrollTop).to.be.greaterThan(0);
+    // The 500th (last) option's row isn't in the rendered window, so its button doesn't exist --
+    // aria-activedescendant still points at the synthetic id instead of a real element's.
+    expect(input.getAttribute('aria-activedescendant')).to.match(/-item-499$/);
+  });
+});
+
+describe('slotted label/hint/error content', () => {
+  it('detects slotted label/hint/error content via slotchange and reveals the matching chrome', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+
+    const labelSlot = el.shadowRoot!.querySelector('slot[name="label"]') as HTMLSlotElement;
+    const hintSlot = el.shadowRoot!.querySelector('slot[name="hint"]') as HTMLSlotElement;
+    const errorSlot = el.shadowRoot!.querySelector('slot[name="error"]') as HTMLSlotElement;
+    const slotchanges = Promise.all([
+      oneEvent(labelSlot, 'slotchange'),
+      oneEvent(hintSlot, 'slotchange'),
+      oneEvent(errorSlot, 'slotchange'),
+    ]);
+
+    const labelEl = document.createElement('span');
+    labelEl.slot = 'label';
+    labelEl.textContent = 'Custom label';
+    const hintEl = document.createElement('span');
+    hintEl.slot = 'hint';
+    hintEl.textContent = 'Custom hint';
+    const errorEl = document.createElement('span');
+    errorEl.slot = 'error';
+    errorEl.textContent = 'Custom error';
+    el.append(labelEl, hintEl, errorEl);
+
+    await slotchanges;
+    await el.updateComplete;
+
+    expect((el.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement).hidden).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement).hidden).to.be.false;
+    expect((el.shadowRoot!.querySelector('[part="error"]') as HTMLElement).hidden).to.be.false;
+  });
+});
+
+describe('unrelated keydown', () => {
+  it('ignores a key with no navigation/pick meaning, leaving the active option unchanged', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+
+    grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+
+    expect(buttons.map((b) => b.tabIndex)).to.deep.equal([0, -1, -1]);
+  });
+});
+
+describe('virtualized scroll handling', () => {
+  it('reflows the visible window when the grid scrolls (throttled via one rAF)', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis();
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+    const before = rowOffsets(el)[0];
+
+    grid.scrollTop = 3000;
+    grid.dispatchEvent(new Event('scroll'));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await el.updateComplete;
+
+    expect(rowOffsets(el)[0]).to.not.equal(before);
+  });
+
+  it('cancels a pending virtual-scroll animation frame on disconnect instead of leaking it onto a detached element', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis();
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+
+    grid.scrollTop = 3000;
+    grid.dispatchEvent(new Event('scroll')); // schedules a throttling rAF
+    el.remove(); // disconnect before that rAF fires -- must cancel it, not run it on a detached element
+
+    // If the rAF weren't canceled, its callback would call requestUpdate() on a disconnected
+    // element; letting a macrotask pass here without error is the assertion.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+
+  it('tears down the scroll listener and resize observer when filtering shrinks the set below the virtualization threshold', async () => {
+    const el = await connectEmojiPicker();
+    el.style.inlineSize = '320px';
+    el.groups = manyEmojis();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="virtual-spacer"]')).to.exist;
+
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    input.value = 'no-match-at-all-xyz';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="virtual-spacer"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+  });
+});
+
+it('resets the active index back to 0 when a smaller groups array leaves the previous active index out of range', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups; // 3 items
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]') as HTMLElement;
+  grid.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })); // active index -> 2 (last)
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')[2].tabIndex).to.equal(0);
+
+  // Reassigning `groups` directly (not filtering via the search input, which already zeroes the
+  // active index itself) is what leaves updated()'s own out-of-range clamp as the only thing that
+  // can catch this.
+  el.groups = [{ key: 'smileys', label: 'Smileys', emojis: [groups[0].emojis[0]] }];
+  await el.updateComplete;
+
+  const buttons = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="emoji"]')];
+  expect(buttons.length).to.equal(1);
+  expect(buttons[0].tabIndex).to.equal(0);
+});
+
+it('reflects aria-required and aria-invalid as true on the grid once required is set and the field has been touched', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  el.required = true;
+  await el.updateComplete;
+  const grid = el.shadowRoot!.querySelector('[part="grid"]')!;
+  expect(grid.getAttribute('aria-required')).to.equal('true');
+  expect(grid.getAttribute('aria-invalid')).to.equal('false'); // not yet touched
+
+  const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+  input.dispatchEvent(new FocusEvent('blur'));
+  await el.updateComplete;
+  expect(grid.getAttribute('aria-invalid')).to.equal('true');
 });

@@ -335,6 +335,153 @@ describe('input / setRangeText()', () => {
   });
 });
 
+describe('forwarding getters/setters/methods before first render', () => {
+  it('returns null / no-ops instead of throwing when called before the native textarea has rendered', () => {
+    const el = document.createElement('lr-textarea') as LyraTextarea;
+    expect(el.input).to.equal(null);
+    expect(el.selectionStart).to.equal(null);
+    expect(el.selectionEnd).to.equal(null);
+    expect(() => {
+      el.selectionStart = 2;
+    }).to.not.throw();
+    expect(() => {
+      el.selectionEnd = 4;
+    }).to.not.throw();
+    expect(() => el.setRangeText('x')).to.not.throw();
+    expect(el.value).to.equal('');
+  });
+
+  it('onInput/onChange no-op if somehow invoked before the native textarea has rendered', () => {
+    const el = document.createElement('lr-textarea') as LyraTextarea;
+    const handlers = el as unknown as { onInput: () => void; onChange: () => void };
+    expect(() => handlers.onInput()).to.not.throw();
+    expect(() => handlers.onChange()).to.not.throw();
+    expect(el.value).to.equal('');
+  });
+});
+
+it('sets selectionDirection via the property setter', async () => {
+  const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
+  el.value = 'alpha beta';
+  await el.updateComplete;
+  el.setSelectionRange(1, 5);
+  el.selectionDirection = 'backward';
+  expect(el.input!.selectionDirection).to.equal('backward');
+});
+
+it('normalizes a nullish selectionDirection assignment to "none" before forwarding to the native textarea', async () => {
+  const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
+  el.value = 'alpha beta';
+  await el.updateComplete;
+  const ta = el.input!;
+  // Chromium normalizes an explicit 'none' straight back to 'forward' on readback (a native
+  // quirk, reproducible by setting `ta.selectionDirection` directly too), so round-tripping
+  // through the getter can't prove the fallback ran -- spy on the native setter itself instead to
+  // confirm the literal value our code forwards.
+  const nativeDescriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'selectionDirection')!;
+  let written: string | undefined;
+  Object.defineProperty(ta, 'selectionDirection', {
+    configurable: true,
+    get: nativeDescriptor.get,
+    set(value: string) {
+      written = value;
+      nativeDescriptor.set!.call(this, value);
+    },
+  });
+  try {
+    el.selectionDirection = null;
+    expect(written).to.equal('none');
+  } finally {
+    delete (ta as unknown as Record<string, unknown>).selectionDirection;
+  }
+});
+
+it('setRangeText() replaces the current selection when called with no start/end (native single-arg overload)', async () => {
+  const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
+  el.value = 'hello world';
+  await el.updateComplete;
+  el.setSelectionRange(0, 5); // select "hello"
+  el.setRangeText('goodbye');
+  expect(el.value).to.equal('goodbye world');
+});
+
+it('resets touched state (re-hiding aria-invalid) via form.reset(), even when the restored value is still invalid', async () => {
+  const form = (await fixture(html`
+    <form><lr-textarea name="notes" required></lr-textarea></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-textarea') as LyraTextarea;
+  const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  ta.dispatchEvent(new Event('blur')); // touched -> true; required + empty -> invalid
+  await el.updateComplete;
+  expect(ta.getAttribute('aria-invalid')).to.equal('true');
+
+  form.reset(); // restores the (still-empty) default value -- still invalid, but no longer touched
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(ta.getAttribute('aria-invalid')).to.equal('false');
+});
+
+describe('switching resize away from "auto"', () => {
+  it('tears down the resize observer and clears inline auto-grow sizing when switching away from resize="auto"', async () => {
+    const el = (await fixture(html`<lr-textarea resize="auto" rows="1"></lr-textarea>`)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    ta.value = 'line one\nline two\nline three';
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(ta.style.blockSize).to.not.equal('');
+
+    el.resize = 'vertical';
+    await el.updateComplete;
+
+    expect(ta.style.blockSize).to.equal('');
+    expect(ta.style.overflowY).to.equal('');
+    expect(getComputedStyle(ta).resize).to.equal('vertical');
+  });
+
+  it('re-fits when only rows changes while resize="auto" (no value/resize change in the same update)', async () => {
+    const el = (await fixture(html`<lr-textarea resize="auto" rows="1"></lr-textarea>`)) as LyraTextarea;
+    const ta = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    await el.updateComplete;
+    const heightAtRows1 = ta.getBoundingClientRect().height;
+
+    el.rows = 6; // only `rows` changes this update
+    await el.updateComplete;
+
+    expect(ta.getBoundingClientRect().height).to.be.greaterThan(heightAtRows1);
+  });
+
+  it('cancels an already-pending resize-refit animation frame when a new width-change delivery arrives before it fires', async () => {
+    const el = (await fixture(html`
+      <lr-textarea resize="auto" rows="1" style="inline-size: 24rem"></lr-textarea>
+    `)) as LyraTextarea;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    // Seeds a fake pending raf id so the next real width-change delivery finds `resizeRaf`
+    // already set -- the ResizeObserver's own per-frame coalescing (only the latest width is
+    // ever reported per rendering opportunity) combined with the spec-guaranteed
+    // requestAnimationFrame-before-ResizeObserver delivery ordering within a frame make it
+    // impractical to force two genuinely overlapping deliveries through real timing alone.
+    const fakeRafId = requestAnimationFrame(() => {});
+    (el as unknown as { resizeRaf?: number }).resizeRaf = fakeRafId;
+
+    const originalCancel = window.cancelAnimationFrame;
+    let canceledId: number | undefined;
+    window.cancelAnimationFrame = function (id: number): void {
+      canceledId = id;
+      originalCancel.call(window, id);
+    };
+    try {
+      el.style.inlineSize = '8rem';
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      );
+      expect(canceledId).to.equal(fakeRafId);
+    } finally {
+      window.cancelAnimationFrame = originalCancel;
+    }
+  });
+});
+
 describe('blur/focus bubbling', () => {
   it('re-dispatches a bubbling, composed blur event when the native textarea blurs', async () => {
     const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;

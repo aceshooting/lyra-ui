@@ -949,6 +949,33 @@ describe('per-size min-height floor', () => {
   });
 });
 
+describe('trigger gap/radius cssprops', () => {
+  it('exposes --lr-select-gap and --lr-select-radius, defaulting to the pre-existing literals', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const cs = getComputedStyle(trigger(el));
+    expect(cs.gap).to.equal('4px');
+    expect(cs.borderRadius).to.equal('6px');
+  });
+
+  it('retunes the trigger gap and corner radius with no ::part(trigger) rule', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.style.setProperty('--lr-select-gap', '12px');
+    el.style.setProperty('--lr-select-radius', '3px');
+    await el.updateComplete;
+    const cs = getComputedStyle(trigger(el));
+    expect(cs.gap).to.equal('12px');
+    expect(cs.borderRadius).to.equal('3px');
+  });
+
+  it('declares --lr-select-gap/--lr-select-radius on :host and consumes them once on [part="trigger"]', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/:host \{[^}]*--lr-select-gap: var\(--lr-space-xs\);/);
+    expect(css).to.match(/:host \{[^}]*--lr-select-radius: var\(--lr-radius\);/);
+    expect(css).to.include('gap: var(--lr-select-gap);');
+    expect(css).to.include('border-radius: var(--lr-select-radius);');
+  });
+});
+
 /** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
  *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
  *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that
@@ -1177,4 +1204,264 @@ it('reflects size="2xs" as a host attribute', async () => {
   const el = (await fixture(html`<lr-select size="2xs"></lr-select>`)) as LyraSelect;
   expect(el.size).to.equal('2xs');
   expect(el.getAttribute('size')).to.equal('2xs');
+});
+
+describe('ElementInternals unavailable at call time (attachInternals throws)', () => {
+  it('falls back to no-op ElementInternals when attachInternals() exists but throws (e.g. already attached elsewhere)', () => {
+    const original = HTMLElement.prototype.attachInternals;
+    HTMLElement.prototype.attachInternals = function (): ElementInternals {
+      throw new Error('already attached');
+    };
+    try {
+      let el: LyraSelect | undefined;
+      expect(() => {
+        el = document.createElement('lr-select') as LyraSelect;
+      }).to.not.throw();
+      expect(el!.checkValidity()).to.be.true;
+      expect(el!.reportValidity()).to.be.true;
+      expect(el!.form).to.equal(null);
+    } finally {
+      HTMLElement.prototype.attachInternals = original;
+    }
+  });
+});
+
+it('normalizes a nullish name assignment to the empty string and removes the name attribute', async () => {
+  const el = (await fixture(html`<lr-select name="fruit"></lr-select>`)) as LyraSelect;
+  expect(el.getAttribute('name')).to.equal('fruit');
+  (el as unknown as { name: string }).name = null as unknown as string;
+  expect(el.name).to.equal('');
+  expect(el.hasAttribute('name')).to.be.false;
+});
+
+it('normalizes a nullish value assignment to the empty string', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  el.value = 'a';
+  (el as unknown as { value: string }).value = null as unknown as string;
+  expect(el.value).to.equal('');
+});
+
+describe('formStateRestoreCallback', () => {
+  it('restores a string form state verbatim', () => {
+    const el = document.createElement('lr-select') as LyraSelect;
+    (
+      el as unknown as {
+        formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+      }
+    ).formStateRestoreCallback('a', 'restore');
+    expect(el.value).to.equal('a');
+  });
+
+  it('restores to empty when the browser hands it a non-string state (e.g. null)', () => {
+    const el = document.createElement('lr-select') as LyraSelect;
+    el.value = 'a';
+    (
+      el as unknown as {
+        formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
+      }
+    ).formStateRestoreCallback(null, 'restore');
+    expect(el.value).to.equal('');
+  });
+});
+
+it('seeds a newly-selected option that is slotted in after the initial collection pass', async () => {
+  const el = (await fixture(html`
+    <lr-select>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+
+  const defaultSlot = el.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement;
+  const slotchangePromise = oneEvent(defaultSlot, 'slotchange');
+  const opt = document.createElement('lr-option');
+  opt.setAttribute('value', 'b');
+  opt.textContent = 'Banana';
+  opt.toggleAttribute('selected', true);
+  el.append(opt);
+  await slotchangePromise;
+  await el.updateComplete;
+
+  expect(el.value).to.equal('b');
+});
+
+it('does not auto-commit when auto-commit-single-option is set but more than one option is enabled', async () => {
+  const el = (await fixture(html`
+    <lr-select auto-commit-single-option>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b">Banana</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  const btn = trigger(el);
+  expect(btn.getAttribute('role')).to.equal('combobox');
+
+  btn.click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+  expect(el.value).to.equal('');
+});
+
+it('ignores a dispatched keydown-driven open attempt while disabled', async () => {
+  const el = (await fixture(html`
+    <lr-select disabled>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('ignores a dispatched click while disabled, even bypassing native click() gating', async () => {
+  const el = (await fixture(html`
+    <lr-select disabled>
+      <lr-option value="a">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  trigger(el).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('does not select a disabled option row via a direct click, even though the row itself has no native disabled semantics', async () => {
+  const el = (await fixture(html`
+    <lr-select>
+      <lr-option value="a">Apple</lr-option>
+      <lr-option value="b" disabled>Banana</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const disabledRow = [...rows(el)].find((r) => r.dataset.value === 'b')!;
+  disabledRow.click();
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(el.open).to.be.true; // selection blocked, listbox stays open
+});
+
+describe('type-ahead edge cases', () => {
+  it('does nothing when every option is disabled', async () => {
+    const el = (await fixture(html`
+      <lr-select>
+        <lr-option value="a" disabled>Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(el.open).to.be.false;
+  });
+
+  it('does nothing when no option label starts with the typed character', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'z', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+  });
+});
+
+describe('ArrowUp keyboard handling', () => {
+  it('commits the sole option on ArrowUp too, not just ArrowDown', async () => {
+    const el = (await fixture(html`
+      <lr-select auto-commit-single-option>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    setTimeout(() =>
+      trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true })),
+    );
+    await oneEvent(el, 'change');
+    expect(el.value).to.equal('a');
+    expect(el.open).to.be.false;
+  });
+
+  it('navigates upward with ArrowUp when already open, decrementing the active index', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const btn = trigger(el);
+    el.open = true;
+    await el.updateComplete;
+
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete; // active index -> 1 (Banana)
+
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]');
+    expect(active?.textContent).to.contain('Apple');
+  });
+});
+
+it('closes the listbox on Enter without selecting anything when no option has been made active yet', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  expect(el.value).to.equal('');
+  expect(el.open).to.be.false;
+});
+
+describe('Home/End keyboard handling', () => {
+  it('jumps to the first option with Home while open', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const btn = trigger(el);
+    el.open = true;
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete; // active index -> 1 (Banana)
+
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]');
+    expect(active?.textContent).to.contain('Apple');
+  });
+
+  it('jumps to the last option with End while open', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const btn = trigger(el);
+    el.open = true;
+    await el.updateComplete;
+
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    const active = el.shadowRoot!.querySelector('[part="option"][data-active]');
+    expect(active?.textContent).to.contain('Cherry');
+  });
+
+  it('ignores Home/End while the listbox is closed', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const btn = trigger(el);
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+});
+
+it('ignores a listbox click that lands outside any option row (e.g. a group-label or empty padding)', async () => {
+  const el = (await fixture(html`
+    <lr-select>
+      <lr-option value="a" group="Fruits">Apple</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  const groupLabel = listbox.querySelector('.group-label') as HTMLElement;
+  groupLabel.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(el.open).to.be.true;
 });
