@@ -144,7 +144,11 @@ content clickable, and it shows nothing while the viewport is above the first gr
 **Themeable custom properties:** `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport),
 plus shared `--lr-focus-ring-width/-color/-offset` (inward-offset ring on `[part="base"]`, negative
-so it isn't clipped by the container's own `overflow: auto`).
+so it isn't clipped by the container's own `overflow: auto`). `[part="base"]` also carries a
+mouse-hover outline — a subtler preview of that same `:focus-visible` ring, shown because the part
+always carries `tabindex="0"` and is a real keyboard-navigable target — tinted via
+`--lr-virtual-list-hover-outline-color` (default `var(--lr-color-border-strong)`); set it to
+`transparent` to opt out of the hover treatment entirely.
 
 **Optional peer deps:** none.
 

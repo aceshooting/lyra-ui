@@ -36,7 +36,8 @@ search/grid; unset renders no label chrome. When `label` (or the `label` slot) i
 localized default to `aria-labelledby` pointing at the visible label. `hint: string = ''` —
 supporting text rendered below the search/grid; unset renders no hint chrome. `errorText: string =
 ''` (attribute `error-text`) — validation-error text rendered below the hint (overridden by slotted
-`error` content when provided); unset renders no error chrome.
+`error` content when provided); unset renders no error chrome. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` —
+visual size; scales the emoji grid item box and its glyph proportionally, floored at 24px (WCAG 2.5.8).
 
 **Events:** `lr-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
 the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
@@ -62,10 +63,13 @@ error message). While windowing is active the rows are wrapped in `virtual-space
 emoji flex line).
 
 **Themeable custom properties:** `--lr-emoji-picker-item-size` (default `--lr-icon-button-size`,
-each emoji button's box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
+each emoji button's box; scaled by the `size` property), `--lr-emoji-picker-glyph-size` (default
+`--lr-font-size-lg`, the font size of the emoji glyph; scaled by the `size` property to keep the glyph
+proportional to the item box), `--lr-emoji-picker-gap` (default `--lr-space-2xs`, the gap between
 emoji within a windowed row), and `--lr-emoji-picker-row-height` (default
-`calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height). All three
-are also read back in JS to derive columns-per-row and row offsets for the windowed layout,
+`calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`, one windowed row's height).
+`--lr-emoji-picker-item-size`, `--lr-emoji-picker-gap`, and `--lr-emoji-picker-row-height` are also
+read back in JS to derive columns-per-row and row offsets for the windowed layout,
 resolved to real pixels by measuring hidden probe boxes the component's own stylesheet sizes from
 those same tokens — so any CSS length unit works, `rem`/`em` and `calc()` included, and the windowed
 geometry matches what is painted without expressing the tokens in `px`. The measurement is cached
@@ -82,8 +86,9 @@ repainting everything else that reads it — as the only way in. Like `lr-time-r
 properties, it is written as an inline `var()` fallback at the point of use rather than declared on
 `:host`, so a value set on **any ancestor** reaches it instead of being shadowed.
 
-Two constraints remain. `--lr-emoji-picker-item-size` is clamped up to `--lr-icon-button-size`, the
-shared minimum tappable box: a smaller value does not shrink the button, and the windowed geometry
+Two constraints remain. `--lr-emoji-picker-item-size` is held at a flat 24px minimum (WCAG 2.5.8
+touch target floor): the smaller `size` tier values can shrink the box below the old 40px
+unconditional floor, but the minimum holds at 24px regardless of tokens, and the windowed geometry
 follows the clamped, painted size. And windowed rows are absolutely positioned at the row-height
 pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plus the group-label
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
