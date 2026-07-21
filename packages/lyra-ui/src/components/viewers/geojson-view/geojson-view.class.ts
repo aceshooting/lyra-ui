@@ -10,7 +10,14 @@ import '../../media/map/map.js';
 import '../../utility/json-viewer/json-viewer.js';
 import '../../overlays/skeleton/skeleton.js';
 
-type GeoJsonLike = { type: string; coordinates?: unknown; geometry?: GeoJsonLike; geometries?: GeoJsonLike[]; features?: { geometry?: GeoJsonLike }[] };
+/** The three shape-level tags this file's traversal logic (`featureCount()`, `collectCoordinates()`,
+ *  `computeBbox()`) actually switches on. Not derived from `GEOMETRY_TYPES` below -- that array is
+ *  broader (it also runtime-validates bare geometry shapes like `'Point'`/`'LineString'` for
+ *  `isValidGeoJson()`), so deriving from it would widen this field beyond what the comparisons here
+ *  distinguish. */
+export type GeoJsonTypeTag = 'Feature' | 'FeatureCollection' | 'GeometryCollection';
+
+type GeoJsonLike = { type: GeoJsonTypeTag; coordinates?: unknown; geometry?: GeoJsonLike; geometries?: GeoJsonLike[]; features?: { geometry?: GeoJsonLike }[] };
 
 const GEOMETRY_TYPES = ['Feature', 'FeatureCollection', 'Point', 'LineString', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon', 'GeometryCollection'];
 

@@ -32,8 +32,11 @@ export class LyraRelativeTime extends LyraElement {
     const target = this.date instanceof Date ? this.date.getTime() : new Date(this.date).getTime();
     if (!Number.isFinite(target)) return '';
     const seconds = (target - Date.now()) / 1000;
-    const units: RelativeTimeUnit[] = ['year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'];
+    // `units` drives "auto" selection order (largest unit first) -- derived from `divisors`' key
+    // order rather than duplicated, so the two can never drift out of sync; `divisors`' insertion
+    // order is already largest-to-smallest, matching the desired selection order exactly.
     const divisors: Record<RelativeTimeUnit, number> = { year: 31_536_000, quarter: 7_884_000, month: 2_628_000, week: 604_800, day: 86_400, hour: 3_600, minute: 60, second: 1 };
+    const units = Object.keys(divisors) as RelativeTimeUnit[];
     const selected = this.unit === 'auto' ? units.find((candidate) => Math.abs(seconds) >= divisors[candidate]) ?? 'second' : this.unit;
     const value = Math.round(seconds / divisors[selected]);
     return getRelativeTimeFormat(this.effectiveLocale || undefined, { numeric: this.numeric }).format(value, selected);

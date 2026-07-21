@@ -65,6 +65,10 @@ type NotebookState =
   | { kind: 'loaded'; doc: NotebookDoc }
   | { kind: 'error'; message: string };
 
+/** Which DOMPurify profile to sanitize an embedded output under -- `svg` output enables the
+ *  `svg`/`svgFilters` profiles, `html` uses DOMPurify's default profile. */
+type SanitizeProfile = 'svg' | 'html';
+
 export interface LyraNotebookViewerEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
   'lr-highlight-activate': CustomEvent<{ id: string }>;
@@ -397,7 +401,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
    *  kicks off the async work on first render and repaints via `requestUpdate()` once it resolves. */
   private sanitizedOutputCache = new Map<string, string | null>();
 
-  private async ensureSanitized(raw: string, profile: 'svg' | 'html'): Promise<void> {
+  private async ensureSanitized(raw: string, profile: SanitizeProfile): Promise<void> {
     const cacheKey = `${profile}:${raw}`;
     if (this.sanitizedOutputCache.has(cacheKey)) return;
     const sanitizer = await loadNotebookSanitizer();
@@ -411,7 +415,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     this.requestUpdate();
   }
 
-  private renderSanitized(raw: string, profile: 'svg' | 'html'): TemplateResult {
+  private renderSanitized(raw: string, profile: SanitizeProfile): TemplateResult {
     const cacheKey = `${profile}:${raw}`;
     const cached = this.sanitizedOutputCache.get(cacheKey);
     if (cached === undefined) {
