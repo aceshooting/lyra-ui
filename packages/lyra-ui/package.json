@@ -641,6 +641,7 @@
     "@aiden0z/pptx-renderer": "^1.2.4",
     "@sgratzl/chartjs-chart-boxplot": "^4.4.0",
     "chart.js": "^4.5.0",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
     "d3-force": "^3.0.0",
@@ -686,6 +687,9 @@
       "optional": true
     },
     "chart.js": {
+      "optional": true
+    },
+    "chartjs-plugin-datalabels": {
       "optional": true
     },
     "chartjs-plugin-zoom": {
@@ -760,6 +764,7 @@
     "@web/test-runner-junit-reporter": "^1.0.0",
     "@web/test-runner-playwright": "^1.0.0",
     "chart.js": "^4.5.1",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
     "d3-force": "^3.0.0",
