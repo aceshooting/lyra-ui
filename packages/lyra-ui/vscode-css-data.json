@@ -2963,6 +2963,20 @@
       }
     },
     {
+      "name": "--lr-swatch-picker-gemstone-selected-blur",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-size-0-5rem)`) — Selected glow blur used by `mode=\"gemstone\"` when `--lr-swatch-picker-selected-blur` is not overridden."
+      }
+    },
+    {
+      "name": "--lr-swatch-picker-gemstone-shine-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-swatch-picker>`** (default: `1.8s`) — Selected shine duration used by `mode=\"gemstone\"` when `--lr-swatch-picker-shine-duration` is not overridden."
+      }
+    },
+    {
       "name": "--lr-swatch-picker-hit-size",
       "description": {
         "kind": "markdown",
