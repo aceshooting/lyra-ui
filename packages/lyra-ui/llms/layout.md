@@ -1744,6 +1744,11 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   reproduces a plain static card: no `tabindex`, no listeners, no events.
 - `href?: string` — when set, the card's root renders as a real `<a href=...>` instead of a `<div>`,
   for a whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.
+- `target?: string` — native anchor target, applied only while `href` resolves to a link. Setting it
+  to `'_blank'` (or any other target) automatically derives `rel="noopener noreferrer"` on the
+  rendered anchor; there is deliberately **no** separately-settable `rel` property, so a consumer
+  can't forget it and leave the opened page holding a `window.opener` back-reference
+  (reverse-tabnabbing). Unset (the default) emits neither `target` nor `rel`.
 
 **Events:** `lr-card-activate` (no detail) — the whole card was activated, by click or by
 Enter/Space while `[part='base']` has focus. Only fired while `interactive` is set **without**

@@ -88,6 +88,13 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`. */
   @property() href?: string;
 
+  /** Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`
+   *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered
+   *  anchor -- there is no separately-settable `rel` property, so a consumer can't forget it and
+   *  leave the opened page holding a `window.opener` back-reference (reverse-tabnabbing). Matches
+   *  `lr-stat`'s/`lr-app-rail-item`'s identical pattern. */
+  @property() target?: string;
+
   @state() private hasHeaderSlot = false;
   @state() private hasMediaSlot = false;
   @state() private hasFooterSlot = false;
@@ -172,7 +179,12 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
     // `<lr-chip>`'s `toggleable` gating).
     const activatable = this.interactive && !href;
     return href
-      ? html`<a part="base" href=${href}>${body}</a>`
+      ? html`<a
+          part="base"
+          href=${href}
+          target=${this.target || nothing}
+          rel=${this.target ? 'noopener noreferrer' : nothing}
+        >${body}</a>`
       : html`<div
           part="base"
           tabindex=${activatable ? '0' : nothing}

@@ -37,6 +37,28 @@ describe('lr-card', () => {
     expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
   });
 
+  it('derives rel="noopener noreferrer" whenever target is set on a linked card', async () => {
+    const el = (await fixture(html`<lr-card href="https://example.com" target="_blank">Body</lr-card>`)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    expect(anchor.getAttribute('target')).to.equal('_blank');
+    expect(anchor.getAttribute('rel')).to.equal('noopener noreferrer');
+  });
+
+  it('omits target/rel entirely when target is unset (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-card href="https://example.com">Body</lr-card>`)) as LyraCard;
+    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    expect(anchor.hasAttribute('target')).to.be.false;
+    expect(anchor.hasAttribute('rel')).to.be.false;
+  });
+
+  it('ignores target on a non-linked card, leaving the div root untouched (unset-regression)', async () => {
+    const el = (await fixture(html`<lr-card target="_blank">Body</lr-card>`)) as LyraCard;
+    const root = base(el);
+    expect(root.tagName).to.equal('DIV');
+    expect(root.hasAttribute('target')).to.be.false;
+    expect(root.hasAttribute('rel')).to.be.false;
+  });
+
   it('renders header/media/footer/actions slots only when populated', async () => {
     const el = (await fixture(html`
       <lr-card>
