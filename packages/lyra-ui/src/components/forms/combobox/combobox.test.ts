@@ -2604,3 +2604,68 @@ it('chains updated() to super.updated() so a mixin layered under LyraElement wou
     }
   }
 });
+
+describe('source AbortSignal and configurable debounce', () => {
+  it('passes an AbortSignal and aborts the prior request when a newer query supersedes it', async () => {
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    const signals: AbortSignal[] = [];
+    el.source = (_query: string, { signal }: { signal: AbortSignal }) => {
+      signals.push(signal);
+      return new Promise(() => {
+        /* never resolves — kept in-flight so a newer query must abort it */
+      });
+    };
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(250);
+
+    await typeQuery(el, 'newer');
+    await aTimeout(250);
+
+    expect(signals.length).to.equal(2);
+    expect(signals[0]!.aborted, 'the first request should be aborted by the second').to.equal(true);
+    expect(signals[1]!.aborted, 'the current request should still be live').to.equal(false);
+  });
+
+  it('aborts the in-flight request on disconnect', async () => {
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    let captured!: AbortSignal;
+    el.source = (_query: string, { signal }: { signal: AbortSignal }) => {
+      captured = signal;
+      return new Promise(() => {});
+    };
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(250);
+    expect(captured.aborted).to.equal(false);
+
+    el.remove();
+    await el.updateComplete;
+    expect(captured.aborted).to.equal(true);
+  });
+
+  it('remains compatible with a legacy single-argument source', async () => {
+    const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+    // A source that ignores the options bag (the pre-7.x signature) must still work.
+    const legacy = ((query: string) =>
+      Promise.resolve([{ value: 'x', label: `Result "${query}"` }])) as unknown as typeof el.source;
+    el.source = legacy;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(250);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="option"] [part="option-label"]')!.textContent).to.contain(
+      'Result ""',
+    );
+  });
+
+  it('honours a custom sourceDelay (sanitized to a finite non-negative duration)', async () => {
+    const el = (await fixture(html`<lr-combobox source-delay="0"></lr-combobox>`)) as LyraCombobox;
+    await el.updateComplete;
+    expect(el.sourceDelay).to.equal(0);
+    el.sourceDelay = -50;
+    expect(el.sourceDelay, 'negative clamps to 0').to.equal(0);
+    el.sourceDelay = Number.NaN;
+    expect(el.sourceDelay, 'NaN falls back to the default').to.equal(200);
+  });
+});

@@ -545,11 +545,17 @@ shared `FormAssociated` mixin — see gotchas).
   shown when `maxRender` caps the row list; `{n}` is replaced with the hidden count)
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
   matches `label`/`searchText` case-insensitively; ignored while `source` is set)
-- `source: ComboboxSource | null = null` (attribute: false — `(query: string) =>
-  Promise<ComboboxSourceRow[]>`; when set, replaces the light-DOM `<lr-option>` list with an async
-  lookup, debounced ~200ms after each keystroke and re-run on clear/pick. `loadingText` is shown
-  while a call is in flight; a stale in-flight call that resolves after a newer one (or after
-  disconnect) is dropped via a monotonic token)
+- `source: ComboboxSource | null = null` (attribute: false — `(query: string, options: { signal:
+  AbortSignal }) => Promise<ComboboxSourceRow[]>`; when set, replaces the light-DOM `<lr-option>`
+  list with an async lookup, debounced by `sourceDelay` ms after each keystroke and re-run on
+  clear/pick. Forward `options.signal` to `fetch(url, { signal })` to cancel the request when a
+  newer query supersedes it or the element disconnects. `loadingText` is shown while a call is in
+  flight; a stale in-flight call that resolves after a newer one (or after disconnect) is dropped
+  via a monotonic token. The `options` parameter is optional in the type, so a legacy
+  `(query) => …` source stays assignable.)
+- `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
+  and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
+  falling back to `200` for a non-finite value)
 - `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
   keeping the current selection visible even if it's outside the cap; the excess renders as one
   `overflowText` row instead of being dropped silently)

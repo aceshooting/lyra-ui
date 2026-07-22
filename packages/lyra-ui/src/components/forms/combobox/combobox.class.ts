@@ -5,7 +5,7 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
-import { finiteCount } from '../../../internal/numbers.js';
+import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
@@ -65,7 +65,14 @@ export interface ComboboxSourceRow {
   disabled?: boolean;
 }
 
-export type ComboboxSource = (query: string) => Promise<ComboboxSourceRow[]>;
+/** Async row provider for a remote-backed combobox. Receives the current query and an options bag
+ *  carrying an `AbortSignal` that the component aborts when a newer query supersedes this one or the
+ *  element disconnects — forward it to `fetch(url, { signal })` to cancel stale in-flight requests.
+ *  The second parameter is optional, so an existing `(query) => …` source stays assignable. */
+export type ComboboxSource = (
+  query: string,
+  options: { signal: AbortSignal },
+) => Promise<ComboboxSourceRow[]>;
 export type LyraComboboxSelectionDirection = 'forward' | 'backward' | 'none';
 
 const spellcheckConverter = {
@@ -175,6 +182,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     name: { reflect: true, noAccessor: true },
     maxOptionsVisible: { type: Number, attribute: 'max-options-visible', noAccessor: true },
     maxRender: { type: Number, attribute: 'max-render', noAccessor: true },
+    sourceDelay: { type: Number, attribute: 'source-delay', noAccessor: true },
   };
 
   @property() placeholder = '';
@@ -242,6 +250,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
   private sourceTimer?: ReturnType<typeof setTimeout>;
   private sourceToken = 0;
+  /** Aborted when a newer query supersedes the in-flight one, or on disconnect, so the source's
+   *  own `fetch` can cancel. */
+  private sourceAbort?: AbortController;
   // Guards the proactive `asyncRows` warm-up in `willUpdate()` below so it
   // fires at most once per mount instead of re-running (and endlessly
   // resetting the debounce timer) on every subsequent render while the fetch
@@ -299,6 +310,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   // rather than left for Lit's default async field setter to hand through unchecked.
   private _maxOptionsVisible = 3;
   private _maxRender = 200;
+  private _sourceDelay = 200;
 
   constructor() {
     super();
@@ -531,6 +543,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   get maxRender(): number {
     return this._maxRender;
   }
+  /** Debounce (ms) between the last keystroke and the `source` call. Sanitized to a finite
+   *  duration clamped to `[0, browser-timer-ceiling]`; `0` fires on every keystroke, a
+   *  non-finite value falls back to the `200` default. */
+  get sourceDelay(): number {
+    return this._sourceDelay;
+  }
+  set sourceDelay(next: number) {
+    const old = this._sourceDelay;
+    this._sourceDelay = finiteDuration(next, 200);
+    this.requestUpdate('sourceDelay', old);
+  }
+
   set maxRender(next: number) {
     const old = this._maxRender;
     this._maxRender = finiteCount(next, 200);
@@ -629,6 +653,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     clearTimeout(this.sourceTimer);
+    // Cancel any in-flight source request so its fetch is aborted on disconnect.
+    this.sourceAbort?.abort();
+    this.sourceAbort = undefined;
     this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
@@ -915,16 +942,20 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private runSource(query: string): void {
     if (!this.source) return;
     clearTimeout(this.sourceTimer);
+    // Abort any in-flight request from a prior query so its fetch can be cancelled.
+    this.sourceAbort?.abort();
     this.sourceTimer = setTimeout(() => {
       const token = ++this.sourceToken;
+      const controller = new AbortController();
+      this.sourceAbort = controller;
       this.loading = true;
-      // `Promise.resolve().then(() => this.source!(query))` moves the call
+      // `Promise.resolve().then(() => this.source!(query, ...))` moves the call
       // itself inside a `.then()` callback, so a *synchronous* throw from
       // `this.source(query)` becomes a normal promise rejection the
       // following `.catch()` handles, instead of escaping this `setTimeout`
       // callback as an uncaught exception.
       Promise.resolve()
-        .then(() => this.source!(query))
+        .then(() => this.source!(query, { signal: controller.signal }))
         .then((rows) => {
           if (token !== this.sourceToken || !this.isConnected) return;
           this.asyncRows = rows;
@@ -935,12 +966,15 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         })
         .catch((err) => {
           if (token !== this.sourceToken || !this.isConnected) return;
+          // A caller that forwarded the signal to fetch() surfaces cancellation as an AbortError;
+          // that is expected teardown, not a source failure, so don't warn about it.
+          if (err instanceof DOMException && err.name === 'AbortError') return;
           console.warn('<lr-combobox> source() rejected:', err);
         })
         .finally(() => {
           if (token === this.sourceToken) this.loading = false;
         });
-    }, 200);
+    }, this._sourceDelay);
   }
 
   private onInputBlur = (): void => {

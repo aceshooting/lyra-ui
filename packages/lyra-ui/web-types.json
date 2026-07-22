@@ -4000,6 +4000,15 @@
               }
             },
             {
+              "name": "source-delay",
+              "description": "Debounce (ms) between the last keystroke and the `source` call. Sanitized to a finite\nduration clamped to `[0, browser-timer-ceiling]`; `0` fires on every keystroke, a\nnon-finite value falls back to the `200` default.\n\nType: `number`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
               "name": "spellcheck",
               "description": "Type: `boolean`  \nDefault: `true`",
               "value": {
