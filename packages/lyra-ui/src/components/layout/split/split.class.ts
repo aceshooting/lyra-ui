@@ -12,6 +12,7 @@ import {
   type OrientationBreakpointBasis,
 } from '../../../internal/orientation-breakpoint.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
+import { resolveCssLength } from '../../../internal/css-length.js';
 import { styles } from './split.styles.js';
 
 const KEYBOARD_STEP = 2;
@@ -178,9 +179,13 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   };
 
   @property({ attribute: false }) sizes: number[] = [];
-  /** Initialization-only size fallback. Valid persistence wins; otherwise a valid value here wins
-   *  over equal distribution. Later assignments never overwrite live resize state. */
-  @property({ attribute: false }) defaultSizes: number[] = [];
+  /** Initialization-only size fallback, below valid persistence and above equal distribution. Later
+   *  assignments never overwrite live resize state. Each entry is either a plain number (percent of
+   *  the container, matching today's exact strict behavior) or a CSS length string (`'200px'`,
+   *  `'20%'`, `'3rem'`) resolved against the measured container before percent-space validation --
+   *  see `resolveDefaultSizes()`. A pure-number array is validated unchanged (an array that does not
+   *  sum to ~100 is still rejected). */
+  @property({ attribute: false }) defaultSizes: (number | string)[] = [];
   @property({ type: Number }) min = 10;
   @property({ reflect: true }) orientation: SplitOrientation = 'horizontal';
   /** Opt-in inline-size breakpoint for this component's *own* measured allocation. Below it,
@@ -601,11 +606,56 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
   }
 
+  /** Resolves `defaultSizes` to a percent-space array for `initializeSizes()`, or `null` when it is
+   *  empty/unusable. Per D2: a **pure-number** array keeps today's exact strict behavior -- it is
+   *  passed straight to `validInitialSizes()` with no normalization, so `[30, 60]` is still rejected.
+   *  Only when at least one entry is a CSS length string are lengths resolved against the measured
+   *  container (numbers as percent-of-container, `%` as-is, `px`/`rem`/`em` via `resolveCssLength`)
+   *  and then normalized to percentages. */
+  private resolveDefaultSizes(): number[] | null {
+    if (this.defaultSizes.length === 0) return null;
+    const hasLengthString = this.defaultSizes.some((entry) => typeof entry === 'string');
+    if (!hasLengthString) {
+      const numbers = this.defaultSizes as number[];
+      return this.validInitialSizes(numbers) ? [...numbers] : null;
+    }
+    // At least one CSS length string. `currentMeasuredWidth()` (baseEl) is 0 before the first render,
+    // which is when `initializeSizes()` runs from `connectedCallback()`; fall back to the host's own
+    // box -- [part="base"] is `inline-size: 100%` of the host, so they are equal (same stand-in
+    // `connectedCallback()` uses to seed `measuredInlineSize`).
+    const containerSize = this.currentMeasuredWidth() || this.getBoundingClientRect().width;
+    if (!(containerSize > 0)) return null;
+    const resolvedPx: number[] = [];
+    for (const entry of this.defaultSizes) {
+      if (typeof entry === 'number') {
+        if (!Number.isFinite(entry)) return null;
+        resolvedPx.push((entry / 100) * containerSize); // a bare number is percent-of-container
+        continue;
+      }
+      const trimmed = entry.trim();
+      const pctMatch = /^([\d.]+)%$/.exec(trimmed);
+      if (pctMatch) {
+        const pct = Number(pctMatch[1]);
+        if (!Number.isFinite(pct)) return null;
+        resolvedPx.push((pct / 100) * containerSize);
+        continue;
+      }
+      const px = resolveCssLength(trimmed, this); // px/rem/em -> px; undefined otherwise
+      if (px == null || !(px >= 0)) return null;
+      resolvedPx.push(px);
+    }
+    const sum = resolvedPx.reduce((total, size) => total + size, 0);
+    if (!(sum > 0)) return null;
+    const normalized = resolvedPx.map((size) => (size / sum) * 100);
+    return this.validInitialSizes(normalized) ? normalized : null;
+  }
+
   private initializeSizes(): void {
     if (this.loadPersisted()) return;
     if (this.validInitialSizes(this.sizes)) return;
-    if (this.validInitialSizes(this.defaultSizes)) {
-      this.sizes = [...this.defaultSizes];
+    const resolved = this.resolveDefaultSizes();
+    if (resolved) {
+      this.sizes = resolved;
       return;
     }
     this.sizes = [];

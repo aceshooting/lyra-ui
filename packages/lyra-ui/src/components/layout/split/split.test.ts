@@ -296,6 +296,38 @@ it('falls back from invalid persisted sizes to defaultSizes through the initiali
   expect(el.sizes).to.deep.equal([25, 75]);
 });
 
+it('resolves CSS-length defaultSizes entries against the measured container width', async () => {
+  const el = await fixture<LyraSplit>(html`
+    <lr-split style="display: block; inline-size: 500px;" .defaultSizes=${['200px', '300px']}>
+      <div>A</div><div>B</div>
+    </lr-split>
+  `);
+  await el.updateComplete;
+  expect(el.sizes[0]).to.be.closeTo(40, 1);
+  expect(el.sizes[1]).to.be.closeTo(60, 1);
+});
+
+it('still accepts a pure-number defaultSizes array unchanged (unset-regression)', async () => {
+  const el = await fixture<LyraSplit>(html`
+    <lr-split style="display: block; inline-size: 500px;" .defaultSizes=${[30, 70]}>
+      <div>A</div><div>B</div>
+    </lr-split>
+  `);
+  await el.updateComplete;
+  expect(el.sizes).to.deep.equal([30, 70]);
+});
+
+it('rejects a pure-number defaultSizes array that does not sum to 100, exactly as today (D2 regression)', async () => {
+  const el = await fixture<LyraSplit>(html`
+    <lr-split style="display: block; inline-size: 500px;" .defaultSizes=${[30, 60]}>
+      <div>A</div><div>B</div>
+    </lr-split>
+  `);
+  await el.updateComplete;
+  // sum 90 -> rejected -> falls through to the equal split, unchanged from today.
+  expect(el.sizes).to.deep.equal([50, 50]);
+});
+
 it('falls back to an equal split when the persisted localStorage value is malformed JSON, without throwing', async () => {
   const storageKey = 'test-split-malformed-json-' + Math.random();
   localStorage.setItem(`lr-split:${storageKey}:2`, 'not-json{');

@@ -6,9 +6,16 @@ auto-inserted between each adjacent pair.
 **Properties:**
 - `sizes: number[] = []` (attribute: false — percentages per panel, auto-computed equally if
   omitted/mismatched)
-- `defaultSizes: number[] = []` (attribute: false) — initialization-only fallback: a valid restored
-  `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal distribution.
-  Later reassignment never overwrites live drag/persisted state — set it once, at mount.
+- `defaultSizes: (number | string)[] = []` (attribute: false) — initialization-only fallback: a
+  valid restored `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal
+  distribution. Later reassignment never overwrites live drag/persisted state — set it once, at
+  mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
+  pure-number array that does not sum to ~100, e.g. `[30, 60]`, is still rejected and falls through
+  to the equal split) or a CSS **length string** (`'200px'`, `'20%'`, `'3rem'`). When at least one
+  entry is a length string, every entry is resolved against the measured container (numbers as
+  percent-of-container, `%` as-is, `px`/`rem`/`em` via the shared length resolver) and then
+  normalized to percentages before the same validation applies — so `['200px', '300px']` on a 500px
+  container initializes to `[40, 60]`.
 - `min: number = 10` (min % per panel)
 - `orientation: 'horizontal'|'vertical' = 'horizontal'` (reflected) — the axis used at/above
   `orientationBreakpoint` (or always, when that's unset).
