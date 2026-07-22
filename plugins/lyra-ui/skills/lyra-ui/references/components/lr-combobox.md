@@ -87,11 +87,16 @@ The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fi
 internal row model.
 
 **Events:** typing in the filter exposes the original bubbling/composed, non-cancelable `InputEvent`
-as exactly one host `input` event and does not fire `change`. An actual user selection mutation —
-pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or clear — emits exactly
-one bubbling/composed, non-cancelable plain `input` `Event`, immediately followed by the same shape
-of `change` `Event`. Re-picking the current single value and programmatic/default/reset/restore
-writes are silent. The clear button emits one `lr-clear` after its `input`/`change` pair.
+as exactly one host `input` event (no `value` detail) and does not fire `change`. An actual user
+selection mutation — pointer or keyboard selection, multiple-value toggle, tag/Backspace removal, or
+clear — emits exactly one bubbling/composed, non-cancelable `input` `CustomEvent`, immediately
+followed by the same shape of `change`, then a prefixed `lr-change` alias. All three carry
+`detail: { value }` — the new committed selection (a string in single mode, a `string[]` in
+`multiple` mode). `lr-change` mirrors `<lr-checkbox>`'s namespaced alias; subscribe to it when you
+want a `lr-`-prefixed event, or to the native-style `input`/`change` for parity with a native
+control. Re-picking the current single value and programmatic/default/reset/restore writes are
+silent (including on `lr-change`). The clear button emits one `lr-clear` after its
+`input`/`change`/`lr-change` triple.
 `lr-filter` (`detail: { value: string }`) reports the in-progress filter text on every user-driven
 keystroke — the live as-you-typed search string, deliberately *not* `value`, which is the committed
 selection. It is the supported way to read that text; reaching into the shadow root for
@@ -108,8 +113,8 @@ The internal input's `focus` and `blur` are re-dispatched as bubbling, composed 
 committed selection and an in-progress filter query, so the button renders whenever either has
 something to clear, and one press clears both:
 
-- Clearing a selection emits `input`, then `change`, then `lr-clear` — and, if the query was also
-  non-empty, `lr-filter` with an empty `value`.
+- Clearing a selection emits `input`, then `change`, then `lr-change`, then `lr-clear` — and, if the
+  query was also non-empty, `lr-filter` with an empty `value`.
 - A **query-only** clear (nothing selected, just typed text) emits `lr-filter` with an empty
   `value` and deliberately **no** `change` and **no** `lr-clear`. There was no selection
   transition to report, so announcing one would be a lie. Don't listen for `lr-clear` to detect
@@ -209,7 +214,7 @@ Session-history/autofill state is stored as a name-independent JSON string array
 array restores the selection (single mode keeps its first entry); malformed or wrong-shape state
 restores an empty selection. Restored state wins even when it arrives before the first option
 collection, while `form.reset()` still returns to the declarative selected default. Restoration is
-synchronous and fires no `input`/`change` event.
+synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Known gotchas:**
 - `with-clear` remains supported for compatibility, but new code should use the mirrored
