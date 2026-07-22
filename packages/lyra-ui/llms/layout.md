@@ -325,6 +325,9 @@ space for a persistent sidebar/toolbar that should stay visible instead of being
 fullscreen panel/backdrop — it overrides the default `var(--lr-space-l)` inset on every side for
 both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/body padding.
 
+The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
+panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
+
 **Known gotchas:**
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `fullscreen` was still `true`
@@ -332,6 +335,11 @@ both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/b
   between, so `willUpdate()` alone wouldn't otherwise notice.
 - `collapsed` hides the body via `hidden` rather than an animated height transition — collapsing is
   instant, not a slide.
+- prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
+  own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
+  registered against those keys specifically to target `lr-widget`'s collapse button should move
+  to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
+  itself is unaffected.
 
 ---
 

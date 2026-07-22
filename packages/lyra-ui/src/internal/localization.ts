@@ -319,6 +319,9 @@ export type LyraMessageKey =
   | 'fileInputRejectedOne'
   | 'fileInputRejectedMany'
   | 'fileInputFolderRejected'
+  | 'fileInputRejectedType'
+  | 'fileInputRejectedSize'
+  | 'fileInputRejectedCount'
   | 'elapsedMinutesSecondsTemplate'
   | 'graphNode'
   | 'graphLink'
@@ -506,6 +509,8 @@ export type LyraMessageKey =
   | 'widgetViewGroup'
   | 'widgetExitFullscreen'
   | 'widgetExpandToFullscreen'
+  | 'widgetCollapse'
+  | 'widgetExpand'
   | 'menuLabel'
   | 'pause'
   | 'kbdEscapeVisual'
@@ -1359,6 +1364,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   fileInputRejectedOne: '{count} file rejected.',
   fileInputRejectedMany: '{count} files rejected.',
   fileInputFolderRejected: 'Folders are not accepted here.',
+  fileInputRejectedType: '{filename}: this file type is not accepted.',
+  fileInputRejectedSize: '{filename}: this file is too large.',
+  fileInputRejectedCount: '{filename}: only one file can be selected at a time.',
   elapsedMinutesSecondsTemplate: '{minutes}m {seconds}s',
   graphNode: 'Node {label}',
   graphLink: 'Link from {source} to {target}',
@@ -1546,6 +1554,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   widgetViewGroup: 'Panel view',
   widgetExitFullscreen: 'Exit fullscreen',
   widgetExpandToFullscreen: 'Expand to fullscreen',
+  widgetCollapse: 'Collapse panel',
+  widgetExpand: 'Expand panel',
   menuLabel: 'Menu',
   pause: 'Pause',
   kbdEscapeVisual: 'Esc',

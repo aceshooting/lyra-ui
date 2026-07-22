@@ -374,7 +374,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                 part="collapse-button"
                 type="button"
                 aria-expanded=${this.collapsed ? 'false' : 'true'}
-                aria-label=${this.collapsed ? this.localize('dockPanelExpand') : this.localize('dockPanelCollapse')}
+                aria-label=${this.collapsed ? this.localize('widgetExpand') : this.localize('widgetCollapse')}
                 aria-controls=${this.bodyId}
                 @click=${this.toggleCollapsed}
               >

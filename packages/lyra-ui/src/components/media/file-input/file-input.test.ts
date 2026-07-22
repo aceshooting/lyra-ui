@@ -36,6 +36,21 @@ function dragEnterWith(el: HTMLElement, files: File[]): void {
   el.dispatchEvent(ev);
 }
 
+/** Simulates dropping a folder. A real `DataTransfer` cannot host a synthetic directory entry
+ *  (`items.add()` only accepts `File`s), so this fakes the minimal shape `onDrop` actually reads
+ *  off `dataTransfer` -- `.files` (empty, no real files were dropped) and `.items` (one entry
+ *  whose `webkitGetAsEntry()` reports a directory), matching the plain-object faking convention
+ *  `dropWith`/`dragEnterWith` already use via `Object.defineProperty`. */
+function dropFolderWith(el: HTMLElement, folderName: string): void {
+  const fakeDataTransfer = {
+    files: [] as unknown as FileList,
+    items: [{ kind: 'file', webkitGetAsEntry: () => ({ isDirectory: true, name: folderName }) }],
+  };
+  const ev = new DragEvent('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(ev, 'dataTransfer', { value: fakeDataTransfer });
+  el.dispatchEvent(ev);
+}
+
 it('renders the label text by default', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   expect(el.shadowRoot!.textContent).to.contain('Drop files here or click to browse');
@@ -524,6 +539,139 @@ it('announces accepted and rejected selection outcomes through the live region',
   await plural;
   await el.updateComplete;
   expect(status.textContent).to.equal('2 files added. 2 files rejected.');
+});
+
+it('renders no visible rejection region before any rejection has occurred', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  expect(el.shadowRoot!.querySelector('[part="rejection"]')).to.equal(null);
+});
+
+it('renders a visible, per-reason rejection region naming the rejected file (regression -- rejection feedback was sr-only and count-only before)', async () => {
+  const el = (await fixture(
+    html`<lr-file-input .allowedMimeTypes=${['text/csv']}></lr-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('bad.png', 'image/png')]);
+  await ev;
+  await el.updateComplete;
+
+  const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
+  expect(rejection).to.exist;
+  expect(rejection.getAttribute('role')).to.equal('alert');
+  expect(rejection.textContent).to.contain('bad.png: this file type is not accepted.');
+});
+
+it('keeps the visible rejection region separate from, and in addition to, the sr-only status summary', async () => {
+  const el = (await fixture(
+    html`<lr-file-input .allowedMimeTypes=${['text/csv']}></lr-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('bad.png', 'image/png')]);
+  await ev;
+  await el.updateComplete;
+
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
+  expect(status.classList.contains('sr-only')).to.be.true;
+  expect(status.textContent).to.equal('1 file rejected.');
+  expect(rejection.classList.contains('sr-only')).to.be.false;
+});
+
+it('uses a distinct localized message for a size rejection than a type rejection', async () => {
+  const el = (await fixture(
+    html`<lr-file-input max-file-size="4"></lr-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeSizedFile('big.csv', 'text/csv', 10)]);
+  await ev;
+  await el.updateComplete;
+
+  const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
+  expect(rejection.textContent).to.contain('big.csv: this file is too large.');
+});
+
+it('names each rejected file individually when multiple is false and more than one file is dropped', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('a.csv', 'text/csv'), makeFile('b.csv', 'text/csv')]);
+  await ev;
+  await el.updateComplete;
+
+  const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
+  expect(rejection.textContent).to.contain('a.csv: only one file can be selected at a time.');
+  expect(rejection.textContent).to.contain('b.csv: only one file can be selected at a time.');
+});
+
+it('wires the now-referenced fileInputFolderRejected key into the visible rejection region for a dropped folder', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const evPromise = oneEvent(el, 'lr-files');
+  dropFolderWith(base, 'My Folder');
+  const ev = await evPromise;
+  expect(ev.detail.rejected.length).to.equal(1);
+  expect(ev.detail.rejected[0].reason).to.equal('directory');
+  await el.updateComplete;
+
+  const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
+  expect(rejection.textContent).to.contain('Folders are not accepted here.');
+});
+
+it('localizes the new per-reason rejection messages via .strings, not hardcoded English', async () => {
+  const el = (await fixture(
+    html`<lr-file-input
+      .allowedMimeTypes=${['text/csv']}
+      .strings=${{ fileInputRejectedType: '{filename} : type de fichier refusé.' }}
+    ></lr-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('bad.png', 'image/png')]);
+  await ev;
+  await el.updateComplete;
+
+  const rejection = el.shadowRoot!.querySelector('[part="rejection"]') as HTMLElement;
+  expect(rejection.textContent).to.contain('bad.png : type de fichier refusé.');
+});
+
+it('clears the visible rejection region once a subsequent drop is fully accepted', async () => {
+  const el = (await fixture(
+    html`<lr-file-input .allowedMimeTypes=${['text/csv']}></lr-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  let ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('bad.png', 'image/png')]);
+  await ev;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="rejection"]')).to.exist;
+
+  ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('ok.csv', 'text/csv')]);
+  await ev;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="rejection"]')).to.equal(null);
+});
+
+it('is accessible with the visible rejection region populated', async () => {
+  const el = (await fixture(
+    html`<lr-file-input .allowedMimeTypes=${['text/csv']}></lr-file-input>`,
+  )) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const ev = oneEvent(el, 'lr-files');
+  dropWith(base, [makeFile('bad.png', 'image/png')]);
+  await ev;
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
 });
 
 const fileInputBaseChrome = (el: LyraFileInput) => {

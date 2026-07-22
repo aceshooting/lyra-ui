@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -60,7 +60,10 @@ export interface LyraFileInputEventMap {
  * @event blur - Fired when the semantic dropzone loses focus.
  * @csspart base - The dropzone's root, clickable/focusable container.
  * @csspart input - The visually-hidden native `<input type="file">`.
- * @csspart status - The visually-hidden live region announcing drag accept/reject state.
+ * @csspart status - The visually-hidden live region announcing drag accept/reject state and
+ * accepted/rejected selection counts.
+ * @csspart rejection - The visible `role="alert"` region listing each currently-rejected file
+ * alongside its reason, rendered in addition to (never in place of) the sr-only `status` summary.
  * @cssprop [--lr-file-input-compact-padding=var(--lr-space-s)] - `[part="base"]` padding while
  * `compact`.
  * @cssprop [--lr-file-input-compact-gap=var(--lr-space-2xs)] - Gap between the dropzone's slotted
@@ -109,6 +112,12 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   @state() private dragState: DragState = 'default';
   @state() private resultStatus = '';
+  /** Files rejected by the most recent drop/paste/selection, each paired with its reason.
+   *  Populated in `emitFiles()` (never on mount -- it starts empty and every write is a direct
+   *  consequence of a user action), so the visible `[part="rejection"]` alert naturally never
+   *  fires on connect and needs no `isMounting` guard. Cleared back to `[]` whenever a
+   *  subsequent classification rejects nothing. */
+  @state() private rejectedFiles: RejectedFile[] = [];
   @query('[part="base"]') private baseEl?: HTMLElement;
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
 
@@ -159,9 +168,29 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     return { files, rejected };
   }
 
+  /** Per-reason, per-file message for the visible `[part="rejection"]` alert. The filename is
+   *  caller-supplied data interpolated via the `values` argument, never localized itself --
+   *  only the surrounding copy comes from `this.localize()`. `'directory'` deliberately reuses
+   *  `fileInputFolderRejected` verbatim (its template has no `{filename}` placeholder, so the
+   *  extra interpolation value is simply unused). */
+  private rejectionMessage(rejected: RejectedFile): string {
+    const filename = rejected.file.name;
+    switch (rejected.reason) {
+      case 'type':
+        return this.localize('fileInputRejectedType', undefined, { filename });
+      case 'size':
+        return this.localize('fileInputRejectedSize', undefined, { filename });
+      case 'count':
+        return this.localize('fileInputRejectedCount', undefined, { filename });
+      case 'directory':
+        return this.localize('fileInputFolderRejected', undefined, { filename });
+    }
+  }
+
   private emitFiles(fileList: File[], additionalRejected: RejectedFile[] = []): void {
     const { files, rejected } = this.classify(fileList);
     rejected.push(...additionalRejected);
+    this.rejectedFiles = rejected;
     const messages: string[] = [];
     if (files.length) {
       messages.push(
@@ -308,6 +337,15 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         <slot>${label}</slot>
       </div>
       <div part="status" class="sr-only" role="status" aria-live="polite">${this.statusText()}</div>
+      ${this.rejectedFiles.length
+        ? html`
+            <div part="rejection" role="alert">
+              <ul>
+                ${this.rejectedFiles.map((r) => html`<li>${this.rejectionMessage(r)}</li>`)}
+              </ul>
+            </div>
+          `
+        : nothing}
       <input
         part="input"
         class="sr-only"

@@ -53,4 +53,16 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
+  /* Visible per-file rejection feedback, rendered alongside (not instead of) the sr-only status
+     count summary -- see file-input.class.ts's rejectionMessage(). */
+  [part='rejection'] {
+    margin-block: var(--lr-space-2xs) 0;
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+    text-align: start;
+  }
+  [part='rejection'] ul {
+    margin: 0;
+    padding-inline-start: var(--lr-space-m);
+  }
 `;

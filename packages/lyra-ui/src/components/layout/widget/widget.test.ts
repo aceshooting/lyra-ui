@@ -2,6 +2,7 @@ import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './widget.js';
 import type { LyraWidget } from './widget.js';
 import { styles } from './widget.styles.js';
+import { registerLyraLocale } from '../../../internal/localization.js';
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
@@ -318,6 +319,20 @@ it('reflects the collapse-button aria-expanded and aria-label with the collapsed
   expect(btn.getAttribute('aria-label')).to.equal('Expand panel');
 });
 
+it('a registered locale supplies widgetCollapse/widgetExpand for the collapse-button aria-label', async () => {
+  registerLyraLocale('fr-test-widget-collapse', { widgetCollapse: 'Réduire', widgetExpand: 'Développer' });
+  const el = (await fixture(
+    html`<lr-widget label="x" collapsible locale="fr-test-widget-collapse">content</lr-widget>`,
+  )) as LyraWidget;
+  await el.updateComplete;
+  const btn = el.shadowRoot!.querySelector('[part="collapse-button"]') as HTMLButtonElement;
+  expect(btn.getAttribute('aria-label')).to.equal('Réduire');
+
+  btn.click();
+  await el.updateComplete;
+  expect(btn.getAttribute('aria-label')).to.equal('Développer');
+});
+
 it('rotates the wrapping [part="collapse-button"] itself, not the inner svg, per the icons.ts rotation contract', async () => {
   // internal/icons.ts documents: "callers needing 'up'/'left'/'open' etc.
   // rotate the wrapping part element via CSS transform: rotate(...), not the svg."
@@ -375,8 +390,8 @@ it('localizes the collapse/fullscreen/view-group aria-labels and the fullscreen 
       expandable
       .views=${[{ id: 'chart', ariaLabel: 'Chart view' }]}
       .strings=${{
-        dockPanelCollapse: 'Réduire',
-        dockPanelExpand: 'Développer',
+        widgetCollapse: 'Réduire',
+        widgetExpand: 'Développer',
         widgetExitFullscreen: 'Quitter le plein écran',
         widgetExpandToFullscreen: 'Passer en plein écran',
         widgetViewGroup: 'Vue du panneau',
