@@ -3,11 +3,17 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { lengthViolations } from '../../../internal/length-constraints.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
 export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+
+/** The `type`s whose native `<input>` honors `minlength`/`maxlength` at all. The platform ignores
+ *  both on `number`/`time`, so the dirty-value supplement in `updateValidity()` must ignore them
+ *  there too rather than being stricter than the control it wraps. */
+const LENGTH_CONSTRAINED_TYPES: readonly LyraInputType[] = ['text', 'password', 'email', 'search'];
 
 const spellcheckConverter = {
   fromAttribute: (value: string | null): boolean => value !== 'false',
@@ -36,7 +42,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * `password-toggle` eye-icon button that flips the internal native input between
  * `type="password"`/`type="text"` and tracks `passwordVisible`. `type="email"`/`type="number"`
  * (with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own
- * browser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`.
+ * browser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`
+ * — as do `minlength`/`maxlength`/`pattern`, which constrain the text-bearing types.
  * `type="search"`/`type="time"` forward straight through to the native input with no additional
  * chrome or validation, the same as `type="text"`.
  *
@@ -125,6 +132,28 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @property({ type: Number }) max?: number | string;
   /** Accepts `'any'` (the native way to disable step validation) in addition to a numeric step. */
   @property() step?: number | 'any';
+  /** Minimum text length, forwarded to the internal native `<input>`'s own `minlength` and
+   *  consulted by that same native input's constraint validation (`tooShort`, see
+   *  `updateValidity()`). Defaults to `undefined` (no lower bound). Like native `minlength`, an
+   *  empty value never violates it — pair it with `required` to also reject empty. Ignored by the
+   *  native input for `type="number"`/`type="time"`, exactly as the platform specifies. */
+  // numeric-guard-exempt: forwarded straight through to the native <input minlength> attribute
+  // and read back only via that same native input's own ValidityState.tooShort, which applies the
+  // platform's "rules for parsing non-negative integers" (an unparseable value is ignored, not
+  // thrown on). Never used in arithmetic in this file.
+  @property({ type: Number }) minlength?: number;
+  /** Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and the
+   *  same default of `undefined`. Note that native `maxlength` also *prevents* typing beyond the
+   *  limit; it reports `tooLong` for values that arrive some other way (paste of a longer value,
+   *  a programmatic assignment). */
+  // numeric-guard-exempt: same rationale as `minlength` above, for the native <input maxlength>
+  // attribute and ValidityState.tooLong.
+  @property({ type: Number }) maxlength?: number;
+  /** A regular expression the value must match in full, forwarded to the internal native
+   *  `<input>`'s own `pattern` and validated by it (`patternMismatch`). Defaults to `undefined`
+   *  (no pattern). Compiled by the browser with the `v` flag and anchored to the whole value, so
+   *  no `^`/`$` is needed; an empty value never violates it. */
+  @property() pattern?: string;
   /** `type="password"` only — whether the field currently reveals its raw text. Toggled by the
    *  built-in `password-toggle` button; also settable by a consumer up front. */
   @property({ type: Boolean, attribute: 'password-visible' }) passwordVisible = false;
@@ -219,6 +248,13 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
    * `ValidityState` flag — left unchecked, `native.validity.valid` would then read `true` (empty is
    * fine when not required) while `this.value`/the bridged form value still held the literal invalid
    * string. Detect that mismatch and report it as `badInput` instead of trusting native blindly.
+   *
+   * `minlength`/`maxlength` need the same kind of supplement for a different platform rule: the
+   * native `tooShort`/`tooLong` flags are raised only for a value the *user* edited, so an
+   * over-length value assigned from script would report valid. `lengthViolations()` recomputes
+   * both conditions from `value` and they are OR-ed into the native flags (see
+   * `internal/length-constraints.ts`). `patternMismatch` needs no such handling — the platform
+   * applies `pattern` to script-assigned values too.
    */
   protected updateValidity(): void {
     const native = this.inputEl;
@@ -237,7 +273,12 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     if (native.value !== this.value) native.value = this.value;
     const sanitizedAway = this.value !== '' && native.value === '';
     const v = native.validity;
-    if (v.valid) {
+    const own = LENGTH_CONSTRAINED_TYPES.includes(this.type)
+      ? lengthViolations(this.value, this.minlength, this.maxlength)
+      : { tooShort: false, tooLong: false };
+    const tooShort = v.tooShort || own.tooShort;
+    const tooLong = v.tooLong || own.tooLong;
+    if (v.valid && !tooShort && !tooLong) {
       if (sanitizedAway) {
         this[SET_ANCHORED_VALIDITY]({ badInput: true }, this.localize('valueInvalid'));
         return;
@@ -252,15 +293,33 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
         rangeUnderflow: v.rangeUnderflow,
         rangeOverflow: v.rangeOverflow,
         stepMismatch: v.stepMismatch,
+        tooShort,
+        tooLong,
+        patternMismatch: v.patternMismatch,
         badInput: v.badInput,
       },
-      native.validationMessage,
+      // Empty exactly when the native input itself sees nothing wrong, i.e. when only the
+      // dirty-value supplement above fired — the browser has no message for a value it considers
+      // valid, so fall back to the localized generic one.
+      native.validationMessage || this.localize('valueInvalid'),
     );
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('type') || changed.has('min') || changed.has('max') || changed.has('step') || changed.has('readonly')) {
+    // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
+    // reaches the native input only on this render, so validity has to be recomputed after it --
+    // the same reason `min`/`max`/`step` are listed here.
+    if (
+      changed.has('type') ||
+      changed.has('min') ||
+      changed.has('max') ||
+      changed.has('step') ||
+      changed.has('minlength') ||
+      changed.has('maxlength') ||
+      changed.has('pattern') ||
+      changed.has('readonly')
+    ) {
       this.updateValidity();
     }
   }
@@ -368,6 +427,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
             min=${this.min ?? nothing}
             max=${this.max ?? nothing}
             step=${this.step ?? nothing}
+            minlength=${this.minlength ?? nothing}
+            maxlength=${this.maxlength ?? nothing}
+            pattern=${this.pattern ?? nothing}
             .value=${this.value}
             ?required=${this.required}
             ?disabled=${this.effectiveDisabled}

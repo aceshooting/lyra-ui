@@ -199,9 +199,10 @@ it('restores a string state synchronously without emitting a user event', async 
 // never in this repo's real Chromium test environment, where `attachInternals()` is natively
 // implemented. Driven through the real `<lr-textarea>` component (not the local `Ctl` demo class
 // above) so this proves the fallback actually integrates with a production component's own
-// render/validity plumbing, not just the mixin in isolation. `<lr-textarea>` is one of the few
-// `FormAssociated` consumers that does not override `updateValidity()`, so its validity behavior
-// is exactly the base mixin's own required-and-empty check.
+// render/validity plumbing, not just the mixin in isolation. `<lr-textarea>`'s own
+// `updateValidity()` override answers the required-and-empty case first and with the same
+// localized message as the base mixin, so the flows exercised below are the base mixin's own
+// behavior reaching a real component unchanged.
 //
 // Stubbing is scoped to `LyraTextarea.prototype` (rather than the global `HTMLElement.prototype`,
 // as several component-level "attachInternals guard" tests elsewhere in this repo do for their own

@@ -88,6 +88,94 @@ it('participates in native form validation via required', async () => {
   expect(el.checkValidity()).to.be.true;
 });
 
+describe('length constraints', () => {
+  it('forwards minlength/maxlength onto the native textarea', async () => {
+    const el = (await fixture(html`<lr-textarea minlength="2" maxlength="8"></lr-textarea>`)) as LyraTextarea;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(el.minlength).to.equal(2);
+    expect(el.maxlength).to.equal(8);
+    expect(native.minLength).to.equal(2);
+    expect(native.maxLength).to.equal(8);
+  });
+
+  it('bridges tooLong to the host validity', async () => {
+    const el = (await fixture(html`<lr-textarea maxlength="3"></lr-textarea>`)) as LyraTextarea;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    native.focus();
+    native.value = 'abcdef';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.validity.tooLong).to.equal(true);
+    expect(el.checkValidity()).to.equal(false);
+  });
+
+  it('bridges tooShort to the host validity', async () => {
+    const el = (await fixture(html`<lr-textarea minlength="5"></lr-textarea>`)) as LyraTextarea;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    native.focus();
+    native.value = 'ab';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.validity.tooShort).to.equal(true);
+    expect(el.checkValidity()).to.equal(false);
+    // Native `minlength` never fires on an empty value -- an empty optional field stays valid.
+    native.value = '';
+    native.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.validity.tooShort).to.equal(false);
+    expect(el.checkValidity()).to.equal(true);
+  });
+
+  it('reports a programmatically assigned over-length value as invalid, despite the native dirty-value flag', async () => {
+    const el = (await fixture(html`<lr-textarea maxlength="3"></lr-textarea>`)) as LyraTextarea;
+    el.value = 'abcdef';
+    expect(el.validity.tooLong).to.equal(true);
+    expect(el.checkValidity()).to.equal(false);
+    el.value = 'ab';
+    expect(el.validity.tooLong).to.equal(false);
+    expect(el.checkValidity()).to.equal(true);
+  });
+
+  it('recomputes validity when maxlength narrows below the current value without a value write', async () => {
+    const el = (await fixture(html`<lr-textarea value="abcdef"></lr-textarea>`)) as LyraTextarea;
+    expect(el.checkValidity()).to.equal(true);
+    el.maxlength = 3;
+    await el.updateComplete;
+    expect(el.validity.tooLong).to.equal(true);
+    expect(el.checkValidity()).to.equal(false);
+  });
+
+  it('keeps the localized required message and reports required + empty ahead of any length check', async () => {
+    const el = (await fixture(html`<lr-textarea required minlength="5"></lr-textarea>`)) as LyraTextarea;
+    el.strings = { fieldRequired: 'Ce champ est obligatoire.' };
+    expect(el.validity.valueMissing).to.equal(true);
+    expect(el.validity.tooShort).to.equal(false);
+    expect(el.validationMessage).to.equal('This field is required.');
+    el.value = '';
+    expect(el.validationMessage).to.equal('Ce champ est obligatoire.');
+  });
+
+  it('unset regression: renders and validates exactly as before when minlength/maxlength are unset', async () => {
+    const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
+    const native = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+    expect(el.minlength).to.equal(undefined);
+    expect(el.maxlength).to.equal(undefined);
+    expect(native.hasAttribute('minlength')).to.equal(false);
+    expect(native.hasAttribute('maxlength')).to.equal(false);
+    // -1 is the native "no limit" sentinel for an absent minlength/maxlength.
+    expect(native.minLength).to.equal(-1);
+    expect(native.maxLength).to.equal(-1);
+
+    el.value = 'a value far longer than any plausible default limit would ever allow';
+    expect(el.checkValidity()).to.equal(true);
+    expect(el.validity.tooLong).to.equal(false);
+    expect(el.validity.tooShort).to.equal(false);
+    expect(el.validationMessage).to.equal('');
+  });
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lr-textarea placeholder="Notes"></lr-textarea>`)) as LyraTextarea;
   await expect(el).to.be.accessible();

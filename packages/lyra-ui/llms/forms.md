@@ -615,9 +615,28 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `autocomplete` | `autocomplete` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
 | `inputMode` | `inputmode` | `string` | `''` | Virtual-keyboard input hint forwarded to the native `<textarea>`. |
 | `enterKeyHint` | `enterkeyhint` | `string` | `''` | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`. |
+| `minlength` | `minlength` | `number \| undefined` | `undefined` | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`. |
+| `maxlength` | `maxlength` | `number \| undefined` | `undefined` | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`. |
 | `name` | `name` | `string` | `''` | Form field name. |
 | `disabled` | `disabled` | `boolean` | `false` | Disables the control. |
 | `required` | `required` | `boolean` | `false` | Participates in native constraint validation. |
+
+### Constraint validation
+
+`validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
+(from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
+`maxlength` unset constrains nothing, exactly as before they existed.
+
+Two behaviors are worth knowing, both inherited from the platform and both shared with `lr-input`:
+
+- **An empty value is never `tooShort`.** Native `minlength` only applies to a non-empty value, so
+  an optional field left blank stays valid; `required` is what rejects empty.
+- **A script-assigned value is validated too.** The native `tooShort`/`tooLong` flags are raised
+  only for a value the *user* edited, so the component recomputes both from its own `value` and
+  ORs them in — `el.value = <over-length>` reports `tooLong` rather than silently submitting.
+  Lengths count UTF-16 code units, matching the native control (one emoji counts as two).
+  `validationMessage` is the browser's own localized message when the native control flagged the
+  value, and the localized `valueInvalid` string when only the script-value check did.
 
 The visible label, hint, and error live in the same shadow tree as the native control, so their
 generated ids safely drive the native `<label>`/`aria-describedby` relationships. Name precedence
@@ -882,6 +901,13 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
   non-numeric bound only survives a direct property assignment; the declared type also admits a
   string so a subclass can narrow the attribute parsing to its own native type's literal form —
   `lr-time-input` does exactly that. Inert for the other types
+- `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
+  bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
+  Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
+  both on `type="number"`/`type="time"`, and so does this component
+- `pattern?: string` (attribute `pattern`) — a regular expression the value must match in full,
+  forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
+  value by the platform, so no `^`/`$` is needed; an empty value never violates it
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
@@ -956,7 +982,19 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 **Known gotchas:**
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
   own browser-computed `validity` (format/range/step), bridged into this element's own
-  `ElementInternals` — not a second hand-rolled regex check.
+  `ElementInternals` — not a second hand-rolled regex check. The same bridge carries
+  `minlength`/`maxlength`/`pattern`, so `validity` reports the full native set: `valueMissing`,
+  `typeMismatch`, `rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `tooShort`, `tooLong`,
+  `patternMismatch`, and `badInput`.
+- **`tooShort`/`tooLong` also fire for a value assigned from script.** The native flags are raised
+  only for a value the *user* edited, so the component recomputes both from its own `value` and ORs
+  them in; `el.value = <over-length>` reports `tooLong` rather than silently submitting. Lengths
+  count UTF-16 code units, matching the native control (one emoji counts as two). `patternMismatch`
+  needs no such handling — the platform applies `pattern` to script-assigned values already.
+  `validationMessage` is the browser's own localized message when the native input flagged the
+  value, and the localized `valueInvalid` string when only the script-value check did.
+- An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
+  the empty string, and `required` is what rejects it.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
 
 ## `lr-number-input`
@@ -968,8 +1006,8 @@ A migration-friendly numeric alias of `lr-input` — a subclass whose constructo
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
-`min`/`max`/`step` (the native numeric constraint validation). `clearable` and `passwordVisible`
-(`password-visible`) are inherited but inert — see gotchas.
+`min`/`max`/`step` (the native numeric constraint validation). `clearable`, `passwordVisible`
+(`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but inert — see gotchas.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
@@ -991,7 +1029,8 @@ vary by `size` at all).
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
-  toggle only renders for `type="password"`.
+  toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the
+  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.
 
@@ -1004,8 +1043,9 @@ re-typed `min`/`max` pair (below); every other property, event, slot and part is
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`).
-`clearable` and `passwordVisible` (`password-visible`) are inherited but inert, exactly as on
-`lr-number-input`.
+`clearable`, `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are
+inherited but inert, exactly as on `lr-number-input` — the platform ignores all three length/pattern
+constraints on `type="time"` as well.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
 the seconds field, `'any'` disables step validation).

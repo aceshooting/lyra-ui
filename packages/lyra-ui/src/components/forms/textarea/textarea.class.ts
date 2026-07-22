@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
+import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
+import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 
 export type TextareaResize = 'none' | 'vertical' | 'both' | 'auto';
@@ -38,6 +40,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * unset, the chrome remains hidden. A consumer preferring their own form-field layout can still
  * ignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;
  * external `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
+ *
+ * `minlength`/`maxlength` are forwarded to the internal native `<textarea>` and bridged into this
+ * element's own `ElementInternals` as `tooShort`/`tooLong` by `updateValidity()`.
  *
  * @customElement lr-textarea
  * @event input - Native-style composed event fired on every user-driven edit.
@@ -94,6 +99,21 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   @property() autocomplete = '';
   @property({ attribute: 'inputmode' }) override inputMode = '';
   @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
+  /** Minimum text length, forwarded to the native `<textarea>`'s own `minlength` and reported as
+   *  `tooShort` by `updateValidity()`. Defaults to `undefined` (no lower bound). Like native
+   *  `minlength`, an empty value never violates it — pair it with `required` to also reject
+   *  empty. */
+  // numeric-guard-exempt: forwarded to the native <textarea minlength> attribute, which applies
+  // the platform's "rules for parsing non-negative integers" (an unparseable value is ignored,
+  // not thrown on); the same rule gates lengthViolations() before it is used in any comparison.
+  @property({ type: Number }) minlength?: number;
+  /** Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and
+   *  the same default of `undefined`. Note that native `maxlength` also *prevents* typing beyond
+   *  the limit; it reports `tooLong` for values that arrive some other way (paste of a longer
+   *  value, a programmatic assignment). */
+  // numeric-guard-exempt: same rationale as `minlength` above, for the native <textarea maxlength>
+  // attribute and ValidityState.tooLong.
+  @property({ type: Number }) maxlength?: number;
 
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
@@ -208,8 +228,50 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     super.disconnectedCallback();
   }
 
+  /**
+   * Bridges the internal native `<textarea>`'s own browser-computed constraint validation into
+   * this element's `ElementInternals`, mirroring `<lr-input>`'s override of the same name. Without
+   * it this control falls through to the base mixin's plain required-and-empty check, which leaves
+   * `minlength`/`maxlength` enforced while typing but absent from `validity`.
+   *
+   * `required` is evaluated here rather than read back off the native element's own `valueMissing`,
+   * for two reasons: the `required` attribute reaches that element only on Lit's next render (so a
+   * same-tick `el.required = true` would be answered from a stale attribute), and this path owns
+   * the localized `fieldRequired` message the base mixin already produced.
+   *
+   * The native `tooShort`/`tooLong` flags are raised only for a value the *user* edited, so an
+   * over-length value assigned from script would report valid. `lengthViolations()` recomputes
+   * both from `value` and they are OR-ed into the native flags (see
+   * `internal/length-constraints.ts`).
+   */
+  protected updateValidity(): void {
+    if (this.required && this.value === '') {
+      this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
+      return;
+    }
+    const native = this.textareaEl;
+    if (native && native.value !== this.value) native.value = this.value;
+    const own = lengthViolations(this.value, this.minlength, this.maxlength);
+    const tooShort = Boolean(native?.validity.tooShort) || own.tooShort;
+    const tooLong = Boolean(native?.validity.tooLong) || own.tooLong;
+    if (!tooShort && !tooLong) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
+    this[SET_ANCHORED_VALIDITY](
+      { tooShort, tooLong },
+      // Empty exactly when the native textarea itself sees nothing wrong, i.e. when only the
+      // dirty-value supplement above fired — the browser has no message for a value it considers
+      // valid, so fall back to the localized generic one.
+      native?.validationMessage || this.localize('valueInvalid'),
+    );
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
+    // reaches the native textarea only on this render, so validity has to be recomputed after it.
+    if (changed.has('minlength') || changed.has('maxlength')) this.updateValidity();
     if (changed.has('resize')) {
       if (this.resize === 'auto') {
         this.armResizeObserver();
@@ -344,6 +406,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
           autocomplete=${this.autocomplete || nothing}
           inputmode=${this.inputMode || nothing}
           enterkeyhint=${this.enterKeyHint || nothing}
+          minlength=${this.minlength ?? nothing}
+          maxlength=${this.maxlength ?? nothing}
           wrap=${this.wrap}
           .value=${this.value}
           ?required=${this.required}

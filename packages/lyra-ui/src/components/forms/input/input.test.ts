@@ -290,6 +290,126 @@ describe('lr-input', () => {
       expect(native.selectionStart).to.equal(2);
     });
 
+    it('forwards minlength/maxlength/pattern onto the native input', async () => {
+      const el = (await fixture(
+        html`<lr-input minlength="2" maxlength="8" pattern="[a-z]+"></lr-input>`,
+      )) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(el.minlength).to.equal(2);
+      expect(el.maxlength).to.equal(8);
+      expect(el.pattern).to.equal('[a-z]+');
+      expect(native.minLength).to.equal(2);
+      expect(native.maxLength).to.equal(8);
+      expect(native.pattern).to.equal('[a-z]+');
+    });
+
+    it('bridges tooLong to the host validity', async () => {
+      const el = (await fixture(html`<lr-input maxlength="3"></lr-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      native.focus();
+      native.value = 'abcdef';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+
+      expect(el.validity.tooLong).to.equal(true);
+      expect(el.checkValidity()).to.equal(false);
+    });
+
+    it('bridges tooShort to the host validity', async () => {
+      const el = (await fixture(html`<lr-input minlength="5"></lr-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      native.focus();
+      native.value = 'ab';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+
+      expect(el.validity.tooShort).to.equal(true);
+      expect(el.checkValidity()).to.equal(false);
+      // Native `minlength` never fires on an empty value -- an empty optional field stays valid.
+      native.value = '';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+      expect(el.validity.tooShort).to.equal(false);
+      expect(el.checkValidity()).to.equal(true);
+    });
+
+    it('bridges patternMismatch to the host validity', async () => {
+      const el = (await fixture(html`<lr-input pattern="[a-z]+"></lr-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      native.focus();
+      native.value = 'ABC123';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+
+      expect(el.validity.patternMismatch).to.equal(true);
+      expect(el.checkValidity()).to.equal(false);
+      native.value = 'abc';
+      native.dispatchEvent(new Event('input', { bubbles: true }));
+      await el.updateComplete;
+      expect(el.validity.patternMismatch).to.equal(false);
+      expect(el.checkValidity()).to.equal(true);
+    });
+
+    it('reports a programmatically assigned over-length value as invalid, despite the native dirty-value flag', async () => {
+      const el = (await fixture(html`<lr-input maxlength="3"></lr-input>`)) as LyraInput;
+      el.value = 'abcdef';
+      expect(el.validity.tooLong).to.equal(true);
+      expect(el.checkValidity()).to.equal(false);
+      el.value = 'ab';
+      expect(el.validity.tooLong).to.equal(false);
+      expect(el.checkValidity()).to.equal(true);
+    });
+
+    it('recomputes validity when maxlength narrows below the current value without a value write', async () => {
+      const el = (await fixture(html`<lr-input value="abcdef"></lr-input>`)) as LyraInput;
+      expect(el.checkValidity()).to.equal(true);
+      el.maxlength = 3;
+      await el.updateComplete;
+      expect(el.validity.tooLong).to.equal(true);
+      expect(el.checkValidity()).to.equal(false);
+    });
+
+    it('leaves maxlength inert on type="number", exactly as the platform does', async () => {
+      // The platform ignores minlength/maxlength on number/time, so the script-value supplement
+      // must ignore them there too rather than being stricter than the control it wraps --
+      // otherwise `lr-number-input` would reject values a native <input type="number"> accepts.
+      const numeric = (await fixture(
+        html`<lr-input type="number" maxlength="3"></lr-input>`,
+      )) as LyraInput;
+      numeric.value = '123456';
+      expect(numeric.validity.tooLong).to.equal(false);
+      expect(numeric.checkValidity()).to.equal(true);
+
+      // The same limit and the same value length on a text input is the contrasting case that
+      // proves the assertion above is about the type, not about the constraint being unwired.
+      const text = (await fixture(html`<lr-input type="text" maxlength="3"></lr-input>`)) as LyraInput;
+      text.value = '123456';
+      expect(text.validity.tooLong).to.equal(true);
+      expect(text.checkValidity()).to.equal(false);
+    });
+
+    it('unset regression: renders and validates exactly as before when minlength/maxlength/pattern are unset', async () => {
+      const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+      const native = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(el.minlength).to.equal(undefined);
+      expect(el.maxlength).to.equal(undefined);
+      expect(el.pattern).to.equal(undefined);
+      expect(native.hasAttribute('minlength')).to.equal(false);
+      expect(native.hasAttribute('maxlength')).to.equal(false);
+      expect(native.hasAttribute('pattern')).to.equal(false);
+      // -1 / '' are the native "no constraint" sentinels for the absent attributes.
+      expect(native.minLength).to.equal(-1);
+      expect(native.maxLength).to.equal(-1);
+      expect(native.pattern).to.equal('');
+
+      el.value = 'a value far longer than any plausible default limit would ever allow';
+      expect(el.checkValidity()).to.equal(true);
+      expect(el.validity.tooLong).to.equal(false);
+      expect(el.validity.tooShort).to.equal(false);
+      expect(el.validity.patternMismatch).to.equal(false);
+      expect(el.validationMessage).to.equal('');
+    });
+
     it('accepts step="any" instead of coercing to NaN and blocking decimals', async () => {
       const el = (await fixture(
         html`<lr-input type="number" step="any" value="1.5"></lr-input>`,
