@@ -4,6 +4,18 @@ overrides:
   '@xmldom/xmldom': ^0.8.13
 minimumReleaseAgeExclude:
   - '@aceshooting/lyra-flags@0.1.0'
+  - '@secretlint/config-creator@13.0.4'
+  - '@secretlint/config-loader@13.0.4'
+  - '@secretlint/core@13.0.4'
+  - '@secretlint/formatter@13.0.4'
+  - '@secretlint/node@13.0.4'
+  - '@secretlint/profiler@13.0.4'
+  - '@secretlint/resolver@13.0.4'
+  - '@secretlint/secretlint-rule-preset-recommend@13.0.4'
+  - '@secretlint/source-creator@13.0.4'
+  - '@secretlint/types@13.0.4'
+  - '@secretlint/walker@13.0.4'
+  - secretlint@13.0.4
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

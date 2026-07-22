@@ -27,23 +27,23 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       '@secretlint/secretlint-rule-preset-recommend':
-        specifier: ^13.0.2
-        version: 13.0.2
+        specifier: ^13.0.4
+        version: 13.0.4
       '@sgratzl/chartjs-chart-boxplot':
         specifier: ^4.4.5
         version: 4.4.5(chart.js@4.5.1)
       '@storybook/addon-a11y':
-        specifier: ^10.5.2
-        version: 10.5.2(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
+        specifier: ^10.5.3
+        version: 10.5.3(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
       '@storybook/addon-docs':
-        specifier: ^10.5.2
-        version: 10.5.2(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+        specifier: ^10.5.3
+        version: 10.5.3(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       '@storybook/web-components':
-        specifier: ^10.5.2
-        version: 10.5.2(lit@3.3.3)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
+        specifier: ^10.5.3
+        version: 10.5.3(lit@3.3.3)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
       '@storybook/web-components-vite':
-        specifier: ^10.5.2
-        version: 10.5.2(esbuild@0.28.1)(lit@3.3.3)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+        specifier: ^10.5.3
+        version: 10.5.3(esbuild@0.28.1)(lit@3.3.3)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       '@tailwindcss/vite':
         specifier: ^4.3.3
         version: 4.3.3(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
@@ -84,11 +84,11 @@ importers:
         specifier: ^0.3.21
         version: 0.3.21
       secretlint:
-        specifier: ^13.0.2
-        version: 13.0.2
+        specifier: ^13.0.4
+        version: 13.0.4(supports-color@10.2.2)
       storybook:
-        specifier: ^10.5.2
-        version: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+        specifier: ^10.5.3
+        version: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -134,7 +134,7 @@ importers:
         version: 0.11.0
       '@open-wc/testing':
         specifier: ^5.0.0
-        version: 5.0.0
+        version: 5.0.0(supports-color@10.2.2)
       '@sgratzl/chartjs-chart-boxplot':
         specifier: ^4.4.5
         version: 4.4.5(chart.js@4.5.1)
@@ -164,16 +164,16 @@ importers:
         version: 15.0.1
       '@web/dev-server-esbuild':
         specifier: ^2.0.0
-        version: 2.0.0
+        version: 2.0.0(supports-color@10.2.2)
       '@web/test-runner':
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.0.0(supports-color@10.2.2)
       '@web/test-runner-junit-reporter':
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.0.0(supports-color@10.2.2)
       '@web/test-runner-playwright':
         specifier: ^1.0.0
-        version: 1.0.0
+        version: 1.0.0(supports-color@10.2.2)
       chart.js:
         specifier: ^4.5.1
         version: 4.5.1
@@ -1818,46 +1818,46 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@secretlint/config-creator@13.0.2':
-    resolution: {integrity: sha512-wEHE/x7jeaWnDqVhzUg3qLsnl3NOQTA2fVnxwc0Z7dn3SOSh5sEKFr6xTp/LhZxyuHnKJltlcF085UDUFOoqYQ==}
+  '@secretlint/config-creator@13.0.4':
+    resolution: {integrity: sha512-rSYBD36alOtDch10H2fOgiCVMyOrn4IfzICnoBg6IeValIESj7iz22GVC8hEbm3WLBwKVBZ3RjK2SYOteh7Bkw==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/config-loader@13.0.2':
-    resolution: {integrity: sha512-r0ZVJ3oGUwWqoFPwhR9RK/fnp358TImaa72UhrBdBiuzMvAcPtE6EbnAYhbj0Yr5QS6ns+GI11jV344MLqkhTg==}
+  '@secretlint/config-loader@13.0.4':
+    resolution: {integrity: sha512-K6jq7IDqlGdOWKqfiFiKSiWmMHryAIwnFs84u5A5rjWVvrkrHYjNqNRyk6iO7hXM/7cXkxO8Mm8zb77hF1HT1A==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/core@13.0.2':
-    resolution: {integrity: sha512-15vg+zCmjQuDFVoOPNt0TyEu0Z95eir2MO19++wG82yM/vbPtFu/m9qd6oh54ZOBXgMcchdGDTxMwJNDnCLxcA==}
+  '@secretlint/core@13.0.4':
+    resolution: {integrity: sha512-Wv49KcI5XX6xjLR1wxyjORA15PtMb5ar/M27ShimVudaSi6iAM04QCA5Ozx+uEahfHNefUUKbjKGpy/9pxuW7g==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/formatter@13.0.2':
-    resolution: {integrity: sha512-DoU+aEsqPQxiWTQBNkTvQDmGTWB+TQS4UC6XEliWYv4KHpMV81O52jOE7XKS7QUoDMD4dbjh5wUTAgNO1dpzEg==}
+  '@secretlint/formatter@13.0.4':
+    resolution: {integrity: sha512-si7tXQeOIMh/Wqu7lhXnutbnMheGXWGVivbQPhoUR9eMJwT32gTII7Bh3t30zPsUop+SGr/SIc+bPmKehPKb9g==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/node@13.0.2':
-    resolution: {integrity: sha512-xAK+0INjjMASH5guHLSozl++6kDyeOTy4FNC6dhPA7ieebCmHe/+QiAsr4KP9yDRZoh/uRmEno2NMDy5lgQpkA==}
+  '@secretlint/node@13.0.4':
+    resolution: {integrity: sha512-4HmD9yfA9etThrxhDbyTMBaHj556uKxrS+tOBIkP5AAnB6sXk4mmA9fjKDTrk8dkrpg7S/g2Uds3AKb+yeUNnA==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/profiler@13.0.2':
-    resolution: {integrity: sha512-vGaLZCoi9KewOF+sM0iIEBviWaH9mls1HmQFBgEPq4fnvmVO4PfKIkVr4CcAFm3Msg4NjzFE2RBAGwRR+5HEmQ==}
+  '@secretlint/profiler@13.0.4':
+    resolution: {integrity: sha512-T2hSyZmJrQbGAe+Vl9AGNlMnoB0MP6m2BLh7EH80QcesvNM2t0pCzdiBvQ/yCe76w6/gZNpHlrSVayUeT43qVw==}
 
-  '@secretlint/resolver@13.0.2':
-    resolution: {integrity: sha512-Ko50V0P3YAtEO20xBTczOzguBVk6+taSqkoAPHoOSdsTsSq1gzeYggY1UC8vVEHPGyRp/mb2QOuwIShdJZ8JFg==}
+  '@secretlint/resolver@13.0.4':
+    resolution: {integrity: sha512-+s4fRFctBlAbHu4H8lRLj/e6dyDIGpIM2QLAJWgaMJUn9bFxetjRBQEv/HD2U4ohpGHYURLMkDcnS3iZdSTmGg==}
 
-  '@secretlint/secretlint-rule-preset-recommend@13.0.2':
-    resolution: {integrity: sha512-D03Kw51qOgffj9zNlJFZUarVmP8zGcCZNi7A14+vZtHskbbBPEsS/f09idb48rrlMSaRMBN29IkqfbmPyL9xtw==}
+  '@secretlint/secretlint-rule-preset-recommend@13.0.4':
+    resolution: {integrity: sha512-Nbcr7tvyKuRF4BKh7RQSCEOaif4gFPH/qjK2ajcoUDGL7HAY/C6PzcsmVR1Y0qQCRqrBuMuXn1onXE+wxNNNsw==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/source-creator@13.0.2':
-    resolution: {integrity: sha512-tSooHad8QL+lqHP88zH9F8GMoR7bHUqPja5M/QnNHGnvOq/8OT1V8t1uigm6jlD03oJWNLwwF8QeHIedWKJ13g==}
+  '@secretlint/source-creator@13.0.4':
+    resolution: {integrity: sha512-YfVVY7GHbHV6CN/tLIf1BGiONVjX2fvmJyvCv2MhonUiWtLPVU4fnOQIrWMLFakeRJ/GVoV8FfqvPW3jnUHfVA==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/types@13.0.2':
-    resolution: {integrity: sha512-cAZjr6ZTKgSuJMLyTGDrUEtK3XEZa+JStIkD+DmdkT32VGAN+dQJiYr1So3XJopsKSrqhP5kjZKT8WWtftZIpQ==}
+  '@secretlint/types@13.0.4':
+    resolution: {integrity: sha512-on/DivRDZEFzRD2pZJO0wkIL+AvEY+KOoZLPCWcz4pjZnJ4NzMuHQjvTJc9KY0yht+ugcYg9AmtOUzpEk31IWA==}
     engines: {node: '>=22.0.0'}
 
-  '@secretlint/walker@13.0.2':
-    resolution: {integrity: sha512-9GtWeTb763Ilr/nbRzdFidfZTBtbNEsz/BKrilgqLpKR9EqSWe9eYWDQaLIYb4PddIhwOgHuahRrX2BYATNcLQ==}
+  '@secretlint/walker@13.0.4':
+    resolution: {integrity: sha512-ufAWro6oqdTkZYbMXHXlW56IAO+1YhKLwIDTqMYSzDna6bJdph2FXqm2IdnKTd4TNbdVficp1w7GoBm4JHxddA==}
     engines: {node: '>=22.0.0'}
 
   '@sgratzl/boxplots@2.0.0':
@@ -1909,32 +1909,32 @@ packages:
   '@sinonjs/fake-timers@15.4.0':
     resolution: {integrity: sha512-DsG+8/LscQIQg68J6Ef3dv10u6nVyetYn923s3/sus5eaGfTo1of5WMZSLf0UJc9KDuKPilPH0UDJCjvNbDNCA==}
 
-  '@storybook/addon-a11y@10.5.2':
-    resolution: {integrity: sha512-BMze+oj1Jz3QcGl0E6mjuVA32zPD/cTu3Ev4O4qNbKbqLXO4wA1G6aEd8+CGcQtTGEyMCsr0BH6I/WnXcwA1bQ==}
+  '@storybook/addon-a11y@10.5.3':
+    resolution: {integrity: sha512-UJqvVfkTYFT+7MVTVzyMYxZoc2NNJQF+XE5fA8ABuMtQdBWYEgL2O3fjK0TR0F1JcXJZonj4trzyVNCVPjJi5Q==}
     peerDependencies:
-      storybook: ^10.5.2
+      storybook: ^10.5.3
 
-  '@storybook/addon-docs@10.5.2':
-    resolution: {integrity: sha512-MoBANDsh5qEA14U+JaBoQcYsKbayJDDMopigFN0NdVAsZTdBfVIsL7cnjTFBL6ubB3ifb5M0tCXbScpml1KqiQ==}
+  '@storybook/addon-docs@10.5.3':
+    resolution: {integrity: sha512-MI1VDMSMQk78YxjIdt7WlrVOiA3TzTP00lRed1LeXh0fCvA9jxz9YXJI2+XigsLaxCSuOAEf/l35/GTLDMHD8A==}
     peerDependencies:
       '@types/react': ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      storybook: ^10.5.2
+      storybook: ^10.5.3
     peerDependenciesMeta:
       '@types/react':
         optional: true
 
-  '@storybook/builder-vite@10.5.2':
-    resolution: {integrity: sha512-XxY/zpMrEOXqdJaEw8s7fJefDCjO1eRkjvZvb50ojiqDJpTdfguhBrwqlHilpWWt5a12VjbbMrUHza4YPs/bBg==}
+  '@storybook/builder-vite@10.5.3':
+    resolution: {integrity: sha512-qX1jb1nbG1mWJrCn3YrDkpbii+KA1uxdVgENeNusD80RrWCwVG8ce+awjZxKuT8qjYyALSAPBvTHUqZ4C1b7Pg==}
     peerDependencies:
-      storybook: ^10.5.2
+      storybook: ^10.5.3
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
-  '@storybook/csf-plugin@10.5.2':
-    resolution: {integrity: sha512-PK/wXiALFf88mt4HmDtiZJ6NRvhExSXEM9uFIN+OIHxGqg7Xbp6MB0SPdhsTbMY9720ahiu/DJx5iIzkidcA3w==}
+  '@storybook/csf-plugin@10.5.3':
+    resolution: {integrity: sha512-mkPq6zru8fN5+46uC1cZEbKW2ws1hh9KvF4g4/Gu8pNbKnvqULPhk0/Bf0ZCtlr7zI7DvcFhyCy3dbvN+2n4Gw==}
     peerDependencies:
       esbuild: '*'
       rollup: '*'
-      storybook: ^10.5.2
+      storybook: ^10.5.3
       vite: '*'
       webpack: '*'
     peerDependenciesMeta:
@@ -1955,31 +1955,31 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@storybook/react-dom-shim@10.5.2':
-    resolution: {integrity: sha512-TbdYVLuD7gwj1CFsDJhCHUiwfVmzFWzalKEUGy9XgXyNpyOV1CYRsdmRdhaOHgmn2ljQZuTAxSnG7NlElghVaw==}
+  '@storybook/react-dom-shim@10.5.3':
+    resolution: {integrity: sha512-eUWBsRRax5R3MDJVFs/CrFDF1bYS58AMB9tX02lLRuiZe6xy1cKh3CRFS+2xH571l0fNaXQ+7j69TOJ0fk2tmA==}
     peerDependencies:
       '@types/react': ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       '@types/react-dom': ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-      storybook: ^10.5.2
+      storybook: ^10.5.3
     peerDependenciesMeta:
       '@types/react':
         optional: true
       '@types/react-dom':
         optional: true
 
-  '@storybook/web-components-vite@10.5.2':
-    resolution: {integrity: sha512-a1MfgfXiuWtAUqGZwEpOrgpmRORvO1hE+lRXstCj5ZhAcR6M7byPRRBSN5NKC8QSHnMj2VcZx9MyOFqQn0SSTQ==}
+  '@storybook/web-components-vite@10.5.3':
+    resolution: {integrity: sha512-uwHw4cLHRinLswguf4r3D0+ch/SBdH0TyUMiMuYiEilPkg158gf56RSVQYKgIsR4Ll8qD72kDXZ0WO69Ofev1w==}
     peerDependencies:
-      storybook: ^10.5.2
+      storybook: ^10.5.3
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
-  '@storybook/web-components@10.5.2':
-    resolution: {integrity: sha512-arepr4twwvEeCjn7JtcGZp38L5PMNAVVPOTSKwwa+iFWwQW8UbES4oRidKXLqaXKIOi7RyqilBrsuzqtE3wLLw==}
+  '@storybook/web-components@10.5.3':
+    resolution: {integrity: sha512-m0Im4XaUKXV9gghPhSBWSnNMLKSjVkqSZS9HwQ3G1Tzt9VQyDNTnSRzm0EshxEKyAHKeBjD5az9OVecpTxQ4LA==}
     peerDependencies:
       lit: ^2.0.0 || ^3.0.0
-      storybook: ^10.5.2
+      storybook: ^10.5.3
 
   '@tailwindcss/node@4.3.3':
     resolution: {integrity: sha512-/T8IKEsf9VTU6tLjgC7+sv2mOPtQxzE2jMw7u4Tt40Tx+QSZxpzh95/H6cMKoja9XuW7iMdLJYBB0o9G1CaAgg==}
@@ -4483,8 +4483,8 @@ packages:
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
 
-  secretlint@13.0.2:
-    resolution: {integrity: sha512-veYNpVC+Yw9H/EWzdGyEsYHqCFXgKOinGEMbRffvnkHoWnE0CongrCnWXZJ1bkYmirlhemq/gkiOZ5zdHcHCQg==}
+  secretlint@13.0.4:
+    resolution: {integrity: sha512-OhNXAkLN/OAWWByVS/QcIzTwc/NkUJxzvVKvp5N8iAYNny7YdV/M321vfh8wh41tAB0UthYfahMRSPOfBXtbqg==}
     engines: {node: '>=22.0.0'}
     hasBin: true
 
@@ -4618,8 +4618,8 @@ packages:
     resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
     engines: {node: '>= 0.8'}
 
-  storybook@10.5.2:
-    resolution: {integrity: sha512-zkYxVZoDMj8njzZc3EH5UyY7885wpi9a1mmWVwFiNHSo+i5r2Go84E2OI1cdOctRymLkNvgs1j5jqAKA0ftBqg==}
+  storybook@10.5.3:
+    resolution: {integrity: sha512-c8Wumu5qz0N2fnzWBxcPzUsY+8BpKBKChNyl4BEh9qhMV6KW587gL8il8emRB+4Hay+zMjDHA7cIeTkl4FKYuw==}
     hasBin: true
     peerDependencies:
       '@types/react': ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -5903,10 +5903,10 @@ snapshots:
       '@open-wc/dedupe-mixin': 2.0.1
       lit: 3.3.3
 
-  '@open-wc/semantic-dom-diff@0.21.0':
+  '@open-wc/semantic-dom-diff@0.21.0(supports-color@10.2.2)':
     dependencies:
       '@types/chai': 4.3.20
-      '@web/test-runner-commands': 1.0.1
+      '@web/test-runner-commands': 1.0.1(supports-color@10.2.2)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -5918,10 +5918,10 @@ snapshots:
       lit: 3.3.3
       lit-html: 3.3.3
 
-  '@open-wc/testing@5.0.0':
+  '@open-wc/testing@5.0.0(supports-color@10.2.2)':
     dependencies:
       '@esm-bundle/chai': 4.3.4-fix.0
-      '@open-wc/semantic-dom-diff': 0.21.0
+      '@open-wc/semantic-dom-diff': 0.21.0(supports-color@10.2.2)
       '@open-wc/testing-helpers': 3.0.1
       '@types/chai-dom': 1.11.3
       '@types/sinon-chai': 3.2.12
@@ -6191,12 +6191,12 @@ snapshots:
     dependencies:
       tinyexec: 1.2.4
 
-  '@puppeteer/browsers@2.13.2':
+  '@puppeteer/browsers@2.13.2(supports-color@10.2.2)':
     dependencies:
-      debug: 4.4.3
-      extract-zip: 2.0.1
+      debug: 4.4.3(supports-color@10.2.2)
+      extract-zip: 2.0.1(supports-color@10.2.2)
       progress: 2.0.3
-      proxy-agent: 6.5.0
+      proxy-agent: 6.5.0(supports-color@10.2.2)
       semver: 7.8.5
       tar-fs: 3.1.3
       yargs: 17.7.3
@@ -6401,39 +6401,39 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.2':
     optional: true
 
-  '@secretlint/config-creator@13.0.2':
+  '@secretlint/config-creator@13.0.4':
     dependencies:
-      '@secretlint/types': 13.0.2
+      '@secretlint/types': 13.0.4
 
-  '@secretlint/config-loader@13.0.2':
+  '@secretlint/config-loader@13.0.4(supports-color@10.2.2)':
     dependencies:
-      '@secretlint/profiler': 13.0.2
-      '@secretlint/resolver': 13.0.2
-      '@secretlint/types': 13.0.2
+      '@secretlint/profiler': 13.0.4
+      '@secretlint/resolver': 13.0.4
+      '@secretlint/types': 13.0.4
       ajv: 8.20.0
-      debug: 4.4.3
-      rc-config-loader: 4.1.4
+      debug: 4.4.3(supports-color@10.2.2)
+      rc-config-loader: 4.1.4(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  '@secretlint/core@13.0.2':
+  '@secretlint/core@13.0.4(supports-color@10.2.2)':
     dependencies:
-      '@secretlint/profiler': 13.0.2
-      '@secretlint/types': 13.0.2
-      debug: 4.4.3
+      '@secretlint/profiler': 13.0.4
+      '@secretlint/types': 13.0.4
+      debug: 4.4.3(supports-color@10.2.2)
       structured-source: 4.0.0
     transitivePeerDependencies:
       - supports-color
 
-  '@secretlint/formatter@13.0.2':
+  '@secretlint/formatter@13.0.4(supports-color@10.2.2)':
     dependencies:
-      '@secretlint/resolver': 13.0.2
-      '@secretlint/types': 13.0.2
-      '@textlint/linter-formatter': 15.7.1
+      '@secretlint/resolver': 13.0.4
+      '@secretlint/types': 13.0.4
+      '@textlint/linter-formatter': 15.7.1(supports-color@10.2.2)
       '@textlint/module-interop': 15.7.1
       '@textlint/types': 15.7.1
       chalk: 5.6.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       pluralize: 8.0.0
       strip-ansi: 7.2.0
       table: 6.9.0
@@ -6441,33 +6441,33 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@secretlint/node@13.0.2':
+  '@secretlint/node@13.0.4(supports-color@10.2.2)':
     dependencies:
-      '@secretlint/config-loader': 13.0.2
-      '@secretlint/core': 13.0.2
-      '@secretlint/formatter': 13.0.2
-      '@secretlint/profiler': 13.0.2
-      '@secretlint/source-creator': 13.0.2
-      '@secretlint/types': 13.0.2
-      debug: 4.4.3
+      '@secretlint/config-loader': 13.0.4(supports-color@10.2.2)
+      '@secretlint/core': 13.0.4(supports-color@10.2.2)
+      '@secretlint/formatter': 13.0.4(supports-color@10.2.2)
+      '@secretlint/profiler': 13.0.4
+      '@secretlint/source-creator': 13.0.4
+      '@secretlint/types': 13.0.4
+      debug: 4.4.3(supports-color@10.2.2)
       p-map: 7.0.5
     transitivePeerDependencies:
       - supports-color
 
-  '@secretlint/profiler@13.0.2': {}
+  '@secretlint/profiler@13.0.4': {}
 
-  '@secretlint/resolver@13.0.2': {}
+  '@secretlint/resolver@13.0.4': {}
 
-  '@secretlint/secretlint-rule-preset-recommend@13.0.2': {}
+  '@secretlint/secretlint-rule-preset-recommend@13.0.4': {}
 
-  '@secretlint/source-creator@13.0.2':
+  '@secretlint/source-creator@13.0.4':
     dependencies:
-      '@secretlint/types': 13.0.2
+      '@secretlint/types': 13.0.4
       istextorbinary: 9.5.0
 
-  '@secretlint/types@13.0.2': {}
+  '@secretlint/types@13.0.4': {}
 
-  '@secretlint/walker@13.0.2':
+  '@secretlint/walker@13.0.4':
     dependencies:
       ignore: 7.0.6
       picomatch: 4.0.5
@@ -6529,21 +6529,21 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@storybook/addon-a11y@10.5.2(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))':
+  '@storybook/addon-a11y@10.5.3(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))':
     dependencies:
       '@storybook/global': 5.0.0
       axe-core: 4.12.1
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
 
-  '@storybook/addon-docs@10.5.2(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@storybook/addon-docs@10.5.3(@types/react@19.2.17)(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@mdx-js/react': 3.1.1(@types/react@19.2.17)(react@19.2.7)
-      '@storybook/csf-plugin': 10.5.2(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      '@storybook/csf-plugin': 10.5.3(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
       '@storybook/icons': 2.1.0(react@19.2.7)
-      '@storybook/react-dom-shim': 10.5.2(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
+      '@storybook/react-dom-shim': 10.5.3(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
       ts-dedent: 2.3.0
     optionalDependencies:
       '@types/react': 19.2.17
@@ -6554,10 +6554,10 @@ snapshots:
       - vite
       - webpack
 
-  '@storybook/builder-vite@10.5.2(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@storybook/builder-vite@10.5.3(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
-      '@storybook/csf-plugin': 10.5.2(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      '@storybook/csf-plugin': 10.5.3(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
       ts-dedent: 2.3.0
       vite: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
     transitivePeerDependencies:
@@ -6565,9 +6565,9 @@ snapshots:
       - rollup
       - webpack
 
-  '@storybook/csf-plugin@10.5.2(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@storybook/csf-plugin@10.5.3(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
       unplugin: 2.3.11
     optionalDependencies:
       esbuild: 0.28.1
@@ -6580,19 +6580,19 @@ snapshots:
     dependencies:
       react: 19.2.7
 
-  '@storybook/react-dom-shim@10.5.2(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))':
+  '@storybook/react-dom-shim@10.5.3(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))':
     dependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
     optionalDependencies:
       '@types/react': 19.2.17
 
-  '@storybook/web-components-vite@10.5.2(esbuild@0.28.1)(lit@3.3.3)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@storybook/web-components-vite@10.5.3(esbuild@0.28.1)(lit@3.3.3)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
-      '@storybook/builder-vite': 10.5.2(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-      '@storybook/web-components': 10.5.2(lit@3.3.3)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      '@storybook/builder-vite': 10.5.3(esbuild@0.28.1)(rollup@4.62.2)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      '@storybook/web-components': 10.5.3(lit@3.3.3)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
       vite: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - esbuild
@@ -6600,11 +6600,11 @@ snapshots:
       - rollup
       - webpack
 
-  '@storybook/web-components@10.5.2(lit@3.3.3)(storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))':
+  '@storybook/web-components@10.5.3(lit@3.3.3)(storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7))':
     dependencies:
       '@storybook/global': 5.0.0
       lit: 3.3.3
-      storybook: 10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
+      storybook: 10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7)
       tiny-invariant: 1.3.3
       ts-dedent: 2.3.0
 
@@ -6702,7 +6702,7 @@ snapshots:
 
   '@textlint/ast-node-types@15.7.1': {}
 
-  '@textlint/linter-formatter@15.7.1':
+  '@textlint/linter-formatter@15.7.1(supports-color@10.2.2)':
     dependencies:
       '@azu/format-text': 1.0.2
       '@azu/style-format': 1.0.1
@@ -6710,7 +6710,7 @@ snapshots:
       '@textlint/resolver': 15.7.1
       '@textlint/types': 15.7.1
       chalk: 4.1.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       js-yaml: 4.3.0
       lodash: 4.18.1
       pluralize: 2.0.0
@@ -7035,7 +7035,7 @@ snapshots:
 
   '@web/config-loader@1.0.0': {}
 
-  '@web/dev-server-core@1.0.0':
+  '@web/dev-server-core@1.0.0(supports-color@10.2.2)':
     dependencies:
       '@types/koa': 2.15.2
       '@types/ws': 7.4.7
@@ -7046,10 +7046,10 @@ snapshots:
       get-stream: 6.0.1
       is-stream: 2.0.1
       isbinaryfile: 5.0.7
-      koa: 2.16.4
+      koa: 2.16.4(supports-color@10.2.2)
       koa-etag: 4.0.0
-      koa-send: 5.0.1
-      koa-static: 5.0.0
+      koa-send: 5.0.1(supports-color@10.2.2)
+      koa-static: 5.0.0(supports-color@10.2.2)
       lru-cache: 8.0.5
       mime-types: 2.1.35
       parse5: 6.0.1
@@ -7060,10 +7060,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/dev-server-esbuild@2.0.0':
+  '@web/dev-server-esbuild@2.0.0(supports-color@10.2.2)':
     dependencies:
       '@mdn/browser-compat-data': 4.2.1
-      '@web/dev-server-core': 1.0.0
+      '@web/dev-server-core': 1.0.0(supports-color@10.2.2)
       esbuild: 0.28.1
       parse5: 6.0.1
       ua-parser-js: 1.0.41
@@ -7072,10 +7072,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/dev-server-rollup@1.0.0':
+  '@web/dev-server-rollup@1.0.0(supports-color@10.2.2)':
     dependencies:
       '@rollup/plugin-node-resolve': 15.3.1(rollup@4.62.2)
-      '@web/dev-server-core': 1.0.0
+      '@web/dev-server-core': 1.0.0(supports-color@10.2.2)
       nanocolors: 0.2.13
       parse5: 6.0.1
       rollup: 4.62.2
@@ -7085,13 +7085,13 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/dev-server@1.0.0':
+  '@web/dev-server@1.0.0(supports-color@10.2.2)':
     dependencies:
       '@babel/code-frame': 7.29.7
       '@types/command-line-args': 5.2.3
       '@web/config-loader': 1.0.0
-      '@web/dev-server-core': 1.0.0
-      '@web/dev-server-rollup': 1.0.0
+      '@web/dev-server-core': 1.0.0(supports-color@10.2.2)
+      '@web/dev-server-rollup': 1.0.0(supports-color@10.2.2)
       camelcase: 6.3.0
       command-line-args: 5.2.1
       command-line-usage: 7.0.4
@@ -7100,7 +7100,7 @@ snapshots:
       internal-ip: 6.2.0
       nanocolors: 0.2.13
       open: 8.4.2
-      portfinder: 1.0.38
+      portfinder: 1.0.38(supports-color@10.2.2)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -7111,12 +7111,12 @@ snapshots:
       '@types/parse5': 6.0.3
       parse5: 6.0.1
 
-  '@web/test-runner-chrome@1.0.0':
+  '@web/test-runner-chrome@1.0.0(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-core': 1.0.0
-      '@web/test-runner-coverage-v8': 1.0.0
-      chrome-launcher: 0.15.2
-      puppeteer-core: 24.43.1
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-coverage-v8': 1.0.0(supports-color@10.2.2)
+      chrome-launcher: 0.15.2(supports-color@10.2.2)
+      puppeteer-core: 24.43.1(supports-color@10.2.2)
     transitivePeerDependencies:
       - bare-abort-controller
       - bare-buffer
@@ -7125,25 +7125,25 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-commands@1.0.0':
+  '@web/test-runner-commands@1.0.0(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-core': 1.0.0
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
       mkdirp: 1.0.4
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-commands@1.0.1':
+  '@web/test-runner-commands@1.0.1(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-core': 1.0.0
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
       mkdirp: 1.0.4
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-core@1.0.0':
+  '@web/test-runner-core@1.0.0(supports-color@10.2.2)':
     dependencies:
       '@babel/code-frame': 7.29.7
       '@types/babel__code-frame': 7.27.0
@@ -7153,7 +7153,7 @@ snapshots:
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
       '@web/browser-logs': 1.0.0
-      '@web/dev-server-core': 1.0.0
+      '@web/dev-server-core': 1.0.0(supports-color@10.2.2)
       chokidar: 4.0.3
       cli-cursor: 3.1.0
       co-body: 6.2.0
@@ -7176,9 +7176,9 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-coverage-v8@1.0.0':
+  '@web/test-runner-coverage-v8@1.0.0(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-core': 1.0.0
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
       istanbul-lib-coverage: 3.2.2
       lru-cache: 8.0.5
       picomatch: 2.3.2
@@ -7188,10 +7188,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-junit-reporter@1.0.0':
+  '@web/test-runner-junit-reporter@1.0.0(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-chrome': 1.0.0
-      '@web/test-runner-core': 1.0.0
+      '@web/test-runner-chrome': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
       array-flat-polyfill: 1.0.1
       xml: 1.0.1
     transitivePeerDependencies:
@@ -7202,33 +7202,33 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-mocha@1.0.0':
+  '@web/test-runner-mocha@1.0.0(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-core': 1.0.0
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner-playwright@1.0.0':
+  '@web/test-runner-playwright@1.0.0(supports-color@10.2.2)':
     dependencies:
-      '@web/test-runner-core': 1.0.0
-      '@web/test-runner-coverage-v8': 1.0.0
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-coverage-v8': 1.0.0(supports-color@10.2.2)
       playwright: 1.61.1
     transitivePeerDependencies:
       - bufferutil
       - supports-color
       - utf-8-validate
 
-  '@web/test-runner@1.0.0':
+  '@web/test-runner@1.0.0(supports-color@10.2.2)':
     dependencies:
       '@web/browser-logs': 1.0.0
       '@web/config-loader': 1.0.0
-      '@web/dev-server': 1.0.0
-      '@web/test-runner-chrome': 1.0.0
-      '@web/test-runner-commands': 1.0.0
-      '@web/test-runner-core': 1.0.0
-      '@web/test-runner-mocha': 1.0.0
+      '@web/dev-server': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-chrome': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-commands': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-core': 1.0.0(supports-color@10.2.2)
+      '@web/test-runner-mocha': 1.0.0(supports-color@10.2.2)
       camelcase: 6.3.0
       command-line-args: 5.2.1
       command-line-usage: 7.0.4
@@ -7236,7 +7236,7 @@ snapshots:
       diff: 5.2.2
       globby: 11.1.0
       nanocolors: 0.2.13
-      portfinder: 1.0.38
+      portfinder: 1.0.38(supports-color@10.2.2)
       source-map: 0.7.6
     transitivePeerDependencies:
       - bare-abort-controller
@@ -7501,12 +7501,12 @@ snapshots:
     dependencies:
       readdirp: 4.1.2
 
-  chrome-launcher@0.15.2:
+  chrome-launcher@0.15.2(supports-color@10.2.2):
     dependencies:
       '@types/node': 26.1.1
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
-      lighthouse-logger: 1.4.2
+      lighthouse-logger: 1.4.2(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -7712,17 +7712,23 @@ snapshots:
 
   debounce@1.2.1: {}
 
-  debug@2.6.9:
+  debug@2.6.9(supports-color@10.2.2):
     dependencies:
       ms: 2.0.0
+    optionalDependencies:
+      supports-color: 10.2.2
 
-  debug@3.2.7:
+  debug@3.2.7(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
   decamelize@1.2.0: {}
 
@@ -7991,9 +7997,9 @@ snapshots:
 
   extendable-error@0.1.7: {}
 
-  extract-zip@2.0.1:
+  extract-zip@2.0.1(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       get-stream: 5.2.0
       yauzl: 2.10.0
     optionalDependencies:
@@ -8108,11 +8114,11 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
-  get-uri@6.0.5:
+  get-uri@6.0.5(supports-color@10.2.2):
     dependencies:
       basic-ftp: 5.3.1
       data-uri-to-buffer: 6.0.2
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -8216,17 +8222,17 @@ snapshots:
       statuses: 2.0.2
       toidentifier: 1.0.1
 
-  http-proxy-agent@7.0.2:
+  http-proxy-agent@7.0.2(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  https-proxy-agent@7.0.6:
+  https-proxy-agent@7.0.6(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -8432,29 +8438,29 @@ snapshots:
     dependencies:
       etag: 1.8.1
 
-  koa-send@5.0.1:
+  koa-send@5.0.1(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       http-errors: 1.8.1
       resolve-path: 1.4.0
     transitivePeerDependencies:
       - supports-color
 
-  koa-static@5.0.0:
+  koa-static@5.0.0(supports-color@10.2.2):
     dependencies:
-      debug: 3.2.7
-      koa-send: 5.0.1
+      debug: 3.2.7(supports-color@10.2.2)
+      koa-send: 5.0.1(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
-  koa@2.16.4:
+  koa@2.16.4(supports-color@10.2.2):
     dependencies:
       accepts: 1.3.8
       cache-content-type: 1.0.1
       content-disposition: 0.5.4
       content-type: 1.0.5
       cookies: 0.9.1
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       delegates: 1.0.0
       depd: 2.0.0
       destroy: 1.2.0
@@ -8485,9 +8491,9 @@ snapshots:
     dependencies:
       immediate: 3.0.6
 
-  lighthouse-logger@1.4.2:
+  lighthouse-logger@1.4.2(supports-color@10.2.2):
     dependencies:
-      debug: 2.6.9
+      debug: 2.6.9(supports-color@10.2.2)
       marky: 1.3.0
     transitivePeerDependencies:
       - supports-color
@@ -8932,16 +8938,16 @@ snapshots:
 
   p-try@2.2.0: {}
 
-  pac-proxy-agent@7.2.0:
+  pac-proxy-agent@7.2.0(supports-color@10.2.2):
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.4
-      debug: 4.4.3
-      get-uri: 6.0.5
-      http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.6
+      debug: 4.4.3(supports-color@10.2.2)
+      get-uri: 6.0.5(supports-color@10.2.2)
+      http-proxy-agent: 7.0.2(supports-color@10.2.2)
+      https-proxy-agent: 7.0.6(supports-color@10.2.2)
       pac-resolver: 7.0.1
-      socks-proxy-agent: 8.0.5
+      socks-proxy-agent: 8.0.5(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -9032,10 +9038,10 @@ snapshots:
 
   pngjs@7.0.0: {}
 
-  portfinder@1.0.38:
+  portfinder@1.0.38(supports-color@10.2.2):
     dependencies:
       async: 3.2.6
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -9065,16 +9071,16 @@ snapshots:
 
   protocol-buffers-schema@3.6.1: {}
 
-  proxy-agent@6.5.0:
+  proxy-agent@6.5.0(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
-      http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.6
+      debug: 4.4.3(supports-color@10.2.2)
+      http-proxy-agent: 7.0.2(supports-color@10.2.2)
+      https-proxy-agent: 7.0.6(supports-color@10.2.2)
       lru-cache: 7.18.3
-      pac-proxy-agent: 7.2.0
+      pac-proxy-agent: 7.2.0(supports-color@10.2.2)
       proxy-from-env: 1.1.0
-      socks-proxy-agent: 8.0.5
+      socks-proxy-agent: 8.0.5(supports-color@10.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -9094,11 +9100,11 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  puppeteer-core@24.43.1:
+  puppeteer-core@24.43.1(supports-color@10.2.2):
     dependencies:
-      '@puppeteer/browsers': 2.13.2
+      '@puppeteer/browsers': 2.13.2(supports-color@10.2.2)
       chromium-bidi: 14.0.0(devtools-protocol@0.0.1608973)
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       devtools-protocol: 0.0.1608973
       typed-query-selector: 2.12.2
       webdriver-bidi-protocol: 0.4.1
@@ -9137,9 +9143,9 @@ snapshots:
       iconv-lite: 0.4.24
       unpipe: 1.0.0
 
-  rc-config-loader@4.1.4:
+  rc-config-loader@4.1.4(supports-color@10.2.2):
     dependencies:
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       js-yaml: 4.3.0
       json5: 2.2.3
       require-from-string: 2.0.2
@@ -9332,15 +9338,15 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  secretlint@13.0.2:
+  secretlint@13.0.4(supports-color@10.2.2):
     dependencies:
-      '@secretlint/config-creator': 13.0.2
-      '@secretlint/formatter': 13.0.2
-      '@secretlint/node': 13.0.2
-      '@secretlint/profiler': 13.0.2
-      '@secretlint/resolver': 13.0.2
-      '@secretlint/walker': 13.0.2
-      debug: 4.4.3
+      '@secretlint/config-creator': 13.0.4
+      '@secretlint/formatter': 13.0.4(supports-color@10.2.2)
+      '@secretlint/node': 13.0.4(supports-color@10.2.2)
+      '@secretlint/profiler': 13.0.4
+      '@secretlint/resolver': 13.0.4
+      '@secretlint/walker': 13.0.4
+      debug: 4.4.3(supports-color@10.2.2)
       read-pkg: 10.1.0
     transitivePeerDependencies:
       - supports-color
@@ -9453,10 +9459,10 @@ snapshots:
 
   smol-toml@1.7.0: {}
 
-  socks-proxy-agent@8.0.5:
+  socks-proxy-agent@8.0.5(supports-color@10.2.2):
     dependencies:
       agent-base: 7.1.4
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       socks: 2.8.9
     transitivePeerDependencies:
       - supports-color
@@ -9499,7 +9505,7 @@ snapshots:
 
   statuses@2.0.2: {}
 
-  storybook@10.5.2(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7):
+  storybook@10.5.3(@types/react@19.2.17)(prettier@2.8.8)(react@19.2.7):
     dependencies:
       '@storybook/global': 5.0.0
       '@storybook/icons': 2.1.0(react@19.2.7)
