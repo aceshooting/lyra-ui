@@ -135,6 +135,15 @@ export interface LyraSelectEventMap {
  *   hovered/keyboard-active option row. Not declared on `:host`, so a value set on any ancestor
  *   is never shadowed -- retheme just this row state without hijacking the shared
  *   `--lr-color-brand-quiet` token used by every other component's own hover/active state.
+ * @cssprop [--lr-select-option-selected-bg=transparent] - Background of the currently-selected
+ *   option row. Not declared on `:host`; retheme just the selected row without hijacking
+ *   `--lr-color-brand`.
+ * @cssprop [--lr-select-option-selected-border=var(--lr-color-brand)] - Border color of the
+ *   selected option row.
+ * @cssprop [--lr-select-option-selected-color=var(--lr-color-brand)] - Text color of the selected
+ *   option row.
+ * @cssprop [--lr-select-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font weight
+ *   of the selected option row.
  * @cssprop --lr-select-trigger-height - Exact trigger height. Unset by default, which leaves
  *   `--lr-select-trigger-min-height` as a floor only; set it to a length to both floor and cap the
  *   trigger (e.g. to pixel-match a sibling field in the same toolbar row). Because it is never

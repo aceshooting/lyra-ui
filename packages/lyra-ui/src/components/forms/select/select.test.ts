@@ -1465,3 +1465,49 @@ it('ignores a listbox click that lands outside any option row (e.g. a group-labe
   expect(el.value).to.equal('');
   expect(el.open).to.be.true;
 });
+
+describe('selected-state theming tokens', () => {
+  it('honours --lr-select-option-selected-color on the selected row', async () => {
+    const el = (await fixture(html`
+      <lr-select value="a" style="--lr-select-option-selected-color: rgb(1, 2, 3);">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).color).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('honours --lr-select-option-selected-bg on the selected row', async () => {
+    const el = (await fixture(html`
+      <lr-select value="a" style="--lr-select-option-selected-bg: rgb(4, 5, 6);">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the selected row at the brand color when the token is unset (regression)', async () => {
+    const el = (await fixture(html`
+      <lr-select value="a">
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    const brand = getComputedStyle(el).getPropertyValue('--lr-color-brand').trim();
+    // Resolve the brand token through a probe element so we compare like-for-like rgb() values.
+    const probe = document.createElement('span');
+    probe.style.color = brand;
+    document.body.appendChild(probe);
+    const expected = getComputedStyle(probe).color;
+    document.body.removeChild(probe);
+    expect(getComputedStyle(selected).color).to.equal(expected);
+  });
+});

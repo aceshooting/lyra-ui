@@ -204,9 +204,13 @@ export const styles = css`
     background: var(--lr-model-select-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    font-weight: var(--lr-font-weight-semibold);
+    /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
+       rendering is byte-for-byte unchanged) -- so a consumer can retheme just the selected row
+       without hijacking --lr-color-brand library-wide. */
+    background: var(--lr-model-select-option-selected-bg, transparent);
+    border-color: var(--lr-model-select-option-selected-border, var(--lr-color-brand));
+    color: var(--lr-model-select-option-selected-color, var(--lr-color-brand));
+    font-weight: var(--lr-model-select-option-selected-font-weight, var(--lr-font-weight-semibold));
   }
   [part='option-label'] {
     flex: 1 1 auto;

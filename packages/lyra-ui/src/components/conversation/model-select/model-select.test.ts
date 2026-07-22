@@ -1205,3 +1205,42 @@ describe('size', () => {
     expect(getComputedStyle(trigger(el)).minBlockSize).to.equal('40px');
   });
 });
+
+describe('selected-state theming tokens', () => {
+  it('honours --lr-model-select-option-selected-color on the selected row', async () => {
+    const el = (await fixture(html`
+      <lr-model-select .catalog=${CATALOG} style="--lr-model-select-option-selected-color: rgb(1, 2, 3);"></lr-model-select>
+    `)) as LyraModelSelect;
+    el.value = 'mistral';
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).color).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('honours --lr-model-select-option-selected-bg on the selected row', async () => {
+    const el = (await fixture(html`
+      <lr-model-select .catalog=${CATALOG} style="--lr-model-select-option-selected-bg: rgb(4, 5, 6);"></lr-model-select>
+    `)) as LyraModelSelect;
+    el.value = 'mistral';
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the selected row at the brand color when the token is unset (regression)', async () => {
+    const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+    el.value = 'mistral';
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    const brand = getComputedStyle(el).getPropertyValue('--lr-color-brand').trim();
+    const probe = document.createElement('span');
+    probe.style.color = brand;
+    document.body.appendChild(probe);
+    const expected = getComputedStyle(probe).color;
+    document.body.removeChild(probe);
+    expect(getComputedStyle(selected).color).to.equal(expected);
+  });
+});

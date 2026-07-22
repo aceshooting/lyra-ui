@@ -986,7 +986,12 @@ decorative box size (clamped against `--lr-icon-button-size` via `min()`). All f
 uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
 step outside the scale entirely. `--lr-model-select-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
-declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. Plus
+declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
+selected row (`[part="option"][aria-selected="true"]`) has the matching set
+`--lr-model-select-option-selected-bg` (default `transparent`),
+`--lr-model-select-option-selected-border`/`-color` (both `var(--lr-color-brand)`), and
+`--lr-model-select-option-selected-font-weight` (`var(--lr-font-weight-semibold)`), all inline
+`var()` fallbacks so the selected row is rethemeable without hijacking `--lr-color-brand`. Plus
 shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.

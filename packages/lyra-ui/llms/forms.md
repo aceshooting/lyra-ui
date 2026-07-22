@@ -315,6 +315,15 @@ ancestor is never shadowed — retheme just this row state without hijacking the
 `--lr-color-brand-quiet` token every other component's own hover/active state also reads. Same
 knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
 
+The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
+`--lr-select-option-selected-bg` (default `transparent`), `--lr-select-option-selected-border` and
+`--lr-select-option-selected-color` (both default `var(--lr-color-brand)`), and
+`--lr-select-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`). Like the
+active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer can
+retheme the selected row without hijacking `--lr-color-brand` library-wide. Note the shadow-parts
+spec forbids an attribute selector after `::part()` — `::part(option)[aria-selected='true']` is
+invalid CSS and never matches — which is exactly why these tokens exist.
+
 **Optional peer deps:** none.
 
 ```html

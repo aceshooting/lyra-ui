@@ -214,9 +214,14 @@ export const styles = css`
     background: var(--lr-select-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    font-weight: var(--lr-font-weight-semibold);
+    /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
+       rendering is byte-for-byte unchanged) -- mirrors the active-bg indirection above and
+       lr-segmented's/lr-tabs' selected-state tokens -- so a consumer can retheme just the
+       selected row without hijacking --lr-color-brand library-wide. */
+    background: var(--lr-select-option-selected-bg, transparent);
+    border-color: var(--lr-select-option-selected-border, var(--lr-color-brand));
+    color: var(--lr-select-option-selected-color, var(--lr-color-brand));
+    font-weight: var(--lr-select-option-selected-font-weight, var(--lr-font-weight-semibold));
   }
   [part='option'][aria-disabled='true'] {
     opacity: var(--lr-opacity-disabled);
