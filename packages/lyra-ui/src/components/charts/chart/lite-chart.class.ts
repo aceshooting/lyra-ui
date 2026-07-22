@@ -178,7 +178,8 @@ export interface LyraLiteChartEventMap {
  * @csspart legend-swatch - Each legend entry's color swatch.
  * @csspart legend-text - Extra per-item text after the series label, rendered only when `legendText` is set.
  * @csspart live-region - The current mark announcement for keyboard users.
- * @csspart data-list - A visually hidden list of all plotted data points.
+ * @csspart data-list - A visually hidden list of all plotted data points (single-series only).
+ * @csspart data-table - A visually hidden category×series data table, rendered instead of `data-list` when there is more than one dataset so a screen-reader user hears series grouping rather than one flattened N×M sequence.
  * @cssprop [--lr-lite-chart-selected-outline-color=var(--lr-color-brand)] - Stroke for a bar/point whose category index is in `selectedIndex`.
  */
 export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
@@ -961,9 +962,27 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             : nothing}
         </svg>
         <lr-live-region part="live-region"></lr-live-region>
-        <ul part="data-list" class="sr-only" aria-label=${this.localize('chartData')}>
-          ${marksForA11y.map((_mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
-        </ul>
+        ${this.datasets.length > 1
+          ? html`<table part="data-table" class="sr-only">
+              <caption>${this.localize('chartData')}</caption>
+              <thead>
+                <tr>
+                  <th scope="col">${this.localize('chartCategory')}</th>
+                  ${this.datasets.map((series) => html`<th scope="col">${series.label}</th>`)}
+                </tr>
+              </thead>
+              <tbody>
+                ${this.labels.map(
+                  (label, index) => html`<tr>
+                    <th scope="row">${label}</th>
+                    ${this.datasets.map((series) => html`<td>${series.data[index] ?? ''}</td>`)}
+                  </tr>`,
+                )}
+              </tbody>
+            </table>`
+          : html`<ul part="data-list" class="sr-only" aria-label=${this.localize('chartData')}>
+              ${marksForA11y.map((_mark, index) => html`<li>${this.markAnnouncement(index, marksForA11y)}</li>`)}
+            </ul>`}
         ${this.legend
           ? html`<div part="legend">
               ${this.datasets.map(

@@ -261,7 +261,16 @@ fresh, small SVG render is cheaper and more correct than a lossy cache.
 `data-selected` when its category index is in `selectedIndex`), `line`, `point`, `legend`,
 `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after the series label,
 rendered only when `legendText` is set), `live-region` (the current mark announcement for keyboard
-users), `data-list` (a visually hidden list of all plotted data points).
+users), `data-list` (a visually hidden list of all plotted data points — single-series only),
+`data-table` (a visually hidden category×series data table, rendered instead of `data-list` when
+there is more than one dataset).
+
+**Screen-reader data alternative:** a single dataset renders the flat `data-list` (one `<li>` per
+plotted point, matching the roving-tabindex mark order). More than one dataset instead renders a
+`data-table` — a category-labelled `<caption>` (the shared localized `chartData` string), one
+`<th scope="col">` per series (plus a leading `chartCategory` corner header), and one
+`<th scope="row">` per category label with its per-series values in the body — so a screen-reader
+user hears the values grouped by series rather than one flattened N×M sequence.
 
 **Themeable custom properties:** `--lr-chart-height` (same host-level property as `lr-chart`);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token

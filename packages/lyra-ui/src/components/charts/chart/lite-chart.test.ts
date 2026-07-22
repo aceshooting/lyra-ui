@@ -146,7 +146,7 @@ it('emits lr-point-click on Enter and Space while a bar is focused, not on other
   expect(count).to.equal(2);
 });
 
-it('uses one roving tab stop, arrow/Home/End navigation, and a data-list alternative', async () => {
+it('uses one roving tab stop, arrow/Home/End navigation, and a data-table alternative for multi-series', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${BAR_LABELS}
@@ -176,7 +176,10 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-list alterna
   await el.updateComplete;
   expect(marks()[0]!.getAttribute('tabindex')).to.equal('0');
 
-  expect(el.shadowRoot!.querySelectorAll('[part="data-list"] li')).to.have.length(6);
+  // BAR_DATASETS is multi-series, so the screen-reader alternative is the grouped data table
+  // (one row per category, one column per series), not the flat single-series data list.
+  expect(el.shadowRoot!.querySelector('[part="data-list"]')).to.not.exist;
+  expect(el.shadowRoot!.querySelectorAll('[part="data-table"] tbody tr')).to.have.length(BAR_LABELS.length);
 });
 
 it('emits lr-point-click for a line point too, with the same detail shape', async () => {
@@ -1339,6 +1342,68 @@ describe('accessibleLabel', () => {
     expect(svg.getAttribute('role')).to.equal('group');
     expect(el.getAttribute('role')).to.equal(null);
     expect(el.shadowRoot!.querySelectorAll('svg[role]')).to.have.length(1);
+  });
+});
+
+describe('multi-series screen-reader data table', () => {
+  it('renders a data table with series/category headers when there is more than one dataset', async () => {
+    const el = await fixture<LyraLiteChart>(html`<lr-lite-chart type="line"></lr-lite-chart>`);
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [
+      { label: 'Revenue', data: [10, 20] },
+      { label: 'Cost', data: [5, 8] },
+    ];
+    await el.updateComplete;
+    const table = el.shadowRoot!.querySelector('table[part="data-table"]');
+    expect(table).to.exist;
+    expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.not.exist;
+    const headerCells = table!.querySelectorAll('thead th');
+    // The corner cell carries a visible category header (the localized 'chartCategory' string,
+    // 'Category' with no locale registered) rather than an empty <th> -- matching the sibling
+    // lr-chart/lr-box-plot data tables and satisfying axe's empty-table-header best-practice rule.
+    expect([...headerCells].map((c) => c.textContent?.trim())).to.deep.equal(['Category', 'Revenue', 'Cost']);
+    const rowHeaders = table!.querySelectorAll('tbody th');
+    expect([...rowHeaders].map((c) => c.textContent?.trim())).to.deep.equal(['Jan', 'Feb']);
+  });
+
+  it('fills the multi-series table body cells with each series value at each category', async () => {
+    const el = await fixture<LyraLiteChart>(html`<lr-lite-chart type="line"></lr-lite-chart>`);
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [
+      { label: 'Revenue', data: [10, 20] },
+      { label: 'Cost', data: [5, 8] },
+    ];
+    await el.updateComplete;
+    const rows = [...el.shadowRoot!.querySelectorAll('table[part="data-table"] tbody tr')];
+    const cells = rows.map((row) => [...row.querySelectorAll('td')].map((c) => c.textContent?.trim()));
+    expect(cells).to.deep.equal([
+      ['10', '5'],
+      ['20', '8'],
+    ]);
+  });
+
+  it('uses the shared chartData caption on the multi-series table', async () => {
+    const el = await fixture<LyraLiteChart>(html`<lr-lite-chart
+      type="line"
+      .strings=${{ chartData: 'Diagrammdaten' }}
+    ></lr-lite-chart>`);
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [
+      { label: 'Revenue', data: [10, 20] },
+      { label: 'Cost', data: [5, 8] },
+    ];
+    await el.updateComplete;
+    const caption = el.shadowRoot!.querySelector('table[part="data-table"] caption');
+    expect(caption?.textContent?.trim()).to.equal('Diagrammdaten');
+  });
+
+  it('keeps the flat list for a single dataset (unset-regression)', async () => {
+    const el = await fixture<LyraLiteChart>(html`<lr-lite-chart type="line"></lr-lite-chart>`);
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('ul[part="data-list"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('table[part="data-table"]')).to.not.exist;
   });
 });
 
