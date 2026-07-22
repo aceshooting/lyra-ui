@@ -11,6 +11,7 @@ import {
   type BreakpointBasis,
   type OrientationBreakpointBasis,
 } from '../../../internal/orientation-breakpoint.js';
+import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './split.styles.js';
 
 const KEYBOARD_STEP = 2;
@@ -612,36 +613,16 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   }
 
   private loadPersisted(): boolean {
-    const key = this.storageFullKey;
-    if (!key) return false;
-    let raw: string | null;
-    try {
-      raw = localStorage.getItem(key);
-    } catch {
-      /* localStorage unavailable (private browsing, sandboxed iframe, etc.) */
-      return false;
-    }
-    if (!raw) return false;
-    try {
-      const parsed = JSON.parse(raw) as number[];
-      if (this.validInitialSizes(parsed)) {
-        this.sizes = parsed;
-        return true;
-      }
-    } catch {
-      /* ignore malformed persisted state */
+    const parsed = readPersistedState(this.storageFullKey, (v): v is number[] => Array.isArray(v));
+    if (parsed && this.validInitialSizes(parsed)) {
+      this.sizes = parsed;
+      return true;
     }
     return false;
   }
 
   private persist(): void {
-    const key = this.storageFullKey;
-    if (!key) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(this.sizes));
-    } catch {
-      /* ignore persistence failures (e.g. quota exceeded, private browsing) */
-    }
+    writePersistedState(this.storageFullKey, this.sizes);
   }
 
   private ensureSizes(): void {

@@ -8,6 +8,7 @@ import { closeIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './app-rail.styles.js';
 import './app-rail-item.class.js';
 
@@ -362,35 +363,19 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   /** Restore persisted `open`/`railWidthPx`. Runs once, before the first render. `mode` is
    *  breakpoint-derived and deliberately not restored. */
   private loadPersisted(): void {
-    const key = this.storageFullKey;
-    if (!key) return;
-    let raw: string | null;
-    try {
-      raw = localStorage.getItem(key);
-    } catch {
-      /* localStorage unavailable (private browsing, sandboxed iframe, etc.) */
-      return;
-    }
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as { open?: unknown; railWidthPx?: unknown };
-      if (typeof parsed.open === 'boolean') this.open = parsed.open;
-      if (typeof parsed.railWidthPx === 'number' && Number.isFinite(parsed.railWidthPx)) {
-        this.railWidthPx = parsed.railWidthPx;
-      }
-    } catch {
-      /* ignore malformed persisted state */
+    const parsed = readPersistedState(
+      this.storageFullKey,
+      (v): v is { open?: unknown; railWidthPx?: unknown } => typeof v === 'object' && v !== null,
+    );
+    if (!parsed) return;
+    if (typeof parsed.open === 'boolean') this.open = parsed.open;
+    if (typeof parsed.railWidthPx === 'number' && Number.isFinite(parsed.railWidthPx)) {
+      this.railWidthPx = parsed.railWidthPx;
     }
   }
 
   private persist(): void {
-    const key = this.storageFullKey;
-    if (!key) return;
-    try {
-      localStorage.setItem(key, JSON.stringify({ open: this.open, railWidthPx: this.railWidthPx }));
-    } catch {
-      /* ignore persistence failures (e.g. quota exceeded, private browsing) */
-    }
+    writePersistedState(this.storageFullKey, { open: this.open, railWidthPx: this.railWidthPx });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
