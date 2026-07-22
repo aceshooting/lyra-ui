@@ -475,6 +475,12 @@ export interface LyraTableEventMap<T = unknown> {
  *   `aria-selected` is `true`. Shadow Parts forbids an attribute selector after `::part()`, so
  *   `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be
  *   restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-table-header-sorted-bg=transparent] - Background of the currently-sorted column's
+ *   header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`:
+ *   `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor
+ *   the sorted header without hijacking a library-wide token.
+ * @cssprop [--lr-table-header-sorted-color=inherit] - Text color of the currently-sorted column's
+ *   header cell.
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
  *   Measured and set inline per column by the component so multiple sticky columns stack instead
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.

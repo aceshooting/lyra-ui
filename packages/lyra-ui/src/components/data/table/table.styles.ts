@@ -129,9 +129,22 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
-  [part='header-cell'][aria-sort]:not([aria-sort='none']),
-  [part='header-cell'][data-sortable] {
+  /* :where() zeroes the attribute qualifiers' specificity so this drops to (0,1,0), matching the
+     :hover rule below -- otherwise a consumer's own ::part(header-cell) { cursor: ... } override
+     ((0,1,1)) would lose to this rule's (0,3,0) without !important, the same defect the :hover
+     remediation one rule down was written to fix. */
+  :where([part='header-cell'][aria-sort]:not([aria-sort='none'])),
+  :where([part='header-cell'][data-sortable]) {
     cursor: pointer;
+  }
+  /* Inline var() fallbacks rather than :host declarations -- same rationale as the selected-row
+     rule below: a :host-declared custom property shadows any ancestor value, defeating the override
+     hook, and Shadow Parts forbids an attribute selector after ::part() so
+     ::part(header-cell)[aria-sort] is invalid CSS. These let a consumer recolor just the
+     currently-sorted header without hijacking a library-wide token. */
+  [part='header-cell']:where([aria-sort]:not([aria-sort='none'])) {
+    background: var(--lr-table-header-sorted-bg, transparent);
+    color: var(--lr-table-header-sorted-color, inherit);
   }
   /* :where() zeroes the wrapped attribute selectors' specificity contribution, leaving only :hover
      itself -- (0,1,0) total, functionally identical selection to

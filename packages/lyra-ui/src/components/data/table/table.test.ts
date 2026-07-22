@@ -3281,3 +3281,51 @@ describe('ResizeObserver callback batching (perf)', () => {
     }
   });
 });
+
+describe('lr-table sorted-header theming and specificity', () => {
+  it('honours --lr-table-header-sorted-bg on the currently-sorted header cell only', async () => {
+    const el = (await fixture(html`
+      <lr-table style="--lr-table-header-sorted-bg: rgb(7, 8, 9);"></lr-table>
+    `)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    const [nameHeader, scoreHeader] = [...el.shadowRoot!.querySelectorAll('[part="header-cell"]')] as HTMLElement[];
+    expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgb(7, 8, 9)');
+    // The unsorted header must NOT pick up the token.
+    expect(getComputedStyle(nameHeader).backgroundColor).to.not.equal('rgb(7, 8, 9)');
+  });
+
+  it('leaves the sorted header transparent when the token is unset (regression)', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.sortKey = 'score';
+    await el.updateComplete;
+    const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+    expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('lets a consumer ::part(header-cell) cursor override win over the internal sort/cursor rule', async () => {
+    const el = (await fixture(html`
+      <lr-table></lr-table>
+    `)) as LyraTable<Row>;
+    // Consumer stylesheet targeting the part from the light DOM.
+    const consumerStyle = document.createElement('style');
+    consumerStyle.textContent = `lr-table::part(header-cell) { cursor: text; }`;
+    document.head.appendChild(consumerStyle);
+    try {
+      el.columns = columns;
+      el.rows = rows;
+      el.sortKey = 'score';
+      await el.updateComplete;
+      const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+      // Without the :where() specificity fix the internal (0,3,0) rule would keep cursor: pointer.
+      expect(getComputedStyle(scoreHeader).cursor).to.equal('text');
+    } finally {
+      document.head.removeChild(consumerStyle);
+    }
+  });
+});
