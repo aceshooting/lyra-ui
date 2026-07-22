@@ -23,6 +23,9 @@ import { styles } from './empty.styles.js';
  * accepts any padding shorthand (e.g. `8px 2px`).
  * @cssprop [--lr-empty-compact-gap=var(--lr-space-2xs)] - Gap between the icon, title, and
  * description in compact mode.
+ * @cssprop --lr-empty-compact-font-size - Heading font size used in compact mode. Unset by
+ * default (no fallback), so the heading keeps its ordinary inherited font size until a consumer
+ * opts in.
  */
 export class LyraEmpty extends LyraElement {
   static override styles = [LyraElement.styles, styles];

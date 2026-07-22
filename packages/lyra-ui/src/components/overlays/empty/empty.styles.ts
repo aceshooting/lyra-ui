@@ -45,6 +45,12 @@ export const styles = css`
   }
   :host([compact]) [part='heading'] {
     font-weight: var(--lr-font-weight-normal);
+    /* Deliberately no fallback: when unset, this declaration is invalid at
+       computed-value time and font-size falls back to inherited -- identical
+       to today's rendering (there was no font-size override here at all). A
+       fallback like var(--lr-font-size-sm) would shrink every existing
+       compact heading that hasn't opted in to this token. */
+    font-size: var(--lr-empty-compact-font-size);
   }
   [part='description'] {
     font-size: var(--lr-font-size-md-sm);

@@ -445,3 +445,28 @@ it('compact mode still defaults to flex-start/start when --lr-empty-compact-alig
   expect(style.alignItems).to.equal('flex-start');
   expect(style.textAlign).to.equal('start');
 });
+
+it('--lr-empty-compact-font-size overrides the compact heading font size', async () => {
+  const el = (await fixture(
+    html`<lr-empty compact heading="Nothing here" style="--lr-empty-compact-font-size: 20px;"></lr-empty>`,
+  )) as LyraEmpty;
+  const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  expect(getComputedStyle(heading).fontSize).to.equal('20px');
+});
+
+it('leaves the compact heading font size at its inherited default when --lr-empty-compact-font-size is unset (D1: no fallback, so an unset token must not shrink today\'s rendering)', async () => {
+  const normal = (await fixture(
+    html`<lr-empty heading="Nothing here"></lr-empty>`,
+  )) as LyraEmpty;
+  const compact = (await fixture(
+    html`<lr-empty compact heading="Nothing here"></lr-empty>`,
+  )) as LyraEmpty;
+  const normalHeading = normal.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  const compactHeading = compact.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+  // Compare against the non-compact/inherited computed value, not a
+  // hardcoded px string: with no fallback in the `var()`, an unset token
+  // makes the whole `font-size` declaration invalid at computed-value time,
+  // so it falls back to inherited -- byte-for-byte identical to the
+  // non-compact heading's font size.
+  expect(getComputedStyle(compactHeading).fontSize).to.equal(getComputedStyle(normalHeading).fontSize);
+});
