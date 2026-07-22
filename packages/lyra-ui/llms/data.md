@@ -306,6 +306,9 @@ own "consumer computes/renders" contract rather than assuming addition.
   button's label once they've been revealed)
 - `showAllColumns: boolean = false` (attribute `show-all-columns`, reflected) — forces responsive
   priority columns visible and is updated by the built-in reveal button
+- `storageKey?: string` (attribute `storage-key`) — when set, persists `showAllColumns` to
+  `localStorage` (namespaced as `lr-table:${storageKey}`) and restores it on the next mount. Unset
+  (the default) touches storage not at all. Mirrors `lr-app-rail`'s identical `storage-key` pattern
 - `heatTintScale?: { min?: number; max?: number }` (attribute: false) — overrides the auto-derived
   heat-tint domain (min/max of every `heatValue` result across every currently-rendered row —
   post-sort, pre-pagination, the same rows `footer(rows)` already sees). Unset (the default) computes

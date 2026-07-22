@@ -12,6 +12,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
@@ -643,6 +644,20 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  — to persist the current one. */
   @property({ type: Boolean, attribute: 'show-all-columns', reflect: true }) showAllColumns = false;
 
+  /** Persists `showAllColumns` to `localStorage` across reloads when set. Namespaced as
+   *  `lr-table:${storageKey}` -- mirrors `lr-app-rail`'s identical `storage-key` pattern. */
+  @property({ attribute: 'storage-key' }) storageKey?: string;
+
+  private get storageFullKey(): string | undefined {
+    return this.storageKey ? `lr-table:${this.storageKey}` : undefined;
+  }
+
+  /** Skips the very first `updated()` pass so mounting never writes to storage -- `willUpdate()`
+   *  restored `showAllColumns` on that first pass, and Lit has already flipped `hasUpdated` to true
+   *  by the time `updated()` runs, so a dedicated flag is needed. Mirrors `lr-app-rail`'s
+   *  `persistReady`. */
+  private persistReady = false;
+
   /** Roving-tabindex position among header cells; `null` until a header is
    *  clicked/navigated to, at which point `focusedColKey()` falls back to
    *  the first column. */
@@ -1120,6 +1135,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // Restore a persisted `showAllColumns` preference once, before the first render, so the restored
+    // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
+    // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
+    // lr-app-rail's loadPersisted() call in its own willUpdate(). The `persistReady` gate in
+    // updated() keeps this restored value from being written straight back.
+    if (!this.hasUpdated) {
+      const parsed = readPersistedState(
+        this.storageFullKey,
+        (v): v is { showAllColumns?: unknown } => typeof v === 'object' && v !== null,
+      );
+      if (parsed && typeof parsed.showAllColumns === 'boolean') this.showAllColumns = parsed.showAllColumns;
+    }
     if (
       changed.has('rows') ||
       changed.has('rowKey') ||
@@ -1251,6 +1278,13 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  reflects the rendered columns. */
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    // Persist `showAllColumns` whenever it changes, but never on the initial update -- willUpdate()
+    // restored it on that pass, so writing it back would be redundant, and with no `storage-key` set
+    // `writePersistedState(undefined, ...)` is a silent no-op regardless.
+    if (this.persistReady && changed.has('showAllColumns')) {
+      writePersistedState(this.storageFullKey, { showAllColumns: this.showAllColumns });
+    }
+    this.persistReady = true;
     if (changed.has('columns') || changed.has('rows') || changed.has('rowKey')) this.applyStickyOffsets();
     this.syncResizeHandleValues();
     // Re-observe [part='base'] whenever this update's render() produced a
