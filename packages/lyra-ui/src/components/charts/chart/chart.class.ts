@@ -290,6 +290,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `config.options.scales.y.min` — wins over the generated equivalent
    * without discarding sibling keys the generated config set), for consumers
    * who need full Chart.js control beyond the simplified `Series` shape.
+   *
+   * Caveat: the merge only recurses into plain objects — an *array* value
+   * (e.g. `config.plugins` as an inline-plugin array, or `config.data.datasets`)
+   * REPLACES the generated array wholesale rather than concatenating with it.
+   * To add an inline Chart.js plugin without dropping the generated ones,
+   * register it globally instead of passing it through `config.plugins`.
    */
   @property({ attribute: false }) config?: OptionalPeerApi;
 

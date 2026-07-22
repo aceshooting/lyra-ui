@@ -259,10 +259,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
   /** Category indexes to mark `data-selected` on every bar/segment at that index, across every
    *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the
-   *  default) reproduces today's exact output: no bar carries `data-selected`. A consumer's own
-   *  `::part(bar)[data-selected]` (or `[data-selected]` inside the shadow root via a documented
-   *  CSS custom property) rule can then style the highlight -- this component takes no opinion on
-   *  what the highlight looks like, only which bars it applies to. */
+   *  default) reproduces today's exact output: no bar carries `data-selected`. Style the highlight
+   *  via the `--lr-lite-chart-selected-outline-color` custom property -- `::part(bar)[data-selected]`
+   *  is invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), so the outline is
+   *  painted inside the shadow root and exposed through that token. This component takes no opinion
+   *  on what the highlight looks like, only which bars it applies to. */
   @property({ attribute: false }) selectedIndex: number[] = [];
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`

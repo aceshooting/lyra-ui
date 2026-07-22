@@ -208,7 +208,10 @@ passthrough). Not a subclass of `LyraChart`.
   every bar/segment at that index, across every dataset — e.g. to highlight a whole selected week's
   column in a stacked chart. Empty (the default) reproduces the exact existing output: no bar
   carries `data-selected`. This component takes no opinion on what the highlight looks like, only
-  which bars it applies to — style it via `::part(bar)[data-selected]`.
+  which bars it applies to — style the highlight via the `--lr-lite-chart-selected-outline-color`
+  custom property (documented below). Note `::part(bar)[data-selected]` is **invalid CSS** — Shadow
+  Parts forbids an attribute selector after `::part()` — so it silently never matches; the outline
+  is painted inside the shadow root and exposed through that token instead.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values
 - `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
