@@ -1,5 +1,145 @@
 # Changelog
 
+## 6.2.0
+
+### Minor Changes
+
+- 7af01bf: Add `href`, `target`, and `download` to `<lr-button>`, giving it a real `<a>` anchor mode instead of
+  a `<button>` that a consumer has to wrap or intercept.
+
+  `rel` is derived from `target` rather than being independently settable, so a `target="_blank"`
+  button cannot ship without `rel="noopener noreferrer"`. Hrefs are validated through the internal
+  link allowlist; a `download` paired with a `mailto:` href falls back to the native `<button>`, since
+  `mailto:` names no retrievable bytes.
+
+- 7af01bf: Round out the chart components so app code stops reaching into raw `config` passthrough.
+
+  - `data-labels` and `stack-totals` boolean attributes on `<lr-chart>` and its subclasses render
+    value and stacked-total labels using themed tick colors and `--lr-font-*`, replacing hand-rolled
+    `afterDatasetsDraw` painters with hardcoded colors. These require the new optional peer
+    `chartjs-plugin-datalabels` (see the separate peer-dependency note); the plugin registers
+    per chart instance, never globally.
+  - `Series.pointRadius` accepts an array for per-point sizing, and `Series.segmentColors` maps to
+    Chart.js segment coloring.
+  - `seriesPalette()` is now public, so app code can read the resolved, dark-aware chart ramp instead
+    of re-resolving `--lr-theme-color-chart-N` through `getComputedStyle` itself.
+  - Charts re-theme automatically via a shared `ThemeWatcher` controller when the ambient theme
+    changes.
+  - `<lr-lite-chart>` renders a real `<table part="data-table">` screen-reader alternative when there
+    is more than one series; the previous flat `<ul>` degenerated for multi-series data.
+
+- 7af01bf: Add `chartjs-plugin-datalabels` (`^2.2.0`) as a new **optional** peer dependency, backing the new
+  `data-labels`/`stack-totals` chart attributes.
+
+  It is optional in the same sense as the other chart peers: install it only if you use those two
+  attributes. Without it, charts render exactly as before and the label layer fails closed rather than
+  throwing.
+
+- 8e0540a: Add five agentic AI / RAG roadmap components: `lr-agent-eval-dashboard`, `lr-approval-queue`, `lr-embedding-explorer`, `lr-knowledge-base-admin`, and `lr-rag-answer`.
+- 7af01bf: Fill several gaps in the form-control surface that were pushing logic onto consumers.
+
+  - `<lr-input>` and `<lr-textarea>` gain `minlength`/`maxlength` constraints wired into the validity
+    bridge, so length violations participate in constraint validation instead of being advisory.
+    Length is counted in code points, so astral characters count as one.
+  - `<lr-select>` and `<lr-combobox>` now emit value-carrying `lr-change` events, and their `input`/
+    `change` events carry a typed detail — no more `as unknown as { value }` at every call site.
+  - `<lr-card>` gains `target` for anchor-mode cards, with `rel="noopener noreferrer"` derived from it
+    rather than settable on its own.
+  - `<lr-combobox>` accepts an `AbortSignal` for `source` and a configurable `source-delay`
+    (default 200ms), so a fast typist no longer races stale in-flight results.
+
+- 7af01bf: Assorted layout and accessibility improvements.
+
+  - `<lr-split>`'s `defaultSizes` accepts CSS length strings (`['200px', 50]`) alongside percentages,
+    resolved against the measured container and renormalized — a fixed-width sidebar no longer needs a
+    `firstUpdated()` measure-and-convert dance.
+  - `<lr-table>` gains typed `accessible-label`/`caption` properties and warns in development when a
+    grid ships with no accessible name.
+  - `<lr-popover>` gains `hide({ focusTrigger })` for explicit focus return on programmatic close.
+  - `<lr-segmented>` auto-reveals the selection when `value` is set programmatically, and exposes
+    `scrollToValue()`.
+  - `<lr-heatmap>` warns when no 2D canvas context is available instead of silently rendering nothing.
+  - `<lr-file-input>` shows visible, localized rejection feedback per reason, replacing the sr-only
+    count-only message.
+  - `<lr-tool-result-view>` renderers can signal failure via a reflected `status`.
+  - `gemstoneGlyph()` defaults its fill to `currentColor` and carries an intrinsic `1em` box.
+
+- ad9165a: Add `mode="gemstone"` to `<lr-swatch-picker>`, shared gemstone accent data and glyph helpers, and
+  apply the selected shine animation to custom icon swatches as well as plain color fills.
+- 7af01bf: Add opt-in `storage-key` persistence to `<lr-table>`, `<lr-widget>`, and `<lr-app-rail>`, so layout
+  state survives a reload without every application rebuilding the same `localStorage` plumbing.
+
+  Set `storage-key` to persist `<lr-table>`'s `showAllColumns`, `<lr-widget>`'s `collapsed` state, and
+  `<lr-app-rail>`'s open state and width. The attribute is unset by default — behavior without it is
+  unchanged. All three share one internal helper with the `try`/`catch` handling needed for
+  environments where `localStorage` throws (private mode, disabled storage, cross-origin frames).
+
+- 7af01bf: Add theming tokens for surfaces that previously forced consumers through `::part()` overrides.
+
+  - `<lr-icon-button>`: `--lr-icon-button-background`, `--lr-icon-button-background-hover`, and
+    `--lr-icon-button-color`, so a bordered or tinted icon button no longer needs `::part(button)`.
+  - `<lr-button>`: `--lr-button-shadow` (default `none`) for themed elevation.
+  - `<lr-table>`: sorted-header theming tokens, plus a specificity fix so consumer `::part()` rules can
+    actually win against the internal sort-state rule.
+  - `<lr-select>` and `<lr-model-select>`: selected-state tokens; `<lr-combobox>` gains the matching
+    `option-selected` token indirection.
+  - `<lr-empty>`: `--lr-empty-compact-font-size` for compact heading typography.
+  - `<lr-typing-indicator>`: `--lr-typing-duration`, so its speed is no longer keyed off the shared
+    `--lr-transition-ambient`.
+  - `<lr-conversation-item>`: tokenized active-row indicator part.
+
+  Every token's `var()` fallback is the value it replaces, so unset rendering is unchanged.
+
+- 7af01bf: Add `@aceshooting/lyra-ui/theme.js` — a zero-dependency theme runtime and no-flash bootstrap, so
+  applications stop rebuilding mode/accent persistence by hand.
+
+  The new subpath exports `setLyraTheme(theme)`, `getLyraTheme()`, the `LyraTheme`/`LyraThemeMode`
+  (`'light' | 'dark' | 'auto'`) types, and `lyraThemeBootstrap` — a string of head-script source you
+  inline before first paint to apply the persisted theme without a flash of the wrong mode. Theme
+  changes persist to `localStorage` and announce themselves with an `lr-theme-change` event.
+
+  The runtime deliberately does not include WCAG contrast math: deriving an accessible palette from a
+  single brand color is application product logic, not a library concern.
+
+### Patch Changes
+
+- 7af01bf: Fix several rendering and correctness bugs.
+
+  - `<lr-chart>`: a `valueFormatter` no longer corrupts the **category** axis. Formatted indices
+    (`"0"`, `"1"`, `"2"`) were rendering in place of the category labels, because the tick callback was
+    wired to every axis rather than only the value axes.
+  - `<lr-diff-view>`: normalize CRLF and lone-CR line endings, so a Windows-authored file no longer
+    diffs as entirely changed.
+  - `<lr-app-rail>`: anchor the resizer to `:host`, pin `overflow-x`, and free fixed-position popups
+    that were being clipped by the rail.
+  - `<lr-button>`: collapse empty start/end adornment wrappers, which were reserving visible space for
+    slots with nothing in them.
+  - `<lr-swatch-picker>`: keep the selected glow on gemstone swatches.
+
+- a656a10: Add a tokenized active-row indicator part to `lr-conversation-item` and export it through data-mode `lr-thread-list` rows.
+- 203cbce: Forward host `aria-describedby` values to `lr-checkbox`'s internal checkbox role.
+- 983dd04: Validate download anchors against a stricter URL allowlist than navigation anchors. A `mailto:` URL
+  is a legitimate navigation destination but names no retrievable bytes, so pairing it with a
+  `download` attribute produced an affordance that could never download anything.
+
+  `safeDownloadHref()` (internal) is now `safeLinkHref()` minus `mailto:`, and the download sinks use
+  it: `<lr-document-viewer>` and `<lr-document-preview>` omit their download link for a `mailto:`
+  `src`, `<lr-media-card>` falls back to its inert file chip, and `<lr-button>` falls back to the
+  native `<button>` when `download` is set alongside a `mailto:` `href` (a `mailto:` href _without_
+  `download` still renders the anchor, unchanged).
+
+  Behavior change: the `safeLinkHref()` re-exported from the package root is `<lr-media-card>`'s
+  download-sink wrapper, so it now returns `null` for `mailto:` where it previously returned the URL.
+  The general-purpose navigation validator is unchanged.
+
+- 88dfe78: Add `LyraTreeEventMap` so `<lr-tree>`'s `lr-node-toggle`, `lr-node-select`, and `lr-reorder` events are typed on listeners (`addEventListener`), matching every other component with public events.
+- a595ec7: Give `<lr-widget>`'s collapse-button `aria-label` its own dedicated locale keys,
+  `widgetCollapse`/`widgetExpand`, instead of borrowing `<lr-dock-panel>`'s `dockPanelCollapse`/
+  `dockPanelExpand`. Default English strings are unchanged ("Collapse panel"/"Expand panel"). If you
+  had registered a locale under the old borrowed `dockPanel*` keys specifically to translate
+  `<lr-widget>`'s collapse button, move that override to `widgetCollapse`/`widgetExpand` —
+  `<lr-dock-panel>`'s own keys and behavior are unaffected.
+
 ## 6.1.0
 
 ### Minor Changes
