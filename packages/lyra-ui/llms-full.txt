@@ -1468,7 +1468,13 @@ that several other components size their icon-only controls against), so overrid
 above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
-counterpart to it.
+counterpart to it. `--lr-icon-button-background` (default `transparent`) tints the
+`[part='button']` background, `--lr-icon-button-background-hover` (default `--lr-color-surface`)
+its hover-state background, and `--lr-icon-button-color` (default `inherit`) its icon/text color —
+the same per-component indirection `lr-button`'s `--lr-button-fill`/`--lr-button-on-fill` provide,
+letting you tint a single button without a `::part(button)` rule. Left unset, each falls back to
+today's value, so rendering is unchanged. There is deliberately no border-color token:
+`[part='button']` sets `border: 0`, so a border color could never render.
 
 ## `lr-input`
 
@@ -4769,6 +4775,10 @@ position) survives the transition.
   view externally; also updated internally when a view toggle is clicked.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the label-derived fullscreen
   dialog name.
+- `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
+  under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
+  `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
+  storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-change` (`detail: { collapsed }`, the new state), `lr-fullscreen-change`
 (`detail: { fullscreen }` — also fired when fullscreen is exited via Escape or a backdrop click, not
@@ -9649,6 +9659,16 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
+- `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
+  the optional `chartjs-plugin-datalabels` peer (see `peers.md`). Unset (the default) leaves labels
+  off; because the plugin is registered **per chart instance** (not globally), a `<lr-chart
+  data-labels>` never affects any other chart on the page. If the peer is not installed the chart
+  still renders and the attribute is inert, with one `console.warn`. The screen-reader equivalent is
+  the always-present accessible data table (`show-data-table` makes it visible) — labels are a
+  purely visual, canvas-only addition and add no new a11y surface.
+- `stackTotals: boolean = false` (attribute `stack-totals`) — with `stacked` (bar/line only), draws
+  the per-category stack total above each stack, via the same `chartjs-plugin-datalabels` peer.
+  Null/undefined points are skipped; a category whose every value is null shows no total (not `0`)
 - `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
@@ -9928,7 +9948,8 @@ of every entry in these lists.**
 
 **Properties:** `labels`, `datasets`, `legend`, `legendPosition` (attribute `legend-position`),
 `valueFormatter`, `area`, `zoom`, `height`, `xLabel` (`x-label`), `yLabel` (`y-label`), `y2Label`
-(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `config`, `accessibleLabel`
+(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `dataLabels`
+(`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
 (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
 locked to this tag's value.
@@ -9949,7 +9970,7 @@ dependency fails to load — see `llms/components/lr-chart.md`).
 `--lr-chart-tooltip-text`.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
-`zoom` is set.
+`zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
 
 ```html
 <lr-bar-chart legend></lr-bar-chart>
@@ -9993,8 +10014,9 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 - All other `LyraChart` properties are inherited and usable: `legend`, `legendPosition` (attribute
   `legend-position`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
-  `stacked`, `accessibleLabel` (`accessible-label`), `accessibleDescription`
-  (`accessible-description`), `showDataTable` (`show-data-table`), `chartArea` (readonly).
+  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
+  (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+  (`show-data-table`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()` — both inherited.
 

@@ -335,7 +335,8 @@ of every entry in these lists.**
 
 **Properties:** `labels`, `datasets`, `legend`, `legendPosition` (attribute `legend-position`),
 `valueFormatter`, `area`, `zoom`, `height`, `xLabel` (`x-label`), `yLabel` (`y-label`), `y2Label`
-(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `config`, `accessibleLabel`
+(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `dataLabels`
+(`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
 (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
 locked to this tag's value.
@@ -356,7 +357,7 @@ dependency fails to load — see `llms/components/lr-chart.md`).
 `--lr-chart-tooltip-text`.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
-`zoom` is set.
+`zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
 
 ```html
 <lr-bar-chart legend></lr-bar-chart>
@@ -400,8 +401,9 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 - All other `LyraChart` properties are inherited and usable: `legend`, `legendPosition` (attribute
   `legend-position`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
-  `stacked`, `accessibleLabel` (`accessible-label`), `accessibleDescription`
-  (`accessible-description`), `showDataTable` (`show-data-table`), `chartArea` (readonly).
+  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
+  (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+  (`show-data-table`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()` — both inherited.
 

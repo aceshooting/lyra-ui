@@ -1864,6 +1864,27 @@
       }
     },
     {
+      "name": "--lr-icon-button-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `transparent`) — Background fill of the native button."
+      }
+    },
+    {
+      "name": "--lr-icon-button-background-hover",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `var(--lr-color-surface)`) — Background fill on hover."
+      }
+    },
+    {
+      "name": "--lr-icon-button-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `inherit`) — Icon/text color of the native button."
+      }
+    },
+    {
       "name": "--lr-icon-button-radius",
       "description": {
         "kind": "markdown",

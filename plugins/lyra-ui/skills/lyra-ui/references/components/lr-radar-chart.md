@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/radar-chart.js';` (registers the tag; side-effect import)
 - **Class** `LyraRadarChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/radar-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
-- **Optional peers** `chart.js`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -26,7 +26,8 @@ of every entry in these lists.**
 
 **Properties:** `labels`, `datasets`, `legend`, `legendPosition` (attribute `legend-position`),
 `valueFormatter`, `area`, `zoom`, `height`, `xLabel` (`x-label`), `yLabel` (`y-label`), `y2Label`
-(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `config`, `accessibleLabel`
+(`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`, `stacked`, `dataLabels`
+(`data-labels`), `stackTotals` (`stack-totals`), `config`, `accessibleLabel`
 (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
 locked to this tag's value.
@@ -47,7 +48,7 @@ dependency fails to load — see `llms/components/lr-chart.md`).
 `--lr-chart-tooltip-text`.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
-`zoom` is set.
+`zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
 
 ```html
 <lr-bar-chart legend></lr-bar-chart>

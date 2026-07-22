@@ -64,4 +64,10 @@ that several other components size their icon-only controls against), so overrid
 above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-radius`) is the
 `[part='button']` corner radius, retunable without a `::part(button)` rule — the same
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
-counterpart to it.
+counterpart to it. `--lr-icon-button-background` (default `transparent`) tints the
+`[part='button']` background, `--lr-icon-button-background-hover` (default `--lr-color-surface`)
+its hover-state background, and `--lr-icon-button-color` (default `inherit`) its icon/text color —
+the same per-component indirection `lr-button`'s `--lr-button-fill`/`--lr-button-on-fill` provide,
+letting you tint a single button without a `::part(button)` rule. Left unset, each falls back to
+today's value, so rendering is unchanged. There is deliberately no border-color token:
+`[part='button']` sets `border: 0`, so a border color could never render.

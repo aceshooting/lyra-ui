@@ -2,7 +2,7 @@
 
 # Optional peer dependencies
 
-All 25 peers are **optional**: nothing here is needed to install or use the library,
+All 26 peers are **optional**: nothing here is needed to install or use the library,
 and no component imports one eagerly. Install a peer only when you use a component that needs it.
 
 **How they load.** A component that needs a peer resolves it through a dynamic `import()` on first

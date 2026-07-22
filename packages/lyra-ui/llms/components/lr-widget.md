@@ -42,6 +42,10 @@ position) survives the transition.
   view externally; also updated internally when a view toggle is clicked.
 - `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the label-derived fullscreen
   dialog name.
+- `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
+  under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
+  `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
+  storage is never touched — listen for `lr-collapse-change` and persist the state yourself.
 
 **Events:** `lr-collapse-change` (`detail: { collapsed }`, the new state), `lr-fullscreen-change`
 (`detail: { fullscreen }` — also fired when fullscreen is exited via Escape or a backdrop click, not

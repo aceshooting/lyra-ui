@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/histogram.js';` (registers the tag; side-effect import)
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
-- **Optional peers** `chart.js`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,8 +30,9 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
 - All other `LyraChart` properties are inherited and usable: `legend`, `legendPosition` (attribute
   `legend-position`), `valueFormatter`, `area`, `zoom`, `config`, `height`, `xLabel` (`x-label`),
   `yLabel` (`y-label`), `y2Label` (`y2-label`), `beginAtZero` (`begin-at-zero`), `horizontal`,
-  `stacked`, `accessibleLabel` (`accessible-label`), `accessibleDescription`
-  (`accessible-description`), `showDataTable` (`show-data-table`), `chartArea` (readonly).
+  `stacked`, `dataLabels` (`data-labels`), `stackTotals` (`stack-totals`), `accessibleLabel`
+  (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
+  (`show-data-table`), `chartArea` (readonly).
 
 **Methods:** `resetZoom()`, `refreshTheme()` — both inherited.
 

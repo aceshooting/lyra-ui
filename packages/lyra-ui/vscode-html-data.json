@@ -1371,6 +1371,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -1410,6 +1417,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -1698,6 +1712,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -1737,6 +1758,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -2142,7 +2170,7 @@
       "name": "lr-chart",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-chart>` — the core Chart.js wrapper every other `lr-*-chart` tag\nsubclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.\n\n**API mirror note:** the real `wa-chart` docs page\n(https://webawesome.com/docs/components/chart/) documents a `config:\nChartJS['config']` property alongside its simplified attributes — \"a\nflexible wrapper around Chart.js\" supporting *both* simplified attributes\nand full Chart.js configuration passthrough, not a `data`/`options` prop\npair. `lr-chart` mirrors that dual surface: the `Series`-based\n`datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes\nbelow are the simplified surface (compatible with WA's `type`, `xLabel`,\n`yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional\n`config` property is the raw-passthrough escape hatch — a\n`Partial<ChartConfiguration>` deep-merged over the generated config in\n`buildConfig()`, mirroring WA's `config` property without discarding the\n`Series` shape the rest of this component family (subclasses, box-plot,\nhistogram) is built on.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `error` | `role=\"alert\"` message shown instead of `canvas` when the optional `chart.js` peer dependency is not installed. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-chart-height` (default: `var(--lr-size-280px)`) — The host's `block-size`. Set on the host element from the `height` property on every change (custom properties only cascade downward, so it cannot be set from inside the shadow root); a host-level override is overwritten the next time `height` changes.\n- `--lr-chart-grid-color` (default: `var(--lr-color-border)`) — Grid-line color. Resolved via `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`).\n- `--lr-chart-tick-color` (default: `var(--lr-color-text-quiet)`) — Axis tick-label color; also used for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token). Resolved via `getComputedStyle` on every draw.\n- `--lr-chart-legend-color` (default: `var(--lr-color-text)`) — Legend label color. Resolved via `getComputedStyle` on every draw.\n- `--lr-chart-tooltip-bg` (default: `var(--lr-color-surface)`) — Tooltip background color. Resolved via `getComputedStyle` on every draw.\n- `--lr-chart-tooltip-text` (default: `var(--lr-color-text)`) — Tooltip text color. Resolved via `getComputedStyle` on every draw."
+        "value": "`<lr-chart>` — the core Chart.js wrapper every other `lr-*-chart` tag\nsubclasses. Requires the optional peer dep `chart.js`; `chartjs-plugin-zoom`\n(for `zoom`) and `chartjs-plugin-datalabels` (for `data-labels`/`stack-totals`)\nare further optional peers loaded only on demand.\n\n**API mirror note:** the real `wa-chart` docs page\n(https://webawesome.com/docs/components/chart/) documents a `config:\nChartJS['config']` property alongside its simplified attributes — \"a\nflexible wrapper around Chart.js\" supporting *both* simplified attributes\nand full Chart.js configuration passthrough, not a `data`/`options` prop\npair. `lr-chart` mirrors that dual surface: the `Series`-based\n`datasets`/`labels`/`type`/`legend`/`xLabel`/`yLabel`/`zoom` attributes\nbelow are the simplified surface (compatible with WA's `type`, `xLabel`,\n`yLabel`, `withoutLegend`-equivalent `legend`, etc.), and the additional\n`config` property is the raw-passthrough escape hatch — a\n`Partial<ChartConfiguration>` deep-merged over the generated config in\n`buildConfig()`, mirroring WA's `config` property without discarding the\n`Series` shape the rest of this component family (subclasses, box-plot,\nhistogram) is built on.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `center` | Optional overlay content positioned at the chart area's center. Useful for doughnut and pie totals. |\n| `data-table` | An optional consumer-provided accessible table alternative. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The chart wrapper. |\n| `canvas` | The Chart.js canvas. |\n| `center` | The chart-area-centered overlay wrapper for the `center` slot. |\n| `data-table` | The optional generated or slotted data table. |\n| `description` | The accessible chart summary. |\n| `error` | `role=\"alert\"` message shown instead of `canvas` when the optional `chart.js` peer dependency is not installed. |\n| `reset-zoom-button` | The reset-zoom control when zoom is active. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-chart-height` (default: `var(--lr-size-280px)`) — The host's `block-size`. Set on the host element from the `height` property on every change (custom properties only cascade downward, so it cannot be set from inside the shadow root); a host-level override is overwritten the next time `height` changes.\n- `--lr-chart-grid-color` (default: `var(--lr-color-border)`) — Grid-line color. Resolved via `getComputedStyle` on every draw (Chart.js paints to canvas and cannot consume `var()`).\n- `--lr-chart-tick-color` (default: `var(--lr-color-text-quiet)`) — Axis tick-label color; also used for the `xLabel`/`yLabel`/`y2Label` axis-title text (there is no separate title-color token). Resolved via `getComputedStyle` on every draw.\n- `--lr-chart-legend-color` (default: `var(--lr-color-text)`) — Legend label color. Resolved via `getComputedStyle` on every draw.\n- `--lr-chart-tooltip-bg` (default: `var(--lr-color-surface)`) — Tooltip background color. Resolved via `getComputedStyle` on every draw.\n- `--lr-chart-tooltip-text` (default: `var(--lr-color-text)`) — Tooltip text color. Resolved via `getComputedStyle` on every draw."
       },
       "attributes": [
         {
@@ -2171,6 +2199,13 @@
           "description": {
             "kind": "markdown",
             "value": "Type: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -2213,6 +2248,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -5116,6 +5158,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -5155,6 +5204,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -7301,6 +7357,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -7347,6 +7410,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -7471,7 +7541,7 @@
       "name": "lr-icon-button",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-icon-button>` — an accessible icon-only action button.\n\nSet `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted\ncontent is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so\nany complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — renders at its own natural\naspect ratio instead of being forced into a 1:1 box. Bare SVG geometry (`<path>`, `<circle>`,\nand a handful of other raw primitives) with no enclosing `<svg>` of its own is detected and\ncloned into a real, internal SVG-namespaced element so it still paints — the same fallback\n`<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a\nslotted `<lr-flag>`) is never run through it.\n\nForm-associated (mirroring `<lr-button>`'s identical shape): discoverable through\n`form.elements`, and `type=\"submit\"`/`type=\"reset\"` are handled by this component itself via\nthe host's own `closest('form')` — a shadow-internal native `<button type=\"submit\">` does not\nparticipate in an ancestor light-DOM form's submission on its own, since form-submitter\nsemantics don't cross the shadow boundary.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Optional custom icon content, rendered beside (not inside) the `icon` glyph. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `button` | Native button. |\n| `fallback` | The internal SVG-namespaced clone target for slotted bare geometry. Carries the same `fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"` defaults `<lr-icon>`'s own wrapper svg does, so bare stroke-style geometry (no fill/stroke of its own) renders outlined instead of as a solid shape; an explicit `fill`/`stroke`/etc. already present on the slotted node still wins for that node. Only present in the DOM while at least one top-level slotted element needs it; a complete `<svg>`, `<img>`, or custom element never mounts it. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-icon-button-size` (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together.\n- `--lr-icon-button-radius` (default: `var(--lr-radius)`) — Corner radius of the native button."
+        "value": "`<lr-icon-button>` — an accessible icon-only action button.\n\nSet `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted\ncontent is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so\nany complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — renders at its own natural\naspect ratio instead of being forced into a 1:1 box. Bare SVG geometry (`<path>`, `<circle>`,\nand a handful of other raw primitives) with no enclosing `<svg>` of its own is detected and\ncloned into a real, internal SVG-namespaced element so it still paints — the same fallback\n`<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a\nslotted `<lr-flag>`) is never run through it.\n\nForm-associated (mirroring `<lr-button>`'s identical shape): discoverable through\n`form.elements`, and `type=\"submit\"`/`type=\"reset\"` are handled by this component itself via\nthe host's own `closest('form')` — a shadow-internal native `<button type=\"submit\">` does not\nparticipate in an ancestor light-DOM form's submission on its own, since form-submitter\nsemantics don't cross the shadow boundary.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Optional custom icon content, rendered beside (not inside) the `icon` glyph. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `button` | Native button. |\n| `fallback` | The internal SVG-namespaced clone target for slotted bare geometry. Carries the same `fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"` defaults `<lr-icon>`'s own wrapper svg does, so bare stroke-style geometry (no fill/stroke of its own) renders outlined instead of as a solid shape; an explicit `fill`/`stroke`/etc. already present on the slotted node still wins for that node. Only present in the DOM while at least one top-level slotted element needs it; a complete `<svg>`, `<img>`, or custom element never mounts it. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-icon-button-size` (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together.\n- `--lr-icon-button-radius` (default: `var(--lr-radius)`) — Corner radius of the native button.\n- `--lr-icon-button-background` (default: `transparent`) — Background fill of the native button.\n- `--lr-icon-button-background-hover` (default: `var(--lr-color-surface)`) — Background fill on hover.\n- `--lr-icon-button-color` (default: `inherit`) — Icon/text color of the native button."
       },
       "attributes": [
         {
@@ -8382,6 +8452,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -8421,6 +8498,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -10418,6 +10502,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -10457,6 +10548,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -10597,6 +10695,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -10636,6 +10741,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -11130,6 +11242,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -11169,6 +11288,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -12062,6 +12188,13 @@
           }
         },
         {
+          "name": "data-labels",
+          "description": {
+            "kind": "markdown",
+            "value": "Draws each data point's value on the chart via the optional\n`chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for\nthis and every other chart on the page — the plugin registers globally, so\n`buildConfig()` explicitly disables it per-chart until this is set. The\nscreen-reader equivalent is the always-present data table (see\n`show-data-table`); labels are a purely visual, canvas-only addition.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
           "name": "height",
           "description": {
             "kind": "markdown",
@@ -12101,6 +12234,13 @@
           "description": {
             "kind": "markdown",
             "value": "Makes the generated data table visible; it remains screen-reader available when false.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "stack-totals",
+          "description": {
+            "kind": "markdown",
+            "value": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.\n\nType: `boolean`  \nDefault: `false`"
           }
         },
         {
@@ -15727,6 +15867,13 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "storage-key",
+          "description": {
+            "kind": "markdown",
+            "value": "Persists `collapsed` to `localStorage` across reloads when set. Namespaced as\n`lr-widget:${storageKey}` -- mirrors `lr-app-rail`'s/`lr-table`'s identical `storage-key`\npattern. Unset (the default) touches storage not at all.\n\nType: `string | undefined`"
           }
         },
         {

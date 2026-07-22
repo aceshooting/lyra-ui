@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';` (registers the tag; side-effect import)
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
-- **Optional peers** `chart.js`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -58,6 +58,16 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `stacked: boolean = false` — stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only
   meaningful for `bar`/`line` types (scatter/bubble's linear `x` scale and the radial `r` scale used
   by radar/polar-area are out of scope)
+- `dataLabels: boolean = false` (attribute `data-labels`) — draws each point's value on the chart via
+  the optional `chartjs-plugin-datalabels` peer (see `peers.md`). Unset (the default) leaves labels
+  off; because the plugin is registered **per chart instance** (not globally), a `<lr-chart
+  data-labels>` never affects any other chart on the page. If the peer is not installed the chart
+  still renders and the attribute is inert, with one `console.warn`. The screen-reader equivalent is
+  the always-present accessible data table (`show-data-table` makes it visible) — labels are a
+  purely visual, canvas-only addition and add no new a11y surface.
+- `stackTotals: boolean = false` (attribute `stack-totals`) — with `stacked` (bar/line only), draws
+  the per-category stack total above each stack, via the same `chartjs-plugin-datalabels` peer.
+  Null/undefined points are skipped; a category whose every value is null shows no total (not `0`)
 - `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
