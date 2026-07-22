@@ -24,6 +24,26 @@ const rows: Row[] = [
   { id: 'b', name: 'Beta', score: 1 },
 ];
 
+// Most fixtures in this file render a bare <lr-table> with no accessibleLabel /
+// caption / host aria-label, which trips firstUpdated()'s intentional
+// "no accessible name" dev warning. Under CI's WTR_STRICT_CONSOLE guard an
+// unexpected console.warn is thrown as a test failure, so swallow *only* that
+// one expected message here while still re-throwing every other warning
+// (delegating to whatever console.warn the harness installed). The dedicated
+// "accessible name" describe block below installs its own console.warn stub in
+// a nested beforeEach, so its assertions on the warning are unaffected.
+let previousWarn: typeof console.warn;
+beforeEach(() => {
+  previousWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (typeof args[0] === 'string' && args[0].includes('no accessible name')) return;
+    return previousWarn(...args);
+  };
+});
+afterEach(() => {
+  console.warn = previousWarn;
+});
+
 it('renders header labels and a row per item, keyed by rowKey', async () => {
   const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -926,6 +946,26 @@ it('restores a previously-persisted showAllColumns preference from the initial p
   await waitUntil(() => el.shadowRoot!.querySelector('[part="reveal-columns-button"]') !== null);
   const revealButton = el.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLElement;
   expect(revealButton.getAttribute('aria-pressed')).to.equal('true');
+});
+
+it('persists and restores showAllColumns via storage-key', async () => {
+  const key = `lr-test-table-${Math.random()}`;
+  const el = await fixture<LyraTable<Row>>(html`<lr-table storage-key=${key}></lr-table>`);
+  el.showAllColumns = true;
+  await el.updateComplete;
+  el.remove();
+
+  const restored = await fixture<LyraTable<Row>>(html`<lr-table storage-key=${key}></lr-table>`);
+  expect(restored.showAllColumns).to.be.true;
+  localStorage.removeItem(`lr-table:${key}`);
+});
+
+it('writes nothing to storage when storage-key is unset (unset-regression)', async () => {
+  const before = localStorage.length;
+  const el = await fixture<LyraTable<Row>>(html`<lr-table></lr-table>`);
+  el.showAllColumns = true;
+  await el.updateComplete;
+  expect(localStorage.length).to.equal(before);
 });
 
 it('never renders [part="reveal-columns-button"] and keeps columnsHidden false regardless of container width when no column declares a priority (regression)', async () => {
