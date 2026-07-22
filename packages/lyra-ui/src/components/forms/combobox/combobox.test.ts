@@ -52,6 +52,22 @@ it('exposes exactly one composed InputEvent when the user types', async () => {
   expect(changeCount).to.equal(0);
 });
 
+it('emits lr-change with the new value alongside native-style change/input', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  const seen: Array<{ type: string; detail: unknown }> = [];
+  for (const type of ['input', 'change', 'lr-change']) {
+    el.addEventListener(type, (e) => seen.push({ type, detail: (e as CustomEvent).detail }));
+  }
+  const option = el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement;
+  option.click();
+  await el.updateComplete;
+
+  expect(seen.map((s) => s.type)).to.deep.equal(['input', 'change', 'lr-change']);
+  for (const s of seen) expect(s.detail).to.deep.equal({ value: 'b' });
+});
+
 it('emits one native input/change pair, in order, when a row changes the selection', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.open = true;
@@ -63,7 +79,7 @@ it('emits one native input/change pair, in order, when a row changes the selecti
   (el.shadowRoot!.querySelectorAll('[part="option"]')[1] as HTMLElement).click();
 
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
-  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['CustomEvent', 'CustomEvent']);
   expect(events.every((event) => event.bubbles && event.composed)).to.be.true;
   expect(events.every((event) => !event.cancelable)).to.be.true;
 });
@@ -82,7 +98,7 @@ it('emits one native input/change pair for keyboard selection', async () => {
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
-  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['CustomEvent', 'CustomEvent']);
 });
 
 it('emits one native input/change pair for both adding and toggling off a multiple value', async () => {
@@ -96,13 +112,13 @@ it('emits one native input/change pair for both adding and toggling off a multip
 
   (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
-  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['CustomEvent', 'CustomEvent']);
 
   events.length = 0;
   await el.updateComplete;
   (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
-  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['CustomEvent', 'CustomEvent']);
 });
 
 it('emits the same native input/change pair when a selected tag is removed', async () => {
@@ -117,7 +133,7 @@ it('emits the same native input/change pair when a selected tag is removed', asy
   (el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLButtonElement).click();
 
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change']);
-  expect(events.map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.map((event) => event.constructor.name)).to.deep.equal(['CustomEvent', 'CustomEvent']);
   expect(events.every((event) => !event.cancelable)).to.be.true;
 });
 
@@ -150,7 +166,7 @@ it('emits one input/change pair and one lr-clear event when cleared', async () =
   (el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLButtonElement).click();
 
   expect(events.map((event) => event.type)).to.deep.equal(['input', 'change', 'lr-clear']);
-  expect(events.slice(0, 2).map((event) => event.constructor.name)).to.deep.equal(['Event', 'Event']);
+  expect(events.slice(0, 2).map((event) => event.constructor.name)).to.deep.equal(['CustomEvent', 'CustomEvent']);
   expect(events.slice(0, 2).every((event) => !event.cancelable)).to.be.true;
 });
 
@@ -167,6 +183,20 @@ it('does not emit input/change for programmatic values or re-picking the current
   (el.shadowRoot!.querySelectorAll('[part="option"]')[0] as HTMLElement).click();
 
   expect(eventCount).to.equal(0);
+});
+
+it('keeps a programmatic value write silent on lr-change too, not just input/change', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  let count = 0;
+  for (const type of ['input', 'change', 'lr-change']) {
+    el.addEventListener(type, () => count++);
+  }
+  el.value = 'a';
+  await el.updateComplete;
+  el.multiple = true;
+  el.value = ['a', 'b'];
+  await el.updateComplete;
+  expect(count).to.equal(0);
 });
 
 it('keeps programmatic multiple-value writes silent', async () => {

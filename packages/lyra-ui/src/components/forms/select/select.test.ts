@@ -82,6 +82,34 @@ it('emits input alongside change on selection, matching a native <select>', asyn
   expect(inputFired).to.be.true;
 });
 
+it('emits lr-change with the new value alongside native-style change/input', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const seen: Array<{ type: string; detail: unknown }> = [];
+  for (const type of ['input', 'change', 'lr-change']) {
+    el.addEventListener(type, (e) => seen.push({ type, detail: (e as CustomEvent).detail }));
+  }
+  rows(el)[1].click();
+  await el.updateComplete;
+
+  expect(seen.map((s) => s.type)).to.deep.equal(['input', 'change', 'lr-change']);
+  for (const s of seen) expect(s.detail).to.deep.equal({ value: 'b' });
+});
+
+it('stays silent on input/change/lr-change for a programmatic value assignment', async () => {
+  const el = (await fixture(basic())) as LyraSelect;
+  await el.updateComplete;
+  let count = 0;
+  for (const type of ['input', 'change', 'lr-change']) {
+    el.addEventListener(type, () => count++);
+  }
+  el.value = 'b';
+  await el.updateComplete;
+  expect(el.value).to.equal('b');
+  expect(count).to.equal(0);
+});
+
 it('does not refire change/input when reopening and re-clicking the already-selected row', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   el.value = 'b';

@@ -49,8 +49,9 @@ export type LyraSelectSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 export interface LyraSelectEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
-  input: CustomEvent<undefined>;
-  change: CustomEvent<undefined>;
+  input: CustomEvent<{ value: string }>;
+  change: CustomEvent<{ value: string }>;
+  'lr-change': CustomEvent<{ value: string }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -101,9 +102,12 @@ export interface LyraSelectEventMap {
  *   analogous value-change pair. Which form controls mirror native unprefixed DOM event names
  *   (this one, matching `<select>`) versus which use the `lr-` prefix (`<lr-slider>`,
  *   matching `<input type="range">` via a custom name) is a deliberate per-control choice, not
- *   an incidental divergence.
+ *   an incidental divergence. `detail: { value: string }`.
  * @event input - Fired alongside `change` on every selection change (native
- *   `<select>` doesn't meaningfully distinguish the two either).
+ *   `<select>` doesn't meaningfully distinguish the two either). `detail: { value: string }`.
+ * @event lr-change - Prefixed compatibility alias fired after `input` and `change` on the same
+ *   selection change, mirroring `<lr-checkbox>`'s `lr-change`. `detail: { value: string }`. Not
+ *   fired for a programmatic `value` assignment.
  * @event lr-show - The listbox opened.
  * @event lr-hide - The listbox closed.
  * @event blur - Re-dispatched from the trigger as a bubbling, composed event.
@@ -542,12 +546,16 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     this.value = option.value;
     this.hide();
     if (changed) {
-      // Deliberately unprefixed -- this control is a direct <select>
-      // counterpart, so its value-change events keep <select>'s own naming
-      // instead of the `lr-` prefix `<lr-slider>` uses for its analogous
-      // rename. See the class doc's `change` event entry for the full rule.
-      this.emit('input');
-      this.emit('change');
+      // `input`/`change` stay deliberately unprefixed -- this control is a
+      // direct <select> counterpart, so its value-change events keep
+      // <select>'s own naming instead of the `lr-` prefix `<lr-slider>` uses
+      // for its analogous rename. See the class doc's `change` event entry for
+      // the full rule. `lr-change` is an additional prefixed alias (matching
+      // `<lr-checkbox>`), so a consumer can subscribe to a namespaced event.
+      // All three carry `detail: { value }`.
+      this.emit('input', { value: this.value });
+      this.emit('change', { value: this.value });
+      this.emit('lr-change', { value: this.value });
     }
   }
 

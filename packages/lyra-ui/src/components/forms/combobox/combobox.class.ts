@@ -90,6 +90,9 @@ export interface LyraComboboxEventMap {
   'lr-hide': CustomEvent<undefined>;
   'lr-clear': CustomEvent<undefined>;
   'lr-filter': CustomEvent<ComboboxFilterDetail>;
+  'lr-change': CustomEvent<{ value: string | string[] }>;
+  input: CustomEvent<{ value: string | string[] }>;
+  change: CustomEvent<{ value: string | string[] }>;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -112,11 +115,15 @@ export interface LyraComboboxEventMap {
  *   only ever collects `<lr-option>` elements from the default slot.
  * @slot end - Adornment after the filter input and the built-in clear action, and before the
  *   expand icon — so consumer content never sits outboard of the dropdown chevron.
- * @event {Event} change - The selection changed through user interaction. A bubbling,
- * composed, non-cancelable Event.
- * @event {InputEvent | Event} input - The user typed in the filter or changed the selection. Text
- * edits expose the original InputEvent; selection changes emit a bubbling,
- * composed, non-cancelable Event.
+ * @event {CustomEvent<{ value: string | string[] }>} change - The selection changed through user
+ * interaction. A bubbling, composed, non-cancelable event carrying `detail: { value }` (the new
+ * committed selection: a string in single mode, a string[] in `multiple` mode).
+ * @event {InputEvent | CustomEvent<{ value: string | string[] }>} input - The user typed in the
+ * filter or changed the selection. Text edits expose the original InputEvent (no `value` detail);
+ * selection changes emit a bubbling, composed, non-cancelable event carrying `detail: { value }`.
+ * @event {CustomEvent<{ value: string | string[] }>} lr-change - Prefixed compatibility alias fired
+ * after `input` and `change` on the same selection change, mirroring `<lr-checkbox>`'s `lr-change`.
+ * `detail: { value }`. Not fired for typing or a programmatic `value` assignment.
  * @event lr-show - The listbox opened.
  * @event lr-hide - The listbox closed.
  * @event lr-clear - The value was cleared.
@@ -860,14 +867,16 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     }
   }
 
-  /** Dispatches the platform-style value-event pair used by non-text user
-   * interactions. Text editing keeps and exposes the original InputEvent
-   * from the shadow input so its data/inputType metadata is not lost. */
+  /** Dispatches the platform-style value events used by non-text user
+   * interactions: `input`, `change`, and the prefixed `lr-change` alias, each
+   * carrying `detail: { value }` (the new committed selection). Text editing
+   * keeps and exposes the original InputEvent from the shadow input so its
+   * data/inputType metadata is not lost. `this.emit()` (from `LyraElement`)
+   * already dispatches a bubbling, composed, non-cancelable `CustomEvent`. */
   private emitValueEvents(): void {
-    const EventConstructor = this.ownerDocument.defaultView?.Event ?? Event;
-    const init: EventInit = { bubbles: true, composed: true };
-    this.dispatchEvent(new EventConstructor('input', init));
-    this.dispatchEvent(new EventConstructor('change', init));
+    this.emit('input', { value: this.value });
+    this.emit('change', { value: this.value });
+    this.emit('lr-change', { value: this.value });
   }
 
   private pickRow(row: ComboboxSourceRow): void {
