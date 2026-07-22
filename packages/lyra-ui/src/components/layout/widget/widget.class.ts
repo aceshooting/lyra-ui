@@ -8,6 +8,7 @@ import {
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
 import { lockScroll } from '../../../internal/scroll-lock.js';
+import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, closeIcon, expandIcon } from '../../../internal/icons.js';
 import { styles } from './widget.styles.js';
@@ -100,6 +101,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property() sublabel = '';
   @property({ type: Boolean, reflect: true }) collapsible = false;
   @property({ type: Boolean, reflect: true }) collapsed = false;
+  /** Persists `collapsed` to `localStorage` across reloads when set. Namespaced as
+   *  `lr-widget:${storageKey}` -- mirrors `lr-app-rail`'s/`lr-table`'s identical `storage-key`
+   *  pattern. Unset (the default) touches storage not at all. */
+  @property({ attribute: 'storage-key' }) storageKey?: string;
   @property({ type: Boolean, reflect: true }) expandable = false;
   @property({ type: Boolean, reflect: true }) fullscreen = false;
   /** Raw CSS `inset` shorthand applied to the fullscreen panel and backdrop instead of the default
@@ -137,6 +142,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private explicitTrigger?: HTMLElement;
   private readonly bodyId = nextId('widget-body');
 
+  private get storageFullKey(): string | undefined {
+    return this.storageKey ? `lr-widget:${this.storageKey}` : undefined;
+  }
+
+  /** Skips the very first `updated()` pass so mounting never writes to storage -- `willUpdate()`
+   *  restored `collapsed` on that first pass, and Lit has already flipped `hasUpdated` to true by
+   *  the time `updated()` runs, so a dedicated flag is needed. Mirrors `lr-table`'s/`lr-app-rail`'s
+   *  `persistReady`. */
+  private persistReady = false;
+
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
@@ -145,6 +160,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       this.hasLabelSlot = labelChildren.length > 0;
       this.labelSlotText = labelChildren.map((el) => el.textContent?.trim()).filter(Boolean).join(' ') || undefined;
       this.hasSublabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sublabel');
+      // Restore a persisted `collapsed` preference once, before the first render, so the restored
+      // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
+      // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
+      // lr-table's/lr-app-rail's restore in their own willUpdate(). The `persistReady` gate in
+      // updated() keeps this restored value from being written straight back.
+      const parsed = readPersistedState(
+        this.storageFullKey,
+        (v): v is { collapsed?: unknown } => typeof v === 'object' && v !== null,
+      );
+      if (parsed && typeof parsed.collapsed === 'boolean') this.collapsed = parsed.collapsed;
     }
     if (changed.has('fullscreen')) {
       if (this.fullscreen) {
@@ -172,6 +197,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   // moving focus outside the panel. The shared manager then reclaims it while
   // preserving focus that is still on one of the visible header controls.
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    // Persist `collapsed` whenever it changes, but never on the initial update -- willUpdate()
+    // restored it on that pass, so writing it back would be redundant, and with no `storage-key`
+    // set `writePersistedState(undefined, ...)` is a silent no-op regardless.
+    if (this.persistReady && changed.has('collapsed')) {
+      writePersistedState(this.storageFullKey, { collapsed: this.collapsed });
+    }
+    this.persistReady = true;
     if (changed.has('fullscreen') && this.fullscreen) {
       this.overlayHandle?.focusInitial();
     } else if (changed.has('collapsed') && this.fullscreen) {

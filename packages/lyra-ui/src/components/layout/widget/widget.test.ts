@@ -869,6 +869,28 @@ describe('backdrop-inset', () => {
   });
 });
 
+describe('storage-key persistence', () => {
+  it('persists and restores collapsed via storage-key', async () => {
+    const key = `lr-test-widget-${Math.random()}`;
+    const el = await fixture<LyraWidget>(html`<lr-widget storage-key=${key} collapsible></lr-widget>`);
+    el.collapsed = true;
+    await el.updateComplete;
+    el.remove();
+
+    const restored = await fixture<LyraWidget>(html`<lr-widget storage-key=${key} collapsible></lr-widget>`);
+    expect(restored.collapsed).to.be.true;
+    localStorage.removeItem(`lr-widget:${key}`);
+  });
+
+  it('writes nothing to storage when storage-key is unset (unset-regression)', async () => {
+    const before = localStorage.length;
+    const el = await fixture<LyraWidget>(html`<lr-widget collapsible></lr-widget>`);
+    el.collapsed = true;
+    await el.updateComplete;
+    expect(localStorage.length).to.equal(before);
+  });
+});
+
 describe('view-toggle active-state cssprops', () => {
   /** Resolves what a `declaration` would compute to *inside this component's shadow root*, where the
    *  `--lr-*` design tokens actually live. Used to assert the unset defaults byte-for-byte against
