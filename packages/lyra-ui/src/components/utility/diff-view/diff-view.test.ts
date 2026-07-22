@@ -115,6 +115,41 @@ describe('layout', () => {
   });
 });
 
+describe('line-ending normalization', () => {
+  it('treats CRLF and LF forms of the same content as unchanged', async () => {
+    const el = (await fixture(html`
+      <lr-diff-view .oldText=${'a\r\nb\r\nc'} .newText=${'a\nb\nc'}></lr-diff-view>
+    `)) as LyraDiffView;
+    await el.updateComplete;
+    const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')];
+    const changed = lines.filter((l) => {
+      const t = l.getAttribute('data-type');
+      return t === 'add' || t === 'remove';
+    });
+    expect(changed.length).to.equal(0);
+  });
+
+  it('splits a lone-CR (classic Mac) document into separate lines, not one giant line', async () => {
+    const el = (await fixture(html`
+      <lr-diff-view .oldText=${'a\rb\rc'} .newText=${'a\rb\rc'}></lr-diff-view>
+    `)) as LyraDiffView;
+    await el.updateComplete;
+    const lines = [...el.shadowRoot!.querySelectorAll('[part="line"]')];
+    expect(lines.length).to.equal(3);
+  });
+
+  it('emits an lr-copy payload with no stray carriage returns for CRLF input', async () => {
+    const el = (await fixture(html`
+      <lr-diff-view copyable .oldText=${'a\r\nb'} .newText=${'a\r\nc'}></lr-diff-view>
+    `)) as LyraDiffView;
+    await el.updateComplete;
+    let copyText = '';
+    el.addEventListener('lr-copy', (e) => (copyText = (e as CustomEvent).detail.text));
+    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+    expect(copyText.includes('\r')).to.equal(false);
+  });
+});
+
 describe('syntax highlighting', () => {
   it('does not load shiki when language/languages are unset', async () => {
     const el = (await fixture(html`<lr-diff-view .oldText=${'a'} .newText=${'b'}></lr-diff-view>`)) as LyraDiffView;
@@ -171,6 +206,32 @@ describe('syntax highlighting', () => {
     await aTimeout(10);
     const addLine = el.shadowRoot!.querySelector('[part="line"][data-type="add"]')!;
     expect(addLine.textContent!.trim()).to.equal('+ HL:x');
+  });
+
+  it('keeps highlighted line count in lockstep with the diff line count for CRLF input', async () => {
+    // Shiki normalizes CRLF internally, so its rendered `.line` count matches the NORMALIZED line
+    // count. tokenizeLines must pad/truncate to `splitLines(text).length` (also normalized) -- if
+    // it used a raw `split('\n')` it would expect one extra entry per CRLF line and misindex every
+    // highlighted line. This fake highlighter mimics shiki's CRLF normalization.
+    const fakeHighlighter = {
+      codeToHtml: (text: string) =>
+        `<pre class="shiki"><code>${text
+          .replace(/\r\n|\r/g, '\n')
+          .split('\n')
+          .map((line) => `<span class="line">HL:${line}</span>`)
+          .join('\n')}</code></pre>`,
+    };
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a\r\nb\r\nc'} .newText=${'a\r\nb\r\nc'} language="text"></lr-diff-view>`,
+    )) as LyraDiffView;
+    (el as unknown as { languages: unknown }).languages = { text: {} };
+    (el as unknown as { loadHighlighterCore: () => Promise<unknown> }).loadHighlighterCore = () =>
+      Promise.resolve(fakeHighlighter);
+    await el.updateComplete;
+    await aTimeout(10);
+    const diffLineCount = el.shadowRoot!.querySelectorAll('[part="line"]').length;
+    const highlighted = (el as unknown as { highlightedOldLines: string[] | null }).highlightedOldLines;
+    expect(highlighted?.length).to.equal(diffLineCount);
   });
 });
 

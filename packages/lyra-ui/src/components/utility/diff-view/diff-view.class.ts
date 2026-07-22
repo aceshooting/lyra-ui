@@ -16,6 +16,14 @@ import { styles } from './diff-view.styles.js';
  *  `lr-copy-button`'s own `COPY_CONFIRM_MS`. */
 const COPY_CONFIRM_MS = 1500;
 
+/** Split into logical lines while normalizing all three line-ending conventions (CRLF, lone CR,
+ *  LF). A raw `text.split('\n')` leaves a trailing `\r` on every CRLF line -- which makes two files
+ *  that differ only in line endings diff as entirely changed, corrupts the emitted `lr-copy`
+ *  payload, and (with `white-space: pre-wrap`) renders a spurious blank line after each row -- and
+ *  collapses a lone-CR (classic-Mac) document into a single giant line. Used at BOTH the diff and
+ *  the shiki-tokenize call sites so their line counts stay in lockstep. */
+const splitLines = (text: string): string[] => text.split(/\r\n|\r|\n/);
+
 export interface LyraDiffViewEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
 }
@@ -94,7 +102,7 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('oldText') || changed.has('newText')) {
-      this.diffOps = computeLineDiff(this.oldText.split('\n'), this.newText.split('\n'));
+      this.diffOps = computeLineDiff(splitLines(this.oldText), splitLines(this.newText));
     }
     if (changed.has('oldText') || changed.has('newText') || changed.has('language') || changed.has('languages')) {
       this.syncHighlight();
@@ -129,14 +137,16 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   /** Tokenizes `text` as one document (so multi-line tokens survive) and splits shiki's own
    *  rendered `.line` spans back into a per-source-line HTML array, normalized to exactly
-   *  `text.split('\n').length` entries -- shiki's own trailing-newline handling can otherwise be
-   *  off by one relative to a plain `split('\n')`. */
+   *  `splitLines(text).length` entries -- shiki's own trailing-newline handling can otherwise be
+   *  off by one relative to a plain split. MUST use the same `splitLines` as the diff at
+   *  `willUpdate` above: if this counted lines differently (e.g. plain `split('\n')` while the diff
+   *  normalizes CRLF), every CRLF document would misindex `highlightedOldLines`/`-NewLines`. */
   private tokenizeLines(hl: ShikiHighlighterCore, text: string, lang: string): string[] | null {
     try {
       const html = hl.codeToHtml(text, { lang, themes: SHIKI_THEMES });
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const lines = Array.from(doc.querySelectorAll('code > .line')).map((line) => line.innerHTML);
-      const expected = text.split('\n').length;
+      const expected = splitLines(text).length;
       while (lines.length > expected) lines.pop();
       while (lines.length < expected) lines.push('');
       return lines;
