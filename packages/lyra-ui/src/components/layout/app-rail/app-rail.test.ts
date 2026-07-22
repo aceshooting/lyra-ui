@@ -858,3 +858,39 @@ describe('aria-label forwarding', () => {
     expect(panel.getAttribute('aria-label')).to.equal('Custom nav name');
   });
 });
+
+describe('layout: resizer anchor, overflow, and mobile containing block', () => {
+  it('anchors the resizer within the host, not the viewport', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable style="block-size: 300px;"><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    const hostRect = el.getBoundingClientRect();
+    const resizerRect = resizer.getBoundingClientRect();
+    // Before the fix (:host had no position) inset-block:0 resolved against the viewport, so the
+    // resizer spanned the full viewport height -- far taller than the 300px host.
+    expect(Math.round(resizerRect.height)).to.equal(Math.round(hostRect.height));
+  });
+
+  it('sets overflow-x to clip on the scrollable base so no spurious horizontal scrollbar appears', async () => {
+    const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Chromium normalizes overflow-x:clip to 'hidden' when the cross axis is a scroll container;
+    // either value pins the axis and prevents the auto-computed horizontal scrollbar. What matters
+    // is that it is no longer 'visible'/'auto'.
+    expect(['clip', 'hidden']).to.include(getComputedStyle(base).overflowX);
+  });
+
+  it('settles the open mobile panel at transform:none so fixed descendants are not trapped', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail mode="mobile" open><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    // A non-none transform (even translateX(0) -> matrix(1,0,0,1,0,0)) establishes a containing
+    // block for position:fixed. The open state must compute to 'none'.
+    expect(getComputedStyle(panel).transform).to.equal('none');
+  });
+});

@@ -3,6 +3,11 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* Establishes the containing block for [part="resizer"], which is a SIBLING of [part="base"]
+       (not a child), so [part="base"]'s own position: relative cannot anchor it. Without this the
+       absolutely-positioned resizer resolves inset-block:0 against the initial containing block
+       (the viewport), spanning full viewport height and sitting offscreen. */
+    position: relative;
     /* Component-specific sizing -- not shared design tokens, so a consumer
        can retheme any of them without a raw literal leaking into the public
        API (same rationale as lr-dialog's --lr-dialog-overlay-color and
@@ -59,7 +64,8 @@ export const styles = css`
      part attribute switches between the two names per render, so the two
      rulesets below are always mutually exclusive on it. */
   [part='base'] {
-    position: relative; /* anchors [part="resizer"] */
+    /* The resizer is anchored by :host (a sibling relationship), not by this element. */
+    position: relative;
     display: flex;
     flex-direction: column;
     inline-size: var(--lr-app-rail-width);
@@ -68,6 +74,9 @@ export const styles = css`
     background: var(--lr-color-surface);
     padding-block-end: var(--lr-safe-area-bottom);
     overflow-y: auto;
+    /* Pin the cross axis explicitly: with only overflow-y set, overflow-x computes from visible to
+       auto and can add a spurious horizontal scrollbar when slotted header/footer content is wide. */
+    overflow-x: clip;
     transition: inline-size var(--lr-transition-base);
   }
   :host([mode='icon-only']) [part='base'] {
@@ -121,6 +130,8 @@ export const styles = css`
     padding-block-end: var(--lr-safe-area-bottom);
     box-shadow: var(--lr-shadow);
     overflow-y: auto;
+    /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
+    overflow-x: clip;
     transform: translateX(-100%);
     transition: transform var(--lr-transition-base);
   }
@@ -132,8 +143,14 @@ export const styles = css`
   :host(:dir(rtl)) [part='panel'] {
     transform: translateX(100%);
   }
+  /* Settled-open state is transform: none, NOT translateX(0): a non-none transform (even the
+     identity) establishes a containing block for position: fixed descendants, which would trap and
+     clip consumer-slotted dropdowns/tooltips inside the open mobile panel (lyra-ui positions popups
+     with position: fixed via Floating UI, not the top layer). Transitions between translateX(-100%)
+     and none are well-defined (none interpolates as the identity matrix), so the slide-in still
+     animates. */
   :host([mode='mobile'][open]) [part='panel'] {
-    transform: translateX(0);
+    transform: none;
   }
 
   [part='header'] {
@@ -153,6 +170,8 @@ export const styles = css`
   [part='nav'] {
     flex: 1 1 auto;
     overflow-y: auto;
+    /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
+    overflow-x: clip;
     padding: var(--lr-space-s);
     display: flex;
     flex-direction: column;
