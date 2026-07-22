@@ -6,6 +6,7 @@
 - **Class** `LyraGraphLegend`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

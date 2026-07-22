@@ -6,6 +6,7 @@
 - **Class** `LyraTreeNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/tree/tree-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tree` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

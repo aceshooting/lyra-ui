@@ -6,6 +6,7 @@
 - **Class** `LyraToastItem`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/toast/toast-item.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-toast` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

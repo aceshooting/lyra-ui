@@ -6,6 +6,7 @@
 - **Class** `LyraMemoryPanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

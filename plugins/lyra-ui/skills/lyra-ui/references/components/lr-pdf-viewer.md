@@ -6,6 +6,7 @@
 - **Class** `LyraPdfViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
+- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

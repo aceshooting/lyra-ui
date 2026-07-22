@@ -6,6 +6,7 @@
 - **Class** `LyraFormatDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** nothing component-specific — inherits only the shared surface
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

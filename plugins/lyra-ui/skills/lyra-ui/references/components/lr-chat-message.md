@@ -6,6 +6,7 @@
 - **Class** `LyraChatMessage`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -115,6 +116,11 @@ streaming-indicator pulse animation's cycle, the same shared compound token
 `[part=bubble]`'s background resolves through `--lr-color-surface`. If your own panel/container
 background already maps to that same token, override `[part=bubble]`'s background explicitly (e.g.
 via `::part(bubble)`) so message bubbles stay visually distinct from the surrounding panel.
+
+> Retheming a bubble from outside `<lr-chat-message>` (e.g. per-thread or per-role colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none. Internally renders a `<lr-live-region>` (a first-party sibling
 component, auto-imported alongside this one, not an npm peer) for the status-transition

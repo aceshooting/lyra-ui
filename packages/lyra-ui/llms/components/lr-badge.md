@@ -6,6 +6,7 @@
 - **Class** `LyraBadge`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/badge/badge.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 1 part, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tag` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

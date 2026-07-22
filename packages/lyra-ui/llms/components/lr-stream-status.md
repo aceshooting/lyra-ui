@@ -6,6 +6,7 @@
 - **Class** `LyraStreamStatus`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

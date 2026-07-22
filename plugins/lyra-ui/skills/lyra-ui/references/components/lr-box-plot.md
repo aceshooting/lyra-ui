@@ -6,6 +6,7 @@
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -6,6 +6,7 @@
 - **Class** `LyraDocumentPreview`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

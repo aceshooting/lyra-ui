@@ -6,6 +6,7 @@
 - **Class** `LyraDoughnutChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/doughnut-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
+- **Themeable via** 7 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

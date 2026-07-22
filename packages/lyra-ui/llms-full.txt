@@ -760,6 +760,14 @@ a hovered or keyboard-active `[part='option']` row — the same per-component in
 `lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
 row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
 
+The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
+`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border`
+and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`), and
+`--lr-combobox-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`) — the same
+four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
+Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
+can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
 default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the row free to grow —
@@ -1421,6 +1429,9 @@ and the per-`size`
 and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
 both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
 by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
+`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
+byte-identical to before this property existed — set it to add a drop shadow (e.g. an
+elevated/floating action button) without a `::part(base)` rule.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
@@ -4890,6 +4901,9 @@ space for a persistent sidebar/toolbar that should stay visible instead of being
 fullscreen panel/backdrop — it overrides the default `var(--lr-space-l)` inset on every side for
 both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/body padding.
 
+The collapse-button `aria-label` is localized via its own `widgetCollapse` (default `'Collapse
+panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
+
 **Known gotchas:**
 - a reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `fullscreen` was still `true`
@@ -4897,6 +4911,11 @@ both `[part="base"]` and `[part="backdrop"]`. Set `compact` for tighter header/b
   between, so `willUpdate()` alone wouldn't otherwise notice.
 - `collapsed` hides the body via `hidden` rather than an animated height transition — collapsing is
   instant, not a slide.
+- prior to this release the collapse-button `aria-label` was localized through `lr-dock-panel`'s
+  own `dockPanelCollapse`/`dockPanelExpand` keys (a borrowed, differently-named pair). A locale
+  registered against those keys specifically to target `lr-widget`'s collapse button should move
+  to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
+  itself is unaffected.
 
 ---
 
@@ -6679,7 +6698,9 @@ the existing `flex-start` cross-axis and `start` text alignment, and `center` ce
 `--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode),
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
 in compact mode; the non-compact layout's gap stays the plain shared `--lr-space-s` token, not
-independently themeable), plus shared tokens (`--lr-space-xs/-s/-l`,
+independently themeable), `--lr-empty-compact-font-size` (compact mode only; unset by default with
+**no fallback value** — the compact heading keeps its ordinary inherited font size until a
+consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
@@ -8756,12 +8777,24 @@ accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `
 when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
 gains/loses focus.
 
+Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
+the file and the reason via one of four locale keys: `fileInputRejectedType` (default
+`'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
+`'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
+file can be selected at a time.'`), and — for `'directory'` — the pre-existing
+`fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
+`{filename}` placeholder). The filename is interpolated as caller-supplied data, never localized
+itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
+
 **Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
 provided. The accessible name always comes from `label` regardless, so icon-only slot content still
 announces correctly.
 
 **CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
-element carrying the drag accept/reject announcement)
+element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
+`rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
+each currently-rejected file next to a per-reason message — in addition to, never in place of, the
+sr-only `status` summary above)
 
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default
@@ -11623,6 +11656,11 @@ streaming-indicator pulse animation's cycle, the same shared compound token
 background already maps to that same token, override `[part=bubble]`'s background explicitly (e.g.
 via `::part(bubble)`) so message bubbles stay visually distinct from the surrounding panel.
 
+> Retheming a bubble from outside `<lr-chat-message>` (e.g. per-thread or per-role colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+
 **Optional peer deps:** none. Internally renders a `<lr-live-region>` (a first-party sibling
 component, auto-imported alongside this one, not an npm peer) for the status-transition
 announcements described below.
@@ -11696,10 +11734,13 @@ variant), `cursor` (the blinking bar in the `cursor` variant)
 `size="sm"`), `--lr-typing-gap` (default `0.25rem`, `0.1875rem` at `size="sm"`),
 `--lr-typing-cursor-width` (default `0.125rem`, `0.09375rem` at `size="sm"`),
 `--lr-typing-cursor-height` (default `1em`, unaffected by `size`),
-`--lr-typing-dot-stagger-1` (default `600ms`, second dot), and
-`--lr-typing-dot-stagger-2` (default `1200ms`, third dot). Every variant uses the shared
-`--lr-transition-ambient` compound duration/timing token (default `1.8s ease-in-out`) as its
-animation cycle.
+`--lr-typing-dot-stagger-1` (default `600ms`, second dot), `--lr-typing-dot-stagger-2` (default
+`1200ms`, third dot), and `--lr-typing-duration` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`) — the compound duration/timing-function token every variant uses as its
+animation cycle. `--lr-typing-duration` is a dedicated alias: it defaults to the library-wide
+`--lr-transition-ambient` token (shared by every other ambient-looping component), but overriding
+it retimes only this component, leaving `--lr-transition-ambient` itself — and anything else keyed
+off it — untouched.
 
 **Optional peer deps:** none.
 
@@ -11708,7 +11749,7 @@ animation cycle.
 <lr-typing-indicator variant="pulse" size="sm"></lr-typing-indicator>
 <lr-typing-indicator variant="cursor"></lr-typing-indicator>
 <lr-typing-indicator
-  style="--lr-transition-ambient: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
+  style="--lr-typing-duration: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
 ></lr-typing-indicator>
 ```
 
@@ -11727,9 +11768,10 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk
   freezing on its invisible ("off") blink half.
-- `--lr-transition-ambient` is a compound `duration timing-function` value and cannot be divided
-  with `calc()`. When retiming it, override both stagger properties alongside it to preserve the
-  default one-third/two-thirds dot phasing, as shown above.
+- `--lr-typing-duration` (like the `--lr-transition-ambient` token it aliases by default) is a
+  compound `duration timing-function` value and cannot be divided with `calc()`. When retiming it,
+  override both stagger properties alongside it to preserve the default one-third/two-thirds dot
+  phasing, as shown above.
 - `size="sm"` shrinks the dot size, gap, and cursor width, but **not** `--lr-typing-cursor-height`
   (still `1em` at any size) — the cursor bar's height is meant to track surrounding text size via
   `1em`, not the component's own `size` property.
@@ -13696,6 +13738,11 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 `--lr-space-xs/-s/-m`, `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-*`,
 `--lr-transition-fast`.
 
+> Retheming a chip from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+
 **Optional peer deps:** none.
 
 ```html
@@ -13762,6 +13809,13 @@ shell around it.
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
+- `status: 'pending'|'running'|'success'|'error'|'denied' = 'success'` (reflected) — the outcome of
+  the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
+  (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
+  never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
+  property existed — leaves it at that default, and a later renderer that stays quiet doesn't
+  inherit a stale outcome left behind by a previous one. Same status vocabulary as
+  `<lr-tool-result-dialog>`/`<lr-tool-call-chip>`.
 
 **Events:** `lr-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lr-json-viewer>`, whether because no renderer matched, a candidate
@@ -13804,10 +13858,16 @@ this same module-level registry unless a given `<lr-tool-result-view>`'s `regist
 set to a different `Map` instance.
 
 **`ToolRendererDefinition`** — the shape of one registered renderer:
-- `render?: (result: unknown, args: unknown) => unknown` — renders the result (and the args that
-  produced it) as UI. Typed as `unknown` rather than Lit's `TemplateResult` so any lit-html-renderable
-  value works (a plain string, a DOM node, an array of templates) — consumers already own their own
-  Lit import and don't need this module to add one
+- `render?: (result: unknown, args: unknown, context: ToolRenderContext) => unknown` — renders the
+  result (and the args that produced it) as UI. Typed as `unknown` rather than Lit's
+  `TemplateResult` so any lit-html-renderable value works (a plain string, a DOM node, an array of
+  templates) — consumers already own their own Lit import and don't need this module to add one.
+  The 3rd `context` argument is additive: it's the *last* positional parameter, so a pre-existing
+  2-arg `render(result, args)` function stays assignable to this type unchanged — JS/TS function
+  assignability allows an implementation with fewer parameters than its declared type. Use
+  `context.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
+  — e.g. an application-level failure the renderer still drew real UI for — instead of throwing,
+  which discards that UI for the `<lr-json-viewer>` fallback instead
 - `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only
   when no exact `toolName` key matches (see dispatch order below); only ever consulted *before*
   `load` resolves when supplied inline at registration time — a definition that needs shape-based
@@ -13819,6 +13879,27 @@ set to a different `Map` instance.
   registers it. Resolves to either a definition directly, or a `{ default }`-shaped module namespace
   object, so `load: () => import('./my-renderer.js')` works unmodified when that module's default
   export is itself a `ToolRendererDefinition`
+
+**`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
+- `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
+  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
+  union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
+  it is entirely optional: a renderer that never calls it leaves `<lr-tool-result-view>`'s `status`
+  property at its default, `'success'`. This threads through the lazy `load()` path exactly the
+  same way — a `render()` resolved via `load()` receives the same 3rd `context` argument as one
+  registered directly.
+
+```ts
+registerToolRenderer('run_query', {
+  render: (result, _args, context) => {
+    if ((result as { rows?: unknown[] })?.rows === undefined) {
+      context.reportStatus('error');
+      return html`<p class="query-error">The query returned no result set.</p>`;
+    }
+    return html`<query-result-table .rows=${(result as { rows: unknown[] }).rows}></query-result-table>`;
+  },
+});
+```
 
 **Exports:**
 - `registerToolRenderer(name: string, def: ToolRendererDefinition): void` — registers (or
@@ -13879,6 +13960,20 @@ registerToolRenderer('web_search', {
 - `matches` is a linear scan over every registered definition's `matches` in registration order; it
   only runs when the exact-name lookup misses, so tool names with a direct registration never pay
   that scan cost
+- `status` is reset to `'success'` immediately before every `render()` call, not merely at
+  construction — a renderer that reported `'error'` on one result does not leave that status
+  behind once dispatch moves on to a different (quiet) renderer; a `reportStatus()` call that
+  arrives asynchronously after a *newer* resolve has already started (a stale promise the previous
+  render kicked off) is detected via the same generation counter as the `load()` staleness guard
+  and discarded rather than clobbering the newer status
+- **don't type a custom renderer against a hand-rolled, over-generic function signature** (e.g.
+  `render: (...args: any[]) => unknown`, or a locally-declared narrower alias then cast to
+  `ToolRendererDefinition`) — write the registration as a plain object literal (as in every example
+  above) or annotate it as `ToolRendererDefinition` directly, so TypeScript checks the actual
+  current `render`/`matches`/`load` shape, including the `context: ToolRenderContext` 3rd
+  parameter and the exact `ToolResultStatus` string union `reportStatus` accepts. A loosened/`any`
+  signature type-checks either way but silently gives up the compiler's ability to catch a typo'd
+  status string or a dropped `context` parameter
 - `fallback` implements exactly two kinds, `"json"` and `"text"`; any *other* value silently behaves
   as `"json"`, as does `"text"` whenever `result` isn't a string. Only `"text"` renders
   `[part="fallback-text"]`/`[part="fallback-copy"]`
@@ -16366,6 +16461,11 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 `--lr-color-warning` / `-warning-quiet`, `--lr-color-danger` / `-danger-quiet`, `--lr-radius`,
 `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`, `--lr-space-s`/`-m`,
 `--lr-transition-fast`, `--lr-focus-ring-*`.
+
+> Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 

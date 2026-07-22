@@ -6,6 +6,7 @@
 - **Class** `LyraDateInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 13 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-picker` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

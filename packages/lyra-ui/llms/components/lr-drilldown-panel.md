@@ -6,6 +6,7 @@
 - **Class** `LyraDrilldownPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/drilldown-panel/drilldown-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 11 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -6,6 +6,7 @@
 - **Class** `LyraCitationBadge`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/citation-badge/citation-badge.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,6 +56,11 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 `--lr-color-warning` / `-warning-quiet`, `--lr-color-danger` / `-danger-quiet`, `--lr-radius`,
 `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`, `--lr-space-s`/`-m`,
 `--lr-transition-fast`, `--lr-focus-ring-*`.
+
+> Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 

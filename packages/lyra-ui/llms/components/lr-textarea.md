@@ -6,6 +6,7 @@
 - **Class** `LyraTextarea`, also available unregistered from `@aceshooting/lyra-ui/components/forms/textarea/textarea.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 5 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

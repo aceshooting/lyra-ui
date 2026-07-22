@@ -6,6 +6,7 @@
 - **Class** `LyraQrCode`, also available unregistered from `@aceshooting/lyra-ui/components/media/qr-code/qr-code.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** `qrcode` — see `llms/peers.md`
+- **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

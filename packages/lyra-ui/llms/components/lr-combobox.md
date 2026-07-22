@@ -6,6 +6,7 @@
 - **Class** `LyraCombobox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 21 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -179,6 +180,14 @@ the properties above, do not vary by `size` — the same `--lr-button-gap`/`-rad
 a hovered or keyboard-active `[part='option']` row — the same per-component indirection
 `lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
 row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
+
+The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
+`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border`
+and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`), and
+`--lr-combobox-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`) — the same
+four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
+Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
+can retheme the selected row without hijacking `--lr-color-brand` library-wide.
 
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by

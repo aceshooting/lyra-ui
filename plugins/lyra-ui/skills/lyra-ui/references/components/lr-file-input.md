@@ -6,6 +6,7 @@
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,12 +51,24 @@ accepted), `'size'` from `maxFileSize`, or `'directory'` for a dropped folder. `
 when the semantic dropzone (the actual keyboard-focusable element, not the hidden native `<input>`)
 gains/loses focus.
 
+Each rejected file also renders as its own line in the visible `[part="rejection"]` alert, naming
+the file and the reason via one of four locale keys: `fileInputRejectedType` (default
+`'{filename}: this file type is not accepted.'`), `fileInputRejectedSize` (default
+`'{filename}: this file is too large.'`), `fileInputRejectedCount` (default `'{filename}: only one
+file can be selected at a time.'`), and — for `'directory'` — the pre-existing
+`fileInputFolderRejected` (default `'Folders are not accepted here.'`, reused verbatim, so it has no
+`{filename}` placeholder). The filename is interpolated as caller-supplied data, never localized
+itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
+
 **Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
 provided. The accessible name always comes from `label` regardless, so icon-only slot content still
 announces correctly.
 
 **CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
-element carrying the drag accept/reject announcement)
+element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
+`rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
+each currently-rejected file next to a per-reason message — in addition to, never in place of, the
+sr-only `status` summary above)
 
 **Themeable custom properties:** `--lr-file-input-compact-padding` (default `var(--lr-space-s)`) —
 `[part='base']`'s padding while `compact`; `--lr-file-input-compact-gap` (default

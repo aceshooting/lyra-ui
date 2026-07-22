@@ -6,6 +6,7 @@
 - **Class** `LyraEmpty`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/empty/empty.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 5 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,7 +35,9 @@ the existing `flex-start` cross-axis and `start` text alignment, and `center` ce
 `--lr-empty-compact-padding` (default `--lr-space-xs` — padding used in compact mode),
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
 in compact mode; the non-compact layout's gap stays the plain shared `--lr-space-s` token, not
-independently themeable), plus shared tokens (`--lr-space-xs/-s/-l`,
+independently themeable), `--lr-empty-compact-font-size` (compact mode only; unset by default with
+**no fallback value** — the compact heading keeps its ordinary inherited font size until a
+consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.

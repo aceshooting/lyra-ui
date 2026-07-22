@@ -6,6 +6,7 @@
 - **Class** `LyraButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/button/button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 5 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -99,6 +100,9 @@ and the per-`size`
 and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
 both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
 by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
+`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
+byte-identical to before this property existed — set it to add a drop shadow (e.g. an
+elevated/floating action button) without a `::part(base)` rule.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no

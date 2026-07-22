@@ -6,6 +6,7 @@
 - **Class** `LyraToolCallChip`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-call-chip/tool-call-chip.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 10 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,6 +62,11 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 `--lr-color-danger`/`-danger-quiet`, `--lr-color-warning`/`-warning-quiet`, `--lr-color-text`,
 `--lr-space-xs/-s/-m`, `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-*`,
 `--lr-transition-fast`.
+
+> Retheming a chip from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
 
 **Optional peer deps:** none.
 

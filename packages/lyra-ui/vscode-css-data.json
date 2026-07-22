@@ -555,6 +555,13 @@
       }
     },
     {
+      "name": "--lr-button-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-button>`** — Box shadow of the internal button. **Undeclared by default**, so `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g. an elevated/floating action button) without a `::part(base)` rule."
+      }
+    },
+    {
       "name": "--lr-button-size-2xs",
       "description": {
         "kind": "markdown",
@@ -1017,6 +1024,34 @@
       }
     },
     {
+      "name": "--lr-combobox-option-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `transparent`) — Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`."
+      }
+    },
+    {
+      "name": "--lr-combobox-option-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-color-brand)`) — Border color of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-combobox-option-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-color-brand)`) — Text color of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-combobox-option-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-combobox>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row."
+      }
+    },
+    {
       "name": "--lr-combobox-radius",
       "description": {
         "kind": "markdown",
@@ -1476,6 +1511,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-empty>`** — Cross-axis and text alignment used in compact mode; set to `center` for dense but centered empty states."
+      }
+    },
+    {
+      "name": "--lr-empty-compact-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-empty>`** — Heading font size used in compact mode. Unset by default (no fallback), so the heading keeps its ordinary inherited font size until a consumer opts in."
       }
     },
     {
@@ -3687,7 +3729,7 @@
       "name": "--lr-transition-ambient",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chat-message>`** (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function.\n\n**`<lr-skeleton>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by the pulse and sheen effects.\n\n**`<lr-tool-call-chip>`** (default: `1.8s ease-in-out`) — Pending-icon pulse duration and timing.\n\n**`<lr-typing-indicator>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by all variants."
+        "value": "**`<lr-chat-message>`** (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function.\n\n**`<lr-skeleton>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by the pulse and sheen effects.\n\n**`<lr-tool-call-chip>`** (default: `1.8s ease-in-out`) — Pending-icon pulse duration and timing."
       }
     },
     {
@@ -3709,6 +3751,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-typing-indicator>`** (default: `1200ms`) — Delay for the third dot in the dots variant."
+      }
+    },
+    {
+      "name": "--lr-typing-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-typing-indicator>`** (default: `var(--lr-transition-ambient)`) — Animation duration and timing function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the shared `--lr-transition-ambient` token (default `1.8s ease-in-out`) by default, so retiming just this component doesn't affect other ambient-looping components in the library."
       }
     },
     {

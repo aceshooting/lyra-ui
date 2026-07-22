@@ -6,6 +6,7 @@
 - **Class** `LyraEmojiPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
+- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

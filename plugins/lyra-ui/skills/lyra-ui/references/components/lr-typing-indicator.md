@@ -6,6 +6,7 @@
 - **Class** `LyraTypingIndicator`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/typing-indicator/typing-indicator.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,10 +40,13 @@ variant), `cursor` (the blinking bar in the `cursor` variant)
 `size="sm"`), `--lr-typing-gap` (default `0.25rem`, `0.1875rem` at `size="sm"`),
 `--lr-typing-cursor-width` (default `0.125rem`, `0.09375rem` at `size="sm"`),
 `--lr-typing-cursor-height` (default `1em`, unaffected by `size`),
-`--lr-typing-dot-stagger-1` (default `600ms`, second dot), and
-`--lr-typing-dot-stagger-2` (default `1200ms`, third dot). Every variant uses the shared
-`--lr-transition-ambient` compound duration/timing token (default `1.8s ease-in-out`) as its
-animation cycle.
+`--lr-typing-dot-stagger-1` (default `600ms`, second dot), `--lr-typing-dot-stagger-2` (default
+`1200ms`, third dot), and `--lr-typing-duration` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`) — the compound duration/timing-function token every variant uses as its
+animation cycle. `--lr-typing-duration` is a dedicated alias: it defaults to the library-wide
+`--lr-transition-ambient` token (shared by every other ambient-looping component), but overriding
+it retimes only this component, leaving `--lr-transition-ambient` itself — and anything else keyed
+off it — untouched.
 
 **Optional peer deps:** none.
 
@@ -51,7 +55,7 @@ animation cycle.
 <lr-typing-indicator variant="pulse" size="sm"></lr-typing-indicator>
 <lr-typing-indicator variant="cursor"></lr-typing-indicator>
 <lr-typing-indicator
-  style="--lr-transition-ambient: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
+  style="--lr-typing-duration: 900ms ease-in-out; --lr-typing-dot-stagger-1: 300ms; --lr-typing-dot-stagger-2: 600ms"
 ></lr-typing-indicator>
 ```
 
@@ -70,9 +74,10 @@ decorative; `label` is the entire accessible content, nothing narrates individua
   state (`opacity: 1`, no transform, `animation: none !important`) rather than freezing on whatever
   frame the animation happened to be on — notably relevant for `cursor`, which would otherwise risk
   freezing on its invisible ("off") blink half.
-- `--lr-transition-ambient` is a compound `duration timing-function` value and cannot be divided
-  with `calc()`. When retiming it, override both stagger properties alongside it to preserve the
-  default one-third/two-thirds dot phasing, as shown above.
+- `--lr-typing-duration` (like the `--lr-transition-ambient` token it aliases by default) is a
+  compound `duration timing-function` value and cannot be divided with `calc()`. When retiming it,
+  override both stagger properties alongside it to preserve the default one-third/two-thirds dot
+  phasing, as shown above.
 - `size="sm"` shrinks the dot size, gap, and cursor width, but **not** `--lr-typing-cursor-height`
   (still `1em` at any size) — the cursor bar's height is meant to track surrounding text size via
   `1em`, not the component's own `size` property.

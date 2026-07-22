@@ -6,6 +6,7 @@
 - **Class** `LyraToolSelectDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-select-dialog/tool-select-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 23 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

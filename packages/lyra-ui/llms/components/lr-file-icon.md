@@ -6,6 +6,7 @@
 - **Class** `LyraFileIcon`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-icon/file-icon.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -6,6 +6,7 @@
 - **Class** `LyraAccordion`, also available unregistered from `@aceshooting/lyra-ui/components/layout/details/accordion.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 1 part, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-details`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

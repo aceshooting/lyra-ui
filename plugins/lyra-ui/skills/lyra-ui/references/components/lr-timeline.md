@@ -6,6 +6,7 @@
 - **Class** `LyraTimeline`, also available unregistered from `@aceshooting/lyra-ui/components/data/timeline/timeline.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-timeline-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

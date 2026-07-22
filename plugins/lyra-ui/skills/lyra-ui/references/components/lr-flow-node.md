@@ -6,6 +6,7 @@
 - **Class** `LyraFlowNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-node/flow-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

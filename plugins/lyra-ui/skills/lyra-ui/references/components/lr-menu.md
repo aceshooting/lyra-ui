@@ -6,6 +6,7 @@
 - **Class** `LyraMenu`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menu/menu.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
+- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
