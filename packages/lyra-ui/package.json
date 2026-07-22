@@ -68,6 +68,7 @@
     "./ai": "./dist/ai/index.js",
     "./ai/*": "./dist/ai/*",
     "./theme/*": "./dist/theme/*",
+    "./theme.js": "./dist/theme/theme.js",
     "./theme.css": "./dist/theme.css",
     "./testing": "./dist/testing/happy-dom-shims.js",
     "./package.json": "./package.json"

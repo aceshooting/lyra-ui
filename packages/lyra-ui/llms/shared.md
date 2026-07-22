@@ -190,6 +190,94 @@ dark palette — that fallback applies only where no real `--lr-theme-*` value i
 The token layer also sets `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
 
+### Theme mode/accent runtime (`@aceshooting/lyra-ui/theme.js`)
+
+Flipping the mode class/attribute above is something every app ends up hand-rolling — persist a
+choice, apply it on load, avoid the flash of wrong theme before the app boots. `theme.js` is that
+runtime, published as its own subpath: **zero dependencies, no Lit, no component imports, and no
+side effects on import**, so an app can persist and apply a theme without pulling the component
+graph into its first-paint bundle.
+
+```ts
+import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
+
+setLyraTheme({ mode: 'dark' });                  // unspecified fields keep their current value
+setLyraTheme({ accent: '#7c3aed' });             // mode stays 'dark'
+getLyraTheme();                                  // → { mode: 'dark', accent: '#7c3aed' }
+setLyraTheme({ mode: 'auto', accent: null });    // clears the override and the accent
+```
+
+- **`setLyraTheme({ mode?, accent? })`** persists to `localStorage['lyra-theme']`, applies to
+  `document.documentElement`, and dispatches `lr-theme-change` on `window` with
+  `detail: { mode, accent }`. Fields you omit keep their current value; pass `null` to clear the
+  accent. It **never throws** — when `localStorage` is unavailable (private browsing, quota, a
+  sandboxed iframe) it degrades to apply-without-persist, and the "fields you omit keep their
+  current value" rule still holds across calls in that state: the merge falls back to the last
+  theme applied in this session rather than to the default.
+- **`getLyraTheme()`** returns `{ mode, accent }`, defaulting to `{ mode: 'auto', accent: null }`
+  when nothing is stored or the stored value is malformed. Storage is re-read on every call — no
+  in-memory cache — so a value written by another tab or a previous session is picked up cold.
+  Where storage is unreadable or unwritable it reports the theme last applied, so the return value
+  always describes what the document is actually showing and a toggle UI bound to it stays in sync.
+- **`mode`** is `'light' | 'dark' | 'auto'`. `'light'`/`'dark'` set **both `data-lr-theme`** (the
+  attribute `theme.css` actually keys its palette blocks on) **and `data-theme`** (the generic
+  attribute canvas-rendered components watch, so `lr-chart`/`lr-heatmap`/`lr-qr-code` repaint on
+  the switch rather than keeping stale colors — see `llms/components/lr-chart.md`). `'auto'`
+  removes both, which means **no override — not "follow the OS"**:
+  - **With `theme.css` imported** (the setup this section is nested under), its `:root` block sets
+    the full light palette unconditionally and that file ships no `prefers-color-scheme` block, so
+    `'auto'` renders **light** whatever the OS is set to.
+  - **Without `theme.css`**, no real `--lr-theme-*` value is set, so the token layer's
+    `prefers-color-scheme: dark` fallback described above does apply and bare components follow
+    the OS.
+
+  To follow the OS *alongside* `theme.css`, resolve the preference yourself and pass a concrete
+  mode — `setLyraTheme` deliberately does no `matchMedia` work of its own:
+  ```ts
+  const os = matchMedia('(prefers-color-scheme: dark)');
+  const sync = () => setLyraTheme({ mode: os.matches ? 'dark' : 'light' });
+  sync();
+  os.addEventListener('change', sync);
+  ```
+- **`accent`** is written to `--lr-theme-accent` as an inline custom property on the root element.
+  This is a **hook for your CSS, not a token the library reads** — no lyra-ui component consumes
+  `--lr-theme-accent`. Point the real inputs at it to make it retint anything, **writing one rule
+  per mode**:
+  ```css
+  :root { --lr-theme-color-brand-fill-loud: var(--lr-theme-accent, #0969da); }
+  .lr-dark,
+  [data-lr-theme='dark'] { --lr-theme-color-brand-fill-loud: var(--lr-theme-accent, #4ea0f0); }
+  ```
+  **Each arm's fallback must carry that mode's own value.** A single `:root` rule flattens both
+  modes to one color whenever the accent is unset (`accent: null`, the default): `:root` and
+  `[data-lr-theme='dark']` have equal specificity and both match `<html>` — the element
+  `setLyraTheme` writes `data-lr-theme` onto — so a consumer stylesheet loaded after `theme.css`
+  wins the tie on source order and pins the light-mode blue in dark mode. Copy each fallback from
+  the matching palette block in `theme.css` (`#0969da` light / `#4ea0f0` dark here).
+
+  Because that is a `--lr-theme-*` input, it reaches every nested shadow root — see "Where an
+  override actually reaches" above for why setting a `--lr-*` token instead would not.
+
+**No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
+meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
+is on the root element before first paint. It is a string precisely so this can happen in an
+unbundled `<script>` context without shipping or parsing the module:
+
+```html
+<head>
+  <script>/* server-inlines lyraThemeBootstrap here */</script>
+  <link rel="stylesheet" href="/theme.css" />
+</head>
+```
+
+It reads the same storage key, applies the same two attributes and `--lr-theme-accent`, and
+swallows any error — malformed storage or a blocked `localStorage` leaves the document untouched
+rather than throwing before your app loads.
+
+**This runtime does no color math.** It stores and applies whatever accent string you give it; it
+does not validate the value, compute a palette from it, or check contrast against any surface.
+Verifying that an accent meets WCAG contrast against the light *and* dark palettes is yours.
+
 ## Localization: `locale`, `strings`, and the locale runtime
 
 Every built-in string — button labels, accessible names, descriptions, validation messages, status
