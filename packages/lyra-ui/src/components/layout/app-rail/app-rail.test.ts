@@ -92,6 +92,33 @@ it('hides app-rail-item labels visually in icon-only mode while retaining their 
 
 // -- breakpoint-driven mode wiring ---------------------------------------
 
+it('resolves the correct mode on the first rendered frame, before any matchMedia change event', async () => {
+  // Regression guard mirroring split.test.ts's first-paint collapse-state test: `mode` is derived
+  // from `matchMedia().matches` synchronously in connectedCallback -> setupMediaQueries (there is
+  // no ResizeObserver on this element), so the VERY FIRST render must already land on the correct
+  // mode -- not 'full' first and the real mode only after a change event/second frame. The stub's
+  // add/removeEventListener are no-ops, so the only path to a non-'full' mode here is that initial
+  // synchronous `.matches` read; pre-matching every `max-width` query makes both breakpoints match,
+  // and computeAppRailMode(true, true) resolves to 'mobile'.
+  const savedMatchMedia = window.matchMedia;
+  window.matchMedia = ((query: string) =>
+    ({
+      matches: query.includes('max-width'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+  try {
+    const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
+    // Assert on the very first update -- no second `await el.updateComplete` and no manual
+    // matchMedia change-event dispatch between fixture creation and this assertion.
+    expect(el.mode).to.equal('mobile');
+    expect(el.getAttribute('mode'), 'first frame, not a second frame').to.equal('mobile');
+  } finally {
+    window.matchMedia = savedMatchMedia;
+  }
+});
+
 it('switches to icon-only and emits lr-mode-change when the icon-only query starts matching', async () => {
   const el = (await fixture(html`<lr-app-rail><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
   const promise = oneEvent(el, 'lr-mode-change');
