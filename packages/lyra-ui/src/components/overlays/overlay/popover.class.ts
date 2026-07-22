@@ -28,6 +28,9 @@ export interface LyraPopoverEventMap {
  * @slot - Popover content.
  * @event lr-show - The popover opened.
  * @event lr-hide - The popover closed.
+ * @method hide - `hide(options?: { focusTrigger?: boolean }): void` — programmatically close the
+ *   popover. `focusTrigger: true` returns focus to the slotted trigger (like Escape); the default
+ *   closes without moving focus (like `el.open = false`).
  * @csspart trigger - The trigger wrapper.
  * @csspart popup - The positioned popup.
  * @csspart content - The content wrapper.
@@ -191,6 +194,16 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private onDocumentPointer = (event: PointerEvent): void => {
     if (!event.composedPath().includes(this)) this.open = false;
   };
+
+  /** Programmatically close the popover. Pass `{ focusTrigger: true }` to return focus to the
+   *  slotted trigger (matching what Escape does); the default (`false`) closes without moving
+   *  focus, matching a bare `el.open = false`. Additive — existing dismissal paths are unchanged. */
+  hide(options?: { focusTrigger?: boolean }): void {
+    if (!this.open) return;
+    this.open = false;
+    if (options?.focusTrigger) this.trigger?.focus();
+  }
+
   override render(): TemplateResult {
     // The accessible-name fallback follows the popup's actual semantic role --
     // a `popupRole="menu"` popup (e.g. <lr-dropdown>) is announced as a menu,

@@ -446,3 +446,49 @@ it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is ne
   expect(el.open).to.be.false;
   expect(document.activeElement, 'Escape must not move focus off the trigger, as before').to.equal(trigger);
 });
+
+describe('lr-popover hide()', () => {
+  it('closes the popover without moving focus by default', async () => {
+    const el = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    outside.focus();
+    try {
+      el.hide();
+      await el.updateComplete;
+      expect(el.open).to.be.false;
+      // Default hide() does not steal focus (matches a bare `el.open = false`).
+      expect(document.activeElement).to.equal(outside);
+    } finally {
+      document.body.removeChild(outside);
+    }
+  });
+
+  it('returns focus to the trigger when called with { focusTrigger: true }', async () => {
+    const el = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    el.hide({ focusTrigger: true });
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(document.activeElement).to.equal(trigger);
+  });
+
+  it('is a no-op when already closed', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    let hideCount = 0;
+    el.addEventListener('lr-hide', () => hideCount++);
+    el.hide({ focusTrigger: true });
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    expect(hideCount).to.equal(0);
+  });
+});

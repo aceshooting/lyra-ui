@@ -650,6 +650,9 @@ near the virtual point) when one is available to give it something to observe; o
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before.
+`hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
+`{ focusTrigger: true }` to return focus to the slotted trigger (as Escape does), or omit it to
+close without moving focus (as a bare `el.open = false` does). No-op when already closed.
 **Events:** `lr-show`, `lr-hide`. **Slots:** `trigger`, default content. **CSS parts:** `trigger`,
 `popup`, `content`. **Themeable custom properties:** `--lr-overlay-max-inline-size` (default
 `--lr-size-20rem` — maximum inline size of the popup).
