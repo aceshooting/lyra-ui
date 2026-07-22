@@ -859,6 +859,62 @@ describe('aria-label forwarding', () => {
   });
 });
 
+describe('storage-key persistence', () => {
+  const keys: string[] = [];
+  function uniqueKey(): string {
+    const k = `test-${keys.length}-${window.location.pathname.length}`;
+    keys.push(k);
+    return k;
+  }
+  afterEach(() => {
+    for (const k of keys) {
+      try {
+        localStorage.removeItem(`lr-app-rail:${k}`);
+      } catch {
+        /* ignore */
+      }
+    }
+    keys.length = 0;
+  });
+
+  it('persists railWidthPx and restores it on a fresh mount', async () => {
+    const key = uniqueKey();
+    const el = (await fixture(
+      html`<lr-app-rail resizable storage-key=${key}><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    el.railWidthPx = 260;
+    await el.updateComplete;
+
+    const el2 = (await fixture(
+      html`<lr-app-rail resizable storage-key=${key}><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el2.updateComplete;
+    expect(el2.railWidthPx).to.equal(260);
+  });
+
+  it('does not touch localStorage when storage-key is unset', async () => {
+    const el = (await fixture(html`<lr-app-rail resizable><a href="/a">A</a></lr-app-rail>`)) as LyraAppRail;
+    await el.updateComplete;
+    const before = localStorage.length;
+    el.railWidthPx = 300;
+    await el.updateComplete;
+    expect(localStorage.length).to.equal(before);
+  });
+
+  it('does not persist mode (breakpoint-derived), only open and railWidthPx', async () => {
+    const key = uniqueKey();
+    const el = (await fixture(
+      html`<lr-app-rail resizable storage-key=${key}><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+    el.railWidthPx = 220;
+    await el.updateComplete;
+    const stored = JSON.parse(localStorage.getItem(`lr-app-rail:${key}`)!) as Record<string, unknown>;
+    expect(Object.keys(stored).sort()).to.deep.equal(['open', 'railWidthPx']);
+  });
+});
+
 describe('layout: resizer anchor, overflow, and mobile containing block', () => {
   it('anchors the resizer within the host, not the viewport', async () => {
     const el = (await fixture(

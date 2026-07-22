@@ -760,12 +760,16 @@
             },
             {
               "name": "resizable",
-              "description": "Opts a continuously draggable width in for the `'full'` state — exposes a `[part=\"resizer\"]`\nhandle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to\n`[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the\nchosen width to survive a reload should listen for `lr-rail-resize` and persist `widthPx`\nitself. `false` (the default) renders no resizer and leaves the fixed-width\n`--lr-app-rail-width` CSS token exactly as before this property existed.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "Opts a continuously draggable width in for the `'full'` state — exposes a `[part=\"resizer\"]`\nhandle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to\n`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the chosen width (and `open`)\nacross reloads; otherwise listen for `lr-rail-resize` and persist `widthPx` yourself. `false`\n(the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token\nexactly as before this property existed.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
                 ]
               }
+            },
+            {
+              "name": "storage-key",
+              "description": "When set, persists `open` and `railWidthPx` to `localStorage` under\n`lr-app-rail:${storageKey}`, restoring them on the next mount — mirrors `lr-split`'s\n`storage-key`. `mode` is breakpoint-derived and is never persisted. Unset (the default) means\nno persistence, exactly as before.\n\nType: `string | undefined`"
             }
           ]
         },

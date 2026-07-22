@@ -1100,8 +1100,10 @@ content is never duplicated.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
-`[minRailWidthPx, maxRailWidthPx]`, with no built-in persistence — a consumer that wants the chosen
-width to survive a reload listens for `lr-rail-resize` and persists `railWidthPx` itself.
+`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist `open` and
+`railWidthPx` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the next mount
+(mirrors `lr-split`'s `storage-key`; `mode` is breakpoint-derived and never persisted). Without a
+`storageKey` there is no persistence — listen for `lr-rail-resize` and persist `widthPx` yourself.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
@@ -1146,6 +1148,9 @@ accessor itself, which still takes full priority.
 - `railWidthPx?: number` (attribute `rail-width-px`) — the rail's current width in px while
   `resizable`; settable/gettable directly. Unset defers to `--lr-app-rail-width`'s own resolved
   width.
+- `storageKey?: string` (attribute `storage-key`) — when set, persists `open` and `railWidthPx` to
+  `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next mount. `mode` is
+  breakpoint-derived and never persisted. Unset means no persistence.
 - `minRailWidthPx: number = 190` (attribute `min-rail-width-px`) — minimum `railWidthPx` a
   drag/keyboard resize can reach.
 - `maxRailWidthPx: number = 440` (attribute `max-rail-width-px`) — maximum `railWidthPx` a

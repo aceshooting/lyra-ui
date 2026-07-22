@@ -231,11 +231,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
-   *  `[minRailWidthPx, maxRailWidthPx]`. No built-in persistence — a consumer that wants the
-   *  chosen width to survive a reload should listen for `lr-rail-resize` and persist `widthPx`
-   *  itself. `false` (the default) renders no resizer and leaves the fixed-width
-   *  `--lr-app-rail-width` CSS token exactly as before this property existed. */
+   *  `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the chosen width (and `open`)
+   *  across reloads; otherwise listen for `lr-rail-resize` and persist `widthPx` yourself. `false`
+   *  (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
+   *  exactly as before this property existed. */
   @property({ type: Boolean, reflect: true }) resizable = false;
+
+  /** When set, persists `open` and `railWidthPx` to `localStorage` under
+   *  `lr-app-rail:${storageKey}`, restoring them on the next mount — mirrors `lr-split`'s
+   *  `storage-key`. `mode` is breakpoint-derived and is never persisted. Unset (the default) means
+   *  no persistence, exactly as before. */
+  @property({ attribute: 'storage-key' }) storageKey?: string;
 
   /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
    *  `--lr-app-rail-width` CSS token's own resolved width. */
@@ -256,6 +262,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
+
+  /** False until after the first `updated()`, so persistence never fires on the load pass. */
+  private persistReady = false;
 
   private _mode: AppRailMode = 'full';
   // Whether matchMedia changes are currently ignored because a consumer
@@ -346,10 +355,49 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return this.baseEl?.getBoundingClientRect().width ?? 240;
   }
 
+  private get storageFullKey(): string | undefined {
+    return this.storageKey ? `lr-app-rail:${this.storageKey}` : undefined;
+  }
+
+  /** Restore persisted `open`/`railWidthPx`. Runs once, before the first render. `mode` is
+   *  breakpoint-derived and deliberately not restored. */
+  private loadPersisted(): void {
+    const key = this.storageFullKey;
+    if (!key) return;
+    let raw: string | null;
+    try {
+      raw = localStorage.getItem(key);
+    } catch {
+      /* localStorage unavailable (private browsing, sandboxed iframe, etc.) */
+      return;
+    }
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as { open?: unknown; railWidthPx?: unknown };
+      if (typeof parsed.open === 'boolean') this.open = parsed.open;
+      if (typeof parsed.railWidthPx === 'number' && Number.isFinite(parsed.railWidthPx)) {
+        this.railWidthPx = parsed.railWidthPx;
+      }
+    } catch {
+      /* ignore malformed persisted state */
+    }
+  }
+
+  private persist(): void {
+    const key = this.storageFullKey;
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify({ open: this.open, railWidthPx: this.railWidthPx }));
+    } catch {
+      /* ignore persistence failures (e.g. quota exceeded, private browsing) */
+    }
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
+      this.loadPersisted();
     }
     if (this.hasUpdated && (changed.has('iconOnlyBreakpoint') || changed.has('mobileBreakpoint'))) {
       this.teardownMediaQueries();
@@ -382,6 +430,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       this.justOpened = false;
       this.overlayHandle?.focusInitial();
     }
+    // Persist whenever the persistable state changes, but never on the initial update -- that pass
+    // is where loadPersisted() set these values, and Lit has already flipped `hasUpdated` to true
+    // by the time `updated` runs, so a dedicated flag is needed to skip it.
+    if (this.persistReady && (changed.has('open') || changed.has('railWidthPx'))) {
+      this.persist();
+    }
+    this.persistReady = true;
     if (
       (changed.has('railWidthPx') || changed.has('resizable') || changed.has('mode') || !this.hasUpdated) &&
       this.baseEl
