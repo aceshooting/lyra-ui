@@ -865,6 +865,20 @@ it('applies one valueFormatter to numeric ticks, tooltips, and legend values', a
   expect(labels[0].text).to.equal('Revenue: legend:30');
 });
 
+it('does not run category-axis tick labels through valueFormatter', async () => {
+  const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+  el.labels = ['Jan', 'Feb', 'Mar'];
+  el.datasets = [{ label: 'Revenue', data: [10, 20, 30] }];
+  el.valueFormatter = (value, context) => `${context}:${value}`;
+
+  const config = (el as any).buildConfig();
+  // The x scale is categorical (type: 'category') and must render the real label text, not
+  // valueFormatter run against the tick index.
+  expect(config.options.scales.x.ticks.callback).to.be.undefined;
+  // The y scale is the numeric axis and must still run through valueFormatter.
+  expect(config.options.scales.y.ticks.callback(10)).to.equal('tick:10');
+});
+
 it('positions the center slot from chart-area geometry', async () => {
   const el = (await fixture(html`
     <lr-doughnut-chart><span slot="center">Total</span></lr-doughnut-chart>

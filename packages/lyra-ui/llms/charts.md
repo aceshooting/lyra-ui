@@ -18,9 +18,11 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — places the
   legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
   that allocation width
-- `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric tick, tooltip,
-  and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or `'legend'`
-  context
+- `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric (value-axis)
+  tick, tooltip, and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or
+  `'legend'` context. Never runs against the categorical x-axis's own labels (line/bar's `labels`
+  strings) — Chart.js's category scale passes the tick index to `ticks.callback`, not the label
+  text
 - `area: boolean = false`
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed

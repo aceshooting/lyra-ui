@@ -273,7 +273,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ type: Boolean }) legend = false;
   /** Legend placement. `auto` uses a right legend above 480px and a bottom legend below it. */
   @property({ attribute: 'legend-position' }) legendPosition: LyraChartLegendPosition = 'top';
-  /** Formats numeric ticks, tooltip values, and legend values from one callback. */
+  /**
+   * Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.
+   * Never runs against the categorical x-axis's own labels (line/bar's `labels` strings) —
+   * Chart.js's category scale passes the tick index to `ticks.callback`, not the label text,
+   * so formatting it would corrupt the axis.
+   */
   @property({ attribute: false }) valueFormatter?: LyraChartValueFormatter;
   @property({ type: Boolean }) area = false;
   @property({ type: Boolean }) zoom = false;
@@ -609,10 +614,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return palette.length ? palette : FALLBACK_SERIES_PALETTE;
   }
 
-  private tickOptions(theme: ThemeColors): OptionalPeerApi {
+  private tickOptions(theme: ThemeColors, kind: 'category' | 'value' = 'value'): OptionalPeerApi {
     return {
       color: theme.tick,
-      ...(this.valueFormatter
+      ...(this.valueFormatter && kind === 'value'
         ? { callback: (value: unknown) => this.formatValue(value, 'tick') }
         : {}),
     };
@@ -658,7 +663,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       x: {
         type: effectiveType === 'scatter' || effectiveType === 'bubble' ? 'linear' : 'category',
         title: { display: !!this.xLabel, text: this.xLabel, color: theme.tick },
-        ticks: this.tickOptions(theme),
+        ticks: this.tickOptions(
+          theme,
+          effectiveType === 'scatter' || effectiveType === 'bubble' ? 'value' : 'category',
+        ),
         grid: { color: theme.grid },
         stacked,
       },
