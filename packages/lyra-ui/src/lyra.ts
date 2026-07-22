@@ -406,7 +406,7 @@ export type {
 } from './components/data/heatmap/heatmap.js';
 export { linearAlpha, sqrtStep } from './components/data/heatmap/heatmap-scale.js';
 export { LyraTree } from './components/data/tree/tree.js';
-export type { TreeItem, TreeBadge } from './components/data/tree/tree.js';
+export type { TreeItem, TreeBadge, LyraTreeEventMap } from './components/data/tree/tree.js';
 export { LyraFileTree } from './components/data/file-tree/file-tree.js';
 export type { FileTreeNode, GitStatus, LyraFileTreeEventMap } from './components/data/file-tree/file-tree.js';
 export { LyraCommitCard } from './components/agent-tools/commit-card/commit-card.js';

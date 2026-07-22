@@ -16,6 +16,7 @@ import {
   LyraToolApprovalDialog,
   LyraToolParamForm,
   LyraToolSelectDialog,
+  LyraTree,
   LyraVirtualList,
 } from '../src/lyra.js';
 import type {
@@ -70,6 +71,7 @@ import type {
   LyraSourceCardEventMap,
   LyraSplitEventMap,
   LyraTimeRangeEventMap,
+  LyraTreeEventMap,
 } from '../src/lyra.js';
 import type {
   LyraActivityFeedEventMap,
@@ -203,6 +205,7 @@ const barrelEventMapTypes: [
   LyraSourceCardEventMap,
   LyraSplitEventMap,
   LyraTimeRangeEventMap,
+  LyraTreeEventMap,
 ] | undefined = undefined;
 void barrelEventMapTypes;
 
@@ -493,4 +496,28 @@ list.addEventListener('lr-visible-range-changed', (event) => {
   const end: number = event.detail.end;
   void start;
   void end;
+});
+
+// Before LyraTreeEventMap existed, LyraTree had no Events generic at all, so a
+// listener registered here got a bare `Event` -- `event.detail` didn't typecheck.
+declare const tree: LyraTree;
+tree.addEventListener('lr-node-toggle', (event) => {
+  const id: string = event.detail.id;
+  const expanded: boolean = event.detail.expanded;
+  void id;
+  void expanded;
+});
+tree.addEventListener('lr-node-select', (event) => {
+  const id: string = event.detail.id;
+  void id;
+});
+tree.addEventListener('lr-reorder', (event) => {
+  const id: string = event.detail.id;
+  const parentId: string | null = event.detail.parentId;
+  const fromIndex: number = event.detail.fromIndex;
+  const toIndex: number = event.detail.toIndex;
+  void id;
+  void parentId;
+  void fromIndex;
+  void toIndex;
 });

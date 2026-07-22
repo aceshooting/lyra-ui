@@ -18,6 +18,12 @@ import type { LyraTreeNode } from './tree-node.class.js';
 import type { TreeBadgeTone, TreeBadge, TreeItem } from './tree-item.js';
 export type { TreeBadgeTone, TreeBadge, TreeItem };
 
+export interface LyraTreeEventMap {
+  'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
+  'lr-node-select': CustomEvent<{ id: string }>;
+  'lr-reorder': CustomEvent<{ id: string; parentId: string | null; fromIndex: number; toIndex: number }>;
+}
+
 /**
  * `<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.
  *
@@ -45,7 +51,7 @@ export type { TreeBadgeTone, TreeBadge, TreeItem };
  * @csspart empty - The empty-state message shown when `data` is empty.
  * @slot - `<lr-tree-node>` elements (top-level tree items).
  */
-export class LyraTree extends LyraElement {
+export class LyraTree extends LyraElement<LyraTreeEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) data: TreeItem[] = [];
@@ -307,7 +313,7 @@ export class LyraTree extends LyraElement {
     const { parentId, siblings, index } = found;
     const toIndex = index + delta;
     if (toIndex < 0 || toIndex >= siblings.length) return;
-    this.emit('lr-reorder', { id, parentId, fromIndex: index, toIndex });
+    this.emit<LyraTreeEventMap['lr-reorder']['detail']>('lr-reorder', { id, parentId, fromIndex: index, toIndex });
     this.liveRegion?.announce(
       this.localize('treeNodeMoved', undefined, {
         label: node.item.accessibleLabel || node.item.label,

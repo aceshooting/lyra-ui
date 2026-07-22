@@ -191,14 +191,22 @@ export default {
       'src/**/*.stories.ts',
       'src/**/*.d.ts',
     ],
-    // Sanity floor only, not a real gate: catches a totally broken
-    // instrumentation run (0% everywhere), nothing else. The real,
-    // informational-only gate lives in codecov.yml's coverage.status.
+    // Blocking gate: fails `pnpm test:coverage` (and CI's build-and-coverage
+    // job with it) if overall coverage drops below these floors. Restored
+    // 2026-07-22 after a re-audit found commit fb700ac3 had quietly widened
+    // this to a 1%-everywhere sanity check while leaving codecov.yml's own
+    // status checks `informational: true` -- the net effect was that nothing
+    // in CI actually failed for a real coverage regression. Codecov's
+    // per-commit/per-PR delta reporting stays informational (a third-party
+    // service outage should not be able to block a release), but this
+    // in-repo, CI-native floor is the real enforcement mechanism. Values
+    // match this repo's actual, currently-measured coverage (97%+) with
+    // headroom, not an arbitrary round number.
     threshold: {
-      statements: 1,
-      branches: 1,
-      functions: 1,
-      lines: 1,
+      statements: 75,
+      branches: 65,
+      functions: 65,
+      lines: 75,
     },
     report: true,
     reportDir: 'coverage',
