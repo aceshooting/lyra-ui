@@ -257,6 +257,39 @@ it('type="reset" resets the closest ancestor form via host click()', async () =>
   expect(input.value).to.equal('');
 });
 
+it('honours --lr-icon-button-background and --lr-icon-button-color on the native button', async () => {
+  const el = await fixture(html`
+    <lr-icon-button
+      icon="close"
+      aria-label="Dismiss"
+      style="--lr-icon-button-background: rgb(1, 2, 3); --lr-icon-button-color: rgb(7, 8, 9);"
+    ></lr-icon-button>
+  `);
+  const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+  expect(cs.backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(cs.color).to.equal('rgb(7, 8, 9)');
+});
+
+it('drives the button:hover background from --lr-icon-button-background-hover, falling back to --lr-color-surface', () => {
+  // :hover has no scriptable state in this runner (no pointer-control plugin is installed), so
+  // this guards the hover-only token plumbing in the stylesheet text -- mirroring this file's
+  // radius-token check and the wider repo convention for hover rules. The rendered base-token
+  // test above proves the byte-identical var() plumbing resolves at runtime.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    'background: var(--lr-icon-button-background-hover, var(--lr-color-surface));',
+  );
+});
+
+it('renders unset background/color exactly as before (unset-regression)', async () => {
+  const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
+  const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+  // With every new tint token unset, the button keeps today's transparent background and no
+  // rendered border -- the additive guarantee 6.2.0 rests on.
+  expect(cs.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+  expect(cs.borderStyle).to.equal('none');
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   await expect(el).to.be.accessible();

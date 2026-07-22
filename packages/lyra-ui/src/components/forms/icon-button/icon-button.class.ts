@@ -71,6 +71,9 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  *   `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components
  *   size their icon controls against), so overriding it globally resizes all of them together.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Corner radius of the native button.
+ * @cssprop [--lr-icon-button-background=transparent] - Background fill of the native button.
+ * @cssprop [--lr-icon-button-background-hover=var(--lr-color-surface)] - Background fill on hover.
+ * @cssprop [--lr-icon-button-color=inherit] - Icon/text color of the native button.
  */
 export class LyraIconButton extends LyraElement {
   static override styles = [LyraElement.styles, styles];
