@@ -1909,43 +1909,24 @@ describe('coverage: color/theme helper edge cases', () => {
   });
 });
 
-describe('coverage: theme-watcher defensive branches', () => {
-  it('onColorSchemeChange (prefers-color-scheme listener) redraws without throwing', async () => {
+describe('theme watching (via the shared ThemeWatcher controller)', () => {
+  it('redraws when an ancestor theme attribute mutates, without a manual refreshTheme() call', async () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     el.rowLabels = ['a'];
     el.colLabels = ['x'];
     el.values = [[5]];
     await el.updateComplete;
-    expect(() => (el as unknown as { onColorSchemeChange(): void }).onColorSchemeChange()).to.not.throw();
+
+    let refreshes = 0;
+    const realRefresh = (el as unknown as { refreshTheme: () => void }).refreshTheme.bind(el);
+    (el as unknown as { refreshTheme: () => void }).refreshTheme = () => {
+      refreshes++;
+      realRefresh();
+    };
+    el.setAttribute('data-theme', 'dark');
+    await aTimeout(0);
+    expect(refreshes).to.be.greaterThan(0);
     expect(el.shadowRoot!.querySelector('canvas')).to.exist;
-  });
-
-  it('watchTheme(): returns before touching colorSchemeQuery when ownerDocument has no defaultView', async () => {
-    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    await el.updateComplete;
-    const before = (el as unknown as { colorSchemeQuery?: MediaQueryList }).colorSchemeQuery;
-    const fakeDoc = { defaultView: null } as unknown as Document;
-    Object.defineProperty(el, 'ownerDocument', { configurable: true, value: fakeDoc });
-    try {
-      (el as unknown as { watchTheme(): void }).watchTheme();
-    } finally {
-      delete (el as unknown as Record<string, unknown>).ownerDocument;
-    }
-    const after = (el as unknown as { colorSchemeQuery?: MediaQueryList }).colorSchemeQuery;
-    expect(after).to.equal(before);
-  });
-
-  it('watchTheme(): skips creating a MutationObserver when the global is unavailable', async () => {
-    const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
-    await el.updateComplete;
-    const originalMO = window.MutationObserver;
-    // @ts-expect-error -- deliberately removing the global to exercise the defensive fallback branch
-    delete window.MutationObserver;
-    try {
-      expect(() => (el as unknown as { watchTheme(): void }).watchTheme()).to.not.throw();
-    } finally {
-      window.MutationObserver = originalMO;
-    }
   });
 });
 

@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
 import { styles } from './chart.styles.js';
@@ -254,6 +255,16 @@ export interface LyraChartEventMap {
  */
 export class LyraChart extends LyraElement<LyraChartEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  constructor() {
+    super();
+    // Redraws (re-resolving `--lr-chart-*` via getComputedStyle, since canvas can't read var())
+    // when prefers-color-scheme flips or an ancestor's theme attribute mutates. The controller
+    // registers itself with the host via addController(); redraw only once a chart exists.
+    new ThemeWatcher(this, () => {
+      if (this.chart) this.refreshTheme();
+    });
+  }
 
   @property({ converter: { fromAttribute: (value) => normalizeChartType(value) } })
   type: LyraChartType = 'line';
@@ -962,12 +973,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /**
    * Forces a redraw so `themeColors()` re-reads the `--lr-chart-*` custom
-   * properties from the current computed style. No global theme-broadcast
-   * event exists anywhere in lyra-ui (nothing to subscribe to here) — this
-   * is the escape hatch for a consumer's own theme-toggle handler to call
-   * directly when it flips e.g. a `data-theme` attribute upstream that
-   * doesn't otherwise change any `lr-chart` property, so Lit's reactive
-   * update loop has nothing of its own to trigger `draw()` on.
+   * properties from the current computed style. A {@link ThemeWatcher} now
+   * calls this automatically when `prefers-color-scheme` flips or an ancestor's
+   * `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates, so a
+   * consumer flipping an upstream theme attribute no longer has to. It remains
+   * public as the manual escape hatch for theme changes those signals can't
+   * observe (e.g. a same-attribute value swap the observer already covers is
+   * handled, but a fully out-of-band restyle is not).
    */
   refreshTheme(): void {
     this.draw();

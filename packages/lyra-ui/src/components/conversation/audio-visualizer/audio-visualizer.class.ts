@@ -3,6 +3,7 @@ import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './audio-visualizer.styles.js';
 
 export type AudioVisualizerVariant = 'bars' | 'waveform';
@@ -57,9 +58,6 @@ export class LyraAudioVisualizer extends LyraElement {
   private resizeObserver?: ResizeObserver;
   private dprQuery?: MediaQueryList;
   private motionQuery?: MediaQueryList;
-  private colorSchemeQuery?: MediaQueryList;
-  private themeObserver?: MutationObserver;
-  private themeRefreshQueued = false;
   private rafId?: number;
   private lastAmbientDrawMs = 0;
   private authorSuppliedRole = false;
@@ -98,6 +96,13 @@ export class LyraAudioVisualizer extends LyraElement {
     return finiteNumber(this.gain, 1);
   }
 
+  constructor() {
+    super();
+    // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
+    // controller registers itself with the host via addController().
+    new ThemeWatcher(this, () => this.refreshTheme());
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.resizeObserver = new ResizeObserver((entries) => {
@@ -112,7 +117,6 @@ export class LyraAudioVisualizer extends LyraElement {
     this.motionQuery =
       typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.motionQuery?.addEventListener('change', this.onMotionPreferenceChange);
-    this.watchTheme();
     this.resolvedColors = undefined; // a reconnect may land under a different theme scope
     this.syncAnalyser();
     this.visible = true; // a reconnect may land at a different scroll position than last observed
@@ -139,9 +143,6 @@ export class LyraAudioVisualizer extends LyraElement {
     this.dprQuery?.removeEventListener('change', this.onDprChange);
     this.motionQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.motionQuery = undefined;
-    this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
-    this.themeObserver?.disconnect();
-    this.themeObserver = undefined;
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
     if (this.rafId !== undefined) {
@@ -166,37 +167,6 @@ export class LyraAudioVisualizer extends LyraElement {
   private onMotionPreferenceChange = (): void => {
     this.scheduleDraw();
   };
-  private onColorSchemeChange = (): void => {
-    this.refreshTheme();
-  };
-  private queueThemeRefresh = (): void => {
-    if (this.themeRefreshQueued) return;
-    this.themeRefreshQueued = true;
-    queueMicrotask(() => {
-      this.themeRefreshQueued = false;
-      if (this.isConnected) this.refreshTheme();
-    });
-  };
-  private watchTheme(): void {
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
-    this.colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
-    this.colorSchemeQuery?.addEventListener('change', this.onColorSchemeChange);
-    if (typeof MutationObserver === 'undefined') return;
-    const targets: Element[] = [this];
-    let parent = this.parentElement;
-    while (parent) {
-      targets.push(parent);
-      parent = parent.parentElement;
-    }
-    this.themeObserver = new MutationObserver(this.queueThemeRefresh);
-    for (const target of targets) {
-      this.themeObserver.observe(target, {
-        attributes: true,
-        attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'],
-      });
-    }
-  }
 
   /** Redraws canvas content after an upstream token or theme change. */
   refreshTheme(): void {

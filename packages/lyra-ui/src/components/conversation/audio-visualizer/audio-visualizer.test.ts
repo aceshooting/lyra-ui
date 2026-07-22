@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, aTimeout } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './audio-visualizer.js';
 import type { LyraAudioVisualizer } from './audio-visualizer.js';
@@ -373,20 +373,14 @@ describe('media-query change handlers', () => {
     expect(priv.rafId).to.not.be.undefined;
   });
 
-  it('onColorSchemeChange refreshes the theme (clears cached colors) and reschedules a draw', async () => {
+  it('refreshes the theme (clears cached colors) when an ancestor theme attribute mutates', async () => {
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as {
-      colorSchemeQuery?: MediaQueryList;
-      resolvedColors?: unknown;
-      rafId?: number;
-    };
-    expect(priv.rafId).to.be.undefined;
+    const priv = el as unknown as { resolvedColors?: unknown };
     priv.resolvedColors = { active: 'stale', quiet: 'stale' };
-    expect(priv.colorSchemeQuery).to.exist;
-    priv.colorSchemeQuery!.dispatchEvent(new Event('change'));
+    el.setAttribute('data-theme', 'dark');
+    await aTimeout(0); // let the ThemeWatcher's coalesced microtask run
     expect(priv.resolvedColors).to.be.undefined; // refreshTheme() reset the cache
-    expect(priv.rafId).to.not.be.undefined;
   });
 });
 
@@ -403,47 +397,26 @@ describe('refreshTheme() public API', () => {
   });
 });
 
-describe('queueThemeRefresh coalescing', () => {
-  it('coalesces repeated calls into a single refreshTheme() once microtasks flush', async () => {
+describe('theme-attribute coalescing (via the shared ThemeWatcher)', () => {
+  it('coalesces a burst of watched-attribute writes into a single refreshTheme()', async () => {
     const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
     await settleRaf(el);
-    const priv = el as unknown as {
-      queueThemeRefresh: () => void;
-      themeRefreshQueued: boolean;
-      resolvedColors?: unknown;
-      rafId?: number;
+    let refreshes = 0;
+    const realRefresh = (el as unknown as { refreshTheme: () => void }).refreshTheme.bind(el);
+    (el as unknown as { refreshTheme: () => void }).refreshTheme = () => {
+      refreshes++;
+      realRefresh();
     };
-    priv.resolvedColors = { active: 'stale', quiet: 'stale' };
-    expect(priv.themeRefreshQueued).to.be.false;
-    priv.queueThemeRefresh();
-    expect(priv.themeRefreshQueued).to.be.true;
-    priv.queueThemeRefresh(); // already queued: early-returns instead of double-queueing
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(priv.themeRefreshQueued).to.be.false;
-    expect(priv.resolvedColors).to.be.undefined; // refreshTheme() ran
-    expect(priv.rafId).to.not.be.undefined;
+    el.setAttribute('data-theme', 'a');
+    el.setAttribute('data-color-scheme', 'b');
+    el.setAttribute('class', 'c');
+    await aTimeout(0);
+    expect(refreshes).to.equal(1);
   });
 });
 
-describe('watchTheme() defensive branches', () => {
-  it('no-ops when ownerDocument.defaultView is unavailable (e.g. a detached document)', async () => {
-    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-    Object.defineProperty(el, 'ownerDocument', { value: { defaultView: null }, configurable: true });
-    expect(() => (el as unknown as { watchTheme: () => void }).watchTheme()).to.not.throw();
-  });
-
-  it('skips the MutationObserver setup when MutationObserver is unavailable', async () => {
-    const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
-    const original = window.MutationObserver;
-    (window as unknown as { MutationObserver: unknown }).MutationObserver = undefined;
-    try {
-      expect(() => (el as unknown as { watchTheme: () => void }).watchTheme()).to.not.throw();
-    } finally {
-      (window as unknown as { MutationObserver: unknown }).MutationObserver = original;
-    }
-  });
-});
+// Theme-watching defensive branches (no defaultView, no MutationObserver) are covered by the
+// shared controller's own suite in src/internal/theme-watcher.test.ts.
 
 describe('AudioContext constructor fallback', () => {
   class FakeWebkitAudioContext extends EventTarget {

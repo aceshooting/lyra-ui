@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js';
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
@@ -661,9 +662,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private resizeObserver?: ResizeObserver;
   private drawRafId?: number;
   private dprQuery?: MediaQueryList;
-  private colorSchemeQuery?: MediaQueryList;
-  private themeObserver?: MutationObserver;
-  private themeRefreshQueued = false;
+
+  constructor() {
+    super();
+    // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
+    // controller registers itself with the host via addController().
+    new ThemeWatcher(this, () => this.refreshTheme());
+  }
   /** The current value range, refreshed once per update cycle by `willUpdate()`. See `computeValueRange()`. */
   private cachedValueRange: [number, number] | null = null;
   /**
@@ -725,16 +730,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.resizeObserver = new ResizeObserver(this.scheduleDraw);
     this.resizeObserver.observe(this);
     this.watchDpr();
-    this.watchTheme();
+    // Theme watching is owned by the ThemeWatcher controller (connect/disconnect lifecycle too).
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.dprQuery?.removeEventListener('change', this.onDprChange);
-    this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
-    this.themeObserver?.disconnect();
-    this.themeObserver = undefined;
     if (this.drawRafId !== undefined) {
       cancelAnimationFrame(this.drawRafId);
       this.drawRafId = undefined;
@@ -755,41 +757,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     this.watchDpr();
     this.draw();
   };
-
-  private onColorSchemeChange = (): void => {
-    this.refreshTheme();
-  };
-
-  private queueThemeRefresh = (): void => {
-    if (this.themeRefreshQueued) return;
-    this.themeRefreshQueued = true;
-    queueMicrotask(() => {
-      this.themeRefreshQueued = false;
-      if (this.isConnected) this.refreshTheme();
-    });
-  };
-
-  private watchTheme(): void {
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
-    this.colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
-    this.colorSchemeQuery?.addEventListener('change', this.onColorSchemeChange);
-
-    if (typeof MutationObserver === 'undefined') return;
-    const targets: Element[] = [this];
-    let parent = this.parentElement;
-    while (parent) {
-      targets.push(parent);
-      parent = parent.parentElement;
-    }
-    this.themeObserver = new MutationObserver(this.queueThemeRefresh);
-    for (const target of targets) {
-      this.themeObserver.observe(target, {
-        attributes: true,
-        attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'],
-      });
-    }
-  }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (

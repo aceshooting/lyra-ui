@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
 import { styles } from './qr-code.styles.js';
 
@@ -222,14 +223,17 @@ export class LyraQrCode extends LyraElement {
   private generation = 0;
 
   private dprQuery?: MediaQueryList;
-  private colorSchemeQuery?: MediaQueryList;
-  private themeObserver?: MutationObserver;
-  private themeRefreshQueued = false;
+
+  constructor() {
+    super();
+    // Redraws when prefers-color-scheme flips or an ancestor's theme attribute mutates. The
+    // controller registers itself with the host via addController().
+    new ThemeWatcher(this, () => this.refreshTheme());
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.watchDpr();
-    this.watchTheme();
     if (typeof IntersectionObserver !== 'undefined') {
       this.intersectionObserver = new IntersectionObserver((entries) => {
         const wasVisible = this.visible;
@@ -243,9 +247,6 @@ export class LyraQrCode extends LyraElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.dprQuery?.removeEventListener('change', this.onDprChange);
-    this.colorSchemeQuery?.removeEventListener('change', this.onColorSchemeChange);
-    this.themeObserver?.disconnect();
-    this.themeObserver = undefined;
     this.intersectionObserver?.disconnect();
     this.intersectionObserver = undefined;
   }
@@ -263,41 +264,6 @@ export class LyraQrCode extends LyraElement {
     this.watchDpr();
     this.draw();
   };
-
-  private onColorSchemeChange = (): void => {
-    this.refreshTheme();
-  };
-
-  private queueThemeRefresh = (): void => {
-    if (this.themeRefreshQueued) return;
-    this.themeRefreshQueued = true;
-    queueMicrotask(() => {
-      this.themeRefreshQueued = false;
-      if (this.isConnected) this.refreshTheme();
-    });
-  };
-
-  private watchTheme(): void {
-    const view = this.ownerDocument.defaultView;
-    if (!view) return;
-    this.colorSchemeQuery = view.matchMedia?.('(prefers-color-scheme: dark)');
-    this.colorSchemeQuery?.addEventListener('change', this.onColorSchemeChange);
-
-    if (typeof MutationObserver === 'undefined') return;
-    const targets: Element[] = [this];
-    let parent = this.parentElement;
-    while (parent) {
-      targets.push(parent);
-      parent = parent.parentElement;
-    }
-    this.themeObserver = new MutationObserver(this.queueThemeRefresh);
-    for (const target of targets) {
-      this.themeObserver.observe(target, {
-        attributes: true,
-        attributeFilter: ['class', 'style', 'data-theme', 'data-color-scheme'],
-      });
-    }
-  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);

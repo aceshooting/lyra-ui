@@ -52,9 +52,11 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 **Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`, and
 `exportData('csv' | 'png')` (returns a spreadsheet-safe CSV snapshot or the current PNG data URL
 when Chart.js is loaded)
-(forces a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style —
-the escape hatch for a consumer's own theme-toggle handler to call when it flips something, e.g. a
-`data-theme` attribute, that doesn't otherwise change any `lr-chart` property)
+(forces a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style. A
+built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme` flips or an
+ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
+theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
+escape hatch for theme changes those signals can't observe)
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
 `resetZoom()`), `lr-point-click` (fired when a click lands on, or nearest to — intersect-only —
@@ -100,10 +102,9 @@ subset actually used.
   property values fall back to `line`. Each typed `lr-*-chart` subclass (e.g.
   `llms/components/lr-bar-chart.md`) locks its *own* `type` via a real prototype accessor — a
   genuine runtime lock, not just a compile-time default.
-- no global theme-broadcast event exists to auto-retheme an already-drawn chart on a theme switch —
-  a consumer flipping something upstream (e.g. a `data-theme` attribute) that doesn't otherwise
-  change any `lr-chart` property must call `refreshTheme()` itself to make Chart.js re-read the
-  `--lr-chart-*` tokens above.
+- a built-in `ThemeWatcher` auto-retheme an already-drawn chart when `prefers-color-scheme` flips or
+  an ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates (coalesced to one
+  redraw). `refreshTheme()` stays public for out-of-band theme changes those signals can't observe.
 - generated `scales` are keyed off the *effective* type (`config.type` ?? `type`, see
   `effectiveType()`) and are type-appropriate: no scale at all for `type="pie"`/`"doughnut"` (true of
   `<lr-chart type="pie">` directly, not just the `lr-pie-chart`/`lr-doughnut-chart` subclasses),

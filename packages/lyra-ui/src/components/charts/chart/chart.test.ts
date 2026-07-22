@@ -895,6 +895,46 @@ it('refreshTheme() forces a redraw that re-reads the --lr-chart-* tokens after a
   expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.equal('rgb(9, 9, 9)');
 });
 
+it('auto-redraws when a data-theme attribute mutates, without a manual refreshTheme() call', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'x', data: [1, 2] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  el.style.setProperty('--lr-chart-tooltip-bg', 'rgb(3, 4, 5)');
+  // Trigger the ThemeWatcher's MutationObserver (a watched attribute on the host itself).
+  el.setAttribute('data-theme', 'dark');
+  // The observer coalesces to a microtask; give it a macrotask boundary to run + redraw.
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.equal('rgb(3, 4, 5)');
+});
+
+it('coalesces a burst of theme attribute writes into a single redraw', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A'];
+  el.datasets = [{ label: 'x', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  let refreshes = 0;
+  const realRefresh = (el as unknown as { refreshTheme: () => void }).refreshTheme.bind(el);
+  (el as unknown as { refreshTheme: () => void }).refreshTheme = () => {
+    refreshes++;
+    realRefresh();
+  };
+  el.setAttribute('data-theme', 'a');
+  el.setAttribute('data-color-scheme', 'b');
+  await aTimeout(0);
+  // The watcher coalesces the burst to a single refresh (`class` is omitted here since Lit may
+  // reflect its own class changes and trigger an unrelated update).
+  expect(refreshes).to.equal(1);
+});
+
 it('emits `lr-point-click` with the resolved point detail when the wired onClick handler fires', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';

@@ -301,18 +301,7 @@ describe('lr-qr-code', () => {
     expect(parseInt(canvas.style.width, 10)).to.equal(90);
   });
 
-  it('redraws via refreshTheme() when the color-scheme change handler fires', async () => {
-    const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
-    installFakeLoader(
-      el,
-      fakeApi(() => ({ modules: fakeModules(true) })),
-    );
-    el.value = 'hello';
-    await waitForPart(el, 'canvas');
-    expect(() => (el as unknown as { onColorSchemeChange(): void }).onColorSchemeChange()).to.not.throw();
-  });
-
-  it('coalesces repeated queueThemeRefresh() calls into a single refreshTheme() before the next microtask', async () => {
+  it('redraws (coalesced) when an ancestor theme attribute mutates, via the shared ThemeWatcher', async () => {
     const el = (await fixture(html`<lr-qr-code size="90"></lr-qr-code>`)) as LyraQrCode;
     installFakeLoader(
       el,
@@ -326,32 +315,11 @@ describe('lr-qr-code', () => {
       refreshCalls++;
       originalRefreshTheme();
     };
-    const queueThemeRefresh = (el as unknown as { queueThemeRefresh(): void }).queueThemeRefresh.bind(el);
-    queueThemeRefresh();
-    queueThemeRefresh(); // must be swallowed by the in-flight guard, not double-fire
+    // A burst of watched-attribute writes must coalesce to a single refresh.
+    el.setAttribute('data-theme', 'a');
+    el.setAttribute('data-color-scheme', 'b');
     await aTimeout(20);
     expect(refreshCalls).to.equal(1);
-  });
-
-  it('does nothing when watchTheme() runs against a document with no defaultView (e.g. a detached document)', async () => {
-    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
-    Object.defineProperty(el, 'ownerDocument', { value: { defaultView: null }, configurable: true });
-    try {
-      expect(() => (el as unknown as { watchTheme(): void }).watchTheme()).to.not.throw();
-    } finally {
-      delete (el as unknown as { ownerDocument?: unknown }).ownerDocument;
-    }
-  });
-
-  it('skips MutationObserver theme-watching setup when the global is unavailable, without throwing', async () => {
-    const originalMutationObserver = window.MutationObserver;
-    try {
-      (window as unknown as { MutationObserver?: unknown }).MutationObserver = undefined;
-      const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
-      expect((el as unknown as { themeObserver?: unknown }).themeObserver).to.equal(undefined);
-    } finally {
-      window.MutationObserver = originalMutationObserver;
-    }
   });
 
   it('warns once and falls back to #000000 for an invalid --lr-qr-code-fill override', async () => {
