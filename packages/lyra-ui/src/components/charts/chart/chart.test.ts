@@ -1776,3 +1776,129 @@ it('returns a fresh array from the detached-host fallback branch too, so a calle
     first.push(...baseline);
   }
 });
+
+describe('data labels and stack totals', () => {
+  it('leaves the datalabels plugin display disabled when data-labels is unset (additive-guarantee)', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    const config = (el as any).buildConfig();
+    // Because chartjs-plugin-datalabels draws on EVERY dataset once globally
+    // registered, an unset chart MUST explicitly disable it so a sibling
+    // <lr-chart data-labels> on the same page cannot leak labels onto this one.
+    expect(config.options.plugins.datalabels.display).to.equal(false);
+  });
+
+  it('enables the datalabels plugin display when data-labels is set', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    const config = (el as any).buildConfig();
+    expect(config.options.plugins.datalabels.display).to.not.equal(false);
+  });
+
+  it('reflects the data-labels attribute to the dataLabels property', async () => {
+    const el = (await fixture(html`<lr-chart data-labels></lr-chart>`)) as LyraChart;
+    expect((el as unknown as { dataLabels: boolean }).dataLabels).to.equal(true);
+  });
+
+  it('computes null-aware per-category stack totals', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1', 'Q2', 'Q3'];
+    el.datasets = [
+      { label: 'A', data: [10, null as unknown as number, 5] },
+      { label: 'B', data: [20, 30, null as unknown as number] },
+    ];
+    (el as unknown as { stacked: boolean }).stacked = true;
+    (el as unknown as { stackTotals: boolean }).stackTotals = true;
+    // Per-category totals across datasets on the same axis, skipping nulls:
+    // Q1 = 10+20 = 30, Q2 = 0+30 = 30, Q3 = 5+0 = 5.
+    const totals = (el as any).computeStackTotals('y');
+    expect(totals).to.deep.equal([30, 30, 5]);
+  });
+
+  it('returns no total for a category whose every value is null', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1', 'Q2'];
+    el.datasets = [
+      { label: 'A', data: [10, null as unknown as number] },
+      { label: 'B', data: [20, null as unknown as number] },
+    ];
+    (el as unknown as { stacked: boolean }).stacked = true;
+    (el as unknown as { stackTotals: boolean }).stackTotals = true;
+    const totals = (el as any).computeStackTotals('y');
+    // Q1 = 30; Q2 all-null -> null (no total drawn), not 0.
+    expect(totals[0]).to.equal(30);
+    expect(totals[1]).to.equal(null);
+  });
+
+  it('builds a chart with the data-labels plugin registered per-instance without disturbing a sibling chart', async () => {
+    // A labelled chart and a plain chart on the same page. Per-instance
+    // registration means the plugin attaches ONLY to the labelled one; a global
+    // registration would attach to (and crash the next update of) the plain one.
+    const labelled = (await fixture(
+      html`<lr-chart data-labels type="bar"></lr-chart>`,
+    )) as LyraChart;
+    labelled.labels = ['Jan', 'Feb'];
+    labelled.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    const plain = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    plain.labels = ['Jan', 'Feb'];
+    plain.datasets = [{ label: 'Cost', data: [5, 8] }];
+
+    await labelled.updateComplete;
+    await plain.updateComplete;
+    await waitUntil(() => (labelled as any).chart != null, 'labelled chart never initialized', {
+      timeout: 5000,
+    });
+    await waitUntil(() => (plain as any).chart != null, 'plain chart never initialized', {
+      timeout: 5000,
+    });
+    // The labelled chart's per-instance plugin is present; the plain chart's
+    // config carries no plugins array (so the plugin never touches it).
+    await waitUntil(() => (labelled as any).dataLabelsPlugin != null, 'plugin never loaded', {
+      timeout: 5000,
+    });
+    expect((labelled as any).buildConfig().plugins).to.be.an('array').with.lengthOf(1);
+    expect((plain as any).buildConfig().plugins).to.equal(undefined);
+
+    // The plugin must be attached to the LIVE chart, not merely present in the
+    // config: chart.js reads config.plugins only at construction, so a plugin
+    // that resolved after the chart was first built has to force a rebuild.
+    // isPluginEnabled() reflects what the live instance actually registered.
+    await waitUntil(
+      () => (labelled as any).chart?.isPluginEnabled?.('datalabels') === true,
+      'data-labels plugin never attached to the live chart',
+      { timeout: 5000 },
+    );
+    expect((plain as any).chart.isPluginEnabled('datalabels')).to.equal(false);
+
+    // Force a redraw of the plain chart — a globally-registered datalabels would
+    // throw here in its beforeUpdate hook. Per-instance registration keeps it safe.
+    plain.datasets = [{ label: 'Cost', data: [6, 9] }];
+    await plain.updateComplete;
+    expect((plain as any).chart).to.exist;
+  });
+
+  it('attaches the data-labels plugin to the live chart when turned on after first render', async () => {
+    // Turn-on-after-connect: the chart is built plain, then data-labels flips on.
+    // The plugin resolves after construction, so applyDataLabelsPlugin() must
+    // rebuild the chart for it to attach (chart.update() can't add a plugin).
+    const el = (await fixture(html`<lr-chart type="bar"></lr-chart>`)) as LyraChart;
+    el.labels = ['Jan', 'Feb'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, 'chart never initialized', { timeout: 5000 });
+    expect((el as any).chart.isPluginEnabled('datalabels')).to.equal(false);
+
+    (el as unknown as { dataLabels: boolean }).dataLabels = true;
+    await el.updateComplete;
+    await waitUntil(
+      () => (el as any).chart?.isPluginEnabled?.('datalabels') === true,
+      'data-labels plugin never attached after turn-on',
+      { timeout: 5000 },
+    );
+  });
+});

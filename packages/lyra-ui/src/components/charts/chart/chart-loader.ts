@@ -2,9 +2,13 @@ import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 
 type ChartJsModule = OptionalPeerApi;
 type ZoomPlugin = OptionalPeerApi;
+type DataLabelsPlugin = OptionalPeerApi;
 
 let chartJs: Promise<ChartJsModule | null> | undefined;
 let zoomLoad: Promise<ChartJsModule | null> | undefined;
+let dataLabelsLoad:
+  | Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null>
+  | undefined;
 let registered = false;
 
 /**
@@ -135,4 +139,65 @@ export function loadChartJsWithZoom(
     });
   }
   return zoomLoad;
+}
+
+/**
+ * Imports the optional `chartjs-plugin-datalabels` peer and returns the plugin
+ * object, or `undefined` if the peer isn't installed (charts still render;
+ * data labels are simply inert). Reads `mod.default ?? mod` because the plugin
+ * ships its registerable object as the ES-module default export — registering
+ * the whole module namespace instead would silently no-op. Un-memoized (unlike
+ * `loadChartJsWithDataLabels()` below) so both the success and the
+ * degrade-with-a-warning failure paths are directly testable without needing
+ * to actually uninstall the package. `importDataLabels` defaults to the real
+ * dynamic import; it's a parameter purely so tests can instrument it.
+ */
+export async function loadDataLabelsPlugin(
+  importDataLabels: () => Promise<{ default: DataLabelsPlugin } | DataLabelsPlugin> = () =>
+    import('chartjs-plugin-datalabels') as Promise<{ default: DataLabelsPlugin }>,
+): Promise<DataLabelsPlugin | undefined> {
+  try {
+    const mod = await importDataLabels();
+    return (mod as { default?: DataLabelsPlugin }).default ?? (mod as DataLabelsPlugin);
+  } catch (err) {
+    console.warn(
+      '<lr-chart> data labels need the optional peer dependency `chartjs-plugin-datalabels` — ' +
+        'charts still render without it, but the `data-labels`/`stack-totals` attributes have no ' +
+        'effect until it is installed with `pnpm add chartjs-plugin-datalabels`:',
+      err,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * Loads `chart.js` (reusing the cached load) plus the `chartjs-plugin-datalabels`
+ * plugin object, on first actual demand — most charts never set `data-labels`.
+ * Returns `{ mod, plugin }` (or `null` if chart.js itself is absent; `plugin` is
+ * `undefined` if only the data-labels peer is missing). The plugin is
+ * **deliberately NOT registered globally** — unlike `chartjs-plugin-zoom` (inert
+ * until given options), `chartjs-plugin-datalabels` draws on every dataset the
+ * moment it is globally registered and, worse, breaks any chart constructed
+ * before that global registration on its next update. So `chart.class.ts`
+ * registers the returned `plugin` PER-INSTANCE via the chart's own
+ * `config.plugins` array, touching only charts that set `data-labels`/
+ * `stack-totals`. The load is memoized behind a single `dataLabelsLoad` promise
+ * assigned synchronously before any `await` — closing the same check-then-act
+ * race across the `await` boundary that `loadChartJsWithZoom()`'s doc describes.
+ *
+ * `importDataLabels` defaults to the real dynamic import; it's a parameter
+ * purely so tests can instrument/count the underlying import.
+ */
+export function loadChartJsWithDataLabels(
+  importDataLabels: () => Promise<{ default: DataLabelsPlugin } | DataLabelsPlugin> = () =>
+    import('chartjs-plugin-datalabels') as Promise<{ default: DataLabelsPlugin }>,
+): Promise<{ mod: ChartJsModule; plugin: DataLabelsPlugin | undefined } | null> {
+  if (!dataLabelsLoad) {
+    dataLabelsLoad = loadChartJs().then(async (mod) => {
+      if (!mod) return null;
+      const plugin = await loadDataLabelsPlugin(importDataLabels);
+      return { mod, plugin };
+    });
+  }
+  return dataLabelsLoad;
 }

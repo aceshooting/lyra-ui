@@ -1,5 +1,11 @@
 import { expect } from '@open-wc/testing';
-import { loadChartJs, loadChartAndZoom, loadChartJsWithZoom } from './chart-loader.js';
+import {
+  loadChartJs,
+  loadChartAndZoom,
+  loadChartJsWithZoom,
+  loadChartJsWithDataLabels,
+  loadDataLabelsPlugin,
+} from './chart-loader.js';
 
 it('resolves the Chart.js module', async () => {
   const mod = await loadChartJs();
@@ -129,5 +135,54 @@ describe('loadChartJsWithZoom (memoized zoom-plugin load)', () => {
 
     await Promise.all([p1, p2]);
     expect(zoomImportCount).to.equal(1);
+  });
+});
+
+describe('loadChartJsWithDataLabels (memoized data-labels plugin load)', () => {
+  it('serializes two concurrent callers behind the same in-flight promise, so the plugin is only imported once', async () => {
+    let importCount = 0;
+    const fakeModule = await import('chartjs-plugin-datalabels');
+    const importDataLabels = () => {
+      importCount++;
+      return Promise.resolve(fakeModule);
+    };
+
+    // No `await` between the two calls — the same check-then-act race the zoom
+    // loader closes: two `<lr-chart data-labels>` elements connecting close
+    // together must share one in-flight load, not each register the plugin.
+    const p1 = loadChartJsWithDataLabels(importDataLabels);
+    const p2 = loadChartJsWithDataLabels(importDataLabels);
+    expect(p1).to.equal(p2);
+
+    await Promise.all([p1, p2]);
+    expect(importCount).to.equal(1);
+  });
+
+  it('resolves undefined and warns (naming the component + package) when the data-labels plugin fails to load — a partial install must not break charts', async () => {
+    // Tested via the un-memoized `loadDataLabelsPlugin` so the rejected import
+    // actually runs (the memoized `loadChartJsWithDataLabels` would return a
+    // cached success from the test above) — mirrors how the zoom failure path
+    // is tested through `loadChartAndZoom` rather than the memoized wrapper.
+    const warn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      const plugin = await loadDataLabelsPlugin(() => Promise.reject(new Error('boom')));
+      expect(plugin).to.equal(undefined);
+      expect(warnings.length).to.be.greaterThan(0);
+      const joined = warnings.flat().map(String).join(' ');
+      expect(joined).to.contain('lr-chart');
+      expect(joined).to.contain('chartjs-plugin-datalabels');
+    } finally {
+      console.warn = warn;
+    }
+  });
+
+  it('reads `mod.default ?? mod` so the plugin object is registered, not the module namespace', async () => {
+    const sentinelPlugin = { id: 'datalabels-sentinel' };
+    const plugin = await loadDataLabelsPlugin(() =>
+      Promise.resolve({ default: sentinelPlugin } as never),
+    );
+    expect(plugin).to.equal(sentinelPlugin);
   });
 });

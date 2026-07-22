@@ -7,7 +7,7 @@ import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
-import { loadChartJs, loadChartJsWithZoom } from './chart-loader.js';
+import { loadChartJs, loadChartJsWithZoom, loadChartJsWithDataLabels } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -215,7 +215,9 @@ export interface LyraChartEventMap {
 }
 /**
  * `<lr-chart>` — the core Chart.js wrapper every other `lr-*-chart` tag
- * subclasses. Requires the optional peer deps `chart.js` + `chartjs-plugin-zoom`.
+ * subclasses. Requires the optional peer dep `chart.js`; `chartjs-plugin-zoom`
+ * (for `zoom`) and `chartjs-plugin-datalabels` (for `data-labels`/`stack-totals`)
+ * are further optional peers loaded only on demand.
  *
  * **API mirror note:** the real `wa-chart` docs page
  * (https://webawesome.com/docs/components/chart/) documents a `config:
@@ -310,6 +312,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   @property({ type: Boolean }) horizontal = false;
   /** Stacks the `x`/`y`(/`y2`) scale entries `buildScales()` returns; only meaningful for `bar` and `line` types. */
   @property({ type: Boolean }) stacked = false;
+  /**
+   * Draws each data point's value on the chart via the optional
+   * `chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for
+   * this and every other chart on the page — the plugin registers globally, so
+   * `buildConfig()` explicitly disables it per-chart until this is set. The
+   * screen-reader equivalent is the always-present data table (see
+   * `show-data-table`); labels are a purely visual, canvas-only addition.
+   */
+  @property({ type: Boolean, attribute: 'data-labels' }) dataLabels = false;
+  /**
+   * When the chart is `stacked` (bar/line only), draws the per-category stack
+   * total above each stack, via the same optional `chartjs-plugin-datalabels`
+   * peer as `data-labels`. Null/undefined points are skipped; a category whose
+   * every value is null shows no total. Unset (the default) draws nothing.
+   */
+  @property({ type: Boolean, attribute: 'stack-totals' }) stackTotals = false;
 
   /**
    * Raw Chart.js configuration passthrough — mirrors `wa-chart`'s `config`
@@ -379,6 +397,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // state.
   private loadGeneration = 0;
   private zoomLoadGeneration = 0;
+  private dataLabelsLoadGeneration = 0;
+  // The resolved `chartjs-plugin-datalabels` plugin object, registered
+  // PER-INSTANCE via this chart's own `config.plugins` (not globally — a global
+  // registration would draw labels on, and break, every other chart on the
+  // page). `undefined` until the peer loads (or if it's not installed).
+  private dataLabelsPlugin?: OptionalPeerApi;
 
   @state() private zoomed = false;
 
@@ -431,6 +455,20 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.chartJsModule = mod;
       this.draw();
     });
+    // `data-labels`/`stack-totals` need the optional `chartjs-plugin-datalabels`
+    // peer registered before the plugin's `datalabels` options in `buildConfig()`
+    // take effect. Load it in parallel with the core (both memoized), then
+    // redraw once it's registered — mirrors the `zoom` on-demand load and its
+    // generation + `isConnected` guard against a disconnect mid-import.
+    if (this.needsDataLabels) {
+      const dlGeneration = ++this.dataLabelsLoadGeneration;
+      void loadChartJsWithDataLabels().then((result) => {
+        if (dlGeneration !== this.dataLabelsLoadGeneration || !this.isConnected || !this.needsDataLabels) {
+          return;
+        }
+        this.applyDataLabelsPlugin(result?.plugin);
+      });
+    }
     if (typeof IntersectionObserver !== 'undefined') {
       this.intersectionObserver = new IntersectionObserver((entries) => {
         const wasVisible = this.visible;
@@ -447,9 +485,33 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.resizeObserver = undefined;
     this.loadGeneration += 1;
     this.zoomLoadGeneration += 1;
+    this.dataLabelsLoadGeneration += 1;
     this.chart?.destroy();
     this.chart = undefined;
     this.intersectionObserver?.disconnect();
+  }
+
+  /**
+   * Called once the `chartjs-plugin-datalabels` peer resolves. Chart.js reads a
+   * config's inline `plugins: [...]` array ONLY at construction — the in-place
+   * `chart.data`/`chart.options` update path in `draw()` never picks up a plugin
+   * added later. So on a cold load (plugin resolves after the chart was already
+   * built) or a `data-labels`/`stack-totals` turn-on, the live chart must be
+   * torn down and rebuilt for the per-instance plugin to actually attach. Guards
+   * on the plugin being newly present so a redraw that already includes it (or a
+   * feature that's since been turned back off) doesn't needlessly rebuild.
+   */
+  private applyDataLabelsPlugin(plugin: OptionalPeerApi | undefined): void {
+    this.dataLabelsPlugin = plugin;
+    if (plugin && this.needsDataLabels && this.chart) {
+      // Force reconstruction: a live chart built without the plugin can't gain
+      // it through chart.update(). destroy() + clearing builtType makes the next
+      // draw() take the `new Chart()` branch, which reads config.plugins.
+      this.chart.destroy();
+      this.chart = undefined;
+      this.builtType = undefined;
+    }
+    this.draw();
   }
 
   /**
@@ -523,6 +585,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         });
       }
     }
+    // `data-labels`/`stack-totals` can turn on after connect (like `zoom`) — load
+    // the plugin on demand and redraw once it's registered, with the same
+    // generation + `isConnected` guard against a disconnect mid-import.
+    if ((changed.has('dataLabels') || changed.has('stackTotals')) && this.needsDataLabels) {
+      const dlGeneration = ++this.dataLabelsLoadGeneration;
+      void loadChartJsWithDataLabels().then((result) => {
+        if (dlGeneration !== this.dataLabelsLoadGeneration || !this.isConnected || !this.needsDataLabels) {
+          return;
+        }
+        this.applyDataLabelsPlugin(result?.plugin);
+      });
+    }
     const contentChanged = [
       'type',
       'labels',
@@ -539,6 +613,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'beginAtZero',
       'horizontal',
       'stacked',
+      'dataLabels',
+      'stackTotals',
       'config',
       'zoom',
       'locale',
@@ -618,6 +694,110 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       tooltipBg: cs.getPropertyValue('--lr-chart-tooltip-bg').trim() || FALLBACK_TOOLTIP_BG,
       tooltipText: cs.getPropertyValue('--lr-chart-tooltip-text').trim() || FALLBACK_TOOLTIP_TEXT,
     };
+  }
+
+  /** Whether this chart wants the optional `chartjs-plugin-datalabels` peer loaded — either to draw
+   *  per-point data labels or per-stack totals. */
+  private get needsDataLabels(): boolean {
+    return this.dataLabels || this.stackTotals;
+  }
+
+  /**
+   * `options.plugins.datalabels`. Always emitted (the plugin is global once
+   * registered, so it must be explicitly gated off per-chart) — returns
+   * `{ display: false }` unless `data-labels`/`stack-totals` is set. The label
+   * color is resolved via `getComputedStyle` (the same `themeColors()` tick
+   * color) because Chart.js paints to canvas and cannot read `var()`.
+   *
+   * `stackTotals` draws once per category: the plugin fires per (dataset, point),
+   * so a total is shown only on the topmost stacked dataset of each axis and its
+   * formatter returns the null-aware `computeStackTotals()` value (blank when the
+   * whole category is null). When only `dataLabels` is set, each point shows its
+   * own value; a null/non-finite point renders blank.
+   */
+  private datalabelsOptions(theme: ThemeColors, effectiveType: EffectiveChartType): OptionalPeerApi {
+    if (!this.needsDataLabels) return { display: false };
+    const stackTotalsActive =
+      this.stackTotals && (effectiveType === 'bar' || effectiveType === 'line');
+    // The topmost dataset per axis carries the stack total (drawn above the stack).
+    const topDatasetIndexByAxis = new Map<'y' | 'y2', number>();
+    if (stackTotalsActive) {
+      this.datasets.forEach((s, i) => topDatasetIndexByAxis.set(s.axis === 'y2' ? 'y2' : 'y', i));
+    }
+    const totalsByAxis = stackTotalsActive
+      ? { y: this.computeStackTotals('y'), y2: this.computeStackTotals('y2') }
+      : undefined;
+    return {
+      color: theme.tick,
+      // Totals sit above the stack; plain point labels center on the point.
+      align: stackTotalsActive ? 'end' : 'center',
+      anchor: stackTotalsActive ? 'end' : 'center',
+      display: (context: OptionalPeerApi): boolean => {
+        const datasetIndex: number = context.datasetIndex;
+        const axis: 'y' | 'y2' = this.datasets[datasetIndex]?.axis === 'y2' ? 'y2' : 'y';
+        if (stackTotalsActive) {
+          // Only the topmost dataset of each axis draws, and only where the
+          // category total is non-null.
+          if (topDatasetIndexByAxis.get(axis) !== datasetIndex) return this.dataLabels;
+          const total = totalsByAxis?.[axis][context.dataIndex];
+          if (total == null) return this.dataLabels;
+          return true;
+        }
+        return this.dataLabels;
+      },
+      formatter: (value: unknown, context: OptionalPeerApi): string => {
+        const datasetIndex: number = context.datasetIndex;
+        const axis: 'y' | 'y2' = this.datasets[datasetIndex]?.axis === 'y2' ? 'y2' : 'y';
+        if (stackTotalsActive && topDatasetIndexByAxis.get(axis) === datasetIndex) {
+          const total = totalsByAxis?.[axis][context.dataIndex];
+          if (total != null) return this.formatDataLabel(total);
+        }
+        const numeric = typeof value === 'number' ? value : Number((value as { y?: number })?.y ?? value);
+        if (numeric == null || !Number.isFinite(numeric)) return '';
+        return this.formatDataLabel(numeric);
+      },
+    };
+  }
+
+  /** Locale/format a data-label number through the same `valueFormatter` the axis/tooltip use, so a
+   *  drawn label matches the rest of the chart; falls back to a plain locale string. The formatter
+   *  runs in the `'tooltip'` context — the closest semantic match to an on-point value label, so a
+   *  consumer formatter that branches on context behaves predictably rather than seeing `undefined`. */
+  private formatDataLabel(value: number): string {
+    if (this.valueFormatter) {
+      const formatted = this.valueFormatter(value, 'tooltip');
+      if (formatted != null) return String(formatted);
+    }
+    return value.toLocaleString(this.effectiveLocale);
+  }
+
+  /**
+   * Per-category stack totals for the datasets on axis `axisId` (`'y'`/`'y2'`),
+   * or `null` for a category whose every value is null/undefined (so no total
+   * is drawn there rather than a misleading `0`). Reads the same per-point
+   * values as the sr-only data table, null-aware — canvas draws these via the
+   * datalabels plugin, but the numbers themselves stay screen-reader available
+   * through `renderDataTable()`.
+   */
+  private computeStackTotals(axisId: 'y' | 'y2' = 'y'): (number | null)[] {
+    const members = this.datasets.filter((s) => (s.axis === 'y2' ? 'y2' : 'y') === axisId);
+    const categoryCount = members.reduce(
+      (max, s) => Math.max(max, (s.points ?? s.data ?? []).length),
+      this.labels.length,
+    );
+    const totals: (number | null)[] = [];
+    for (let i = 0; i < categoryCount; i++) {
+      let sum = 0;
+      let any = false;
+      for (const s of members) {
+        const raw = s.points ? s.points[i]?.y : s.data?.[i];
+        if (raw == null || !Number.isFinite(raw)) continue;
+        sum += raw;
+        any = true;
+      }
+      totals.push(any ? sum : null);
+    }
+    return totals;
   }
 
   /**
@@ -884,6 +1064,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           this.seriesToDataset(s, i, palette, effectiveType),
         ) as never,
       },
+      // `chartjs-plugin-datalabels` is registered PER-INSTANCE (only on charts
+      // that need it) rather than globally, because a global registration draws
+      // on — and breaks the next update of — every other chart on the page.
+      // Only added when the peer has actually loaded and the feature is on.
+      ...(this.needsDataLabels && this.dataLabelsPlugin
+        ? { plugins: [this.dataLabelsPlugin] }
+        : {}),
       options: {
         locale: this.effectiveLocale,
         responsive: true,
@@ -939,6 +1126,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 limits: { x: { min: 'original', max: 'original' } },
               }
             : undefined,
+          // `chartjs-plugin-datalabels`, once attached to a chart, draws on EVERY
+          // dataset by default. This options block is ALWAYS present and defaults
+          // `display: false` so that even a chart the plugin somehow reaches
+          // (e.g. a consumer registering it globally themselves) stays inert
+          // unless `data-labels`/`stack-totals` is set. This library attaches the
+          // plugin per-instance (the `plugins` array above), never globally.
+          datalabels: this.datalabelsOptions(theme, effectiveType),
         },
         onResize: (chart: OptionalPeerApi) => this.updateChartArea(chart),
         scales: this.buildScales(effectiveType, theme),
@@ -952,7 +1146,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // level (see `deepMerge` above), letting consumers override or extend a
     // single nested key (e.g. `config.options.scales.y.min`) without
     // clobbering the rest of the generated sibling object.
-    return deepMerge(generated, this.config);
+    const merged = deepMerge(generated, this.config);
+    // `deepMerge` replaces arrays wholesale, so a consumer `config.plugins`
+    // would drop the per-instance data-labels plugin the generated config added
+    // (silently disabling `data-labels`/`stack-totals`). Concatenate it back —
+    // the consumer's inline plugins AND the built-in data-labels plugin both run.
+    if (this.needsDataLabels && this.dataLabelsPlugin) {
+      const mergedPlugins = Array.isArray(merged.plugins) ? merged.plugins : [];
+      if (!mergedPlugins.includes(this.dataLabelsPlugin)) {
+        merged.plugins = [...mergedPlugins, this.dataLabelsPlugin];
+      }
+    }
+    return merged;
   }
 
   private draw(): void {
