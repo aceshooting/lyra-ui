@@ -2249,6 +2249,34 @@
       }
     },
     {
+      "name": "--lr-model-select-option-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `transparent`) — Background of the currently-selected option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`."
+      }
+    },
+    {
+      "name": "--lr-model-select-option-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-color-brand)`) — Border color of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-model-select-option-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-color-brand)`) — Text color of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-model-select-option-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-model-select>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row."
+      }
+    },
+    {
       "name": "--lr-model-select-trigger-min-height",
       "description": {
         "kind": "markdown",
@@ -2648,6 +2676,34 @@
       }
     },
     {
+      "name": "--lr-select-option-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `transparent`) — Background of the currently-selected option row. Not declared on `:host`; retheme just the selected row without hijacking `--lr-color-brand`."
+      }
+    },
+    {
+      "name": "--lr-select-option-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `var(--lr-color-brand)`) — Border color of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-select-option-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `var(--lr-color-brand)`) — Text color of the selected option row."
+      }
+    },
+    {
+      "name": "--lr-select-option-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-select>`** (default: `var(--lr-font-weight-semibold)`) — Font weight of the selected option row."
+      }
+    },
+    {
       "name": "--lr-select-radius",
       "description": {
         "kind": "markdown",
@@ -3023,6 +3079,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-switch>`** (default: `var(--lr-size-2-25rem)`) — Inline size of the track, and (with the block size) the distance the thumb travels when checked."
+      }
+    },
+    {
+      "name": "--lr-table-header-sorted-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `transparent`) — Background of the currently-sorted column's header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`: `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor the sorted header without hijacking a library-wide token."
+      }
+    },
+    {
+      "name": "--lr-table-header-sorted-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `inherit`) — Text color of the currently-sorted column's header cell."
       }
     },
     {

@@ -32,6 +32,13 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 **Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.
 
+**Methods:**
+- `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
+  the (possibly overflowing) track, without changing the selection. Honors
+  `prefers-reduced-motion` (falls back to `behavior: 'auto'`). This runs automatically when `value`
+  is changed programmatically (keyboard navigation already reveals the focused segment on its own),
+  so you only need to call it for the "reveal without selecting" case.
+
 **Slots:** none.
 
 **CSS parts:** `base` (the `role="radiogroup"` root), `segment` (a single `role="radio"` button),

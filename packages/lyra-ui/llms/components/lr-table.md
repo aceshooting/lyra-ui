@@ -237,6 +237,11 @@ element *or on any ancestor* and still reach the rule that reads it. It exists b
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
+`--lr-table-header-sorted-bg` (default `transparent`) and `--lr-table-header-sorted-color` (default
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`).
+Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
+because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
+chevron; these tokens style the header cell itself.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).

@@ -820,6 +820,15 @@ ancestor is never shadowed — retheme just this row state without hijacking the
 `--lr-color-brand-quiet` token every other component's own hover/active state also reads. Same
 knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
 
+The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
+`--lr-select-option-selected-bg` (default `transparent`), `--lr-select-option-selected-border` and
+`--lr-select-option-selected-color` (both default `var(--lr-color-brand)`), and
+`--lr-select-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`). Like the
+active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer can
+retheme the selected row without hijacking `--lr-color-brand` library-wide. Note the shadow-parts
+spec forbids an attribute selector after `::part()` — `::part(option)[aria-selected='true']` is
+invalid CSS and never matches — which is exactly why these tokens exist.
+
 **Optional peer deps:** none.
 
 ```html
@@ -2964,6 +2973,11 @@ element *or on any ancestor* and still reach the rule that reads it. It exists b
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
+`--lr-table-header-sorted-bg` (default `transparent`) and `--lr-table-header-sorted-color` (default
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`).
+Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
+because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
+chevron; these tokens style the header cell itself.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
@@ -5132,6 +5146,13 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 
 **Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.
+
+**Methods:**
+- `scrollToValue(value: string): void` — scroll the segment with the given `value` into view within
+  the (possibly overflowing) track, without changing the selection. Honors
+  `prefers-reduced-motion` (falls back to `behavior: 'auto'`). This runs automatically when `value`
+  is changed programmatically (keyboard navigation already reveals the focused segment on its own),
+  so you only need to call it for the "reveal without selecting" case.
 
 **Slots:** none.
 
@@ -11969,7 +11990,12 @@ decorative box size (clamped against `--lr-icon-button-size` via `min()`). All f
 uses — so `size` is the primary lever; override the cssprop directly only to retune a single tier or
 step outside the scale entirely. `--lr-model-select-option-active-bg` (default
 `var(--lr-color-brand-quiet)`) — background of a hovered or keyboard-active `[part="option"]` row;
-declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. Plus
+declared as a `var()` fallback at the point of use, not on `:host`, so it isn't tied to `size`. The
+selected row (`[part="option"][aria-selected="true"]`) has the matching set
+`--lr-model-select-option-selected-bg` (default `transparent`),
+`--lr-model-select-option-selected-border`/`-color` (both `var(--lr-color-brand)`), and
+`--lr-model-select-option-selected-font-weight` (`var(--lr-font-weight-semibold)`), all inline
+`var()` fallbacks so the selected row is rethemeable without hijacking `--lr-color-brand`. Plus
 shared tokens — `--lr-space-xs/-s`, `--lr-color-border/-surface/-brand/-brand-quiet/-text-quiet`,
 `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-width/-color/-offset`, `--lr-icon-button-size`,
 `--lr-transition-fast`, `--lr-opacity-disabled`.
