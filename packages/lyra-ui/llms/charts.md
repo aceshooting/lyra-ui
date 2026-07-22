@@ -12,8 +12,18 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `labels: string[] = []` (attribute: false)
 - `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
   points?: {x,y,label?}[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
-  noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number; type?:
-  'line'|'bar' }`
+  noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number|number[];
+  segmentColors?: string[]; type?: 'line'|'bar' }`
+  - `pointRadius` takes a single number (applied to every point) **or** an array matching `data`'s
+    length that sizes each point independently — passed straight through to Chart.js, which
+    supports both natively. Useful for emphasizing a single outlier or the latest reading without
+    splitting the series in two.
+  - `segmentColors` colors each *segment* (the line drawn between two consecutive points) by the
+    segment's **starting** point index, so `['red', 'green']` over 3 points paints the first
+    segment red and the second green; a shorter array cycles. Wired to Chart.js's
+    `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
+    Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
+    empty array) emits no `segment` key at all, leaving line rendering exactly as before.
 - `legend: boolean = false`
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — places the
   legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
@@ -59,6 +69,14 @@ built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme`
 ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
 theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
 escape hatch for theme changes those signals can't observe)
+
+`seriesPalette(): string[]` resolves the categorical series ramp (`--lr-color-chart-1..8`) through
+`getComputedStyle` and returns the concrete, theme-aware colors — the exact same values the chart
+hands any series that sets no `color` of its own. Call it to color chart-adjacent UI (custom
+legends, KPI tiles, annotations fed through the raw `config` passthrough) from one source of truth
+instead of hand-resolving `--lr-color-chart-N` and drifting out of sync when the theme flips.
+Returns a fresh array each call (safe to mutate), and falls back to the light-mode literals only
+when the custom properties can't be resolved at all (e.g. a detached host).
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
 `resetZoom()`), `lr-point-click` (fired when a click lands on, or nearest to — intersect-only —

@@ -24,7 +24,19 @@ export interface Series {
   noTooltip?: boolean;
   axis?: 'y' | 'y2';
   pointColors?: string[];
-  pointRadius?: number;
+  /**
+   * Per-point radius. A single number applies to every point; an array (matching `data`'s
+   * length) sets each point independently — passed straight through to Chart.js, which
+   * supports both natively.
+   */
+  pointRadius?: number | number[];
+  /**
+   * Per-segment (the line between two consecutive points) border color, indexed by the
+   * *starting* point of each segment — e.g. `['red', 'green']` on 3 points colors the first
+   * segment red and the second green. Wired to Chart.js's `segment.borderColor`, and cycled
+   * when shorter than the segment count. Only meaningful for line-type series.
+   */
+  segmentColors?: string[];
   type?: 'line' | 'bar';
 }
 
@@ -573,6 +585,18 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       borderColor: colors?.[0] ?? fallback,
       pointBackgroundColor: s.pointColors,
       pointRadius: s.pointRadius,
+      // `segment` is Chart.js's per-line-segment scriptable-options hook (line controller only),
+      // keyed by the segment's *starting* point index. Only spread in when the series actually
+      // sets `segmentColors`, so a series without it produces the exact dataset object it always
+      // did — Chart.js treats a present-but-inert `segment` key differently from an absent one.
+      ...(s.segmentColors?.length
+        ? {
+            segment: {
+              borderColor: (ctx: { p0DataIndex: number }) =>
+                s.segmentColors![ctx.p0DataIndex % s.segmentColors!.length],
+            },
+          }
+        : {}),
       yAxisID: s.axis === 'y2' ? 'y2' : 'y',
     };
   }
@@ -603,15 +627,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * `<lr-lite-chart>` draws its default palette from. Feeds `seriesToDataset()` a concrete,
    * theme-aware default color for any series that sets no `color` of its own. Falls back to
    * the light-mode literals only if the custom properties can't be resolved (host detached).
+   *
+   * Public so app code can color its own chart-adjacent UI (legends, KPI tiles, annotations
+   * fed through the raw `config` passthrough) from the same resolved ramp the chart itself
+   * uses, instead of hand-resolving `--lr-color-chart-N` and drifting out of sync with the
+   * active theme. Returns a fresh array on every call — mutating it does not affect the chart.
    */
-  private seriesPalette(): string[] {
+  seriesPalette(): string[] {
     const cs = getComputedStyle(this);
     const palette: string[] = [];
     for (let i = 1; i <= FALLBACK_SERIES_PALETTE.length; i++) {
       const value = cs.getPropertyValue(`--lr-color-chart-${i}`).trim();
       if (value) palette.push(value);
     }
-    return palette.length ? palette : FALLBACK_SERIES_PALETTE;
+    // Copy on the fallback path: `palette` is already per-call, but FALLBACK_SERIES_PALETTE is a
+    // shared module-level array, and this method is public -- handing it out by reference would let
+    // one caller's push()/reverse()/sort() permanently re-shape every later chart's default ramp
+    // (and, since the loop above is bounded by its length, push the probe past --lr-color-chart-8).
+    return palette.length ? palette : [...FALLBACK_SERIES_PALETTE];
   }
 
   private tickOptions(theme: ThemeColors, kind: 'category' | 'value' = 'value'): OptionalPeerApi {

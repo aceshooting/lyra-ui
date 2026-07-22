@@ -1655,3 +1655,124 @@ it('reports "no data" for a series with neither data nor points, instead of thro
   const description = el.shadowRoot!.querySelector('[part="description"]')!;
   expect(description.textContent).to.contain('Empty: no data');
 });
+
+// --- Series.pointRadius array, Series.segmentColors, public seriesPalette() -----------------------
+
+it('accepts a per-point pointRadius array', async () => {
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B', 'C'];
+  el.datasets = [{ label: 'S', data: [1, 2, 3], pointRadius: [2, 6, 2] }];
+  const config = (el as any).buildConfig();
+  expect(config.data.datasets[0].pointRadius).to.deep.equal([2, 6, 2]);
+});
+
+it('maps segmentColors to Chart.js segment.borderColor', async () => {
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B', 'C'];
+  el.datasets = [{ label: 'S', data: [1, 2, 3], segmentColors: ['red', 'green'] }];
+  const config = (el as any).buildConfig();
+  const segmentBorderColor = config.data.datasets[0].segment.borderColor;
+  expect(segmentBorderColor({ p0DataIndex: 0 })).to.equal('red');
+  expect(segmentBorderColor({ p0DataIndex: 1 })).to.equal('green');
+});
+
+it('exposes seriesPalette() publicly', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  expect(el.seriesPalette()).to.be.an('array').with.length.greaterThan(0);
+});
+
+it('leaves a series that sets neither pointRadius nor segmentColors exactly as it built before', async () => {
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B', 'C'];
+  el.datasets = [{ label: 'S', data: [1, 2, 3] }];
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  // No `segment` key at all -- not a present-but-empty one. Chart.js branches on the key's
+  // presence, so an unconditional `segment: {}` would change line rendering for every consumer
+  // who never asked for per-segment colors.
+  expect(Object.prototype.hasOwnProperty.call(ds, 'segment')).to.be.false;
+  expect(ds.pointRadius).to.equal(undefined);
+  // The rest of the generated dataset is untouched by the two new opt-in keys.
+  expect(Object.keys(ds)).to.deep.equal([
+    'label',
+    'data',
+    'type',
+    'fill',
+    'borderWidth',
+    'borderDash',
+    'backgroundColor',
+    'borderColor',
+    'pointBackgroundColor',
+    'pointRadius',
+    'yAxisID',
+  ]);
+});
+
+it('still passes a scalar pointRadius straight through, unchanged by the array widening', async () => {
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'S', data: [1, 2], pointRadius: 5 }];
+
+  expect((el as any).buildConfig().data.datasets[0].pointRadius).to.equal(5);
+});
+
+it('cycles segmentColors when the array is shorter than the segment count', async () => {
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B', 'C', 'D'];
+  el.datasets = [{ label: 'S', data: [1, 2, 3, 4], segmentColors: ['red'] }];
+
+  const segmentBorderColor = (el as any).buildConfig().data.datasets[0].segment.borderColor;
+  expect(segmentBorderColor({ p0DataIndex: 0 })).to.equal('red');
+  expect(segmentBorderColor({ p0DataIndex: 2 })).to.equal('red');
+});
+
+it('drops an empty segmentColors array rather than emitting an inert segment key', async () => {
+  const el = (await fixture(html`<lr-chart type="line"></lr-chart>`)) as LyraChart;
+  el.labels = ['A', 'B'];
+  el.datasets = [{ label: 'S', data: [1, 2], segmentColors: [] }];
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(Object.prototype.hasOwnProperty.call(ds, 'segment')).to.be.false;
+});
+
+it('resolves seriesPalette() against the live --lr-color-chart-* custom properties', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.style.setProperty('--lr-color-chart-1', 'rgb(1, 1, 1)');
+  el.style.setProperty('--lr-color-chart-2', 'rgb(2, 2, 2)');
+  el.datasets = [{ label: 'uncolored', data: [1, 2] }];
+  await el.updateComplete;
+
+  const palette = el.seriesPalette();
+  expect(palette[0]).to.equal('rgb(1, 1, 1)');
+  expect(palette[1]).to.equal('rgb(2, 2, 2)');
+  // Same resolved ramp buildConfig() hands an uncolored series, so app code coloring adjacent
+  // UI from this stays in sync with the chart itself rather than drifting from it.
+  expect((el as any).buildConfig().data.datasets[0].borderColor).to.equal(palette[0]);
+});
+
+it('returns a fresh array from the detached-host fallback branch too, so a caller cannot corrupt the shared default', async () => {
+  // The method is public now, so its "fresh array every call" guarantee has to hold on the
+  // fallback path as well -- that path used to hand back the module-level fallback constant by
+  // reference, letting one caller's push()/reverse() permanently re-shape every later chart's
+  // default ramp (and, since the resolve loop is bounded by that same array's length, make every
+  // later chart probe custom properties past --lr-color-chart-8).
+  const detached = document.createElement('lr-chart') as LyraChart;
+  // Proves we are genuinely on the fallback path: a detached host resolves no custom property.
+  expect(getComputedStyle(detached).getPropertyValue('--lr-color-chart-1').trim()).to.equal('');
+
+  const first = detached.seriesPalette();
+  expect(first.length).to.be.greaterThan(0);
+  const baseline = [...first];
+
+  try {
+    first.push('#000000');
+    first.reverse();
+    const second = document.createElement('lr-chart') as LyraChart;
+    expect(second.seriesPalette()).to.deep.equal(baseline);
+  } finally {
+    // If the guarantee is broken, `first` IS the shared constant -- restore it so a single
+    // failure here does not cascade into every later chart in this file.
+    first.length = 0;
+    first.push(...baseline);
+  }
+});
