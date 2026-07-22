@@ -106,6 +106,9 @@ export const styles = css`
     /* After the "font" shorthand, which would otherwise reset font-size back to the inherited one. */
     font-size: var(--lr-button-font-size);
     cursor: pointer;
+    /* Undeclared by default (byte-identical to today's absent box-shadow); set it to add a
+       drop shadow (e.g. an elevated/floating action button) without a ::part(base) rule. */
+    box-shadow: var(--lr-button-shadow, none);
   }
   :host([appearance='filled']) [part='base'] {
     background: var(--lr-button-fill);

@@ -176,6 +176,14 @@ export interface LyraComboboxEventMap {
  *   (`[part='combobox']`). Does not vary by `size` tier.
  * @cssprop [--lr-combobox-option-active-bg=var(--lr-color-brand-quiet)] - Background of a hovered
  *   or keyboard-active option row.
+ * @cssprop [--lr-combobox-option-selected-bg=transparent] - Background of the currently-selected
+ *   option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.
+ * @cssprop [--lr-combobox-option-selected-border=var(--lr-color-brand)] - Border color of the
+ *   selected option row.
+ * @cssprop [--lr-combobox-option-selected-color=var(--lr-color-brand)] - Text color of the
+ *   selected option row.
+ * @cssprop [--lr-combobox-option-selected-font-weight=var(--lr-font-weight-semibold)] - Font
+ *   weight of the selected option row.
  */
 export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   static formAssociated = true;

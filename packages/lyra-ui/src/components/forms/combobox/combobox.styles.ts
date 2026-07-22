@@ -279,9 +279,13 @@ export const styles = css`
     background: var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    font-weight: var(--lr-font-weight-semibold);
+    /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
+       rendering is byte-for-byte unchanged) -- so a consumer can retheme just the selected row
+       without hijacking --lr-color-brand library-wide. */
+    background: var(--lr-combobox-option-selected-bg, transparent);
+    border-color: var(--lr-combobox-option-selected-border, var(--lr-color-brand));
+    color: var(--lr-combobox-option-selected-color, var(--lr-color-brand));
+    font-weight: var(--lr-combobox-option-selected-font-weight, var(--lr-font-weight-semibold));
   }
   [part='option'][aria-disabled='true'] {
     /* was a literal 0.4; unified with the rest of the library's single

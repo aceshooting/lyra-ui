@@ -167,6 +167,14 @@ a hovered or keyboard-active `[part='option']` row — the same per-component in
 `lr-select`'s identical `--lr-select-option-active-bg` uses, so a consumer can retheme just this
 row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
 
+The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
+`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border`
+and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`), and
+`--lr-combobox-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`) — the same
+four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
+Like the active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer
+can retheme the selected row without hijacking `--lr-color-brand` library-wide.
+
 `--lr-combobox-trigger-height` pins an **exact** input-container height (both floors and caps it),
 for pixel-matching an `<lr-input>` or `<lr-select>` in the same toolbar row. It is **undeclared by
 default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the row free to grow —
@@ -828,6 +836,9 @@ and the per-`size`
 and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
 both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
 by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
+`--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
+byte-identical to before this property existed — set it to add a drop shadow (e.g. an
+elevated/floating action button) without a `::part(base)` rule.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no

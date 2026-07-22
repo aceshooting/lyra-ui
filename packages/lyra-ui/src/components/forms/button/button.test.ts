@@ -585,6 +585,27 @@ describe('lr-button', () => {
     });
   });
 
+  describe('--lr-button-shadow', () => {
+    it('applies a box-shadow through the token', async () => {
+      const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+      el.style.setProperty('--lr-button-shadow', '0 4px 8px rgba(0, 0, 0, 0.3)');
+      await el.updateComplete;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const probe = document.createElement('span');
+      probe.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+      document.body.appendChild(probe);
+      const expected = getComputedStyle(probe).boxShadow;
+      document.body.removeChild(probe);
+      expect(getComputedStyle(base).boxShadow).to.equal(expected);
+    });
+
+    it('renders no box-shadow when the token is unset (regression)', async () => {
+      const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(getComputedStyle(base).boxShadow).to.equal('none');
+    });
+  });
+
   describe('anchor mode (href/target/download)', () => {
     it('renders a real <a> when href is set', async () => {
       const el = (await fixture(

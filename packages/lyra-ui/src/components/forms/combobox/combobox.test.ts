@@ -2526,6 +2526,51 @@ describe('--lr-combobox-option-active-bg', () => {
   });
 });
 
+describe('selected-state theming tokens', () => {
+  it('honours --lr-combobox-option-selected-color on the selected row', async () => {
+    const el = (await fixture(html`
+      <lr-combobox style="--lr-combobox-option-selected-color: rgb(1, 2, 3);">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = 'a';
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).color).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('honours --lr-combobox-option-selected-bg on the selected row', async () => {
+    const el = (await fixture(html`
+      <lr-combobox style="--lr-combobox-option-selected-bg: rgb(4, 5, 6);">
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+      </lr-combobox>
+    `)) as LyraCombobox;
+    el.value = 'a';
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).backgroundColor).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('leaves the selected row at the brand color when the token is unset (regression)', async () => {
+    const el = (await fixture(basic())) as LyraCombobox;
+    el.value = 'a';
+    el.open = true;
+    await el.updateComplete;
+    const selected = el.shadowRoot!.querySelector('[part="option"][aria-selected="true"]') as HTMLElement;
+    const brand = getComputedStyle(el).getPropertyValue('--lr-color-brand').trim();
+    const probe = document.createElement('span');
+    probe.style.color = brand;
+    document.body.appendChild(probe);
+    const expected = getComputedStyle(probe).color;
+    document.body.removeChild(probe);
+    expect(getComputedStyle(selected).color).to.equal(expected);
+  });
+});
+
 // -- Host click() forwarding -------------------------------------------------
 
 it('forwards host click() to opening the listbox and focusing the filter input', async () => {

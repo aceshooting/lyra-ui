@@ -104,6 +104,9 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * Override it to retune without a `::part(base)` rule.
  * @cssprop [--lr-button-radius=var(--lr-radius)] - Corner radius of the internal button. Does not
  * vary by `size` tier. `appearance="link"` ignores it (it renders with zero radius).
+ * @cssprop --lr-button-shadow - Box shadow of the internal button. **Undeclared by default**, so
+ * `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g.
+ * an elevated/floating action button) without a `::part(base)` rule.
  */
 export class LyraButton extends LyraElement {
   static override styles = [LyraElement.styles, styles];
