@@ -1425,6 +1425,67 @@ it('omits aria-label on the shadow-DOM grid element when the host has none', asy
   expect(grid.hasAttribute('aria-label')).to.be.false;
 });
 
+describe('accessible name (accessibleLabel / caption / dev warning)', () => {
+  let originalWarn: typeof console.warn;
+  let warnings: unknown[][];
+  beforeEach(() => {
+    originalWarn = console.warn;
+    warnings = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+  });
+  afterEach(() => {
+    console.warn = originalWarn;
+  });
+
+  it('names the grid from accessibleLabel and does not warn', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Match scores"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(grid.getAttribute('aria-label')).to.equal('Match scores');
+    expect(warnings.length).to.equal(0);
+  });
+
+  it('renders a caption and points the grid at it via aria-labelledby when no other name exists', async () => {
+    // Set at construction so the caption is present on the first render (firstUpdated's warning
+    // check runs then); a property assigned after fixture() would arrive too late.
+    const el = (await fixture(html`<lr-table caption="Quarterly results"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    const cap = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
+    expect(cap).to.exist;
+    expect(cap.textContent).to.equal('Quarterly results');
+    expect(grid.getAttribute('aria-labelledby')).to.equal(cap.id);
+    expect(warnings.length).to.equal(0);
+  });
+
+  it('warns exactly once when the grid has no accessible name', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    // Force additional renders — the warning must not repeat.
+    el.rows = [...rows];
+    await el.updateComplete;
+    expect(warnings.length).to.equal(1);
+    expect(String(warnings[0]![0])).to.include('no accessible name');
+  });
+
+  it('prefers accessibleLabel over caption for the name (no aria-labelledby)', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Primary"></lr-table>`)) as LyraTable<Row>;
+    el.caption = 'Secondary';
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="table"]') as HTMLElement;
+    expect(grid.getAttribute('aria-label')).to.equal('Primary');
+    expect(grid.hasAttribute('aria-labelledby')).to.be.false;
+  });
+});
+
 it('does not trigger a Lit "scheduled an update after an update completed" dev warning when a priority column transitions to actually-hidden', async () => {
   // Reset Lit's own dedupe set first so this doesn't silently pass just
   // because an earlier test in this file (or another file in the same

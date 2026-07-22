@@ -10,7 +10,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { srOnly } from '../../../internal/a11y.js';
+import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -407,6 +407,7 @@ export interface LyraTableEventMap<T = unknown> {
  *   the same reason as `focus`.
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
+ * @csspart caption - The `<caption>` element, rendered only when `caption` is set.
  * @csspart head - The `<thead>` element.
  * @csspart header-cell - Each `<th>` header cell.
  * @csspart resize-handle - The focusable separator used to resize a `resizable` column.
@@ -505,6 +506,17 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ reflect: true }) layout: 'auto' | 'fixed' = 'auto';
   @property({ attribute: 'sort-key' }) sortKey = '';
   @property({ attribute: 'sort-dir' }) sortDir: 'asc' | 'desc' = 'asc';
+  /** Accessible name for the `role="grid"` — a typed alternative to setting `aria-label` on the
+   *  host. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback
+   *  when this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. */
+  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  /** Optional visible caption rendered as the table's `<caption>`. Also names the grid (via
+   *  `aria-labelledby`) when no `accessibleLabel`/host `aria-label` is set. Consumer-supplied
+   *  text, not localized. */
+  @property() caption = '';
+
+  /** Stable id for the `<caption>`, so `aria-labelledby` can point at it. */
+  private readonly captionId = nextId('lr-table-caption');
   /** Derives each row's stable identity for `repeat()`'s DOM-reconciliation
    *  key and the delegated click/keydown row lookup (`rowsByKey`,
    *  `data-row-key`). When omitted, `keyOf()` falls back to the row's index
@@ -859,6 +871,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       this.syncResizeHandleValues();
     });
   };
+
+  protected override firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    // A grid with no accessible name is a real a11y defect but silently renders. Warn once per
+    // element (dev signal; the guard keeps it out of hot render paths and prevents log spam).
+    if (!this.accessibleLabel && !this.getAttribute('aria-label') && !this.caption) {
+      console.warn(
+        '<lr-table> has no accessible name: set `accessibleLabel`, a host `aria-label`, or ' +
+          '`caption` so assistive technology can identify the grid.',
+      );
+    }
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -1713,7 +1737,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         : html`<table
             part="table"
             role="grid"
-            aria-label=${this.getAttribute('aria-label') || nothing}
+            aria-label=${this.accessibleLabel || this.getAttribute('aria-label') || nothing}
+            aria-labelledby=${!this.accessibleLabel && !this.getAttribute('aria-label') && this.caption
+              ? this.captionId
+              : nothing}
             aria-multiselectable=${this.selectionMode === 'multiple' ? 'true' : nothing}
             ?data-has-column-widths=${hasColumnWidths}
             data-layout=${effectiveLayout}
@@ -1722,6 +1749,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
             @dblclick=${this.onTableDoubleClick}
             @focusin=${this.onTableFocusIn}
           >
+            ${this.caption ? html`<caption part="caption" id=${this.captionId}>${this.caption}</caption>` : nothing}
             <colgroup>
               ${hasExpand ? html`<col style=${styleMap({ 'inline-size': 'var(--lr-icon-button-size)' })} />` : nothing}
               ${this.columns.map(
