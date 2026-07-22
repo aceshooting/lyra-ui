@@ -3390,3 +3390,362 @@ describe('lr-table sorted-header theming and specificity', () => {
     }
   });
 });
+
+describe('lr-table client-side sorting', () => {
+  interface SortRow {
+    id: string;
+    name: string;
+    score: number | null;
+  }
+
+  const sortColumns: TableColumn<SortRow>[] = [
+    { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+    { key: 'score', label: 'Score', sortable: true, sortValue: (r) => r.score, cell: (r) => r.score },
+  ];
+
+  const sortRows: SortRow[] = [
+    { id: 'bea', name: 'Bea', score: 2 },
+    { id: 'amy', name: 'Amy', score: 3 },
+    { id: 'cy', name: 'Cy', score: 1 },
+  ];
+
+  const sortTable = async (): Promise<LyraTable<SortRow>> => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    el.columns = sortColumns;
+    el.rows = sortRows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    return el;
+  };
+
+  const columnText = (el: LyraTable<SortRow>, key: string): string[] =>
+    [...el.shadowRoot!.querySelectorAll(`tbody [data-col-key="${key}"]`)].map(
+      (cell) => cell.textContent!.trim(),
+    );
+
+  it('sorts rows client-side by the active column when sortMode is client', async () => {
+    const el = await sortTable();
+    el.sortMode = 'client';
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['Cy', 'Bea', 'Amy']);
+  });
+
+  it('reverses the client-side order when sortDir is desc', async () => {
+    const el = await sortTable();
+    el.sortKey = 'score';
+    el.sortDir = 'desc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['Amy', 'Bea', 'Cy']);
+  });
+
+  it('leaves row order untouched in server sort mode', async () => {
+    const el = await sortTable();
+    el.sortMode = 'server';
+    el.sortKey = 'score';
+    el.sortDir = 'desc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['Bea', 'Amy', 'Cy']);
+  });
+
+  it('falls back to a locale-aware numeric string collator when a column has no sortValue', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r) => r.name }];
+    el.rows = [
+      { id: '10', name: 'item10', score: 0 },
+      { id: '2', name: 'item2', score: 0 },
+    ];
+    el.rowKey = (r) => r.id;
+    el.sortKey = 'name';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    // A plain lexicographic compare would order item10 before item2.
+    expect(columnText(el, 'name')).to.deep.equal(['item2', 'item10']);
+  });
+
+  it('sorts null/undefined sortValue results last regardless of direction', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    el.columns = sortColumns;
+    el.rows = [
+      { id: 'a', name: 'A', score: null },
+      { id: 'b', name: 'B', score: 1 },
+    ];
+    el.rowKey = (r) => r.id;
+    el.sortKey = 'score';
+    el.sortDir = 'desc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['B', 'A']);
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['B', 'A']);
+  });
+
+  it('never sorts by a column that is not marked sortable', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    el.columns = [
+      { key: 'name', label: 'Name', cell: (r) => r.name },
+      { key: 'score', label: 'Score', sortValue: (r) => r.score, cell: (r) => r.score },
+    ];
+    el.rows = sortRows;
+    el.rowKey = (r) => r.id;
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['Bea', 'Amy', 'Cy']);
+  });
+
+  it('applies defaultSortDir when header activation switches to a different column, then toggles', async () => {
+    const el = await sortTable();
+    el.defaultSortDir = 'desc';
+    await el.updateComplete;
+    const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
+    scoreHeader.click();
+    await el.updateComplete;
+    expect(el.sortKey).to.equal('score');
+    expect(el.sortDir).to.equal('desc');
+    expect(columnText(el, 'name')).to.deep.equal(['Amy', 'Bea', 'Cy']);
+
+    // Re-activating the already-sorted column toggles instead of re-seeding.
+    scoreHeader.click();
+    await el.updateComplete;
+    expect(el.sortDir).to.equal('asc');
+    expect(columnText(el, 'name')).to.deep.equal(['Cy', 'Bea', 'Amy']);
+
+    // Switching to a different column re-applies defaultSortDir.
+    const nameHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[0] as HTMLElement;
+    nameHeader.click();
+    await el.updateComplete;
+    expect(el.sortKey).to.equal('name');
+    expect(el.sortDir).to.equal('desc');
+    expect(columnText(el, 'name')).to.deep.equal(['Cy', 'Bea', 'Amy']);
+  });
+
+  it('resolves the clicked row against the post-sort order (rowsByKey stays in step)', async () => {
+    const el = await sortTable();
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    setTimeout(() => firstRow.click());
+    const ev = await oneEvent(el, 'lr-row-click');
+    expect(ev.detail.row.id).to.equal('cy');
+  });
+
+  it('sorts the current page from the whole matching set, not just the page slice', async () => {
+    const el = await sortTable();
+    el.pageSize = 2;
+    el.page = 1;
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    expect(columnText(el, 'name')).to.deep.equal(['Cy', 'Bea']);
+  });
+
+  it('keeps row identity across a client sort with no rowKey set', async () => {
+    // keyOf() falls back to the row's index in `rows`, and the sort permutes entries while each
+    // entry keeps that original index -- so identity survives a re-sort even without rowKey.
+    const el = (await fixture(
+      html`<lr-table accessible-label="Scores"></lr-table>`,
+    )) as LyraTable<SortRow>;
+    el.columns = sortColumns;
+    el.rows = sortRows;
+    el.selectionMode = 'single';
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    const firstRow = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    setTimeout(() => firstRow.click());
+    const ev = await oneEvent(el, 'lr-row-click');
+    expect(ev.detail.row.id).to.equal('cy');
+    await el.updateComplete;
+    // 'cy' is index 2 in `rows`, so the index-based fallback key must be 2, not its sorted slot 0.
+    expect(el.selectedKey).to.equal(2);
+    expect(firstRow.getAttribute('aria-selected')).to.equal('true');
+  });
+
+  it('collates through effectiveLocale, not a hardcoded locale', async () => {
+    const localeRows: SortRow[] = [
+      { id: 'z', name: 'zebra', score: 0 },
+      { id: 'a', name: '\u00e4pple', score: 0 },
+    ];
+    const localeTable = async (locale: string): Promise<LyraTable<SortRow>> => {
+      const el = (await fixture(
+        html`<lr-table accessible-label="Scores"></lr-table>`,
+      )) as LyraTable<SortRow>;
+      el.columns = [{ key: 'name', label: 'Name', sortable: true, cell: (r) => r.name }];
+      el.rows = localeRows;
+      el.rowKey = (r) => r.id;
+      el.locale = locale;
+      el.sortKey = 'name';
+      await el.updateComplete;
+      return el;
+    };
+    // German collates 'a-umlaut' alongside 'a'; Swedish collates it after 'z'. A hardcoded 'en'
+    // (or a bare `undefined`) would produce the German order for both.
+    expect(columnText(await localeTable('de'), 'name')).to.deep.equal(['\u00e4pple', 'zebra']);
+    expect(columnText(await localeTable('sv'), 'name')).to.deep.equal(['zebra', '\u00e4pple']);
+  });
+
+  it('is accessible while client-sorted', async () => {
+    const el = await sortTable();
+    el.sortKey = 'score';
+    el.sortDir = 'desc';
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
+  it('leaves row order and sort state untouched with sortMode/defaultSortDir/sortValue unset (regression)', async () => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<SortRow>;
+    el.columns = [
+      { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+      { key: 'score', label: 'Score', sortable: true, cell: (r) => r.score },
+    ];
+    el.rows = sortRows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    // Defaults: sortMode 'client', but no sortKey => the input order is preserved verbatim.
+    expect(el.sortKey).to.equal('');
+    expect(el.sortDir).to.equal('asc');
+    expect(el.sortMode).to.equal('client');
+    expect(el.defaultSortDir).to.equal('asc');
+    expect(columnText(el, 'name')).to.deep.equal(['Bea', 'Amy', 'Cy']);
+    expect(columnText(el, 'score')).to.deep.equal(['2', '3', '1']);
+  });
+});
+
+describe('lr-table client-side sorting with groupBy', () => {
+  interface GroupSortRow {
+    id: string;
+    name: string;
+    score: number;
+    team: string;
+  }
+
+  const groupSortColumns: TableColumn<GroupSortRow>[] = [
+    { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
+    { key: 'score', label: 'Score', sortable: true, sortValue: (r) => r.score, cell: (r) => r.score },
+  ];
+
+  // Groups are contiguous in input order, and 'Zeta' appears before 'Alpha' so a group ordering
+  // derived by collating the group keys is distinguishable from one that follows first appearance.
+  const groupSortRows: GroupSortRow[] = [
+    { id: 'a', name: 'Alpha', score: 3, team: 'Zeta' },
+    { id: 'b', name: 'Bravo', score: 1, team: 'Zeta' },
+    { id: 'c', name: 'Cody', score: 4, team: 'Alpha' },
+    { id: 'd', name: 'Dana', score: 2, team: 'Alpha' },
+  ];
+
+  const groupedTable = async (): Promise<LyraTable<GroupSortRow>> => {
+    const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<GroupSortRow>;
+    el.columns = groupSortColumns;
+    el.rows = groupSortRows;
+    el.rowKey = (r) => r.id;
+    el.groupBy = (r) => r.team;
+    await el.updateComplete;
+    return el;
+  };
+
+  const nameText = (el: LyraTable<GroupSortRow>): string[] =>
+    [...el.shadowRoot!.querySelectorAll('tbody [data-col-key="name"]')].map((cell) => cell.textContent!.trim());
+  const groupText = (el: LyraTable<GroupSortRow>): string[] =>
+    [...el.shadowRoot!.querySelectorAll('[part="group-cell"]')].map((cell) => cell.textContent!.trim());
+
+  it('keeps each group contiguous when client-sorting on a non-group column', async () => {
+    const el = await groupedTable();
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    // A flat global sort would interleave the teams (Bravo/Zeta, Dana/Alpha, Alpha/Zeta,
+    // Cody/Alpha) and emit a group header before nearly every row.
+    expect(groupText(el)).to.have.lengthOf(2);
+    expect(nameText(el)).to.deep.equal(['Bravo', 'Alpha', 'Dana', 'Cody']);
+  });
+
+  it('orders groups by first appearance in rows, not by collating the group key', async () => {
+    const el = await groupedTable();
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    expect(groupText(el)).to.deep.equal(['Zeta', 'Alpha']);
+  });
+
+  it('sorts within groups in desc as well', async () => {
+    const el = await groupedTable();
+    el.sortKey = 'score';
+    el.sortDir = 'desc';
+    await el.updateComplete;
+    expect(groupText(el)).to.deep.equal(['Zeta', 'Alpha']);
+    expect(nameText(el)).to.deep.equal(['Alpha', 'Bravo', 'Cody', 'Dana']);
+  });
+
+  it('leaves a grouped table untouched with no sortKey (regression)', async () => {
+    const el = await groupedTable();
+    expect(groupText(el)).to.deep.equal(['Zeta', 'Alpha']);
+    expect(nameText(el)).to.deep.equal(['Alpha', 'Bravo', 'Cody', 'Dana']);
+  });
+
+  it('does not group-partition in server sort mode', async () => {
+    const el = await groupedTable();
+    el.sortMode = 'server';
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    expect(nameText(el)).to.deep.equal(['Alpha', 'Bravo', 'Cody', 'Dana']);
+  });
+
+  it('is accessible while client-sorted inside groups', async () => {
+    const el = await groupedTable();
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+
+  // A column whose value never varies inside a group (the group column itself being the obvious
+  // case) makes the within-group sort provably inert -- every comparison ties. Sorting only the
+  // rows would leave `aria-sort`/the chevron announcing an ordering the table never applied, so
+  // the groups themselves have to move instead.
+  const teamColumns: TableColumn<GroupSortRow>[] = [
+    ...groupSortColumns,
+    { key: 'team', label: 'Team', sortable: true, cell: (r) => r.team },
+  ];
+  const ariaSortFor = (el: LyraTable<GroupSortRow>, key: string): string | null =>
+    el.shadowRoot!.querySelector(`thead [data-col-key="${key}"]`)!.getAttribute('aria-sort');
+
+  it('reorders the groups when the active sort column is constant within every group', async () => {
+    const el = await groupedTable();
+    el.columns = teamColumns;
+    el.sortKey = 'team';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    // Input order is Zeta then Alpha; an ascending sort on the group column must actually move it.
+    expect(groupText(el)).to.deep.equal(['Alpha', 'Zeta']);
+    expect(nameText(el)).to.deep.equal(['Cody', 'Dana', 'Alpha', 'Bravo']);
+    // ... and the announced ordering must now be one the table genuinely applied.
+    expect(ariaSortFor(el, 'team')).to.equal('ascending');
+  });
+
+  it('flips the group order when a group-constant sort is descending', async () => {
+    const el = await groupedTable();
+    el.columns = teamColumns;
+    el.sortKey = 'team';
+    el.sortDir = 'desc';
+    await el.updateComplete;
+    expect(groupText(el)).to.deep.equal(['Zeta', 'Alpha']);
+    expect(nameText(el)).to.deep.equal(['Alpha', 'Bravo', 'Cody', 'Dana']);
+    expect(ariaSortFor(el, 'team')).to.equal('descending');
+  });
+
+  it('keeps group order by first appearance when the sort column varies within a group', async () => {
+    const el = await groupedTable();
+    el.columns = teamColumns;
+    el.sortKey = 'score';
+    el.sortDir = 'asc';
+    await el.updateComplete;
+    // `score` varies inside both teams, so the within-group sort is real and the groups must not
+    // be reordered -- the pre-existing first-appearance contract still holds.
+    expect(groupText(el)).to.deep.equal(['Zeta', 'Alpha']);
+    expect(nameText(el)).to.deep.equal(['Bravo', 'Alpha', 'Dana', 'Cody']);
+  });
+});
