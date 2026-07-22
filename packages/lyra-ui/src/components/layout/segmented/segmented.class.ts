@@ -1,8 +1,9 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './segmented.styles.js';
 
 export interface SegmentedItem {
@@ -34,6 +35,10 @@ export interface LyraSegmentedEventMap {
  * @customElement lr-segmented
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value }`.
+ * @method scrollToValue - `scrollToValue(value: string): void` — scroll the segment with the given
+ *   `value` into view within the (possibly overflowing) track. Called automatically when `value`
+ *   changes programmatically; exposed for the "reveal without selecting" case. Honors
+ *   `prefers-reduced-motion`.
  * @csspart base - The `role="radiogroup"` root.
  * @csspart segment - A single `role="radio"` button.
  * @csspart segment-icon - Optional leading visual supplied by the item's `icon` field; content
@@ -93,11 +98,36 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.emit<{ value: string }>('lr-change', { value: item.value });
   }
 
-  private focusItem(value: string): void {
-    const button = this.renderRoot.querySelector(
+  private segmentButton(value: string): HTMLElement | null {
+    return this.renderRoot.querySelector(
       `[part="segment"][data-value="${CSS.escape(value)}"]`,
     ) as HTMLElement | null;
-    button?.focus();
+  }
+
+  private focusItem(value: string): void {
+    // Keyboard nav already reveals the focused segment implicitly (native focus() scrolls it into
+    // view). scrollToValue below closes the equivalent gap for programmatic `value` changes.
+    this.segmentButton(value)?.focus();
+  }
+
+  /** Scroll the segment with the given `value` into view within the (possibly overflowing) track.
+   *  Public so a consumer can reveal a segment without selecting it. */
+  scrollToValue(value: string): void {
+    this.segmentButton(value)?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    // Reveal a programmatically-changed selection. Guard the first render so an initial mount
+    // never scrolls an ancestor page to the selected segment. Keyboard-driven changes already
+    // reveal via focusItem()'s focus(), and re-scrolling there is harmless/idempotent.
+    if (changed.has('value') && changed.get('value') !== undefined && this.value) {
+      this.scrollToValue(this.value);
+    }
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
