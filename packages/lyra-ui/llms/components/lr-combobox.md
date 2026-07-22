@@ -66,7 +66,8 @@ shared `FormAssociated` mixin — see gotchas).
   falling back to `200` for a non-finite value)
 - `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
   keeping the current selection visible even if it's outside the cap; the excess renders as one
-  `overflowText` row instead of being dropped silently)
+  `overflowText` row instead of being dropped silently. See "Large option lists" below for how to
+  size it, and when `source` is the better answer)
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
 - `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
@@ -123,6 +124,32 @@ something to clear, and one press clears both:
   open listbox in single-select, or any time in `multiple` mode. A closed single-select shows the
   selected label rather than the query, so a stale query alone never surfaces a button offering to
   clear text the user cannot see.
+
+**Large option lists: sizing `maxRender`, and why the listbox is not windowed.** Every row that
+survives the filter and fits under `maxRender` is a real DOM element — the listbox renders its rows
+in full rather than recycling a small window of them across a scroll. That is a deliberate
+accessibility constraint, not an omission: the filter input carries `aria-activedescendant`, which
+is an **IDREF**, and an IDREF only resolves within its own tree scope. Moving the rows into the
+library's windowing primitive (`<lr-virtual-list>`) would place them one shadow root deeper than the
+input that has to point at them, where neither the attribute nor its `ariaActiveDescendantElement`
+element-reflection replacement can reach — element reflection resolves same-root or upward only. So
+`<lr-virtual-list>` stays `role="list"`/`role="listitem"` and is the right tool for feeds and
+viewers, not for a listbox whose active row must stay addressable.
+
+What that means in practice:
+
+- **Up to a few hundred rows, raise `maxRender` and move on.** A few hundred flex rows is an
+  unremarkable amount of DOM; a country, currency, or time-zone list (typically 200–450 entries)
+  renders comfortably with `max-render` set to cover it. The cap exists to bound pathological
+  cases, not to make lists of that size expensive.
+- **Past roughly a thousand rows, reach for `source` instead of a larger cap.** An async source
+  narrows the candidate set before it ever becomes DOM, which is a categorically better trade than
+  rendering everything and asking the browser to lay it out. Pair it with `sourceDelay` to debounce.
+- **Leave the overflow row doing its job.** When the cap does bite, the excess collapses into one
+  `overflowText` row (default `"+{n} more — refine your search"`) rather than disappearing
+  silently, and the current selection is always kept visible even when it falls outside the cap.
+  Suppressing that row by setting `maxRender` far above the real list size trades a useful "keep
+  typing" affordance for layout work no user asked for.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), plus two adornment slots:

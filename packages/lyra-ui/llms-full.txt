@@ -646,7 +646,8 @@ shared `FormAssociated` mixin — see gotchas).
   falling back to `200` for a non-finite value)
 - `maxRender: number = 200` (attribute `max-render` — caps how many rows render at once, always
   keeping the current selection visible even if it's outside the cap; the excess renders as one
-  `overflowText` row instead of being dropped silently)
+  `overflowText` row instead of being dropped silently. See "Large option lists" below for how to
+  size it, and when `source` is the better answer)
 - `value: string | string[]` — a getter/setter: plain `string` in single mode, `string[]` in
   `multiple` mode
 - `selectedRows: ComboboxSourceRow[]` (read-only getter) — structured rows for the current
@@ -703,6 +704,32 @@ something to clear, and one press clears both:
   open listbox in single-select, or any time in `multiple` mode. A closed single-select shows the
   selected label rather than the query, so a stale query alone never surfaces a button offering to
   clear text the user cannot see.
+
+**Large option lists: sizing `maxRender`, and why the listbox is not windowed.** Every row that
+survives the filter and fits under `maxRender` is a real DOM element — the listbox renders its rows
+in full rather than recycling a small window of them across a scroll. That is a deliberate
+accessibility constraint, not an omission: the filter input carries `aria-activedescendant`, which
+is an **IDREF**, and an IDREF only resolves within its own tree scope. Moving the rows into the
+library's windowing primitive (`<lr-virtual-list>`) would place them one shadow root deeper than the
+input that has to point at them, where neither the attribute nor its `ariaActiveDescendantElement`
+element-reflection replacement can reach — element reflection resolves same-root or upward only. So
+`<lr-virtual-list>` stays `role="list"`/`role="listitem"` and is the right tool for feeds and
+viewers, not for a listbox whose active row must stay addressable.
+
+What that means in practice:
+
+- **Up to a few hundred rows, raise `maxRender` and move on.** A few hundred flex rows is an
+  unremarkable amount of DOM; a country, currency, or time-zone list (typically 200–450 entries)
+  renders comfortably with `max-render` set to cover it. The cap exists to bound pathological
+  cases, not to make lists of that size expensive.
+- **Past roughly a thousand rows, reach for `source` instead of a larger cap.** An async source
+  narrows the candidate set before it ever becomes DOM, which is a categorically better trade than
+  rendering everything and asking the browser to lay it out. Pair it with `sourceDelay` to debounce.
+- **Leave the overflow row doing its job.** When the cap does bite, the excess collapses into one
+  `overflowText` row (default `"+{n} more — refine your search"`) rather than disappearing
+  silently, and the current selection is always kept visible even when it falls outside the cap.
+  Suppressing that row by setting `maxRender` far above the real list size trades a useful "keep
+  typing" affordance for layout work no user asked for.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), plus two adornment slots:
@@ -1311,7 +1338,25 @@ A generic action-button primitive. Renders an internal native `<button>`; `type=
 `type="reset"` are handled by the component itself via the host's own `closest('form')`, since a
 shadow-internal native button doesn't participate in an ancestor form's submission on its own.
 
+Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
+link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
+handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
+ancestor `<fieldset disabled>`) renders the anchor with `aria-disabled="true"` and **no `href`**, so
+it is neither focusable nor navigable; an unsafe/unparseable `href` falls back to the native
+`<button>`.
+
 **Properties:**
+- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
+  `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Unset (the default)
+  renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
+  renders. While the button is disabled the anchor is rendered **without** `href` (keeping
+  `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
+  falls back to the native `<button>`
+- `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
+  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor; `rel` is never
+  independently settable (reverse-tabnabbing). Ignored in `<button>` mode
+- `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
+  link. Ignored in `<button>` mode
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'plain' | 'quiet' | 'link' = 'filled'` (reflected)
   — `'accent'` is a
@@ -1336,15 +1381,17 @@ shadow-internal native button doesn't participate in an ancestor form's submissi
 The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
 `100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
 
-**Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal native
-`<button>`; `click()` also runs the component's submit/reset behavior.
+**Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
+element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
+submit/reset behavior in `<button>` mode.
 
 **Events:** none (a plain native `click` bubbles and composes through the shadow boundary
 unmodified; disabled while `disabled` or `loading`).
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
 
-**CSS parts:** `base`, `label`, `start`, `end`, `spinner` (present only while `loading`).
+**CSS parts:** `base` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe
+link), `label`, `start`, `end`, `spinner` (present only while `loading`).
 
 **Themeable custom properties:** `--lr-button-width`, `--lr-button-accent`, `--lr-button-fill`,
 `--lr-button-on-fill`, `--lr-button-border` (each swapped by the active `variant`, default

@@ -546,7 +546,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
 
   /** Maximum number of rows rendered before the rest collapse behind the overflow indicator
    *  (the current selection is always kept visible regardless). Sanitized to a finite,
-   *  non-negative integer. */
+   *  non-negative integer.
+   *
+   *  Rows render in full rather than as a recycled scroll window, because the filter input's
+   *  `aria-activedescendant` is an IDREF and can only resolve within its own tree scope — rows
+   *  hosted inside a nested windowing element would sit one shadow root deeper than the input
+   *  that must point at them. Raising this to cover a few-hundred-entry list (countries,
+   *  currencies, time zones) is the intended use; past roughly a thousand rows, `source` narrows
+   *  the set before it becomes DOM and is the better tool. */
   get maxRender(): number {
     return this._maxRender;
   }
