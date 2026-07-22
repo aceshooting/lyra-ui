@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { fileIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { safeFetchUrl, safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
+import { safeDownloadHref, safeFetchUrl, safeMediaSrc } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseText } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -432,7 +432,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   private renderDownloadFallback(): TemplateResult {
     const label = this.filename || this.localize('documentPreviewGenericFile');
-    const href = safeLinkHref(this.src);
+    const href = safeDownloadHref(this.src);
     return html`
       <div class="fallback">
         <span class="fallback-icon" aria-hidden="true">${fileIcon()}</span>

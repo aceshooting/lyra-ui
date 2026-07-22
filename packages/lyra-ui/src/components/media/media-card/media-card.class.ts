@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { expandIcon, fileIcon } from '../../../internal/icons.js';
 import {
-  safeLinkHref as validateLinkHref,
+  safeDownloadHref as validateLinkHref,
   safeMediaSrc as validateMediaSrc,
 } from '../../../internal/safe-url.js';
 import { styles } from './media-card.styles.js';
@@ -29,8 +29,12 @@ export function safeMediaSrc(url: string): string | null {
   return validateMediaSrc(url);
 }
 
-/** Validates `url` for the library's download/open link sinks. Kept as a
- * public wrapper so existing imports and generated API metadata remain stable. */
+/** Validates `url` for the library's download/open link sinks — `http:`,
+ * `https:`, `blob:`, or relative. Deliberately narrower than the general-purpose
+ * navigation validator of the same name in `internal/safe-url.js`, which also
+ * admits `mailto:`; a mail handoff names no retrievable bytes, so it is not a
+ * valid target for this component's `download` affordance. Kept as a public
+ * wrapper so existing imports and generated API metadata remain stable. */
 export function safeLinkHref(url: string): string | null {
   return validateLinkHref(url);
 }

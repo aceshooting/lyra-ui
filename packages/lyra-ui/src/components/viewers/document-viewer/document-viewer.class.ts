@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeLinkHref } from '../../../internal/safe-url.js';
+import { safeDownloadHref } from '../../../internal/safe-url.js';
 import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
 import {
   findDocumentRenderer,
@@ -211,7 +211,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   override render(): TemplateResult {
-    const downloadHref = safeLinkHref(this.src);
+    const downloadHref = safeDownloadHref(this.src);
     return html`
       <lr-dialog
         ?open=${this.open}

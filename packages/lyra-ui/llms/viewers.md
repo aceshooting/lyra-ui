@@ -163,9 +163,10 @@ available, the region becomes a standard `role="progressbar"` instead, self-desc
   just via two different mechanisms depending on timing.
 - `download-link` (and thus `lr-download`) only renders/fires when `src` is set — a generic-fallback
   state with no `src` shows only the file glyph and message, with no download affordance at all.
-- `download-link` also never renders for a `data:` URL, even though `data:` is accepted for text/image
-  sinks — a `src="data:..."` document renders/fetches fine but falls back to no download affordance
-  in the generic state.
+- `download-link` also never renders for a `data:` or `mailto:` URL, even though `data:` is accepted
+  for text/image sinks and `mailto:` is accepted for navigation anchors elsewhere in the library — a
+  `src="data:..."` document renders/fetches fine but falls back to no download affordance in the
+  generic state, and a `mailto:` names no retrievable bytes so it cannot be a download target at all.
 - A `src` that fails its sink's URL-safety check does **not** raise `lr-render-error` — that event is
   reserved for a `fetch()` that was actually attempted and failed at the network layer; an unsafe/
   malformed `src` is silently treated as unusable instead (a rendered `[part="error"]` message for

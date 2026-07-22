@@ -1,7 +1,17 @@
 // URL safety is sink-specific. A `data:` URL is inert when used as media or
 // fetched as data, but navigating an anchor to `data:text/html,...` creates an
-// active document. Keep the link allowlist deliberately narrower.
+// active document. Keep the anchor allowlists deliberately narrower.
+//
+// The two anchor allowlists differ on `mailto:` because they answer different
+// questions. A navigation anchor asks "may the user go here?" -- handing off to
+// the mail client is a legitimate destination. A download anchor asks "does this
+// name a retrievable resource?" -- `mailto:` names no bytes, so a `download`
+// attribute pointed at one is meaningless and the affordance should degrade to
+// its inert state instead. Download is therefore a strict subset of resource,
+// which is what lets a media component treat "failed the media-src check" as
+// "necessarily fails the download-href check too".
 const SAFE_RESOURCE_SCHEMES = new Set(['http:', 'https:', 'blob:', 'data:']);
+const SAFE_DOWNLOAD_SCHEMES = new Set(['http:', 'https:', 'blob:']);
 const SAFE_LINK_SCHEMES = new Set(['http:', 'https:', 'blob:', 'mailto:']);
 
 // A fixed web base makes relative and scheme-relative inputs parse through the
@@ -37,11 +47,22 @@ export function safeFetchUrl(url: unknown): string | null {
   return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES);
 }
 
-/** Returns a trimmed URL safe for an `<a href>`, or `null`. `http:`, `https:`,
- * `blob:`, `mailto:`, and relative URLs are allowed. `data:` is intentionally
- * excluded because following it can open an active document; `mailto:` is
- * allowed because it hands off to the mail client rather than navigating a
- * document. */
+/** Returns a trimmed URL safe for a *navigation* `<a href>`, or `null`.
+ * `http:`, `https:`, `blob:`, `mailto:`, and relative URLs are allowed.
+ * `data:` is intentionally excluded because following it can open an active
+ * document; `mailto:` is allowed because it hands off to the mail client
+ * rather than navigating a document. Use `safeDownloadHref()` instead for an
+ * anchor that retrieves a resource (one carrying a `download` attribute). */
 export function safeLinkHref(url: unknown): string | null {
   return safeUrlOrNull(url, SAFE_LINK_SCHEMES);
+}
+
+/** Returns a trimmed URL safe for a *download/open* `<a href>` pointing at a
+ * resource, or `null`. `http:`, `https:`, `blob:`, and relative URLs are
+ * allowed. This is `safeLinkHref()` minus `mailto:`: a mail handoff names no
+ * retrievable bytes, so pairing it with a `download` attribute is meaningless.
+ * The allowlist is a strict subset of `safeMediaSrc()`'s, so a URL that fails
+ * the media-src check necessarily fails this one too. */
+export function safeDownloadHref(url: unknown): string | null {
+  return safeUrlOrNull(url, SAFE_DOWNLOAD_SCHEMES);
 }

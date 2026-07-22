@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { safeFetchUrl, safeLinkHref, safeMediaSrc } from './safe-url.js';
+import { safeDownloadHref, safeFetchUrl, safeLinkHref, safeMediaSrc } from './safe-url.js';
 
 describe('sink-specific safe URL helpers', () => {
   it('allows web, blob, relative, and scheme-relative resource URLs', () => {
@@ -16,6 +16,7 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeMediaSrc(url), url).to.equal(url);
       expect(safeFetchUrl(url), url).to.equal(url);
       expect(safeLinkHref(url), url).to.equal(url);
+      expect(safeDownloadHref(url), url).to.equal(url);
     }
   });
 
@@ -24,6 +25,7 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeMediaSrc(url), url).to.equal(url);
       expect(safeFetchUrl(url), url).to.equal(url);
       expect(safeLinkHref(url), url).to.be.null;
+      expect(safeDownloadHref(url), url).to.be.null;
     }
   });
 
@@ -39,16 +41,41 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeMediaSrc(url), url).to.be.null;
       expect(safeFetchUrl(url), url).to.be.null;
       expect(safeLinkHref(url), url).to.be.null;
+      expect(safeDownloadHref(url), url).to.be.null;
     }
   });
 
-  it('allows mailto: links for navigation but never as a resource or fetch source', () => {
+  it('allows mailto: links for navigation but never as a resource, fetch source, or download', () => {
     // A `mailto:` opens the mail client rather than navigating an active document, so it is safe as
     // an `<a href>` target -- but it is not a fetchable/rendered resource, so the resource sinks
-    // still reject it.
+    // still reject it. `safeDownloadHref` sides with the resource sinks: a mail handoff names no
+    // retrievable bytes, so it is not a valid target for an anchor carrying `download`.
     expect(safeLinkHref('mailto:hello@example.com')).to.equal('mailto:hello@example.com');
     expect(safeMediaSrc('mailto:hello@example.com')).to.be.null;
     expect(safeFetchUrl('mailto:hello@example.com')).to.be.null;
+    expect(safeDownloadHref('mailto:hello@example.com')).to.be.null;
+  });
+
+  it('keeps the download allowlist a strict subset of the media-src allowlist', () => {
+    // Media components rely on this invariant to skip a redundant re-check: a `src` that already
+    // failed `safeMediaSrc` cannot pass `safeDownloadHref`, so an image/video whose scheme is
+    // rejected always degrades to the inert, unclickable chip rather than a live anchor. Widening
+    // either allowlist without re-checking this is what broke `lr-media-card` once already.
+    for (const url of [
+      'mailto:hello@example.com',
+      'javascript:alert(1)',
+      'vbscript:msgbox(1)',
+      'tel:+352000000',
+      'about:blank',
+      'ftp://example.test/file',
+      'file:///tmp/secret',
+    ]) {
+      if (safeMediaSrc(url) === null) expect(safeDownloadHref(url), url).to.be.null;
+    }
+    // `data:` is the one direction the subset permits to differ: a resource sink may render it,
+    // but navigating or downloading it must not.
+    expect(safeMediaSrc('data:text/plain,hello')).to.equal('data:text/plain,hello');
+    expect(safeDownloadHref('data:text/plain,hello')).to.be.null;
   });
 
   it('uses browser URL normalization before checking the scheme', () => {
@@ -56,6 +83,7 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeMediaSrc(url), url).to.be.null;
       expect(safeFetchUrl(url), url).to.be.null;
       expect(safeLinkHref(url), url).to.be.null;
+      expect(safeDownloadHref(url), url).to.be.null;
     }
   });
 
@@ -64,6 +92,7 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeMediaSrc(url), url).to.be.null;
       expect(safeFetchUrl(url), url).to.be.null;
       expect(safeLinkHref(url), url).to.be.null;
+      expect(safeDownloadHref(url), url).to.be.null;
     }
   });
 
@@ -72,6 +101,7 @@ describe('sink-specific safe URL helpers', () => {
       expect(safeMediaSrc(value as string)).to.be.null;
       expect(safeFetchUrl(value as string)).to.be.null;
       expect(safeLinkHref(value as string)).to.be.null;
+      expect(safeDownloadHref(value as string)).to.be.null;
     }
   });
 

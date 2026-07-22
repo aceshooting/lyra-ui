@@ -640,6 +640,18 @@ describe('lr-button', () => {
       expect(anchor.getAttribute('href')).to.equal('mailto:hello@example.com');
     });
 
+    // `download` flips the anchor from a navigation sink to a resource sink, and the two have
+    // different allowlists: a mail handoff is a legitimate destination but names no retrievable
+    // bytes, so it cannot be a download target. Same href, opposite verdict, decided by `download`.
+    it('rejects a mailto: href when download is set, falling back to the native button', async () => {
+      const el = (await fixture(
+        html`<lr-button href="mailto:hello@example.com" download="contact">Email</lr-button>`,
+      )) as LyraButton;
+      // Assert on the root's tag name rather than node existence: a failing `to.not.exist` on a
+      // DOM node hangs the whole file while chai tries to serialize it as `actual`.
+      expect(el.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('button');
+    });
+
     it('ignores an unsafe href scheme, falling back to the native button', async () => {
       const el = (await fixture(
         html`<lr-button href="javascript:alert(1)">Go</lr-button>`,

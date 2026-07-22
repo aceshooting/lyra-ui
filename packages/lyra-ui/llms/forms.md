@@ -754,7 +754,9 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 
 **Properties:**
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
-  `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Unset (the default)
+  `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Setting `download`
+  narrows the allowlist to `http:`/`https:`/`blob:`/relative — `mailto:` names no retrievable bytes,
+  so a `mailto:` href paired with `download` falls back to the native `<button>`. Unset (the default)
   renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
   renders. While the button is disabled the anchor is rendered **without** `href` (keeping
   `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value

@@ -138,6 +138,18 @@ describe('dialog wiring', () => {
     `)) as LyraDocumentViewer;
     expect(el.shadowRoot!.querySelector('[part="download-link"]')).to.not.exist;
   });
+
+  // `mailto:` is safe to *navigate* to but names no retrievable bytes, so pairing it with this
+  // anchor's `download` attribute is meaningless -- the affordance degrades to absent rather than
+  // rendering a download link that cannot download anything.
+  it('omits the download action for a mailto: source', async () => {
+    const el = (await fixture(html`
+      <lr-document-viewer open name="contact" src="mailto:hello@example.com"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    // Count, not the node itself: a failing `to.not.exist` on a DOM node hangs the whole file
+    // while chai tries to serialize it as `actual`.
+    expect(el.shadowRoot!.querySelectorAll('[part="download-link"]').length).to.equal(0);
+  });
 });
 
 describe('accessibility', () => {
