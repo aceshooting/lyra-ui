@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
 import { styles } from './swatch-picker.styles.js';
 
 export interface SwatchOption {
@@ -17,9 +18,13 @@ export interface SwatchOption {
    *  brand-specific glyph. A `currentColor`-based SVG (fill or stroke) picks up `color` automatically
    *  via the swatch's `color` CSS property, matching `<lr-segmented>`'s `SegmentedItem.icon` field. */
   icon?: unknown;
+  /** Canonical gemstone to render automatically in `mode="gemstone"`. An explicit `icon` still
+   * wins, so a consumer can customize one option without leaving gemstone mode. */
+  gemstone?: GemstoneKey;
 }
 
 export type LyraSwatchPickerSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+export type LyraSwatchPickerMode = 'swatch' | 'gemstone';
 
 export interface LyraSwatchPickerEventMap {
   'lr-change': CustomEvent<{ value: string }>;
@@ -32,6 +37,10 @@ export interface LyraSwatchPickerEventMap {
  * radio group), cyclic Arrow/Home/End navigation. Distinct from `<lr-color-picker>`'s freeform
  * native color input -- this picks exactly one of N designer-chosen named colors, the shape apps
  * otherwise hand-roll as a row of round accent-color buttons.
+ *
+ * `mode="gemstone"` uses the shared faceted gemstone glyph for options carrying a `gemstone`
+ * key and opts into the gemstone glow/shine defaults. The `options` array still controls display
+ * order and `value` still controls the initial selection.
  *
  * @customElement lr-swatch-picker
  * @event lr-change - Fired when the selected value changes via click or keyboard.
@@ -54,6 +63,10 @@ export interface LyraSwatchPickerEventMap {
  *   `prefers-reduced-motion: reduce`. Independent of `--lr-swatch-picker-selected-blur` (a separate
  *   `filter: brightness()` animation, not `box-shadow`), so the two compose freely, and works
  *   identically for a plain color circle and an icon swatch alike.
+ * @cssprop [--lr-swatch-picker-gemstone-selected-blur=var(--lr-size-0-5rem)] - Selected glow
+ *   blur used by `mode="gemstone"` when `--lr-swatch-picker-selected-blur` is not overridden.
+ * @cssprop [--lr-swatch-picker-gemstone-shine-duration=1.8s] - Selected shine duration used by
+ *   `mode="gemstone"` when `--lr-swatch-picker-shine-duration` is not overridden.
  * @cssprop [--lr-swatch-picker-hit-size=var(--lr-size-2-5rem)] - Hit-area size (both
  *   min-inline-size and min-block-size) for the swatch button, swapped per tier and floored at 24px.
  * @cssprop [--lr-swatch-picker-fill-size=var(--lr-size-1-5rem)] - Visible fill/icon diameter
@@ -71,6 +84,10 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   /** Visual size — scales the swatch hit-area and fill diameter proportionally, hit-area
    *  floored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale. */
   @property({ reflect: true }) size: LyraSwatchPickerSize = 'm';
+
+  /** Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared
+   * gemstone glyph for options with a `gemstone` key and enables its glow/shine recipe. */
+  @property({ reflect: true }) mode: LyraSwatchPickerMode = 'swatch';
 
   /** Accessible name for the radiogroup, used when no visible label context
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
@@ -135,7 +152,9 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
         ${repeat(
           this.options,
           (option) => option.value,
-          (option, index) => html`<button
+          (option, index) => {
+            const icon = option.icon ?? (this.mode === 'gemstone' && option.gemstone ? gemstoneGlyph(option.color) : null);
+            return html`<button
             type="button"
             part="swatch"
             data-value=${option.value}
@@ -147,10 +166,11 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             style=${styleMap({ '--lr-swatch-color': option.color })}
             @click=${() => this.select(option)}
           >${
-            option.icon
-              ? html`<span part="swatch-icon" aria-hidden="true">${option.icon}</span>`
+            icon
+              ? html`<span part="swatch-icon" aria-hidden="true">${icon}</span>`
               : html`<span part="swatch-fill" aria-hidden="true"></span>`
-          }</button>`,
+          }</button>`;
+          },
         )}
       </div>
     `;

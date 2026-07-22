@@ -21,16 +21,18 @@ named colors, the shape apps otherwise hand-roll as a row of round accent-color 
 
 **Properties:**
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
-  label: string; icon?: unknown }`; `color` is any CSS color string used as the swatch fill, `label`
-  is each swatch's accessible name and `title`. `icon` is an optional custom shape (e.g. a gem
-  glyph) rendered *instead of* the plain filled circle; the swatch sets `color: <option color>` so a
-  `currentColor`-based SVG picks the option's color up automatically, matching
-  `<lr-segmented>`'s `SegmentedItem.icon`.
+  label: string; icon?: unknown; gemstone?: GemstoneKey }`; `color` is any CSS color string used as
+  the swatch fill, `label` is each swatch's accessible name and `title`. `icon` is an optional
+  custom shape rendered *instead of* the plain filled circle; `gemstone` selects the canonical
+  faceted glyph when `mode="gemstone"`. An explicit `icon` wins over `gemstone`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
   fill diameter proportionally, hit-area floored at 24px; not pixel-matched to `lr-input`'s
   row-height scale)
+- `mode: 'swatch' | 'gemstone' = 'swatch'` (reflected) — `swatch` preserves the plain-circle
+  default. `gemstone` renders the shared glyph for options carrying a `gemstone` key and enables
+  the selected glow/shine defaults.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
 
@@ -59,7 +61,9 @@ for a looping brighten-and-settle pulse on the selected swatch. It drives a sepa
 works identically for a fill and an icon; disabled outright under `prefers-reduced-motion: reduce`,
 which also drops the hover/selection scale transition), `--lr-swatch-picker-hit-size` (hit-area
 size, swapped per `size` tier), `--lr-swatch-picker-fill-size` (visible fill/icon diameter, swapped
-per `size` tier); plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
+per `size` tier), `--lr-swatch-picker-gemstone-selected-blur` (default `--lr-size-0-5rem` in
+gemstone mode), `--lr-swatch-picker-gemstone-shine-duration` (default `1.8s` in gemstone mode);
+plus shared tokens — `--lr-color-border`/`-brand`, `--lr-space-xs`,
 `--lr-border-width-thin`/`-thick`, `--lr-radius`, `--lr-transition-fast`, `--lr-focus-ring-*`,
 and the per-tier `--lr-size-*` tokens.
 
@@ -77,6 +81,24 @@ and the per-tier `--lr-size-*` tokens.
   picker.value = 'green';
   picker.addEventListener('lr-change', (e) => console.log(e.detail.value));
 </script>
+```
+
+For the shared gemstone accent mode, import the side-effect-free palette/glyph helper. The
+consumer still owns localized labels, display order, and the initial value:
+
+```ts
+import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
+import { GEMSTONES } from '@aceshooting/lyra-ui/theme/gemstones.js';
+
+const order = ['emerald', 'ruby', 'sapphire', 'hematite'] as const;
+picker.mode = 'gemstone';
+picker.options = order.map((key) => ({
+  value: key,
+  color: GEMSTONES[key].fill,
+  label: translateGemstone(key),
+  gemstone: key,
+}));
+picker.value = 'ruby';
 ```
 
 **Known gotchas:**

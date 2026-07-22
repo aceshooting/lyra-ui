@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones.js';
 import type { LyraSwatchPickerSize } from './swatch-picker.js';
 import './swatch-picker.js';
 
@@ -10,6 +11,14 @@ const accents = () => [
   { value: 'orange', color: 'var(--lr-color-warning)', label: 'Orange' },
   { value: 'red', color: 'var(--lr-color-danger)', label: 'Red' },
 ];
+
+const gemstoneAccents = (order = GEMSTONE_KEYS) =>
+  order.map((key) => ({
+    value: key,
+    color: GEMSTONES[key].fill,
+    label: key[0]!.toUpperCase() + key.slice(1),
+    gemstone: key,
+  }));
 
 /** A `stroke="currentColor"` gem glyph (brilliant-cut) -- picks up each option's color through the
  *  swatch's `color` custom property with no extra wiring. */
@@ -143,6 +152,26 @@ export const ShiningSelection: Story = {
       style="--lr-swatch-picker-selected-blur: 0.35rem; --lr-swatch-picker-shine-duration: 1.6s;"
       .options=${accents().map((option, i) => ({ ...option, icon: gemIcons[i % gemIcons.length]!() }))}
       value="purple"
+    ></lr-swatch-picker>
+  `,
+};
+
+export const GemstoneMode: Story = {
+  name: 'Gemstone mode',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Gemstone mode supplies the canonical faceted glyph and selected glow/shine recipe. The options array still controls order and value still controls the initial selection, so each consumer can keep its own defaults and palette order.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-swatch-picker
+      mode="gemstone"
+      label="Gemstone accent"
+      .options=${gemstoneAccents(['emerald', 'ruby', 'amethyst', 'sapphire', 'hematite'])}
+      value="amethyst"
     ></lr-swatch-picker>
   `,
 };

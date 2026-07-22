@@ -12,9 +12,8 @@
 
 ## `lr-icon-button`
 
-An accessible icon-only action button — a native `<button>` wrapping an `lr-icon`. Not
-form-associated: it is an action trigger, so `type="submit"`/`"reset"` work through the ancestor
-form the way a native button does, but the element itself contributes no form value.
+An accessible icon-only action button — a form-associated custom element with a native `<button>`
+inside. Its `type="submit"`/`"reset"` behavior is forwarded to the ancestor form by the component.
 
 **Properties:**
 - `icon: string = ''` — an `lr-icon` glyph name (see `llms/components/lr-icon.md`)

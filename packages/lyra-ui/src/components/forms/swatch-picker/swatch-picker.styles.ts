@@ -31,6 +31,8 @@ export const styles = css`
        with no icon-specific branching needed (unlike the box-shadow/drop-shadow split below, which
        needs one precisely because box-shadow doesn't reach into a transparent box's own content). */
     --lr-swatch-picker-shine-duration: 0s;
+    --lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
+    --lr-swatch-picker-gemstone-shine-duration: 1.8s;
     --lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1-5rem);
   }
@@ -53,6 +55,10 @@ export const styles = css`
   :host([size='xl']) {
     --lr-swatch-picker-hit-size: var(--lr-size-3-5rem);
     --lr-swatch-picker-fill-size: var(--lr-size-2rem);
+  }
+  :host([mode='gemstone']) {
+    --lr-swatch-picker-selected-blur: var(--lr-swatch-picker-gemstone-selected-blur);
+    --lr-swatch-picker-shine-duration: var(--lr-swatch-picker-gemstone-shine-duration);
   }
   [part='base'] {
     display: inline-flex;
@@ -113,10 +119,13 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
+  [part='swatch'][aria-checked='true'] [part='swatch-fill'],
+  [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
     transform: scale(1.2);
-    box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
     animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
+  }
+  [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
+    box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
   }
   @keyframes lr-swatch-picker-shine {
     0%,
@@ -147,7 +156,8 @@ export const styles = css`
     [part='swatch-icon'] {
       transition: none;
     }
-    [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
+    [part='swatch'][aria-checked='true'] [part='swatch-fill'],
+    [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
       animation: none;
     }
   }

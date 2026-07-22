@@ -726,7 +726,13 @@ export type { StepItem, StepState } from './components/layout/stepper/stepper.js
 export { LyraSegmented } from './components/layout/segmented/segmented.js';
 export type { SegmentedItem } from './components/layout/segmented/segmented.js';
 export { LyraSwatchPicker } from './components/forms/swatch-picker/swatch-picker.js';
-export type { SwatchOption } from './components/forms/swatch-picker/swatch-picker.js';
+export type {
+  LyraSwatchPickerMode,
+  LyraSwatchPickerSize,
+  SwatchOption,
+} from './components/forms/swatch-picker/swatch-picker.js';
+export { DEFAULT_GEMSTONE, GEMSTONE_KEYS, GEMSTONES, gemstoneGlyph } from './theme/gemstones.js';
+export type { GemstoneAccent, GemstoneKey } from './theme/gemstones.js';
 export { LyraDiffView } from './components/utility/diff-view/diff-view.js';
 export { computeLineDiff } from './components/utility/diff-view/diff-line-diff.js';
 export type { DiffOp } from './components/utility/diff-view/diff-line-diff.js';
