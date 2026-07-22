@@ -19,7 +19,8 @@ input: click/Enter/Space/ArrowDown opens it, and there's no typing-to-filter. Op
 `<lr-option value>` children — the same element `<lr-combobox>` uses — reconciled the same way
 combobox does, and the popup reuses `internal/positioner.ts` for placement.
 Session-history/autofill restoration assigns the stored string through the same synchronous
-value/form/validity path as a programmatic value write and does not emit `input` or `change`.
+value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
+`lr-change`.
 
 Single-select only, with no `filter`/`source`/`with-clear`/`max-options-visible`/`empty-text`/
 `max-render`/`multiple` surface — reach for `<lr-combobox>` instead whenever any of those apply.
@@ -52,8 +53,10 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)
 
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
-selection change — a native `<select>` doesn't meaningfully distinguish the two either),
-`lr-show`, `lr-hide`
+selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
+`lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
+`lr-change`). All three carry `detail: { value: string }` (the new selection) and fire only on a
+real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided)
