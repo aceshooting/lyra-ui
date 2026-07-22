@@ -2047,6 +2047,13 @@
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
+        },
+        {
+          "name": "target",
+          "description": {
+            "kind": "markdown",
+            "value": "Native anchor target, used only while `href` resolves to a link. Setting this to `'_blank'`\n(or any other target) automatically derives `rel=\"noopener noreferrer\"` on the rendered\nanchor -- there is no separately-settable `rel` property, so a consumer can't forget it and\nleave the opened page holding a `window.opener` back-reference (reverse-tabnabbing). Matches\n`lr-stat`'s/`lr-app-rail-item`'s identical pattern.\n\nType: `string | undefined`"
+          }
         }
       ]
     },
@@ -7723,7 +7730,7 @@
       "name": "lr-input",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-input>` — a single-line plain-text input primitive, the `lr-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lr-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-textarea>`/\n`<lr-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as\n`<lr-select>`/`<lr-combobox>`. `type=\"password\"` always renders a\n`password-toggle` eye-icon button that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`.\n`type=\"search\"`/`type=\"time\"` forward straight through to the native input with no additional\nchrome or validation, the same as `type=\"text\"`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\nForwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,\n`setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to\n`focus()`/`blur()`/`select()`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `end` | Adornment after the native input and built-in actions. |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n| `start` | Adornment before the native input. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `clear-button` | The clear action, rendered for non-empty clearable text/search inputs. |\n| `end` | Wrapper around the `end` adornment slot. |\n| `error` | The error message. |\n| `form-control` | The outer wrapper around label, input, error and hint. |\n| `form-control-label` | The `<label>` element. |\n| `hint` | The hint message. |\n| `input` | The native `<input>` element. |\n| `input-wrapper` | The row wrapping the native input and the password-toggle button. |\n| `password-toggle` | The show/hide-password button, present only when `type=\"password\"`. |\n| `start` | Wrapper around the `start` adornment slot. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-input-control-min-height` — Outer control height floor, scaled by `size`.\n- `--lr-input-control-height` — Exact outer control height. Unset by default, which leaves `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element.\n- `--lr-input-padding-block` — Block padding of the native input, scaled by `size`.\n- `--lr-input-padding-inline` — Inline padding of the control row, scaled by `size`.\n- `--lr-input-font-size` — Font size of the native input, scaled by `size`.\n- `--lr-input-gap` (default: `var(--lr-space-xs)`) — Gap between the start/end adornments and the native input in the control row. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(input-wrapper)` rule.\n- `--lr-input-radius` (default: `var(--lr-radius)`) — Corner radius of the control row. Does not vary by `size` tier."
+        "value": "`<lr-input>` — a single-line plain-text input primitive, the `lr-*` equivalent of a plain\n`wa-input`, form-associated via the `FormAssociated` mixin (same shape as `<lr-textarea>`).\n\nShips the same opt-in `label`/`hint`/`errorText` form-control chrome as `<lr-textarea>`/\n`<lr-select>` (props + matching named slots + `form-control`/`form-control-label`/`hint`/`error`\nparts) — left unset, the chrome stays hidden. `size` uses the same `xs`–`xl` scale as\n`<lr-select>`/`<lr-combobox>`. `type=\"password\"` always renders a\n`password-toggle` eye-icon button that flips the internal native input between\n`type=\"password\"`/`type=\"text\"` and tracks `passwordVisible`. `type=\"email\"`/`type=\"number\"`\n(with `min`/`max`/`step`) delegate constraint validation to the internal native `<input>`'s own\nbrowser-computed `validity`, bridged into this element's `ElementInternals` by `updateValidity()`\n— as do `minlength`/`maxlength`/`pattern`, which constrain the text-bearing types.\n`type=\"search\"`/`type=\"time\"` forward straight through to the native input with no additional\nchrome or validation, the same as `type=\"text\"`.\n\nA host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\nForwards the full native selection/editing surface (`selectionStart`/`selectionEnd`,\n`setSelectionRange()`, `setRangeText()`), the same as `<lr-textarea>`, in addition to\n`focus()`/`blur()`/`select()`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `end` | Adornment after the native input and built-in actions. |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n| `start` | Adornment before the native input. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `clear-button` | The clear action, rendered for non-empty clearable text/search inputs. |\n| `end` | Wrapper around the `end` adornment slot. |\n| `error` | The error message. |\n| `form-control` | The outer wrapper around label, input, error and hint. |\n| `form-control-label` | The `<label>` element. |\n| `hint` | The hint message. |\n| `input` | The native `<input>` element. |\n| `input-wrapper` | The row wrapping the native input and the password-toggle button. |\n| `password-toggle` | The show/hide-password button, present only when `type=\"password\"`. |\n| `start` | Wrapper around the `start` adornment slot. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-input-control-min-height` — Outer control height floor, scaled by `size`.\n- `--lr-input-control-height` — Exact outer control height. Unset by default, which leaves `--lr-input-control-min-height` as a floor only; set it to a length to both floor and cap the control row (e.g. to pixel-match `<lr-select>`/`<lr-combobox>` in the same toolbar). Because it is never declared by the component itself, it can be set from an ancestor or an outer-tree rule as well as inline on the element.\n- `--lr-input-padding-block` — Block padding of the native input, scaled by `size`.\n- `--lr-input-padding-inline` — Inline padding of the control row, scaled by `size`.\n- `--lr-input-font-size` — Font size of the native input, scaled by `size`.\n- `--lr-input-gap` (default: `var(--lr-space-xs)`) — Gap between the start/end adornments and the native input in the control row. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(input-wrapper)` rule.\n- `--lr-input-radius` (default: `var(--lr-radius)`) — Corner radius of the control row. Does not vary by `size` tier."
       },
       "attributes": [
         {
@@ -7818,10 +7825,24 @@
           }
         },
         {
+          "name": "maxlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and the\nsame default of `undefined`. Note that native `maxlength` also *prevents* typing beyond the\nlimit; it reports `tooLong` for values that arrive some other way (paste of a longer value,\na programmatic assignment).\n\nType: `number | undefined`"
+          }
+        },
+        {
           "name": "min",
           "description": {
             "kind": "markdown",
             "value": "`type=\"number\"` only — forwarded to the internal native `<input>`'s own `min`/`max`/`step`\nand consulted by that same native input's constraint validation (see `updateValidity()`).\nDefaults to `undefined` (no lower bound). The `min` attribute is parsed as a number here; the\ndeclared type also admits a string so a subclass bound to a non-numeric native input type can\nnarrow the attribute parsing to that type's own literal form (`<lr-time-input>`'s `09:00`)\nwithout redeclaring the whole property surface.\n\nType: `number | string | undefined`"
+          }
+        },
+        {
+          "name": "minlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Minimum text length, forwarded to the internal native `<input>`'s own `minlength` and\nconsulted by that same native input's constraint validation (`tooShort`, see\n`updateValidity()`). Defaults to `undefined` (no lower bound). Like native `minlength`, an\nempty value never violates it — pair it with `required` to also reject empty. Ignored by the\nnative input for `type=\"number\"`/`type=\"time\"`, exactly as the platform specifies.\n\nType: `number | undefined`"
           }
         },
         {
@@ -7836,6 +7857,13 @@
           "description": {
             "kind": "markdown",
             "value": "`type=\"password\"` only — whether the field currently reveals its raw text. Toggled by the\nbuilt-in `password-toggle` button; also settable by a consumer up front.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "pattern",
+          "description": {
+            "kind": "markdown",
+            "value": "A regular expression the value must match in full, forwarded to the internal native\n`<input>`'s own `pattern` and validated by it (`patternMismatch`). Defaults to `undefined`\n(no pattern). Compiled by the browser with the `v` flag and anchored to the whole value, so\nno `^`/`$` is needed; an empty value never violates it.\n\nType: `string | undefined`"
           }
         },
         {
@@ -9798,6 +9826,13 @@
           }
         },
         {
+          "name": "maxlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and the\nsame default of `undefined`. Note that native `maxlength` also *prevents* typing beyond the\nlimit; it reports `tooLong` for values that arrive some other way (paste of a longer value,\na programmatic assignment).\n\nType: `number | undefined`"
+          }
+        },
+        {
           "name": "min",
           "description": {
             "kind": "markdown",
@@ -9805,10 +9840,24 @@
           }
         },
         {
+          "name": "minlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Minimum text length, forwarded to the internal native `<input>`'s own `minlength` and\nconsulted by that same native input's constraint validation (`tooShort`, see\n`updateValidity()`). Defaults to `undefined` (no lower bound). Like native `minlength`, an\nempty value never violates it — pair it with `required` to also reject empty. Ignored by the\nnative input for `type=\"number\"`/`type=\"time\"`, exactly as the platform specifies.\n\nType: `number | undefined`"
+          }
+        },
+        {
           "name": "password-visible",
           "description": {
             "kind": "markdown",
             "value": "`type=\"password\"` only — whether the field currently reveals its raw text. Toggled by the\nbuilt-in `password-toggle` button; also settable by a consumer up front.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "pattern",
+          "description": {
+            "kind": "markdown",
+            "value": "A regular expression the value must match in full, forwarded to the internal native\n`<input>`'s own `pattern` and validated by it (`patternMismatch`). Defaults to `undefined`\n(no pattern). Compiled by the browser with the `v` flag and anchored to the whole value, so\nno `^`/`$` is needed; an empty value never violates it.\n\nType: `string | undefined`"
           }
         },
         {
@@ -13852,7 +13901,7 @@
       "name": "lr-textarea",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-textarea>` — a multiline plain-text input primitive, form-associated via the\n`FormAssociated` mixin (see `<lr-chat-composer>`/`<lr-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nShips an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +\n`form-control-label`/`hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left\nunset, the chrome remains hidden. A consumer preferring their own form-field layout can still\nignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | The error message. |\n| `form-control` | The outer wrapper around label, textarea, error and hint. |\n| `form-control-label` | The `<label>` element. |\n| `hint` | The hint message. |\n| `textarea` | The native `<textarea>` element. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-textarea-max-block-size` (default: `none`) — Maximum auto-grown block size before the textarea scrolls."
+        "value": "`<lr-textarea>` — a multiline plain-text input primitive, form-associated via the\n`FormAssociated` mixin (see `<lr-chat-composer>`/`<lr-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nShips an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +\n`form-control-label`/`hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left\nunset, the chrome remains hidden. A consumer preferring their own form-field layout can still\nignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\n`minlength`/`maxlength` are forwarded to the internal native `<textarea>` and bridged into this\nelement's own `ElementInternals` as `tooShort`/`tooLong` by `updateValidity()`.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Custom error content. |\n| `hint` | Custom hint content. |\n| `label` | Custom label content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `error` | The error message. |\n| `form-control` | The outer wrapper around label, textarea, error and hint. |\n| `form-control-label` | The `<label>` element. |\n| `hint` | The hint message. |\n| `textarea` | The native `<textarea>` element. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-textarea-max-block-size` (default: `none`) — Maximum auto-grown block size before the textarea scrolls."
       },
       "attributes": [
         {
@@ -13930,6 +13979,20 @@
           "description": {
             "kind": "markdown",
             "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "maxlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and\nthe same default of `undefined`. Note that native `maxlength` also *prevents* typing beyond\nthe limit; it reports `tooLong` for values that arrive some other way (paste of a longer\nvalue, a programmatic assignment).\n\nType: `number | undefined`"
+          }
+        },
+        {
+          "name": "minlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Minimum text length, forwarded to the native `<textarea>`'s own `minlength` and reported as\n`tooShort` by `updateValidity()`. Defaults to `undefined` (no lower bound). Like native\n`minlength`, an empty value never violates it — pair it with `required` to also reject\nempty.\n\nType: `number | undefined`"
           }
         },
         {
@@ -14191,6 +14254,13 @@
           }
         },
         {
+          "name": "maxlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Upper counterpart of `minlength` (native `maxlength`/`tooLong`), with the same parsing and the\nsame default of `undefined`. Note that native `maxlength` also *prevents* typing beyond the\nlimit; it reports `tooLong` for values that arrive some other way (paste of a longer value,\na programmatic assignment).\n\nType: `number | undefined`"
+          }
+        },
+        {
           "name": "min",
           "description": {
             "kind": "markdown",
@@ -14198,10 +14268,24 @@
           }
         },
         {
+          "name": "minlength",
+          "description": {
+            "kind": "markdown",
+            "value": "Minimum text length, forwarded to the internal native `<input>`'s own `minlength` and\nconsulted by that same native input's constraint validation (`tooShort`, see\n`updateValidity()`). Defaults to `undefined` (no lower bound). Like native `minlength`, an\nempty value never violates it — pair it with `required` to also reject empty. Ignored by the\nnative input for `type=\"number\"`/`type=\"time\"`, exactly as the platform specifies.\n\nType: `number | undefined`"
+          }
+        },
+        {
           "name": "password-visible",
           "description": {
             "kind": "markdown",
             "value": "`type=\"password\"` only — whether the field currently reveals its raw text. Toggled by the\nbuilt-in `password-toggle` button; also settable by a consumer up front.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "pattern",
+          "description": {
+            "kind": "markdown",
+            "value": "A regular expression the value must match in full, forwarded to the internal native\n`<input>`'s own `pattern` and validated by it (`patternMismatch`). Defaults to `undefined`\n(no pattern). Compiled by the browser with the `v` flag and anchored to the whole value, so\nno `^`/`$` is needed; an empty value never violates it.\n\nType: `string | undefined`"
           }
         },
         {

@@ -42,6 +42,13 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
   non-numeric bound only survives a direct property assignment; the declared type also admits a
   string so a subclass can narrow the attribute parsing to its own native type's literal form —
   `lr-time-input` does exactly that. Inert for the other types
+- `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
+  bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
+  Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
+  both on `type="number"`/`type="time"`, and so does this component
+- `pattern?: string` (attribute `pattern`) — a regular expression the value must match in full,
+  forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
+  value by the platform, so no `^`/`$` is needed; an empty value never violates it
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
@@ -116,5 +123,17 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 **Known gotchas:**
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
   own browser-computed `validity` (format/range/step), bridged into this element's own
-  `ElementInternals` — not a second hand-rolled regex check.
+  `ElementInternals` — not a second hand-rolled regex check. The same bridge carries
+  `minlength`/`maxlength`/`pattern`, so `validity` reports the full native set: `valueMissing`,
+  `typeMismatch`, `rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `tooShort`, `tooLong`,
+  `patternMismatch`, and `badInput`.
+- **`tooShort`/`tooLong` also fire for a value assigned from script.** The native flags are raised
+  only for a value the *user* edited, so the component recomputes both from its own `value` and ORs
+  them in; `el.value = <over-length>` reports `tooLong` rather than silently submitting. Lengths
+  count UTF-16 code units, matching the native control (one emoji counts as two). `patternMismatch`
+  needs no such handling — the platform applies `pattern` to script-assigned values already.
+  `validationMessage` is the browser's own localized message when the native input flagged the
+  value, and the localized `valueInvalid` string when only the script-value check did.
+- An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
+  the empty string, and `required` is what rejects it.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.

@@ -19,8 +19,8 @@ A migration-friendly numeric alias of `lr-input` — a subclass whose constructo
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
-`min`/`max`/`step` (the native numeric constraint validation). `clearable` and `passwordVisible`
-(`password-visible`) are inherited but inert — see gotchas.
+`min`/`max`/`step` (the native numeric constraint validation). `clearable`, `passwordVisible`
+(`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but inert — see gotchas.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
@@ -42,6 +42,7 @@ vary by `size` at all).
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
-  toggle only renders for `type="password"`.
+  toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the
+  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.

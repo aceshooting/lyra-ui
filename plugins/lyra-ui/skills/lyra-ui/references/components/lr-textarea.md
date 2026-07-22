@@ -40,9 +40,28 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `autocomplete` | `autocomplete` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
 | `inputMode` | `inputmode` | `string` | `''` | Virtual-keyboard input hint forwarded to the native `<textarea>`. |
 | `enterKeyHint` | `enterkeyhint` | `string` | `''` | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`. |
+| `minlength` | `minlength` | `number \| undefined` | `undefined` | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`. |
+| `maxlength` | `maxlength` | `number \| undefined` | `undefined` | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`. |
 | `name` | `name` | `string` | `''` | Form field name. |
 | `disabled` | `disabled` | `boolean` | `false` | Disables the control. |
 | `required` | `required` | `boolean` | `false` | Participates in native constraint validation. |
+
+### Constraint validation
+
+`validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
+(from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
+`maxlength` unset constrains nothing, exactly as before they existed.
+
+Two behaviors are worth knowing, both inherited from the platform and both shared with `lr-input`:
+
+- **An empty value is never `tooShort`.** Native `minlength` only applies to a non-empty value, so
+  an optional field left blank stays valid; `required` is what rejects empty.
+- **A script-assigned value is validated too.** The native `tooShort`/`tooLong` flags are raised
+  only for a value the *user* edited, so the component recomputes both from its own `value` and
+  ORs them in — `el.value = <over-length>` reports `tooLong` rather than silently submitting.
+  Lengths count UTF-16 code units, matching the native control (one emoji counts as two).
+  `validationMessage` is the browser's own localized message when the native control flagged the
+  value, and the localized `valueInvalid` string when only the script-value check did.
 
 The visible label, hint, and error live in the same shadow tree as the native control, so their
 generated ids safely drive the native `<label>`/`aria-describedby` relationships. Name precedence

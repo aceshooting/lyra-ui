@@ -19,8 +19,9 @@ re-typed `min`/`max` pair (below); every other property, event, slot and part is
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`).
-`clearable` and `passwordVisible` (`password-visible`) are inherited but inert, exactly as on
-`lr-number-input`.
+`clearable`, `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are
+inherited but inert, exactly as on `lr-number-input` — the platform ignores all three length/pattern
+constraints on `type="time"` as well.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
 the seconds field, `'any'` disables step validation).

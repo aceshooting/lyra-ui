@@ -237,6 +237,11 @@ element *or on any ancestor* and still reach the rule that reads it. It exists b
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
+`--lr-table-header-sorted-bg` (default `transparent`) and `--lr-table-header-sorted-color` (default
+`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`).
+Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,
+because `::part(header-cell)[aria-sort]` is invalid CSS. The `sort-icon` part styles only the
+chevron; these tokens style the header cell itself.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
@@ -262,11 +267,16 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 - only single-row selection is modeled (`selectedKey: string | number | null`);
   there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
   a `cell()` callback if you need multi-select.
-- no `caption`/`aria-label` *property* exists, but a plain `aria-label` HTML attribute set on the
-  host **is** forwarded into the shadow-DOM `<table role="grid">` (read via
-  `this.getAttribute('aria-label')` at render time — a plain global-attribute read, not a reactive
-  Lit `@property`): `<lr-table aria-label="Scores">` gives the grid an accessible name; omit it and
-  the shadow table simply has none.
+- `accessibleLabel: string = ''` (attribute `accessible-label`) — a typed accessible name for the
+  `<table role="grid">`. A plain `aria-label` HTML attribute on the host is also forwarded (read via
+  `this.getAttribute('aria-label')` at render time) and serves as a fallback when `accessibleLabel`
+  is unset. Consumer-supplied text, so neither is run through `this.localize()`.
+- `caption: string = ''` — an optional visible `<caption>` (exposed as the `caption` CSS part). When
+  no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
+  `aria-labelledby`.
+- A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
+  `console.warn` on first render (dev signal) — an unnamed grid is an accessibility defect that
+  otherwise renders silently.
 - Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
   body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
   body, Down from the header enters the body's roving stop and Up from the body's first row returns

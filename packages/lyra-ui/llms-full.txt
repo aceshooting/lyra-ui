@@ -240,6 +240,94 @@ dark palette — that fallback applies only where no real `--lr-theme-*` value i
 The token layer also sets `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
 
+### Theme mode/accent runtime (`@aceshooting/lyra-ui/theme.js`)
+
+Flipping the mode class/attribute above is something every app ends up hand-rolling — persist a
+choice, apply it on load, avoid the flash of wrong theme before the app boots. `theme.js` is that
+runtime, published as its own subpath: **zero dependencies, no Lit, no component imports, and no
+side effects on import**, so an app can persist and apply a theme without pulling the component
+graph into its first-paint bundle.
+
+```ts
+import { setLyraTheme, getLyraTheme } from '@aceshooting/lyra-ui/theme.js';
+
+setLyraTheme({ mode: 'dark' });                  // unspecified fields keep their current value
+setLyraTheme({ accent: '#7c3aed' });             // mode stays 'dark'
+getLyraTheme();                                  // → { mode: 'dark', accent: '#7c3aed' }
+setLyraTheme({ mode: 'auto', accent: null });    // clears the override and the accent
+```
+
+- **`setLyraTheme({ mode?, accent? })`** persists to `localStorage['lyra-theme']`, applies to
+  `document.documentElement`, and dispatches `lr-theme-change` on `window` with
+  `detail: { mode, accent }`. Fields you omit keep their current value; pass `null` to clear the
+  accent. It **never throws** — when `localStorage` is unavailable (private browsing, quota, a
+  sandboxed iframe) it degrades to apply-without-persist, and the "fields you omit keep their
+  current value" rule still holds across calls in that state: the merge falls back to the last
+  theme applied in this session rather than to the default.
+- **`getLyraTheme()`** returns `{ mode, accent }`, defaulting to `{ mode: 'auto', accent: null }`
+  when nothing is stored or the stored value is malformed. Storage is re-read on every call — no
+  in-memory cache — so a value written by another tab or a previous session is picked up cold.
+  Where storage is unreadable or unwritable it reports the theme last applied, so the return value
+  always describes what the document is actually showing and a toggle UI bound to it stays in sync.
+- **`mode`** is `'light' | 'dark' | 'auto'`. `'light'`/`'dark'` set **both `data-lr-theme`** (the
+  attribute `theme.css` actually keys its palette blocks on) **and `data-theme`** (the generic
+  attribute canvas-rendered components watch, so `lr-chart`/`lr-heatmap`/`lr-qr-code` repaint on
+  the switch rather than keeping stale colors — see `llms/components/lr-chart.md`). `'auto'`
+  removes both, which means **no override — not "follow the OS"**:
+  - **With `theme.css` imported** (the setup this section is nested under), its `:root` block sets
+    the full light palette unconditionally and that file ships no `prefers-color-scheme` block, so
+    `'auto'` renders **light** whatever the OS is set to.
+  - **Without `theme.css`**, no real `--lr-theme-*` value is set, so the token layer's
+    `prefers-color-scheme: dark` fallback described above does apply and bare components follow
+    the OS.
+
+  To follow the OS *alongside* `theme.css`, resolve the preference yourself and pass a concrete
+  mode — `setLyraTheme` deliberately does no `matchMedia` work of its own:
+  ```ts
+  const os = matchMedia('(prefers-color-scheme: dark)');
+  const sync = () => setLyraTheme({ mode: os.matches ? 'dark' : 'light' });
+  sync();
+  os.addEventListener('change', sync);
+  ```
+- **`accent`** is written to `--lr-theme-accent` as an inline custom property on the root element.
+  This is a **hook for your CSS, not a token the library reads** — no lyra-ui component consumes
+  `--lr-theme-accent`. Point the real inputs at it to make it retint anything, **writing one rule
+  per mode**:
+  ```css
+  :root { --lr-theme-color-brand-fill-loud: var(--lr-theme-accent, #0969da); }
+  .lr-dark,
+  [data-lr-theme='dark'] { --lr-theme-color-brand-fill-loud: var(--lr-theme-accent, #4ea0f0); }
+  ```
+  **Each arm's fallback must carry that mode's own value.** A single `:root` rule flattens both
+  modes to one color whenever the accent is unset (`accent: null`, the default): `:root` and
+  `[data-lr-theme='dark']` have equal specificity and both match `<html>` — the element
+  `setLyraTheme` writes `data-lr-theme` onto — so a consumer stylesheet loaded after `theme.css`
+  wins the tie on source order and pins the light-mode blue in dark mode. Copy each fallback from
+  the matching palette block in `theme.css` (`#0969da` light / `#4ea0f0` dark here).
+
+  Because that is a `--lr-theme-*` input, it reaches every nested shadow root — see "Where an
+  override actually reaches" above for why setting a `--lr-*` token instead would not.
+
+**No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
+meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
+is on the root element before first paint. It is a string precisely so this can happen in an
+unbundled `<script>` context without shipping or parsing the module:
+
+```html
+<head>
+  <script>/* server-inlines lyraThemeBootstrap here */</script>
+  <link rel="stylesheet" href="/theme.css" />
+</head>
+```
+
+It reads the same storage key, applies the same two attributes and `--lr-theme-accent`, and
+swallows any error — malformed storage or a blocked `localStorage` leaves the document untouched
+rather than throwing before your app loads.
+
+**This runtime does no color math.** It stores and applies whatever accent string you give it; it
+does not validate the value, compute a palette from it, or check contrast against any surface.
+Verifying that an accent meets WCAG contrast against the light *and* dark palettes is yours.
+
 ## Localization: `locale`, `strings`, and the locale runtime
 
 Every built-in string — button labels, accessible names, descriptions, validation messages, status
@@ -1120,9 +1208,28 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `autocomplete` | `autocomplete` | `string` | `''` | Forwarded to the native `<textarea>`; empty omits the attribute. |
 | `inputMode` | `inputmode` | `string` | `''` | Virtual-keyboard input hint forwarded to the native `<textarea>`. |
 | `enterKeyHint` | `enterkeyhint` | `string` | `''` | Virtual-keyboard Enter-key hint forwarded to the native `<textarea>`. |
+| `minlength` | `minlength` | `number \| undefined` | `undefined` | Minimum text length; forwarded to the native `<textarea>` and reported as `validity.tooShort`. |
+| `maxlength` | `maxlength` | `number \| undefined` | `undefined` | Maximum text length; forwarded to the native `<textarea>` (which also stops typing past it) and reported as `validity.tooLong`. |
 | `name` | `name` | `string` | `''` | Form field name. |
 | `disabled` | `disabled` | `boolean` | `false` | Disables the control. |
 | `required` | `required` | `boolean` | `false` | Participates in native constraint validation. |
+
+### Constraint validation
+
+`validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
+(from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
+`maxlength` unset constrains nothing, exactly as before they existed.
+
+Two behaviors are worth knowing, both inherited from the platform and both shared with `lr-input`:
+
+- **An empty value is never `tooShort`.** Native `minlength` only applies to a non-empty value, so
+  an optional field left blank stays valid; `required` is what rejects empty.
+- **A script-assigned value is validated too.** The native `tooShort`/`tooLong` flags are raised
+  only for a value the *user* edited, so the component recomputes both from its own `value` and
+  ORs them in — `el.value = <over-length>` reports `tooLong` rather than silently submitting.
+  Lengths count UTF-16 code units, matching the native control (one emoji counts as two).
+  `validationMessage` is the browser's own localized message when the native control flagged the
+  value, and the localized `valueInvalid` string when only the script-value check did.
 
 The visible label, hint, and error live in the same shadow tree as the native control, so their
 generated ids safely drive the native `<label>`/`aria-describedby` relationships. Name precedence
@@ -1387,6 +1494,13 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
   non-numeric bound only survives a direct property assignment; the declared type also admits a
   string so a subclass can narrow the attribute parsing to its own native type's literal form —
   `lr-time-input` does exactly that. Inert for the other types
+- `minlength?: number` / `maxlength?: number` (attributes `minlength`/`maxlength`) — text-length
+  bounds forwarded to the native input and reported as `validity.tooShort`/`validity.tooLong`.
+  Apply to the text-bearing types (`text`, `search`, `email`, `password`); the platform ignores
+  both on `type="number"`/`type="time"`, and so does this component
+- `pattern?: string` (attribute `pattern`) — a regular expression the value must match in full,
+  forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
+  value by the platform, so no `^`/`$` is needed; an empty value never violates it
 - `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
@@ -1461,7 +1575,19 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 **Known gotchas:**
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
   own browser-computed `validity` (format/range/step), bridged into this element's own
-  `ElementInternals` — not a second hand-rolled regex check.
+  `ElementInternals` — not a second hand-rolled regex check. The same bridge carries
+  `minlength`/`maxlength`/`pattern`, so `validity` reports the full native set: `valueMissing`,
+  `typeMismatch`, `rangeUnderflow`, `rangeOverflow`, `stepMismatch`, `tooShort`, `tooLong`,
+  `patternMismatch`, and `badInput`.
+- **`tooShort`/`tooLong` also fire for a value assigned from script.** The native flags are raised
+  only for a value the *user* edited, so the component recomputes both from its own `value` and ORs
+  them in; `el.value = <over-length>` reports `tooLong` rather than silently submitting. Lengths
+  count UTF-16 code units, matching the native control (one emoji counts as two). `patternMismatch`
+  needs no such handling — the platform applies `pattern` to script-assigned values already.
+  `validationMessage` is the browser's own localized message when the native input flagged the
+  value, and the localized `valueInvalid` string when only the script-value check did.
+- An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
+  the empty string, and `required` is what rejects it.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
 
 ## `lr-number-input`
@@ -1473,8 +1599,8 @@ A migration-friendly numeric alias of `lr-input` — a subclass whose constructo
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), `enterKeyHint` (`enterkeyhint`), and
-`min`/`max`/`step` (the native numeric constraint validation). `clearable` and `passwordVisible`
-(`password-visible`) are inherited but inert — see gotchas.
+`min`/`max`/`step` (the native numeric constraint validation). `clearable`, `passwordVisible`
+(`password-visible`), and `minlength`/`maxlength`/`pattern` are inherited but inert — see gotchas.
 
 **Events:** `input`/`change` (native-style, composed), `lr-input`/`lr-change`
 (`detail: { value }`), `focus`/`blur` (re-dispatched bubbling + composed from the internal native
@@ -1496,7 +1622,8 @@ vary by `size` at all).
 **Known gotchas:**
 - `clearable`/`clear-button`/`lr-clear` are inert: the clear action only renders for
   `type="text"`/`"search"`. `password-visible`/`password-toggle` are likewise inert, since the
-  toggle only renders for `type="password"`.
+  toggle only renders for `type="password"`. `minlength`/`maxlength`/`pattern` are inert too — the
+  platform ignores all three on `type="number"`; use `min`/`max`/`step` instead.
 - `type` is re-forced to `number` on every connect, but a later `el.type = 'text'` on a connected
   element is not reverted — use `lr-input` when the type has to change.
 
@@ -1509,8 +1636,9 @@ re-typed `min`/`max` pair (below); every other property, event, slot and part is
 **Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
 `autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`).
-`clearable` and `passwordVisible` (`password-visible`) are inherited but inert, exactly as on
-`lr-number-input`.
+`clearable`, `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are
+inherited but inert, exactly as on `lr-number-input` — the platform ignores all three length/pattern
+constraints on `type="time"` as well.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
 the seconds field, `'any'` disables step validation).
@@ -6115,6 +6243,11 @@ to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where t
   reproduces a plain static card: no `tabindex`, no listeners, no events.
 - `href?: string` — when set, the card's root renders as a real `<a href=...>` instead of a `<div>`,
   for a whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`.
+- `target?: string` — native anchor target, applied only while `href` resolves to a link. Setting it
+  to `'_blank'` (or any other target) automatically derives `rel="noopener noreferrer"` on the
+  rendered anchor; there is deliberately **no** separately-settable `rel` property, so a consumer
+  can't forget it and leave the opened page holding a `window.opener` back-reference
+  (reverse-tabnabbing). Unset (the default) emits neither `target` nor `rel`.
 
 **Events:** `lr-card-activate` (no detail) — the whole card was activated, by click or by
 Enter/Space while `[part='base']` has focus. Only fired while `interactive` is set **without**
@@ -9464,15 +9597,27 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `labels: string[] = []` (attribute: false)
 - `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
   points?: {x,y,label?}[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
-  noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number; type?:
-  'line'|'bar' }`
+  noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number|number[];
+  segmentColors?: string[]; type?: 'line'|'bar' }`
+  - `pointRadius` takes a single number (applied to every point) **or** an array matching `data`'s
+    length that sizes each point independently — passed straight through to Chart.js, which
+    supports both natively. Useful for emphasizing a single outlier or the latest reading without
+    splitting the series in two.
+  - `segmentColors` colors each *segment* (the line drawn between two consecutive points) by the
+    segment's **starting** point index, so `['red', 'green']` over 3 points paints the first
+    segment red and the second green; a shorter array cycles. Wired to Chart.js's
+    `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
+    Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
+    empty array) emits no `segment` key at all, leaving line rendering exactly as before.
 - `legend: boolean = false`
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — places the
   legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
   that allocation width
-- `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric tick, tooltip,
-  and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or `'legend'`
-  context
+- `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric (value-axis)
+  tick, tooltip, and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or
+  `'legend'` context. Never runs against the categorical x-axis's own labels (line/bar's `labels`
+  strings) — Chart.js's category scale passes the tick index to `ticks.callback`, not the label
+  text
 - `area: boolean = false`
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
@@ -9509,6 +9654,14 @@ built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme`
 ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
 theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
 escape hatch for theme changes those signals can't observe)
+
+`seriesPalette(): string[]` resolves the categorical series ramp (`--lr-color-chart-1..8`) through
+`getComputedStyle` and returns the concrete, theme-aware colors — the exact same values the chart
+hands any series that sets no `color` of its own. Call it to color chart-adjacent UI (custom
+legends, KPI tiles, annotations fed through the raw `config` passthrough) from one source of truth
+instead of hand-resolving `--lr-color-chart-N` and drifting out of sync when the theme flips.
+Returns a fresh array each call (safe to mutate), and falls back to the light-mode literals only
+when the custom properties can't be resolved at all (e.g. a detached host).
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
 `resetZoom()`), `lr-point-click` (fired when a click lands on, or nearest to — intersect-only —
