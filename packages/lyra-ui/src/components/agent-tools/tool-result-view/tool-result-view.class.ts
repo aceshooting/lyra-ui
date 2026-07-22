@@ -7,6 +7,8 @@ import {
   loadToolRenderer,
   type ToolRendererDefinition,
   type ToolRendererRegistry,
+  type ToolRenderContext,
+  type ToolResultStatus,
 } from './registry.js';
 import { styles } from './tool-result-view.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
@@ -46,6 +48,12 @@ export interface LyraToolResultViewEventMap {
  * copy-to-clipboard affordance to either fallback kind (forwarded to `<lr-json-viewer>`'s own
  * `copyable` for `"json"`; a `<lr-copy-button>` alongside the text for `"text"`).
  *
+ * A matched renderer's `render()` is also handed a 3rd `context` argument
+ * (`{ reportStatus }`) it can use to signal a non-throwing outcome (e.g. an application-level
+ * failure it still drew a real UI for) — see `ToolRenderContext` in `registry.ts`. This is purely
+ * additive: a pre-existing 2-arg `render(result, args)` function stays assignable unchanged, and a
+ * renderer that never calls `reportStatus` leaves `status` at its default, `'success'`.
+ *
  * @customElement lr-tool-result-view
  * @event lr-render-error - `detail: { toolName, error }` — fired immediately
  * before falling back to `<lr-json-viewer>`, whether because no renderer
@@ -76,6 +84,16 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
 
   /** Shows a copy-to-clipboard affordance alongside the fallback view (both `"json"` and `"text"` kinds) — forwarded to `<lr-json-viewer>`'s own `copyable`, or renders a `<lr-copy-button>` next to the text fallback. */
   @property({ type: Boolean, reflect: true }) copyable = false;
+
+  /**
+   * The outcome of the currently-rendered result, as reported by the matched renderer's optional
+   * `context.reportStatus()` third `render()` argument (see `ToolRenderContext` in `registry.ts`).
+   * Reset to `'success'` immediately before every `render()` call, so a renderer that never calls
+   * `reportStatus` — including every pre-existing 2-arg renderer — leaves it at that default, and a
+   * later renderer that stays quiet doesn't inherit a stale outcome from a previous one. Reuses the
+   * same vocabulary as `<lr-tool-result-dialog>`'s own `status` property.
+   */
+  @property({ reflect: true }) status: ToolResultStatus = 'success';
 
   @state() private renderState: RenderState = FALLBACK_STATE;
 
@@ -150,8 +168,20 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
       this.fail(new Error(`<lr-tool-result-view>: renderer for tool "${this.toolName}" has no render()`));
       return;
     }
+    // Captured up front so a `reportStatus()` call arriving asynchronously (e.g. from a promise
+    // the renderer's own render() kicked off) after a *newer* resolve() has already started can
+    // detect it's stale and skip writing over a more recent status -- mirrors the same
+    // generation-guard pattern resolve()/loadToolRenderer() already use for stale results.
+    const generation = this.generation;
+    this.status = 'success';
+    const context: ToolRenderContext = {
+      reportStatus: (status) => {
+        if (generation !== this.generation) return;
+        this.status = status;
+      },
+    };
     try {
-      this.renderState = { kind: 'rendered', template: def.render(this.result, this.args) };
+      this.renderState = { kind: 'rendered', template: def.render(this.result, this.args, context) };
     } catch (error) {
       this.fail(error);
     }

@@ -303,3 +303,91 @@ it('copyable also forwards to lr-json-viewer in the default json fallback', asyn
   const viewer = base(el).querySelector('lr-json-viewer') as HTMLElement & { copyable: boolean };
   expect(viewer.copyable).to.be.true;
 });
+
+describe('status / context.reportStatus', () => {
+  it('defaults status to "success" for a renderer that never calls reportStatus (unset regression)', async () => {
+    registerToolRenderer('get_weather', {
+      render: (result, args) => litHtml`<span class="weather">${JSON.stringify(result)}${JSON.stringify(args)}</span>`,
+    });
+    const el = (await fixture(html`
+      <lr-tool-result-view tool-name="get_weather" .result=${{ tempC: 19 }}></lr-tool-result-view>
+    `)) as LyraToolResultView;
+    expect(el.status).to.equal('success');
+    expect(el.getAttribute('status')).to.equal('success');
+    expect(base(el).querySelector('.weather')).to.exist;
+  });
+
+  it('threads context.reportStatus through render(), setting status while keeping the renderer\'s own content mounted', async () => {
+    registerToolRenderer('flaky_tool', {
+      render: (_result, _args, context) => {
+        context.reportStatus('error');
+        return litHtml`<span class="flaky-result">partial</span>`;
+      },
+    });
+    const el = (await fixture(html`
+      <lr-tool-result-view tool-name="flaky_tool" .result=${{ ok: false }}></lr-tool-result-view>
+    `)) as LyraToolResultView;
+    expect(el.status).to.equal('error');
+    expect(el.getAttribute('status')).to.equal('error');
+    expect(base(el).querySelector('.flaky-result')).to.exist;
+    expect(base(el).querySelector('lr-json-viewer')).to.not.exist;
+  });
+
+  it('resets status back to "success" on the next resolve when the newly-matched renderer stays quiet', async () => {
+    registerToolRenderer('flaky_tool', {
+      render: (_result, _args, context) => {
+        context.reportStatus('error');
+        return litHtml`<span class="flaky-result">partial</span>`;
+      },
+    });
+    registerToolRenderer('quiet_tool', { render: () => litHtml`<span class="quiet">ok</span>` });
+
+    const el = (await fixture(html`
+      <lr-tool-result-view tool-name="flaky_tool" .result=${{}}></lr-tool-result-view>
+    `)) as LyraToolResultView;
+    expect(el.status).to.equal('error');
+
+    el.toolName = 'quiet_tool';
+    await el.updateComplete;
+    expect(el.status).to.equal('success');
+  });
+
+  it('threads context.reportStatus through the lazy load() path too', async () => {
+    registerToolRenderer('slow_status_tool', {
+      load: () =>
+        Promise.resolve({
+          render: (_result: unknown, _args: unknown, context: { reportStatus: (s: string) => void }) => {
+            context.reportStatus('denied');
+            return litHtml`<span class="lazy-status">lazy</span>`;
+          },
+        }),
+    });
+
+    const el = (await fixture(html`
+      <lr-tool-result-view tool-name="slow_status_tool" .result=${{}}></lr-tool-result-view>
+    `)) as LyraToolResultView;
+
+    await waitUntil(() => base(el).querySelector('.lazy-status') !== null);
+    expect(el.status).to.equal('denied');
+  });
+
+  it('every pre-existing 2-arg renderer (result, args) stays assignable and unaffected by the 3rd context argument', async () => {
+    let seen: { result: unknown; args: unknown } | undefined;
+    registerToolRenderer('get_weather', {
+      render: (result, args) => {
+        seen = { result, args };
+        return litHtml`<span class="weather-2arg">${JSON.stringify(result)}</span>`;
+      },
+    });
+    const el = (await fixture(html`
+      <lr-tool-result-view
+        tool-name="get_weather"
+        .result=${{ tempC: 19 }}
+        .args=${{ location: 'Brussels' }}
+      ></lr-tool-result-view>
+    `)) as LyraToolResultView;
+    expect(base(el).querySelector('.weather-2arg')).to.exist;
+    expect(el.status).to.equal('success');
+    expect(seen).to.deep.equal({ result: { tempC: 19 }, args: { location: 'Brussels' } });
+  });
+});

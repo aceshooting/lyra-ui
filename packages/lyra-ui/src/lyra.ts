@@ -510,6 +510,7 @@ export {
 export type {
   ToolRendererDefinition,
   ToolRendererRegistry,
+  ToolRenderContext,
 } from './components/agent-tools/tool-result-view/registry.js';
 export { LyraToolResultDialog } from './components/agent-tools/tool-result-dialog/tool-result-dialog.js';
 export type {

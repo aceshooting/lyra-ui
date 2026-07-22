@@ -49,8 +49,10 @@ export type TypingIndicatorSize = 'sm' | 'md';
  * @csspart dot - Each of the three dots in the `dots` variant.
  * @csspart pulse - The single pulsing dot in the `pulse` variant.
  * @csspart cursor - The blinking bar in the `cursor` variant.
- * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Animation duration and timing function
- * shared by all variants.
+ * @cssprop [--lr-typing-duration=var(--lr-transition-ambient)] - Animation duration and timing
+ * function for the dot-bounce/pulse/cursor-blink loop, shared by all variants. Aliases the
+ * shared `--lr-transition-ambient` token (default `1.8s ease-in-out`) by default, so retiming
+ * just this component doesn't affect other ambient-looping components in the library.
  * @cssprop [--lr-typing-dot-stagger-1=600ms] - Delay for the second dot in the dots variant.
  * @cssprop [--lr-typing-dot-stagger-2=1200ms] - Delay for the third dot in the dots variant.
  */

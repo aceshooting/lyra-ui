@@ -76,6 +76,8 @@ export function readTagFacts(manifest) {
         importPath: `@aceshooting/lyra-ui/${entry}`,
         modulePath: mod.path,
         purpose: summarize(decl.description ?? decl.summary ?? ''),
+        cssParts: decl.cssParts ?? [],
+        cssProperties: decl.cssProperties ?? [],
       });
     }
   }
@@ -354,6 +356,8 @@ function buildComponentFile(tag, section, tagFacts, peersByTag) {
   const facts = tagFacts.get(tag);
   const shares = section.tags.filter((t) => t !== tag && tagFacts.has(t));
   const peers = peersByTag.get(tag) ?? [];
+  const cssPartNames = facts.cssParts?.map((p) => p.name) ?? [];
+  const cssPropNames = facts.cssProperties?.map((p) => p.name) ?? [];
   return [
     GENERATED(`llms/${facts.family}.md`),
     '',
@@ -366,6 +370,9 @@ function buildComponentFile(tag, section, tagFacts, peersByTag) {
     peers.length
       ? `- **Optional peers** ${peers.map((p) => `\`${p}\``).join(', ') } — see \`llms/peers.md\``
       : '- **Optional peers** none',
+    cssPartNames.length || cssPropNames.length
+      ? `- **Themeable via** ${cssPartNames.length} part${cssPartNames.length === 1 ? '' : 's'}, ${cssPropNames.length} custom propert${cssPropNames.length === 1 ? 'y' : 'ies'} — see this component's own \`@csspart\`/\`@cssprop\` list below`
+      : '- **Themeable via** nothing component-specific — inherits only the shared surface',
     shares.length
       ? `- **Documented with** ${shares.map((t) => `\`${t}\``).join(', ')} (same section below)`
       : null,

@@ -50,6 +50,11 @@ referenced: `--lr-color-text-quiet`, `--lr-color-surface`, `--lr-color-border`,
 `--lr-space-xs/-s/-m`, `--lr-radius`, `--lr-shadow`, `--lr-focus-ring-*`,
 `--lr-transition-fast`.
 
+> Retheming a chip from outside `<lr-tool-call-chip>` (e.g. per-tool or per-status colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+
 **Optional peer deps:** none.
 
 ```html
@@ -116,6 +121,13 @@ shell around it.
 - `copyable: boolean = false` (reflected) — shows a copy-to-clipboard affordance alongside the
   fallback view, for either `fallback` kind: forwarded to `<lr-json-viewer>`'s own `copyable` for
   `"json"`, or a `<lr-copy-button>` rendered next to the text for `"text"`.
+- `status: 'pending'|'running'|'success'|'error'|'denied' = 'success'` (reflected) — the outcome of
+  the currently-rendered result, as reported by the matched renderer's own `context.reportStatus()`
+  (see below). Reset to `'success'` immediately before every `render()` call, so a renderer that
+  never calls `reportStatus` — including every pre-existing 2-arg renderer written before this
+  property existed — leaves it at that default, and a later renderer that stays quiet doesn't
+  inherit a stale outcome left behind by a previous one. Same status vocabulary as
+  `<lr-tool-result-dialog>`/`<lr-tool-call-chip>`.
 
 **Events:** `lr-render-error` (`detail: { toolName: string; error: unknown }`) — fired immediately
 before falling back to `<lr-json-viewer>`, whether because no renderer matched, a candidate
@@ -158,10 +170,16 @@ this same module-level registry unless a given `<lr-tool-result-view>`'s `regist
 set to a different `Map` instance.
 
 **`ToolRendererDefinition`** — the shape of one registered renderer:
-- `render?: (result: unknown, args: unknown) => unknown` — renders the result (and the args that
-  produced it) as UI. Typed as `unknown` rather than Lit's `TemplateResult` so any lit-html-renderable
-  value works (a plain string, a DOM node, an array of templates) — consumers already own their own
-  Lit import and don't need this module to add one
+- `render?: (result: unknown, args: unknown, context: ToolRenderContext) => unknown` — renders the
+  result (and the args that produced it) as UI. Typed as `unknown` rather than Lit's
+  `TemplateResult` so any lit-html-renderable value works (a plain string, a DOM node, an array of
+  templates) — consumers already own their own Lit import and don't need this module to add one.
+  The 3rd `context` argument is additive: it's the *last* positional parameter, so a pre-existing
+  2-arg `render(result, args)` function stays assignable to this type unchanged — JS/TS function
+  assignability allows an implementation with fewer parameters than its declared type. Use
+  `context.reportStatus(status)` (see `ToolRenderContext` below) to signal a non-throwing outcome
+  — e.g. an application-level failure the renderer still drew real UI for — instead of throwing,
+  which discards that UI for the `<lr-json-viewer>` fallback instead
 - `matches?: (payload: unknown) => boolean` — facade/shape-based dispatch predicate, consulted only
   when no exact `toolName` key matches (see dispatch order below); only ever consulted *before*
   `load` resolves when supplied inline at registration time — a definition that needs shape-based
@@ -173,6 +191,27 @@ set to a different `Map` instance.
   registers it. Resolves to either a definition directly, or a `{ default }`-shaped module namespace
   object, so `load: () => import('./my-renderer.js')` works unmodified when that module's default
   export is itself a `ToolRendererDefinition`
+
+**`ToolRenderContext`** — the shape of `render()`'s 3rd argument:
+- `reportStatus: (status: ToolResultStatus) => void` — reports this render's outcome without
+  throwing. `ToolResultStatus` is `'pending' | 'running' | 'success' | 'error' | 'denied'`, the same
+  union `<lr-tool-result-dialog>`/`<lr-tool-call-chip>` use, re-exported from this module. Calling
+  it is entirely optional: a renderer that never calls it leaves `<lr-tool-result-view>`'s `status`
+  property at its default, `'success'`. This threads through the lazy `load()` path exactly the
+  same way — a `render()` resolved via `load()` receives the same 3rd `context` argument as one
+  registered directly.
+
+```ts
+registerToolRenderer('run_query', {
+  render: (result, _args, context) => {
+    if ((result as { rows?: unknown[] })?.rows === undefined) {
+      context.reportStatus('error');
+      return html`<p class="query-error">The query returned no result set.</p>`;
+    }
+    return html`<query-result-table .rows=${(result as { rows: unknown[] }).rows}></query-result-table>`;
+  },
+});
+```
 
 **Exports:**
 - `registerToolRenderer(name: string, def: ToolRendererDefinition): void` — registers (or
@@ -233,6 +272,20 @@ registerToolRenderer('web_search', {
 - `matches` is a linear scan over every registered definition's `matches` in registration order; it
   only runs when the exact-name lookup misses, so tool names with a direct registration never pay
   that scan cost
+- `status` is reset to `'success'` immediately before every `render()` call, not merely at
+  construction — a renderer that reported `'error'` on one result does not leave that status
+  behind once dispatch moves on to a different (quiet) renderer; a `reportStatus()` call that
+  arrives asynchronously after a *newer* resolve has already started (a stale promise the previous
+  render kicked off) is detected via the same generation counter as the `load()` staleness guard
+  and discarded rather than clobbering the newer status
+- **don't type a custom renderer against a hand-rolled, over-generic function signature** (e.g.
+  `render: (...args: any[]) => unknown`, or a locally-declared narrower alias then cast to
+  `ToolRendererDefinition`) — write the registration as a plain object literal (as in every example
+  above) or annotate it as `ToolRendererDefinition` directly, so TypeScript checks the actual
+  current `render`/`matches`/`load` shape, including the `context: ToolRenderContext` 3rd
+  parameter and the exact `ToolResultStatus` string union `reportStatus` accepts. A loosened/`any`
+  signature type-checks either way but silently gives up the compiler's ability to catch a typo'd
+  status string or a dropped `context` parameter
 - `fallback` implements exactly two kinds, `"json"` and `"text"`; any *other* value silently behaves
   as `"json"`, as does `"text"` whenever `result` isn't a string. Only `"text"` renders
   `[part="fallback-text"]`/`[part="fallback-copy"]`

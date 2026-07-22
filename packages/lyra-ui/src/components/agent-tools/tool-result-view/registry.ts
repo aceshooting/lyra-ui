@@ -11,6 +11,39 @@
  */
 
 /**
+ * `ToolResultStatus` lives on `<lr-tool-result-dialog>` (`tool-result-dialog.class.ts`) and is
+ * re-exported here rather than duplicated -- this module's cycle analysis (see
+ * `scripts/check-import-cycles.mjs`, run as part of `contract-policy`) confirmed
+ * `tool-result-dialog.class.ts` and everything *it* imports (`LyraElement`, `scroll-lock`,
+ * `overlay-manager`, `a11y`, `icons`, `numbers`) has zero path back into this `tool-result-view/`
+ * directory, so importing the type here creates no circular import; `verbatimModuleSyntax` erases
+ * the `import type` at build time regardless, so this costs nothing at runtime either way.
+ */
+import type { ToolResultStatus } from '../tool-result-dialog/tool-result-dialog.class.js';
+export type { ToolResultStatus };
+
+/**
+ * Handed to a renderer's `render()` as an optional 3rd positional argument (see
+ * `ToolRendererDefinition.render`). A pre-existing 2-arg `render(result, args)` function stays
+ * assignable to the widened 3-arg type -- JS/TS function assignability allows an implementation
+ * with fewer parameters than its declared type -- so this addition is purely additive; no
+ * existing renderer needs to change.
+ */
+export interface ToolRenderContext {
+  /**
+   * Reports this render's outcome without throwing. A renderer that understood the result shape
+   * well enough to draw *some* UI for it -- e.g. an inline error banner for an application-level
+   * failure embedded in an otherwise well-formed payload, or a "denied" state for a tool call the
+   * caller refused to run -- calls this instead of throwing, so `<lr-tool-result-view>` reflects
+   * the outcome via its `status` property while still keeping the renderer's own template mounted,
+   * rather than discarding it for the `<lr-json-viewer>` fallback the way a *thrown* error does.
+   * Calling this is entirely optional: a renderer that never calls it leaves `status` at its
+   * default, `'success'`.
+   */
+  reportStatus: (status: ToolResultStatus) => void;
+}
+
+/**
  * One registered renderer. Either `render` is present directly, or `load` is
  * -- a definition registered purely as `{ load }` is expected to resolve (via
  * dynamic `import()`, typically) to the real `render`/`matches` pair on
@@ -32,8 +65,14 @@ export interface ToolRendererDefinition {
    * `TemplateResult` so any lit-html-renderable value works too (a plain
    * string, a DOM node, an array of templates) -- consumers already own
    * their own Lit import and don't need this module to add one.
+   *
+   * The 3rd `context` argument (see `ToolRenderContext`) is a back-compat-preserving addition --
+   * it's the last positional parameter, so every pre-existing 2-arg `render(result, args)`
+   * function stays assignable unchanged. Use `context.reportStatus()` to signal a non-throwing
+   * failure (or any other `ToolResultStatus`) while still rendering real content, instead of
+   * throwing and losing that content to the `<lr-json-viewer>` fallback.
    */
-  render?: (result: unknown, args: unknown) => unknown;
+  render?: (result: unknown, args: unknown, context: ToolRenderContext) => unknown;
   /** Facade/shape-based dispatch predicate -- see the module doc's dispatch order. */
   matches?: (payload: unknown) => boolean;
   /**

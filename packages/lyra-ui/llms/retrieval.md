@@ -871,6 +871,11 @@ directly — set instead by the `:host([status=...])` rules), plus shared tokens
 `--lr-color-surface`, `--lr-color-border`, `--lr-shadow`, `--lr-space-s`/`-m`,
 `--lr-transition-fast`, `--lr-focus-ring-*`.
 
+> Retheming a badge from outside `<lr-citation-badge>` (e.g. per-source or per-confidence colors)?
+> Set `--lr-theme-*` on the ancestor wrapper, not `--lr-*` directly — see `llms/shared.md`'s
+> "Theming and design tokens" section for why a `--lr-*` override on a wrapper only reaches that
+> wrapper's *direct* children, not a nested `<lr-*>` host's shadow DOM.
+
 **Optional peer deps:** none.
 
 ```html

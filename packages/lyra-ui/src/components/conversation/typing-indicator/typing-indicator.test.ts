@@ -129,9 +129,9 @@ it('swaps the rendered shape when variant changes on an already-mounted instance
 
 it('gives every variant a looping animation that is disabled under reduced motion', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include("animation: lr-typing-dot-bounce var(--lr-transition-ambient) infinite;");
-  expect(css).to.include("animation: lr-typing-pulse var(--lr-transition-ambient) infinite;");
-  expect(css).to.include("animation: lr-typing-cursor-blink var(--lr-transition-ambient) infinite;");
+  expect(css).to.include("animation: lr-typing-dot-bounce var(--lr-typing-duration) infinite;");
+  expect(css).to.include("animation: lr-typing-pulse var(--lr-typing-duration) infinite;");
+  expect(css).to.include("animation: lr-typing-cursor-blink var(--lr-typing-duration) infinite;");
   expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
 });
 
@@ -182,6 +182,53 @@ describe('ambient transition token', () => {
     const el = (await fixture(html`<lr-typing-indicator variant="cursor"></lr-typing-indicator>`)) as LyraTypingIndicator;
     const cursor = el.shadowRoot!.querySelector('[part="cursor"]') as HTMLElement;
     expect(getComputedStyle(cursor).animationDuration).to.equal('1.8s');
+  });
+});
+
+describe('dedicated duration token', () => {
+  it('defaults --lr-typing-duration through the --lr-transition-ambient alias to 1.8s (unset regression)', async () => {
+    const el = (await fixture(html`<lr-typing-indicator variant="dots"></lr-typing-indicator>`)) as LyraTypingIndicator;
+    const dots = el.shadowRoot!.querySelectorAll('[part="dot"]');
+    expect(getComputedStyle(dots[0]).animationDuration).to.equal('1.8s');
+  });
+
+  it('honors a --lr-typing-duration override on the host for every variant', async () => {
+    const dots = (await fixture(
+      html`<lr-typing-indicator variant="dots" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    expect(getComputedStyle(dots.shadowRoot!.querySelector('[part="dot"]')!).animationDuration).to.equal('0.9s');
+
+    const pulse = (await fixture(
+      html`<lr-typing-indicator variant="pulse" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    expect(getComputedStyle(pulse.shadowRoot!.querySelector('[part="pulse"]')!).animationDuration).to.equal('0.9s');
+
+    const cursor = (await fixture(
+      html`<lr-typing-indicator variant="cursor" style="--lr-typing-duration: 0.9s ease-in-out;"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    expect(getComputedStyle(cursor.shadowRoot!.querySelector('[part="cursor"]')!).animationDuration).to.equal('0.9s');
+  });
+
+  it('still honors a --lr-transition-ambient override on the host (the alias source, not severed)', async () => {
+    const el = (await fixture(
+      html`<lr-typing-indicator variant="dots" style="--lr-transition-ambient: 3s ease-in-out;"></lr-typing-indicator>`,
+    )) as LyraTypingIndicator;
+    const dot = el.shadowRoot!.querySelector('[part="dot"]') as HTMLElement;
+    expect(getComputedStyle(dot).animationDuration).to.equal('3s');
+  });
+
+  it('keeps the reduced-motion override intact (branch unaffected by the new token)', () => {
+    // The centralized `@media (prefers-reduced-motion: reduce)` override in
+    // tokens.styles.ts collapses --lr-transition-ambient itself, and this
+    // component's own reduced-motion rule below unconditionally forces
+    // `animation: none`, regardless of --lr-typing-duration. There is no way
+    // to force the browser's actual prefers-reduced-motion media feature from
+    // inside a wtr test (no launcher/browser-context option is configured for
+    // it in this repo -- see spinner.test.ts/progress.test.ts for the same
+    // stylesheet-level assertion pattern used for a pure-CSS reduced-motion
+    // branch), so this asserts the override rule is still present verbatim.
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/@media \(prefers-reduced-motion: reduce\) \{[^}]*animation: none !important;/);
   });
 });
 
