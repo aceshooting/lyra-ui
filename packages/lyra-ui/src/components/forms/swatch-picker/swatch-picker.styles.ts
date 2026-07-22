@@ -122,10 +122,10 @@ export const styles = css`
   [part='swatch'][aria-checked='true'] [part='swatch-fill'],
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
     transform: scale(1.2);
-    animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
   }
   [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
     box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
+    animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
   }
   @keyframes lr-swatch-picker-shine {
     0%,
@@ -140,10 +140,27 @@ export const styles = css`
      above (drawn around [part='swatch-fill']'s true shape) doesn't apply to it at all -- render()
      only ever mounts one of [part='swatch-fill']/[part='swatch-icon'] per swatch (see
      swatch-picker.class.ts), so this selector and the one above never both match the same swatch.
-     Swap to a drop-shadow on the icon itself, which follows its real rendered shape. */
+     Swap to a drop-shadow on the icon itself, which follows its real rendered shape.
+
+     The shine gets its OWN keyframe here (rather than sharing the fill's) because both effects
+     land on filter for an icon, and a running animation outranks an author-normal declaration:
+     a brightness-only keyframe would win the cascade and blank this glow out entirely for the
+     whole animation -- i.e. for every swatch in mode="gemstone", where the shine is on by default.
+     The keyframe therefore re-states the drop-shadow alongside the brightness so the two compose,
+     and the static declaration below stays as the path taken when the animation isn't running
+     (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion). */
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
-    transform: scale(1.2);
     filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color));
+    animation: lr-swatch-picker-shine-icon var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
+  }
+  @keyframes lr-swatch-picker-shine-icon {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color)) brightness(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color)) brightness(1.4);
+    }
   }
   /* The scale is redundant selection feedback (the ring already conveys it), so keep the
      transform but drop its easing under reduced-motion -- the swatch snaps rather than glides.

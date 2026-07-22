@@ -223,9 +223,17 @@ describe('lr-swatch-picker', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('--lr-swatch-picker-shine-duration: 0s;');
     expect(css).to.match(
-      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\],\s*\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration\)/,
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration\)/,
     );
     expect(css).to.match(/@keyframes lr-swatch-picker-shine\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*brightness\(1\.4\)/);
+    // An icon swatch runs a distinct keyframe that composes the selected glow with the brightness
+    // pulse -- sharing the fill's brightness-only one would blank the glow out (see styles.ts).
+    expect(css).to.match(
+      /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-icon'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine-icon var\(--lr-swatch-picker-shine-duration\)/,
+    );
+    expect(css).to.match(
+      /@keyframes lr-swatch-picker-shine-icon\s*\{[\s\S]*?50%\s*\{[^}]*filter:\s*drop-shadow\([^}]*brightness\(1\.4\)/,
+    );
   });
 
   it('actually applies the lr-swatch-picker-shine animation to the checked swatch\'s rendered fill', async () => {
@@ -244,7 +252,7 @@ describe('lr-swatch-picker', () => {
     expect(getComputedStyle(uncheckedFill).animationName).to.equal('none');
   });
 
-  it('applies the lr-swatch-picker-shine animation to a checked custom icon', async () => {
+  it('applies the lr-swatch-picker-shine-icon animation to a checked custom icon', async () => {
     const el = (await fixture(html`
       <lr-swatch-picker
         .options=${[
@@ -258,9 +266,31 @@ describe('lr-swatch-picker', () => {
     const buttons = swatches(el);
     const checkedIcon = buttons[1]!.querySelector('[part="swatch-icon"]') as HTMLElement;
     const uncheckedIcon = buttons[0]!.querySelector('[part="swatch-icon"]') as HTMLElement;
-    expect(getComputedStyle(checkedIcon).animationName).to.equal('lr-swatch-picker-shine');
+    expect(getComputedStyle(checkedIcon).animationName).to.equal('lr-swatch-picker-shine-icon');
     expect(getComputedStyle(checkedIcon).animationDuration).to.equal('1.6s');
     expect(getComputedStyle(uncheckedIcon).animationName).to.equal('none');
+  });
+
+  it('keeps the selected glow on a checked icon while the shine animation is running', async () => {
+    // Regression: the shine keyframes and the selected-glow rule both target `filter` on
+    // [part='swatch-icon']. A running animation wins the cascade over an author-normal
+    // declaration, so a shared brightness-only keyframe silently blanked the glow out for every
+    // icon swatch -- which is every swatch in mode="gemstone", where the shine is on by default.
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        .options=${[
+          { value: 'blue', color: '#0969da', label: 'Blue', icon: html`<svg></svg>` },
+          { value: 'green', color: '#1a7f37', label: 'Green', icon: html`<svg></svg>` },
+        ]}
+        value="green"
+        style="--lr-swatch-picker-selected-color: rgb(10, 20, 30); --lr-swatch-picker-selected-blur: 0.5rem; --lr-swatch-picker-shine-duration: 1.6s;"
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const checkedIcon = swatches(el)[1]!.querySelector('[part="swatch-icon"]') as HTMLElement;
+    const filter = getComputedStyle(checkedIcon).filter;
+    expect(filter).to.contain('drop-shadow');
+    expect(filter).to.contain('rgb(10, 20, 30)');
+    expect(filter).to.contain('brightness');
   });
 
   it('disables the shine animation outright under prefers-reduced-motion, independent of the transform-easing rule', () => {
