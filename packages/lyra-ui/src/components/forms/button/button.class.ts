@@ -1,5 +1,5 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './button.styles.js';
@@ -170,6 +170,14 @@ export class LyraButton extends LyraElement {
    *  independent (mirrors `<lr-export-button>`'s own `loading`/`disabled` pair). */
   @property({ type: Boolean, reflect: true }) loading = false;
 
+  /** Whether the `start`/`end` slots have assigned content. Drives `?hidden` on the adornment
+   *  wrappers so an unslotted wrapper collapses to `display: none` instead of contributing a dead
+   *  `--lr-button-gap` of inline space (a bare `<slot>` is an element child, so a `:empty` rule
+   *  could never match it). Seeded synchronously in `willUpdate` before the first paint, then kept
+   *  current by each slot's `slotchange` — mirrors `<lr-input>`'s identical pattern. */
+  @state() private hasStartSlot = false;
+  @state() private hasEndSlot = false;
+
   @query('button') private buttonEl?: HTMLButtonElement;
 
   /** Activates the internal native button, including submit/reset behavior. */
@@ -204,6 +212,26 @@ export class LyraButton extends LyraElement {
     this.requestUpdate();
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // Seed the wrapper-visibility flags from light-DOM children before the first render, so the
+    // adornment wrappers start collapsed/expanded correctly rather than flashing full-width for a
+    // frame until the first `slotchange` fires. Refreshed thereafter by `onStartSlotChange`/
+    // `onEndSlotChange`.
+    if (!this.hasUpdated) {
+      this.hasStartSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'start');
+      this.hasEndSlot = Array.from(this.children).some((element) => element.getAttribute('slot') === 'end');
+    }
+  }
+
+  private onStartSlotChange = (e: Event): void => {
+    this.hasStartSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
+  private onEndSlotChange = (e: Event): void => {
+    this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+  };
+
   override render(): TemplateResult {
     const ariaLabel = this.getAttribute('aria-label');
     return html`
@@ -215,9 +243,13 @@ export class LyraButton extends LyraElement {
         ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}
       >
-        <span part="start"><slot name="start"></slot></span>
+        <span part="start" ?hidden=${!this.hasStartSlot}>
+          <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+        </span>
         <span part="label"><slot></slot></span>
-        <span part="end"><slot name="end"></slot></span>
+        <span part="end" ?hidden=${!this.hasEndSlot}>
+          <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+        </span>
         ${this.loading ? html`<span part="spinner" aria-hidden="true">${spinnerIcon()}</span>` : ''}
       </button>
     `;

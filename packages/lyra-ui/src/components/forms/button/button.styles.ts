@@ -156,14 +156,19 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='start']:empty,
-  [part='end']:empty {
-    display: none;
-  }
   [part='start'],
   [part='end'] {
     display: inline-flex;
     align-items: center;
+  }
+  /* When the matching slot has no assigned content, button.class.ts stamps the hidden attribute
+     on the wrapper (a bare slot is an element child, so the old :empty rule could never match).
+     This higher-specificity selector wins over the display: inline-flex above so the empty
+     wrapper collapses and stops contributing a dead --lr-button-gap of inline space -- mirrors
+     input.styles.ts's identical [part='start'][hidden]/[part='end'][hidden] rule. */
+  [part='start'][hidden],
+  [part='end'][hidden] {
+    display: none;
   }
   /* Per-tier geometry: cssprop re-assignment only. The "m" tier lives on :host above ("size"
      reflects and defaults to 'm', so :host always matches it). */

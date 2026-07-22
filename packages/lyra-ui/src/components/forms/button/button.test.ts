@@ -525,6 +525,29 @@ describe('lr-button', () => {
     });
   });
 
+  describe('start/end adornment wrappers collapse when unslotted', () => {
+    it('collapses both adornment wrappers (display:none) when nothing is slotted into start/end', async () => {
+      const el = (await fixture(html`<lr-button>Label</lr-button>`)) as LyraButton;
+      const startWrapper = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
+      const endWrapper = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+      // Assert the *rendered* result, not the stylesheet text: a silently-inert :empty rule
+      // (a <slot> is an element child, so :empty never matched) is invisible to CSS-text asserts.
+      expect(getComputedStyle(startWrapper).display).to.equal('none');
+      expect(getComputedStyle(endWrapper).display).to.equal('none');
+    });
+
+    it('keeps the start wrapper visible when content is slotted into start', async () => {
+      const el = (await fixture(
+        html`<lr-button><span slot="start">*</span>Label</lr-button>`,
+      )) as LyraButton;
+      const startWrapper = el.shadowRoot!.querySelector('[part="start"]') as HTMLElement;
+      const endWrapper = el.shadowRoot!.querySelector('[part="end"]') as HTMLElement;
+      expect(getComputedStyle(startWrapper).display).to.not.equal('none');
+      // The unused end wrapper still collapses.
+      expect(getComputedStyle(endWrapper).display).to.equal('none');
+    });
+  });
+
   describe('appearance="outlined" fill', () => {
     it('stays transparent when --lr-button-outlined-fill is unset', async () => {
       const el = (await fixture(html`<lr-button appearance="outlined">Save</lr-button>`)) as LyraButton;
