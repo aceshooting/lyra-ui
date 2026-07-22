@@ -636,6 +636,27 @@ describe('resolveRgb', () => {
     expect(warnings).to.have.length(1);
     expect(warnings.flat().join(' ')).to.contain('not-a-real-color');
   });
+
+  // Regression guard for the no-canvas-context diagnostic added alongside this (exercised, with the
+  // context forced to null, in the dedicated heatmap-no-canvas.test.ts -- see the comment there for
+  // why it cannot live in this file). In a normal environment the context resolves, so that branch
+  // must stay completely silent and every color must still resolve to its real value rather than to
+  // the fallback -- i.e. adding the diagnostic changed nothing for real consumers.
+  it('stays silent and resolves real colors when a 2D canvas context IS available', () => {
+    const originalWarn = console.warn;
+    const warnings: unknown[][] = [];
+    console.warn = (...args: unknown[]) => warnings.push(args);
+    try {
+      // Each of these round-trips through the canvas parser to a real value, not the fallback.
+      expect(resolveRgb('rgb(9, 105, 218)', '#123456')).to.deep.equal([9, 105, 218, 1]);
+      expect(resolveRgb('hsl(0, 100%, 50%)', '#123456')).to.deep.equal([255, 0, 0, 1]);
+      expect(resolveRgb('red', '#123456')).to.deep.equal([255, 0, 0, 1]);
+      expect(resolveRgb('#0969da', '#123456')).to.deep.equal([9, 105, 218, 1]);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings).to.have.length(0);
+  });
 });
 
 

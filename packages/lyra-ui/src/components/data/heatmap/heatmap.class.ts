@@ -175,6 +175,24 @@ function warnInvalidColor(color: string): void {
   );
 }
 
+let warnedNoCanvasContext = false;
+
+/** Distinct from `warnInvalidColor()`: that one means "this color string is not valid CSS", this
+ *  one means "the environment can't tell us, because there is no canvas 2D context to parse it
+ *  with". Both end at the same fallback, so without separate messages a consumer debugging a wrong
+ *  ramp color cannot tell a typo'd token from a headless/canvas-disabled environment. Warned once
+ *  per page, not once per color: the cause is environmental, and `resolveRgb()` runs per ramp
+ *  endpoint on every draw pass. */
+function warnNoCanvasContext(): void {
+  if (warnedNoCanvasContext) return;
+  warnedNoCanvasContext = true;
+  console.warn(
+    '<lr-heatmap>: no 2D canvas context is available in this environment; color resolution ' +
+      'for non-hex/non-rgb values (e.g. oklch(), color(srgb ...), named colors) will fall back ' +
+      'to the given default instead of resolving the requested color.',
+  );
+}
+
 /**
  * Normalizes a bucket count to the safe, renderable range. Non-finite values
  * restore the public default; finite values are floored and clamped to
@@ -247,7 +265,10 @@ export function resolveRgb(color: string, fallbackHex: string): [number, number,
   if (direct) return direct;
 
   const ctx = getScratchCtx();
-  if (!ctx) return fallback;
+  if (!ctx) {
+    warnNoCanvasContext();
+    return fallback;
+  }
 
   const sentinel = 'rgb(1, 2, 3)';
   ctx.fillStyle = sentinel;
