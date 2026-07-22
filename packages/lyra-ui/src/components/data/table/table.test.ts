@@ -950,14 +950,24 @@ it('restores a previously-persisted showAllColumns preference from the initial p
 
 it('persists and restores showAllColumns via storage-key', async () => {
   const key = `lr-test-table-${Math.random()}`;
-  const el = await fixture<LyraTable<Row>>(html`<lr-table storage-key=${key}></lr-table>`);
-  el.showAllColumns = true;
-  await el.updateComplete;
-  el.remove();
+  const fullKey = `lr-table:${key}`;
+  localStorage.removeItem(fullKey);
+  try {
+    const el = await fixture<LyraTable<Row>>(html`<lr-table storage-key=${key}></lr-table>`);
+    // The first `updated()` pass only flips the `persistReady` gate; the write happens on the
+    // *next* pass. Set the property, then wait until the value has actually landed in storage
+    // before remounting -- asserting the write flushed removes any dependence on update timing
+    // (this test previously never reached its body under strict console, so the race was hidden).
+    el.showAllColumns = true;
+    await el.updateComplete;
+    await waitUntil(() => localStorage.getItem(fullKey) !== null, 'showAllColumns was never persisted');
+    el.remove();
 
-  const restored = await fixture<LyraTable<Row>>(html`<lr-table storage-key=${key}></lr-table>`);
-  expect(restored.showAllColumns).to.be.true;
-  localStorage.removeItem(`lr-table:${key}`);
+    const restored = await fixture<LyraTable<Row>>(html`<lr-table storage-key=${key}></lr-table>`);
+    expect(restored.showAllColumns).to.be.true;
+  } finally {
+    localStorage.removeItem(fullKey);
+  }
 });
 
 it('writes nothing to storage when storage-key is unset (unset-regression)', async () => {
