@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import { LyraElement } from './lyra-element.js';
 import { FormAssociated } from './form-associated.js';
 import { tag } from './prefix.js';
+import { LyraTextarea } from '../components/forms/textarea/textarea.js';
 
 class Ctl extends FormAssociated(LyraElement) {
   render() {
@@ -191,4 +192,109 @@ it('restores a string state synchronously without emitting a user event', async 
   expect(ctl.value).to.equal('restored');
   expect(new FormData(form).get('quantity')).to.equal('restored');
   expect(ctl.checkValidity()).to.be.true;
+});
+
+// `createFallbackInternals()` (the hand-rolled, inert `ElementInternals` substitute defined in
+// this file) only ever runs when `this.attachInternals()` is missing, returns falsy, or throws --
+// never in this repo's real Chromium test environment, where `attachInternals()` is natively
+// implemented. Driven through the real `<lr-textarea>` component (not the local `Ctl` demo class
+// above) so this proves the fallback actually integrates with a production component's own
+// render/validity plumbing, not just the mixin in isolation. `<lr-textarea>` is one of the few
+// `FormAssociated` consumers that does not override `updateValidity()`, so its validity behavior
+// is exactly the base mixin's own required-and-empty check.
+//
+// Stubbing is scoped to `LyraTextarea.prototype` (rather than the global `HTMLElement.prototype`,
+// as several component-level "attachInternals guard" tests elsewhere in this repo do for their own
+// hand-rolled fallbacks) so it cannot leak into any other custom element constructed while these
+// tests run. The stub is always removed in a `finally` block, even if an assertion above throws.
+describe('fallback ElementInternals when attachInternals() is unavailable', () => {
+  it('constructs without throwing, and threads required+empty through a working validity/checkValidity/reportValidity, when attachInternals() throws', async () => {
+    const proto = LyraTextarea.prototype as unknown as { attachInternals: () => ElementInternals };
+    const original = proto.attachInternals;
+    proto.attachInternals = () => {
+      throw new DOMException('attachInternals is not supported', 'NotSupportedError');
+    };
+    try {
+      // The try/catch in the mixin's constructor (form-associated.ts:138-143) must swallow the
+      // failure and install the fallback instead of letting construction itself throw.
+      let bare: LyraTextarea | undefined;
+      expect(() => {
+        bare = document.createElement(tag('textarea')) as unknown as LyraTextarea;
+      }).to.not.throw();
+      // No flags set -> valid, proving the fallback's checkValidity()/reportValidity() reflect
+      // validity.valid correctly rather than being permanently broken.
+      expect(bare!.checkValidity()).to.be.true;
+      expect(bare!.reportValidity()).to.be.true;
+
+      // Drive a fully-rendered instance through required+empty -> invalid -> filled -> valid, to
+      // prove setValidity() on the fallback actually threads flags through the validity getters
+      // (form-associated.ts:55-61), not just that construction didn't crash.
+      const el = await fixture<LyraTextarea>(html`<lr-textarea required name="notes"></lr-textarea>`);
+      expect(el.validity.valueMissing).to.be.true;
+      expect(el.checkValidity()).to.be.false;
+      expect(el.reportValidity()).to.be.false;
+      expect(el.internals.checkValidity()).to.be.false;
+      expect(el.internals.reportValidity()).to.be.false;
+      expect(el.internals.validationMessage).to.equal('This field is required.');
+
+      // Assigning `.value` drives `setFormValue()` and must not throw even though the fallback's
+      // own `setFormValue()` is a no-op.
+      expect(() => {
+        el.value = 'filled in';
+      }).to.not.throw();
+      expect(el.validity.valueMissing).to.be.false;
+      expect(el.checkValidity()).to.be.true;
+      expect(el.reportValidity()).to.be.true;
+      expect(el.internals.validationMessage).to.equal('');
+
+      // Inert defaults documented on createFallbackInternals().
+      expect(el.internals.form).to.equal(null);
+      expect(el.internals.labels.length).to.equal(0);
+      expect(el.form).to.equal(null);
+      expect(el.labels.length).to.equal(0);
+      // `states` (the CustomStateSet substitute) is a documented no-op -- safe to call, never
+      // reflects anything back.
+      expect(el.internals.states.has('checked')).to.be.false;
+      expect(() => {
+        el.internals.states.add('checked');
+      }).to.not.throw();
+      expect(el.internals.states.delete('checked')).to.be.false;
+    } finally {
+      proto.attachInternals = original;
+    }
+  });
+
+  it('falls back the same way when attachInternals() returns a falsy value instead of throwing (form-associated.ts:140)', async () => {
+    const proto = LyraTextarea.prototype as unknown as { attachInternals: () => ElementInternals };
+    const original = proto.attachInternals;
+    // Returns `undefined` *without* throwing -- exercises the `internals ?? createFallbackInternals()`
+    // branch directly, distinct from the try/catch branch covered above.
+    proto.attachInternals = () => undefined as unknown as ElementInternals;
+    try {
+      let bare: LyraTextarea | undefined;
+      expect(() => {
+        bare = document.createElement(tag('textarea')) as unknown as LyraTextarea;
+      }).to.not.throw();
+      expect(bare!.checkValidity()).to.be.true;
+      expect(bare!.reportValidity()).to.be.true;
+
+      const el = await fixture<LyraTextarea>(html`<lr-textarea required name="notes"></lr-textarea>`);
+      expect(el.validity.valueMissing).to.be.true;
+      expect(el.checkValidity()).to.be.false;
+      expect(el.internals.checkValidity()).to.be.false;
+
+      expect(() => {
+        el.value = 'filled in';
+      }).to.not.throw();
+      expect(el.validity.valueMissing).to.be.false;
+      expect(el.checkValidity()).to.be.true;
+
+      expect(el.internals.form).to.equal(null);
+      expect(el.internals.labels.length).to.equal(0);
+      expect(el.form).to.equal(null);
+      expect(el.labels.length).to.equal(0);
+    } finally {
+      proto.attachInternals = original;
+    }
+  });
 });

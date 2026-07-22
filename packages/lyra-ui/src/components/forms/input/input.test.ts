@@ -125,6 +125,27 @@ describe('lr-input', () => {
       expect(email.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
     });
 
+    it('onClear() guard: no-ops when disabled, read-only, or the value is already empty', async () => {
+      const el = (await fixture(html`<lr-input clearable value="query"></lr-input>`)) as LyraInput;
+      const handlers = el as unknown as { onClear: () => void };
+      let clearCount = 0;
+      el.addEventListener('lr-clear', () => { clearCount += 1; });
+
+      el.disabled = true;
+      handlers.onClear();
+      expect(el.value).to.equal('query');
+      el.disabled = false;
+
+      el.readonly = true;
+      handlers.onClear();
+      expect(el.value).to.equal('query');
+      el.readonly = false;
+
+      el.value = '';
+      handlers.onClear();
+      expect(clearCount).to.equal(0);
+    });
+
     it('is accessible with populated adornments and a clear action', async () => {
       const el = await fixture(html`
         <lr-input clearable value="query" aria-label="Search">
@@ -383,6 +404,73 @@ describe('lr-input', () => {
       expect(el.value).to.equal('hello there');
       const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
       expect(input.value).to.equal('hello there');
+    });
+
+    it('setRangeText() replaces the current selection when called with no start/end (native single-arg overload)', async () => {
+      const el = (await fixture(html`<lr-input value="hello world"></lr-input>`)) as LyraInput;
+      el.setSelectionRange(0, 5); // select "hello"
+      el.setRangeText('goodbye');
+      expect(el.value).to.equal('goodbye world');
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      expect(input.value).to.equal('goodbye world');
+    });
+
+    it('normalizes a nullish selectionStart/selectionEnd assignment to 0 on the native input', async () => {
+      const el = (await fixture(html`<lr-input value="hello world"></lr-input>`)) as LyraInput;
+      const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+      el.selectionStart = null;
+      el.selectionEnd = null;
+      expect(input.selectionStart).to.equal(0);
+      expect(input.selectionEnd).to.equal(0);
+    });
+
+    it('exposes the native input via the public input getter', async () => {
+      const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+      expect(el.input).to.equal(el.shadowRoot!.querySelector('input'));
+    });
+
+    it('forwards focus() and blur() to the native input', async () => {
+      const el = (await fixture(html`<lr-input></lr-input>`)) as LyraInput;
+      el.focus();
+      expect(el.shadowRoot!.activeElement === el.input).to.be.true;
+      el.blur();
+      expect(el.shadowRoot!.activeElement).to.equal(null);
+    });
+
+    it('forwards select() to select the full native input value', async () => {
+      const el = (await fixture(html`<lr-input value="hello world"></lr-input>`)) as LyraInput;
+      el.select();
+      expect(el.selectionStart).to.equal(0);
+      expect(el.selectionEnd).to.equal(el.value.length);
+    });
+  });
+
+  describe('forwarding getters/setters/methods before first render', () => {
+    it('returns null / no-ops instead of throwing when called before the native input has rendered', () => {
+      const el = document.createElement('lr-input') as LyraInput;
+      expect(el.input).to.equal(null);
+      expect(el.selectionStart).to.equal(null);
+      expect(el.selectionEnd).to.equal(null);
+      expect(() => {
+        el.selectionStart = 2;
+      }).to.not.throw();
+      expect(() => {
+        el.selectionEnd = 4;
+      }).to.not.throw();
+      expect(() => el.setRangeText('x')).to.not.throw();
+      expect(el.value).to.equal('');
+    });
+
+    it('onInput/onChange no-op if somehow invoked before the native input has rendered', () => {
+      const el = document.createElement('lr-input') as LyraInput;
+      const handlers = el as unknown as { onInput: () => void; onChange: () => void };
+      let seen = 0;
+      el.addEventListener('lr-input', () => { seen += 1; });
+      el.addEventListener('lr-change', () => { seen += 1; });
+      handlers.onInput();
+      handlers.onChange();
+      expect(el.value).to.equal('');
+      expect(seen).to.equal(0);
     });
   });
 
