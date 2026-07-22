@@ -718,7 +718,25 @@ A generic action-button primitive. Renders an internal native `<button>`; `type=
 `type="reset"` are handled by the component itself via the host's own `closest('form')`, since a
 shadow-internal native button doesn't participate in an ancestor form's submission on its own.
 
+Set `href` to a safe link URL and the root renders as a real `<a part="base" href=…>` instead — a
+link styled as a button (e.g. a CTA). Native navigation is then the activation, so the submit/reset
+handling and `type` have no effect in that mode. A disabled link button (its own `disabled` or an
+ancestor `<fieldset disabled>`) renders the anchor with `aria-disabled="true"` and **no `href`**, so
+it is neither focusable nor navigable; an unsafe/unparseable `href` falls back to the native
+`<button>`.
+
 **Properties:**
+- `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative; see
+  `safeLinkHref`), the root renders as an `<a href=…>` instead of a `<button>`. Unset (the default)
+  renders a plain `<button>`, unchanged. `type` (submit/reset) has no effect while the anchor
+  renders. While the button is disabled the anchor is rendered **without** `href` (keeping
+  `aria-disabled="true"`), so a disabled link button cannot navigate. An unsafe/unparseable value
+  falls back to the native `<button>`
+- `target?: string` — native anchor `target`, used only while `href` resolves to a link. Setting it
+  (e.g. `'_blank'`) automatically derives `rel="noopener noreferrer"` on the anchor; `rel` is never
+  independently settable (reverse-tabnabbing). Ignored in `<button>` mode
+- `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
+  link. Ignored in `<button>` mode
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'plain' | 'quiet' | 'link' = 'filled'` (reflected)
   — `'accent'` is a
@@ -743,15 +761,17 @@ shadow-internal native button doesn't participate in an ancestor form's submissi
 The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
 `100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
 
-**Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal native
-`<button>`; `click()` also runs the component's submit/reset behavior.
+**Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
+element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
+submit/reset behavior in `<button>` mode.
 
 **Events:** none (a plain native `click` bubbles and composes through the shadow boundary
 unmodified; disabled while `disabled` or `loading`).
 
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
 
-**CSS parts:** `base`, `label`, `start`, `end`, `spinner` (present only while `loading`).
+**CSS parts:** `base` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe
+link), `label`, `start`, `end`, `spinner` (present only while `loading`).
 
 **Themeable custom properties:** `--lr-button-width`, `--lr-button-accent`, `--lr-button-fill`,
 `--lr-button-on-fill`, `--lr-button-border` (each swapped by the active `variant`, default

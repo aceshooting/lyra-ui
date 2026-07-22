@@ -584,4 +584,193 @@ describe('lr-button', () => {
       await expect(el).to.be.accessible();
     });
   });
+
+  describe('anchor mode (href/target/download)', () => {
+    it('renders a real <a> when href is set', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com">Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      expect(anchor).to.exist;
+      expect(anchor.getAttribute('href')).to.equal('https://example.com');
+      expect(el.shadowRoot!.querySelector('button[part="base"]')).to.not.exist;
+    });
+
+    it('still renders the label/start/end/spinner content inside the anchor', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com"><span slot="start">*</span>Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      expect(anchor.querySelector('[part="label"]')).to.exist;
+      expect(anchor.querySelector('[part="start"]')).to.exist;
+      expect(anchor.querySelector('[part="end"]')).to.exist;
+    });
+
+    it('derives rel="noopener noreferrer" when target is set on a link button', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com" target="_blank">Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a') as HTMLAnchorElement;
+      expect(anchor.getAttribute('target')).to.equal('_blank');
+      expect(anchor.getAttribute('rel')).to.equal('noopener noreferrer');
+    });
+
+    it('omits rel entirely when target is unset (no standalone settable rel)', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com">Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a') as HTMLAnchorElement;
+      expect(anchor.hasAttribute('rel')).to.be.false;
+    });
+
+    it('forwards download to the anchor', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com/file.zip" download="file.zip">Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a') as HTMLAnchorElement;
+      expect(anchor.getAttribute('download')).to.equal('file.zip');
+    });
+
+    it('allows a mailto: href (anchor-safe link scheme)', async () => {
+      const el = (await fixture(
+        html`<lr-button href="mailto:hello@example.com">Email</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      expect(anchor).to.exist;
+      expect(anchor.getAttribute('href')).to.equal('mailto:hello@example.com');
+    });
+
+    it('ignores an unsafe href scheme, falling back to the native button', async () => {
+      const el = (await fixture(
+        html`<lr-button href="javascript:alert(1)">Go</lr-button>`,
+      )) as LyraButton;
+      expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('button[part="base"]')).to.exist;
+    });
+
+    it('forwards a host aria-label onto the internal anchor as a literal string', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com" aria-label="Open the site">Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      expect(anchor.getAttribute('aria-label')).to.equal('Open the site');
+    });
+
+    it('forwards host click()/focus()/blur() to the internal anchor', async () => {
+      const el = (await fixture(
+        html`<lr-button href="https://example.com">Go</lr-button>`,
+      )) as LyraButton;
+      const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+      let clicked = 0;
+      // Prevent the default navigation that host click() would otherwise trigger.
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        clicked++;
+      });
+      el.click();
+      expect(clicked).to.equal(1);
+      el.focus();
+      // Compare booleans, never DOM nodes, as chai's actual/expected (a failed node comparison
+      // hangs the whole file at 180s).
+      expect(el.shadowRoot!.activeElement === anchor, 'focus() should focus the anchor').to.be.true;
+      el.blur();
+      expect(el.shadowRoot!.activeElement === anchor, 'blur() should unfocus the anchor').to.be
+        .false;
+    });
+
+    it('is accessible as a link button', async () => {
+      const el = await fixture(html`<lr-button href="https://example.com">Go</lr-button>`);
+      await expect(el).to.be.accessible();
+    });
+
+    describe('D8: a disabled link button omits href and cannot navigate', () => {
+      it('renders an <a> with NO href attribute when disabled', async () => {
+        const el = (await fixture(
+          html`<lr-button disabled href="https://example.com">Go</lr-button>`,
+        )) as LyraButton;
+        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        expect(anchor).to.exist;
+        expect(anchor.hasAttribute('href'), 'a disabled link button must not carry href').to.be
+          .false;
+        expect(anchor.getAttribute('aria-disabled')).to.equal('true');
+      });
+
+      it('does not navigate on click while disabled (an anchor with no href is not activatable)', async () => {
+        const el = (await fixture(
+          html`<lr-button disabled href="https://example.com">Go</lr-button>`,
+        )) as LyraButton;
+        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        let navigations = 0;
+        // A default-prevented, href-less anchor fires no navigation; count any that slip through.
+        anchor.addEventListener('click', (e) => {
+          if (!e.defaultPrevented && anchor.hasAttribute('href')) navigations++;
+          e.preventDefault();
+        });
+        anchor.click();
+        expect(navigations).to.equal(0);
+        expect(anchor.hasAttribute('href')).to.be.false;
+      });
+
+      it('restores href once re-enabled', async () => {
+        const el = (await fixture(
+          html`<lr-button disabled href="https://example.com">Go</lr-button>`,
+        )) as LyraButton;
+        el.disabled = false;
+        await el.updateComplete;
+        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        expect(anchor.getAttribute('href')).to.equal('https://example.com');
+        expect(anchor.hasAttribute('aria-disabled')).to.be.false;
+      });
+
+      it('omits href when disabled by an ancestor fieldset', async () => {
+        const form = (await fixture(html`
+          <form>
+            <fieldset>
+              <lr-button href="https://example.com">Go</lr-button>
+            </fieldset>
+          </form>
+        `)) as HTMLFormElement;
+        const el = form.querySelector('lr-button') as LyraButton;
+        const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+        fieldset.disabled = true;
+        await el.updateComplete;
+        const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+        expect(anchor.hasAttribute('href')).to.be.false;
+        expect(anchor.getAttribute('aria-disabled')).to.equal('true');
+      });
+    });
+
+    describe('unset-regression: href unset renders the native button unchanged', () => {
+      it('still renders a native <button> and honors variant/appearance/size when href is unset', async () => {
+        const el = (await fixture(
+          html`<lr-button variant="brand" appearance="outlined" size="l">Go</lr-button>`,
+        )) as LyraButton;
+        expect(el.shadowRoot!.querySelector('button[part="base"]')).to.exist;
+        expect(el.shadowRoot!.querySelector('a[part="base"]')).to.not.exist;
+      });
+
+      it('exposes href/target/download as undefined by default', async () => {
+        const el = (await fixture(html`<lr-button>Go</lr-button>`)) as LyraButton;
+        expect(el.href).to.be.undefined;
+        expect(el.target).to.be.undefined;
+        expect(el.download).to.be.undefined;
+      });
+
+      it('type="submit" still submits the ancestor form when href is unset', async () => {
+        const form = (await fixture(html`
+          <form>
+            <lr-button type="submit">Save</lr-button>
+          </form>
+        `)) as HTMLFormElement;
+        const el = form.querySelector('lr-button') as LyraButton;
+        let submitted = false;
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          submitted = true;
+        });
+        (el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement).click();
+        expect(submitted).to.be.true;
+      });
+    });
+  });
 });

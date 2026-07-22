@@ -34,13 +34,21 @@ describe('sink-specific safe URL helpers', () => {
       'file:///tmp/secret',
       'ftp://example.test/file',
       'about:blank',
-      'mailto:a@example.test',
       'tel:+352000000',
     ]) {
       expect(safeMediaSrc(url), url).to.be.null;
       expect(safeFetchUrl(url), url).to.be.null;
       expect(safeLinkHref(url), url).to.be.null;
     }
+  });
+
+  it('allows mailto: links for navigation but never as a resource or fetch source', () => {
+    // A `mailto:` opens the mail client rather than navigating an active document, so it is safe as
+    // an `<a href>` target -- but it is not a fetchable/rendered resource, so the resource sinks
+    // still reject it.
+    expect(safeLinkHref('mailto:hello@example.com')).to.equal('mailto:hello@example.com');
+    expect(safeMediaSrc('mailto:hello@example.com')).to.be.null;
+    expect(safeFetchUrl('mailto:hello@example.com')).to.be.null;
   });
 
   it('uses browser URL normalization before checking the scheme', () => {

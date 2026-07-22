@@ -2,7 +2,7 @@
 // fetched as data, but navigating an anchor to `data:text/html,...` creates an
 // active document. Keep the link allowlist deliberately narrower.
 const SAFE_RESOURCE_SCHEMES = new Set(['http:', 'https:', 'blob:', 'data:']);
-const SAFE_LINK_SCHEMES = new Set(['http:', 'https:', 'blob:']);
+const SAFE_LINK_SCHEMES = new Set(['http:', 'https:', 'blob:', 'mailto:']);
 
 // A fixed web base makes relative and scheme-relative inputs parse through the
 // same WHATWG URL algorithm as absolute inputs. This also means malformed
@@ -37,8 +37,11 @@ export function safeFetchUrl(url: unknown): string | null {
   return safeUrlOrNull(url, SAFE_RESOURCE_SCHEMES);
 }
 
-/** Returns a trimmed URL safe for an `<a href>`, or `null`. `data:` is
- * intentionally excluded because following it can open an active document. */
+/** Returns a trimmed URL safe for an `<a href>`, or `null`. `http:`, `https:`,
+ * `blob:`, `mailto:`, and relative URLs are allowed. `data:` is intentionally
+ * excluded because following it can open an active document; `mailto:` is
+ * allowed because it hands off to the mail client rather than navigating a
+ * document. */
 export function safeLinkHref(url: unknown): string | null {
   return safeUrlOrNull(url, SAFE_LINK_SCHEMES);
 }

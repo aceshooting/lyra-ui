@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { spinnerIcon } from '../../../internal/icons.js';
+import { safeLinkHref } from '../../../internal/safe-url.js';
 import { styles } from './button.styles.js';
 
 export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
@@ -16,15 +17,25 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * native `<button type="submit">` does not participate in an ancestor light-DOM form's submission
  * on its own, since form-submitter semantics don't cross the shadow boundary.
  *
- * A host `aria-label` is forwarded to the internal button as a literal string (for an icon-only
- * button with no visible label); external `aria-labelledby`/`aria-describedby` idrefs are not
- * copied across the shadow boundary.
+ * When `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see
+ * `safeLinkHref`) the root renders as a real `<a part="base" href=…>` instead — for a link styled
+ * as a button (e.g. a CTA). Native navigation is then the anchor's own activation, so the
+ * submit/reset click handler and `type` (submit/reset) have no effect in that mode. When the
+ * button is disabled (its own `disabled` or an ancestor `<fieldset disabled>`) the anchor renders
+ * with `aria-disabled="true"` and **no `href`** — an href-less anchor is not focusable or
+ * navigable, so a disabled link button genuinely cannot be activated (unlike a bare
+ * `aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the
+ * native `<button>`.
+ *
+ * A host `aria-label` is forwarded to the internal button/anchor as a literal string (for an
+ * icon-only button with no visible label); external `aria-labelledby`/`aria-describedby` idrefs
+ * are not copied across the shadow boundary.
  *
  * @customElement lr-button
  * @slot - Default slot: the button's label content.
  * @slot start - Leading icon/content, rendered before the label.
  * @slot end - Trailing icon/content, rendered after the label.
- * @csspart base - The internal native `<button>`.
+ * @csspart base - The internal native `<button>` (or an `<a>` when `href` resolves to a safe link).
  * @csspart label - The default-slot label wrapper.
  * @csspart start - The `start` slot wrapper.
  * @csspart end - The `end` slot wrapper.
@@ -170,6 +181,23 @@ export class LyraButton extends LyraElement {
    *  independent (mirrors `<lr-export-button>`'s own `loading`/`disabled` pair). */
   @property({ type: Boolean, reflect: true }) loading = false;
 
+  /** When set to a safe link URL, the button's root renders as a real `<a href=…>` instead of a
+   *  `<button>` — for a link styled as a button (e.g. a CTA). Unset (the default) renders a plain
+   *  `<button>`, byte-for-byte as before. Only `http:`/`https:`/`blob:`/`mailto:`/relative URLs are
+   *  honored (see `safeLinkHref`); an unsafe/unparseable value falls back to the native `<button>`.
+   *  `type` (submit/reset) has no effect while the anchor renders — an anchor has no submit/reset
+   *  concept, and native navigation is its own activation. While the button is disabled the anchor
+   *  renders with no `href` (see the class doc comment), so a disabled link button cannot navigate. */
+  @property() href?: string;
+  /** Native anchor `target`, used only while `href` resolves to a link. Setting this to `'_blank'`
+   *  (or any other target) automatically derives `rel="noopener noreferrer"` on the rendered anchor
+   *  — matching `lr-card`'s/`lr-stat`'s identical pattern; `rel` is never independently settable, to
+   *  close the reverse-tabnabbing vector. Ignored in `<button>` mode. */
+  @property() target?: string;
+  /** Native anchor `download` attribute, used only while `href` resolves to a link. Ignored in
+   *  `<button>` mode. */
+  @property() download?: string;
+
   /** Whether the `start`/`end` slots have assigned content. Drives `?hidden` on the adornment
    *  wrappers so an unslotted wrapper collapses to `display: none` instead of contributing a dead
    *  `--lr-button-gap` of inline space (a bare `<slot>` is an element child, so a `:empty` rule
@@ -178,19 +206,23 @@ export class LyraButton extends LyraElement {
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
 
-  @query('button') private buttonEl?: HTMLButtonElement;
+  // Matches either root: the native `<button>` (default) or the `<a>` rendered in anchor mode, so
+  // `click()`/`focus()`/`blur()` work in both.
+  @query('[part="base"]') private baseEl?: HTMLButtonElement | HTMLAnchorElement;
 
-  /** Activates the internal native button, including submit/reset behavior. */
+  /** Activates the internal base element. In `<button>` mode this also runs the component's
+   *  submit/reset behavior (via the button's own `@click`); in anchor mode it triggers native
+   *  navigation (the anchor has no `@click` handler of its own). */
   override click(): void {
-    this.buttonEl?.click();
+    this.baseEl?.click();
   }
 
   override focus(options?: FocusOptions): void {
-    this.buttonEl?.focus(options);
+    this.baseEl?.focus(options);
   }
 
   override blur(): void {
-    this.buttonEl?.blur();
+    this.baseEl?.blur();
   }
 
   private onClick = (): void => {
@@ -234,6 +266,38 @@ export class LyraButton extends LyraElement {
 
   override render(): TemplateResult {
     const ariaLabel = this.getAttribute('aria-label');
+    // Shared inner content, rendered identically in both roots so the extracted variable produces
+    // byte-identical DOM to the previous inline template in `<button>` mode.
+    const content = html`
+      <span part="start" ?hidden=${!this.hasStartSlot}>
+        <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
+      </span>
+      <span part="label"><slot></slot></span>
+      <span part="end" ?hidden=${!this.hasEndSlot}>
+        <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
+      </span>
+      ${this.loading ? html`<span part="spinner" aria-hidden="true">${spinnerIcon()}</span>` : ''}
+    `;
+
+    const href = safeLinkHref(this.href);
+    if (href) {
+      const disabled = this.effectiveDisabled;
+      // Per decision D8: a disabled link button omits `href` entirely. An anchor with no `href` is
+      // not focusable or activatable, so the button genuinely cannot navigate -- unlike a bare
+      // `aria-disabled` on a still-navigable `<a href>`. `@click`/submit-reset are deliberately
+      // absent: native navigation is the anchor's own activation (mirrors `lr-card`).
+      return html`<a
+        part="base"
+        href=${disabled ? nothing : href}
+        target=${this.target || nothing}
+        rel=${this.target ? 'noopener noreferrer' : nothing}
+        download=${this.download || nothing}
+        aria-label=${ariaLabel || nothing}
+        aria-disabled=${disabled ? 'true' : nothing}
+        >${content}</a
+      >`;
+    }
+
     return html`
       <button
         part="base"
@@ -243,14 +307,7 @@ export class LyraButton extends LyraElement {
         ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}
       >
-        <span part="start" ?hidden=${!this.hasStartSlot}>
-          <slot name="start" @slotchange=${this.onStartSlotChange}></slot>
-        </span>
-        <span part="label"><slot></slot></span>
-        <span part="end" ?hidden=${!this.hasEndSlot}>
-          <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
-        </span>
-        ${this.loading ? html`<span part="spinner" aria-hidden="true">${spinnerIcon()}</span>` : ''}
+        ${content}
       </button>
     `;
   }
