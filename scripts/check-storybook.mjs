@@ -233,13 +233,10 @@ async function main() {
     }
 
     await waitForStory(page, baseUrl, 'responsivepanel--forced-overlay-bottom-sheet', { width: 390, height: 800 });
-    // The documentation story starts open so its bottom-sheet layout is visible immediately.
-    // Normalize it closed before exercising the trigger; an open modal correctly makes that
-    // background trigger inert and intercepts pointer events.
-    await page.locator('lr-responsive-panel').evaluate((element) => {
-      element.open = false;
-    });
-    await page.waitForFunction(() => !document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
+    if (await page.locator('lr-responsive-panel').evaluate((element) => element.hasAttribute('open'))) {
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
+    }
     await page.getByRole('button', { name: 'Open panel' }).click();
     await page.waitForFunction(() => document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
     const panelBox = await page.locator('lr-responsive-panel').locator('[part="panel"]').boundingBox();

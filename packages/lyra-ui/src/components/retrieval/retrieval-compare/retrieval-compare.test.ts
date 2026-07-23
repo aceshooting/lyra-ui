@@ -37,15 +37,23 @@ it('honors top-k and emits the full selected set/chunk pair', async () => {
 });
 
 it('renders a localized empty state and remains accessible at populated state', async () => {
-  const empty = (await fixture(html`<lr-retrieval-compare></lr-retrieval-compare>`)) as LyraRetrievalCompare;
-  expect(empty.shadowRoot!.querySelector('lr-empty')).to.exist;
+  const empty = (await fixture(
+    html`<lr-retrieval-compare
+      .strings=${{ retrievalCompareEmpty: 'Aucun résultat à comparer' }}
+    ></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  expect(empty.shadowRoot!.querySelector('lr-empty')?.getAttribute('heading')).to.equal(
+    'Aucun résultat à comparer',
+  );
   const populated = (await fixture(html`<lr-retrieval-compare .sets=${sets}></lr-retrieval-compare>`)) as LyraRetrievalCompare;
   await expect(populated).shadowDom.to.be.accessible();
 });
 
-it('applies per-instance localized strings', async () => {
+it('applies per-instance strings to the comparison region label', async () => {
   const el = (await fixture(html`<lr-retrieval-compare
     .strings=${{ retrievalCompareLabel: 'Localized retrieval comparison' }}
   ></lr-retrieval-compare>`)) as LyraRetrievalCompare;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized retrieval comparison');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Localized retrieval comparison',
+  );
 });

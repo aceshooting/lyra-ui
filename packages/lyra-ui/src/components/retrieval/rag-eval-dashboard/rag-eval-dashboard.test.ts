@@ -42,8 +42,14 @@ it('emits controlled metric, slice, and run selection events', async () => {
 });
 
 it('has a localized empty state and a named populated region', async () => {
-  const empty = (await fixture(html`<lr-rag-eval-dashboard></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
-  expect(empty.shadowRoot!.querySelector('lr-empty')).to.exist;
+  const empty = (await fixture(
+    html`<lr-rag-eval-dashboard
+      .strings=${{ ragEvalDashboardEmpty: 'Aucune évaluation disponible' }}
+    ></lr-rag-eval-dashboard>`,
+  )) as LyraRagEvalDashboard;
+  expect(empty.shadowRoot!.querySelector('lr-empty')?.getAttribute('heading')).to.equal(
+    'Aucune évaluation disponible',
+  );
   const populated = (await fixture(
     html`<lr-rag-eval-dashboard aria-label="RAG quality" .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`,
   )) as LyraRagEvalDashboard;
@@ -51,9 +57,11 @@ it('has a localized empty state and a named populated region', async () => {
   await expect(populated).shadowDom.to.be.accessible();
 });
 
-it('applies per-instance localized strings', async () => {
+it('applies per-instance strings to the evaluation region label', async () => {
   const el = (await fixture(html`<lr-rag-eval-dashboard
     .strings=${{ ragEvalDashboardLabel: 'Localized RAG evaluation' }}
   ></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized RAG evaluation');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Localized RAG evaluation',
+  );
 });

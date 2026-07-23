@@ -43,6 +43,18 @@ it('emits controlled claim and citation selection events with complete records',
   expect((await citationEvent).detail).to.deep.equal({ citation: citations[0] });
 });
 
+it('applies per-instance strings to claim status', async () => {
+  const el = (await fixture(
+    html`<lr-claim-evidence
+      .claims=${claims.slice(0, 1)}
+      .strings=${{ claimEvidenceSupported: 'Pris en charge' }}
+    ></lr-claim-evidence>`,
+  )) as LyraClaimEvidence;
+  expect(el.shadowRoot!.querySelector('[part="status"]')?.textContent?.trim()).to.equal(
+    'Pris en charge',
+  );
+});
+
 it('uses the host aria-label and exposes selected state without changing the controlled id', async () => {
   const el = (await fixture(
     html`<lr-claim-evidence aria-label="Evidence audit" selected-claim-id="claim-2" .claims=${claims}></lr-claim-evidence>`,
@@ -53,9 +65,11 @@ it('uses the host aria-label and exposes selected state without changing the con
   await expect(el).shadowDom.to.be.accessible();
 });
 
-it('applies per-instance localized strings', async () => {
+it('applies per-instance strings to the evidence region label', async () => {
   const el = (await fixture(html`<lr-claim-evidence
     .strings=${{ claimEvidenceLabel: 'Localized evidence review' }}
   ></lr-claim-evidence>`)) as LyraClaimEvidence;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized evidence review');
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+    'Localized evidence review',
+  );
 });

@@ -79,6 +79,18 @@ it('honors false literals for true-default rendering options', async () => {
   expect(el.shadowRoot!.querySelectorAll('[data-type="reasoning"]')).to.have.lengthOf(0);
 });
 
+it('applies per-instance strings to retry controls', async () => {
+  const el = (await fixture(
+    html`<lr-message-parts
+      .parts=${[parts[8]!]}
+      .strings=${{ messagePartRetry: 'Réessayer cette section', retry: 'Réessayer' }}
+    ></lr-message-parts>`,
+  )) as LyraMessageParts;
+  const retry = el.shadowRoot!.querySelector('lr-button') as HTMLElement;
+  expect(retry.getAttribute('aria-label')).to.equal('Réessayer cette section');
+  expect(retry.textContent?.trim()).to.equal('Réessayer');
+});
+
 it('is accessible with populated mixed content', async () => {
   const el = await fixture(html`<lr-message-parts .parts=${parts}></lr-message-parts>`);
   expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(parts.length);

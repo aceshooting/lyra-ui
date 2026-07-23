@@ -70,6 +70,17 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   expect(leaked).to.be.false;
 });
 
+it('applies per-instance strings to the unavailable state', async () => {
+  const el = (await fixture(
+    html`<lr-mcp-app
+      .strings=${{ mcpAppUnavailable: 'Application interactive indisponible.' }}
+    ></lr-mcp-app>`,
+  )) as LyraMcpApp;
+  expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent?.trim()).to.equal(
+    'Application interactive indisponible.',
+  );
+});
+
 it('is accessible with an app loaded', async () => {
   const el = await fixture(html`<lr-mcp-app
     .resource=${{ uri: 'ui://example/app', title: 'Example app', html: '<p>Example</p>' }}

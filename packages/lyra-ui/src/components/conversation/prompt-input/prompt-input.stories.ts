@@ -1,19 +1,41 @@
+import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { Meta, StoryObj } from '@storybook/web-components';
 import './prompt-input.js';
 
-const meta: Meta = { title: 'Conversation/Prompt Input', component: 'lr-prompt-input' };
+const meta: Meta = {
+  title: 'Prompt Input',
+  component: 'lr-prompt-input',
+  tags: ['autodocs'],
+};
 export default meta;
 type Story = StoryObj;
 
+const renderPromptInput = () => html`
+  <lr-prompt-input
+    value="Summarize the attached report for the executive team."
+    .attachments=${[
+      { id: 'report', name: 'annual-report.pdf', mimeType: 'application/pdf' },
+    ]}
+    .modelCatalog=${['fast', 'accurate']}
+    model="accurate"
+    .voiceCatalog=${['calm', 'bright']}
+    .sources=${[
+      { id: 'report', label: 'Annual report' },
+      { id: 'transcript', label: 'Earnings transcript' },
+    ]}
+    .selectedSourceIds=${['report']}
+    .mentionItems=${[
+      { id: 'finance', label: 'Finance team' },
+      { id: 'legal', label: 'Legal team' },
+    ]}
+    .queue=${[{ id: 'follow-up', value: 'List the three largest risks.' }]}
+  ></lr-prompt-input>
+`;
+
 export const Default: Story = {
-  render: () => html`<lr-prompt-input
-    placeholder="Ask the knowledge base"
-    .modelCatalog=${['gpt-5', 'local-model']}
-    model="gpt-5"
-    .mentionItems=${[{ id: 'docs', label: 'documentation' }]}
-    .commandItems=${[{ id: 'summarize', label: 'summarize' }]}
-    .sources=${[{ id: 'guide', label: 'Product guide', mimeType: 'application/pdf' }]}
-  ></lr-prompt-input>`,
+  render: () => html`<div style="max-width: 48rem;">${renderPromptInput()}</div>`,
 };
 
+export const Narrow: Story = {
+  render: () => html`<div style="max-width: 320px;">${renderPromptInput()}</div>`,
+};

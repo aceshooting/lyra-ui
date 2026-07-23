@@ -51,6 +51,21 @@ it('emits edit, remove, and send-now requests with stable ids', async () => {
   expect(sendEvent.detail.item.id).to.equal('one');
 });
 
+it('applies per-instance strings to the queue label', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-queue
+      .items=${items}
+      .strings=${{ promptQueueLabel: 'Invites en attente' }}
+    ></lr-prompt-queue>`,
+  )) as LyraPromptQueue;
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal(
+    'Invites en attente',
+  );
+  expect(el.shadowRoot!.querySelector('[part="heading"]')?.textContent?.trim()).to.equal(
+    'Invites en attente',
+  );
+});
+
 it('honors editable="false" and is accessible while populated', async () => {
   const el = (await fixture(
     html`<lr-prompt-queue editable="false" .items=${items}></lr-prompt-queue>`,

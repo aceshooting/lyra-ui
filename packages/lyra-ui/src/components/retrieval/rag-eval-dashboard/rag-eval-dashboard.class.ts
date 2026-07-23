@@ -108,22 +108,20 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         >
           ${this.localize('ragEvalDashboardAllSlices')}
         </button>
-        ${this.slices.map(
-          (slice) => {
-            const slicePart = this.slice === slice ? 'slice slice-selected' : 'slice';
-            return html`
-              <button
-                part=${slicePart}
-                type="button"
-                data-slice=${slice}
-                aria-pressed=${this.slice === slice ? 'true' : 'false'}
-                @click=${() => this.emit('lr-slice-change', { slice })}
-              >
-                ${slice}
-              </button>
-            `;
-          },
-        )}
+        ${this.slices.map((slice) => {
+          const slicePart = this.slice === slice ? 'slice slice-selected' : 'slice';
+          return html`
+            <button
+              part=${slicePart}
+              type="button"
+              data-slice=${slice}
+              aria-pressed=${this.slice === slice ? 'true' : 'false'}
+              @click=${() => this.emit('lr-slice-change', { slice })}
+            >
+              ${slice}
+            </button>
+          `;
+        })}
       </nav>
     `;
   }

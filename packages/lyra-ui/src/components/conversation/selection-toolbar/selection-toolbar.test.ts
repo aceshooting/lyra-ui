@@ -12,9 +12,11 @@ it('renders a named toolbar at a supplied selection rectangle', async () => {
     text="selected passage"
     .anchor=${{ kind: 'page', page: 4 }}
     .rect=${rect}
+    .strings=${{ selectionToolbarLabel: 'Actions de sélection' }}
   ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
   const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
   expect(toolbar.getAttribute('role')).to.equal('toolbar');
+  expect(toolbar.getAttribute('aria-label')).to.equal('Actions de sélection');
   expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-inline-start')).to.equal('70px');
   expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-block-start')).to.equal('30px');
   expect(el.shadowRoot!.querySelectorAll('[part~="action"]')).to.have.lengthOf(4);
