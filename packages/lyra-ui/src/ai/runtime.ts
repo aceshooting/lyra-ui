@@ -73,6 +73,16 @@ function cloneSerializable(value: unknown): unknown {
   }
 }
 
+function cloneProviderRecord<T extends object>(value: T): T {
+  const cloned = cloneSerializable(value);
+  return cloned && typeof cloned === 'object' ? cloned as T : { ...value };
+}
+
+function cloneMessage(message: ChatMessage): ChatMessage {
+  const cloned = cloneProviderRecord(message);
+  return { ...cloned, parts: [...(cloned.parts ?? [])] };
+}
+
 function pointerSegments(path: string): string[] | null {
   if (path === '') return [];
   if (!path.startsWith('/')) return null;
@@ -137,9 +147,14 @@ export function applySharedStatePatch(value: unknown, patch: readonly JsonPatchO
 
 function upsertMessage(messages: readonly ChatMessage[], message: ChatMessage): ChatMessage[] {
   const index = messages.findIndex((candidate) => candidate.id === message.id);
-  if (index < 0) return [...messages, { ...message, parts: [...(message.parts ?? [])] }];
+  const cloned = cloneMessage(message);
+  if (index < 0) return [...messages, cloned];
   const next = [...messages];
-  next[index] = { ...messages[index], ...message, parts: [...(message.parts ?? messages[index]?.parts ?? [])] };
+  next[index] = {
+    ...messages[index],
+    ...cloned,
+    parts: message.parts === undefined ? [...(messages[index]?.parts ?? [])] : cloned.parts,
+  };
   return next;
 }
 
@@ -156,8 +171,9 @@ function upsertPart(
       : { id: messageId, role: role ?? 'assistant', status: 'streaming', parts: [] };
   const parts = [...(message.parts ?? [])];
   const partIndex = parts.findIndex((candidate) => candidate.id === part.id);
-  if (partIndex < 0) parts.push(part);
-  else parts[partIndex] = part;
+  const cloned = cloneProviderRecord(part);
+  if (partIndex < 0) parts.push(cloned);
+  else parts[partIndex] = cloned;
   message.parts = parts;
   if (messageIndex < 0) return [...messages, message];
   const next = [...messages];
@@ -212,12 +228,12 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
       next = { ...state, runId: event.runId, status: { kind: 'running' }, error: undefined };
       break;
     case 'run-status':
-      next = { ...state, runId: event.runId ?? state.runId, status: event.status };
+      next = { ...state, runId: event.runId ?? state.runId, status: cloneProviderRecord(event.status) };
       break;
     case 'messages-snapshot':
       next = {
         ...state,
-        messages: event.messages.map((message) => ({ ...message, parts: [...(message.parts ?? [])] })),
+        messages: event.messages.map(cloneMessage),
       };
       break;
     case 'message-start':
@@ -238,8 +254,9 @@ export function reduceAgentStream(state: AgentStreamState, event: AgentStreamEve
     case 'tool-upsert': {
       const index = state.tools.findIndex((tool) => tool.id === event.invocation.id);
       const tools = [...state.tools];
-      if (index < 0) tools.push({ ...event.invocation });
-      else tools[index] = { ...tools[index], ...event.invocation };
+      const invocation = cloneProviderRecord(event.invocation);
+      if (index < 0) tools.push(invocation);
+      else tools[index] = { ...tools[index], ...invocation };
       next = { ...state, tools };
       break;
     }
