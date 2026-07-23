@@ -39,7 +39,7 @@ changes the component library version without installing a supported SheetJS rel
 | `katex` | `^0.18.1` | `lr-markdown`, `lr-markdown-core` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.0` | `lr-docx-viewer` |
-| `maplibre-gl` | `^6.0.0` | `lr-geojson-view`, `lr-map` |
+| `maplibre-gl` | `^5.24.0` | `lr-geojson-view`, `lr-map` |
 | `marked` | `^18.0.7` | `lr-markdown`, `lr-markdown-core` |
 | `papaparse` | `^5.5.3` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.1.200` | `lr-pdf-viewer` |
