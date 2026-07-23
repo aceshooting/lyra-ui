@@ -55,14 +55,17 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     this.emit('blur');
   };
 
+  /** Focus the internal native range handle; a pre-render call is a no-op. */
   override focus(options?: FocusOptions): void {
     this.handleEl?.focus(options);
   }
 
+  /** Blur the internal native range handle; a pre-render call is a no-op. */
   override blur(): void {
     this.handleEl?.blur();
   }
 
+  /** Activate the internal native range handle; a pre-render call is a no-op. */
   override click(): void {
     this.handleEl?.click();
   }

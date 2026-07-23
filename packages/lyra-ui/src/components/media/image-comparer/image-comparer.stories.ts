@@ -5,6 +5,14 @@ const meta: Meta = {
   title: 'Image Comparer',
   component: 'lr-image-comparer',
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'Before/after comparison with a native range handle. Host `focus()`, `blur()`, and `click()` forward to that handle.',
+      },
+    },
+  },
 };
 export default meta;
 type Story = StoryObj;

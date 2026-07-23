@@ -14,7 +14,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message — plugs into `<lr-chat-message>`\'s `attachments` slot or a markdown/message renderer. `kind` dispatches to an `<img>`, a `<video controls>`, or a generic file chip; leave it unset to auto-detect from `mime-type`. `src` is always re-validated against a safe-scheme allowlist before it reaches an `<img>`/`<video>` `src` or an `<a href>` — see the component\'s own class doc for the full `data:` judgement call.',
+          'A lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message — plugs into `<lr-chat-message>`\'s `attachments` slot or a markdown/message renderer. `kind` dispatches to an `<img>`, a `<video controls>`, or a generic file chip; leave it unset to auto-detect from `mime-type`. `src` is always re-validated against a safe-scheme allowlist before it reaches an `<img>`/`<video>` `src` or an `<a href>` — see the component\'s own class doc for the full `data:` judgement call. Host `focus()`, `blur()`, and `click()` forward to the image button, video open button, or safe-file anchor; an unsafe inert file preview makes them no-ops.',
       },
     },
   },

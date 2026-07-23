@@ -234,14 +234,26 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     ) ?? null;
   }
 
+  /**
+   * Focus the primary action: the image button, video open button, or safe-file anchor.
+   * Unsafe/inert file previews have no action, so this is a no-op for them.
+   */
   override focus(options?: FocusOptions): void {
     this.primaryAction?.focus(options);
   }
 
+  /**
+   * Blur the primary action: the image button, video open button, or safe-file anchor.
+   * Unsafe/inert file previews have no action, so this is a no-op for them.
+   */
   override blur(): void {
     this.primaryAction?.blur();
   }
 
+  /**
+   * Activate the primary action: the image button, video open button, or safe-file anchor.
+   * Unsafe/inert file previews have no action, so this is a no-op for them.
+   */
   override click(): void {
     this.primaryAction?.click();
   }
