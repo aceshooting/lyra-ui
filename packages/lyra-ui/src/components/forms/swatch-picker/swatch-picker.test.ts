@@ -164,6 +164,23 @@ describe('lr-swatch-picker', () => {
     expect(selected.querySelector('[part="swatch-icon"] svg')?.getAttribute('viewBox')).to.equal('0 0 24 24');
   });
 
+  it('sizes the gemstone glyph to the visible fill box instead of the button UA font size', async () => {
+    const el = (await fixture(html`
+      <lr-swatch-picker
+        mode="gemstone"
+        .options=${[
+          { value: 'ruby', color: '#e63950', label: 'Ruby', gemstone: 'ruby' as const },
+        ]}
+      ></lr-swatch-picker>
+    `)) as LyraSwatchPicker;
+    const icon = swatches(el)[0]!.querySelector('[part="swatch-icon"]') as HTMLElement;
+    const glyph = icon.querySelector('svg') as SVGElement;
+
+    expect(getComputedStyle(icon).inlineSize).to.equal('24px');
+    expect(glyph.getBoundingClientRect().width).to.equal(24);
+    expect(glyph.getBoundingClientRect().height).to.equal(24);
+  });
+
   it('exposes the swatch color through `color` for currentColor icons, and paints the fill circle\'s background from it', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('color: var(--lr-swatch-color); cursor: pointer;');

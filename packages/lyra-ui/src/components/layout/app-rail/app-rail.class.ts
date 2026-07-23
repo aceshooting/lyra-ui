@@ -23,6 +23,15 @@ export type AppRailModeInput = AppRailMode | 'auto';
  *  `preferredMode`'s own doc). */
 export type AppRailPreferredMode = Exclude<AppRailMode, 'mobile'>;
 
+/** Whitespace-separated tokens accepted by the `persist` attribute. */
+export type AppRailPersistField = 'open' | 'width' | 'preferred-mode';
+
+const APP_RAIL_PERSIST_FIELDS = new Set<AppRailPersistField>([
+  'open',
+  'width',
+  'preferred-mode',
+]);
+
 export interface AppRailModeChangeDetail {
   mode: AppRailMode;
 }
@@ -232,17 +241,24 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   /** Opts a continuously draggable width in for the `'full'` state — exposes a `[part="resizer"]`
    *  handle (pointer-drag and `ArrowLeft`/`ArrowRight` keyboard stepping, RTL-aware) clamped to
-   *  `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the chosen width (and `open`)
-   *  across reloads; otherwise listen for `lr-rail-resize` and persist `widthPx` yourself. `false`
-   *  (the default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token
-   *  exactly as before this property existed. */
+   *  `[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` to persist the fields selected by
+   *  `persist`; otherwise listen for `lr-rail-resize` and persist `widthPx` yourself. `false` (the
+   *  default) renders no resizer and leaves the fixed-width `--lr-app-rail-width` CSS token exactly
+   *  as before this property existed. */
   @property({ type: Boolean, reflect: true }) resizable = false;
 
-  /** When set, persists `open` and `railWidthPx` to `localStorage` under
+  /** When set, persists the fields selected by `persist` to `localStorage` under
    *  `lr-app-rail:${storageKey}`, restoring them on the next mount — mirrors `lr-split`'s
-   *  `storage-key`. `mode` is breakpoint-derived and is never persisted. Unset (the default) means
-   *  no persistence, exactly as before. */
+   *  `storage-key`. Effective `mode` is breakpoint-derived and is never persisted. Unset (the
+   *  default) means no persistence, exactly as before. */
   @property({ attribute: 'storage-key' }) storageKey?: string;
+
+  /**
+   * Whitespace-separated persistence allowlist. `open width` is the backward-compatible default;
+   * use `width preferred-mode` to retain layout preference without restoring the transient mobile
+   * overlay. Valid tokens are `open`, `width`, and `preferred-mode`.
+   */
+  @property() persist = 'open width';
 
   /** The rail's current width in px while `resizable` — settable/gettable. Unset defers to the
    *  `--lr-app-rail-width` CSS token's own resolved width. */
@@ -360,29 +376,73 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     return this.storageKey ? `lr-app-rail:${this.storageKey}` : undefined;
   }
 
-  /** Restore persisted `open`/`railWidthPx`. Runs once, before the first render. `mode` is
-   *  breakpoint-derived and deliberately not restored. */
-  private loadPersisted(): void {
-    const parsed = readPersistedState(
-      this.storageFullKey,
-      (v): v is { open?: unknown; railWidthPx?: unknown } => typeof v === 'object' && v !== null,
+  private get persistFields(): Set<AppRailPersistField> {
+    const persist = typeof this.persist === 'string' ? this.persist : '';
+    return new Set(
+      persist
+        .split(/\s+/)
+        .filter((field): field is AppRailPersistField =>
+          APP_RAIL_PERSIST_FIELDS.has(field as AppRailPersistField),
+        ),
     );
-    if (!parsed) return;
-    if (typeof parsed.open === 'boolean') this.open = parsed.open;
-    if (typeof parsed.railWidthPx === 'number' && Number.isFinite(parsed.railWidthPx)) {
-      this.railWidthPx = parsed.railWidthPx;
-    }
   }
 
-  private persist(): void {
-    writePersistedState(this.storageFullKey, { open: this.open, railWidthPx: this.railWidthPx });
+  /** Restore the selected persisted fields. Runs once, before the first render. Effective `mode`
+   *  remains breakpoint-derived; only the optional non-mobile `preferredMode` input is restorable. */
+  private loadPersisted(): boolean {
+    const parsed = readPersistedState(
+      this.storageFullKey,
+      (v): v is { open?: unknown; railWidthPx?: unknown; preferredMode?: unknown } =>
+        typeof v === 'object' && v !== null,
+    );
+    if (!parsed) return false;
+    const fields = this.persistFields;
+    if (fields.has('open') && typeof parsed.open === 'boolean') this.open = parsed.open;
+    if (
+      fields.has('width') &&
+      typeof parsed.railWidthPx === 'number' &&
+      Number.isFinite(parsed.railWidthPx)
+    ) {
+      this.railWidthPx = parsed.railWidthPx;
+    }
+    if (
+      fields.has('preferred-mode') &&
+      (parsed.preferredMode === 'full' || parsed.preferredMode === 'icon-only')
+    ) {
+      this.preferredMode = parsed.preferredMode;
+      return true;
+    }
+    return false;
+  }
+
+  private persistState(): void {
+    const fields = this.persistFields;
+    if (fields.size === 0) return;
+    const state: {
+      open?: boolean;
+      railWidthPx?: number;
+      preferredMode?: AppRailPreferredMode | null;
+    } = {};
+    if (fields.has('open')) state.open = this.open;
+    if (fields.has('width')) state.railWidthPx = this.railWidthPx;
+    if (fields.has('preferred-mode')) state.preferredMode = this.preferredMode ?? null;
+    writePersistedState(this.storageFullKey, state);
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
-      this.loadPersisted();
+      const restoredPreferredMode = this.loadPersisted();
+      if (restoredPreferredMode && !this.forced) {
+        // Fold the restored preference into the first render without emitting a user-facing mode
+        // change event during mount or scheduling a second update from inside willUpdate().
+        this._mode = computeAppRailMode(
+          this.iconOnlyMatches,
+          this.mobileMatches,
+          this.preferredMode,
+        );
+      }
     }
     if (this.hasUpdated && (changed.has('iconOnlyBreakpoint') || changed.has('mobileBreakpoint'))) {
       this.teardownMediaQueries();
@@ -418,8 +478,14 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     // Persist whenever the persistable state changes, but never on the initial update -- that pass
     // is where loadPersisted() set these values, and Lit has already flipped `hasUpdated` to true
     // by the time `updated` runs, so a dedicated flag is needed to skip it.
-    if (this.persistReady && (changed.has('open') || changed.has('railWidthPx'))) {
-      this.persist();
+    if (
+      this.persistReady &&
+      (changed.has('open') ||
+        changed.has('railWidthPx') ||
+        changed.has('preferredMode') ||
+        changed.has('persist'))
+    ) {
+      this.persistState();
     }
     this.persistReady = true;
     if (

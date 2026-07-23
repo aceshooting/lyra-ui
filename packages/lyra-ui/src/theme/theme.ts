@@ -10,6 +10,11 @@
 
 const STORAGE_KEY = 'lyra-theme';
 
+export interface LyraThemeBootstrapOptions {
+  /** The localStorage key holding a `{ mode, accent }` theme record. */
+  storageKey?: string;
+}
+
 /**
  * The three theme modes. `'light'`/`'dark'` are explicit overrides written to the root element.
  * `'auto'` means **no override** -- both mode attributes are removed -- which is not the same as
@@ -150,11 +155,25 @@ export function getLyraTheme(): LyraTheme {
 }
 
 /**
- * A self-contained IIFE body, safe to inline into a `<script>` tag placed before any stylesheet
- * in `<head>`, that applies the persisted theme before first paint (avoiding a flash of the
- * wrong theme). Deliberately a plain string (not a function) so it can be inlined without also
- * shipping/parsing this whole module in an unbundled `<script>` context.
+ * Creates a self-contained IIFE body, safe to inline into a `<script>` tag placed before any
+ * stylesheet in `<head>`, that applies a persisted `{ mode, accent }` theme before first paint.
+ * Pass an application-owned `storageKey` to reuse the no-flash bootstrap independently of this
+ * module's `setLyraTheme()`/`getLyraTheme()` persistence key.
+ *
+ * The returned value is deliberately a plain string (not a function) so it can be inlined without
+ * shipping or parsing this whole module in an unbundled `<script>` context.
  */
-export const lyraThemeBootstrap = `(function(){try{var raw=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});if(!raw)return;var t=JSON.parse(raw);if(t.mode==='light'||t.mode==='dark'){${MODE_ATTRIBUTES.map(
-  (attribute) => `document.documentElement.setAttribute(${JSON.stringify(attribute)},t.mode);`,
-).join('')}}if(typeof t.accent==='string'&&t.accent){document.documentElement.style.setProperty('--lr-theme-accent',t.accent);}}catch(e){}})();`;
+export function createLyraThemeBootstrap(
+  options: LyraThemeBootstrapOptions = {},
+): string {
+  const storageKey = options.storageKey ?? STORAGE_KEY;
+  return `(function(){try{var raw=localStorage.getItem(${JSON.stringify(storageKey)});if(!raw)return;var t=JSON.parse(raw);if(t.mode==='light'||t.mode==='dark'){${MODE_ATTRIBUTES.map(
+    (attribute) => `document.documentElement.setAttribute(${JSON.stringify(attribute)},t.mode);`,
+  ).join('')}}if(typeof t.accent==='string'&&t.accent){document.documentElement.style.setProperty('--lr-theme-accent',t.accent);}}catch(e){}})();`;
+}
+
+/**
+ * The default-key no-flash bootstrap. Equivalent to `createLyraThemeBootstrap()` and retained for
+ * consumers that store their theme under `localStorage['lyra-theme']`.
+ */
+export const lyraThemeBootstrap = createLyraThemeBootstrap();

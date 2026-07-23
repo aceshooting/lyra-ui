@@ -569,6 +569,8 @@ export { LyraAppRailItem } from './components/layout/app-rail/app-rail-item.js';
 export type {
   AppRailMode,
   AppRailModeInput,
+  AppRailPreferredMode,
+  AppRailPersistField,
   AppRailModeChangeDetail,
   AppRailToggleDetail,
   AppRailResizeDetail,

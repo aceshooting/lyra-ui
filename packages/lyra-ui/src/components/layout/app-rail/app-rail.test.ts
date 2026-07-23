@@ -940,6 +940,57 @@ describe('storage-key persistence', () => {
     const stored = JSON.parse(localStorage.getItem(`lr-app-rail:${key}`)!) as Record<string, unknown>;
     expect(Object.keys(stored).sort()).to.deep.equal(['open', 'railWidthPx']);
   });
+
+  it('persists only the fields selected by persist, including preferredMode', async () => {
+    const key = uniqueKey();
+    const el = (await fixture(
+      html`<lr-app-rail
+        storage-key=${key}
+        persist="width preferred-mode"
+      ><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    el.open = true;
+    el.railWidthPx = 275;
+    el.preferredMode = 'icon-only';
+    await el.updateComplete;
+
+    const stored = JSON.parse(localStorage.getItem(`lr-app-rail:${key}`)!) as Record<
+      string,
+      unknown
+    >;
+    expect(stored).to.deep.equal({
+      railWidthPx: 275,
+      preferredMode: 'icon-only',
+    });
+  });
+
+  it('does not restore controlled open state when persist excludes open', async () => {
+    const key = uniqueKey();
+    localStorage.setItem(
+      `lr-app-rail:${key}`,
+      JSON.stringify({
+        open: true,
+        railWidthPx: 260,
+        preferredMode: 'icon-only',
+      }),
+    );
+
+    const el = (await fixture(
+      html`<lr-app-rail
+        storage-key=${key}
+        persist="width preferred-mode"
+        .open=${false}
+      ><a href="/a">A</a></lr-app-rail>`,
+    )) as LyraAppRail;
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(el.railWidthPx).to.equal(260);
+    expect(el.preferredMode).to.equal('icon-only');
+    expect(el.mode).to.equal('icon-only');
+  });
 });
 
 describe('layout: resizer anchor, overflow, and mobile containing block', () => {

@@ -270,6 +270,20 @@ it('honours --lr-icon-button-background and --lr-icon-button-color on the native
   expect(cs.color).to.equal('rgb(7, 8, 9)');
 });
 
+it('honours --lr-icon-button-border on the native button', async () => {
+  const el = await fixture(html`
+    <lr-icon-button
+      icon="close"
+      aria-label="Dismiss"
+      style="--lr-icon-button-border: 2px solid rgb(10, 20, 30);"
+    ></lr-icon-button>
+  `);
+  const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);
+  expect(cs.borderTopWidth).to.equal('2px');
+  expect(cs.borderTopStyle).to.equal('solid');
+  expect(cs.borderTopColor).to.equal('rgb(10, 20, 30)');
+});
+
 it('drives the button:hover background from --lr-icon-button-background-hover, falling back to --lr-color-surface', () => {
   // :hover has no scriptable state in this runner (no pointer-control plugin is installed), so
   // this guards the hover-only token plumbing in the stylesheet text -- mirroring this file's
@@ -278,6 +292,13 @@ it('drives the button:hover background from --lr-icon-button-background-hover, f
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(
     'background: var(--lr-icon-button-background-hover, var(--lr-color-surface));',
+  );
+});
+
+it('drives the button:hover foreground from --lr-icon-button-color-hover', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    'color: var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit));',
   );
 });
 

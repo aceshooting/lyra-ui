@@ -107,3 +107,29 @@ export const CustomBreakpoints: Story = {
       </lr-app-rail>
     `),
 };
+
+export const LayoutOnlyPersistence: Story = {
+  name: 'Layout-only persistence',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`persist="width preferred-mode"` restores the user’s rail width and collapse preference without restoring the transient mobile overlay open.',
+      },
+    },
+  },
+  render: () =>
+    page(html`
+      <lr-app-rail
+        label="Primary"
+        resizable
+        storage-key="storybook-layout-only"
+        persist="width preferred-mode"
+        preferred-mode="full"
+        style="block-size:100%;"
+      >
+        <span slot="header" style="padding:0.5rem; font-weight:600;">Acme</span>
+        ${navItems}
+      </lr-app-rail>
+    `),
+};

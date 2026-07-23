@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { Series } from './chart.js';
+import { seriesPalette, type Series } from './chart.js';
 
 const meta: Meta = {
   title: 'Charts/Chart',
@@ -18,6 +18,33 @@ export const Default: Story = {
         type="bar"
         height="16rem"
         style="width: 22rem"
+        legend
+        .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+        .datasets=${series}
+      ></lr-chart>
+    `;
+  },
+};
+
+export const PreMountSeriesPalette: Story = {
+  name: 'Pre-mount series palette',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`seriesPalette(scope?)` resolves the theme ramp before a chart element exists, so application code can build its Series array and chart-adjacent UI from the same colors.',
+      },
+    },
+  },
+  render: () => {
+    const palette = seriesPalette(document.documentElement);
+    const series: Series[] = [
+      { label: 'Revenue', data: [12, 19, 14, 22], color: palette[0] },
+      { label: 'Costs', data: [7, 11, 9, 13], color: palette[1] },
+    ];
+    return html`
+      <lr-chart
+        type="line"
         legend
         .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
         .datasets=${series}

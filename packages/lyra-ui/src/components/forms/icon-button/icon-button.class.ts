@@ -74,6 +74,9 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @cssprop [--lr-icon-button-background=transparent] - Background fill of the native button.
  * @cssprop [--lr-icon-button-background-hover=var(--lr-color-surface)] - Background fill on hover.
  * @cssprop [--lr-icon-button-color=inherit] - Icon/text color of the native button.
+ * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Icon/text color
+ *   on hover.
+ * @cssprop [--lr-icon-button-border=0] - Complete border shorthand of the native button.
  */
 export class LyraIconButton extends LyraElement {
   static override styles = [LyraElement.styles, styles];

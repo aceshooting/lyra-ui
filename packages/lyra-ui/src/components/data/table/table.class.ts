@@ -74,6 +74,29 @@ const optionalBooleanConverter: ComplexAttributeConverter<boolean | undefined> =
   },
 };
 
+/**
+ * Development-only diagnostics need to disappear from production bundles and unbundled browser
+ * use. Prefer an explicit NODE_ENV when a bundler exposes one, then Vite's import-meta contract;
+ * an unknown environment fails quiet instead of logging to end users.
+ */
+function isDevelopmentRuntime(): boolean {
+  const nodeEnv = (
+    globalThis as typeof globalThis & {
+      process?: { env?: { NODE_ENV?: unknown } };
+    }
+  ).process?.env?.NODE_ENV;
+  if (nodeEnv === 'production') return false;
+  if (nodeEnv === 'development') return true;
+
+  const viteEnv = (
+    import.meta as ImportMeta & {
+      readonly env?: { readonly DEV?: unknown; readonly MODE?: unknown };
+    }
+  ).env;
+  if (typeof viteEnv?.DEV === 'boolean') return viteEnv.DEV;
+  return viteEnv?.MODE === 'development';
+}
+
 /** Which inline-start/inline-end edge a column aligns or sticks to. Shared by
  *  `TableColumn.align`, `TableColumn.sticky`'s non-boolean member, and
  *  `stickyDirection()`'s return type. */
@@ -891,7 +914,12 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     super.firstUpdated(changed);
     // A grid with no accessible name is a real a11y defect but silently renders. Warn once per
     // element (dev signal; the guard keeps it out of hot render paths and prevents log spam).
-    if (!this.accessibleLabel && !this.getAttribute('aria-label') && !this.caption) {
+    if (
+      isDevelopmentRuntime() &&
+      !this.accessibleLabel &&
+      !this.getAttribute('aria-label') &&
+      !this.caption
+    ) {
       console.warn(
         '<lr-table> has no accessible name: set `accessibleLabel`, a host `aria-label`, or ' +
           '`caption` so assistive technology can identify the grid.',

@@ -4,6 +4,7 @@ custom-elements.json
 coverage/
 .DS_Store
 .playwright-mcp/
+.claude/
 
 *storybook.log
 storybook-static

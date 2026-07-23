@@ -1920,10 +1920,24 @@
       }
     },
     {
+      "name": "--lr-icon-button-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `0`) — Complete border shorthand of the native button."
+      }
+    },
+    {
       "name": "--lr-icon-button-color",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-icon-button>`** (default: `inherit`) — Icon/text color of the native button."
+      }
+    },
+    {
+      "name": "--lr-icon-button-color-hover",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `var(--lr-icon-button-color, inherit)`) — Icon/text color on hover."
       }
     },
     {

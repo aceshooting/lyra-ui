@@ -1119,10 +1119,13 @@ content is never duplicated.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
-`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist `open` and
-`railWidthPx` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the next mount
-(mirrors `lr-split`'s `storage-key`; `mode` is breakpoint-derived and never persisted). Without a
-`storageKey` there is no persistence — listen for `lr-rail-resize` and persist `widthPx` yourself.
+`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields
+selected by `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the
+next mount (mirrors `lr-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
+persisted). The backward-compatible allowlist is `open width`; use
+`persist="width preferred-mode"` for durable layout preference without restoring the transient
+mobile overlay. Without a `storageKey` there is no persistence — listen for `lr-rail-resize` and
+persist `widthPx` yourself.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
@@ -1167,9 +1170,14 @@ accessor itself, which still takes full priority.
 - `railWidthPx?: number` (attribute `rail-width-px`) — the rail's current width in px while
   `resizable`; settable/gettable directly. Unset defers to `--lr-app-rail-width`'s own resolved
   width.
-- `storageKey?: string` (attribute `storage-key`) — when set, persists `open` and `railWidthPx` to
-  `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next mount. `mode` is
-  breakpoint-derived and never persisted. Unset means no persistence.
+- `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
+  `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
+  mount. Effective `mode` is breakpoint-derived and never persisted. Unset means no persistence.
+- `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
+  Valid `AppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
+  (`preferredMode`). The default preserves the existing open+width behavior. Use
+  `persist="width preferred-mode"` when overlay-open state is controlled or should stay
+  session-only.
 - `minRailWidthPx: number = 190` (attribute `min-rail-width-px`) — minimum `railWidthPx` a
   drag/keyboard resize can reach.
 - `maxRailWidthPx: number = 440` (attribute `max-rail-width-px`) — maximum `railWidthPx` a

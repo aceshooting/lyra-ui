@@ -109,6 +109,10 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-swatch-picker-fill-size);
     block-size: var(--lr-swatch-picker-fill-size);
+    /* gemstoneGlyph() follows the icon convention of a 1em intrinsic box. Establish that em from
+       the visible fill token here so the SVG fills this wrapper instead of inheriting the browser's
+       smaller default button font size. Consumer-provided em-sized icons benefit identically. */
+    font-size: var(--lr-swatch-picker-fill-size);
     transition: transform var(--lr-transition-fast);
   }
   [part='swatch']:hover [part='swatch-fill'],

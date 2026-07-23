@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones.js';
+import { GEMSTONE_KEYS, GEMSTONES } from '../../../theme/gemstones-data.js';
 import type { LyraSwatchPickerSize } from './swatch-picker.js';
 import './swatch-picker.js';
 

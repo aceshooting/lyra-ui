@@ -157,7 +157,36 @@ const FALLBACK_SERIES_PALETTE = [
   '#f470b8',
   '#52d6e8',
   '#c9d1d9',
-];
+] as const;
+
+/**
+ * Resolves the categorical series ramp before or after a chart exists. Pass the element whose
+ * theme scope should be read; omitting it reads `document.documentElement`, while `null` selects
+ * the light-mode fallback directly (also used automatically when no DOM is available).
+ *
+ * Each `--lr-color-chart-N` first resolves through the supplied element. When the component token
+ * layer is not present yet, the helper reads its `--lr-theme-color-chart-N` input directly, so an
+ * application-level theme override still reaches pre-mount chart data. Returns a fresh array.
+ */
+export function seriesPalette(element?: Element | null): string[] {
+  const target =
+    element === undefined && typeof document !== 'undefined'
+      ? document.documentElement
+      : element;
+  if (!target || typeof getComputedStyle !== 'function') {
+    return [...FALLBACK_SERIES_PALETTE];
+  }
+
+  const cs = getComputedStyle(target);
+  return FALLBACK_SERIES_PALETTE.map((fallback, index) => {
+    const number = index + 1;
+    return (
+      cs.getPropertyValue(`--lr-color-chart-${number}`).trim() ||
+      cs.getPropertyValue(`--lr-theme-color-chart-${number}`).trim() ||
+      fallback
+    );
+  });
+}
 
 interface ThemeColors {
   grid: string;
@@ -802,7 +831,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /**
    * Resolves the categorical series palette (`--lr-color-chart-1..8`, declared in
-   * `internal/tokens.styles.ts` with their own dark-theme ramp) via `getComputedStyle` —
+   * `internal/tokens.styles.ts` as indirections through `--lr-theme-color-chart-1..8`, with their
+   * own dark-theme ramp) via `getComputedStyle` —
    * same canvas-can't-read-`var()` constraint as `themeColors()`, and the same source
    * `<lr-lite-chart>` draws its default palette from. Feeds `seriesToDataset()` a concrete,
    * theme-aware default color for any series that sets no `color` of its own. Falls back to
@@ -814,17 +844,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * active theme. Returns a fresh array on every call — mutating it does not affect the chart.
    */
   seriesPalette(): string[] {
-    const cs = getComputedStyle(this);
-    const palette: string[] = [];
-    for (let i = 1; i <= FALLBACK_SERIES_PALETTE.length; i++) {
-      const value = cs.getPropertyValue(`--lr-color-chart-${i}`).trim();
-      if (value) palette.push(value);
-    }
-    // Copy on the fallback path: `palette` is already per-call, but FALLBACK_SERIES_PALETTE is a
-    // shared module-level array, and this method is public -- handing it out by reference would let
-    // one caller's push()/reverse()/sort() permanently re-shape every later chart's default ramp
-    // (and, since the loop above is bounded by its length, push the probe past --lr-color-chart-8).
-    return palette.length ? palette : [...FALLBACK_SERIES_PALETTE];
+    return seriesPalette(this);
   }
 
   private tickOptions(theme: ThemeColors, kind: 'category' | 'value' = 'value'): OptionalPeerApi {

@@ -260,8 +260,12 @@ setLyraTheme({ mode: 'auto', accent: null });    // clears the override and the 
 
 **No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
 meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
-is on the root element before first paint. It is a string precisely so this can happen in an
-unbundled `<script>` context without shipping or parsing the module:
+is on the root element before first paint. It reads `localStorage['lyra-theme']`.
+`createLyraThemeBootstrap({ storageKey })` returns the same kind of string for an application-owned
+key, so an existing persistence layer can reuse the pre-paint half independently of
+`setLyraTheme()`/`getLyraTheme()`. Calling the factory with no options returns the same string as
+`lyraThemeBootstrap`. The result is a string precisely so this can happen in an unbundled
+`<script>` context without shipping or parsing the module:
 
 ```html
 <head>
@@ -270,9 +274,9 @@ unbundled `<script>` context without shipping or parsing the module:
 </head>
 ```
 
-It reads the same storage key, applies the same two attributes and `--lr-theme-accent`, and
-swallows any error — malformed storage or a blocked `localStorage` leaves the document untouched
-rather than throwing before your app loads.
+Both variants expect a stored `{ mode, accent }` record, apply the same two attributes and
+`--lr-theme-accent`, and swallow any error — malformed storage or a blocked `localStorage` leaves
+the document untouched rather than throwing before your app loads.
 
 **This runtime does no color math.** It stores and applies whatever accent string you give it; it
 does not validate the value, compute a palette from it, or check contrast against any surface.

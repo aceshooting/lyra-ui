@@ -1478,13 +1478,20 @@ it('omits aria-label on the shadow-DOM grid element when the host has none', asy
 describe('accessible name (accessibleLabel / caption / dev warning)', () => {
   let originalWarn: typeof console.warn;
   let warnings: unknown[][];
+  let originalProcess: unknown;
   beforeEach(() => {
     originalWarn = console.warn;
     warnings = [];
     console.warn = (...args: unknown[]) => warnings.push(args);
+    const runtime = globalThis as typeof globalThis & { process?: unknown };
+    originalProcess = runtime.process;
+    runtime.process = { env: { NODE_ENV: 'development' } };
   });
   afterEach(() => {
     console.warn = originalWarn;
+    const runtime = globalThis as typeof globalThis & { process?: unknown };
+    if (originalProcess === undefined) delete runtime.process;
+    else runtime.process = originalProcess;
   });
 
   it('names the grid from accessibleLabel and does not warn', async () => {
@@ -1522,6 +1529,17 @@ describe('accessible name (accessibleLabel / caption / dev warning)', () => {
     await el.updateComplete;
     expect(warnings.length).to.equal(1);
     expect(String(warnings[0]![0])).to.include('no accessible name');
+  });
+
+  it('does not warn in a production runtime', async () => {
+    (globalThis as typeof globalThis & { process?: unknown }).process = {
+      env: { NODE_ENV: 'production' },
+    };
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    expect(warnings.length).to.equal(0);
   });
 
   it('prefers accessibleLabel over caption for the name (no aria-labelledby)', async () => {

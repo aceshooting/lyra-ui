@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './chart.js';
 import './doughnut-chart.js';
-import type { LyraChart } from './chart.js';
+import { seriesPalette, type LyraChart } from './chart.js';
 import { styles } from './chart.styles.js';
 
 it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
@@ -1679,6 +1679,29 @@ it('maps segmentColors to Chart.js segment.borderColor', async () => {
 it('exposes seriesPalette() publicly', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   expect(el.seriesPalette()).to.be.an('array').with.length.greaterThan(0);
+});
+
+it('resolves the series palette before a chart instance exists', () => {
+  const scope = document.createElement('div');
+  scope.style.setProperty('--lr-theme-color-chart-1', 'rgb(11, 12, 13)');
+  scope.style.setProperty('--lr-color-chart-2', 'rgb(21, 22, 23)');
+  document.body.append(scope);
+  try {
+    const palette = seriesPalette(scope);
+    expect(palette).to.have.lengthOf(8);
+    expect(palette[0]).to.equal('rgb(11, 12, 13)');
+    expect(palette[1]).to.equal('rgb(21, 22, 23)');
+  } finally {
+    scope.remove();
+  }
+});
+
+it('returns a fresh light-mode fallback palette without a DOM target', () => {
+  const first = seriesPalette(null);
+  const second = seriesPalette(null);
+  expect(first).to.have.lengthOf(8);
+  expect(first).to.deep.equal(second);
+  expect(first).to.not.equal(second);
 });
 
 it('leaves a series that sets neither pointRadius nor segmentColors exactly as it built before', async () => {

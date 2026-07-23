@@ -6,7 +6,7 @@
 - **Class** `LyraIconButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 2 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -67,8 +67,10 @@ above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-ra
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
 counterpart to it. `--lr-icon-button-background` (default `transparent`) tints the
 `[part='button']` background, `--lr-icon-button-background-hover` (default `--lr-color-surface`)
-its hover-state background, and `--lr-icon-button-color` (default `inherit`) its icon/text color —
-the same per-component indirection `lr-button`'s `--lr-button-fill`/`--lr-button-on-fill` provide,
-letting you tint a single button without a `::part(button)` rule. Left unset, each falls back to
-today's value, so rendering is unchanged. There is deliberately no border-color token:
-`[part='button']` sets `border: 0`, so a border color could never render.
+its hover-state background, `--lr-icon-button-color` (default `inherit`) its icon/text color,
+`--lr-icon-button-color-hover` (default `var(--lr-icon-button-color, inherit)`) its hover-state
+foreground, and `--lr-icon-button-border` (default `0`) the complete native-button border
+shorthand. These are the same per-component indirection `lr-button`'s
+`--lr-button-fill`/`--lr-button-on-fill` provide, letting a single button be bordered and tinted
+without a `::part(button)` rule. Left unset, each falls back to the original value, so rendering is
+unchanged.

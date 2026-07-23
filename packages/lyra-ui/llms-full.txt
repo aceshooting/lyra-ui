@@ -310,8 +310,12 @@ setLyraTheme({ mode: 'auto', accent: null });    // clears the override and the 
 
 **No-flash bootstrap.** `lyraThemeBootstrap` is a self-contained IIFE **string** (not a function),
 meant to be inlined into a `<script>` in `<head>` **before any stylesheet**, so the persisted theme
-is on the root element before first paint. It is a string precisely so this can happen in an
-unbundled `<script>` context without shipping or parsing the module:
+is on the root element before first paint. It reads `localStorage['lyra-theme']`.
+`createLyraThemeBootstrap({ storageKey })` returns the same kind of string for an application-owned
+key, so an existing persistence layer can reuse the pre-paint half independently of
+`setLyraTheme()`/`getLyraTheme()`. Calling the factory with no options returns the same string as
+`lyraThemeBootstrap`. The result is a string precisely so this can happen in an unbundled
+`<script>` context without shipping or parsing the module:
 
 ```html
 <head>
@@ -320,9 +324,9 @@ unbundled `<script>` context without shipping or parsing the module:
 </head>
 ```
 
-It reads the same storage key, applies the same two attributes and `--lr-theme-accent`, and
-swallows any error — malformed storage or a blocked `localStorage` leaves the document untouched
-rather than throwing before your app loads.
+Both variants expect a stored `{ mode, accent }` record, apply the same two attributes and
+`--lr-theme-accent`, and swallow any error — malformed storage or a blocked `localStorage` leaves
+the document untouched rather than throwing before your app loads.
 
 **This runtime does no color math.** It stores and applies whatever accent string you give it; it
 does not validate the value, compute a palette from it, or check contrast against any surface.
@@ -1530,11 +1534,13 @@ above 24px — see `llms/shared.md`. `--lr-icon-button-radius` (default `--lr-ra
 `--lr-button-radius` pattern; `lr-icon-button` has no `size` tiers, so there is no per-tier gap
 counterpart to it. `--lr-icon-button-background` (default `transparent`) tints the
 `[part='button']` background, `--lr-icon-button-background-hover` (default `--lr-color-surface`)
-its hover-state background, and `--lr-icon-button-color` (default `inherit`) its icon/text color —
-the same per-component indirection `lr-button`'s `--lr-button-fill`/`--lr-button-on-fill` provide,
-letting you tint a single button without a `::part(button)` rule. Left unset, each falls back to
-today's value, so rendering is unchanged. There is deliberately no border-color token:
-`[part='button']` sets `border: 0`, so a border color could never render.
+its hover-state background, `--lr-icon-button-color` (default `inherit`) its icon/text color,
+`--lr-icon-button-color-hover` (default `var(--lr-icon-button-color, inherit)`) its hover-state
+foreground, and `--lr-icon-button-border` (default `0`) the complete native-button border
+shorthand. These are the same per-component indirection `lr-button`'s
+`--lr-button-fill`/`--lr-button-on-fill` provide, letting a single button be bordered and tinted
+without a `::part(button)` rule. Left unset, each falls back to the original value, so rendering is
+unchanged.
 
 ## `lr-input`
 
@@ -2080,7 +2086,8 @@ swatch's interactive hit target, sized via `--lr-swatch-picker-hit-size` — def
 `[part='swatch'][aria-checked='true']`), `swatch-fill` (the filled circle inside it, sized via
 `--lr-swatch-picker-fill-size` — defaults to `--lr-size-1-5rem`, also swapped per `size` tier —
 rendered when the option has no `icon`), `swatch-icon` (the option's `icon` shape, rendered in its
-place when it has one). Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the
+place when it has one, with its inherited `font-size` set to the same fill-size token so a `1em`
+glyph fills the wrapper). Exactly one of `swatch-fill`/`swatch-icon` is mounted per swatch, so the
 two never coexist.
 
 **Themeable custom properties:** `--lr-swatch-picker-selected-color` (ring color around the
@@ -2116,12 +2123,14 @@ and the per-tier `--lr-size-*` tokens.
 </script>
 ```
 
-For the shared gemstone accent mode, import the side-effect-free palette/glyph helper. The
-consumer still owns localized labels, display order, and the initial value:
+For the shared gemstone accent mode, import the Lit-free palette data entry. The glyph renderer
+remains available separately from `theme/gemstones.js` for Lit templates; palette-only consumers
+do not need to load Lit. The consumer still owns localized labels, display order, and the initial
+value:
 
 ```ts
 import '@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.js';
-import { GEMSTONES } from '@aceshooting/lyra-ui/theme/gemstones.js';
+import { GEMSTONES } from '@aceshooting/lyra-ui/theme/gemstones-data.js';
 
 const order = ['emerald', 'ruby', 'sapphire', 'hematite'] as const;
 picker.mode = 'gemstone';
@@ -3222,8 +3231,8 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.
 - A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
-  `console.warn` on first render (dev signal) — an unnamed grid is an accessibility defect that
-  otherwise renders silently.
+  `console.warn` on first render in development builds only — an unnamed grid is an accessibility
+  defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
 - Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
   body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
   body, Down from the header enters the body's roving stop and Up from the body's first row returns
@@ -5695,10 +5704,13 @@ content is never duplicated.
 
 Opting in to `resizable` adds a continuously draggable width for the `'full'` state: a
 `[part="resizer"]` handle (pointer-drag and Left/Right-arrow keyboard stepping, RTL-aware) clamped to
-`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist `open` and
-`railWidthPx` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the next mount
-(mirrors `lr-split`'s `storage-key`; `mode` is breakpoint-derived and never persisted). Without a
-`storageKey` there is no persistence — listen for `lr-rail-resize` and persist `widthPx` yourself.
+`[minRailWidthPx, maxRailWidthPx]`. Set `storageKey` (attribute `storage-key`) to persist the fields
+selected by `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restore them on the
+next mount (mirrors `lr-split`'s `storage-key`; effective `mode` is breakpoint-derived and never
+persisted). The backward-compatible allowlist is `open width`; use
+`persist="width preferred-mode"` for durable layout preference without restoring the transient
+mobile overlay. Without a `storageKey` there is no persistence — listen for `lr-rail-resize` and
+persist `widthPx` yourself.
 `preferredMode` separately lets a host manually prefer `'full'`/`'icon-only'` for the non-mobile
 breakpoint axis (e.g. a user's own collapse toggle) while `mobile-breakpoint` continues to be tracked
 automatically regardless — it's only consulted while `mode` isn't force-pinned via the `mode`
@@ -5743,9 +5755,14 @@ accessor itself, which still takes full priority.
 - `railWidthPx?: number` (attribute `rail-width-px`) — the rail's current width in px while
   `resizable`; settable/gettable directly. Unset defers to `--lr-app-rail-width`'s own resolved
   width.
-- `storageKey?: string` (attribute `storage-key`) — when set, persists `open` and `railWidthPx` to
-  `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next mount. `mode` is
-  breakpoint-derived and never persisted. Unset means no persistence.
+- `storageKey?: string` (attribute `storage-key`) — when set, persists the fields selected by
+  `persist` to `localStorage` under `lr-app-rail:${storageKey}` and restores them on the next
+  mount. Effective `mode` is breakpoint-derived and never persisted. Unset means no persistence.
+- `persist: string = 'open width'` — whitespace-separated field allowlist used with `storageKey`.
+  Valid `AppRailPersistField` tokens are `open`, `width` (`railWidthPx`), and `preferred-mode`
+  (`preferredMode`). The default preserves the existing open+width behavior. Use
+  `persist="width preferred-mode"` when overlay-open state is controlled or should stay
+  session-only.
 - `minRailWidthPx: number = 190` (attribute `min-rail-width-px`) — minimum `railWidthPx` a
   drag/keyboard resize can reach.
 - `maxRailWidthPx: number = 440` (attribute `max-rail-width-px`) — maximum `railWidthPx` a
@@ -9775,13 +9792,28 @@ ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates �
 theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
 escape hatch for theme changes those signals can't observe)
 
-`seriesPalette(): string[]` resolves the categorical series ramp (`--lr-color-chart-1..8`) through
-`getComputedStyle` and returns the concrete, theme-aware colors — the exact same values the chart
-hands any series that sets no `color` of its own. Call it to color chart-adjacent UI (custom
-legends, KPI tiles, annotations fed through the raw `config` passthrough) from one source of truth
-instead of hand-resolving `--lr-color-chart-N` and drifting out of sync when the theme flips.
-Returns a fresh array each call (safe to mutate), and falls back to the light-mode literals only
-when the custom properties can't be resolved at all (e.g. a detached host).
+The instance method `seriesPalette(): string[]` resolves the categorical series ramp
+(`--lr-color-chart-1..8`) through `getComputedStyle` and returns the concrete, theme-aware colors —
+the exact same values the chart hands any series that sets no `color` of its own. Each internal
+token resolves through the matching application input (`--lr-theme-color-chart-1..8`), so theme
+overrides are included.
+
+The module also exports `seriesPalette(scope?: Element | null): string[]`, which can run before a
+chart exists. Omit `scope` to read `document.documentElement`, pass an element to resolve its theme
+scope, or pass `null` to request the light-mode fallback directly. When a scope has no component
+token layer yet, the helper reads the `--lr-theme-color-chart-N` inputs directly. Both forms return
+a fresh eight-color array each call (safe to mutate) and let chart-adjacent UI, KPI tiles, or the
+`Series` array itself come from one source of truth.
+
+```ts
+import { seriesPalette } from '@aceshooting/lyra-ui/components/charts/chart/chart.js';
+
+const colors = seriesPalette();
+const series = [
+  { label: 'Revenue', data: [12, 19], color: colors[0] },
+  { label: 'Costs', data: [7, 11], color: colors[1] },
+];
+```
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
 `resetZoom()`), `lr-point-click` (fired when a click lands on, or nearest to — intersect-only —

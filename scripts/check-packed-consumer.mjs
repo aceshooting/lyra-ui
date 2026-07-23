@@ -185,6 +185,18 @@ if (prefix.tag('empty') !== 'lr-empty' || customElements.get('lr-empty') !== roo
 console.log('Node ESM package imports passed.');
 `,
   );
+  await writeFile(
+    join(fixtureDir, 'src', 'node-gemstones-data-import.mjs'),
+    `const palette = await import('@aceshooting/lyra-ui/theme/gemstones-data.js');
+if (typeof document !== 'undefined') {
+  throw new Error('plain Node unexpectedly exposes a document before the palette import');
+}
+if (palette.DEFAULT_GEMSTONE !== 'emerald' || palette.GEMSTONE_KEYS.length !== 9) {
+  throw new Error('the Lit-free gemstone data entry did not expose the expected palette');
+}
+console.log('Lit-free gemstone data import passed.');
+`,
+  );
 
   await writeFile(
     join(fixtureDir, 'src', 'typecheck.ts'),
@@ -201,6 +213,13 @@ import { loadMaplibre } from '@aceshooting/lyra-ui/components/media/map/map-load
 import { loadMarkdownAndSanitizer } from '@aceshooting/lyra-ui/components/conversation/markdown/markdown-loader.js';
 import { loadShikiHighlighter } from '@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js';
 import { loadD3 } from '@aceshooting/lyra-ui/components/retrieval/graph/graph-loader.js';
+import { seriesPalette } from '@aceshooting/lyra-ui/components/charts/chart/chart.class.js';
+import { createLyraThemeBootstrap } from '@aceshooting/lyra-ui/theme.js';
+import {
+  DEFAULT_GEMSTONE,
+  GEMSTONE_KEYS,
+  GEMSTONES,
+} from '@aceshooting/lyra-ui/theme/gemstones-data.js';
 import type {
   LyraChartEventMap,
   LyraGraphEventMap,
@@ -223,6 +242,11 @@ void [
   loadMarkdownAndSanitizer,
   loadShikiHighlighter,
   loadD3,
+  seriesPalette,
+  createLyraThemeBootstrap,
+  DEFAULT_GEMSTONE,
+  GEMSTONE_KEYS,
+  GEMSTONES,
 ];
 `,
   );
@@ -393,6 +417,12 @@ async function main() {
       'optional-peer fixture install',
     );
 
+    await run(
+      process.execPath,
+      ['src/node-gemstones-data-import.mjs'],
+      coreFixture,
+      'Lit-free gemstone data import check',
+    );
     await run(process.execPath, ['src/node-imports.mjs'], coreFixture, 'Node ESM import check');
     await run(
       join(coreFixture, 'node_modules', '.bin', binName('tsc')),

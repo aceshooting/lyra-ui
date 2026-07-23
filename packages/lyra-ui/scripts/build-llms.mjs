@@ -250,6 +250,13 @@ function buildPeers(tagFacts) {
     '`<lr-phone-input>` is the exception: it takes an explicit consumer-built adapter',
     '(`loadLibphonenumberAdapter()`) instead of importing `libphonenumber-js` itself.',
     '',
+    '**SheetJS (`xlsx`).** The supported `>=0.20.3 <0.21.0` releases are distributed by SheetJS',
+    'from its CDN, not the public npm registry (whose newest release is 0.18.5). Install the peer',
+    'with `pnpm add https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` (or the equivalent npm',
+    'command), matching the range below. The npm-published 0.18.5 release has unresolved advisories;',
+    'do not run `npm audit fix --force` to address them when it proposes downgrading lyra-ui. That',
+    'changes the component library version without installing a supported SheetJS release.',
+    '',
     '| Peer | Range | Needed by |',
     '|---|---|---|',
     ...rows.map(

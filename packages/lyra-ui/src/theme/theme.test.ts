@@ -1,5 +1,10 @@
 import { expect } from '@open-wc/testing';
-import { setLyraTheme, getLyraTheme, lyraThemeBootstrap } from './theme.js';
+import {
+  createLyraThemeBootstrap,
+  setLyraTheme,
+  getLyraTheme,
+  lyraThemeBootstrap,
+} from './theme.js';
 
 const STORAGE_KEY = 'lyra-theme';
 
@@ -152,7 +157,12 @@ describe('theme runtime', () => {
 });
 
 describe('lyraThemeBootstrap', () => {
-  afterEach(resetRoot);
+  const customStorageKey = 'application-theme';
+
+  afterEach(() => {
+    resetRoot();
+    localStorage.removeItem(customStorageKey);
+  });
 
   it('is a non-empty string containing no import statements (safe to inline in a <script> tag)', async () => {
     const { lyraThemeBootstrap: bootstrap } = await import('./theme.js');
@@ -166,6 +176,25 @@ describe('lyraThemeBootstrap', () => {
     expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
     expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
     expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal('#e63950');
+  });
+
+  it('creates a no-flash bootstrap for an application-owned storage key', () => {
+    localStorage.setItem(
+      customStorageKey,
+      JSON.stringify({ mode: 'dark', accent: '#4f8ff7' }),
+    );
+
+    new Function(createLyraThemeBootstrap({ storageKey: customStorageKey }))();
+
+    expect(document.documentElement.getAttribute('data-theme')).to.equal('dark');
+    expect(document.documentElement.getAttribute('data-lr-theme')).to.equal('dark');
+    expect(document.documentElement.style.getPropertyValue('--lr-theme-accent')).to.equal(
+      '#4f8ff7',
+    );
+  });
+
+  it('keeps lyraThemeBootstrap as the default-key factory output', () => {
+    expect(createLyraThemeBootstrap()).to.equal(lyraThemeBootstrap);
   });
 
   it('applies nothing when storage is empty, malformed, or set to auto', () => {

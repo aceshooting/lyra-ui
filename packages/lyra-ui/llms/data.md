@@ -415,8 +415,8 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
   no `accessibleLabel`/host `aria-label` is present the caption also names the grid via
   `aria-labelledby`.
 - A grid with **none** of `accessibleLabel`, host `aria-label`, or `caption` logs a one-time
-  `console.warn` on first render (dev signal) — an unnamed grid is an accessibility defect that
-  otherwise renders silently.
+  `console.warn` on first render in development builds only — an unnamed grid is an accessibility
+  defect that otherwise renders silently. Production and unknown/unbundled runtimes do not log it.
 - Full roving-tabindex grid keyboard pattern (one `tabindex="0"` stop among header cells, one among
   body rows) — Left/Right/Home/End move within the header row, Up/Down/Home/End move within the
   body, Down from the header enters the body's roving stop and Up from the body's first row returns
