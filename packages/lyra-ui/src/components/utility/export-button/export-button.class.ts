@@ -222,13 +222,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     if (changed.has('formats') && this.formatsFocusSnapshot) {
       const { index, id } = this.formatsFocusSnapshot;
       this.formatsFocusSnapshot = undefined;
-      if (this.formats.length <= 1) {
-        this.closeMenu();
-        this.triggerEl?.focus();
-      } else if (this.open) {
-        const nextIndex = this.formats.findIndex((format) => this.formatId(format) === id);
-        this.focusMenuItem(nextIndex >= 0 ? nextIndex : index);
-      }
+      // Collapsing to one format changes the reactive open property. Defer the whole focus
+      // restoration until this update completes so closeMenu() cannot schedule an update from
+      // inside updated() and trigger Lit's change-in-update warning.
+      this.scheduleAfterUpdate(() => {
+        if (this.formats.length <= 1) {
+          this.closeMenu();
+          this.triggerEl?.focus();
+        } else if (this.open) {
+          const nextIndex = this.formats.findIndex((format) => this.formatId(format) === id);
+          this.focusMenuItem(nextIndex >= 0 ? nextIndex : index);
+        }
+      });
     }
   }
 

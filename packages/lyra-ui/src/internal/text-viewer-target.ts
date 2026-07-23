@@ -57,7 +57,15 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
         if (root) (this as unknown as { bindTextSelection(contentRoot: Element): void }).bindTextSelection(root);
       }
       const searchText = root ? scopeFromElement(root).text : '';
-      if (this.searchQuery && (searchText !== this.lastSearchText || changed.has('highlights'))) this.updateSearchRanges();
+      if (this.searchQuery && (searchText !== this.lastSearchText || changed.has('highlights'))) {
+        // updateSearchRanges() assigns reactive searchRanges. Defer that assignment until this
+        // update has completed; doing it directly from updated() schedules a second Lit update
+        // from inside the first one and emits Lit's change-in-update warning.
+        this.scheduleAfterUpdate(() => {
+          this.updateSearchRanges();
+          this.paintRanges();
+        });
+      }
       this.paintRanges();
     }
 

@@ -59,8 +59,13 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     super.updated(changed);
     if (!changed.has('path') || !this.restoreFocusAfterPathChange || this.path.length === 0) return;
     this.restoreFocusAfterPathChange = false;
-    const controls = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]');
-    controls?.[this.activeIndex]?.focus();
+    // Focusing dispatches the control's focus handler, which updates the live-region text.
+    // Run it after this update completes so that reactive announcement does not schedule another
+    // update from inside updated() and trigger Lit's change-in-update warning.
+    this.scheduleAfterUpdate(() => {
+      const controls = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]');
+      controls?.[this.activeIndex]?.focus();
+    });
   }
 
   private activate(index: number): void {

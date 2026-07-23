@@ -28,6 +28,20 @@ async function nextFrame(): Promise<void> {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
+async function suppressExpectedDataSlotWarning(callback: () => Promise<void>): Promise<void> {
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (!String(args[0]).includes('[lr-thread-list] both `threads` and slotted content')) {
+      originalWarn(...args);
+    }
+  };
+  try {
+    await callback();
+  } finally {
+    console.warn = originalWarn;
+  }
+}
+
 // In data mode, rendered rows live inside `lr-virtual-list`'s own shadow root (a separate shadow
 // tree nested one level below `lr-thread-list`'s), since `renderItem`'s returned content is
 // rendered by `lr-virtual-list` into its own render root -- `querySelector(All)` never crosses a
@@ -86,12 +100,14 @@ it('restores injected slotted roles outside slotted mode and reapplies them on r
   const row = el.querySelector('lr-conversation-item')!;
   expect(row.getAttribute('role')).to.equal('listitem');
 
-  el.threads = [{ id: 'data', title: 'Data row' }];
-  await el.updateComplete;
-  expect(row.hasAttribute('role')).to.be.false;
+  await suppressExpectedDataSlotWarning(async () => {
+    el.threads = [{ id: 'data', title: 'Data row' }];
+    await el.updateComplete;
+    expect(row.hasAttribute('role')).to.be.false;
 
-  el.threads = [];
-  await el.updateComplete;
+    el.threads = [];
+    await el.updateComplete;
+  });
   expect(row.getAttribute('role')).to.equal('listitem');
 
   el.remove();
@@ -114,12 +130,14 @@ it('preserves an author-supplied slotted role across mode changes and reconnects
   const row = el.querySelector('lr-conversation-item')!;
   expect(row.getAttribute('role')).to.equal('option');
 
-  el.threads = [{ id: 'data', title: 'Data row' }];
-  await el.updateComplete;
-  expect(row.getAttribute('role')).to.equal('option');
+  await suppressExpectedDataSlotWarning(async () => {
+    el.threads = [{ id: 'data', title: 'Data row' }];
+    await el.updateComplete;
+    expect(row.getAttribute('role')).to.equal('option');
 
-  el.threads = [];
-  await el.updateComplete;
+    el.threads = [];
+    await el.updateComplete;
+  });
   expect(row.getAttribute('role')).to.equal('option');
 
   el.remove();
