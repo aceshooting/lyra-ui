@@ -723,6 +723,55 @@ it('maxLabels decimates which axis-label text elements render, always keeping th
   expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(20);
 });
 
+it('maxLabels distributes labels evenly without bunching the final sampled label against the endpoint', async () => {
+  const labels = Array.from({ length: 30 }, (_, i) => `L${i}`);
+  const el = await mount(html`<lr-lite-chart
+    type="line"
+    max-labels="10"
+    .labels=${labels}
+    .datasets=${[{ label: 's', data: labels.map((_, i) => i) }]}
+  ></lr-lite-chart>`);
+  const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"][text-anchor="middle"]')].map(
+    (node) => node.textContent,
+  );
+  expect(axisLabels).to.deep.equal(['L0', 'L3', 'L6', 'L10', 'L13', 'L16', 'L19', 'L23', 'L26', 'L29']);
+});
+
+it('keeps decimated date labels clear of each other and the y-axis ticks at narrow widths', async () => {
+  const labels = Array.from({ length: 30 }, (_, i) => `07-${String(i + 1).padStart(2, '0')}`);
+  const el = await mount(html`<lr-lite-chart
+    type="line"
+    max-labels="10"
+    height="260px"
+    style="width: 332px"
+    .labels=${labels}
+    .datasets=${[{ label: 'Filed', data: labels.map((_, i) => i % 5) }]}
+  ></lr-lite-chart>`);
+  const xLabels = [
+    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="middle"]'),
+  ];
+  const yLabels = [
+    ...el.shadowRoot!.querySelectorAll<SVGTextElement>('[part="axis-label"][text-anchor="end"]'),
+  ];
+  const overlaps = (left: DOMRect, right: DOMRect) =>
+    left.left < right.right &&
+    left.right > right.left &&
+    left.top < right.bottom &&
+    left.bottom > right.top;
+
+  for (let index = 0; index < xLabels.length; index++) {
+    const rect = xLabels[index]!.getBoundingClientRect();
+    expect(
+      xLabels.slice(index + 1).some((label) => overlaps(rect, label.getBoundingClientRect())),
+      `x-axis label ${xLabels[index]!.textContent} overlaps another x-axis label`,
+    ).to.be.false;
+    expect(
+      yLabels.some((label) => overlaps(rect, label.getBoundingClientRect())),
+      `x-axis label ${xLabels[index]!.textContent} overlaps a y-axis tick`,
+    ).to.be.false;
+  }
+});
+
 it('renders every label when maxLabels is unset, even for a long category list (regression)', async () => {
   const labels = Array.from({ length: 20 }, (_, i) => `L${i}`);
   const el = await mount(html`<lr-lite-chart

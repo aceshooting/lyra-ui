@@ -50,7 +50,8 @@ const DEFAULT_PALETTE = [
 const PAD_LEFT = 36;
 const PAD_RIGHT = 8;
 const PAD_TOP = 8;
-const PAD_BOTTOM = 20;
+const PAD_BOTTOM = 24;
+const CATEGORY_LABEL_OFFSET = 18;
 const AXIS_TITLE_SPACE = 14;
 const TICK_COUNT = 4;
 const BAR_GROUP_GAP = 0.2; // fraction of a category slot left as gap between categories
@@ -982,24 +983,22 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     return this.renderChart();
   }
 
-  /**
-   * Step size for `maxLabels` decimation: 1 (show every label, today's
-   * unchanged default) when `maxLabels` is unset or already >= the label
-   * count, otherwise the ceil-divide spacing that lands close to
-   * `maxLabels` shown labels while always keeping index 0 and the last
-   * index (enforced by the caller, not here).
-   */
-  private labelStep(n: number): number {
-    if (this.maxLabels == null) return 1;
+  /** Indexes retained by `maxLabels`, distributed across the complete domain so the sample
+   * immediately before the forced final endpoint can never bunch against it. `undefined` means
+   * every label renders, preserving the default and non-finite-value behavior. */
+  private visibleLabelIndexes(n: number): Set<number> | undefined {
+    if (this.maxLabels == null) return undefined;
     // finiteCount() falls back to `n` itself for a non-finite maxLabels (NaN/Infinity, e.g. an
     // unparsable attribute) -- making the `n <= max` check below always true, i.e. reproducing "no
     // cap", the same behavior as maxLabels being unset entirely. An explicit *negative* (but
     // finite) value instead clamps to `0` (finiteCount's own floor, same convention as
     // `normalizeBucketCount()`'s handling of a negative bucket count elsewhere in this codebase),
-    // which still can't go negative or divide by zero below thanks to `Math.max(1, max - 1)`.
+    // while the documented first/last guarantee still keeps both endpoints.
     const max = finiteCount(this.maxLabels, n);
-    if (n <= max) return 1;
-    return Math.max(1, Math.ceil((n - 1) / Math.max(1, max - 1)));
+    if (n <= max) return undefined;
+    const count = Math.min(n, Math.max(2, max));
+    if (count <= 1) return new Set(n === 1 ? [0] : []);
+    return new Set(Array.from({ length: count }, (_, index) => Math.round((index * (n - 1)) / (count - 1))));
   }
 
   private renderChart(): TemplateResult {
@@ -1046,14 +1045,14 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         ? this.renderBars(plotX, plotY, plotH, slot, lo, hi)
         : this.renderLines(plotX, plotY, plotW, plotH, lo, hi);
 
-    const step = this.labelStep(n);
+    const visibleLabelIndexes = this.visibleLabelIndexes(n);
     const categoryLabels = this.labels.map((label, i) => {
-      if (i !== 0 && i !== n - 1 && i % step !== 0) return nothing; // maxLabels decimation
+      if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) return nothing;
       const x =
         this.type === 'bar' && n > 0
           ? (this.barX ? this.barX(i) : plotX + i * slot) + slot / 2 // matches renderBars()'s own per-category slot center (or the barX override, when set)
           : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
-      return svg`<text part="axis-label" x=${x} y=${plotY + plotH + 14} text-anchor="middle">${label}</text>`;
+      return svg`<text part="axis-label" x=${x} y=${plotY + plotH + CATEGORY_LABEL_OFFSET} text-anchor="middle">${label}</text>`;
     });
 
     const datasetLabels = this.datasets.map((dataset) => dataset.label);
