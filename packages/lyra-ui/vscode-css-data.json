@@ -2819,14 +2819,14 @@
       "name": "--lr-selection-toolbar-block-start",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-selection-toolbar>`** — Computed logical block position of the toolbar."
+        "value": "**`<lr-selection-toolbar>`** — Computed logical block anchor position."
       }
     },
     {
       "name": "--lr-selection-toolbar-inline-start",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-selection-toolbar>`** — Computed logical inline position of the toolbar."
+        "value": "**`<lr-selection-toolbar>`** — Computed logical inline anchor position."
       }
     },
     {

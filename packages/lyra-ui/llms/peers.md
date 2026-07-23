@@ -36,11 +36,11 @@ changes the component library version without installing a supported SheetJS rel
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `jszip` | `^3.10.1` | `lr-archive-viewer` |
-| `katex` | `^0.17.0` | `lr-markdown`, `lr-markdown-core` |
+| `katex` | `^0.18.1` | `lr-markdown`, `lr-markdown-core` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.0` | `lr-docx-viewer` |
-| `maplibre-gl` | `^5.24.0` | `lr-geojson-view`, `lr-map` |
-| `marked` | `^18.0.6` | `lr-markdown`, `lr-markdown-core` |
+| `maplibre-gl` | `^6.0.0` | `lr-geojson-view`, `lr-map` |
+| `marked` | `^18.0.7` | `lr-markdown`, `lr-markdown-core` |
 | `papaparse` | `^5.5.3` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.1.200` | `lr-pdf-viewer` |
 | `postal-mime` | `^2.7.5` | `lr-email-viewer` |

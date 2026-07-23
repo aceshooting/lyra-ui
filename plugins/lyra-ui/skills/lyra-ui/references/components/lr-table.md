@@ -13,7 +13,10 @@
 
 ## `lr-table`
 
-Sort/select-aware data table. Sorting remains consumer-controlled; optional filtering, pagination,
+Sort/select-aware data table. Sorting is built in and client-side by default (`sortMode="client"`
+orders `rows` from `sortKey`/`sortDir` and the active column's `sortValue`); `sortMode="server"`
+renders `rows` in the order given for a server-ordered table, and `lr-sort` fires on header
+activation either way. Optional filtering, pagination,
 and loading chrome are built in while remaining controlled at the public API boundary. A
 `columns[].heatValue`-opted-in heat-tint mode paints a shared, normalized color-mix background across
 every tinted cell (auto-derived domain, or overridden via `heatTintScale`); `rowTotal`/`grandTotal`
@@ -23,8 +26,16 @@ own "consumer computes/renders" contract rather than assuming addition.
 
 **Properties:**
 - `columns: TableColumn<T>[] = []` (attribute: false) — `{ key, label, headerCell?, width?,
-  minWidth?, maxWidth?, resizable?, sortable?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
+  minWidth?, maxWidth?, resizable?, sortable?, sortValue?, align?: 'start'|'end', priority?: 'medium'|'low', sticky?: boolean |
   'start' | 'end', footer?, cellStyle?, heatValue?, cell: (row) => unknown }` —
+  `sortValue(row) => string | number | null | undefined` supplies the comparable value backing
+  client-mode sorting for that column: a finite number sorts numerically, a string sorts through an
+  `Intl.Collator` built from the component's effective locale with `numeric: true` (so `item2`
+  precedes `item10`), and `null`/`undefined`/non-finite sorts **last in both directions** so
+  flipping `sortDir` never floats a block of blanks to the top. Omit it and the column sorts by its
+  stringified `cell()` output instead — meaningful only when `cell()` returns a string or number, so
+  define `sortValue` whenever `cell()` returns a template or element. Ignored under
+  `sortMode="server"` and on a column that is not `sortable`;
   `priority` progressively hides that column via a `@container` query as `[part='base']` narrows
   (`'low'` hides first, under a ~900px container width; `'medium'` next, under ~640px; both
   breakpoints are fixed in `table.styles.ts`, not themeable tokens), reversible via
@@ -97,6 +108,19 @@ own "consumer computes/renders" contract rather than assuming addition.
   the two consequences of the fixed algorithm worth knowing before opting in
 - `sortKey: string = ''` (attribute `sort-key`)
 - `sortDir: 'asc'|'desc' = 'asc'` (attribute `sort-dir`)
+- `sortMode: 'client'|'server' = 'client'` (attribute `sort-mode`, reflected) — mirrors
+  `paginationMode`'s identical split. `'client'` (the default) orders `rows` in the browser from
+  `sortKey`/`sortDir` and the active column's `sortValue`; `'server'` renders `rows` exactly as
+  given, for a table whose ordering already happened server-side. `lr-sort` is emitted on header
+  activation under both modes. With no `sortKey` set (the default) `'client'` is a **no-op** — the
+  input order is preserved verbatim — so a table that never sorts renders identically either way.
+  Sorting applies to the whole filtered set *before* client pagination slices the page, so page 1
+  holds the globally-smallest rows rather than a re-sorted slice
+- `defaultSortDir: 'asc'|'desc' = 'asc'` (attribute `default-sort-dir`) — the direction applied
+  whenever header activation switches sorting to a **different** column, including the first column
+  ever sorted. Re-activating the column that is already `sortKey` toggles between `'asc'` and
+  `'desc'` instead, so `defaultSortDir` never overrides a direction the user just chose for the
+  column they are still on. Set `'desc'` for a most-recent-first or highest-first table
 - `rowKey?: (row: T) => string | number` (attribute: false) — derives each row's stable identity for
   DOM-reconciliation and the delegated row click/keydown lookup; falls back to the row's array index
   when omitted, which is only safe while `rows` never reorders — set it whenever `rows` can be
@@ -143,7 +167,13 @@ own "consumer computes/renders" contract rather than assuming addition.
   mode slices rows; server mode renders the supplied page unchanged
 - Editable columns emit `lr-cell-edit` on commit and never mutate the supplied row object.
 - `groupBy?: (row: T) => string | number` (attribute: false) — inserts a non-focusable full-width
-  group row before each group
+  group row wherever this key changes between consecutive rendered rows. Supply `rows` with each
+  group already contiguous; the table renders the groups in their first-appearance order in `rows`
+  and never reorders them. A client-mode sort is applied **within** each group, so sorting a
+  grouped table on a column unrelated to the group key reorders rows inside their groups and
+  leaves the grouping intact. The one exception: when the sorted column's value is constant inside
+  every group — the group column itself, most obviously — there is nothing to reorder within a
+  group, so the **groups** are ordered by that value instead.
 - `groupLabel?: (key: string | number, rows: T[]) => unknown` (attribute: false) — custom group
   header content; without it, the group key is rendered as text
 - `expandedContent?: (row: T) => unknown` (attribute: false) — enables a leading expand toggle and
@@ -187,7 +217,8 @@ own "consumer computes/renders" contract rather than assuming addition.
   column × footer row). Only rendered when both `rowTotal` is set **and** at least one column defines
   `footer` — otherwise there is no footer row for it to occupy, and this renders nothing
 
-**Events:** `lr-sort` (`detail: { key }`, fired on sortable-header activation), `lr-row-click`
+**Events:** `lr-sort` (`detail: { key }`, fired on sortable-header activation — which also updates
+`sortKey`/`sortDir` itself, per `defaultSortDir` above), `lr-row-click`
 (`detail: { row }`), `lr-load-more` (fired on the "load more" button), `lr-columns-hidden-change`
 (`detail: { hidden: boolean }`, fired only on a real `columnsHidden` transition),
 `lr-columns-revealed` (`detail: { revealed: boolean }`), and `lr-row-expand-toggle`
@@ -256,12 +287,13 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 **Optional peer deps:** none.
 
 ```html
-<lr-table id="t" sort-key="name" sort-dir="asc"></lr-table>
+<lr-table id="t" sort-key="name" sort-dir="asc" accessible-label="Items"></lr-table>
 <script type="module">
   const t = document.getElementById('t');
   t.columns = [
     { key: 'name', label: 'Name', sortable: true, cell: (r) => r.name },
-    { key: 'value', label: 'Value', align: 'end', cell: (r) => r.value },
+    // sortValue keeps the numeric column comparing as numbers, not as strings.
+    { key: 'value', label: 'Value', align: 'end', sortable: true, sortValue: (r) => r.value, cell: (r) => r.value },
   ];
   t.rows = [{ name: 'Alpha', value: 1 }, { name: 'Beta', value: 2 }];
   t.rowKey = (r) => r.name;
@@ -271,6 +303,23 @@ so multiple `sticky` columns stack instead of overlapping; it is a read-out, not
 ```
 
 **Known gotchas:**
+- activating a sortable header now writes `sortKey`/`sortDir` on the table itself, in **both** sort
+  modes — it is no longer a pure `lr-sort` notification. A `sortMode="server"` consumer that
+  re-sorts on `lr-sort` and pushes fresh `rows` back in is unaffected (the table renders whatever
+  order it is handed), but a consumer implementing a *tri-state* header (asc → desc → unsorted) must
+  drive `sortKey`/`sortDir` from its own `lr-sort` handler, since the built-in activation only
+  toggles between the two directions.
+- `sortValue`/`cell` are read off the column object by identity. Mutating a column **in place**
+  (`t.columns[0].sortValue = …`) neither re-renders nor re-sorts; assign a new `columns` array.
+- `groupBy` + client sorting are **not** in conflict: the sort runs per group, not across the whole
+  set, so group rows stay contiguous. The consequence is that the group order is normally yours to
+  control — it follows first appearance in `rows`. The single exception is a sort on a column whose
+  value is constant inside every group (the group column itself, a column functionally determined
+  by the group key, or any column at all when every group holds one row): the within-group sort
+  would be a provable no-op, so the groups are ordered by that constant value instead. That is what
+  keeps `aria-sort` and the header chevron honest — otherwise clicking the group column would flip
+  both while changing nothing. To force a group order in any other case, sort `rows` into it before
+  assigning them (or set `sort-mode="server"` and own the whole ordering).
 - only single-row selection is modeled (`selectedKey: string | number | null`);
   there's no bulk-select/checkbox-column API — you must hand-roll a checkbox column entirely inside
   a `cell()` callback if you need multi-select.

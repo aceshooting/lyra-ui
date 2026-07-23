@@ -51,7 +51,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 
 - `lr-sparkline` · data/sparkline/sparkline.js — a zero-dependency inline SVG trend chart.
 - `lr-stat` · data/stat/stat.js — a KPI/stat card.
-- `lr-table` · data/table/table.js — a presentational, sort/select-aware data table.
+- `lr-table` · data/table/table.js — a sort/select-aware data table.
 - `lr-pagination` · data/pagination/pagination.js — controlled, server-friendly page navigation with an editable page jump and optional item-range summary.
 - `lr-gauge` · data/gauge/gauge.js — a radial, full-circle ring, or linear meter.
 - `lr-word-cloud` · data/word-cloud/word-cloud.js — a zero-dependency SVG word/tag cloud.
