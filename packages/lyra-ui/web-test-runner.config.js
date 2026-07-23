@@ -24,38 +24,6 @@ const hammerEsmInteropPlugin = {
   },
 };
 
-/**
- * `maplibre-gl` (an optional peer dep of `lr-map`) declares `"type":
- * "module"` in its package.json but its `main` (`dist/maplibre-gl.js`)
- * is actually a UMD bundle with no `export` statement — it just assigns
- * `globalThis.maplibregl` when it detects no CJS/AMD loader. Same root cause
- * as the hammerjs shim above: real consumers bundle with Vite/webpack/esbuild-
- * bundle, which do this CJS/UMD interop automatically; `@web/test-runner`
- * serves unbundled ESM, so this tiny plugin appends synthetic named exports
- * once maplibre-gl.js has run and populated `globalThis.maplibregl`.
- *
- * `Map`/`Marker`/`Popup` (lr-map's `LyraMap`/marker/popup support all need
- * these) are exported via renamed local bindings rather than directly — an ES
- * module's top-level `const Map = ...` would lexically shadow the native
- * `Map` collection class for the *entire* module (this file's own minified
- * bundle uses `new Map()` internally), corrupting maplibre-gl's own
- * initialization. Bind every export to a private name and export-rename it,
- * for consistency, even though only `Map` actually collides.
- */
-const maplibreEsmInteropPlugin = {
-  name: 'maplibre-gl-esm-interop',
-  transform(context) {
-    if (context.response.is('js') && context.path.endsWith('/maplibre-gl/dist/maplibre-gl.js')) {
-      return `${context.body}
-const __lyraMaplibreMap = globalThis.maplibregl.Map;
-const __lyraMaplibreMarker = globalThis.maplibregl.Marker;
-const __lyraMaplibrePopup = globalThis.maplibregl.Popup;
-export { __lyraMaplibreMap as Map, __lyraMaplibreMarker as Marker, __lyraMaplibrePopup as Popup };
-`;
-    }
-  },
-};
-
 const papaparseEsmInteropPlugin = {
   name: 'papaparse-esm-interop',
   transform(context) {
@@ -145,7 +113,6 @@ export default {
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,
-    maplibreEsmInteropPlugin,
     papaparseEsmInteropPlugin,
     mammothEsmInteropPlugin,
     jszipEsmInteropPlugin,

@@ -144,7 +144,7 @@ async function writeFixture(fixtureDir, packageTarball, flagsTarball, withOption
       'd3-selection': '^3.0.0',
       'd3-zoom': '^3.0.0',
       dompurify: '^3.4.12',
-      'maplibre-gl': '^5.24.0',
+      'maplibre-gl': '^6.0.0',
       marked: '^18.0.6',
       shiki: '^4.3.1',
     });
@@ -309,7 +309,12 @@ export default defineConfig({
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
     codeBlock: `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';\nexport const loaded = true;\n`,
     chart: `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';\nexport const loaded = true;\n`,
-    map: `import '@aceshooting/lyra-ui/components/media/map/map.js';\nexport const loaded = true;\n`,
+    map: `import '@aceshooting/lyra-ui/components/media/map/map.js';
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+setWorkerUrl(workerUrl);
+export const loaded = true;
+`,
     graph: `import '@aceshooting/lyra-ui/components/retrieval/graph/graph.js';\nexport const loaded = true;\n`,
   };
   await Promise.all(
@@ -371,6 +376,9 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers) {
   }
   if (config.maxGzipBytes != null && output.gzipBytes > config.maxGzipBytes) {
     violations.push(`gzip ${formatBytes(output.gzipBytes)} exceeds budget ${formatBytes(config.maxGzipBytes)}`);
+  }
+  if (entry === 'map' && !output.files.some((file) => /maplibre-gl-worker/.test(file))) {
+    violations.push('the Vite consumer did not emit MapLibre v6’s module worker');
   }
   if (violations.length > 0) {
     throw new Error(

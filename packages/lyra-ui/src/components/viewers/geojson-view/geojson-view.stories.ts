@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './geojson-view.js';
+import '../../../../../../.storybook/maplibre-worker.js';
 
 const meta: Meta = { title: 'DocumentViewer/GeojsonView', component: 'lr-geojson-view', tags: ['autodocs'] };
 export default meta;

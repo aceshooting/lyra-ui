@@ -1099,4 +1099,6 @@ alongside the `lr-json-viewer` fallback), `error` (the error region, `role="aler
 Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
-message instead of the map.
+message instead of the map. MapLibre v6 is ESM-only and requires WebGL2; consumers must import its
+CSS and configure its module-worker URL for their bundler before this viewer constructs the nested
+map. See `llms/components/lr-map.md` for the Vite example and the other bundler variants.

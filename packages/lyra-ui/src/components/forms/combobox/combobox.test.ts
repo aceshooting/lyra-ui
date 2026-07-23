@@ -1611,16 +1611,22 @@ it('renders a localized alert and clears stale rows when an async source fails',
     <lr-combobox source-delay="0" open
       .strings=${{ comboboxLoadError: 'Options unavailable' }}></lr-combobox>
   `)) as LyraCombobox;
-  el.source = async () => {
-    throw new Error('private server detail');
-  };
-  await el.updateComplete;
-  await aTimeout(20);
-  await el.updateComplete;
-  const alert = el.shadowRoot!.querySelector('[role="alert"]') as HTMLElement;
-  expect(alert.textContent?.trim()).to.equal('Options unavailable');
-  expect(alert.textContent).to.not.contain('private server detail');
-  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(0);
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    el.source = async () => {
+      throw new Error('private server detail');
+    };
+    await el.updateComplete;
+    await aTimeout(20);
+    await el.updateComplete;
+    const alert = el.shadowRoot!.querySelector('[role="alert"]') as HTMLElement;
+    expect(alert.textContent?.trim()).to.equal('Options unavailable');
+    expect(alert.textContent).to.not.contain('private server detail');
+    expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(0);
+  } finally {
+    console.warn = originalWarn;
+  }
 });
 
 it('invalidates an in-flight request when source is replaced and clamps active state after shrink', async () => {

@@ -281,13 +281,19 @@ not installed)
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
 
-**Optional peer deps:** `maplibre-gl` (lazy-loaded; consumer must **separately** `import
-'maplibre-gl/dist/maplibre-gl.css'` once — the component does not do this for you).
+**Optional peer deps:** `maplibre-gl` (lazy-loaded). MapLibre v6 is ESM-only and requires WebGL2.
+The consumer must **separately** import `maplibre-gl/dist/maplibre-gl.css` and configure the v6
+module-worker URL for its bundler once — the component cannot choose a bundler-specific worker URL.
+For Vite:
 
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>
-<script>
+<script type="module">
+  import { setWorkerUrl } from 'maplibre-gl';
+  import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
   import 'maplibre-gl/dist/maplibre-gl.css';
+  setWorkerUrl(workerUrl);
+
   const m = document.querySelector('lr-map');
   m.choropleth = {
     sourceId: 'regions',
@@ -300,6 +306,10 @@ not installed)
   m.addEventListener('lr-map-click', (e) => console.log(e.detail.feature?.properties));
 </script>
 ```
+
+Webpack, esbuild, Rollup, and direct-browser ESM use different worker URL forms; use MapLibre's ESM
+installation guide for the matching setup:
+https://maplibre.org/maplibre-gl-js/docs/#esm.
 
 **Known gotchas:**
 - clearing or swapping the choropleth no longer leaks the old layer: setting `choropleth =

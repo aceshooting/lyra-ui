@@ -55,7 +55,7 @@
     },
     "./flags/*": "./flags/*"
   },
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.17.0",
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "sharp": "^0.35.3",

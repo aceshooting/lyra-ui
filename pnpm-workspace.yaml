@@ -16,6 +16,8 @@ minimumReleaseAgeExclude:
   - '@secretlint/types@13.0.4'
   - '@secretlint/walker@13.0.4'
   - secretlint@13.0.4
+  - '@publint/pack@0.1.6'
+  - publint@0.3.22
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

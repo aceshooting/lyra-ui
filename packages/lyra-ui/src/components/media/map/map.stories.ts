@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import type { ChoroplethLayer, GeoJsonDataLayer, LegendEntry, MapMarker } from './map.js';
 import { storyColor } from '../../../../../../.storybook/story-theme.js';
+import '../../../../../../.storybook/maplibre-worker.js';
 
 const legend = (): LegendEntry[] => [
   { color: storyColor('brand'), label: 'Low' },

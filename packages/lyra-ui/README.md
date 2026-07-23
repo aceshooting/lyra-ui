@@ -55,12 +55,28 @@ npm install @aceshooting/lyra-ui
 # optional peer: maplibre-gl, only needed for <lr-map> — also import
 #   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lr-map only
 #   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet.
+#   MapLibre v6 is ESM-only, requires WebGL2, and also needs its module-worker
+#   URL configured for your bundler before the first map is constructed.
 #   <lr-map> falls back to OpenStreetMap's demo tile server when you don't
 #   set `mapStyle` — fine for local dev, but NOT for production (no capacity
 #   guarantees, requires an identifying User-Agent, subject to IP-blocking —
 #   see https://operations.osmfoundation.org/policies/tiles/). Production
 #   apps must supply their own `mapStyle`.
 ```
+
+For example, Vite consumers configure MapLibre v6's self-contained worker once:
+
+```js
+import { setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import 'maplibre-gl/dist/maplibre-gl.css';
+
+setWorkerUrl(workerUrl);
+```
+
+Webpack, esbuild, Rollup, and direct-browser ESM use different worker URL forms; follow
+[MapLibre's ESM installation guide](https://maplibre.org/maplibre-gl-js/docs/#esm) for the matching
+setup.
 
 ## Usage
 

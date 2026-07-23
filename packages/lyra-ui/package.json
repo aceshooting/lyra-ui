@@ -672,8 +672,8 @@
   "peerDependencies": {
     "@aceshooting/lyra-flags": "workspace:^2.0.0",
     "@aiden0z/pptx-renderer": "^1.2.4",
-    "@sgratzl/chartjs-chart-boxplot": "^4.4.0",
-    "chart.js": "^4.5.0",
+    "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
+    "chart.js": "^4.5.1",
     "chartjs-plugin-datalabels": "^2.2.0",
     "chartjs-plugin-zoom": "^2.2.0",
     "d3-drag": "^3.0.0",
@@ -688,9 +688,9 @@
     "katex": "^0.18.1",
     "libphonenumber-js": ">=1.11.0 <2",
     "mammoth": "^1.12.0",
-    "maplibre-gl": "^5.24.0",
+    "maplibre-gl": "^6.0.0",
     "marked": "^18.0.7",
-    "papaparse": "^5.5.3",
+    "papaparse": "^5.5.4",
     "pdfjs-dist": "^6.1.200",
     "postal-mime": "^2.7.5",
     "qrcode": "^1.5.4",
@@ -812,9 +812,9 @@
     "katex": "^0.18.1",
     "libphonenumber-js": "^1.13.9",
     "mammoth": "^1.12.0",
-    "maplibre-gl": "^5.24.0",
+    "maplibre-gl": "^6.0.0",
     "marked": "^18.0.7",
-    "papaparse": "^5.5.3",
+    "papaparse": "^5.5.4",
     "pdfjs-dist": "^6.1.200",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.61.1",
@@ -825,6 +825,6 @@
     "typescript": "^7.0.2",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.17.0",
   "customElements": "custom-elements.json"
 }

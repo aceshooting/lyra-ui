@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -162,6 +162,13 @@ async function main() {
   const entries = new Set(Object.keys(index.entries ?? {}));
   for (const id of requiredStories) {
     if (!entries.has(id)) throw new Error(`Storybook catalog is missing required story ${id}`);
+  }
+
+  const assetNames = await readdir(join(staticRoot, 'assets'));
+  if (!assetNames.some((name) => name.startsWith('maplibre-gl-worker-'))) {
+    throw new Error(
+      'Storybook is missing the MapLibre module worker; configure its Vite worker URL before rendering map stories',
+    );
   }
 
   const server = createServer(serve);

@@ -23,8 +23,8 @@ changes the component library version without installing a supported SheetJS rel
 |---|---|---|
 | `@aceshooting/lyra-flags` | `workspace:^2.0.0` | `lr-flag`, `lr-phone-input` |
 | `@aiden0z/pptx-renderer` | `^1.2.4` | `lr-pptx-viewer` |
-| `@sgratzl/chartjs-chart-boxplot` | `^4.4.0` | `lr-box-plot` |
-| `chart.js` | `^4.5.0` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `@sgratzl/chartjs-chart-boxplot` | `^4.4.5` | `lr-box-plot` |
+| `chart.js` | `^4.5.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-zoom` | `^2.2.0` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `d3-drag` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
@@ -39,9 +39,9 @@ changes the component library version without installing a supported SheetJS rel
 | `katex` | `^0.18.1` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.0` | `lr-docx-viewer` |
-| `maplibre-gl` | `^5.24.0` | `lr-geojson-view`, `lr-map` |
+| `maplibre-gl` | `^6.0.0` | `lr-geojson-view`, `lr-map` |
 | `marked` | `^18.0.7` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
-| `papaparse` | `^5.5.3` | `lr-csv-viewer`, `lr-dataset-viewer` |
+| `papaparse` | `^5.5.4` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.1.200` | `lr-pdf-viewer` |
 | `postal-mime` | `^2.7.5` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
