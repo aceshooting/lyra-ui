@@ -1,4 +1,4 @@
-import { html, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { DocumentRef } from '../../../ai/types.js';
@@ -9,6 +9,7 @@ import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class
 import '../document-preview/document-preview.js';
 import '../../utility/diff-view/diff-view.js';
 import { styles } from './document-compare.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** Which pane a comparison side identifies -- `'old'` is the "before" version, `'new'` is the
  *  "after" version. */
@@ -23,14 +24,6 @@ export type LyraDocumentCompareView = 'diff' | 'side-by-side';
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
  *  `fromAttribute` checks the literal string instead (mirrors `lr-checkpoint`'s identical
  *  converter). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 export interface LyraDocumentCompareEventMap {
   /** Bubbles unchanged from the internal `<lr-diff-view>` while `view="diff"`. `detail: { text }` — the full unified-diff text. */

@@ -7,7 +7,12 @@ const meta: Meta = { title: 'Overlay/Tooltip', component: 'lr-tooltip', tags: ['
 export default meta;
 type Story = StoryObj;
 
-export const Default: Story = { render: () => html`<lr-tooltip delay="0">Helpful context<button slot="trigger">Hover or focus</button></lr-tooltip>` };
+export const Default: Story = {
+  render: (_args, context) =>
+    html`<lr-tooltip .open=${context.viewMode !== 'docs'} manual delay="0"
+      >Helpful context<button slot="trigger">Hover or focus</button></lr-tooltip
+    >`,
+};
 
 function onSurfaceClick(e: MouseEvent): void {
   const surface = e.currentTarget as HTMLElement;

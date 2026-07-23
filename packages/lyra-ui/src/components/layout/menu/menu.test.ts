@@ -1,8 +1,12 @@
 import { fixture, expect, oneEvent, html } from '@open-wc/testing';
 import './menu.js';
 import './menu-item.js';
+import '../../forms/button/button.js';
+import '../../forms/icon-button/icon-button.js';
 import type { LyraMenu } from './menu.js';
 import type { LyraMenuItem } from './menu-item.js';
+import type { LyraButton } from '../../forms/button/button.js';
+import type { LyraIconButton } from '../../forms/icon-button/icon-button.js';
 
 const basic = () => html`
   <lr-menu label="Row actions">
@@ -37,13 +41,83 @@ it('renders role="menu" around the default slot, and reflects open=false by defa
 it('sets aria-haspopup/aria-expanded/aria-controls on the assigned trigger element', async () => {
   const el = (await fixture(basic())) as LyraMenu;
   const btn = trigger(el);
+  expect(el.id).to.not.equal('');
   expect(btn.getAttribute('aria-haspopup')).to.equal('menu');
   expect(btn.getAttribute('aria-expanded')).to.equal('false');
-  expect(btn.getAttribute('aria-controls')).to.not.equal('');
+  expect(btn.getAttribute('aria-controls')).to.equal(el.id);
+  if ('ariaControlsElements' in btn) {
+    expect(btn.ariaControlsElements.length).to.equal(1);
+    expect(btn.ariaControlsElements[0]?.id).to.equal(el.id);
+  }
 
   btn.click();
   await el.updateComplete;
   expect(btn.getAttribute('aria-expanded')).to.equal('true');
+});
+
+it('preserves a consumer-supplied host id as the aria-controls target', async () => {
+  const el = (await fixture(html`
+    <lr-menu id="account-actions" label="Account actions">
+      <button slot="trigger">Actions</button>
+      <lr-menu-item value="profile">Profile</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  expect(el.id).to.equal('account-actions');
+  expect(trigger(el).getAttribute('aria-controls')).to.equal('account-actions');
+});
+
+it('forwards menu trigger semantics to lr-button\'s focused native control', async () => {
+  const el = (await fixture(html`
+    <lr-menu label="Actions">
+      <lr-button slot="trigger" aria-label="Actions">Actions</lr-button>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  const triggerButton = el.querySelector('lr-button') as LyraButton;
+  await triggerButton.updateComplete;
+  const focusedControl = triggerButton.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+
+  expect(triggerButton.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(triggerButton.getAttribute('aria-expanded')).to.equal('false');
+  expect(focusedControl.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(focusedControl.getAttribute('aria-expanded')).to.equal('false');
+  if ('ariaControlsElements' in focusedControl) {
+    expect(focusedControl.ariaControlsElements.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements[0]?.id).to.equal(el.id);
+  }
+
+  triggerButton.click();
+  await el.updateComplete;
+  await triggerButton.updateComplete;
+  expect(focusedControl.getAttribute('aria-expanded')).to.equal('true');
+  await expect(el).to.be.accessible();
+});
+
+it('forwards menu trigger semantics to lr-icon-button\'s focused native control', async () => {
+  const el = (await fixture(html`
+    <lr-menu label="Actions">
+      <lr-icon-button slot="trigger" icon="more-horizontal" aria-label="Actions"></lr-icon-button>
+      <lr-menu-item value="rename">Rename</lr-menu-item>
+    </lr-menu>
+  `)) as LyraMenu;
+  const triggerButton = el.querySelector('lr-icon-button') as LyraIconButton;
+  await triggerButton.updateComplete;
+  const focusedControl = triggerButton.shadowRoot!.querySelector('button[part="button"]') as HTMLButtonElement;
+
+  expect(triggerButton.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(triggerButton.getAttribute('aria-expanded')).to.equal('false');
+  expect(focusedControl.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(focusedControl.getAttribute('aria-expanded')).to.equal('false');
+  if ('ariaControlsElements' in focusedControl) {
+    expect(focusedControl.ariaControlsElements.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements[0]?.id).to.equal(el.id);
+  }
+
+  triggerButton.click();
+  await el.updateComplete;
+  await triggerButton.updateComplete;
+  expect(focusedControl.getAttribute('aria-expanded')).to.equal('true');
+  await expect(el).to.be.accessible();
 });
 
 it('opens on trigger click and moves focus to the first item', async () => {

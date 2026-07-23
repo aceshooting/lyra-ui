@@ -1,29 +1,12 @@
-import { html, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { finiteCount, finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './playback.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 const MIN_INTERVAL_MS = 16; // ~one animation frame; prevents a near-zero-delay tick loop
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, matching every other `reflect: true` boolean property in this library -- though
- *  `loop` itself is not reflected today, this keeps the converter reusable if that changes. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 // Deduplicated per distinct bad value (like the analogous one-time warnings
 // in lr-heatmap/lr-word-cloud) rather than a single once-ever flag, so a
@@ -89,10 +72,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   // hand-written accessor below, so a direct `el.playing = true/false`
   // assignment always drives the real timer — not just calls through
   // play()/pause().
-  /** Whether playback wraps back to index 0 after the last step instead of pausing there. Defaults
-   *  `true`; uses `trueDefaultBooleanConverter` (declared via `static properties` above) so plain
-   *  HTML `loop="false"` actually clears it -- Lit's default presence-based `type: Boolean`
-   *  converter cannot distinguish an absent attribute from the literal string `"false"`. */
+  
   loop = true;
 
   /**
@@ -298,7 +278,6 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

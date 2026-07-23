@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -21,6 +21,7 @@ import { styles } from './agent-workspace.styles.js';
 import '../chat-viewport/chat-viewport.js';
 import '../chat-message/chat-message.js';
 import '../markdown/markdown.js';
+import '../message-parts/message-parts.js';
 import '../chat-composer/chat-composer.js';
 import '../../agent-tools/agent-run/agent-run.js';
 import '../../agent-tools/tool-timeline/tool-timeline.js';
@@ -28,22 +29,7 @@ import '../../retrieval/retrieval-results/retrieval-results.js';
 import '../../retrieval/grounding-summary/grounding-summary.js';
 import '../../agent-tools/context-inspector/context-inspector.js';
 import '../../overlays/empty/empty.js';
-
-/** `true`-defaulting boolean attribute converter for `follow`/`showDetails`/`showComposer` --
- *  identical shape/rationale to `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated
- *  locally per this library's convention of not sharing these tiny converters across
- *  independently-consumable component files. Lit's default presence-based `type: Boolean` can
- *  never be set back to `false` from a plain-HTML attribute once the property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraAgentWorkspaceEventMap {
   'lr-input': CustomEvent<{ value: string }>;
@@ -65,9 +51,10 @@ export interface LyraAgentWorkspaceEventMap {
  *
  * The component performs no network requests, model calls, retrieval, or persistence. Assign new
  * data to the public properties as the host application receives updates. The `messages` fallback
- * renders sanitized Markdown from each message's `text`; applications needing richer message
- * content can replace that entire region with the `messages` slot. The `details` slot similarly
- * replaces the built-in details pane while keeping the responsive shell.
+ * renders ordered `message.parts` through `<lr-message-parts>` when supplied, otherwise sanitized
+ * Markdown from the legacy `message.text`; applications can replace the entire region with the
+ * `messages` slot. The `details` slot similarly replaces the built-in details pane while keeping
+ * the responsive shell.
  *
  * @customElement lr-agent-workspace
  * @slot messages - Replaces the data-driven transcript message list.
@@ -226,7 +213,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
         .timestamp=${message.timestamp}
         @lr-retry=${this.onMessageRetry}
       >
-        <lr-markdown .content=${message.text ?? ''}></lr-markdown>
+        ${message.parts?.length
+          ? html`<lr-message-parts .parts=${message.parts}></lr-message-parts>`
+          : html`<lr-markdown .content=${message.text ?? ''}></lr-markdown>`}
       </lr-chat-message>
     `;
   }

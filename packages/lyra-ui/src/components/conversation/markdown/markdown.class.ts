@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -31,6 +31,7 @@ import {
   type MarkdownHeadingItem as SharedMarkdownHeadingItem,
 } from './markdown-shared.js';
 import { styles } from './markdown.styles.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** Re-exported so `markdown.ts`'s `export *` keeps exposing this from the same public path as
  *  before this type moved into the pair's shared module -- see `markdown-shared.ts`'s class doc. */
@@ -111,11 +112,6 @@ function markdownCodeTransformer(lang: string) {
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
  *  `fromAttribute` checks the literal string instead. Shared by `sanitize`, `gfm`, and
  *  `highlightCode`, which have the identical `true`-default parsing need. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-};
 
 export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -869,7 +865,6 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

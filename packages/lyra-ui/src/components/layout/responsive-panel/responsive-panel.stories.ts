@@ -67,11 +67,11 @@ export const ForcedOverlayBottomSheet: Story = {
   render: () => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
-      <lr-responsive-panel mode="overlay" variant="bottom-sheet" label="Share">
+      <lr-responsive-panel mode="overlay" variant="bottom-sheet" label="Share" open>
         <span slot="header" style="font-weight: 600;">Share</span>
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-          <button>Copy link</button>
-          <button>Share to...</button>
+          <button dir="auto">Copy link</button>
+          <button dir="auto">Share to...</button>
         </div>
       </lr-responsive-panel>
     </div>

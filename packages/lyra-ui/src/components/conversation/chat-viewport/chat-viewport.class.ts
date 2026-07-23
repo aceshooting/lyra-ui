@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -7,26 +7,9 @@ import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { LyraVirtualList, type VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
 import { getPluralRules } from '../../../internal/intl-cache.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type ChatViewportLive = 'off' | 'polite' | 'assertive';
-
-/** `true`-defaulting boolean attribute converter for `follow`. Lit's built-in `type: Boolean`
- *  converter is presence-based -- the attribute's mere presence (regardless of its string value)
- *  maps to `true`, so a plain-markup consumer writing the literal `follow="false"` would actually
- *  get `true` (this property's default), the opposite of what that string reads as -- the same bug
- *  class `<lr-checkpoint>`'s `trueDefaultBooleanConverter` documents and fixes for
- *  `restorable`/`confirmRestore`. Attribute absent (or removed) -> `true` (the default);
- *  `follow="false"` -> `false`; anything else present (no value, `="true"`, ...) -> `true`. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting for it; only the
-    // non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
-};
 
 export interface LyraChatViewportEventMap {
   'lr-follow-change': CustomEvent<{ following: boolean }>;
@@ -86,11 +69,7 @@ export interface LyraChatViewportEventMap {
 export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   static override styles = [LyraElement.styles, styles];
 
-  /** Component-managed stick-to-bottom state, host-writable. Setting `true` scrolls to the end and
-   *  re-engages following; setting `false` releases it. Uses {@link trueDefaultBooleanConverter}
-   *  rather than Lit's default presence-based `type: Boolean` handling, so a plain-HTML consumer
-   *  can start released with the attribute string `follow="false"`, not just a `.follow=${false}`
-   *  property binding. */
+  
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
 
   /** Live-region policy forwarded to the internal `role="log"`. Keep `off` for token-by-token

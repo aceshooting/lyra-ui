@@ -317,6 +317,19 @@ it('forwards lr-chunk-open from a row\'s lr-chunk-inspector, and never leaks the
   expect(events[0]!.detail).to.deep.equal({ id: 'c1', sourceId: 's1' });
 });
 
+it('carries a retrieval locator through to lr-chunk-open and derives its visible page', async () => {
+  const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+  const locator = { kind: 'page' as const, page: 7 };
+  el.chunks = [{ ...chunks[0]!, locator }];
+  await el.updateComplete;
+  const inspector = el.shadowRoot!.querySelector('lr-chunk-inspector') as LyraChunkInspector;
+  expect(inspector.chunks[0]!.anchor).to.deep.equal(locator);
+  expect(inspector.chunks[0]!.page).to.equal(7);
+  const pending = oneEvent(el, 'lr-chunk-open');
+  (inspector.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement).click();
+  expect((await pending).detail).to.deep.equal({ id: 'c1', sourceId: 's1', anchor: locator });
+});
+
 describe('pagination', () => {
   it('shows a Load more button in flat mode when hasMore is true, firing lr-load-more on click', async () => {
     const el = (await fixture(html`<lr-retrieval-results has-more></lr-retrieval-results>`)) as LyraRetrievalResults;

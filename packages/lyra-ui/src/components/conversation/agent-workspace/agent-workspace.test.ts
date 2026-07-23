@@ -82,6 +82,25 @@ it('composes transcript and agent details from controlled data', async () => {
   expect(el.shadowRoot!.querySelector('[part="details"]')).to.exist;
 });
 
+it('renders ordered message parts when present while preserving legacy text messages', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace .messages=${[
+      {
+        id: 'parts-message',
+        role: 'assistant',
+        text: 'Legacy fallback',
+        parts: [
+          { id: 'reasoning', type: 'reasoning', text: 'Checking', state: 'complete' },
+          { id: 'answer', type: 'text', text: 'Structured answer', state: 'complete' },
+        ],
+      },
+      { id: 'legacy-message', role: 'assistant', text: 'Legacy answer' },
+    ]}></lr-agent-workspace>
+  `);
+  expect(el.shadowRoot!.querySelectorAll('lr-message-parts')).to.have.lengthOf(1);
+  expect(el.shadowRoot!.querySelectorAll('lr-markdown')).to.have.lengthOf(1);
+});
+
 it('forwards a stable message id with retry events', async () => {
   const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .messages=${[
     { id: 'message-7', role: 'assistant', status: 'failed', text: 'Failed' },

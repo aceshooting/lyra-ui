@@ -6,6 +6,7 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { closeIcon, eyeIcon, eyeOffIcon } from '../../../internal/icons.js';
 import { styles } from './input.styles.js';
+import { spellcheckConverter } from '../../../internal/converters.js';
 
 export type LyraInputType = 'text' | 'password' | 'email' | 'number' | 'time' | 'search';
 export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
@@ -14,11 +15,6 @@ export type LyraInputSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
  *  both on `number`/`time`, so the dirty-value supplement in `updateValidity()` must ignore them
  *  there too rather than being stricter than the control it wraps. */
 const LENGTH_CONSTRAINED_TYPES: readonly LyraInputType[] = ['text', 'password', 'email', 'search'];
-
-const spellcheckConverter = {
-  fromAttribute: (value: string | null): boolean => value !== 'false',
-  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
-};
 
 export interface LyraInputEventMap {
   input: CustomEvent<undefined>;

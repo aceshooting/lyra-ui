@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -12,6 +12,10 @@ import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { seriesPalette, translucentAreaColor } from './chart-colors.js';
+
+export { seriesPalette } from './chart-colors.js';
 
 export interface Series {
   label: string;
@@ -108,19 +112,6 @@ function normalizeChartType(value: unknown): LyraChartType {
  */
 type EffectiveChartType = LyraChartType | (string & {});
 
-/** `true`-defaulting boolean attribute converter for `beginAtZero` -- identical shape/rationale to
- *  `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated locally per this library's
- *  convention of not sharing these tiny converters across independently-consumable component
- *  files. Lit's default presence-based `type: Boolean` can never be set back to `false` from a
- *  plain-HTML attribute once the property's own default is `true` (removing an attribute that was
- *  never present fires no `attributeChangedCallback`), so `fromAttribute` checks the literal
- *  string instead. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-};
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -129,7 +120,6 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 // response) reach up through the merge and mutate `Object.prototype` —
 // skipped unconditionally regardless of `base`'s own shape.
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
 
 // Defensive JS-side fallbacks for themeColors() below, mirroring the
 // light-mode default of each `--lr-chart-*` token's own fallback chain
@@ -140,53 +130,6 @@ const FALLBACK_TICK_COLOR = '#6b7280';
 const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
-
-// Light-mode defaults of --lr-color-chart-1..8 (see internal/tokens.styles.ts), the same
-// categorical ramp <lr-lite-chart>'s DEFAULT_PALETTE draws from. Used to give a series with
-// no explicit `color` a themed, theme-visible default instead of Chart.js's own hardcoded
-// near-black (rgba(0,0,0,.1)) fill, which is invisible on the dark theme — grid/tick/legend
-// were already themed via themeColors(), but the data series itself was not. Only the literal
-// fallbacks here are reached when getComputedStyle can't resolve the custom properties (host
-// detached); a live host resolves the real, dark-aware values in seriesPalette() below.
-const FALLBACK_SERIES_PALETTE = [
-  '#8250df',
-  '#bf3989',
-  '#0a7d91',
-  '#57606a',
-  '#b083f5',
-  '#f470b8',
-  '#52d6e8',
-  '#c9d1d9',
-] as const;
-
-/**
- * Resolves the categorical series ramp before or after a chart exists. Pass the element whose
- * theme scope should be read; omitting it reads `document.documentElement`, while `null` selects
- * the light-mode fallback directly (also used automatically when no DOM is available).
- *
- * Each `--lr-color-chart-N` first resolves through the supplied element. When the component token
- * layer is not present yet, the helper reads its `--lr-theme-color-chart-N` input directly, so an
- * application-level theme override still reaches pre-mount chart data. Returns a fresh array.
- */
-export function seriesPalette(element?: Element | null): string[] {
-  const target =
-    element === undefined && typeof document !== 'undefined'
-      ? document.documentElement
-      : element;
-  if (!target || typeof getComputedStyle !== 'function') {
-    return [...FALLBACK_SERIES_PALETTE];
-  }
-
-  const cs = getComputedStyle(target);
-  return FALLBACK_SERIES_PALETTE.map((fallback, index) => {
-    const number = index + 1;
-    return (
-      cs.getPropertyValue(`--lr-color-chart-${number}`).trim() ||
-      cs.getPropertyValue(`--lr-theme-color-chart-${number}`).trim() ||
-      fallback
-    );
-  });
-}
 
 interface ThemeColors {
   grid: string;
@@ -658,14 +601,25 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private seriesToDataset(s: Series, index: number, palette: string[], effectiveType: EffectiveChartType) {
     const colors = Array.isArray(s.color) ? s.color : s.color ? [s.color] : undefined;
     // Default a color-less series to the categorical palette, keyed by dataset index (matching
-    // <lr-lite-chart>). pie/doughnut carry one series whose *slices* each need a distinct color,
-    // so those default to an array cycled across the palette; every other family is one color
-    // per series. Only applied when the caller gave no `color` — an explicit `color` still wins.
+    // <lr-lite-chart>). pie/doughnut/polarArea carry one series whose *slices* each need a distinct
+    // color, so those default to an array cycled across the palette; every other family is one
+    // color per series. Only applied when the caller gave no `color` — an explicit `color` still wins.
     const fallback = palette.length ? palette[index % palette.length] : undefined;
     const sliceColors =
-      (effectiveType === 'pie' || effectiveType === 'doughnut') && palette.length
-        ? (s.points ?? s.data ?? []).map((_, i) => palette[i % palette.length])
+      (effectiveType === 'pie' || effectiveType === 'doughnut' || effectiveType === 'polarArea') && palette.length
+        ? (s.points ?? s.data ?? []).map((_, i) => palette[i % palette.length]!)
         : undefined;
+    const fill = s.fill ?? this.area;
+    const backgroundColor = colors ?? sliceColors ?? fallback;
+    const datasetType = s.type ?? effectiveType;
+    const resolvedBackgroundColor =
+      datasetType === 'line' && fill
+        ? Array.isArray(backgroundColor)
+          ? backgroundColor.map((color) => translucentAreaColor(this, color))
+          : backgroundColor
+            ? translucentAreaColor(this, backgroundColor)
+            : backgroundColor
+        : backgroundColor;
     return {
       label: s.label,
       data: s.points ?? s.data ?? [],
@@ -683,10 +637,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // series over a bar chart of the *same* effective family) is passed
       // through.
       type: s.type,
-      fill: s.fill ?? this.area,
+      fill,
       borderWidth: s.width ?? 2,
       borderDash: s.dash ? [4, 4] : undefined,
-      backgroundColor: colors ?? sliceColors ?? fallback,
+      backgroundColor: resolvedBackgroundColor,
       borderColor: colors?.[0] ?? fallback,
       pointBackgroundColor: s.pointColors,
       pointRadius: s.pointRadius,
@@ -878,7 +832,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return {
         r: {
           beginAtZero: this.beginAtZero,
-          ticks: this.tickOptions(theme),
+          ticks: { ...this.tickOptions(theme), showLabelBackdrop: false },
           grid: { color: theme.grid },
           angleLines: { color: theme.grid },
           pointLabels: { color: theme.tick },
@@ -1378,7 +1332,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

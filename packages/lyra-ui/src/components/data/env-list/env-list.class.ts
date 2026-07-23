@@ -1,10 +1,11 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './env-list.styles.js';
 // The registering barrel, not the bare .class.js module -- this side effect is what
 // registers <lr-empty> so it's actually defined when this component renders it.
 import '../../overlays/empty/empty.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 const MASK = '•'.repeat(8);
 
@@ -15,14 +16,6 @@ const MASK = '•'.repeat(8);
  * actually get `true` (these properties' default), the opposite of what that string reads as --
  * the same bug class `<lr-checkpoint>`'s `restorable`/`confirmRestore` converters document and fix.
  */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 export interface EnvEntry {
   name: string;

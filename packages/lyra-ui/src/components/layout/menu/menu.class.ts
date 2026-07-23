@@ -90,13 +90,15 @@ export interface LyraMenuEventMap {
  * the focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`
  * never leaves a stale `tabindex="0"` tab stop on the last active item.
  *
- * The trigger element itself is read from the `trigger` slot's assigned
- * element (first one, if several are assigned) and enhanced imperatively
- * with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls` — the same
- * "reach into a consumer-owned light-DOM element to complete its a11y
- * wiring" approach `<lr-dialog>` documents for its own heading detection,
- * necessary here because those attributes belong on the actual interactive
- * trigger, which lives outside this component's own shadow root.
+ * The trigger element itself is read from the `trigger` slot's assigned element (first one, if
+ * several are assigned) and enhanced imperatively with
+ * `aria-haspopup="menu"`/`aria-expanded`/`aria-controls` — the same "reach into a consumer-owned
+ * light-DOM element to complete its a11y wiring" approach `<lr-dialog>` documents for its own
+ * heading detection. `aria-controls` targets this menu host (which receives a stable generated
+ * `id` only when the consumer did not supply one), rather than a shadow-private popup id, so the
+ * relationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe
+ * those attributes and forward them to their shadow-internal native controls, including the
+ * resolved element-reference relationship.
  *
  * The popup is always rendered (never `display:none`) so `.focus()` calls on
  * its content work synchronously the instant it opens — visually hidden via
@@ -189,6 +191,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private itemStateObserver?: MutationObserver;
   private _isFirstUpdate = true;
   private pendingFocus: 'first' | 'last' = 'first';
+  private readonly generatedHostId = nextId('menu');
   private readonly listId = nextId('menu-list');
   // Standard menu type-ahead, mirroring lr-select's identical listbox
   // trio: printable keystrokes accumulate into this buffer and reset ~500ms
@@ -196,6 +199,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   // restarting the search on every keystroke.
   private typeAheadBuffer = '';
   private typeAheadTimer?: ReturnType<typeof setTimeout>;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (!this.id) this.id = this.generatedHostId;
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -386,14 +394,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     if (this.open) this.reposition();
   };
 
-  /** `aria-haspopup`/`aria-expanded`/`aria-controls` belong on the actual
-   *  interactive trigger, which is consumer-owned light-DOM content outside
-   *  this component's own shadow root -- see the class doc. */
+  /** `aria-haspopup`/`aria-expanded`/`aria-controls` belong on the actual interactive trigger,
+   *  which is consumer-owned light-DOM content outside this component's own shadow root. The
+   *  controls target is this host rather than `[part="list"]`: the latter's id is private to this
+   *  shadow root and cannot form a valid reference from the trigger -- see the class doc. */
   private syncTriggerA11y(): void {
     if (!this.triggerEl) return;
     this.triggerEl.setAttribute('aria-haspopup', 'menu');
     this.triggerEl.setAttribute('aria-expanded', this.open ? 'true' : 'false');
-    this.triggerEl.setAttribute('aria-controls', this.listId);
+    this.triggerEl.setAttribute('aria-controls', this.id);
   }
 
   private onItemsSlotChange = (e: Event): void => {

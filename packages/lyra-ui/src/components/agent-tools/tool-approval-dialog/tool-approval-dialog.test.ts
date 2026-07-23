@@ -75,6 +75,7 @@ it('renders the tool name in the heading, defaulting to a generic "tool" when un
   )) as LyraToolApprovalDialog;
   expect(withName.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('web_search');
   expect(withName.shadowRoot!.querySelector('h2')!.textContent).to.equal('Approve web_search call?');
+  expect(withName.shadowRoot!.querySelector('h2')!.getAttribute('dir')).to.equal('auto');
 
   const withoutName = (await fixture(
     html`<lr-tool-approval-dialog></lr-tool-approval-dialog>`,

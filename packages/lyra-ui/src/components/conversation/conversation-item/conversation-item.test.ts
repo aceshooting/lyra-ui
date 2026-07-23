@@ -131,6 +131,24 @@ describe('excerpt slot (wins over the excerpt property)', () => {
   });
 });
 
+it('isolates caller text and formatted timestamps from an inherited RTL direction', async () => {
+  const wrapper = await fixture(html`
+    <div dir="rtl">
+      <lr-conversation-item
+        title="Deploy pipeline investigation"
+        excerpt="Can you check the token refresh?"
+        .timestamp=${new Date('2026-01-01T11:00:00Z')}
+      ></lr-conversation-item>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-conversation-item') as LyraConversationItem;
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('dir')).to.equal('auto');
+  expect(el.shadowRoot!.querySelector('[part="excerpt"]')!.getAttribute('dir')).to.equal('auto');
+  expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.getAttribute('dir')).to.equal('auto');
+});
+
 describe('timestamp', () => {
   it('renders no [part="timestamp"] when unset', async () => {
     const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;

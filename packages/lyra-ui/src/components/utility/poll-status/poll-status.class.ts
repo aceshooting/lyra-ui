@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { pauseIcon, playIcon } from '../../../internal/icons.js';
@@ -6,6 +6,7 @@ import { finiteDuration } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './poll-status.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraPollStatusEventMap {
   'lr-poll-due': CustomEvent<undefined>;
@@ -13,21 +14,6 @@ export interface LyraPollStatusEventMap {
 }
 
 const TICK_MS = 1000;
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library
- *  (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /**
  * `<lr-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a

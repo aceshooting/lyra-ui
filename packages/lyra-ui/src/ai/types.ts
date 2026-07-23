@@ -1,7 +1,8 @@
 import type { ChatMessageRole, ChatMessageStatus } from '../components/conversation/chat-message/chat-message.class.js';
 import type { ToolCallStatus } from '../components/agent-tools/tool-call-chip/tool-call-chip.class.js';
+import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 
-export type { ChatMessageRole, ChatMessageStatus, ToolCallStatus };
+export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolCallStatus };
 
 /**
  * Provider-neutral shared type surface for the agentic AI component layer built on top of this
@@ -102,6 +103,9 @@ export interface ChatMessage {
   /** Plain-text (or app-rendered-markdown-source) body; `<lr-chat-message>` renders none of the message content itself, so this is for state-holding/serialization, not direct binding. */
   text?: string;
   attachments?: DocumentRef[];
+  /** Ordered, interleavable content. `text` remains the backward-compatible plain-body shortcut. */
+  parts?: MessagePart[];
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -135,6 +139,86 @@ export interface DocumentRef {
   version?: string;
 }
 
+/** Format-neutral location understood by Lyra's anchor-capable document viewers. */
+export type DocumentLocator = LyraAnchor;
+
+export type MessagePartState = 'streaming' | 'complete' | 'error';
+
+export interface MessagePartBase {
+  id: string;
+  state?: MessagePartState;
+  metadata?: Record<string, unknown>;
+}
+
+export interface TextMessagePart extends MessagePartBase {
+  type: 'text';
+  text: string;
+}
+
+export interface ReasoningMessagePart extends MessagePartBase {
+  type: 'reasoning';
+  text: string;
+  /** Host hint; renderers still expose a user-controlled disclosure. */
+  collapsed?: boolean;
+}
+
+export interface ToolCallMessagePart extends MessagePartBase {
+  type: 'tool-call';
+  invocation: ToolInvocation;
+}
+
+export interface ToolResultMessagePart extends MessagePartBase {
+  type: 'tool-result';
+  invocationId: string;
+  name?: string;
+  result?: unknown;
+  error?: string;
+}
+
+export interface CitationMessagePart extends MessagePartBase {
+  type: 'citation';
+  citation: Citation;
+}
+
+export interface AttachmentMessagePart extends MessagePartBase {
+  type: 'attachment';
+  document: DocumentRef;
+}
+
+export interface DataMessagePart extends MessagePartBase {
+  type: 'data';
+  name?: string;
+  data: unknown;
+  /** Optional allowlisted widget document consumed by `<lr-widget-renderer>`. */
+  widget?: unknown;
+}
+
+export interface AudioMessagePart extends MessagePartBase {
+  type: 'audio';
+  src?: string;
+  transcript?: string;
+  mimeType?: string;
+}
+
+export interface ErrorMessagePart extends MessagePartBase {
+  type: 'error';
+  message: string;
+  code?: string;
+  retryable?: boolean;
+}
+
+/** Ordered content vocabulary shared by runtimes, adapters, and `<lr-message-parts>`. */
+export type MessagePart =
+  | TextMessagePart
+  | ReasoningMessagePart
+  | ToolCallMessagePart
+  | ToolResultMessagePart
+  | CitationMessagePart
+  | AttachmentMessagePart
+  | DataMessagePart
+  | AudioMessagePart
+  | ErrorMessagePart;
+
 /**
  * A single citation record, e.g. one entry a retrieval/grounding step produces. `sourceId`
  * matches the `sourceId` field carried by `<lr-citation-badge>`'s own `lr-citation-activate` /
@@ -150,6 +234,12 @@ export interface Citation {
   sourceId?: string;
   span?: { start: number; end: number };
   label?: string;
+  /** Location inside the cited source. */
+  locator?: DocumentLocator;
+  /** Character range in the generated answer supported by this citation. */
+  answerRange?: { start: number; end: number };
+  quote?: string;
+  metadata?: Record<string, unknown>;
 }
 
 /** A retrieval request. Provider/backend-neutral -- no vendor-specific filter/query shape. */
@@ -174,6 +264,33 @@ export interface RetrievalChunk {
   score: number;
   source: DocumentRef;
   metadata?: Record<string, unknown>;
+  rank?: number;
+  locator?: DocumentLocator;
+  queryId?: string;
+  stage?: string;
+  traceId?: string;
+  scores?: RetrievalScoreBreakdown;
+}
+
+/** Individual retrieval scores before and after fusion/reranking. */
+export interface RetrievalScoreBreakdown {
+  dense?: number;
+  sparse?: number;
+  rerank?: number;
+  final: number;
+}
+
+export type GroundedClaimStatus = 'supported' | 'partially-supported' | 'unsupported' | 'contradicted';
+
+/** One answer claim and the evidence relationship used to assess it. */
+export interface GroundedClaim {
+  id: string;
+  text: string;
+  status: GroundedClaimStatus;
+  citationIds: string[];
+  answerRange?: { start: number; end: number };
+  confidence?: number;
+  explanation?: string;
 }
 
 /** How well a generated response is supported by its retrieved/cited sources. */
@@ -185,6 +302,7 @@ export interface GroundingAssessment {
   /** 0-1. */
   confidence?: number;
   warnings?: string[];
+  claims?: GroundedClaim[];
 }
 
 /** `detail` for a run-lifecycle event (e.g. an agent run's status changing). */

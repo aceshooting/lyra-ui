@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -7,26 +7,7 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './phone-input.styles.js';
-
-/**
- * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
- * converter is presence-based -- the attribute's mere presence (regardless of its string value)
- * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
- * actually get `true` (this component's default), the opposite of what that string reads as --
- * the same bug class `<lr-date-input>`'s `spellcheckConverter` documents and fixes. Mirrors
- * that shape: attribute absent (or removed) -> `true` (the default); `spellcheck="false"` ->
- * `false`; anything else present (no value, `="true"`, ...) -> `true`.
- */
-const spellcheckConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting for it; only the
-    // non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 export type PhoneNumberStatus = 'empty' | 'incomplete' | 'invalid' | 'valid';
 export type PhoneInputSelectionDirection = 'forward' | 'backward' | 'none';

@@ -439,6 +439,23 @@ export type LyraMessageKey =
   | 'streamRecoverAnnounce'
   | 'streamStallClearedAnnounce'
   | 'thinkingPanelLabel'
+  | 'messagePartsLabel'
+  | 'messagePartError'
+  | 'messagePartRetry'
+  | 'promptQueueLabel'
+  | 'promptQueueEmpty'
+  | 'promptQueueSendNow'
+  | 'selectionToolbarLabel'
+  | 'selectionAsk'
+  | 'selectionQuote'
+  | 'selectionCite'
+  | 'promptInputLabel'
+  | 'promptInputControls'
+  | 'promptInputSources'
+  | 'promptInputAttachments'
+  | 'mcpAppLabel'
+  | 'mcpAppUnavailable'
+  | 'mcpAppLoading'
   | 'taskListLabel'
   | 'taskListCompletedOfTotal'
   | 'taskListStepStartedAnnounce'
@@ -896,6 +913,26 @@ export type LyraMessageKey =
   | 'groundingSummaryConfidenceLabel'
   | 'groundingSummaryWarningsHeading'
   | 'groundingSummaryEvidenceHeading'
+  | 'claimEvidenceLabel'
+  | 'claimEvidenceEmpty'
+  | 'claimEvidenceSupported'
+  | 'claimEvidencePartiallySupported'
+  | 'claimEvidenceUnsupported'
+  | 'claimEvidenceContradicted'
+  | 'claimEvidenceConfidence'
+  | 'retrievalCompareLabel'
+  | 'retrievalCompareEmpty'
+  | 'retrievalCompareOverlap'
+  | 'retrievalCompareRank'
+  | 'retrievalCompareDenseScore'
+  | 'retrievalCompareSparseScore'
+  | 'retrievalCompareRerankScore'
+  | 'retrievalCompareFinalScore'
+  | 'ragEvalDashboardLabel'
+  | 'ragEvalDashboardEmpty'
+  | 'ragEvalDashboardRuns'
+  | 'ragEvalDashboardSlices'
+  | 'ragEvalDashboardAllSlices'
   | 'contextInspectorRedacted'
   | 'contextInspectorTruncated'
   | 'contextInspectorLabel'
@@ -1484,6 +1521,23 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   streamRecoverAnnounce: 'Connection restored.',
   streamStallClearedAnnounce: 'No longer stalled.',
   thinkingPanelLabel: 'Thinking',
+  messagePartsLabel: 'Message content',
+  messagePartError: 'Part failed',
+  messagePartRetry: 'Retry this part',
+  promptQueueLabel: 'Queued prompts',
+  promptQueueEmpty: 'No prompts queued',
+  promptQueueSendNow: 'Send now',
+  selectionToolbarLabel: 'Selection actions',
+  selectionAsk: 'Ask',
+  selectionQuote: 'Quote',
+  selectionCite: 'Cite',
+  promptInputLabel: 'AI prompt',
+  promptInputControls: 'Prompt options',
+  promptInputSources: 'Sources',
+  promptInputAttachments: 'Attachments',
+  mcpAppLabel: 'Interactive app',
+  mcpAppUnavailable: 'This interactive app could not be loaded.',
+  mcpAppLoading: 'Loading interactive app…',
   taskListLabel: 'Tasks',
   taskListCompletedOfTotal: '{completed} of {total} completed',
   taskListStepStartedAnnounce: 'Step started: {label}',
@@ -1935,6 +1989,26 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   groundingSummaryConfidenceLabel: 'Confidence',
   groundingSummaryWarningsHeading: 'Warnings',
   groundingSummaryEvidenceHeading: 'Evidence',
+  claimEvidenceLabel: 'Claim evidence',
+  claimEvidenceEmpty: 'No claim-level evidence available',
+  claimEvidenceSupported: 'Supported',
+  claimEvidencePartiallySupported: 'Partially supported',
+  claimEvidenceUnsupported: 'Unsupported',
+  claimEvidenceContradicted: 'Contradicted',
+  claimEvidenceConfidence: '{percent} confidence',
+  retrievalCompareLabel: 'Retrieval comparison',
+  retrievalCompareEmpty: 'No retrieval result sets to compare',
+  retrievalCompareOverlap: 'Top-k overlap: {percent}',
+  retrievalCompareRank: 'Rank {rank}',
+  retrievalCompareDenseScore: 'Dense',
+  retrievalCompareSparseScore: 'Sparse',
+  retrievalCompareRerankScore: 'Rerank',
+  retrievalCompareFinalScore: 'Final',
+  ragEvalDashboardLabel: 'RAG evaluation dashboard',
+  ragEvalDashboardEmpty: 'No evaluation runs available',
+  ragEvalDashboardRuns: 'Evaluation runs',
+  ragEvalDashboardSlices: 'Evaluation slices',
+  ragEvalDashboardAllSlices: 'All',
   contextInspectorRedacted: 'Redacted',
   contextInspectorTruncated: 'Truncated',
   contextInspectorLabel: 'Context inspector',

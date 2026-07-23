@@ -391,7 +391,11 @@ export type {
   SplitResizeDetail,
 } from './components/layout/split/split.js';
 export { LyraTimeRange } from './components/forms/time-range/time-range.js';
-export type { TimeRangePreset } from './components/forms/time-range/time-range.js';
+export type {
+  TimeRangeHandle,
+  TimeRangePreset,
+  TimeRangeValueFormatter,
+} from './components/forms/time-range/time-range.js';
 export { LyraPlayback } from './components/media/playback/playback.js';
 export { LyraPagination } from './components/data/pagination/pagination.js';
 export type { LyraPaginationSize } from './components/data/pagination/pagination.js';

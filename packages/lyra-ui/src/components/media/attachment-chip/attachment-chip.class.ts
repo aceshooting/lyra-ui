@@ -1,26 +1,11 @@
-import { html, nothing, svg, type ComplexAttributeConverter, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './attachment-chip.styles.js';
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Shared by `previewable` and `removable`,
- *  which have the identical `true`-default parsing need -- duplicated locally rather than
- *  imported, matching this exact converter's repeated per-component convention elsewhere in this
- *  library (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
 
@@ -487,7 +472,6 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

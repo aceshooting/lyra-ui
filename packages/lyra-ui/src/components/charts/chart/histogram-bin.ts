@@ -4,6 +4,8 @@ export interface HistogramBucket {
 }
 
 export const MAX_HISTOGRAM_BINS = 1_000;
+const LEFT_TO_RIGHT_ISOLATE = '\u2066';
+const POP_DIRECTIONAL_ISOLATE = '\u2069';
 
 /** Converts an untyped bucket count to a bounded, non-negative integer. */
 export function normalizeHistogramBinCount(binCount: unknown): number {
@@ -41,7 +43,10 @@ export function binValues(values: number[], binCount: number): HistogramBucket[]
   const buckets: HistogramBucket[] = Array.from({ length: bins }, (_, i) => {
     const bLo = lo + i * width;
     const bHi = lo + (i + 1) * width;
-    return { label: `${bLo.toFixed(1)}–${bHi.toFixed(1)}`, count: 0 };
+    return {
+      label: `${LEFT_TO_RIGHT_ISOLATE}${bLo.toFixed(1)}–${bHi.toFixed(1)}${POP_DIRECTIONAL_ISOLATE}`,
+      count: 0,
+    };
   });
 
   for (const v of finite) {

@@ -2,7 +2,6 @@ import {
   html,
   nothing,
   svg,
-  type ComplexAttributeConverter,
   type PropertyValues,
   type SVGTemplateResult,
   type TemplateResult,
@@ -17,6 +16,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import '../../utility/live-region/live-region.js';
 import { styles } from './thread-list.styles.js';
 import { getDateTimeFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface ChatThread {
   id: string;
@@ -101,23 +101,6 @@ function trashIcon(): SVGTemplateResult {
     </svg>
   `;
 }
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. `toAttribute` keeps the original
- *  presence-based reflection direction (`true` -> present, `false` -> absent) so existing
- *  reflected-attribute expectations are unaffected -- only attribute *parsing* changes. Duplicated
- *  locally rather than imported, matching this exact converter's repeated per-component convention
- *  elsewhere in this library (see e.g. `<lr-task-list>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 function defaultFilter(thread: ChatThread, query: string): boolean {
   return thread.title.toLowerCase().includes(query) || (thread.excerpt ?? '').toLowerCase().includes(query);

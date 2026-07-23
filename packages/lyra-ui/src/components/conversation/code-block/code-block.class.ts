@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -27,26 +27,10 @@ import {
 } from './code-block-shared.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
 const COPY_CONFIRM_MS = 1500;
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, matching every other `reflect: true` boolean property in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 export interface LyraCodeBlockEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
@@ -652,7 +636,6 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

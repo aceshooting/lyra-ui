@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
@@ -11,27 +11,13 @@ import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { styles } from './tour.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** Default distance (px) between the target and the popover -- see `LyraTour.distance`. */
 const DEFAULT_DISTANCE = 12;
 /** Default extra px between a target's own box and the spotlight cutout/ring -- see
  *  `LyraTour.spotlightPadding`. */
 const DEFAULT_SPOTLIGHT_PADDING = 4;
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library
- *  (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /**
  * Resolves the element a step spotlights/anchors to. A `string` is resolved via

@@ -66,6 +66,24 @@ it('shows a tooltip after focus and describes the trigger', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('positions a tooltip that is open on first render against its slotted trigger', async () => {
+  const el = (await fixture(html`
+    <div style="margin-inline-start: 300px; margin-block-start: 100px">
+      <lr-tooltip open manual>Helpful text<button slot="trigger">Help</button></lr-tooltip>
+    </div>
+  `)).querySelector('lr-tooltip') as LyraTooltip;
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  const triggerRect = trigger.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+
+  expect(Math.abs(popupRect.x + popupRect.width / 2 - (triggerRect.x + triggerRect.width / 2))).to.be.lessThan(2);
+  expect(popupRect.bottom).to.be.at.most(triggerRect.top);
+});
+
 it('names a dropdown popup "Menu", not "Popover", since it inherits LyraPopover with popupRole=menu', async () => {
   const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;

@@ -14,4 +14,17 @@ describe('lr-rag-answer', () => {
     await expect((await fixture(html`<lr-rag-answer loading></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();
     await expect((await fixture(html`<lr-rag-answer answer="Answer"></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();
   });
+  it('forwards claim-level visibility to its grounding summary', async () => {
+    const assessment = {
+      supportedClaims: 1,
+      unsupportedClaims: 0,
+      coverage: 1,
+      claims: [{ id: 'claim-1', text: 'Supported', status: 'supported' as const, citationIds: [] }],
+    };
+    const el = (await fixture(
+      html`<lr-rag-answer .assessment=${assessment} .showClaims=${false}></lr-rag-answer>`,
+    )) as LyraRagAnswer;
+    const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { showClaims: boolean };
+    expect(summary.showClaims).to.be.false;
+  });
 });

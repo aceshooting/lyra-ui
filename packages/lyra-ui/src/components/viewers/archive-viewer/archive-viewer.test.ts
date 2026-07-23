@@ -169,6 +169,17 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     }
   });
 
+  it('isolates entry names and formatted sizes from an inherited RTL direction', async () => {
+    const { vlistRoot, restore } = await listing();
+    try {
+      const names = Array.from(vlistRoot.querySelectorAll('[part~="entry-name"]'));
+      expect(names.every((name) => name.getAttribute('dir') === 'auto')).to.be.true;
+      expect(vlistRoot.querySelector('[part~="entry-size"]')!.getAttribute('dir')).to.equal('auto');
+    } finally {
+      restore();
+    }
+  });
+
   it('lets a consumer stylesheet reach the virtualized rows through exportparts', async () => {
     const sheet = document.createElement('style');
     sheet.textContent = `

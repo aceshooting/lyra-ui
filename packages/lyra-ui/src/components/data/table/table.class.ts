@@ -20,6 +20,7 @@ import '../../overlays/empty/empty.class.js';
 import '../pagination/pagination.js';
 import '../../overlays/spinner/spinner.js';
 import '../../overlays/skeleton/skeleton.js';
+import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
  *  spinner; `'skeleton'` keeps the real grid — `<colgroup>`, `<thead>`, filter field, pagination
@@ -37,25 +38,6 @@ const DEFAULT_SKELETON_ROWS = 3;
  *  thousands of nodes for a state that exists for a few hundred milliseconds. An explicit
  *  `skeletonRows` is honored verbatim and is not capped. */
 const MAX_DERIVED_SKELETON_ROWS = 20;
-
-/**
- * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
- * converter is presence-based -- the attribute's mere presence (regardless of its string value)
- * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
- * actually get `true` (this property's default), the opposite of what that string reads as -- the
- * same bug class `<lr-textarea>`'s `spellcheckConverter` and `<lr-model-select>`'s identical
- * converter document and fix.
- */
-const spellcheckConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting for it; only the
-    // non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
-};
 
 /**
  * Tri-state boolean converter for `empty-compact`. An absent attribute stays `undefined` -- "keep
@@ -2050,7 +2032,6 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

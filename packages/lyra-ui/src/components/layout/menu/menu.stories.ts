@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './menu.js';
 import './menu-item.js';
+import '../../forms/icon-button/icon-button.js';
 import type { MenuSelectDetail } from './menu.js';
 
 const meta: Meta = {
@@ -25,7 +26,7 @@ type Story = StoryObj;
  *  destructive item set apart with `destructive`. */
 export const GearMenu: Story = {
   render: () => html`
-    <lr-menu label="Settings">
+    <lr-menu label="Settings" open>
       <button
         slot="trigger"
         aria-label="Settings"
@@ -37,6 +38,20 @@ export const GearMenu: Story = {
       <lr-menu-item value="preferences"><span slot="icon">🎛️</span>Preferences</lr-menu-item>
       <hr />
       <lr-menu-item value="signout" destructive><span slot="icon">🚪</span>Sign out</lr-menu-item>
+    </lr-menu>
+  `,
+};
+
+/** Lyra's own icon-button can be the trigger without losing the menu-button relationship:
+ *  `aria-haspopup`, `aria-expanded`, and the controls reference reach its shadow-internal native
+ *  button, which is the element that actually receives focus. */
+export const LyraIconButtonTrigger: Story = {
+  render: () => html`
+    <lr-menu label="Account actions">
+      <lr-icon-button slot="trigger" aria-label="Account actions">👤</lr-icon-button>
+      <lr-menu-item value="profile">Profile</lr-menu-item>
+      <lr-menu-item value="preferences">Preferences</lr-menu-item>
+      <lr-menu-item value="signout" destructive>Sign out</lr-menu-item>
     </lr-menu>
   `,
 };

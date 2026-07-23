@@ -67,6 +67,36 @@ describe('lr-button', () => {
     expect(button.getAttribute('aria-label')).to.equal('Close dialog');
   });
 
+  it('reacts when a mounted host aria-label changes or is removed', async () => {
+    const el = (await fixture(
+      html`<lr-button aria-label="Close dialog" appearance="plain"><svg slot="start"></svg></lr-button>`,
+    )) as LyraButton;
+    const button = el.shadowRoot!.querySelector('button[part="base"]') as HTMLButtonElement;
+    expect(el.accessibleLabel).to.equal('Close dialog');
+
+    el.setAttribute('aria-label', 'Dismiss dialog');
+    await el.updateComplete;
+    expect(el.accessibleLabel).to.equal('Dismiss dialog');
+    expect(button.getAttribute('aria-label')).to.equal('Dismiss dialog');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(el.accessibleLabel).to.equal(null);
+    expect(button.hasAttribute('aria-label')).to.be.false;
+  });
+
+  it('keeps accessibleLabel reactive in anchor mode too', async () => {
+    const el = (await fixture(
+      html`<lr-button href="/settings" aria-label="Open settings">Settings</lr-button>`,
+    )) as LyraButton;
+    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    expect(anchor.getAttribute('aria-label')).to.equal('Open settings');
+
+    el.accessibleLabel = 'Manage settings';
+    await el.updateComplete;
+    expect(anchor.getAttribute('aria-label')).to.equal('Manage settings');
+  });
+
   it('type="submit" requests submit on the closest ancestor form (a shadow-internal button cannot do this on its own)', async () => {
     const form = (await fixture(html`
       <form>

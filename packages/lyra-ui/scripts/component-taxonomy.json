@@ -1,0 +1,20 @@
+{
+  "$comment": "Compatibility aliases and convenience presets remain public tags but are reported separately from primary component behaviors.",
+  "aliases": [
+    "lr-accordion-item",
+    "lr-dropdown-item",
+    "lr-tag"
+  ],
+  "presets": [
+    "lr-bar-chart",
+    "lr-bubble-chart",
+    "lr-doughnut-chart",
+    "lr-line-chart",
+    "lr-number-input",
+    "lr-pie-chart",
+    "lr-polar-area-chart",
+    "lr-radar-chart",
+    "lr-scatter-chart",
+    "lr-time-input"
+  ]
+}

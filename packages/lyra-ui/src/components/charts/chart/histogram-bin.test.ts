@@ -17,6 +17,13 @@ it('labels each bucket with its numeric range', () => {
   expect(buckets[0].label).to.match(/0\.0.*5\.0/);
 });
 
+it('isolates numeric range labels so RTL layout cannot reverse their endpoints', () => {
+  const [bucket] = binValues([0, 10], 2);
+  expect(bucket.label.startsWith('\u2066')).to.be.true;
+  expect(bucket.label.endsWith('\u2069')).to.be.true;
+  expect(bucket.label).to.contain('0.0–5.0');
+});
+
 it('returns an empty array for empty input', () => {
   expect(binValues([], 5)).to.deep.equal([]);
 });

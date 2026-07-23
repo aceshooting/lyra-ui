@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -11,6 +11,7 @@ import '../../utility/live-region/live-region.js';
 import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './activity-feed.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type ActivityEntryTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 
@@ -44,24 +45,6 @@ export interface LyraActivityFeedEventMap {
 /** Close enough to the body's own max scroll position to count as anchored there -- identical
  *  value and rationale to `<lr-thinking-panel>`'s `NEAR_BOTTOM_PX`. */
 const NEAR_BOTTOM_PX = 48;
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, so `follow`'s host attribute is present by default, matching every other
- *  `reflect: true` boolean property in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 /** The tone dot's `part` list: the shared `tone-dot` name plus a tone-specific one. Shadow Parts
  *  forbids an attribute selector after `::part()`, so `::part(tone-dot)[data-tone='success']` is

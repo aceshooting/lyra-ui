@@ -608,7 +608,7 @@
     "check:cycles": "node scripts/check-import-cycles.mjs",
     "check:hit-area": "node scripts/check-hit-area.mjs",
     "check:numeric-guards": "node scripts/check-numeric-guards.mjs",
-    "test:tooling": "node scripts/component-families.test.mjs && node scripts/migrate-wa.test.mjs",
+    "test:tooling": "node scripts/component-families.test.mjs && node scripts/migrate-wa.test.mjs && node scripts/visual-regression-compare.test.mjs",
     "test:types": "tsc --noEmit -p tsconfig.type-tests.json",
     "style-policy": "node scripts/check-style-policy.mjs",
     "check:source-policy": "node scripts/check-source-policy.mjs",

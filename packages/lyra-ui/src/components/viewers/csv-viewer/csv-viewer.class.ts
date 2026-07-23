@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
@@ -11,6 +11,7 @@ import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-view
 import '../../layout/virtual-list/virtual-list.js';
 import { loadPapaParseCached, type PapaParseApi } from '../../../internal/papaparse-loader.js';
 import { styles } from './csv-viewer.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 type CsvState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; rows: unknown[][] } | { kind: 'error'; message: string };
 function columns(rows: unknown[][]): number { return rows.reduce((max, row) => Math.max(max, row.length), 0); }
@@ -21,20 +22,6 @@ function cell(value: unknown): string { return value === undefined || value === 
 function headerOffset(hasHeaderRow: boolean): number {
   return hasHeaderRow ? 1 : 0;
 }
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead (mirrors `lr-task-list`'s
- *  `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 /** One `highlights` entry resolved against the parsed grid, alongside its parsed `cell-range`. */
 interface ResolvedCellHighlight {

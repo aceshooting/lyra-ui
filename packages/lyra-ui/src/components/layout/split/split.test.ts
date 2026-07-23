@@ -265,6 +265,37 @@ it('honors a valid pre-set sizes property at connect, without regenerating an eq
   expect(el.sizes).to.deep.equal([30, 70]);
 });
 
+it('honors initialization-only properties assigned after connection but before the first update', async () => {
+  const storageKey = 'test-split-late-initialization-' + Math.random();
+  localStorage.setItem(`lr-split:${storageKey}:2`, JSON.stringify([35, 65]));
+  const container = await fixture(html`<div></div>`);
+  const el = document.createElement('lr-split');
+  el.append(document.createElement('div'), document.createElement('div'));
+
+  // Connecting schedules the first Lit update. A parent renderer may commit property parts later
+  // in this same turn, so initialization must not become final inside connectedCallback().
+  container.append(el);
+  el.defaultSizes = [20, 80];
+  el.storageKey = storageKey;
+  await el.updateComplete;
+
+  // Persistence still has priority over defaultSizes, proving both late initialization inputs were
+  // visible on the same first-update pass rather than the already-committed equal split winning.
+  expect(el.sizes).to.deep.equal([35, 65]);
+});
+
+it('uses a late-bound defaultSizes value on the first update when no persisted layout exists', async () => {
+  const container = await fixture(html`<div></div>`);
+  const el = document.createElement('lr-split');
+  el.append(document.createElement('div'), document.createElement('div'));
+
+  container.append(el);
+  el.defaultSizes = [16.67, 83.33];
+  await el.updateComplete;
+
+  expect(el.sizes).to.deep.equal([16.67, 83.33]);
+});
+
 it('uses defaultSizes only for initialization, below valid persistence and above equal distribution', async () => {
   const firstVisitKey = 'test-split-default-first-' + Math.random();
   const firstVisit = (await fixture(

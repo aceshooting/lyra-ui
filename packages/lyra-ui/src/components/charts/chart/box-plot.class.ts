@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
@@ -8,6 +8,8 @@ import { loadChartJs } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { seriesPalette } from './chart-colors.js';
 
 export interface BoxPlotPoint {
   min: number;
@@ -33,13 +35,6 @@ const FALLBACK_TICK_COLOR = '#6b7280';
 const FALLBACK_LEGEND_COLOR = '#1a1a1a';
 const FALLBACK_TOOLTIP_BG = '#fff';
 const FALLBACK_TOOLTIP_TEXT = '#1a1a1a';
-
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-};
-
 
 // Mirrors chart.ts's own `ThemeColors` shape (all 5 `--lr-chart-*` tokens)
 // so scales, legends, and tooltips share the same canvas theme contract.
@@ -220,16 +215,17 @@ export class LyraBoxPlot extends LyraElement {
 
   private buildConfig(): OptionalPeerApi {
     const theme = this.themeColors();
+    const palette = seriesPalette(this);
     return {
       // boxplot isn't in chart.js's static ChartType union — same cast the seed uses.
       type: 'boxplot' as never,
       data: {
         labels: this.labels,
-        datasets: this.boxes.map((s) => ({
+        datasets: this.boxes.map((s, index) => ({
           label: s.label,
           data: s.data,
-          backgroundColor: s.color,
-          borderColor: s.color,
+          backgroundColor: s.color ?? palette[index % palette.length],
+          borderColor: s.color ?? palette[index % palette.length],
         })),
       },
       options: {
@@ -383,7 +379,6 @@ export class LyraBoxPlot extends LyraElement {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

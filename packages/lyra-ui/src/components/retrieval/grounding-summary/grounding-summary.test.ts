@@ -49,6 +49,25 @@ it('renders a fourth confidence lr-stat when assessment.confidence is set', asyn
   expect(rows[3]!.getAttribute('value')).to.equal('72%');
 });
 
+it('renders claim-level evidence when claims are supplied and allows it to be hidden explicitly', async () => {
+  const el = (await fixture(html`<lr-grounding-summary></lr-grounding-summary>`)) as LyraGroundingSummary;
+  el.assessment = {
+    supportedClaims: 1,
+    unsupportedClaims: 0,
+    coverage: 1,
+    claims: [{ id: 'claim-1', text: 'A supported claim', status: 'supported', citationIds: ['cite-1'] }],
+  };
+  el.citations = CITATIONS;
+  await el.updateComplete;
+  const claims = el.shadowRoot!.querySelector('lr-claim-evidence') as HTMLElement & { claims: unknown[] };
+  expect(claims).to.exist;
+  expect(claims.claims.length).to.equal(1);
+
+  el.showClaims = false;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-claim-evidence')).to.not.exist;
+});
+
 it('formats large claim counts through the effective locale', async () => {
   const el = (await fixture(html`<lr-grounding-summary locale="de-DE"></lr-grounding-summary>`)) as LyraGroundingSummary;
   el.assessment = { supportedClaims: 1234, unsupportedClaims: 0, coverage: 0.5 };

@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
@@ -14,21 +14,7 @@ import '../../data/stat/stat.class.js';
 import '../../layout/tabs/tabs.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './entity-dossier.styles.js';
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library
- *  (see e.g. `<lr-agent-run>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** The exact `lr-graph.nodeTypes` entry shape -- see `lr-entity-card`'s and
  *  `lr-provenance-panel`'s identical local aliases for why this isn't imported from `lr-graph`

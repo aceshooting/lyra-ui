@@ -1,27 +1,12 @@
-import { html, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './mutation-observer.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraMutationObserverEventMap {
   'lr-mutation': CustomEvent<{ records: MutationRecord[] }>;
 }
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Shared by `child-list` and `subtree`, which
- *  have the identical `true`-default parsing need -- duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library
- *  (see e.g. `<lr-task-list>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /**
  * `<lr-mutation-observer>` — observes element children in the default slot

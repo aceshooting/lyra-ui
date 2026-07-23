@@ -1,26 +1,11 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import type { GitStatus } from '../../data/file-tree/file-tree.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Mirrors `<lr-agent-run>`'s own
- *  `showCancel`/`showRetry` converter. Shared by `files-collapsed` and `copyable`, which have the
- *  identical `true`-default parsing need -- duplicated locally rather than imported, matching this
- *  exact converter's repeated per-component convention elsewhere in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** Visual chrome for `<lr-commit-card>`'s root, mirroring `lr-card`'s (and `<lr-agent-run>`'s own)
  *  `appearance` vocabulary. */

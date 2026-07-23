@@ -1,23 +1,9 @@
-import { html, nothing, svg, type ComplexAttributeConverter, type TemplateResult } from 'lit';
+import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library
- *  (see e.g. `<lr-attachment-chip>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** The exact `lr-graph.nodeTypes` entry shape, declared locally (not imported from
  *  `lr-graph`) so this zero-dependency component never pulls in the graph's own d3 optional-peer

@@ -18,6 +18,17 @@ export interface WidgetNode {
   payload?: unknown;
 }
 
+export interface WidgetBinding {
+  $bind: string;
+  fallback?: string | number | boolean | null;
+}
+
+export interface LyraWidgetDocument {
+  version: '1';
+  root: WidgetNode;
+  state?: unknown;
+}
+
 export interface ResolvedText {
   key: string;
   kind: 'text';
@@ -33,6 +44,7 @@ export interface ResolvedElement {
   actionEvent?: string;
   actionId?: string;
   payload?: unknown;
+  bindings: Array<{ prop: string; path: string; event?: string }>;
   children: ResolvedNode[];
   slot?: string;
 }
@@ -41,6 +53,7 @@ export type ResolvedNode = ResolvedText | ResolvedElement;
 
 export interface ResolveContext {
   registry: WidgetTypeRegistry;
+  state?: unknown;
   /** Dedup key set (`type` or `type:prop`) -- persists across a whole `resolveTree()` call for one
    *  component instance's `tree` value, so a repeated unknown type/prop warns exactly once. */
   warned: Set<string>;
@@ -62,6 +75,39 @@ function warnOnce(ctx: ResolveContext, key: string, message: string): void {
   (ctx.warn ?? console.warn)(`[lr-widget-renderer] ${message}`);
 }
 
+function isBinding(value: unknown): value is WidgetBinding {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) && typeof (value as WidgetBinding).$bind === 'string');
+}
+
+function readPointer(root: unknown, path: string): unknown {
+  if (path === '') return root;
+  if (!path.startsWith('/')) return undefined;
+  let current = root;
+  for (const raw of path.slice(1).split('/')) {
+    const segment = raw.replace(/~1/g, '/').replace(/~0/g, '~');
+    if (segment === '__proto__' || segment === 'prototype' || segment === 'constructor') return undefined;
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) return undefined;
+      current = current[index];
+    } else if (current && typeof current === 'object' && Object.hasOwn(current, segment)) {
+      current = (current as Record<string, unknown>)[segment];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+function resolveValue(value: unknown, ctx: ResolveContext): { value: unknown; path?: string } {
+  if (!isBinding(value)) return { value };
+  const resolved = readPointer(ctx.state, value.$bind);
+  return {
+    value: resolved === undefined ? value.fallback : resolved,
+    path: value.$bind,
+  };
+}
+
 function filterRowColProps(props: Record<string, unknown> | undefined): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (!props) return out;
@@ -74,23 +120,30 @@ function filterRowColProps(props: Record<string, unknown> | undefined): Record<s
 
 function filterMappedProps(
   props: Record<string, unknown> | undefined,
-  def: { props?: Record<string, 'string' | 'number' | 'boolean'>; forcedProps?: Record<string, unknown> },
+  def: {
+    props?: Record<string, 'string' | 'number' | 'boolean'>;
+    forcedProps?: Record<string, unknown>;
+    bindings?: Record<string, { event: string }>;
+  },
   ctx: ResolveContext,
   type: string,
-): Record<string, unknown> {
+): { props: Record<string, unknown>; bindings: Array<{ prop: string; path: string; event?: string }> } {
   const out: Record<string, unknown> = {};
+  const bindings: Array<{ prop: string; path: string; event?: string }> = [];
   const allowlist = def.props ?? {};
   if (props) {
-    for (const [key, value] of Object.entries(props)) {
+    for (const [key, rawValue] of Object.entries(props)) {
       const expectedType = allowlist[key];
+      const { value, path } = resolveValue(rawValue, ctx);
       if (expectedType === undefined || typeof value !== expectedType) {
         warnOnce(ctx, `${type}:${key}`, `skipped disallowed or mistyped prop "${key}" on type "${type}"`);
         continue;
       }
       out[key] = value;
+      if (path) bindings.push({ prop: key, path, event: def.bindings?.[key]?.event });
     }
   }
-  return { ...out, ...(def.forcedProps ?? {}) };
+  return { props: { ...out, ...(def.forcedProps ?? {}) }, bindings };
 }
 
 function budgetExceeded(budget: { remaining: number }, ctx: ResolveContext): boolean {
@@ -135,6 +188,7 @@ function resolveNode(
   let tag: string | undefined;
   let props: Record<string, unknown>;
   let actionEvent: string | undefined;
+  let bindings: Array<{ prop: string; path: string; event?: string }> = [];
   let slots: string[] = [];
 
   if (node.type === 'row' || node.type === 'col') {
@@ -142,7 +196,11 @@ function resolveNode(
     props = filterRowColProps(node.props);
   } else if (node.type === 'text') {
     kind = 'builtin-text';
-    props = {};
+    const resolved = resolveValue(node.props?.['value'], ctx);
+    props = typeof resolved.value === 'string' || typeof resolved.value === 'number'
+      ? { value: String(resolved.value) }
+      : {};
+    if (resolved.path) bindings = [{ prop: 'value', path: resolved.path }];
   } else {
     const def = ctx.registry.get(node.type);
     if (!def) {
@@ -151,7 +209,9 @@ function resolveNode(
     }
     kind = 'mapped';
     tag = def.tag;
-    props = filterMappedProps(node.props, def, ctx, node.type);
+    const filtered = filterMappedProps(node.props, def, ctx, node.type);
+    props = filtered.props;
+    bindings = filtered.bindings;
     slots = def.slots ?? [];
     if (node.actionId !== undefined && def.action) {
       actionEvent = def.action.event;
@@ -176,6 +236,7 @@ function resolveNode(
     actionEvent,
     actionId: actionEvent ? node.actionId : undefined,
     payload: actionEvent ? node.payload : undefined,
+    bindings,
     children,
     slot: node.slot,
   };

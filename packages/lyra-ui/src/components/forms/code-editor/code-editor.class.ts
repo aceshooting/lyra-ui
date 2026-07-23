@@ -1,9 +1,10 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; }
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
@@ -14,14 +15,6 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  *  `fromAttribute` checks the literal string instead (mirrors `lr-task-list`'s `expanded`
  *  converter). `toAttribute` reflects the `true` state as a present attribute rather than omitting
  *  it, matching this property's own `reflect: true`. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 /** `<lr-code-editor>` — dependency-free multiline code editing surface with optional line numbers.
  *

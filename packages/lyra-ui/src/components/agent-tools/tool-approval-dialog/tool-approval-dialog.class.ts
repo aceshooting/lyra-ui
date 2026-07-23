@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -7,31 +7,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { styles } from './tool-approval-dialog.styles.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
-
-const spellcheckConverter = {
-  fromAttribute(value: string | null): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value: boolean): string | null {
-    return value ? null : 'false';
-  },
-};
-
-/** `true`-defaulting boolean attribute converter for `editable` -- identical shape/rationale to
- *  `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated locally per this library's
- *  convention of not sharing these tiny converters across independently-consumable component
- *  files. Lit's default presence-based `type: Boolean` can never be set back to `false` from a
- *  plain-HTML attribute once the property's own default is `true` (removing an attribute that was
- *  never present fires no `attributeChangedCallback`), so `fromAttribute` checks the literal
- *  string instead. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 export type ToolApprovalDialogWrap = 'hard' | 'soft' | 'off';
 
@@ -420,7 +396,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         tabindex="-1"
       >
         <div part="header">
-          <h2 id=${this.titleId}>${headingBefore}<span part="tool-name">${toolName}</span>${headingAfter ?? ''}</h2>
+          <h2 id=${this.titleId} dir="auto">${headingBefore}<span part="tool-name">${toolName}</span>${headingAfter ?? ''}</h2>
         </div>
         <div part="body">
           ${this.editing
@@ -476,7 +452,6 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

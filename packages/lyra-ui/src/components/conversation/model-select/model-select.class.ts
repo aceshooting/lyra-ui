@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
@@ -6,20 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { styles } from './model-select.styles.js';
-
-/**
- * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
- * converter is presence-based -- the attribute's mere presence (regardless of its string value)
- * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
- * actually get `true` (this property's default), the opposite of what that string reads as -- the
- * same bug class `<lr-textarea>`'s `spellcheckConverter` and `<lr-date-input>`'s identical
- * converter document and fix.
- */
-const spellcheckConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-};
+import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 /** Visual size, same `xs`-`xl` scale as `<lr-select>`'s `size`. */
 export type LyraModelSelectSize = 'xs' | 's' | 'm' | 'l' | 'xl';
@@ -813,7 +800,6 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     return this.closedMode ? this.renderClosed() : this.renderFreeText();
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

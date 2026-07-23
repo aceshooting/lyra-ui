@@ -21,6 +21,30 @@ export const Default: Story = {
   render: () => html`<lr-button>Save</lr-button>`,
 };
 
+export const ReactiveAccessibleLabel: Story = {
+  name: 'Reactive accessible label',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`accessibleLabel` is bound to the host `aria-label`; changing the attribute after mount immediately updates the internal native control.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-button
+      aria-label="Run report"
+      @click=${(event: Event) => {
+        const button = event.currentTarget as HTMLElement;
+        button.setAttribute('aria-label', 'Run report again');
+        button.textContent = 'Run again';
+      }}
+    >
+      Run
+    </lr-button>
+  `,
+};
+
 export const Variants: Story = {
   render: () => html`
     <div style="display: flex; gap: 0.5rem;">

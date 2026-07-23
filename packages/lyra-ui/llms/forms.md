@@ -794,6 +794,9 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
 - `disabled: boolean = false` (reflected)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
+  reactively to the internal native button or anchor; changing or removing the attribute after
+  mount updates the actual focused control
 
 The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
 `100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
@@ -872,9 +875,13 @@ box no matter what tier or override is in play.
 ```
 
 **Known gotchas:**
-- A host `aria-label` is forwarded to the internal button as a literal string (for an icon-only
-  button); an external `aria-labelledby`/`aria-describedby` idref is not copied across the shadow
-  boundary.
+- `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
+  a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
+  idref is not copied across the shadow boundary.
+- Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded to the
+  internal semantic control. For `aria-controls`, targets in the host's own root are resolved
+  through the element-reference API so a popup relationship survives the component's shadow
+  boundary; this is what lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
@@ -898,6 +905,11 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 `iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
+
+Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded reactively to
+the shadow-internal native button. `aria-controls` targets in the host's own root are resolved
+through the element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
+exposes the menu relationship and expanded state on the element that actually receives focus.
 
 **Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
@@ -1369,6 +1381,11 @@ consumer-facing `disabled` property/attribute itself.
 - `disabled: boolean = false` (reflected)
 - `startLabel: string = 'Range start'` (attribute `start-label`) — `aria-label` for the start handle
 - `endLabel: string = 'Range end'` (attribute `end-label`) — `aria-label` for the end handle
+- `valueFormatter?: TimeRangeValueFormatter` (attribute: false) — maps each finite, clamped
+  `aria-valuenow` to optional human-readable `aria-valuetext`; called as
+  `(value, handle: TimeRangeHandle)`, where `TimeRangeHandle = 'start' | 'end'`. The formatter may
+  return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
+  Leaving the property unset preserves the numeric-only contract
 - `presets: TimeRangePreset[] = []` (attribute: false) — `TimeRangePreset { label: string; start:
   number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
@@ -1412,10 +1429,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 **Optional peer deps:** none.
 
 ```html
-<lr-time-range min="0" max="1440" start="480" end="1020" step="15"></lr-time-range>
+<lr-time-range id="months" min="0" max="2" start="0" end="2"></lr-time-range>
 <script>
-  document.querySelector('lr-time-range')
-    .addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
+  const months = ['April 2023', 'May 2023', 'June 2023'];
+  const range = document.getElementById('months');
+  range.valueFormatter = (value, handle) =>
+    `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
+  range.addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
 </script>
 ```
 
@@ -1432,9 +1452,9 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   slider.
 - `aria-valuemin`/`aria-valuemax` on each handle report that handle's reachable sub-range (bounded by
   its sibling), not the full domain — matching what Home/End actually jump to.
-- No `aria-valuetext`: only raw numeric `aria-valuenow` is exposed (omitted entirely, rather than a
-  literal `"NaN"`, if `start`/`end` is non-finite), no hook for a human-readable (e.g. formatted
-  date/time) equivalent of the mapped domain.
+- `valueFormatter` is presentation-only: `aria-valuenow`, geometry, emitted values, and preset
+  matching stay numeric. Non-finite handles omit both `aria-valuenow` and `aria-valuetext` and are
+  never passed to the formatter.
 - Handles a `min > max` domain, a non-positive/non-finite `step`, and disabled-mid-drag/
   disconnect-mid-drag correctly (tested) — safe to rely on those edge cases. Concurrent drags are
   tracked per `pointerId` (not a single scalar), so a two-finger touch — one finger per handle —
@@ -1444,7 +1464,7 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 - Non-finite domain/handle values use finite fallback geometry, and non-finite or negative steps are
   treated as unstepped; invalid values never become `NaN`/`Infinity` CSS or ARIA strings.
 - `startLabel`/`endLabel` only override each handle's `aria-label`; they don't affect
-  `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (still raw numbers) or any visible text.
+  `aria-valuenow`/`aria-valuemin`/`aria-valuemax`, `valueFormatter`, or any visible text.
 - An ancestor `<fieldset disabled>` toggling is reflected via `formDisabledCallback` into
   `effectiveDisabled` (tracked separately from the consumer's own `disabled`), so re-enabling the
   fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice

@@ -202,6 +202,10 @@ export class LyraTooltip extends LyraElement {
     if (!this.trigger) return;
     this.bindTrigger(this.trigger);
     this.syncTriggerA11y();
+    // An initially-open tooltip reaches its first updated() before slotchange has supplied the
+    // trigger, so that update has no anchor to position against. Re-run positioning once the
+    // trigger exists, matching the initially-open popover path.
+    if (this.open) this.position();
   };
   private onEnter = (): void => { if (!this.manual) this.setOpen(true); };
   private onLeave = (): void => { if (!this.manual) this.setOpen(false); };

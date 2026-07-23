@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -24,18 +24,10 @@ import {
 } from './code-block-shared.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** How long the copy button's confirmation state lasts before reverting. */
 const COPY_CONFIRM_MS = 1500;
-
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 export interface LyraCodeBlockCoreEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
@@ -576,7 +568,6 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

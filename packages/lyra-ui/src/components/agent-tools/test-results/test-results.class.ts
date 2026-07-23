@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -10,6 +10,7 @@ import '../../overlays/empty/empty.js';
 import '../../overlays/spinner/spinner.js';
 import '../../utility/live-region/live-region.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
 
@@ -28,24 +29,6 @@ export interface TestSuiteResult {
 }
 
 const STATUSES: TestStatus[] = ['passed', 'failed', 'skipped', 'running'];
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `autoExpandFailures` isn't reflected, so `toAttribute` is never invoked by Lit -- included only
- *  to satisfy `ComplexAttributeConverter`'s shape, mirroring `<lr-agent-run>`'s `show-cancel`/
- *  `show-retry` (the closest analog: also non-reflected, custom-named attribute). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /** localize() key for each status's count-bearing summary/filter text, e.g. "3 passed". */
 const STATUS_COUNT_KEY: Record<TestStatus, string> = {

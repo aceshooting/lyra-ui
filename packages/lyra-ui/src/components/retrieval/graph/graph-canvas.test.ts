@@ -240,6 +240,33 @@ describe('drawGraphScene', () => {
     // the empty center.
     expect(ctx.getImageData(50, 30, 1, 1).data[3]).to.be.greaterThan(0);
   });
+
+  it('keeps node labels physically after their anchor under inherited RTL', () => {
+    const ctx = make2dContext();
+    ctx.direction = 'rtl';
+    drawGraphScene(ctx, { k: 1, x: 0, y: 0 }, {
+      hulls: [],
+      links: [],
+      edgeLabels: [],
+      nodes: [],
+      nodeLabels: [{ x: 40, y: 50, text: 'Label' }],
+      showNodeLabels: true,
+      haloColor: '#000',
+      selectedColor: '#000',
+      labelColor: '#000',
+      labelHaloColor: '#fff',
+      font: '10px sans-serif',
+    });
+
+    const pixels = ctx.getImageData(0, 0, 100, 100).data;
+    let firstPaintedX = 100;
+    for (let y = 0; y < 100; y += 1) {
+      for (let x = 0; x < 100; x += 1) {
+        if (pixels[(y * 100 + x) * 4 + 3]! > 0) firstPaintedX = Math.min(firstPaintedX, x);
+      }
+    }
+    expect(firstPaintedX).to.be.at.least(40);
+  });
 });
 
 describe('drawPickingScene', () => {

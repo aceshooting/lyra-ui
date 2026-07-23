@@ -1,27 +1,11 @@
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './callout.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type CalloutVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, matching every other `reflect: true` boolean property in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 /**
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
@@ -61,10 +45,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property() heading = '';
   @property({ type: Boolean, reflect: true }) closable = false;
   @property({ type: Boolean, reflect: true }) inline = false;
-  /** Whether the callout is shown. Defaults `true`; uses `trueDefaultBooleanConverter` (above) so
-   *  plain HTML `open="false"` actually renders it closed -- Lit's default presence-based
-   *  `type: Boolean` converter cannot distinguish an absent attribute from the literal string
-   *  `"false"`. */
+  
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) open = true;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   @state() private hasIcon = false;

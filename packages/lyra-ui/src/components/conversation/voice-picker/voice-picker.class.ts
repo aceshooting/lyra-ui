@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
@@ -7,23 +7,7 @@ import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
-
-/**
- * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
- * converter is presence-based -- the attribute's mere presence (regardless of its string value)
- * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
- * actually get `true` (this property's default), the opposite of what that string reads as -- the
- * same bug class `<lr-model-select>`'s/`<lr-textarea>`'s/`<lr-date-input>`'s identical
- * converters document and fix.
- */
-const spellcheckConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 /**
  * `true`-defaulting boolean attribute converter for `preview`. Lit's built-in `type: Boolean`
@@ -32,14 +16,6 @@ const spellcheckConverter: ComplexAttributeConverter<boolean> = {
  * get `true` (this property's default) -- the same bug class `spellcheckConverter` above and
  * `<lr-checkpoint>`'s `restorable`/`confirmRestore` converters document and fix.
  */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /** A catalog row: a selectable TTS voice. */
 export interface LyraVoiceCatalogEntry {

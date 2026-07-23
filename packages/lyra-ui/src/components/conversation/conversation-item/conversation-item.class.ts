@@ -5,12 +5,12 @@ import {
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
-  type ComplexAttributeConverter,
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter, spellcheckConverter } from '../../../internal/converters.js';
 
 export interface ConversationItemRenameDetail {
   title: string;
@@ -19,27 +19,6 @@ export interface ConversationItemRenameDetail {
 /** String-aware parsing for the native enumerated `spellcheck` attribute -- mirrors
  *  `<lr-textarea>`'s identical converter, since Lit's default boolean converter would otherwise
  *  treat the mere presence of `spellcheck="false"` as `true`. */
-const spellcheckConverter = {
-  fromAttribute: (value: string | null): boolean => value !== 'false',
-  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
-};
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, matching every other `reflect: true` boolean property in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 // Mirrors the shared icon set's viewBox/stroke conventions
 // (internal/icons.ts's chevronIcon()/closeIcon()/etc.) without adding a
@@ -446,6 +425,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                     ? html`<input
                         part="title-input"
                         type="text"
+                        dir="auto"
                         .value=${this.draftTitle}
                         aria-label=${renameLabel}
                         spellcheck=${this.spellcheck}
@@ -456,8 +436,8 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                         @focus=${this.onTitleInputFocus}
                         @blur=${this.onTitleInputBlur}
                       />`
-                    : html`<span part="title" title=${displayTitle}>${displayTitle}</span>`}
-                  <span part="excerpt" ?hidden=${!(this.hasExcerptSlot || this.excerpt)}>
+                    : html`<span part="title" dir="auto" title=${displayTitle}>${displayTitle}</span>`}
+                  <span part="excerpt" dir="auto" ?hidden=${!(this.hasExcerptSlot || this.excerpt)}>
                     <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
                     ${!this.hasExcerptSlot && this.excerpt ? this.excerpt : nothing}
                   </span>
@@ -467,7 +447,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
                 `
               : nothing}
           </div>
-          ${ts ? html`<time part="timestamp" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
+          ${ts ? html`<time part="timestamp" dir="auto" datetime=${ts.toISOString()}>${formatter(ts)}</time>` : nothing}
         </div>
         ${showRenameButton
           ? html`<button
@@ -486,7 +466,6 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

@@ -95,6 +95,11 @@ export const styles = css`
   [part='content'] {
     flex: 1 1 auto;
     min-inline-size: 0;
+    /* Resolve each slotted message from its own first strong character. dir="auto" on the
+       shadow wrapper cannot inspect assigned light-DOM text in every browser, while plaintext
+       participates in the flattened text run and keeps an English message/action ordered inside
+       an RTL page (and vice versa for Arabic content in LTR). */
+    unicode-bidi: plaintext;
   }
   /* toaster.ts's action option (and the WithIcon/Triggers stories) append a
      plain light-DOM button as a sibling of the message text -- without
@@ -105,7 +110,9 @@ export const styles = css`
      content part rather than in its own layout slot. */
   ::slotted(button) {
     display: inline-block;
-    margin-inline-start: var(--lr-space-s);
+    /* Symmetric logical spacing remains on the correct side when plaintext bidi resolution makes
+       the slotted content's reading direction differ from the page direction. */
+    margin-inline: var(--lr-space-s);
     padding: 0;
     border: none;
     background: none;

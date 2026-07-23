@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { TimeRangePreset } from './time-range.js';
+import type { TimeRangePreset, TimeRangeValueFormatter } from './time-range.js';
 import { storyColor } from '../../../../../../.storybook/story-theme.js';
 
 const presets: TimeRangePreset[] = [
@@ -8,6 +8,12 @@ const presets: TimeRangePreset[] = [
   { label: 'Last 30 days', start: 0, end: 30 },
   { label: 'Last 90 days', start: 0, end: 90 },
 ];
+
+const monthLabels = ['April 2023', 'May 2023', 'June 2023'];
+const formatMonth: TimeRangeValueFormatter = (value, handle) => {
+  const month = monthLabels[value];
+  return month ? `${handle === 'start' ? 'From' : 'Through'} ${month}` : undefined;
+};
 
 const meta: Meta = {
   title: 'TimeRange',
@@ -29,6 +35,27 @@ export const Disabled: Story = {
 export const CoarseStep: Story = {
   render: () =>
     html`<lr-time-range min="0" max="100" start="20" end="80" step="10"></lr-time-range>`,
+};
+
+export const HumanReadableValueText: Story = {
+  name: 'Human-readable value text',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A property-only `valueFormatter(value, handle)` maps the numeric domain to each slider handle’s `aria-valuetext` without changing `aria-valuenow` or adding date logic to the component.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-time-range
+      min="0"
+      max="2"
+      start="0"
+      end="2"
+      .valueFormatter=${formatMonth}
+    ></lr-time-range>
+  `,
 };
 
 export const DiscretePresets: Story = {

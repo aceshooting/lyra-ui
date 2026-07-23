@@ -7,11 +7,14 @@ import type { StatVariant } from '../../data/stat/stat.class.js';
 import '../../data/stat/stat.class.js';
 import '../citation-badge/citation-badge.class.js';
 import '../../overlays/empty/empty.class.js';
-import type { Citation, CitationSelectEventDetail, GroundingAssessment } from '../../../ai/types.js';
+import type { Citation, CitationSelectEventDetail, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
 import { styles } from './grounding-summary.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import '../claim-evidence/claim-evidence.class.js';
 
 export interface LyraGroundingSummaryEventMap {
   'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
+  'lr-claim-select': CustomEvent<{ claim: GroundedClaim }>;
 }
 
 /** Coverage/confidence tone thresholds (both are 0-1 fractions) -- the same shape and default
@@ -56,6 +59,7 @@ export interface GroundingSummaryThresholds {
  * @csspart evidence-label - A citation's `label`, shown next to its badge (omitted when unset).
  * @csspart evidence-span - A citation's formatted `span` range, shown next to its badge (omitted
  *   when `span` is unset).
+ * @csspart claims - Claim-level evidence, when present and enabled.
  * @csspart empty - The empty-state message, shown when `assessment` is `null`.
  */
 export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventMap> {
@@ -78,6 +82,10 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** Accessible group label override. Falls back to a host `aria-label`, then the localized
    *  `groundingSummaryLabel` default. */
   @property() label = '';
+
+  /** Renders `assessment.claims` through `<lr-claim-evidence>` when available. */
+  @property({ type: Boolean, attribute: 'show-claims', reflect: true, converter: trueDefaultBooleanConverter })
+  showClaims = true;
 
   private tone(value: number): StatVariant {
     if (value >= this.thresholds.high) return 'success';
@@ -168,6 +176,15 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
                   ${warnings.map((warning) => html`<li part="warning">${warning}</li>`)}
                 </ul>
               </div>
+            `
+          : nothing}
+        ${this.showClaims && a.claims?.length
+          ? html`
+              <lr-claim-evidence
+                part="claims"
+                .claims=${a.claims}
+                .citations=${this.citations}
+              ></lr-claim-evidence>
             `
           : nothing}
         ${this.citations.length > 0

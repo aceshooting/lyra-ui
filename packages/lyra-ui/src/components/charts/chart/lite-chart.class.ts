@@ -1,4 +1,4 @@
-import { html, svg, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -8,6 +8,7 @@ import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LiteSeries {
   label: string;
@@ -45,12 +46,6 @@ const DEFAULT_PALETTE = [
   'var(--lr-chart-color-7)',
   'var(--lr-chart-color-8)',
 ];
-
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-};
 
 const PAD_LEFT = 36;
 const PAD_RIGHT = 8;
@@ -1007,7 +1002,6 @@ function formatTick(v: number): string {
   // above without hardcoding a fixed decimal count that'd butcher large ints.
   return Number(v.toFixed(6)).toString();
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

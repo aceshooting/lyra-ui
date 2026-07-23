@@ -3,6 +3,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
+import { syncAriaControlsElements } from '../../../internal/aria-controls.js';
 import { styles } from './button.styles.js';
 
 export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
@@ -28,9 +29,13 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * `aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the
  * native `<button>`.
  *
- * A host `aria-label` is forwarded to the internal button/anchor as a literal string (for an
- * icon-only button with no visible label); external `aria-labelledby`/`aria-describedby` idrefs
- * are not copied across the shadow boundary.
+ * `accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor
+ * as a literal string (for an icon-only button with no visible label); external
+ * `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
+ * Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are likewise forwarded to
+ * the internal semantic control. When `aria-controls` names elements in the host's own root, the
+ * element-reference relationship is resolved onto the internal control so it remains valid across
+ * this component's shadow boundary.
  *
  * @customElement lr-button
  * @slot - Default slot: the button's label content.
@@ -159,6 +164,14 @@ export class LyraButton extends LyraElement {
     }
   }
 
+  /** Accessible name forwarded to the internal native button or anchor. Bound to the host's
+   *  `aria-label` content attribute so changing or removing that attribute after mount keeps the
+   *  actual focused control synchronized. */
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  @property({ attribute: 'aria-haspopup' }) private triggerHasPopup: string | null = null;
+  @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
+  @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
+
   /** Tone vocabulary shared with `<lr-chip>`/`<lr-avatar>`'s own `tone` property, named
    *  `variant` here (not `tone`) to keep the component's semantic tone vocabulary consistent. */
   @property({ reflect: true }) variant: ButtonVariant = 'neutral';
@@ -270,8 +283,12 @@ export class LyraButton extends LyraElement {
     this.hasEndSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    syncAriaControlsElements(this, this.baseEl, this.triggerControls);
+  }
+
   override render(): TemplateResult {
-    const ariaLabel = this.getAttribute('aria-label');
     // Shared inner content, rendered identically in both roots so the extracted variable produces
     // byte-identical DOM to the previous inline template in `<button>` mode.
     const content = html`
@@ -302,7 +319,10 @@ export class LyraButton extends LyraElement {
         target=${this.target || nothing}
         rel=${this.target ? 'noopener noreferrer' : nothing}
         download=${this.download || nothing}
-        aria-label=${ariaLabel || nothing}
+        aria-label=${this.accessibleLabel || nothing}
+        aria-haspopup=${this.triggerHasPopup ?? nothing}
+        aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-controls=${this.triggerControls || nothing}
         aria-disabled=${disabled ? 'true' : nothing}
         >${content}</a
       >`;
@@ -312,7 +332,10 @@ export class LyraButton extends LyraElement {
       <button
         part="base"
         type="button"
-        aria-label=${ariaLabel || nothing}
+        aria-label=${this.accessibleLabel || nothing}
+        aria-haspopup=${this.triggerHasPopup ?? nothing}
+        aria-expanded=${this.triggerExpanded ?? nothing}
+        aria-controls=${this.triggerControls || nothing}
         aria-busy=${this.loading ? 'true' : 'false'}
         ?disabled=${this.effectiveDisabled || this.loading}
         @click=${this.onClick}

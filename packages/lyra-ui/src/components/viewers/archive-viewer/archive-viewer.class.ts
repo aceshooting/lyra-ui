@@ -99,7 +99,7 @@ export class LyraArchiveViewer extends TextViewerTarget(LyraArchiveViewerBase) {
   private renderEntry = (item: unknown): TemplateResult => {
     const entry = item as ArchiveEntry;
     const kind = this.localize(entry.dir ? 'archiveViewerFolder' : 'archiveViewerFile');
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size">${formatFileSize(entry.size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))}</span>`}</div>`;
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(entry.size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))}</span>`}</div>`;
   };
 
   private renderBody(): TemplateResult {

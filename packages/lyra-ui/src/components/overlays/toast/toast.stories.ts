@@ -35,6 +35,14 @@ export const Triggers: Story = {
       </button>
     </div>
   `,
+  play: async () => {
+    await toast({
+      message: 'Item deleted',
+      variant: 'danger',
+      duration: 0,
+      action: { label: 'Undo', onClick: (item) => item.hide() },
+    }).item;
+  },
 };
 
 const sizes: ToastSize[] = ['xs', 's', 'm', 'l', 'xl'];

@@ -195,7 +195,10 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
 
   if (scene.showNodeLabels && scene.nodeLabels.length) {
     ctx.font = scene.font;
-    ctx.textAlign = 'start';
+    // Label coordinates are physical canvas positions immediately after each node. `start`
+    // mirrors under an inherited RTL direction and paints back across the node; `left` keeps the
+    // anchor physical while the canvas bidi algorithm still shapes the label text itself.
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = scene.labelColor;
     for (const label of scene.nodeLabels) ctx.fillText(label.text, label.x, label.y);

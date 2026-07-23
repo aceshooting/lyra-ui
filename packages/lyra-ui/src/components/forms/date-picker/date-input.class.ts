@@ -25,6 +25,7 @@ import { styles } from './date-input.styles.js';
 import { LyraDatePicker } from './date-picker.class.js';
 import './date-picker.class.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 /** Determines the locale's day/month/year field order from a real formatted
  *  sample (Jan 2, 2026 -- a date where day/month/year are all numerically
@@ -52,24 +53,6 @@ function localeDateOrder(locale: string): ('day' | 'month' | 'year')[] {
 const monthsConverter: ComplexAttributeConverter<1 | 2> = {
   fromAttribute: normalizeCalendarMonths,
   toAttribute: normalizeCalendarMonths,
-};
-
-/**
- * String-aware boolean attribute converter for `spellcheck`. Lit's built-in
- * `type: Boolean` converter is presence-based -- the attribute's mere
- * presence (regardless of its string value) maps to `true`, so a plain-
- * markup consumer writing the literal `spellcheck="false"` would actually get
- * `true` (this component's default), the opposite of what that string reads
- * as -- the same bug class `<lr-textarea>`'s `spellcheckConverter` and
- * `<lr-generation-status>`'s `showStopConverter` document and fix. Mirrors
- * that shape: attribute absent (or removed) -> `true` (the default);
- * `spellcheck="false"` -> `false`; anything else present (no value,
- * `="true"`, ...) -> `true`.
- */
-const spellcheckConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
 };
 
 const weekdayFormatConverter: ComplexAttributeConverter<WeekdayFormat> = {
@@ -913,7 +896,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

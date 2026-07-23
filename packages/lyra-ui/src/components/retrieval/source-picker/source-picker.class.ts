@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -7,6 +7,7 @@ import '../../media/file-icon/file-icon.class.js';
 import '../../forms/input/input.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './source-picker.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraSourceEntry {
   id: string;
@@ -28,24 +29,6 @@ interface SourceRow {
   depth: number;
   hasChildren: boolean;
 }
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once a property's own default is `true` (removing an attribute that was never present fires no
- *  `attributeChangedCallback`), so `fromAttribute` checks the literal string instead. Shared by
- *  `showSelectAll` and `searchable`, which have the identical `true`-default parsing need. Neither
- *  is reflected, so `toAttribute` is never invoked by Lit -- included only to satisfy
- *  `ComplexAttributeConverter`'s shape, mirroring `<lr-test-results>`'s `autoExpandFailures`. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /**
  * `<lr-source-picker>` — a checkbox tree/list scoping which sources ground the next answer:

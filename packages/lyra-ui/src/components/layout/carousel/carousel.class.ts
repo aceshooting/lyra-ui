@@ -1,24 +1,9 @@
-import { html, nothing, type ComplexAttributeConverter, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './carousel.styles.js';
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once the property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead (mirrors `<lr-checkpoint>`'s identical
- *  `trueDefaultBooleanConverter`, duplicated locally per this library's convention of not sharing
- *  it through `internal/`). Not reflected -- `show-indicators` drives no CSS selector of its own,
- *  so `toAttribute` simply omits the attribute for the `true` state. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraCarouselEventMap {
   'lr-slide-change': CustomEvent<{ index: number }>;

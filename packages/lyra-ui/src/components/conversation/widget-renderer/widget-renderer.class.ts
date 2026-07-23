@@ -4,7 +4,13 @@ import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './widget-renderer.styles.js';
-import { resolveTree, type ResolvedNode, type ResolvedElement, type WidgetNode } from './resolve.js';
+import {
+  resolveTree,
+  type LyraWidgetDocument,
+  type ResolvedNode,
+  type ResolvedElement,
+  type WidgetNode,
+} from './resolve.js';
 import { getDefaultWidgetTypeRegistry, type WidgetTypeRegistry } from './registry.js';
 
 const GAP_TOKEN: Record<string, string> = {
@@ -24,9 +30,15 @@ interface ActionHandlerState {
   handler: EventListener;
 }
 
+interface BindingHandlerState {
+  event: string;
+  handler: EventListener;
+}
+
 export interface LyraWidgetRendererEventMap {
   'lr-widget-action': CustomEvent<{ actionId: string; payload: unknown }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
+  'lr-widget-state-change': CustomEvent<{ path: string; value: unknown; nodeId: string; prop: string }>;
 }
 
 /**
@@ -42,6 +54,7 @@ export interface LyraWidgetRendererEventMap {
  * @customElement lr-widget-renderer
  * @event lr-widget-action - `detail: { actionId, payload }` — the single bubbling action channel.
  * @event lr-render-error - `detail: { error }` — the root value was structurally unusable.
+ * @event lr-widget-state-change - A bound control requested a controlled state update.
  * @csspart base - The root wrapper (`display: contents` — adds no layout box of its own).
  * @csspart row - A built-in `row` node.
  * @csspart col - A built-in `col` node.
@@ -53,6 +66,12 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   /** The declarative widget tree to render. `null` (the default) renders an empty base. */
   @property({ attribute: false }) tree: WidgetNode | null = null;
 
+  /** Versioned document form. Takes precedence over `tree` and supplies optional binding state. */
+  @property({ attribute: false }) document: LyraWidgetDocument | null = null;
+
+  /** Controlled binding state override. Falls back to `document.state`. */
+  @property({ attribute: false }) state?: unknown;
+
   /** Per-instance type registry to resolve against instead of the module-level default one
    *  (`getDefaultWidgetTypeRegistry()`, populated by `registerDefaultWidgetTypes()`). */
   @property({ attribute: false }) registry?: WidgetTypeRegistry;
@@ -62,12 +81,18 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   private readonly warned = new Set<string>();
   private readonly elements = new Map<string, HTMLElement>();
   private readonly actionHandlers = new WeakMap<HTMLElement, ActionHandlerState>();
+  private readonly bindingHandlers = new WeakMap<HTMLElement, BindingHandlerState[]>();
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (!this.hasUpdated || changed.has('tree') || changed.has('registry')) {
+    if (!this.hasUpdated || changed.has('tree') || changed.has('document') || changed.has('state') || changed.has('registry')) {
       const registry = this.registry ?? getDefaultWidgetTypeRegistry();
-      const next = resolveTree(this.tree, { registry, warned: this.warned });
-      if (this.tree != null && next === null) {
+      const root = this.document?.root ?? this.tree;
+      const next = resolveTree(root, {
+        registry,
+        warned: this.warned,
+        state: this.state ?? this.document?.state,
+      });
+      if (root != null && next === null) {
         this.emit('lr-render-error', {
           error: new Error('lr-widget-renderer: tree resolved to nothing renderable'),
         });
@@ -96,6 +121,9 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       if (live.has(key)) continue;
       const state = this.actionHandlers.get(el);
       if (state) el.removeEventListener(state.event, state.handler);
+      for (const binding of this.bindingHandlers.get(el) ?? []) {
+        el.removeEventListener(binding.event, binding.handler);
+      }
       this.elements.delete(key);
     }
   }
@@ -132,6 +160,33 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     }
   }
 
+  private syncBindingHandlers(el: HTMLElement, node: ResolvedElement): void {
+    for (const existing of this.bindingHandlers.get(el) ?? []) {
+      el.removeEventListener(existing.event, existing.handler);
+    }
+    const states: BindingHandlerState[] = [];
+    for (const binding of node.bindings) {
+      if (!binding.event) continue;
+      const handler: EventListener = (event) => {
+        const detail = (event as CustomEvent<unknown>).detail;
+        const detailValue =
+          detail && typeof detail === 'object' && 'value' in detail
+            ? (detail as { value: unknown }).value
+            : undefined;
+        const value = detailValue ?? (el as unknown as Record<string, unknown>)[binding.prop];
+        this.emit('lr-widget-state-change', {
+          path: binding.path,
+          value,
+          nodeId: node.key,
+          prop: binding.prop,
+        });
+      };
+      el.addEventListener(binding.event, handler);
+      states.push({ event: binding.event, handler });
+    }
+    this.bindingHandlers.set(el, states);
+  }
+
   /** Creates (or reuses, keyed by `node.key`) the real DOM element for a `mapped` node. Every prop
    *  is assigned as a plain JS property -- never `setAttribute`, never `innerHTML`. The element's
    *  own children are rendered into it via a nested `render()` call, so Lit's diffing still governs
@@ -152,6 +207,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
       else el.removeAttribute('slot');
     }
     this.syncActionHandler(el, node);
+    this.syncBindingHandlers(el, node);
     render(html`${repeat(node.children, (c) => c.key, (c) => this.renderChildValue(c))}`, el, { host: this });
     return el;
   }
@@ -165,6 +221,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     }
     const part = node.kind === 'builtin-row' ? 'row' : node.kind === 'builtin-col' ? 'col' : 'text';
     return html`<div part=${part} style=${styleMap(this.builtinStyle(node))} slot=${node.slot ?? nothing}>
+      ${node.kind === 'builtin-text' ? node.props['value'] ?? nothing : nothing}
       ${repeat(node.children, (c) => c.key, (c) => this.renderChildValue(c))}
     </div>`;
   }

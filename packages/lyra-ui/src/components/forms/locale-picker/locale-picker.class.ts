@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
@@ -12,6 +12,7 @@ import {
 } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { styles } from './locale-picker.styles.js';
+import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
  *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
@@ -20,11 +21,6 @@ import { styles } from './locale-picker.styles.js';
  *  matching this exact converter's repeated per-component convention elsewhere in this library.
  *  `showFlags` (the only property using this converter) doesn't set `reflect: true`, so there's
  *  no `toAttribute` half -- Lit only calls it when reflecting. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-};
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --

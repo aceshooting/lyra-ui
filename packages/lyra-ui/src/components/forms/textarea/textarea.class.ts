@@ -5,6 +5,7 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
+import { spellcheckConverter } from '../../../internal/converters.js';
 
 export type TextareaResize = 'none' | 'vertical' | 'both' | 'auto';
 export type TextareaWrap = 'hard' | 'soft' | 'off';
@@ -14,10 +15,6 @@ export type TextareaSelectionDirection = 'forward' | 'backward' | 'none';
  *  `spellcheck` attribute's own true/false/empty/inherit semantics -- Lit's built-in `type:
  *  Boolean` converts based on attribute *presence*, which would treat a literal
  *  `spellcheck="false"` as truthy (the attribute is present) instead of `false`. */
-const spellcheckConverter = {
-  fromAttribute: (value: string | null): boolean => value !== 'false',
-  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
-};
 
 export interface LyraTextareaEventMap {
   input: CustomEvent<undefined>;

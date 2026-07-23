@@ -1,8 +1,8 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import type { RetrievalChunk } from '../../../ai/types.js';
+import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../layout/virtual-list/virtual-list.js';
@@ -11,6 +11,7 @@ import '../../forms/checkbox/checkbox.js';
 import '../../overlays/spinner/spinner.js';
 import '../../overlays/empty/empty.js';
 import { styles } from './retrieval-results.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** `lr-select`'s detail: the complete updated selection, both as bare ids and as the (deduplicated)
  *  `RetrievalChunk` records they refer to -- a host wanting "what got selected" rarely wants to
@@ -23,7 +24,7 @@ export interface RetrievalResultsSelectDetail {
 export interface LyraRetrievalResultsEventMap {
   'lr-select': CustomEvent<RetrievalResultsSelectDetail>;
   'lr-load-more': CustomEvent<undefined>;
-  'lr-chunk-open': CustomEvent<{ id: string; sourceId: string }>;
+  'lr-chunk-open': CustomEvent<{ id: string; sourceId: string; anchor?: DocumentLocator }>;
 }
 
 export type RetrievalResultsGrouping = 'source' | 'none';
@@ -31,8 +32,8 @@ export type RetrievalResultsPresentation = 'compact' | 'expanded';
 
 /** `RetrievalChunk` -> `lr-chunk-inspector`'s own `LyraChunk` display-row shape, per the mapping
  *  `RetrievalChunk`'s own doc comment (`src/ai/types.ts`) already specifies: `source.id -> sourceId`,
- *  `source.name -> title`. No `page`/`anchor` -- `RetrievalChunk`/`DocumentRef` carry neither, so
- *  those fields are simply left unset rather than guessed at from `metadata`. */
+ *  `source.name -> title`. A structured `locator` is forwarded as `anchor`; page locators also
+ *  supply the inspector's visible `page` without guessing at arbitrary metadata. */
 function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   return {
     id: chunk.id,
@@ -40,26 +41,10 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     score: chunk.score,
     sourceId: chunk.source.id,
     title: chunk.source.name,
+    anchor: chunk.locator,
+    page: chunk.locator?.kind === 'page' ? chunk.locator.page : undefined,
   };
 }
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead. Shared by
- *  `selectable` and `dedupe`, which have the identical `true`-default parsing need. `toAttribute`
- *  reflects the `true` state as a present (empty-string) attribute rather than omitting it,
- *  matching every other `reflect: true` boolean property in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 function formatMetadataValue(value: unknown): string {
   if (value == null) return '';
@@ -317,7 +302,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           ?compact=${this.presentation === 'compact'}
           active-id=${this.activeId}
           label=${rowLabel}
-          @lr-chunk-open=${(e: CustomEvent<{ id: string; sourceId: string }>) => {
+          @lr-chunk-open=${(e: CustomEvent<{ id: string; sourceId: string; anchor?: DocumentLocator }>) => {
             // lr-chunk-inspector's own lr-chunk-open bubbles+composes (LyraElement.emit()'s
             // defaults) -- without stopping it here it would keep bubbling straight through this
             // component under the same name, right behind the correctly-shaped re-emit below.

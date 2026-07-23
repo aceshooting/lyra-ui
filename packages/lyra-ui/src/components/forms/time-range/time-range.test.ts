@@ -50,6 +50,41 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('formats each handle value as aria-valuetext while preserving numeric slider state', async () => {
+  const labels = ['April 2023', 'May 2023', 'June 2023'];
+  const el = (await fixture(html`
+    <lr-time-range
+      min="0"
+      max="2"
+      start="0"
+      end="2"
+      .valueFormatter=${(value: number, handle: 'start' | 'end') =>
+        `${handle === 'start' ? 'From' : 'Through'} ${labels[value]}`}
+    ></lr-time-range>
+  `)) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+
+  expect(startHandle.getAttribute('aria-valuenow')).to.equal('0');
+  expect(startHandle.getAttribute('aria-valuetext')).to.equal('From April 2023');
+  expect(endHandle.getAttribute('aria-valuenow')).to.equal('2');
+  expect(endHandle.getAttribute('aria-valuetext')).to.equal('Through June 2023');
+
+  el.start = 1;
+  await el.updateComplete;
+  expect(startHandle.getAttribute('aria-valuetext')).to.equal('From May 2023');
+});
+
+it('omits aria-valuetext when valueFormatter is unset (opt-in regression)', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  expect(startHandle.hasAttribute('aria-valuetext')).to.be.false;
+  expect(endHandle.hasAttribute('aria-valuetext')).to.be.false;
+});
+
 it('re-clamps when only `end` is set below the current `start` (controlled/two-way binding)', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="50" end="90"></lr-time-range>`,
@@ -694,6 +729,51 @@ it('keeps infinities out of domain geometry and ARIA attributes', async () => {
     expect(handle.getAttribute('aria-valuenow') ?? '').to.not.include('Infinity');
     expect(handle.getAttribute('style')).to.not.match(/NaN|Infinity/);
   });
+});
+
+it('lets a formatter omit aria-valuetext for either handle with a nullish result', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="38" start="0" end="38"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.valueFormatter = (value, handle) => (handle === 'start' ? `Month ${value}` : undefined);
+  await el.updateComplete;
+
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  expect(startHandle.getAttribute('aria-valuetext')).to.equal('Month 0');
+  expect(endHandle.hasAttribute('aria-valuetext')).to.be.false;
+});
+
+it('preserves an intentionally empty formatter result instead of treating it as nullish', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="38" start="0" end="38"></lr-time-range>`,
+  )) as LyraTimeRange;
+  el.valueFormatter = (_value, handle) => (handle === 'start' ? '' : null);
+  await el.updateComplete;
+
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  expect(startHandle.hasAttribute('aria-valuetext')).to.be.true;
+  expect(startHandle.getAttribute('aria-valuetext')).to.equal('');
+  expect(endHandle.hasAttribute('aria-valuetext')).to.be.false;
+});
+
+it('never passes a non-finite handle value to valueFormatter or aria-valuetext', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="38" start="not-a-number" end="38"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const formattedHandles: string[] = [];
+  el.valueFormatter = (value, handle) => {
+    formattedHandles.push(`${handle}:${value}`);
+    return `Month ${value}`;
+  };
+  await el.updateComplete;
+
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const endHandle = el.shadowRoot!.querySelector('[part="handle-end"]') as HTMLElement;
+  expect(formattedHandles).to.deep.equal(['end:38']);
+  expect(startHandle.hasAttribute('aria-valuetext')).to.be.false;
+  expect(endHandle.getAttribute('aria-valuetext')).to.equal('Month 38');
 });
 
 it('defaults each handle\'s aria-label and lets startLabel/endLabel override them', async () => {

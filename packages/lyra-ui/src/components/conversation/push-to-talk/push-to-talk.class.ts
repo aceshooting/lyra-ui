@@ -1,24 +1,11 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { styles } from './push-to-talk.styles.js';
-
-/** `true`-defaulting boolean attribute converter -- Lit's built-in `type: Boolean` converter is
- *  presence-based -- the attribute's mere presence (regardless of its string value) maps to
- *  `true`, so a plain-markup consumer writing the literal `show-timer="false"` would actually get
- *  `true` (this property's default), the opposite of what that string reads as -- same fix as
- *  `<lr-agent-run>`'s identical `trueDefaultBooleanConverter` for `show-cancel`/`show-retry`. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type PushToTalkMode = 'hold' | 'toggle';
 export type PushToTalkState = 'idle' | 'requesting' | 'denied' | 'recording' | 'error';

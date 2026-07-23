@@ -1,39 +1,14 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './file-input.styles.js';
 import { matchesAccept } from './accept.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 type DragState = 'default' | 'accept' | 'reject';
 
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-activity-feed>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, so `paste`'s host attribute is present by default, matching every other
- *  `reflect: true` boolean property in this library. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
-
-/** Fallback cap applied in place of an invalid `maxFileSize` (NaN or negative -- e.g. an
- *  unparsable `max-file-size` attribute, or a host computing the value from a config that hasn't
- *  loaded yet). Deliberately duplicated rather than imported from `internal/resource-loader.ts`'s
- *  own `DEFAULT_MAX_RESOURCE_BYTES` (same value, same "no better number available" rationale) --
- *  that constant is themed around a remote-fetch byte cap, a different concern from this
- *  component's user-facing upload-size guard, and this library's convention is to duplicate a
- *  small constant like this locally rather than add a cross-component import for it (see e.g.
- *  `<lr-activity-feed>`'s own `trueDefaultBooleanConverter` doc comment). */
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 export interface RejectedFile {
@@ -362,7 +337,6 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

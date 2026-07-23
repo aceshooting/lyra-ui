@@ -15,7 +15,10 @@ import type {
   DocumentRef,
   ExportEventDetail,
   GroundingAssessment,
+  GroundedClaim,
+  MessagePart,
   RetrievalChunk,
+  RetrievalScoreBreakdown,
   RetrievalProgressEventDetail,
   RetrievalQuery,
   RetryEventDetail,
@@ -84,6 +87,9 @@ const citation: Citation = {
   sourceId: 'doc-1',
   span: { start: 0, end: 42 },
   label: '[1]',
+  locator: { kind: 'page', page: 12 },
+  answerRange: { start: 0, end: 28 },
+  quote: 'Revenue grew 12%',
 };
 
 const retrievalQuery: RetrievalQuery = {
@@ -100,8 +106,26 @@ const retrievalChunk: RetrievalChunk = {
   score: 0.87,
   source: documentRef,
   metadata: { page: 12 },
+  rank: 1,
+  locator: { kind: 'page', page: 12 },
+  queryId: 'query-1',
+  stage: 'rerank',
+  traceId: 'trace-1',
+  scores: { dense: 0.8, sparse: 0.6, rerank: 0.91, final: 0.91 },
 };
 void retrievalChunk;
+
+const retrievalScores: RetrievalScoreBreakdown = { dense: 0.8, final: 0.91 };
+void retrievalScores;
+
+const groundedClaim: GroundedClaim = {
+  id: 'claim-1',
+  text: 'Revenue grew 12% year over year.',
+  status: 'supported',
+  citationIds: [citation.id],
+  answerRange: { start: 0, end: 34 },
+  confidence: 0.94,
+};
 
 const groundingAssessment: GroundingAssessment = {
   supportedClaims: 8,
@@ -109,6 +133,7 @@ const groundingAssessment: GroundingAssessment = {
   coverage: 0.89,
   confidence: 0.7,
   warnings: ['One claim could not be matched to a source.'],
+  claims: [groundedClaim],
 };
 void groundingAssessment;
 
@@ -119,8 +144,15 @@ const chatMessage: ChatMessage = {
   timestamp: new Date(),
   text: 'Revenue grew 12% year over year.',
   attachments: [documentRef],
+  parts: [
+    { id: 'part-1', type: 'text', text: 'Revenue grew 12% year over year.' },
+    { id: 'part-2', type: 'citation', citation },
+  ],
 };
 void chatMessage;
+
+const messagePart: MessagePart = { id: 'part-3', type: 'reasoning', text: 'Comparing reports…' };
+void messagePart;
 
 const toolInvocation: ToolInvocation = {
   id: 'call-1',

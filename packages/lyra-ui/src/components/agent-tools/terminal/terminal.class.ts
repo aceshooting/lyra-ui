@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -18,6 +18,7 @@ import { styles } from './terminal.styles.js';
 // <lr-virtual-list> an actually-defined tag by the time this component renders it.
 import '../../layout/virtual-list/virtual-list.js';
 import type { VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface TerminalCell {
   char: string;
@@ -61,24 +62,6 @@ const TONE_BACKGROUND_VAR: Record<LyraHighlightTone, string> = {
   warning: 'var(--lr-terminal-highlight-warning-bg, var(--lr-color-warning-quiet))',
   danger: 'var(--lr-terminal-highlight-danger-bg, var(--lr-color-danger-quiet))',
   neutral: 'var(--lr-terminal-highlight-neutral-bg, var(--lr-color-surface))',
-};
-
-/** `true`-defaulting boolean attribute converter, identical shape to `<lr-task-list>`'s
- *  `trueDefaultBooleanConverter` -- duplicated locally per this library's convention of not
- *  sharing these tiny converters across independently-consumable component files. Lit's default
- *  presence-based `type: Boolean` can never be set back to `false` from a plain-HTML attribute
- *  once the property's own default is `true` (removing an attribute that was never present fires
- *  no `attributeChangedCallback`), so `fromAttribute` checks the literal string instead.
- *  `toAttribute` reflects the `true` state as a present (empty-string) attribute rather than
- *  omitting it, matching every other `reflect: true` boolean property in this library -- `wrap`'s
- *  own `:host(:not([wrap]))` selector in terminal.styles.ts depends on that presence/absence. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
 };
 
 function plainTextOfLine(line: TerminalLine): string {

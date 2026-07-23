@@ -249,6 +249,23 @@ it('resolves grid/tick/legend colors from custom --lr-chart-* values set on the 
   expect(config.options.plugins.tooltip.bodyColor).to.equal('rgb(13, 14, 15)');
 });
 
+it('gives uncolored box-plot series concrete themed palette colors', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.style.setProperty('--lr-color-chart-1', 'rgb(130, 80, 220)');
+  el.style.setProperty('--lr-color-chart-2', 'rgb(20, 140, 155)');
+  el.boxes = [
+    { label: 'A', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+    { label: 'B', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
+  ];
+  await el.updateComplete;
+
+  const [a, b] = (el as any).buildConfig().data.datasets;
+  expect(a.backgroundColor).to.equal('rgb(130, 80, 220)');
+  expect(a.borderColor).to.equal('rgb(130, 80, 220)');
+  expect(b.backgroundColor).to.equal('rgb(20, 140, 155)');
+  expect(b.borderColor).to.equal('rgb(20, 140, 155)');
+});
+
 it('disables Chart.js animation when the user prefers reduced motion', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];

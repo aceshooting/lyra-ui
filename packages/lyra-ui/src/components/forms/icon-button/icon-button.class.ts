@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { syncAriaControlsElements } from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
 
 /** Raw SVG geometry primitives that render nothing when parsed as top-level light-DOM children
@@ -48,6 +49,11 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * cloned into a real, internal SVG-namespaced element so it still paints — the same fallback
  * `<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a
  * slotted `<lr-flag>`) is never run through it.
+ *
+ * Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded reactively
+ * to the shadow-internal native button. When `aria-controls` names elements in the host's own root,
+ * the element-reference relationship is resolved onto that focused control so it remains valid
+ * across this component's shadow boundary.
  *
  * Form-associated (mirroring `<lr-button>`'s identical shape): discoverable through
  * `form.elements`, and `type="submit"`/`type="reset"` are handled by this component itself via
@@ -107,6 +113,9 @@ export class LyraIconButton extends LyraElement {
 
   @property() icon = '';
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
+  @property({ attribute: 'aria-haspopup' }) private triggerHasPopup: string | null = null;
+  @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
+  @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
   @property() label = '';
   /** Forwarded to this component's own submit/reset handling (`onClick` below) — see the class
    *  doc comment for why this component (not the shadow-internal `<button>`) owns that behavior. */
@@ -149,6 +158,7 @@ export class LyraIconButton extends LyraElement {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     this.syncFallbackGeometry();
+    syncAriaControlsElements(this, this.buttonEl, this.triggerControls);
   }
 
   /** Mirrors `<lr-icon>`'s own `syncCustomNodes()`: repopulates `[part="fallback"]` from scratch
@@ -167,7 +177,16 @@ export class LyraIconButton extends LyraElement {
 
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('iconButtonLabel');
-    return html`<button part="button" type="button" ?disabled=${this.disabled} aria-label=${label} @click=${this.onClick}>${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
+    return html`<button
+      part="button"
+      type="button"
+      ?disabled=${this.disabled}
+      aria-label=${label}
+      aria-haspopup=${this.triggerHasPopup ?? nothing}
+      aria-expanded=${this.triggerExpanded ?? nothing}
+      aria-controls=${this.triggerControls || nothing}
+      @click=${this.onClick}
+    >${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-icon-button': LyraIconButton; } }

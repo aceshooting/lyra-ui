@@ -1,7 +1,7 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { Citation, CitationSelectEventDetail, DocumentRef, GroundingAssessment } from '../../../ai/types.js';
+import type { Citation, CitationSelectEventDetail, DocumentRef, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
 import '../../conversation/markdown/markdown.js';
 import '../citation-badge/citation-badge.js';
 import '../grounding-summary/grounding-summary.js';
@@ -10,14 +10,11 @@ import '../source-card/source-card.js';
 import '../../overlays/spinner/spinner.js';
 import '../../forms/button/button.js';
 import { styles } from './rag-answer.styles.js';
-
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute: (value) => value !== 'false',
-  toAttribute: (value) => (value ? null : 'false'),
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface LyraRagAnswerEventMap {
   'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
+  'lr-claim-select': CustomEvent<{ claim: GroundedClaim }>;
   'lr-retry': CustomEvent<undefined>;
 }
 
@@ -30,6 +27,7 @@ export interface LyraRagAnswerEventMap {
  * @slot answer - Replaces the data-driven Markdown answer body.
  * @slot sources - Replaces the data-driven source list.
  * @event lr-citation-select - A citation badge was activated. `detail: { citation }`.
+ * @event lr-claim-select - A claim was activated. `detail: { claim }`.
  * @event lr-retry - The retry button was activated after an error.
  * @csspart base - The root answer wrapper.
  * @csspart answer - The answer content wrapper.
@@ -52,6 +50,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   @property({ type: Boolean, reflect: true }) loading = false;
   @property() error = '';
   @property({ type: Boolean, attribute: 'show-sources', reflect: true, converter: trueDefaultBooleanConverter }) showSources = true;
+  @property({ type: Boolean, attribute: 'show-claims', reflect: true, converter: trueDefaultBooleanConverter }) showClaims = true;
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
@@ -72,7 +71,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
     return html`<article part="base" aria-label=${label}>
       ${this.error ? html`<div part="error" role="alert">${this.error}</div><lr-button part="retry" variant="neutral" @lr-click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
       ${this.answer || this.hasSlot('answer') ? html`<div part="answer"><slot name="answer"><lr-markdown .content=${this.answer}></lr-markdown></slot></div>` : nothing}
-      ${this.assessment ? html`<lr-grounding-summary part="grounding" .assessment=${this.assessment} .citations=${this.citations}></lr-grounding-summary>` : nothing}
+      ${this.assessment ? html`<lr-grounding-summary part="grounding" .assessment=${this.assessment} .citations=${this.citations} .showClaims=${this.showClaims}></lr-grounding-summary>` : nothing}
       ${this.citations.length ? html`<section part="citations" aria-label=${this.localize('ragAnswerCitations')}><h3 part="section-heading">${this.localize('ragAnswerCitations')}</h3><div part="citation-list">${this.citations.map((citation, index) => html`<lr-citation-badge .index=${index + 1} .sourceId=${citation.sourceId ?? ''} .label=${citation.label ?? ''} @lr-citation-activate=${this.onCitationActivate}></lr-citation-badge>`)}</div></section>` : nothing}
       ${this.showSources && this.sources.length ? html`<section part="sources" aria-label=${this.localize('ragAnswerSources')}><h3 part="section-heading">${this.localize('ragAnswerSources')}</h3><lr-source-list part="source-list" .label=${this.localize('ragAnswerSources')} expanded><slot name="sources">${this.sources.map((source) => this.renderSource(source))}</slot></lr-source-list></section>` : nothing}
     </article>`;

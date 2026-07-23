@@ -183,8 +183,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  assignments never overwrite live resize state. Each entry is either a plain number (percent of
    *  the container, matching today's exact strict behavior) or a CSS length string (`'200px'`,
    *  `'20%'`, `'3rem'`) resolved against the measured container before percent-space validation --
-   *  see `resolveDefaultSizes()`. A pure-number array is validated unchanged (an array that does not
-   *  sum to ~100 is still rejected). */
+   *  see `resolveDefaultSizes()`. Initialization runs on the first update (not synchronously on
+   *  connection), so same-turn framework property bindings and `storageKey` persistence participate
+   *  before the layout becomes live. A pure-number array is validated unchanged (an array that does
+   *  not sum to ~100 is still rejected). */
   @property({ attribute: false }) defaultSizes: (number | string)[] = [];
   @property({ type: Number }) min = 10;
   @property({ reflect: true }) orientation: SplitOrientation = 'horizontal';
@@ -358,12 +360,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     const hostWidth = this.getBoundingClientRect().width;
     if (hostWidth > 0) this.measuredInlineSize = hostWidth;
     this.panelCount = this.children.length;
-    if (!this.initializedSizes) {
-      this.initializeSizes();
-      this.initializedSizes = true;
-    } else {
-      this.ensureSizes();
-    }
+    // Initialization waits for the first willUpdate() so property bindings committed later in
+    // this same connection turn (notably defaultSizes/storageKey) participate in the
+    // initialization-only precedence chain. Reconnects keep the already-live layout and only
+    // reconcile it with the current panel count.
+    if (this.initializedSizes) this.ensureSizes();
     // No-op on first mount (`baseEl` doesn't exist until the first render —
     // `firstUpdated()` below arms it then) but does the real work on a
     // reconnect, whose shadow DOM content survives disconnect. Mirrors
@@ -421,7 +422,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  documented exception instead (mirrors virtual-list.ts's
    *  `attachContainerListeners()`). */
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('sizes') || this.sizes.length === 0) this.ensureSizes();
+    if (!this.initializedSizes) {
+      this.initializeSizes();
+      this.initializedSizes = true;
+    } else if (changed.has('sizes') || this.sizes.length === 0) {
+      this.ensureSizes();
+    }
     if (changed.has('orientationBreakpoint') || changed.has('orientationBreakpointBasis')) {
       this.orientationBreakpoints.configure(this.orientationBreakpoint, this.orientationBreakpointBasis);
     }
@@ -620,8 +626,8 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       return this.validInitialSizes(numbers) ? [...numbers] : null;
     }
     // At least one CSS length string. `currentMeasuredWidth()` (baseEl) is 0 before the first render,
-    // which is when `initializeSizes()` runs from `connectedCallback()`; fall back to the host's own
-    // box -- [part="base"] is `inline-size: 100%` of the host, so they are equal (same stand-in
+    // which is when `initializeSizes()` runs from `willUpdate()`; fall back to the host's own box --
+    // [part="base"] is `inline-size: 100%` of the host, so they are equal (the same stand-in
     // `connectedCallback()` uses to seed `measuredInlineSize`).
     const containerSize = this.currentMeasuredWidth() || this.getBoundingClientRect().width;
     if (!(containerSize > 0)) return null;

@@ -21,6 +21,10 @@ export interface WidgetTypeDefinition {
   /** The native/custom DOM event on the rendered tag that arms `lr-widget-action` when the node
    *  also sets `actionId`. */
   action?: { event: string };
+  /** Optional controlled-state event mapping for allowlisted props. A node may bind such a prop
+   *  with `{ $bind: '/json/pointer' }`; the renderer emits `lr-widget-state-change` when the
+   *  configured event fires, but never mutates the supplied state itself. */
+  bindings?: Record<string, { event: string }>;
 }
 
 export type WidgetTypeRegistry = Map<string, WidgetTypeDefinition>;

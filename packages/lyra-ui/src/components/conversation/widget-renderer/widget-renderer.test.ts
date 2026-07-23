@@ -156,4 +156,47 @@ describe('lr-widget-renderer', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+
+  it('renders a versioned widget document and resolves controlled state bindings', async () => {
+    const el = await fixture<LyraWidgetRenderer>(html`
+      <lr-widget-renderer
+        .document=${{
+          version: '1',
+          root: {
+            id: 'status',
+            type: 'col',
+            children: [{ type: 'text', props: { value: { $bind: '/status' } } }],
+          },
+          state: { status: 'Ready' },
+        }}
+      ></lr-widget-renderer>
+    `);
+    expect(el.shadowRoot!.textContent).to.contain('Ready');
+  });
+
+  it('emits controlled state changes from bound mapped controls', async () => {
+    const registry = new Map();
+    registry.set('field', {
+      tag: 'input',
+      props: { value: 'string' },
+      bindings: { value: { event: 'input' } },
+    });
+    const el = await fixture<LyraWidgetRenderer>(html`
+      <lr-widget-renderer
+        .registry=${registry}
+        .document=${{
+          version: '1',
+          root: { id: 'name', type: 'field', props: { value: { $bind: '/name' } } },
+          state: { name: 'Ada' },
+        }}
+      ></lr-widget-renderer>
+    `);
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(input.value).to.equal('Ada');
+    const changed = oneEvent(el, 'lr-widget-state-change');
+    input.value = 'Grace';
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    const event = await changed as CustomEvent<{ path: string; value: unknown; nodeId: string; prop: string }>;
+    expect(event.detail).to.deep.equal({ path: '/name', value: 'Grace', nodeId: 'name', prop: 'value' });
+  });
 });

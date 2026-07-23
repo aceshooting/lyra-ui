@@ -1,4 +1,4 @@
-import { html, nothing, type ComplexAttributeConverter, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -8,6 +8,7 @@ import '../../overlays/badge/badge.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** One knowledge-graph entity, as consumed by every knowledge-graph explorer component. Field
  *  names deliberately mirror `lr-graph`'s node shape (`type`, `communityId`), so
@@ -32,21 +33,6 @@ type NodeTypeStyle = { id: string; label: string; color?: string; shape?: 'circl
 
 /** Visual chrome for `<lr-entity-card>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
 export type EntityCardAppearance = 'card' | 'plain';
-
-/** `true`-defaulting boolean attribute converter -- Lit's default presence-based `type: Boolean`
- *  can never be set back to `false` from a plain-HTML attribute once a property's own default is
- *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
- *  `fromAttribute` checks the literal string instead. Duplicated locally rather than imported,
- *  matching this exact converter's repeated per-component convention elsewhere in this library
- *  (see e.g. `<lr-attachment-chip>`'s own `trueDefaultBooleanConverter`). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 export interface LyraEntityCardEventMap {
   'lr-entity-activate': CustomEvent<{ id: string }>;

@@ -8,8 +8,10 @@ auto-inserted between each adjacent pair.
   omitted/mismatched)
 - `defaultSizes: (number | string)[] = []` (attribute: false) — initialization-only fallback: a
   valid restored `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal
-  distribution. Later reassignment never overwrites live drag/persisted state — set it once, at
-  mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
+  distribution. Initialization occurs on the first update so framework property bindings committed
+  after connection in the same turn — including `defaultSizes` and `storageKey` — are honored
+  before the layout becomes live. Later reassignment never overwrites live drag/persisted state —
+  set it once, at mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
   pure-number array that does not sum to ~100, e.g. `[30, 60]`, is still rejected and falls through
   to the equal split) or a CSS **length string** (`'200px'`, `'20%'`, `'3rem'`). When at least one
   entry is a length string, every entry is resolved against the measured container (numbers as
@@ -1495,8 +1497,12 @@ returning to the trigger)
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
 since those attributes belong on the actual interactive trigger, which lives outside this
-component's shadow root), default (`<lr-menu-item>` elements, plus optionally plain `<hr>`
-dividers between groups — native `<hr>` already carries an implicit `separator` role),
+component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
+generated id only when the consumer did not provide one, rather than the shadow-private list id.
+`lr-button`/`lr-icon-button` forward all three values to their focused shadow-internal native
+control and resolve the controls element-reference across their shadow boundary), default
+(`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
+an implicit `separator` role),
 `header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
 section title, an "Apply"/"Done" button, a count — rendered above/below the items inside
 `[part="popup"]` but **outside** the `role="menu"` list. Both collapse to no box at all while

@@ -58,6 +58,33 @@ it('styles the appended action button through the design-token system instead of
     'rgba(0, 0, 0, 0)',
   );
   expect(computed.cursor).to.equal('pointer');
+
+  const messageNode = Array.from(el.childNodes).find((node) => node.nodeType === Node.TEXT_NODE)!;
+  const messageRange = document.createRange();
+  messageRange.selectNodeContents(messageNode);
+  const messageRect = messageRange.getBoundingClientRect();
+  const buttonRect = btn.getBoundingClientRect();
+  expect(
+    buttonRect.left - messageRect.right,
+    'the action label must not visually run into the message text',
+  ).to.be.at.least(4);
+});
+
+it('keeps an English message and action in logical order inside an RTL page', async () => {
+  const wrapper = await fixture(html`
+    <div dir="rtl"><lr-toast-item duration="0">Item deleted<button>Undo</button></lr-toast-item></div>
+  `);
+  const el = wrapper.querySelector('lr-toast-item') as LyraToastItem;
+  await el.updateComplete;
+
+  const messageNode = Array.from(el.childNodes).find((node) => node.nodeType === Node.TEXT_NODE)!;
+  const messageRange = document.createRange();
+  messageRange.selectNodeContents(messageNode);
+  const messageRect = messageRange.getBoundingClientRect();
+  const buttonRect = el.querySelector('button')!.getBoundingClientRect();
+
+  expect(messageRect.left, 'the LTR message must render before its LTR action').to.be.lessThan(buttonRect.left);
+  expect(buttonRect.left - messageRect.right).to.be.at.least(4);
 });
 
 it('reflects the placement property on <lr-toast>', async () => {

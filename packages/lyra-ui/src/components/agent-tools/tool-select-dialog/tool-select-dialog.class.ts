@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
@@ -7,25 +7,7 @@ import { nextId, srOnly } from '../../../internal/a11y.js';
 import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
-
-/**
- * String-aware boolean attribute converter for `spellcheck`. Lit's built-in `type: Boolean`
- * converter is presence-based -- the attribute's mere presence (regardless of its string value)
- * maps to `true`, so a plain-markup consumer writing the literal `spellcheck="false"` would
- * actually get `true` (this property's default), the opposite of what that string reads as -- the
- * same bug class `<lr-textarea>`'s `spellcheckConverter` and `<lr-model-select>`'s identical
- * converter document and fix.
- */
-const spellcheckConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    // `true` is this property's default, so there's nothing worth reflecting for it; only the
-    // non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 /** One selectable agent tool. `category` groups the row; tools with no
  *  `category` (or an empty one) fall into the trailing "Other" bucket. */
@@ -450,7 +432,6 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

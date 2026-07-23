@@ -1,9 +1,10 @@
-import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, svg, nothing, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface CheckpointRestoreDetail {
   checkpointId: string;
@@ -45,14 +46,6 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  *  `true` (removing an attribute that was never present fires no `attributeChangedCallback`), so
  *  `fromAttribute` checks the literal string instead. Shared by both `restorable` and
  *  `confirmRestore`, which have the identical `true`-default parsing need. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /**
  * `<lr-checkpoint>` — an inline conversation restore point: a labeled marker between messages

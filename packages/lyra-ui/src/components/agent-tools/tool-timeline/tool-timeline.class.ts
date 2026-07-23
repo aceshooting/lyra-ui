@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type PropertyValues, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -11,6 +11,7 @@ import '../tool-call-chip/tool-call-chip.js';
 import '../tool-result-view/tool-result-view.js';
 import '../tool-approval-dialog/tool-approval-dialog.js';
 import '../../layout/details/details.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /**
  * One entry in a `<lr-tool-timeline>`. Extends `ToolInvocation` (`src/ai/types.ts`) with exactly
@@ -61,22 +62,6 @@ export interface ToolTimelineApprovalDetail extends ToolApprovalEventDetail {
 export interface LyraToolTimelineEventMap {
   'lr-tool-approval-decide': CustomEvent<ToolTimelineApprovalDetail>;
 }
-
-/** `true`-defaulting boolean attribute converter for `approvalEditable` -- identical shape/
- *  rationale to `<lr-checkpoint>`'s own `trueDefaultBooleanConverter`, duplicated locally per this
- *  library's convention of not sharing these tiny converters across independently-consumable
- *  component files. Lit's default presence-based `type: Boolean` can never be set back to `false`
- *  from a plain-HTML attribute once the property's own default is `true` (removing an attribute
- *  that was never present fires no `attributeChangedCallback`), so `fromAttribute` checks the
- *  literal string instead. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 /** `hour:minute` in the component's effective locale -- identical algorithm to
  *  `<lr-checkpoint>`'s own `defaultFormatTimestamp`, duplicated locally. */

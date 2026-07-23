@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -8,7 +8,8 @@ import '../../charts/chart/lite-chart.js';
 import '../../data/stat/stat.js';
 import '../../overlays/badge/badge.js';
 import { styles } from './agent-eval-dashboard.styles.js';
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = { fromAttribute: (value) => value !== 'false', toAttribute: (value) => (value ? null : 'false') };
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
 export interface AgentEvaluationMetric { id: string; label: string; value: number; format?: EvaluationMetricFormat; }
 export interface AgentEvaluationDashboardRun { id: string; label: string; status: AgentStatusKind; metrics?: Record<string, number>; }

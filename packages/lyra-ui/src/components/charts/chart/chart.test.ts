@@ -1228,6 +1228,25 @@ it('gives an uncolored cartesian series a concrete, themed default color for fil
   expect(ds.backgroundColor).to.not.match(/rgba\(\s*0\s*,\s*0\s*,\s*0/);
 });
 
+it('uses a translucent area fill so a lower-valued sibling line remains visible', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.style.setProperty('--lr-color-chart-1', 'rgb(130, 80, 220)');
+  el.labels = ['Jan', 'Feb'];
+  el.datasets = [
+    { label: 'Sessions', data: [8, 10], fill: true },
+    { label: 'Errors', data: [1, 2], color: 'rgb(210, 35, 55)' },
+  ];
+  await el.updateComplete;
+
+  const [area, line] = (el as any).buildConfig().data.datasets;
+  expect(area.borderColor).to.equal('rgb(130, 80, 220)');
+  expect(area.backgroundColor).to.match(
+    /(?:rgba\(130,\s*80,\s*220,\s*0\.28\)|color\(srgb\s+[^/]+\/\s*0\.28\))/,
+  );
+  expect(line.backgroundColor).to.deep.equal(['rgb(210, 35, 55)']);
+});
+
 it('rotates the default palette across uncolored series so they stay distinguishable', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
@@ -1270,6 +1289,29 @@ it('gives an uncolored pie a per-slice default palette so slices are distinguish
   expect(ds.backgroundColor).to.be.an('array').with.lengthOf(3);
   expect(ds.backgroundColor[0]).to.not.match(/^var\(/);
   expect(ds.backgroundColor[0]).to.not.equal(ds.backgroundColor[1]);
+});
+
+it('gives an uncolored polar-area chart a per-slice palette too', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'polarArea';
+  el.labels = ['A', 'B', 'C'];
+  el.datasets = [{ label: 'Share', data: [30, 45, 25] }];
+  await el.updateComplete;
+
+  const ds = (el as any).buildConfig().data.datasets[0];
+  expect(ds.backgroundColor).to.be.an('array').with.lengthOf(3);
+  expect(ds.backgroundColor[0]).to.not.equal(ds.backgroundColor[1]);
+});
+
+it('disables the light Chart.js tick backdrop on dark-theme radial charts', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.datasets = [{ label: 'Model', data: [30, 45, 25] }];
+
+  for (const type of ['radar', 'polarArea'] as const) {
+    el.type = type;
+    await el.updateComplete;
+    expect((el as any).buildConfig().options.scales.r.ticks.showLabelBackdrop).to.equal(false);
+  }
 });
 
 // Regression coverage for the lifecycle-optional-peer-missing-fails-silently defect class --

@@ -9,6 +9,7 @@ import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
+import { spellcheckConverter } from '../../../internal/converters.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -74,11 +75,6 @@ export type ComboboxSource = (
   options: { signal: AbortSignal },
 ) => Promise<ComboboxSourceRow[]>;
 export type LyraComboboxSelectionDirection = 'forward' | 'backward' | 'none';
-
-const spellcheckConverter = {
-  fromAttribute: (value: string | null): boolean => value !== 'false',
-  toAttribute: (value: boolean): string => (value ? 'true' : 'false'),
-};
 
 /** Detail of `lr-filter`: the in-progress filter text, never the committed selection. */
 export interface ComboboxFilterDetail {
@@ -1273,7 +1269,6 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

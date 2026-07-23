@@ -5,36 +5,13 @@ import {
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
-  type ComplexAttributeConverter,
 } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './chat-composer.styles.js';
-
-/**
- * `true`-defaulting boolean attribute converter, shared by every boolean property on this element
- * whose own default is `true` (`spellcheck`, `submitOnEnter`, `stoppable`). Lit's built-in
- * `type: Boolean` converter is presence-based -- the attribute's mere presence (regardless of its
- * string value) maps to `true`, so a plain-markup consumer writing the literal
- * `submit-on-enter="false"` (or `stoppable="false"`, or `spellcheck="false"`) would actually get
- * `true` (each property's default), the opposite of what that string reads as -- the same bug
- * class `<lr-generation-status>`'s `showStopConverter`/`<lr-checkpoint>`'s
- * `trueDefaultBooleanConverter` document and fix elsewhere. Two-state shape: attribute absent (or
- * removed) -> `true` (the default); `="false"` -> `false`; anything else present (no value,
- * `="true"`, ...) -> `true`.
- */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    // `true` is every one of these properties' default, so there's nothing worth reflecting for
-    // it; only the non-default `false` needs an attribute at all.
-    return value ? null : 'false';
-  },
-};
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** Visual chrome for `<lr-chat-composer>`'s root, mirroring `lr-card`'s `appearance` vocabulary. */
 export type ChatComposerAppearance = 'card' | 'plain';
@@ -170,10 +147,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    *  border-color shift for an underline across the input row, since there is no border left to
    *  recolor. */
   @property({ reflect: true }) appearance: ChatComposerAppearance = 'card';
-  /** Enter-to-send toggle -- see the class doc's "Enter-to-send" paragraph. Uses
-   *  {@link trueDefaultBooleanConverter} rather than Lit's default presence-based `type: Boolean`
-   *  handling, so a plain-HTML consumer can turn this off with the attribute string
-   *  `submit-on-enter="false"`, not just a `.submitOnEnter=${false}` property binding. */
+  
   @property({
     type: Boolean,
     reflect: true,
@@ -185,21 +159,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
    * button and suppresses Enter/click submission without disabling the textarea. Busy Stop behavior
    * remains governed by `status` and `stoppable`. */
   @property({ type: Boolean, reflect: true, attribute: 'submit-disabled' }) submitDisabled = false;
-  /** When `false`, the built-in button never renders as a Stop/cancel control
-   *  while busy -- instead it stays a (disabled) Send button, since there is
-   *  no cancellation operation to offer. Defaults to `true`, reproducing
-   *  today's Stop-button behavior for every `status` other than `'idle'`. Uses
-   *  {@link trueDefaultBooleanConverter} so a plain-HTML consumer can turn this off with the
-   *  attribute string `stoppable="false"`, not just a `.stoppable=${false}` property binding. */
+  
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) stoppable = true;
   /** Accessible name for the internal textarea. Takes precedence over the placeholder-derived name. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  /** Forwarded to the internal `<textarea>`'s own `spellcheck`. Defaults to `true`, matching the
-   *  native element's own default. Uses {@link trueDefaultBooleanConverter} rather than Lit's
-   *  default presence-based `type: Boolean` handling, so a plain-HTML consumer with no way to write
-   *  a `.spellcheck` property binding can still turn this off with `spellcheck="false"`; a Lit
-   *  template can do the same with either that attribute string or a `.spellcheck=${false}`
-   *  property binding. */
+  
   @property({ converter: trueDefaultBooleanConverter }) override spellcheck = true;
   /** Forwarded to the internal `<textarea>`'s own `autocapitalize`. Empty string omits the
    *  attribute (browser default). */
@@ -572,7 +536,6 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     `;
   }
 }
-
 
 declare global {
   interface HTMLElementTagNameMap {

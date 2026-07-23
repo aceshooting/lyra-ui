@@ -5,10 +5,17 @@ import { isRtl } from '../../../internal/rtl.js';
 import { finiteNumber, finiteRange, isSliderKey, decimalPlaces } from '../../../internal/numbers.js';
 import { styles } from './time-range.styles.js';
 
-type Handle = 'start' | 'end';
+export type TimeRangeHandle = 'start' | 'end';
+
+/** Formats a finite, clamped handle value for `aria-valuetext`; return a nullish value to omit
+ *  the attribute for that handle. */
+export type TimeRangeValueFormatter = (
+  value: number,
+  handle: TimeRangeHandle,
+) => string | null | undefined;
 
 interface DragState {
-  handle: Handle;
+  handle: TimeRangeHandle;
   /** `[part="base"]`'s rect and the resolved direction, snapshotted once in
    *  onPointerDown rather than re-read on every pointermove of the same
    *  gesture: getBoundingClientRect()/getComputedStyle() in a window-level
@@ -162,6 +169,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  Overridable for i18n/custom copy; defaults to the same literal text
    *  this component always rendered before the property existed. */
   @property({ attribute: 'end-label' }) endLabel = 'Range end';
+  /** Optional human-readable formatter for each handle's `aria-valuetext`. Receives the same
+   *  finite, clamped number exposed through `aria-valuenow` plus `'start'`/`'end'`; leaving it
+   *  unset preserves the numeric-only slider contract. Return `null`/`undefined` to omit
+   *  `aria-valuetext` for a handle. */
+  @property({ attribute: false }) valueFormatter?: TimeRangeValueFormatter;
   /**
    * Optional discrete presets rendered as a `[part="presets"]` button row
    * above the track. Purely additive: leaving this empty (the default)
@@ -262,7 +274,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    *  both for aria-valuemin/aria-valuemax and for Home/End's jump targets,
    *  instead of reporting/jumping to the component's full [min, max] domain
    *  which the sibling handle may make partially unreachable. */
-  private reachableBounds(handle: Handle): { min: number; max: number } {
+  private reachableBounds(handle: TimeRangeHandle): { min: number; max: number } {
     const { lo, hi } = this.domain();
     // A NaN sibling value (e.g. an invalid `end` attribute) must not leak
     // into the *other* handle's aria-valuemin/aria-valuemax as a literal
@@ -272,7 +284,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     return handle === 'start' ? { min: lo, max: end } : { min: start, max: hi };
   }
 
-  private clamp(handle: Handle, value: number): number {
+  private clamp(handle: TimeRangeHandle, value: number): number {
     const { lo, hi } = this.domain();
     // A non-positive or non-finite step (e.g. a transient `step={0}` while a
     // caller derives it as `(max-min)/tickCount`) would otherwise divide by
@@ -299,7 +311,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     return Math.max(bounded, finiteRange(this.start, lo, lo, hi));
   }
 
-  private setValue(handle: Handle, value: number, commit: boolean): void {
+  private setValue(handle: TimeRangeHandle, value: number, commit: boolean): void {
     const clamped = this.clamp(handle, value);
     if (handle === 'start') this.start = clamped;
     else this.end = clamped;
@@ -333,7 +345,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.emit('lr-change', { start: this.start, end: this.end });
   }
 
-  private onKeyDown = (handle: Handle, e: KeyboardEvent): void => {
+  private onKeyDown = (handle: TimeRangeHandle, e: KeyboardEvent): void => {
     // A handle that already has focus when the component becomes disabled
     // must not still respond to arrow keys (new pointerdowns are already
     // blocked by the `if (this.effectiveDisabled) return;` guard in
@@ -378,7 +390,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     this.emit('lr-change', { start: this.start, end: this.end });
   };
 
-  private onPointerDown = (handle: Handle, e: PointerEvent): void => {
+  private onPointerDown = (handle: TimeRangeHandle, e: PointerEvent): void => {
     if (this.effectiveDisabled) return;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
     this.drags.set(e.pointerId, { handle, rect: base.getBoundingClientRect(), rtl: isRtl(this) });
@@ -488,6 +500,16 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const endPct = this.percentOf(this.end);
     const startBounds = this.reachableBounds('start');
     const endBounds = this.reachableBounds('end');
+    const startValue = Number.isFinite(this.start)
+      ? finiteRange(this.start, startBounds.min, startBounds.min, startBounds.max)
+      : undefined;
+    const endValue = Number.isFinite(this.end)
+      ? finiteRange(this.end, endBounds.min, endBounds.min, endBounds.max)
+      : undefined;
+    const startValueText =
+      startValue === undefined ? undefined : this.valueFormatter?.(startValue, 'start');
+    const endValueText =
+      endValue === undefined ? undefined : this.valueFormatter?.(endValue, 'end');
     return html`
       ${this.presets.length > 0
         ? html`<div part="presets">
@@ -523,9 +545,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-valuemin=${startBounds.min}
           aria-valuemax=${startBounds.max}
-          aria-valuenow=${Number.isFinite(this.start)
-            ? finiteRange(this.start, startBounds.min, startBounds.min, startBounds.max)
-            : nothing}
+          aria-valuenow=${startValue ?? nothing}
+          aria-valuetext=${startValueText ?? nothing}
           style=${`inset-inline-start:${startPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('start', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('start', e)}
@@ -542,9 +563,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           aria-valuemin=${endBounds.min}
           aria-valuemax=${endBounds.max}
-          aria-valuenow=${Number.isFinite(this.end)
-            ? finiteRange(this.end, endBounds.min, endBounds.min, endBounds.max)
-            : nothing}
+          aria-valuenow=${endValue ?? nothing}
+          aria-valuetext=${endValueText ?? nothing}
           style=${`inset-inline-start:${endPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('end', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('end', e)}

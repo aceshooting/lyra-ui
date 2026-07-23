@@ -2,7 +2,6 @@ import {
   html,
   svg,
   nothing,
-  type ComplexAttributeConverter,
   type TemplateResult,
   type SVGTemplateResult,
   type PropertyValues,
@@ -14,6 +13,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.js';
 import { styles } from './task-list.styles.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
  *  (unlike `<lr-tool-call-chip>`'s status vocabulary, which does need one). */
@@ -108,14 +108,6 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *  own `:host([expanded])` styling, so the attribute must actually be present while expanded and
  *  absent while collapsed for that selector to work. Shared by both `expanded` and `collapsible`,
  *  which have the identical `true`-default parsing need -- `collapsible` just isn't reflected. */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? '' : null;
-  },
-};
 
 /**
  * `<lr-task-list>` — a live, collapsible tracker for an agent's plan: ordered steps with

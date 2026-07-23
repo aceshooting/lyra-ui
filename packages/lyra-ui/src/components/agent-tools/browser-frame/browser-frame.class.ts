@@ -1,9 +1,10 @@
-import { html, nothing, type TemplateResult, type ComplexAttributeConverter } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './browser-frame.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
  *  an image of `naturalW`x`naturalH` shown inside a `containerW`x`containerH` box -- ping
@@ -33,14 +34,6 @@ function containRect(
  *  `fromAttribute` checks the literal string instead. Mirrors `<lr-agent-run>`'s own
  *  `showCancel`/`showRetry` converter (`toAttribute` omits the attribute for `true` since nothing
  *  in this component's stylesheet keys off `[controls]`'s presence). */
-const trueDefaultBooleanConverter: ComplexAttributeConverter<boolean> = {
-  fromAttribute(value): boolean {
-    return value !== 'false';
-  },
-  toAttribute(value): string | null {
-    return value ? null : 'false';
-  },
-};
 
 export interface BrowserPing {
   id: string;
