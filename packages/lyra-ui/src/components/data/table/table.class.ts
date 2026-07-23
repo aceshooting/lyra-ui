@@ -94,6 +94,11 @@ export type TableColumnEditable = boolean | 'always';
  *  number via checkboxes. */
 export type TableSelectionMode = 'none' | 'single' | 'multiple';
 
+/** `<lr-table>`'s `sortMode` property: `'client'` orders `rows` in the browser from
+ *  `sortKey`/`sortDir`, `'server'` renders `rows` in the order given. Mirrors the
+ *  `paginationMode` split of the same two names. */
+export type TableSortMode = 'client' | 'server';
+
 export interface TableColumn<T> {
   key: string;
   label: string;
@@ -116,6 +121,18 @@ export interface TableColumn<T> {
    *  width internally and emits `lr-column-resize` on every resize step. */
   resizable?: boolean;
   sortable?: boolean;
+  /** Backs client-mode sorting (`sortMode: 'client'`, the default) for this column. Returns the
+   *  comparable value for `row` — a finite number sorts numerically, a string sorts through a
+   *  locale-aware `Intl.Collator` (`numeric: true`, so `item2` precedes `item10`), and
+   *  `null`/`undefined` (or a non-finite number) sorts *last* regardless of direction, so flipping
+   *  `sortDir` never floats a block of blanks to the top.
+   *
+   *  Omit it to sort by this column's rendered `cell()` output instead, stringified — which only
+   *  produces a meaningful order when `cell()` returns a string or number. Define `sortValue`
+   *  whenever `cell()` returns a template or element, or the column would sort by a constant.
+   *  Ignored entirely when `sortMode` is `'server'` (the caller is assumed to have already ordered
+   *  `rows`) or when the column is not `sortable`. */
+  sortValue?: (row: T) => string | number | null | undefined;
   align?: TableEdgeAlign;
   /** Responsive priority — `undefined` (the default) means "always visible".
    *  `'low'` columns hide first (narrowest container), `'medium'` next, as
@@ -278,7 +295,15 @@ export interface LyraTableEventMap<T = unknown> {
   'lr-column-resize': CustomEvent<{ key: string; width: number }>;
 }
 /**
- * `<lr-table>` — a presentational, sort/select-aware data table.
+ * `<lr-table>` — a sort/select-aware data table.
+ *
+ * Sorting is the one area the table owns outright: under the default
+ * `sortMode: 'client'` a sortable-header activation writes `sortKey`/`sortDir`
+ * itself and reorders the rendered rows (see `sortMode`, `defaultSortDir` and
+ * `columns[].sortValue`). Everything else here stays presentational —
+ * selection state beyond `selectionMode` and expansion state are read, never
+ * written. Set `sortMode="server"` to keep `lr-sort` a pure notification and
+ * drive `sortKey`/`sortDir` plus the row order entirely from your own state.
  *
  * Header/row activation is delegated: one `click` and one `keydown`
  * listener on `<table>` resolve the target via `closest('[data-col-key]'
@@ -325,8 +350,10 @@ export interface LyraTableEventMap<T = unknown> {
  * alignment. Which rows are currently open is fully consumer-owned via
  * `expandedKeys` (a `Set<string | number>` of row keys, per `rowKey`/
  * `keyOf()`) — the table only reads it and emits `lr-row-expand-toggle`
- * on activation, mirroring `sortKey`/`selectedKey`'s existing
- * presentational-only convention.
+ * on activation, mirroring `selectedKey`'s existing presentational-only
+ * convention. (`sortKey`/`sortDir` are *not* a parallel case any more: under
+ * the default `sortMode: 'client'` the table writes them on header
+ * activation.)
  *
  * Selection is opt-in through the `selectionMode` property. Use `single` or
  * `multiple` to self-manage row selection; the default `none` remains
@@ -363,7 +390,9 @@ export interface LyraTableEventMap<T = unknown> {
  * `spellcheck`/`autocapitalize`/`autoCorrect` forward to the filter input and, for a `'text'`
  * (the default) `editType`, the inline cell editor -- no effect on a `'number'` cell editor.
  * `groupBy` inserts non-focusable group header rows before each group; use
- * `groupLabel` when the raw group key needs custom content.
+ * `groupLabel` when the raw group key needs custom content. A client-mode
+ * sort applies *within* each group, so grouping survives sorting on a column
+ * unrelated to the group key.
  *
  * `columns[].heatValue` opts a column into heat-tint mode: its numeric return value is normalized
  * against a shared scale spanning every `heatValue`-defining column across every currently-rendered
@@ -388,7 +417,12 @@ export interface LyraTableEventMap<T = unknown> {
  * or a drag-resize is in flight (column resizing does not work under `table-layout: auto`).
  *
  * @customElement lr-table
- * @event lr-sort - A sortable header was activated. `detail: { key }`.
+ * @event lr-sort - A sortable header was activated. `detail: { key }`. The
+ *   activation additionally updates `sortKey`/`sortDir` on the table itself
+ *   (switching column seeds `defaultSortDir`, re-activating the current one
+ *   toggles), and under the default `sortMode: 'client'` reorders the
+ *   rendered rows. Use `sortMode="server"` for notification-only behavior
+ *   with the row order left exactly as supplied.
  * @event lr-row-click - A row was activated. `detail: { row }`.
  * @event lr-load-more - The "load more" control was activated.
  * @event lr-columns-hidden-change - `columnsHidden` actually changed value
@@ -515,6 +549,21 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   @property({ reflect: true }) layout: 'auto' | 'fixed' = 'auto';
   @property({ attribute: 'sort-key' }) sortKey = '';
   @property({ attribute: 'sort-dir' }) sortDir: 'asc' | 'desc' = 'asc';
+  /** `'client'` (the default) orders `rows` itself, in the browser, from `sortKey`/`sortDir` and
+   *  the active column's `sortValue`. `'server'` renders `rows` in exactly the order given,
+   *  assuming the caller has already sorted them — mirroring `paginationMode`'s identical
+   *  client/server split. `lr-sort` is emitted on header activation either way.
+   *
+   *  With no `sortKey` set (the default) `'client'` is a no-op: the input order is preserved
+   *  verbatim, so an existing consumer that only listens for `lr-sort` sees unchanged rendering
+   *  until a header is actually activated. */
+  @property({ reflect: true, attribute: 'sort-mode' }) sortMode: TableSortMode = 'client';
+  /** The direction applied whenever header activation switches sorting to a *different* column —
+   *  including the first column ever sorted. Re-activating the column that is already `sortKey`
+   *  toggles between `'asc'` and `'desc'` instead, so this never overrides a direction the user
+   *  just chose for the column they are still on. Defaults to `'asc'`; set `'desc'` for a
+   *  most-recent-first or highest-first table. */
+  @property({ attribute: 'default-sort-dir' }) defaultSortDir: 'asc' | 'desc' = 'asc';
   /** Accessible name for the `role="grid"` — a typed alternative to setting `aria-label` on the
    *  host. When set it becomes the grid's `aria-label`; a host `aria-label` is used as a fallback
    *  when this is unset. Consumer-supplied text, so it is NOT run through `this.localize()`. */
@@ -575,6 +624,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
    *  a large page size can't emit thousands of placeholder cells), otherwise 3. Any positive value
    *  is used verbatim and is not capped. Ignored entirely under the default spinner appearance. */
   @property({ type: Number, attribute: 'skeleton-rows' }) skeletonRows = 0;
+  /** Inserts a non-focusable group header row wherever this key changes between consecutive
+   *  rendered rows. Supply `rows` with each group already contiguous — the table does not
+   *  re-order them to make them so, and the group order it renders is their first-appearance
+   *  order in `rows`. A client-mode sort (`sortMode: 'client'`) is applied *within* each group
+   *  rather than across the whole set, so sorting a grouped table on a column unrelated to the
+   *  group key reorders rows inside their groups and leaves the grouping itself intact. Sorting on
+   *  a column whose value is constant inside every group — the group column itself, most obviously
+   *  — reorders the *groups* by that value instead, since there is nothing to reorder within
+   *  them. */
   @property({ attribute: false }) groupBy?: (row: T) => string | number;
   @property({ attribute: false }) groupLabel?: (key: string | number, rows: T[]) => unknown;
   /** Set to a positive value to enable the controlled pagination footer. */
@@ -599,8 +657,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   /** Consumer-owned open/closed state, keyed the same way as `rowKey`/
    *  `selectedKey`. The table never mutates this itself — it only reads it
    *  to decide which rows currently render `expandedContent`; toggle it in
-   *  response to `lr-row-expand-toggle`, mirroring how `sortKey`/
-   *  `selectedKey` already work. */
+   *  response to `lr-row-expand-toggle`, mirroring how `selectedKey` already
+   *  works. Note that `sortKey`/`sortDir` are no longer analogous: under the
+   *  default `sortMode: 'client'` the table owns them and writes them on
+   *  header activation. */
   @property({ attribute: false }) expandedKeys: Set<string | number> = new Set();
   /** Overrides the auto-derived heat-tint domain (min/max of every `heatValue` result across every
    *  currently-rendered row — post-sort, pre-pagination, the same rows `footer(rows)` already sees).
@@ -1101,8 +1161,137 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     return finiteInteger(this.page, 1, 1, this.pageCount);
   }
 
-  private renderedEntries(): Array<{ row: T; index: number }> {
+  /** Memoized on the same principle as `matchingEntries()` above, and re-validated against the
+   *  exact inputs the sort reads. `renderedEntries()` is read several times per update pass (the
+   *  `rowsByKey` rebuild, `focusedRowKey()`, and `render()` itself), and a miss costs one
+   *  consumer-supplied `sortValue()`/`cell()` call per row on top of the comparison pass — sorting
+   *  once per reader would multiply that callback work by the number of readers for no benefit.
+   *  `columns` is compared by identity because the ordering reads `sortValue`/`cell` off the
+   *  active column object; `locale` because it selects the collator. */
+  private cachedSortedEntries: Array<{ row: T; index: number }> | null = null;
+  private sortedEntriesInputs: {
+    entries: Array<{ row: T; index: number }>;
+    columns: TableColumn<T>[];
+    mode: TableSortMode;
+    key: string;
+    dir: 'asc' | 'desc';
+    locale: string;
+    groupBy: ((row: T) => string | number) | undefined;
+  } | null = null;
+  /** `matchingEntries()` reordered by the active sort column. A no-op — the filtered array is
+   *  returned by identity, never copied — under `sortMode: 'server'`, with no `sortKey`, or when
+   *  `sortKey` names a column that is missing or not `sortable`, which is what keeps a table that
+   *  never sets `sortKey` rendering its input order verbatim.
+   *
+   *  When `groupBy` is set the sort is applied *within* each group rather than across the whole
+   *  set. `render()` emits a group header wherever the group key changes between consecutive
+   *  rendered rows, so a flat global sort on a column uncorrelated with the group key would
+   *  interleave the groups and emit a header before nearly every row — the grouping would be
+   *  visually destroyed by sorting. Groups keep their first-appearance order in `rows` (a `Map`
+   *  iterates in insertion order); the group key is deliberately *not* collated, because the
+   *  consumer controls group order through the order it supplies `rows` in, exactly as it does
+   *  when no sort is active.
+   *
+   *  The one exception: when the active column's value is constant inside *every* group, the
+   *  within-group sort is provably inert, so the *groups* are ordered by that constant value
+   *  instead. Without it, sorting on the group column would flip `aria-sort` and the chevron while
+   *  changing nothing — announcing an ordering the table never applied. */
+  private sortedEntries(): Array<{ row: T; index: number }> {
     const entries = this.matchingEntries();
+    if (this.sortMode !== 'client' || this.sortKey === '') return entries;
+    const col = this.columnsByKey.get(this.sortKey);
+    if (!col?.sortable) return entries;
+    const locale = this.effectiveLocale;
+    const inputs = this.sortedEntriesInputs;
+    if (
+      this.cachedSortedEntries !== null &&
+      inputs !== null &&
+      inputs.entries === entries &&
+      inputs.columns === this.columns &&
+      inputs.mode === this.sortMode &&
+      inputs.key === this.sortKey &&
+      inputs.dir === this.sortDir &&
+      inputs.locale === locale &&
+      inputs.groupBy === this.groupBy
+    ) {
+      return this.cachedSortedEntries;
+    }
+    const collator = new Intl.Collator(locale, { numeric: true });
+    const dir = this.sortDir === 'desc' ? -1 : 1;
+    // Decorate/sort/undecorate: `sortValue()`/`cell()` runs once per row rather than once per
+    // comparison, so a costly consumer accessor stays O(n) instead of O(n log n). A non-finite
+    // number is folded into the same "missing" bucket as null/undefined -- NaN would otherwise
+    // make the comparator self-inconsistent (every comparison against it returns 0) and leave the
+    // order engine-defined rather than merely surprising.
+    const decorated = entries.map((entry) => {
+      const raw = col.sortValue ? col.sortValue(entry.row) : String(col.cell(entry.row) ?? '');
+      return { entry, value: typeof raw === 'number' && !Number.isFinite(raw) ? null : raw };
+    });
+    // Array.prototype.sort is stable, so rows comparing equal keep their `rows` order.
+    const compare = (
+      a: { value: string | number | null | undefined },
+      b: { value: string | number | null | undefined },
+    ): number => {
+      const av = a.value;
+      const bv = b.value;
+      // Missing values sort last in BOTH directions -- multiplying by `dir` here would float a
+      // block of blanks to the top the moment the user flipped to descending.
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return collator.compare(String(av), String(bv)) * dir;
+    };
+    let sorted: Array<{ row: T; index: number }>;
+    const groupBy = this.groupBy;
+    if (groupBy === undefined) {
+      decorated.sort(compare);
+      sorted = decorated.map((decoration) => decoration.entry);
+    } else {
+      // Partition first, sort inside each partition. A `Map` keyed by the group key iterates in
+      // insertion order, so the groups come back in their first-appearance order in `rows` and
+      // stay contiguous -- see this method's doc comment.
+      const buckets = new Map<string | number, typeof decorated>();
+      for (const decoration of decorated) {
+        const groupKey = groupBy(decoration.entry.row);
+        const bucket = buckets.get(groupKey);
+        if (bucket === undefined) buckets.set(groupKey, [decoration]);
+        else bucket.push(decoration);
+      }
+      const ordered = [...buckets.values()];
+      // A column whose value never varies inside a group -- the group column itself being the
+      // obvious case, but also any column functionally determined by the group key, and the
+      // one-row-per-group case -- makes the within-group sort provably inert: every comparison
+      // ties, the sort is stable, and the rendered order is identical to the unsorted one. Sorting
+      // only the rows would then leave `render()` announcing `aria-sort="ascending"` and painting a
+      // chevron for an ordering the table never applied. Move the groups instead, keyed by that
+      // constant value, so the announced ordering genuinely holds. Every bucket is non-empty by
+      // construction, and `sort` is stable, so groups whose values tie keep first appearance.
+      const constantWithinEveryGroup = ordered.every((bucket) =>
+        bucket.every((decoration) => compare(decoration, bucket[0]!) === 0),
+      );
+      if (constantWithinEveryGroup) ordered.sort((a, b) => compare(a[0]!, b[0]!));
+      sorted = [];
+      for (const bucket of ordered) {
+        if (!constantWithinEveryGroup) bucket.sort(compare);
+        for (const decoration of bucket) sorted.push(decoration.entry);
+      }
+    }
+    this.sortedEntriesInputs = {
+      entries,
+      columns: this.columns,
+      mode: this.sortMode,
+      key: this.sortKey,
+      dir: this.sortDir,
+      locale,
+      groupBy,
+    };
+    this.cachedSortedEntries = sorted;
+    return sorted;
+  }
+
+  private renderedEntries(): Array<{ row: T; index: number }> {
+    const entries = this.sortedEntries();
     if (this.normalizedPageSize === 0 || this.paginationMode === 'server') return entries;
     const start = (this.appliedPage - 1) * this.normalizedPageSize;
     return entries.slice(start, start + this.normalizedPageSize);
@@ -1160,6 +1349,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       );
       if (parsed && typeof parsed.showAllColumns === 'boolean') this.showAllColumns = parsed.showAllColumns;
     }
+    // Ordered before the rowsByKey rebuild below, not after: client-mode sorting resolves the
+    // active column through `columnsByKey`, so rebuilding it second would have the very first
+    // update (where `columns` and `rows` land together) key rowsByKey off an *unsorted* order
+    // while render() -- reading the now-populated map -- paints the sorted one, silently
+    // resolving delegated row clicks to the wrong row.
+    if (changed.has('columns')) {
+      this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
+    }
     if (
       changed.has('rows') ||
       changed.has('rowKey') ||
@@ -1168,7 +1365,16 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       changed.has('page') ||
       changed.has('pageSize') ||
       changed.has('paginationMode') ||
-      changed.has('totalItems')
+      changed.has('totalItems') ||
+      // Sorting reorders the entries and, under pagination, changes which of them the current
+      // page even contains -- so the key->entry map has to be rebuilt alongside it.
+      changed.has('columns') ||
+      changed.has('sortKey') ||
+      changed.has('sortDir') ||
+      changed.has('sortMode') ||
+      // A client sort is applied within each group, so swapping `groupBy` re-orders the entries
+      // (and, under pagination, changes which of them the current page holds) too.
+      changed.has('groupBy')
     ) {
       this.rowsByKey = new Map(
         this.renderedEntries().map((entry) => [
@@ -1176,9 +1382,6 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
           entry,
         ]),
       );
-    }
-    if (changed.has('columns')) {
-      this.columnsByKey = new Map(this.columns.map((c) => [c.key, c]));
     }
     // Read *before* render() gets to move the node out from under the focus it currently holds --
     // by the time updated() runs, "the editor was focused a moment ago" and "the user clicked away
@@ -1326,10 +1529,22 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     queueMicrotask(() => this.recomputeColumnsHidden());
   }
 
+  /** Header activation (click, Enter, Space). Owns `sortKey`/`sortDir` end-to-end now that
+   *  `sortMode: 'client'` makes the table responsible for the order it renders: switching to a
+   *  different column seeds the direction from `defaultSortDir`, re-activating the current one
+   *  toggles it. `lr-sort` still fires exactly as before, so a `sortMode: 'server'` consumer that
+   *  re-sorts on the event and pushes fresh `rows` back in keeps working unchanged. */
   private activateColumn(key: string): void {
     this.activeColKey = key;
     const col = this.columnsByKey.get(key);
-    if (col?.sortable) this.emit('lr-sort', { key: col.key });
+    if (!col?.sortable) return;
+    if (this.sortKey === key) {
+      this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortKey = key;
+      this.sortDir = this.defaultSortDir;
+    }
+    this.emit('lr-sort', { key: col.key });
   }
 
   private activateRow(key: string): void {
@@ -1731,7 +1946,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       </div>`;
     }
 
-    const matchingEntries = this.matchingEntries();
+    // Sorted, not merely filtered: `footer`/`grandTotal` are documented as seeing every rendered
+    // row "post-sort, pre-pagination", and an aggregate that reads position (a first/last value, a
+    // running comparison) would otherwise disagree with the order actually painted below. Free
+    // when no sort is active -- `sortedEntries()` returns the filtered array by identity.
+    const matchingEntries = this.sortedEntries();
     // A cold load is exactly the case where `rows` is still empty, so skeleton mode must not take
     // either empty-state branch -- "no data" is a *result*, and the load has not produced one yet.
     if (!skeletonLoading && this.rows.length === 0 && !this.filterable && this.normalizedPageSize === 0) {
