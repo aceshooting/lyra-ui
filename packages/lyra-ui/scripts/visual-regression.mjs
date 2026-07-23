@@ -249,6 +249,23 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   await page.evaluate(() => document.fonts.ready).catch(() => {});
   await page.waitForTimeout(250);
   if (id === 'threadlist--default') {
+    // This story nests Lit updates three levels deep: thread-list -> virtual-list ->
+    // conversation-item. The outer rows can already have stable geometry while a conversation
+    // item's `active` host attribute has applied its CSS background but its queued Lit render has
+    // not added the active indicator (or the new `dir="auto"` text nodes) yet. Waiting only for
+    // row boxes therefore admits a real, repeatable half-rendered frame on a slower CI runner.
+    // Await every currently-rendered layer directly before checking layout stability.
+    await page.evaluate(async () => {
+      const host = document.querySelector('lr-thread-list');
+      await host?.updateComplete;
+      const list = host?.shadowRoot?.querySelector('lr-virtual-list');
+      await list?.updateComplete;
+      const items = [...(list?.shadowRoot?.querySelectorAll('lr-conversation-item') ?? [])];
+      await Promise.all(items.map((item) => item.updateComplete));
+      await list?.updateComplete;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await Promise.all(items.map((item) => item.updateComplete));
+    });
     await page.waitForFunction(
       () => {
         const host = document.querySelector('lr-thread-list');
@@ -256,7 +273,17 @@ async function captureStory(page, baseUrl, id, theme, direction) {
         const root = list?.shadowRoot;
         const viewport = root?.querySelector('[part="base"]');
         const rows = [...(root?.querySelectorAll('[part="row"]') ?? [])];
-        if (!(viewport instanceof HTMLElement) || rows.length < 5) return false;
+        const items = [...(root?.querySelectorAll('lr-conversation-item') ?? [])];
+        const activeItem = items.find((item) => item.hasAttribute('active'));
+        const activeIndicator = activeItem?.shadowRoot?.querySelector('[part="active-indicator"]');
+        if (
+          !(viewport instanceof HTMLElement) ||
+          rows.length < 5 ||
+          items.length < 3 ||
+          !(activeIndicator instanceof HTMLElement)
+        ) {
+          return false;
+        }
 
         const signature = [
           rows.length,
@@ -266,6 +293,11 @@ async function captureStory(page, baseUrl, id, theme, direction) {
             const rect = row.getBoundingClientRect();
             return [rect.top, rect.height];
           }),
+          ...items.flatMap((item) => {
+            const rect = item.getBoundingClientRect();
+            return [rect.left, rect.width, rect.height];
+          }),
+          ...Object.values(activeIndicator.getBoundingClientRect().toJSON()),
         ].join('|');
         const key = '__lyraThreadListVisualLayout';
         const previous = globalThis[key];

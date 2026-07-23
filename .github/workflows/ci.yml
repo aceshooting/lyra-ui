@@ -201,6 +201,7 @@ jobs:
           path: packages/lyra-ui/.visual-diff-output
           if-no-files-found: ignore
           retention-days: 14
+          include-hidden-files: true
 
   platform-contracts:
     name: ${{ matrix.browser }} / Node ${{ matrix.node-version }}
