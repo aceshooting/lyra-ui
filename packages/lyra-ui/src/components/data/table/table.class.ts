@@ -500,6 +500,9 @@ export interface LyraTableEventMap<T = unknown> {
  *   `aria-selected` is `true`. Shadow Parts forbids an attribute selector after `::part()`, so
  *   `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be
  *   restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-table-row-stripe-bg=transparent] - Background of alternating body rows. The
+ *   token is read only on rows carrying the internal stripe marker, so it can be set on the table
+ *   or an ancestor without affecting group, expanded, hover, or selected rows.
  * @cssprop [--lr-table-header-sorted-bg=transparent] - Background of the currently-sorted column's
  *   header cell (`[aria-sort]` other than `none`). Same rationale as `--lr-table-row-selected-bg`:
  *   `::part(header-cell)[aria-sort]` is invalid CSS, so this token is the supported way to recolor
@@ -1897,6 +1900,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                       part="row"
                       role="row"
                       data-row-key=${encodeKey(key)}
+                      ?data-stripe=${entryIndex % 2 === 0}
                       aria-selected=${selected ? 'true' : 'false'}
                       tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
                     >

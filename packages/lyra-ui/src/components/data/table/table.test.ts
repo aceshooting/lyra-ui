@@ -2692,6 +2692,26 @@ describe('--lr-table-row-selected-bg', () => {
   });
 });
 
+describe('--lr-table-row-stripe-bg', () => {
+  it('recolors alternating body rows without affecting the others', async () => {
+    const el = (await fixture(html`
+      <lr-table style="--lr-table-row-stripe-bg: rgb(10, 20, 30);"></lr-table>
+    `)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+    const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];
+    expect(rowEls).to.have.length(3);
+    expect(rowEls[0]!.hasAttribute('data-stripe')).to.equal(true);
+    expect(rowEls[1]!.hasAttribute('data-stripe')).to.equal(false);
+    expect(rowEls[2]!.hasAttribute('data-stripe')).to.equal(true);
+    expect(getComputedStyle(rowEls[0]!).backgroundColor).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(rowEls[1]!).backgroundColor).to.not.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(rowEls[2]!).backgroundColor).to.equal('rgb(10, 20, 30)');
+  });
+});
+
 describe('loadingAppearance="skeleton"', () => {
   const widthColumns: TableColumn<Row>[] = [
     { key: 'name', label: 'Name', width: '160px', cell: (r) => r.name },

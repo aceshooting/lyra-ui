@@ -188,6 +188,9 @@ export const styles = css`
       transition: none !important;
     }
   }
+  [part='row'][data-stripe] {
+    background: var(--lr-table-row-stripe-bg, transparent);
+  }
   [part='row']:hover {
     background: var(--lr-color-brand-quiet);
   }
