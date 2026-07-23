@@ -120,23 +120,23 @@ export const styles = css`
     cursor: pointer;
     padding: 0;
   }
-  [part='highlight'][data-tone='success'] {
+  [part='highlight']:where([data-tone='success']) {
     border-color: var(--lr-image-viewer-highlight-success-border, var(--lr-color-success));
     background: var(--lr-image-viewer-highlight-success-bg, color-mix(in srgb, var(--lr-color-success) 20%, transparent));
   }
-  [part='highlight'][data-tone='warning'] {
+  [part='highlight']:where([data-tone='warning']) {
     border-color: var(--lr-image-viewer-highlight-warning-border, var(--lr-color-warning));
     background: var(--lr-image-viewer-highlight-warning-bg, color-mix(in srgb, var(--lr-color-warning) 20%, transparent));
   }
-  [part='highlight'][data-tone='danger'] {
+  [part='highlight']:where([data-tone='danger']) {
     border-color: var(--lr-image-viewer-highlight-danger-border, var(--lr-color-danger));
     background: var(--lr-image-viewer-highlight-danger-bg, color-mix(in srgb, var(--lr-color-danger) 20%, transparent));
   }
-  [part='highlight'][data-tone='neutral'] {
+  [part='highlight']:where([data-tone='neutral']) {
     border-color: var(--lr-image-viewer-highlight-neutral-border, var(--lr-color-border));
     background: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
   }
-  [part='highlight'][data-active] {
+  [part='highlight']:where([data-active]) {
     border-width: var(--lr-border-width-thick);
     outline: var(--lr-focus-ring-width) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);

@@ -406,25 +406,21 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.applyDataLayers();
       });
       this._map.setStyle(this.mapStyle);
-    } else if (this._styleLoaded) {
-      if (changed.has('dataLayers')) {
-        const collides = Boolean(
-          this.choropleth &&
-          this.dataLayers.some((layer) => layer.sourceId === this.choropleth!.sourceId),
-        );
-        // When introducing a collision, move the choropleth out of the public namespace before
-        // applying the data source. When removing one, release the data source first so the
-        // choropleth can move back to its public id without MapLibre observing duplicate ids.
-        if (collides) {
-          this.applyChoropleth();
-          this.applyDataLayers();
-        } else {
-          this.applyDataLayers();
-          this.applyChoropleth();
-        }
-      } else if (changed.has('choropleth')) {
-        this.applyChoropleth();
+    } else if (this._styleLoaded && (changed.has('dataLayers') || changed.has('choropleth'))) {
+      const nextChoroplethSourceId = this.choropleth
+        ? this.resolveChoroplethSourceId(this.choropleth.sourceId)
+        : undefined;
+      // Remove a choropleth that must move namespaces before mutating data layers. This ordering
+      // also makes an atomic `choropleth = undefined; dataLayers = [{ same sourceId }]` update
+      // safe: the old source is released before the new layers begin referring to that id.
+      if (
+        this._appliedChoroplethSourceId &&
+        this._appliedChoroplethSourceId !== nextChoroplethSourceId
+      ) {
+        this.removeChoropleth();
       }
+      if (changed.has('dataLayers')) this.applyDataLayers();
+      this.applyChoropleth();
     }
     if (changed.has('center') && this._map) this._map.setCenter(this.safeCenter);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
@@ -438,9 +434,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       return;
     }
     const { geojson, field, stops } = this.choropleth;
-    const sourceId = this.dataLayers.some((layer) => layer.sourceId === this.choropleth!.sourceId)
-      ? `lr-choropleth-${this.choropleth.sourceId}`
-      : this.choropleth.sourceId;
+    const sourceId = this.resolveChoroplethSourceId(this.choropleth.sourceId);
     const fillLayerId = `${sourceId}-fill`;
 
     if (this._appliedChoroplethSourceId && this._appliedChoroplethSourceId !== sourceId) {
@@ -491,6 +485,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       });
     }
     this._appliedFillLayerId = fillLayerId;
+  }
+
+  /**
+   * Keeps the choropleth out of every caller-controlled data-layer namespace. Repeatedly prefixing
+   * is intentional: a consumer may legitimately supply both `shared` and
+   * `lr-choropleth-shared`, so a single conditional prefix is not sufficient.
+   */
+  private resolveChoroplethSourceId(sourceId: string): string {
+    const dataSourceIds = new Set(this.dataLayers.map((layer) => layer.sourceId));
+    let resolved = sourceId;
+    while (dataSourceIds.has(resolved)) resolved = `lr-choropleth-${resolved}`;
+    return resolved;
   }
 
   /** Removes whatever choropleth layer/source is currently applied, if any. */

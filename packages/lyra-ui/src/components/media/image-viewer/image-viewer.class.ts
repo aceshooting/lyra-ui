@@ -323,14 +323,18 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   private pointerOrigin: { x: number; y: number } | null = null;
 
   private cancelPointerDraft(pointerId = this.pointerDraftId, releaseCapture = true): void {
-    if (pointerId == null || this.pointerDraftId !== pointerId) return;
+    // An explicit pointer event may only cancel its own active gesture. Lifecycle/property reset
+    // calls use the default value; when no pointer is active they must still clear a
+    // keyboard-created draft.
+    if (pointerId != null && this.pointerDraftId !== pointerId) return;
     const wrapper = this.wrapperEl;
+    const capturedPointerId = this.pointerDraftId;
     this.pointerDraftId = null;
     this.pointerOrigin = null;
     this.draft = null;
-    if (releaseCapture && wrapper) {
+    if (releaseCapture && wrapper && capturedPointerId != null) {
       try {
-        wrapper.releasePointerCapture(pointerId);
+        wrapper.releasePointerCapture(capturedPointerId);
       } catch {
         // Synthetic pointers and already-lost captures can throw; state is still safely cleared.
       }
