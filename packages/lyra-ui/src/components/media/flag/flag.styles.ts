@@ -16,6 +16,12 @@ export const styles = css`
     box-shadow: 0 0 0 var(--lr-size-1px) var(--lr-color-border) inset;
     object-fit: var(--lr-flag-object-fit, cover);
   }
+  [part='error'] {
+    display: inline-block;
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-normal);
+  }
   :host([round]) {
     block-size: var(--lr-size-1em);
     inline-size: var(--lr-size-1em);

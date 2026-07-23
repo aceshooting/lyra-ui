@@ -21,6 +21,7 @@ export const styles = css`
   }
   [part='header'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-xs);
     inline-size: 100%;
@@ -62,7 +63,7 @@ export const styles = css`
   }
   [part='label'] {
     flex: 1 1 auto;
-    min-inline-size: 0;
+    min-inline-size: var(--lr-size-6ch);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -71,7 +72,10 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-0-35em);
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    text-align: end;
     font-weight: var(--lr-font-weight-normal);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);

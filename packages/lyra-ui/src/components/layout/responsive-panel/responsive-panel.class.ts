@@ -1,22 +1,26 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { activateOverlay, deepActiveElement, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
-import { styles } from './responsive-panel.styles.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import {
+  activateOverlay,
+  deepActiveElement,
+  type OverlayHandle,
+} from "../../../internal/overlay-manager.js";
+import { lockScroll } from "../../../internal/scroll-lock.js";
+import { styles } from "./responsive-panel.styles.js";
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
 /** The `mode` property's literal value -- `'auto'` tracks the viewport
  *  breakpoint live; `'inline'`/`'overlay'` force that presentation
  *  regardless of viewport width. */
-export type ResponsivePanelMode = 'inline' | 'overlay' | 'auto';
+export type ResponsivePanelMode = "inline" | "overlay" | "auto";
 
 /** What `mode` actually resolves to once the breakpoint is taken into
  *  account -- `'auto'` never appears here. */
-export type ResponsivePanelEffectiveMode = 'inline' | 'overlay';
+export type ResponsivePanelEffectiveMode = "inline" | "overlay";
 
-export type ResponsivePanelVariant = 'fullscreen' | 'bottom-sheet';
+export type ResponsivePanelVariant = "fullscreen" | "bottom-sheet";
 
 /** Reason the panel was closed, forwarded as the `lr-close` event detail --
  *  mirrors lr-dialog's own `DialogCloseReason` shape. `'escape'` and
@@ -24,15 +28,19 @@ export type ResponsivePanelVariant = 'fullscreen' | 'bottom-sheet';
  *  dismiss triggers (they can't occur while inline, since there's no
  *  backdrop/document-keydown trap wired up then); any other string is
  *  whatever a caller passes to `close()`. */
-export type ResponsivePanelCloseReason = 'escape' | 'backdrop' | 'api' | (string & Record<never, never>);
+export type ResponsivePanelCloseReason =
+  | "escape"
+  | "backdrop"
+  | "api"
+  | (string & Record<never, never>);
 
 export interface ResponsivePanelModeChangeDetail {
   mode: ResponsivePanelEffectiveMode;
 }
 
 export interface LyraResponsivePanelEventMap {
-  'lr-close': CustomEvent<ResponsivePanelCloseReason>;
-  'lr-mode-change': CustomEvent<ResponsivePanelModeChangeDetail>;
+  "lr-close": CustomEvent<ResponsivePanelCloseReason>;
+  "lr-mode-change": CustomEvent<ResponsivePanelModeChangeDetail>;
 }
 
 /**
@@ -43,9 +51,12 @@ export interface LyraResponsivePanelEventMap {
  * it) directly instead of needing control over the real browser window,
  * which `@web/test-runner` doesn't give.
  */
-export function resolveEffectiveMode(mode: ResponsivePanelMode, belowBreakpoint: boolean): ResponsivePanelEffectiveMode {
-  if (mode === 'inline' || mode === 'overlay') return mode;
-  return belowBreakpoint ? 'overlay' : 'inline';
+export function resolveEffectiveMode(
+  mode: ResponsivePanelMode,
+  belowBreakpoint: boolean
+): ResponsivePanelEffectiveMode {
+  if (mode === "inline" || mode === "overlay") return mode;
+  return belowBreakpoint ? "overlay" : "inline";
 }
 
 /**
@@ -128,31 +139,33 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
 
   /** `'auto'` (default) tracks `mobile-breakpoint` live; `'inline'`/`'overlay'` force that
    *  presentation regardless of viewport width. */
-  @property({ reflect: true }) mode: ResponsivePanelMode = 'auto';
+  @property({ reflect: true }) mode: ResponsivePanelMode = "auto";
 
   /** Only affects the overlay presentation's visual treatment -- `'fullscreen'` (default) covers
    *  the whole viewport; `'bottom-sheet'` slides up from the bottom and doesn't cover the full
    *  height. */
-  @property({ reflect: true }) variant: ResponsivePanelVariant = 'fullscreen';
+  @property({ reflect: true }) variant: ResponsivePanelVariant = "fullscreen";
 
   /** Accessible name for the overlay presentation's `role="dialog"`. Unused in the inline
    *  presentation, which has no dialog semantics to name. When empty, falls back to the `header`
    *  slot's content -- see the class doc for the full fallback order. */
-  @property() label = '';
+  @property() label = "";
 
   /** CSS length passed to `matchMedia` as `(max-width: <this>)` to decide, in `mode="auto"`,
    *  whether the effective presentation is `'overlay'` (below/at this width) or `'inline'`
    *  (above it). */
-  @property({ attribute: 'mobile-breakpoint' }) mobileBreakpoint = '768px';
+  @property({ attribute: "mobile-breakpoint" }) mobileBreakpoint = "768px";
 
   /** Host-level `aria-label` override for the overlay presentation's accessible name -- wins over
    *  every other source (`label`, the header-slot fallback), matching `<lr-dialog>`'s
    *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
    *  `aria-label` attribute on `<lr-responsive-panel>` itself, not a public JS property. */
-  @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
+  @property({ attribute: "aria-label" }) private accessibleLabel:
+    | string
+    | null = null;
 
   @state() private belowBreakpoint = false;
-  @state() private effectiveMode: ResponsivePanelEffectiveMode = 'inline';
+  @state() private effectiveMode: ResponsivePanelEffectiveMode = "inline";
   @state() private hasHeaderSlot = false;
   @state() private hasFooterSlot = false;
   /** Fallback accessible name sourced from the `header` slot's content -- see `detectHeadingText()`. */
@@ -162,6 +175,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   private releaseScrollLock?: () => void;
   private lastTrigger?: HTMLElement;
   private overlayHandle?: OverlayHandle;
+  private headerObserver?: MutationObserver;
   /** Whether the overlay-only mechanics (scroll-lock and shared overlay registration) are currently
    *  engaged -- derived from `effectiveMode === 'overlay' && open`, tracked separately from those
    *  two properties so willUpdate can diff "was engaged" vs "should be engaged now" regardless of
@@ -174,8 +188,12 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     super.willUpdate(changed);
     this.isFirstUpdate = !this.hasUpdated;
     if (this.isFirstUpdate) {
-      this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
-      this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
+      this.hasHeaderSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "header"
+      );
+      this.hasFooterSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "footer"
+      );
       this.headingText = this.detectHeadingText();
     }
     // Must run before the effectiveMode computation below reads
@@ -191,11 +209,22 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     // construction), but connectedCallback() already called setupMediaQuery()
     // once before this first update runs, so repeating it here would be
     // redundant -- only a live post-mount change should re-run it.
-    if (!this.isFirstUpdate && changed.has('mobileBreakpoint') && this.isConnected) {
+    if (
+      !this.isFirstUpdate &&
+      changed.has("mobileBreakpoint") &&
+      this.isConnected
+    ) {
       this.setupMediaQuery();
     }
-    if (this.isFirstUpdate || changed.has('mode') || changed.has('belowBreakpoint')) {
-      this.effectiveMode = resolveEffectiveMode(this.mode, this.belowBreakpoint);
+    if (
+      this.isFirstUpdate ||
+      changed.has("mode") ||
+      changed.has("belowBreakpoint")
+    ) {
+      this.effectiveMode = resolveEffectiveMode(
+        this.mode,
+        this.belowBreakpoint
+      );
     }
 
     // Captured on a genuine open transition only, independent of
@@ -206,12 +235,15 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     // fires when only effectiveMode (not open) changes, which would
     // re-capture whatever currently has focus (e.g. something inside the
     // panel) instead of the original external trigger.
-    if (changed.has('open') && this.open) {
+    if (changed.has("open") && this.open) {
       const active = deepActiveElement(this.ownerDocument);
-      this.lastTrigger = active && typeof (active as HTMLElement).focus === 'function' ? (active as HTMLElement) : undefined;
+      this.lastTrigger =
+        active && typeof (active as HTMLElement).focus === "function"
+          ? (active as HTMLElement)
+          : undefined;
     }
 
-    const overlayOpen = this.effectiveMode === 'overlay' && this.open;
+    const overlayOpen = this.effectiveMode === "overlay" && this.open;
     if (overlayOpen !== this.overlayChromeActive) {
       this.overlayChromeActive = overlayOpen;
       if (overlayOpen) {
@@ -224,10 +256,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
         // Removing modal chrome while the still-open panel becomes inline
         // must preserve focus in that same panel. Only a real open -> closed
         // transition restores the opener.
-        this.deactivateOverlayChrome(changed.has('open') && !this.open);
+        this.deactivateOverlayChrome(changed.has("open") && !this.open);
       }
     }
-    if (changed.has('open') && !this.open) this.lastTrigger = undefined;
+    if (changed.has("open") && !this.open) this.lastTrigger = undefined;
   }
 
   // Runs after render (not willUpdate) so [part="panel"] has already landed
@@ -235,8 +267,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // mirrors lr-dialog's identical ordering rationale.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (!this.isFirstUpdate && changed.has('effectiveMode')) {
-      this.emit<ResponsivePanelModeChangeDetail>('lr-mode-change', { mode: this.effectiveMode });
+    if (!this.isFirstUpdate && changed.has("effectiveMode")) {
+      this.emit<ResponsivePanelModeChangeDetail>("lr-mode-change", {
+        mode: this.effectiveMode,
+      });
     }
     if (this.focusOverlayAfterUpdate) {
       this.focusOverlayAfterUpdate = false;
@@ -251,34 +285,49 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
     // notice overlay chrome is still supposed to be active -- restore it.
-    const overlayOpen = resolveEffectiveMode(this.mode, this.belowBreakpoint) === 'overlay' && this.open;
+    const overlayOpen =
+      resolveEffectiveMode(this.mode, this.belowBreakpoint) === "overlay" &&
+      this.open;
     if (this.hasUpdated && overlayOpen) {
       if (this.overlayHandle?.isActive()) {
         this.overlayHandle.resume();
       } else {
         this.activateOverlayChrome();
       }
-      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      if (!this.releaseScrollLock)
+        this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
+    }
+    if (this.hasUpdated) {
+      queueMicrotask(() => {
+        if (!this.isConnected) return;
+        const slot = this.shadowRoot?.querySelector<HTMLSlotElement>(
+          'slot[name="header"]'
+        );
+        if (slot) this.syncHeaderSlot(slot.assignedElements({ flatten: true }));
+      });
     }
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.mediaQuery?.removeEventListener('change', this.onMediaChange);
+    this.mediaQuery?.removeEventListener("change", this.onMediaChange);
     this.mediaQuery = undefined;
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
+    this.headerObserver?.disconnect();
+    this.headerObserver = undefined;
   }
 
   private activateOverlayChrome(): void {
     this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlayHandle = activateOverlay({
       host: this,
-      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
-      onEscape: () => this.close('escape'),
-      onBackdrop: () => this.close('backdrop'),
+      panel: () =>
+        this.shadowRoot?.querySelector<HTMLElement>('[part="panel"]') ?? null,
+      onEscape: () => this.close("escape"),
+      onBackdrop: () => this.close("backdrop"),
       restoreFocusTo: this.lastTrigger ?? null,
     });
   }
@@ -291,14 +340,14 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private setupMediaQuery(): void {
-    this.mediaQuery?.removeEventListener('change', this.onMediaChange);
+    this.mediaQuery?.removeEventListener("change", this.onMediaChange);
     const view = this.ownerDocument.defaultView;
     if (!view?.matchMedia) {
       this.mediaQuery = undefined;
       return;
     }
     this.mediaQuery = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
-    this.mediaQuery.addEventListener('change', this.onMediaChange);
+    this.mediaQuery.addEventListener("change", this.onMediaChange);
     this.handleBreakpointChange(this.mediaQuery.matches);
   }
 
@@ -314,12 +363,33 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 
   private onHeaderSlotChange = (e: Event): void => {
-    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-    this.headingText = this.detectHeadingText();
+    this.syncHeaderSlot(
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true })
+    );
   };
 
+  private syncHeaderSlot(assigned: Element[]): void {
+    this.hasHeaderSlot = assigned.length > 0;
+    this.headingText = this.detectHeadingText();
+    this.headerObserver?.disconnect();
+    this.headerObserver = undefined;
+    if (assigned.length === 0 || !this.isConnected) return;
+    this.headerObserver = new MutationObserver(() => {
+      this.headingText = this.detectHeadingText();
+    });
+    for (const element of assigned) {
+      this.headerObserver.observe(element, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    }
+  }
+
   private onFooterSlotChange = (e: Event): void => {
-    this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasFooterSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   // Only direct children slotted into `header` are scanned -- same depth
@@ -332,7 +402,9 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   // would go. Recomputed only on slot assignment changes, not on every
   // render -- same rationale as lr-dialog's detectHeading().
   private detectHeadingText(): string | undefined {
-    const headerChildren = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'header');
+    const headerChildren = Array.from(this.children).filter(
+      (el) => el.getAttribute("slot") === "header"
+    );
     if (headerChildren.length === 0) return undefined;
     const heading = headerChildren.find((el) => el.matches(HEADING_SELECTOR));
     if (heading) return heading.textContent?.trim() || undefined;
@@ -340,7 +412,7 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
       headerChildren
         .map((el) => el.textContent?.trim())
         .filter(Boolean)
-        .join(' ') || undefined
+        .join(" ") || undefined
     );
   }
 
@@ -354,10 +426,10 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
    * active, since the inline presentation never took focus away from
    * anything to begin with.
    */
-  close(reason: ResponsivePanelCloseReason = 'api'): void {
+  close(reason: ResponsivePanelCloseReason = "api"): void {
     if (!this.open) return;
     this.open = false;
-    this.emit<ResponsivePanelCloseReason>('lr-close', reason);
+    this.emit<ResponsivePanelCloseReason>("lr-close", reason);
   }
 
   private onBackdropClick = (): void => {
@@ -365,17 +437,20 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   };
 
   override render(): TemplateResult {
-    const overlay = this.effectiveMode === 'overlay';
-    const accessibleName = this.accessibleLabel ?? (this.label || this.headingText);
+    const overlay = this.effectiveMode === "overlay";
+    const accessibleName =
+      this.accessibleLabel ?? (this.label || this.headingText);
     return html`
-      <div part="base" class=${overlay ? 'overlay' : 'inline'}>
-        ${overlay ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}
+      <div part="base" class=${overlay ? "overlay" : "inline"}>
+        ${overlay
+          ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>`
+          : nothing}
         <div
           part="panel"
-          role=${overlay ? 'dialog' : nothing}
-          aria-modal=${overlay ? 'true' : nothing}
+          role=${overlay ? "dialog" : nothing}
+          aria-modal=${overlay ? "true" : nothing}
           aria-label=${overlay && accessibleName ? accessibleName : nothing}
-          tabindex=${overlay ? '-1' : nothing}
+          tabindex=${overlay ? "-1" : nothing}
         >
           <div part="header" ?hidden=${!this.hasHeaderSlot}>
             <slot name="header" @slotchange=${this.onHeaderSlotChange}></slot>
@@ -392,9 +467,8 @@ export class LyraResponsivePanel extends LyraElement<LyraResponsivePanelEventMap
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-responsive-panel': LyraResponsivePanel;
+    "lr-responsive-panel": LyraResponsivePanel;
   }
 }

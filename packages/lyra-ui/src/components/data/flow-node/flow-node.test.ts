@@ -33,6 +33,18 @@ it('renders a determinate progress bar only when progress is set', async () => {
   expect(el.shadowRoot!.querySelector('[part="progress"]')).to.exist;
 });
 
+it('exposes determinate progress semantics with its current value', async () => {
+  const el = (await fixture(
+    html`<lr-flow-node heading="Fetch" progress="40"></lr-flow-node>`,
+  )) as LyraFlowNode;
+  const progress = el.shadowRoot!.querySelector('[part="progress"]') as HTMLElement;
+  expect(progress.getAttribute('role')).to.equal('progressbar');
+  expect(progress.getAttribute('aria-label')).to.equal('Progress');
+  expect(progress.getAttribute('aria-valuemin')).to.equal('0');
+  expect(progress.getAttribute('aria-valuemax')).to.equal('100');
+  expect(progress.getAttribute('aria-valuenow')).to.equal('40');
+});
+
 it('renders one handle per input/output with data-handle-id/data-handle-kind and a native title', async () => {
   const el = (await fixture(
     html`<lr-flow-node .inputs=${[{ id: 'a' }, { id: 'b', label: 'Second input' }]} .outputs=${[{ id: 'out' }]}></lr-flow-node>`,
@@ -103,6 +115,27 @@ describe('duration composition', () => {
   it('formats a duration at or above 1000ms in seconds', async () => {
     const el = (await fixture(html`<lr-flow-node status="running" duration-ms="2500"></lr-flow-node>`)) as LyraFlowNode;
     expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('2.5s');
+  });
+
+  it('locale-formats the numeric duration value', async () => {
+    const el = (await fixture(
+      html`<lr-flow-node locale="ar" status="running" duration-ms="2500"></lr-flow-node>`,
+    )) as LyraFlowNode;
+    const expected = new Intl.NumberFormat('ar', { maximumFractionDigits: 1 }).format(2.5);
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include(expected);
+  });
+
+  it('localizes status plus caller detail as one reorderable message', async () => {
+    const el = (await fixture(
+      html`<lr-flow-node
+        status="running"
+        status-detail="fetching"
+        .strings=${{ flowStatusWithDetail: '{detail} [{status}]' }}
+      ></lr-flow-node>`,
+    )) as LyraFlowNode;
+    expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent!.trim()).to.equal(
+      'fetching [Running]',
+    );
   });
 
   it('falls back to the plain status label when durationMs is unset', async () => {

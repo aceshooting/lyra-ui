@@ -56,3 +56,46 @@ it('applies per-instance localized strings', async () => {
   ></lr-prompt-studio>`)) as LyraPromptStudio;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized prompt workshop');
 });
+
+it('keeps both variable controls named when a caller supplies an empty variable name', async () => {
+  const el = (await fixture(html`<lr-prompt-studio
+    .variables=${[{ name: '', value: 'developers' }]}
+  ></lr-prompt-studio>`)) as LyraPromptStudio;
+  const inputs = [...el.shadowRoot!.querySelectorAll('[part="variable"] input')];
+  expect(inputs.map((input) => input.getAttribute('aria-label'))).to.deep.equal([
+    'Variable 1 name',
+    'Variable 1 value',
+  ]);
+});
+
+it('generates a unique message id even when the timestamp-based candidate already exists', async () => {
+  const originalNow = Date.now;
+  Date.now = () => 123;
+  try {
+    const existing: PromptStudioMessage[] = [
+      { id: 'message-123-1', role: 'system', content: 'Keep me' },
+    ];
+    const el = (await fixture(html`<lr-prompt-studio .messages=${existing}></lr-prompt-studio>`)) as LyraPromptStudio;
+    const pending = oneEvent(el, 'lr-change');
+    (el.shadowRoot!.querySelector('[part="add-message"]') as HTMLButtonElement).click();
+    const event = await pending;
+    const ids = event.detail.messages.map((message: PromptStudioMessage) => message.id);
+    expect(new Set(ids).size).to.equal(2);
+    expect(ids[0]).to.equal('message-123-1');
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
+it('renders and exposes a component-scoped theme hook for the selected version', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-studio
+      style="--lr-prompt-studio-version-selected-border: rgb(1, 2, 3)"
+      selected-version-id="v1"
+      .versions=${versions}
+    ></lr-prompt-studio>
+  `)) as LyraPromptStudio;
+  const version = el.shadowRoot!.querySelector('[part="version"]') as HTMLElement;
+  expect(version.getAttribute('aria-pressed')).to.equal('true');
+  expect(getComputedStyle(version).borderTopColor).to.equal('rgb(1, 2, 3)');
+});

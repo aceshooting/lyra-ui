@@ -5,6 +5,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { safeLinkHref } from '../../../internal/safe-url.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './stat.styles.js';
 
 export type StatVariant = 'neutral' | 'success' | 'warning' | 'danger';
@@ -196,15 +197,24 @@ export class LyraStat extends LyraElement {
     const arrow = rawDirection === 'flat' ? '–' : chevronIcon();
     const hasCaption = this.hasCaptionSlot || this.caption.length > 0;
     const hasSub = this.hasSubSlot || this.sub.length > 0;
+    const formattedTrend = getNumberFormat(this.effectiveLocale, {
+      style: 'percent',
+      maximumFractionDigits: 20,
+    }).format(Math.abs(this.trend) / 100);
     // The visible pill only ever shows the icon rotation + color to convey
     // direction and good/bad polarity; both are invisible to screen readers,
     // so mirror them into a plain-language sr-only announcement.
     const trendAnnouncement =
       rawDirection === 'flat'
         ? this.localize('trendUnchanged')
-        : `${this.localize(rawDirection === 'up' ? 'trendIncreased' : 'trendDecreased', undefined, { value: Math.abs(this.trend) })}${
-            isGood == null ? '' : isGood ? this.localize('trendGoodSuffix') : this.localize('trendBadSuffix')
-          }`;
+        : this.localize('statTrendAnnouncement', undefined, {
+            trend: this.localize(
+              rawDirection === 'up' ? 'statTrendIncreased' : 'statTrendDecreased',
+              undefined,
+              { value: formattedTrend },
+            ),
+            polarity: this.localize(isGood ? 'statTrendGood' : 'statTrendBad'),
+          });
 
     const content = html`
         <span part="icon" ?hidden=${!this.hasIcon}
@@ -228,7 +238,7 @@ export class LyraStat extends LyraElement {
               data-direction=${rawDirection}
               data-polarity=${isGood == null ? nothing : isGood ? 'good' : 'bad'}
             >
-              <span aria-hidden="true">${arrow} ${Math.abs(this.trend)}%</span>
+              <span aria-hidden="true">${arrow} ${formattedTrend}</span>
               <span class="sr-only">${trendAnnouncement}</span>
             </span>`
           : nothing}

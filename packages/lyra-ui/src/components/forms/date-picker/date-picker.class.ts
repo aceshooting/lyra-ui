@@ -83,6 +83,9 @@ export interface LyraDatePickerEventMap {
  * @csspart day-range-end - The end of a selected range.
  * @csspart day-range-inner - An interior day in a selected range.
  * @csspart day-placeholder - A non-day grid placeholder.
+ * @cssprop [--lr-date-picker-month-gap=var(--lr-space-l)] - Gap between visible months.
+ * @cssprop [--lr-date-picker-header-gap=var(--lr-space-s)] - Month-header child gap.
+ * @cssprop [--lr-date-picker-radius=var(--lr-radius)] - Calendar and control corner radius.
  */
 export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   static override styles = [LyraElement.styles, styles];

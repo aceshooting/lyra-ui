@@ -3,20 +3,16 @@ import './message-actions.js';
 import '../branch-picker/branch-picker.js';
 import type { LyraMessageActions } from './message-actions.js';
 
-it('establishes container-type: inline-size on the host so its own @container narrow-width rule can actually fire', async () => {
+it('does not apply inline-size containment that collapses intrinsic inline layout', async () => {
   const el = (await fixture(
     html`<lr-message-actions
       style="inline-size: 160px;"
       .controls=${['regenerate', 'edit']}
     ></lr-message-actions>`,
   )) as LyraMessageActions;
-  expect(getComputedStyle(el).containerType).to.equal('inline-size');
-
-  // 160px is under the @container (max-inline-size: 20rem) threshold -- without container-type
-  // establishing containment, that rule can never fire and [part='base'] never gets its
-  // inline-size: 100% override, no matter how narrow the host is.
+  expect(getComputedStyle(el).containerType).to.equal('normal');
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(getComputedStyle(base).width).to.equal('160px');
+  expect(base.scrollWidth).to.be.at.most(el.clientWidth);
 });
 
 it('renders no built-ins by default and no copy button without copyText', async () => {

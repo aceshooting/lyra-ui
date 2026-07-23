@@ -36,14 +36,21 @@ describe('parseHighlightLines', () => {
   it('returns an empty set for an empty string', () => {
     expect(parseHighlightLines('').size).to.equal(0);
   });
+
+  it('bounds arbitrarily large ranges to the rendered line count', () => {
+    expect([...parseHighlightLines('1-999999999', 3)]).to.deep.equal([1, 2, 3]);
+  });
 });
 
 describe('codeBlockLineTransformer', () => {
   it('stamps data-line, data-highlighted, and part on a highlighted line node', () => {
     const transformer = codeBlockLineTransformer({
       lineNumbers: false,
+      interactiveLines: false,
+      focusedLine: 1,
       highlightedLines: new Set([2]),
       activeLines: new Set(),
+      lineDescription: () => '',
     });
     const node = { properties: {} as Record<string, unknown> };
     transformer.line(node, 2);
@@ -55,8 +62,11 @@ describe('codeBlockLineTransformer', () => {
   it('does not stamp part on a non-highlighted line', () => {
     const transformer = codeBlockLineTransformer({
       lineNumbers: false,
+      interactiveLines: false,
+      focusedLine: 1,
       highlightedLines: new Set([2]),
       activeLines: new Set(),
+      lineDescription: () => '',
     });
     const node = { properties: {} as Record<string, unknown> };
     transformer.line(node, 5);
@@ -67,12 +77,33 @@ describe('codeBlockLineTransformer', () => {
   it('stamps data-active for an active line', () => {
     const transformer = codeBlockLineTransformer({
       lineNumbers: false,
+      interactiveLines: false,
+      focusedLine: 1,
       highlightedLines: new Set(),
       activeLines: new Set([3]),
+      lineDescription: () => '',
     });
     const node = { properties: {} as Record<string, unknown> };
     transformer.line(node, 3);
     expect(node.properties['data-active']).to.equal('');
+  });
+
+  it('makes highlighted shiki lines keyboard-operable without replacing their source text', () => {
+    const transformer = codeBlockLineTransformer({
+      lineNumbers: true,
+      interactiveLines: true,
+      focusedLine: 2,
+      highlightedLines: new Set(),
+      activeLines: new Set(),
+      lineDescription: (line) => `Line ${line}`,
+    });
+    const node = { properties: {} as Record<string, unknown> };
+    transformer.line(node, 2);
+    expect(node.properties.part).to.deep.equal(['line-button']);
+    expect(node.properties.role).to.equal('button');
+    expect(node.properties.tabindex).to.equal('0');
+    expect(node.properties['aria-description']).to.equal('Line 2');
+    expect(node.properties['aria-label']).to.equal(undefined);
   });
 });
 
@@ -109,7 +140,7 @@ describe('renderCodeBlockPlainCode', () => {
     expect(lines[1].getAttribute('data-line')).to.equal('2');
   });
 
-  it('renders <button class="line"> gutter controls with a localized aria-label and roving tabindex when interactiveLines and lineNumbers are both set', () => {
+  it('keeps source text as each line button name and supplies the localized line number as a description', () => {
     const container = renderInto({
       code: 'a\nb\nc',
       lineNumbers: true,
@@ -126,7 +157,8 @@ describe('renderCodeBlockPlainCode', () => {
     expect(buttons[0].getAttribute('tabindex')).to.equal('-1');
     expect(buttons[1].getAttribute('tabindex')).to.equal('0');
     expect(buttons[1].getAttribute('part')).to.equal('line-button line-highlight');
-    expect(buttons[1].getAttribute('aria-label')).to.equal('codeBlockLineLabel:{"line":2}');
+    expect(buttons[1].hasAttribute('aria-label')).to.be.false;
+    expect(buttons[1].getAttribute('aria-description')).to.equal('codeBlockLineLabel:{"line":2}');
   });
 
   it('invokes onLineActivate/onLineKeyDown with the clicked/pressed line number', () => {

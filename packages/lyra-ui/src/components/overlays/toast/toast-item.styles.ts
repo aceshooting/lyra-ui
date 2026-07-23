@@ -95,6 +95,7 @@ export const styles = css`
   [part='content'] {
     flex: 1 1 auto;
     min-inline-size: 0;
+    overflow-wrap: anywhere;
     /* Resolve each slotted message from its own first strong character. dir="auto" on the
        shadow wrapper cannot inspect assigned light-DOM text in every browser, while plaintext
        participates in the flattened text run and keeps an English message/action ordered inside

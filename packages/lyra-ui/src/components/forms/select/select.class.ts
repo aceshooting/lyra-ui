@@ -211,6 +211,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   private cleanup?: () => void;
   private _isFirstUpdate = true;
   private _selected = '';
+  // Public values are not required to be unique. Keep the selected option's
+  // element identity separately so two same-valued rows never both become
+  // selected and a click on the later occurrence cannot route to the first.
+  private selectedOption?: LyraOption;
   private _disabled = false;
   private _required = false;
   // What `form.reset()` restores to. Captured exactly once, from whatever
@@ -220,6 +224,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   // very first pick on an initially-unselected select) can't itself become
   // the reset default. See lr-combobox's identical `_defaultSelected`.
   private _defaultSelected = '';
+  private _defaultSelectedOption?: LyraOption;
   private _defaultCaptured = false;
   // A restored value must win over declarative selected markup collected by
   // the first asynchronous slotchange. Cleared by the next ordinary value write.
@@ -349,13 +354,26 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     return this._selected;
   }
   set value(next: string) {
-    const old = this._selected;
     this._restoredStateActive = false;
-    this._selected = next ?? '';
+    this.setSelection(next ?? '', this.options.find((option) => option.value === (next ?? '')));
+  }
+
+  private setSelection(next: string, option?: LyraOption): void {
+    const old = this._selected;
+    const oldOption = this.selectedOption;
+    this._selected = next;
+    this.selectedOption =
+      option && this.options.includes(option) && option.value === next
+        ? option
+        : this.options.find((candidate) => candidate.value === next);
     this.syncFormValue();
     this.reflectSelected();
     this.updateValidity();
     this.requestUpdate('value', old);
+    // A different occurrence can carry the same public value. Lit's normal
+    // value change detection is intentionally silent for same-string writes,
+    // so schedule the occurrence-only render explicitly.
+    if (old === next && oldOption !== this.selectedOption) this.requestUpdate();
   }
 
   private updateValidity(): void {
@@ -379,7 +397,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   formResetCallback(): void {
     this.touched = false;
-    this.value = this._defaultSelected;
+    this._restoredStateActive = false;
+    this.setSelection(this._defaultSelected, this._defaultSelectedOption);
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,
@@ -435,11 +454,11 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // single-mode behavior. This is the only place `_defaultSelected` is
       // set; picking an option later (the `value` setter) never redefines
       // the reset default.
-      const declared = this.options.filter((o) => o.selected).map((o) => o.value);
-      const declaredFirst = declared[0];
-      this._defaultSelected = declaredFirst ?? '';
+      const declaredFirst = this.options.find((option) => option.selected);
+      this._defaultSelected = declaredFirst?.value ?? '';
+      this._defaultSelectedOption = declaredFirst;
       if (declaredFirst !== undefined && !this._restoredStateActive) {
-        this.value = declaredFirst;
+        this.setSelection(declaredFirst.value, declaredFirst);
         return; // `value=`'s setter already called reflectSelected()
       }
     } else {
@@ -448,10 +467,10 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
       // native `<select><option selected>` would -- seed the newest one
       // into the live selection instead of letting reflectSelected() below
       // strip its `selected` attribute back off.
-      const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected).map((o) => o.value);
+      const newlySelected = this.options.filter((o) => !previous.has(o) && o.selected);
       const newest = newlySelected[newlySelected.length - 1];
       if (newest !== undefined && !this._restoredStateActive) {
-        this.value = newest;
+        this.setSelection(newest.value, newest);
         return; // `value=`'s setter already called reflectSelected()
       }
     }
@@ -459,7 +478,14 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   };
 
   private reflectSelected(): void {
-    for (const o of this.options) o.selected = o.value === this._selected;
+    if (
+      !this.selectedOption ||
+      !this.options.includes(this.selectedOption) ||
+      this.selectedOption.value !== this._selected
+    ) {
+      this.selectedOption = this.options.find((option) => option.value === this._selected);
+    }
+    for (const option of this.options) option.selected = option === this.selectedOption;
   }
 
   /**
@@ -542,8 +568,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     // firing when "the selection changed", so only emit them when the
     // value actually moves, matching a native <select> (which never fires
     // `change` for re-picking the currently-selected <option>).
-    const changed = option.value !== this._selected;
-    this.value = option.value;
+    const changed = option !== this.selectedOption || option.value !== this._selected;
+    this._restoredStateActive = false;
+    this.setSelection(option.value, option);
     this.hide();
     if (changed) {
       // `input`/`change` stay deliberately unprefixed -- this control is a
@@ -619,8 +646,8 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
     const navigable = this.options.filter((o) => !o.disabled);
     if (!navigable.length) return;
-    const currentValue = this.open ? navigable[this.activeIndex]?.value : this._selected;
-    const currentIndex = navigable.findIndex((o) => o.value === currentValue);
+    const currentOption = this.open ? navigable[this.activeIndex] : this.selectedOption;
+    const currentIndex = navigable.indexOf(currentOption as LyraOption);
     const n = navigable.length;
     for (let step = 1; step <= n; step++) {
       const idx = (currentIndex + step + n) % n;
@@ -703,9 +730,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
 
   private onListboxClick = (e: MouseEvent): void => {
     const optionEl = (e.target as HTMLElement).closest('[part="option"]') as HTMLElement | null;
-    const value = optionEl?.dataset['value'];
-    if (value === undefined) return;
-    const option = this.options.find((o) => o.value === value);
+    const index = Number(optionEl?.dataset['index']);
+    if (!Number.isInteger(index)) return;
+    const option = this.options[index];
     if (option) this.selectOption(option);
   };
 
@@ -718,12 +745,13 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
         if (currentGroup) out.push(html`<div class="group-label" part="group-label">${currentGroup}</div>`);
       }
       const id = `${this.listId}-opt-${i}`;
-      const selected = o.value === this._selected;
+      const selected = o === this.selectedOption;
       out.push(
         html`<div
           part="option"
           id=${id}
           role="option"
+          data-index=${i}
           data-value=${o.value}
           aria-selected=${selected ? 'true' : 'false'}
           aria-disabled=${o.disabled ? 'true' : 'false'}
@@ -746,7 +774,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const active = this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
     const activeId = active ? `${this.listId}-opt-${options.indexOf(active)}` : '';
     const selectedLabel = this._selected
-      ? (options.find((o) => o.value === this._selected)?.label ?? this._selected)
+      ? (this.selectedOption?.label ?? options.find((o) => o.value === this._selected)?.label ?? this._selected)
       : '';
     const hasValue = this._selected.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;

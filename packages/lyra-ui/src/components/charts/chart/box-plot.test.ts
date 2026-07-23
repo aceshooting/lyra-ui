@@ -354,6 +354,152 @@ it('skips redrawing when the content signature is unchanged', async () => {
   expect((el as any).chart.data).to.equal(dataRef);
 });
 
+describe('review remediation regressions', () => {
+  it('suppresses the generated fallback table when custom data-table content is supplied', async () => {
+    const el = (await fixture(html`
+      <lr-box-plot>
+        <table slot="data-table"><tbody><tr><td>Custom distributions</td></tr></tbody></table>
+      </lr-box-plot>
+    `)) as LyraBoxPlot;
+    el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    await aTimeout(0);
+
+    expect(el.shadowRoot!.querySelectorAll('[part="data-table"] > table')).to.have.length(0);
+  });
+
+  it('locale-formats summary counts, row ordinals, and every generated table number', async () => {
+    const el = (await fixture(html`<lr-box-plot locale="ar-EG"></lr-box-plot>`)) as LyraBoxPlot;
+    el.boxes = [
+      {
+        label: 'Latency',
+        data: [{ min: 1000, q1: 1100, median: 1234.5, q3: 1300, max: 1400 }],
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    const formatter = new Intl.NumberFormat(el.effectiveLocale);
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
+    expect(table.querySelector('tbody th')?.textContent).to.contain(formatter.format(1));
+    expect([...table.querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+      'Latency',
+      formatter.format(1000),
+      formatter.format(1100),
+      formatter.format(1234.5),
+      formatter.format(1300),
+      formatter.format(1400),
+    ]);
+    expect(el.shadowRoot!.querySelector('[part="description"]')?.textContent).to.contain(
+      formatter.format(1),
+    );
+  });
+
+  it('allows component string overrides to reach its generated summary and caption', async () => {
+    const el = (await fixture(html`
+      <lr-box-plot
+        .strings=${{
+          boxPlotSummaryWithData: 'Distributions: {summaries}',
+          boxPlotData: 'Distribution table',
+        }}
+      ></lr-box-plot>
+    `)) as LyraBoxPlot;
+    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    expect(el.shadowRoot!.querySelector('[part="description"]')?.textContent).to.contain(
+      'Distributions:',
+    );
+    expect(el.shadowRoot!.querySelector('caption')?.textContent).to.equal('Distribution table');
+  });
+
+  it('drops malformed five-number points without poisoning valid summaries or table cells', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.labels = ['Broken', 'Valid'];
+    el.boxes = [
+      {
+        label: 'Latency',
+        data: [
+          { min: 1, q1: 2, median: NaN, q3: 4, max: 5 },
+          { min: 10, q1: 20, median: 30, q3: 40, max: 50 },
+        ],
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    const text = el.shadowRoot!.textContent ?? '';
+    expect(text).to.not.contain('NaN');
+    expect(el.shadowRoot!.querySelectorAll('tbody tr')).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('tbody th')?.textContent).to.equal('Valid');
+    const configured = (el as any).buildConfig().data.datasets[0].data;
+    expect(configured[0]).to.equal(null);
+    expect(configured[1]).to.include({ min: 10, q1: 20, median: 30, q3: 40, max: 50 });
+  });
+
+  it('does not recreate a detached chart from an already scheduled update', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    el.boxes = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
+    el.remove();
+    await el.updateComplete;
+    expect((el as unknown as { chart?: unknown }).chart).to.equal(undefined);
+  });
+
+  it('automatically refreshes canvas colors after an ancestor theme mutation', async () => {
+    const wrapper = await fixture(html`<div><lr-box-plot></lr-box-plot></div>`);
+    const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
+    el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    let refreshes = 0;
+    const refreshTheme = el.refreshTheme.bind(el);
+    el.refreshTheme = () => {
+      refreshes++;
+      refreshTheme();
+    };
+    wrapper.setAttribute('data-theme', 'dark');
+    await aTimeout(0);
+    expect(refreshes).to.equal(1);
+  });
+
+  it('materializes caller-supplied box colors before handing them to canvas', async () => {
+    const el = (await fixture(html`
+      <lr-box-plot style="--box-color: rgb(12, 34, 56)"></lr-box-plot>
+    `)) as LyraBoxPlot;
+    el.boxes = [
+      {
+        label: 'Latency',
+        color: 'var(--box-color)',
+        data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    const dataset = (el as any).buildConfig().data.datasets[0];
+    expect(dataset.backgroundColor).to.equal('rgb(12, 34, 56)');
+    expect(dataset.borderColor).to.equal('rgb(12, 34, 56)');
+  });
+
+  it('styles its public peer-load error as an error state', async () => {
+    const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    await (el as any).onBoxPlotPluginLoaded(null);
+    await el.updateComplete;
+
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    const computed = getComputedStyle(error);
+    expect(computed.paddingTop).to.not.equal('0px');
+    expect(computed.textAlign).to.equal('center');
+  });
+});
+
 it('connectedCallback() routes the resolved boxplot-plugin module into the loaded handler instead of ignoring it', async () => {
   // Guards the wiring itself (as opposed to the handler-in-isolation test
   // above): a regression back to the old bug — `connectedCallback()`

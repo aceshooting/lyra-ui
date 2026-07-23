@@ -326,6 +326,26 @@ it('uses groupLabel to render custom group header content', async () => {
   expect(el.shadowRoot!.querySelector('[part="group-cell"]')!.textContent).to.contain('Passing:1');
 });
 
+it('computes custom group rows in linear work', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = Array.from({ length: 120 }, (_, index) => ({
+    id: String(index),
+    name: `Row ${index}`,
+    score: index,
+  }));
+  let groupByCalls = 0;
+  el.groupBy = (row) => {
+    groupByCalls++;
+    return row.id;
+  };
+  el.groupLabel = (key, groupedRows) => `${key}:${groupedRows.length}`;
+  await el.updateComplete;
+
+  expect(groupByCalls).to.be.lessThan(500);
+  expect(el.shadowRoot!.querySelectorAll('[part="group-row"]')).to.have.lengthOf(120);
+});
+
 it('filters rows through the built-in filter field and emits the requested text', async () => {
   const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
   el.columns = columns;
@@ -343,6 +363,24 @@ it('filters rows through the built-in filter field and emits the requested text'
   expect(event.detail).to.deep.equal({ text: 'beta' });
   expect(el.shadowRoot!.querySelectorAll('[part="row"]').length).to.equal(1);
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
+});
+
+it('re-emits one focus and blur event for the internal filter instead of leaking duplicates', async () => {
+  const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  let focusCount = 0;
+  let blurCount = 0;
+  el.addEventListener('focus', () => focusCount++);
+  el.addEventListener('blur', () => blurCount++);
+
+  input.focus();
+  input.blur();
+
+  expect(focusCount).to.equal(1);
+  expect(blurCount).to.equal(1);
 });
 
 it('forwards spellcheck/autocapitalize/autocorrect to the filter input', async () => {
@@ -1080,11 +1118,23 @@ it('sets aria-selected="true" only on the row matching selectedKey', async () =>
   el.columns = columns;
   el.rows = rows;
   el.rowKey = (r) => r.id;
+  el.selectionMode = 'single';
   el.selectedKey = 'b';
   await el.updateComplete;
   const [firstRow, secondRow] = [...el.shadowRoot!.querySelectorAll('[part="row"]')];
   expect(firstRow.getAttribute('aria-selected')).to.equal('false');
   expect(secondRow.getAttribute('aria-selected')).to.equal('true');
+});
+
+it('omits aria-selected when row selection is disabled', async () => {
+  const el = (await fixture(html`<lr-table selection-mode="none"></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  for (const row of el.shadowRoot!.querySelectorAll('[part="row"]')) {
+    expect(row.hasAttribute('aria-selected')).to.be.false;
+  }
 });
 
 it('sets data-align="end" on the header cell and body cell for an end-aligned column, and "start" otherwise', async () => {

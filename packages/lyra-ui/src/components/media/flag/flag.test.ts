@@ -383,6 +383,50 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(el.shadowRoot!.querySelector('img')).to.not.exist;
   });
 
+  it('fails closed with a localized alert when the resolver rejects', async () => {
+    __setFlagUrlResolverForTesting(
+      Promise.resolve(async () => {
+        throw new Error('network failure');
+      }),
+    );
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    let el!: LyraFlag;
+    try {
+      el = (await fixture(html`
+        <lr-flag
+          country="fr"
+          .strings=${{ flagLoadError: 'Impossible de charger le drapeau.' }}
+        ></lr-flag>
+      `)) as LyraFlag;
+      await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+    } finally {
+      console.warn = originalWarn;
+    }
+    const error = el.shadowRoot!.querySelector('[part="error"]')!;
+    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.textContent).to.equal('Impossible de charger le drapeau.');
+  });
+
+  it('distinguishes a missing resolver from a valid resolver returning no flag', async () => {
+    __setFlagUrlResolverForTesting(Promise.resolve(null));
+    const missing = (await fixture(html`
+      <lr-flag country="fr" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
+    `)) as LyraFlag;
+    await waitUntil(() => !!missing.shadowRoot!.querySelector('[part="error"]'));
+    expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+      'Flags unavailable.',
+    );
+
+    __setFlagUrlResolverForTesting(Promise.resolve(async () => undefined));
+    const unknown = (await fixture(html`
+      <lr-flag country="zz" .strings=${{ flagLoadError: 'Flags unavailable.' }}></lr-flag>
+    `)) as LyraFlag;
+    await waitUntil(() => !unknown.loading);
+    expect(unknown.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect(unknown.shadowRoot!.querySelector('img')).to.equal(null);
+  });
+
   it('ignores a rejection superseded by a newer country/language/src change (the same resolveToken guard the .then() branch uses), while the still-current call still recovers from its own rejection', async () => {
     const rejecters: Array<(err: unknown) => void> = [];
     __setFlagUrlResolverForTesting(

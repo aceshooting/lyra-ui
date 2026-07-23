@@ -2,6 +2,8 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type P
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
+import { nextId, srOnly } from '../../../internal/a11y.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { FlowStructureSnapshot } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-minimap.styles.js';
 
@@ -32,7 +34,7 @@ interface FlowCanvasLike extends HTMLElement {
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
  */
 export class LyraFlowMinimap extends LyraElement {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** Id of the target `lr-flow-canvas`. When empty, the nearest ancestor is used (the
    *  slotted-into-a-corner-slot case, the primary wiring). */
@@ -41,6 +43,7 @@ export class LyraFlowMinimap extends LyraElement {
   @property() label = '';
 
   @state() private snapshot: FlowStructureSnapshot | null = null;
+  @state() private liveText = '';
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private dragState?: { pointerId: number; startClientX: number; startClientY: number; startViewport: { x: number; y: number; zoom: number } };
@@ -50,13 +53,14 @@ export class LyraFlowMinimap extends LyraElement {
    *  after dragging it re-centers the map on the release point, undoing the drag. Consumed (reset
    *  to `false`) the next time `onMapClick` runs, so a genuine click on the map still centers it. */
   private justDraggedViewport = false;
-  /** Watches the root for DOM changes while no canvas has resolved yet, so a `for` target or
-   *  ancestor `lr-flow-canvas` that mounts after this element does still gets picked up instead
-   *  of leaving this element permanently blank. Disconnected once a canvas resolves. */
+  private announceNextSnapshot = false;
+  private readonly instructionsId = nextId('flow-minimap-instructions');
+  /** Watches target lifecycle so late, removed, and same-id replacement canvases are reconciled. */
   private canvasWatcher?: MutationObserver;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.watchForCanvas();
     this.resolveAndAttach();
   }
 
@@ -83,12 +87,6 @@ export class LyraFlowMinimap extends LyraElement {
   // cycle produces instead of synchronously scheduling a second cycle from within `updated()`.
   protected override willUpdate(changed: PropertyValues): void {
     if (this.hasUpdated && changed.has('for')) {
-      this.unsubscribe?.();
-      this.unsubscribe = undefined;
-      this.canvasWatcher?.disconnect();
-      this.canvasWatcher = undefined;
-      this.canvasEl = undefined;
-      this.snapshot = null;
       this.resolveAndAttach();
     }
   }
@@ -104,16 +102,28 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   private resolveAndAttach(): void {
-    const canvas = this.resolveCanvas();
-    if (!canvas) {
-      this.watchForCanvas();
-      return;
-    }
-    this.canvasWatcher?.disconnect();
-    this.canvasWatcher = undefined;
+    const canvas = this.resolveCanvas() ?? undefined;
+    if (canvas === this.canvasEl) return;
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+    this.snapshot = null;
     this.canvasEl = canvas;
+    if (!canvas) return;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
       this.snapshot = snapshot;
+      if (this.announceNextSnapshot) {
+        this.announceNextSnapshot = false;
+        const number = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 });
+        const percent = getNumberFormat(this.effectiveLocale, {
+          style: 'percent',
+          maximumFractionDigits: 1,
+        });
+        this.liveText = this.localize('flowMinimapViewportChanged', undefined, {
+          x: number.format(snapshot.viewport.x),
+          y: number.format(snapshot.viewport.y),
+          zoom: percent.format(snapshot.viewport.zoom),
+        });
+      }
     });
   }
 
@@ -218,16 +228,19 @@ export class LyraFlowMinimap extends LyraElement {
     if (!this.canvasEl || !this.snapshot) return;
     if (e.key === '+' || e.key === '=') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.zoomIn();
       return;
     }
     if (e.key === '-' || e.key === '_') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.zoomOut();
       return;
     }
     if (e.key === 'Enter' || e.key === 'Home') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.fit();
       return;
     }
@@ -238,15 +251,19 @@ export class LyraFlowMinimap extends LyraElement {
     // increases toward the physical right regardless of text direction, so the arrows stay physical.
     if (e.key === 'ArrowRight') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.setViewport({ x: x - stepX, y, zoom });
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.setViewport({ x: x + stepX, y, zoom });
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.setViewport({ x, y: y - stepY, zoom });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      this.announceNextSnapshot = true;
       this.canvasEl.setViewport({ x, y: y + stepY, zoom });
     }
   };
@@ -258,7 +275,7 @@ export class LyraFlowMinimap extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.getAttribute('aria-label') || this.localize('flowMinimapLabel');
+    const label = this.getAttribute('aria-label') || this.label || this.localize('flowMinimapLabel');
     if (!this.canvasEl || !this.snapshot) {
       return html`<div part="base" aria-hidden="true"></div>`;
     }
@@ -280,9 +297,11 @@ export class LyraFlowMinimap extends LyraElement {
         ${this.renderNodes()}
         <rect
           part="viewport"
-          role="button"
+          role="group"
           tabindex="0"
           aria-label=${this.localize('flowMinimapViewport')}
+          aria-describedby=${this.instructionsId}
+          aria-keyshortcuts="+ - Enter Home ArrowUp ArrowDown ArrowLeft ArrowRight"
           x=${viewportRect.x}
           y=${viewportRect.y}
           width=${viewportRect.width}
@@ -291,6 +310,12 @@ export class LyraFlowMinimap extends LyraElement {
           @keydown=${this.onViewportKeyDown}
         ></rect>
       </svg>
+      <div part="instructions" class="sr-only" id=${this.instructionsId}>
+        ${this.localize('flowMinimapInstructions')}
+      </div>
+      <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        ${this.liveText}
+      </div>
     </div>`;
   }
 }

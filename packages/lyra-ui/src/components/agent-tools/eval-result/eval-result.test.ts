@@ -210,4 +210,29 @@ describe('lr-eval-result', () => {
     expect(el.shadowRoot!.querySelector('[part="diff-view"]')).to.exist;
     await expect(el).to.be.accessible();
   });
+
+  it('suppresses raw rubric and table events after translating them', async () => {
+    const el = (await fixture(html`
+      <lr-eval-result .runs=${RUNS} .columns=${COLUMNS} .rubricKeys=${RUBRIC_KEYS}></lr-eval-result>
+    `)) as LyraEvalResult;
+    let rawInputs = 0;
+    let reviewInputs = 0;
+    let rawRows = 0;
+    let runSelects = 0;
+    el.addEventListener('lr-input', () => rawInputs++);
+    el.addEventListener('lr-review-input', () => reviewInputs++);
+    el.addEventListener('lr-row-click', () => rawRows++);
+    el.addEventListener('lr-run-select', () => runSelects++);
+    el.shadowRoot!.querySelector('lr-rubric-form')!.dispatchEvent(new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: { accuracy: 4 } },
+    }));
+    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-row-click', {
+      bubbles: true,
+      composed: true,
+      detail: { row: RUNS[1] },
+    }));
+    expect([rawInputs, reviewInputs, rawRows, runSelects]).to.deep.equal([0, 1, 0, 1]);
+  });
 });

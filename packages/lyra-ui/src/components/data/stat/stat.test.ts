@@ -377,11 +377,71 @@ it('interpolates the trend value into a locale override instead of concatenating
       label="x"
       value="1"
       trend="12"
-      .strings=${{ trendIncreased: '{value}% de plus', trendGoodSuffix: '' }}
+      .strings=${{
+        statTrendIncreased: '{value} de plus',
+        statTrendGood: '',
+        statTrendAnnouncement: '{trend}{polarity}',
+      }}
     ></lr-stat>`,
   )) as LyraStat;
   const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
   expect(trend.querySelector('.sr-only')!.textContent).to.equal('12% de plus');
+});
+
+it('formats the trend as a locale-aware percentage in both visible and announced text', async () => {
+  const el = (await fixture(
+    html`<lr-stat lang="de-DE" label="x" value="1" trend="12.5"></lr-stat>`,
+  )) as LyraStat;
+  const trend = el.shadowRoot!.querySelector('[part="trend"]')!;
+  const expectedPercent = new Intl.NumberFormat('de-DE', {
+    style: 'percent',
+    maximumFractionDigits: 20,
+  }).format(0.125);
+
+  expect(trend.querySelector('[aria-hidden="true"]')!.textContent).to.contain(expectedPercent);
+  expect(trend.querySelector('.sr-only')!.textContent).to.contain(expectedPercent);
+});
+
+it('localizes the full trend announcement so direction and polarity can be reordered', async () => {
+  const el = (await fixture(
+    html`<lr-stat
+      label="x"
+      value="1"
+      trend="12"
+      .strings=${{
+        statTrendIncreased: '{value} higher',
+        statTrendGood: 'favorable',
+        statTrendAnnouncement: '[{polarity}] {trend}',
+      }}
+    ></lr-stat>`,
+  )) as LyraStat;
+
+  expect(el.shadowRoot!.querySelector('[part="trend"] .sr-only')!.textContent).to.equal(
+    '[favorable] 12% higher',
+  );
+});
+
+it('contains long unbroken content inside a 320px allocation', async () => {
+  const long = 'x'.repeat(300);
+  const wrapper = await fixture(html`
+    <div style="inline-size: 320px">
+      <lr-stat
+        style="inline-size: 100%"
+        label=${long}
+        value=${long}
+        unit=${long}
+        sub=${long}
+        caption=${long}
+        .rows=${[{ label: long, value: long }]}
+      ></lr-stat>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-stat') as LyraStat;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  expect(el.getBoundingClientRect().width).to.be.at.most(320);
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth);
 });
 
 it('collapses the spark part when no spark content is slotted', async () => {

@@ -55,7 +55,9 @@ export class LyraResultField extends LyraElement {
     const hasLabel = this.label.length > 0;
     return html`
       <div part="base">
-        ${hasLabel ? html`<span part="label">${this.label}:</span>` : nothing}
+        ${hasLabel
+          ? html`<span part="label">${this.localize('resultFieldLabel', undefined, { label: this.label })}</span>`
+          : nothing}
         <span part="value"
           >${this.hasValueSlot ? nothing : this.value}<slot @slotchange=${this.onSlotChange}></slot
         ></span>
@@ -70,4 +72,3 @@ declare global {
     'lr-result-field': LyraResultField;
   }
 }
-

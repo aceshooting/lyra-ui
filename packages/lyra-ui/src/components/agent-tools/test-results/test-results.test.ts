@@ -165,6 +165,32 @@ describe('lr-test-results', () => {
     expect(slot.assignedElements()[0].textContent).to.equal('rich diff here');
   });
 
+  it('generates unique whitespace-free internal IDREF targets for duplicate and unsafe test ids', async () => {
+    const duplicateSuites: TestSuiteResult[] = [
+      {
+        id: 'suite one',
+        name: 'one',
+        tests: [{ id: 'same id', name: 'first', status: 'failed', message: 'x' }],
+      },
+      {
+        id: 'suite two',
+        name: 'two',
+        tests: [{ id: 'same id', name: 'second', status: 'failed', message: 'y' }],
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-test-results .suites=${duplicateSuites}></lr-test-results>`,
+    )) as LyraTestResults;
+    await el.updateComplete;
+    const ids = [...el.shadowRoot!.querySelectorAll('[id]')].map((node) => node.id);
+    expect(new Set(ids).size).to.equal(ids.length);
+    expect(ids.some((id) => /\s/.test(id))).to.be.false;
+    for (const control of el.shadowRoot!.querySelectorAll('[aria-controls], [aria-describedby]')) {
+      const target = control.getAttribute('aria-controls') ?? control.getAttribute('aria-describedby');
+      expect(el.shadowRoot!.getElementById(target!)).to.exist;
+    }
+  });
+
   it('is accessible with a mixed-status suite', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;

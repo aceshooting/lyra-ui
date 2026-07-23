@@ -1,15 +1,10 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { tag } from '../../../internal/prefix.js';
-import './reorder-item.js';
-import type { LyraReorderItem } from './reorder-item.class.js';
-// The registering barrel, not the bare *.class.js module -- this side effect is what makes
-// <lr-live-region> an actually-defined tag by the time this list renders one, matching
-// <lr-tree>'s identical import for the same reason.
-import '../../utility/live-region/live-region.js';
-import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import { styles } from './reorder-list.styles.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property, query } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { tag } from "../../../internal/prefix.js";
+import type { LyraReorderItem } from "./reorder-item.class.js";
+import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
+import { styles } from "./reorder-list.styles.js";
 
 export interface ReorderDetail {
   order: string[];
@@ -18,7 +13,7 @@ export interface ReorderDetail {
 }
 
 export interface LyraReorderListEventMap {
-  'lr-reorder': CustomEvent<ReorderDetail>;
+  "lr-reorder": CustomEvent<ReorderDetail>;
 }
 
 /**
@@ -64,13 +59,13 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  plain `aria-label` attribute on the host itself is honored as a fallback when this is left
    *  unset, matching `<lr-control-group>`. Native lists don't require an accessible name, so this
    *  has no forced fallback string when both are left unset. */
-  @property() label = '';
+  @property() label = "";
 
   /** Disables every item's move-up/move-down buttons and the Ctrl/Cmd+Arrow shortcut, without
    *  removing any item from the DOM or mutating any item's own `disabled` attribute. */
   @property({ type: Boolean, reflect: true }) disabled = false;
 
-  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query("lr-live-region") private liveRegion?: LyraLiveRegion;
 
   /** Set by `moveItem()` to the button that should receive focus once the moved item's own
    *  deferred re-render has actually cleared its `disabled` attribute; consumed by
@@ -82,17 +77,27 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  Deferring ALL of the actual async work to `getUpdateComplete()` -- started exactly once, only
    *  when it actually runs -- means a second `moveItem()` call before that point has nothing
    *  in-flight to race against; it just overwrites this field. */
-  private pendingFocusTarget: { item: LyraReorderItem; buttonPart: 'move-up-button' | 'move-down-button' } | null =
-    null;
+  private pendingFocusTarget: {
+    item: LyraReorderItem;
+    buttonPart: "move-up-button" | "move-down-button";
+  } | null = null;
 
   /** Set while an `lr-reorder` listener has called `preventDefault()`, holding a move until the
    *  host calls `finalizePendingMove()` or `revertPendingMove()`. `moveItem()` refuses to start
    *  any further move while this is set -- at most one move is ever held at a time. */
-  private pendingMove: { item: LyraReorderItem; direction: 'up' | 'down'; fromIndex: number; toIndex: number } | null =
-    null;
+  private pendingMove: {
+    item: LyraReorderItem;
+    direction: "up" | "down";
+    fromIndex: number;
+    toIndex: number;
+    members: LyraReorderItem[];
+  } | null = null;
 
   private get itemElements(): LyraReorderItem[] {
-    return [...this.querySelectorAll(tag('reorder-item'))] as LyraReorderItem[];
+    const itemTag = tag("reorder-item");
+    return [...this.children].filter(
+      (element): element is LyraReorderItem => element.localName === itemTag
+    );
   }
 
   private syncBoundaryState(): void {
@@ -105,12 +110,23 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   }
 
   private onSlotChange = (): void => {
+    if (this.pendingMove && !this.pendingMembershipIsCurrent())
+      this.revertPendingMove();
     this.syncBoundaryState();
   };
 
+  private pendingMembershipIsCurrent(): boolean {
+    if (!this.pendingMove) return false;
+    const current = this.itemElements;
+    return (
+      current.length === this.pendingMove.members.length &&
+      current.every((item, index) => item === this.pendingMove!.members[index])
+    );
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('disabled')) this.syncBoundaryState();
+    if (changed.has("disabled")) this.syncBoundaryState();
   }
 
   override disconnectedCallback(): void {
@@ -152,7 +168,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       const { item, buttonPart } = this.pendingFocusTarget;
       this.pendingFocusTarget = null;
       await item.updateComplete;
-      (item.shadowRoot?.querySelector(`[part='${buttonPart}']`) as HTMLElement | null)?.focus();
+      (
+        item.shadowRoot?.querySelector(
+          `[part='${buttonPart}']`
+        ) as HTMLElement | null
+      )?.focus();
     }
     return result;
   }
@@ -160,11 +180,16 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   /** Physically moves `item` (already known to belong at `toIndex`) and runs the same
    *  boundary-recompute / focus-restore / announce steps for both the immediate (uncanceled) path
    *  and a later `finalizePendingMove()` call. */
-  private applyMove(item: LyraReorderItem, direction: 'up' | 'down', _fromIndex: number, toIndex: number): void {
+  private applyMove(
+    item: LyraReorderItem,
+    direction: "up" | "down",
+    _fromIndex: number,
+    toIndex: number
+  ): void {
     const items = this.itemElements;
     // safe: callers validate toIndex ∈ [0, items.length - 1] before applyMove (see move handler)
     const target = items[toIndex]!;
-    if (direction === 'up') this.insertBefore(item, target);
+    if (direction === "up") this.insertBefore(item, target);
     else this.insertBefore(item, target.nextElementSibling);
 
     this.syncBoundaryState();
@@ -172,31 +197,34 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     // Focus the same-direction button if it's still usable after the move; otherwise the move
     // just made this item a new boundary in that direction (it would get force-blurred the
     // instant Lit's next render sets it `disabled`), so fall back to the other button instead.
-    const sameDirDisabled = direction === 'up' ? item.atStart : item.atEnd;
+    const sameDirDisabled = direction === "up" ? item.atStart : item.atEnd;
     const buttonPart = sameDirDisabled
-      ? direction === 'up'
-        ? 'move-down-button'
-        : 'move-up-button'
-      : direction === 'up'
-        ? 'move-up-button'
-        : 'move-down-button';
+      ? direction === "up"
+        ? "move-down-button"
+        : "move-up-button"
+      : direction === "up"
+      ? "move-up-button"
+      : "move-down-button";
     this.pendingFocusTarget = { item, buttonPart };
 
     const newItems = this.itemElements;
     this.liveRegion?.announce(
-      this.localize('reorderItemMoved', undefined, { index: toIndex + 1, total: newItems.length }),
+      this.localize("reorderItemMoved", undefined, {
+        index: toIndex + 1,
+        total: newItems.length,
+      }),
       // A discrete, user-initiated action: never coalesce it behind the announcer's throttle
       // window the way streaming status text is -- matches <lr-tree>'s identical reorder announcement.
-      { force: true },
+      { force: true }
     );
   }
 
-  private moveItem(item: LyraReorderItem, direction: 'up' | 'down'): void {
+  private moveItem(item: LyraReorderItem, direction: "up" | "down"): void {
     if (this.disabled || item.disabled || this.pendingMove) return;
     const items = this.itemElements;
     const fromIndex = items.indexOf(item);
     if (fromIndex < 0) return;
-    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    const toIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1;
     if (toIndex < 0 || toIndex >= items.length) return;
 
     // Compute the order the move WOULD produce, without touching the DOM yet -- the event fires
@@ -206,12 +234,18 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     reordered.splice(toIndex, 0, item);
 
     const event = this.emit<ReorderDetail>(
-      'lr-reorder',
+      "lr-reorder",
       { order: this.orderValues(reordered), fromIndex, toIndex },
-      { cancelable: true },
+      { cancelable: true }
     );
     if (event.defaultPrevented) {
-      this.pendingMove = { item, direction, fromIndex, toIndex };
+      this.pendingMove = {
+        item,
+        direction,
+        fromIndex,
+        toIndex,
+        members: [...items],
+      };
       item.pending = true;
       return;
     }
@@ -223,6 +257,10 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
    *  async work (e.g. persisting the new order) has succeeded. No-op if nothing is pending. */
   finalizePendingMove(): void {
     if (!this.pendingMove) return;
+    if (!this.pendingMembershipIsCurrent()) {
+      this.revertPendingMove();
+      return;
+    }
     const { item, direction, fromIndex, toIndex } = this.pendingMove;
     this.pendingMove = null;
     item.pending = false;
@@ -240,19 +278,28 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   }
 
   private onMoveRequest = (e: Event): void => {
-    const item = (e.target as Element | null)?.closest?.(tag('reorder-item')) as LyraReorderItem | null;
+    const item = (e.target as Element | null)?.closest?.(
+      tag("reorder-item")
+    ) as LyraReorderItem | null;
     if (!item) return;
-    const { direction } = (e as CustomEvent<{ direction: 'up' | 'down' }>).detail;
+    const { direction } = (e as CustomEvent<{ direction: "up" | "down" }>)
+      .detail;
     this.moveItem(item, direction);
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.disabled) return;
-    if (!(e.ctrlKey || e.metaKey) || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-    const item = (e.target as Element | null)?.closest?.(tag('reorder-item')) as LyraReorderItem | null;
+    if (
+      !(e.ctrlKey || e.metaKey) ||
+      (e.key !== "ArrowUp" && e.key !== "ArrowDown")
+    )
+      return;
+    const item = (e.target as Element | null)?.closest?.(
+      tag("reorder-item")
+    ) as LyraReorderItem | null;
     if (!item) return;
     e.preventDefault();
-    this.moveItem(item, e.key === 'ArrowDown' ? 'down' : 'up');
+    this.moveItem(item, e.key === "ArrowDown" ? "down" : "up");
   };
 
   override render(): TemplateResult {
@@ -260,7 +307,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${this.label || this.getAttribute('aria-label') || nothing}
+        aria-label=${this.label || this.getAttribute("aria-label") || nothing}
         @lr-move-request=${this.onMoveRequest}
         @keydown=${this.onKeyDown}
       >
@@ -273,6 +320,6 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-reorder-list': LyraReorderList;
+    "lr-reorder-list": LyraReorderList;
   }
 }

@@ -2,12 +2,14 @@ import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
+import type { LyraMessageKey } from '../../../internal/localization.js';
 import { styles } from './flag.styles.js';
 import { ALPHA2_RE, languageToCountry } from './language-map.js';
 import '../../overlays/skeleton/skeleton.class.js';
 
 export type FlagVariant = 'compact' | 'standard' | 'detailed';
 export type FlagUrlResolver = (code: string, options?: { variant?: FlagVariant }) => Promise<string | undefined>;
+const FLAG_LOAD_ERROR_KEY = 'flagLoadError' as LyraMessageKey;
 
 /**
  * Resolves the optional peer dependency `@aceshooting/lyra-flags`'s `flagUrl`
@@ -92,9 +94,11 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * Flag images are shipped by the optional peer package `@aceshooting/lyra-flags`,
  * not bundled into lyra-ui itself, so importing the core library pulls zero flag
  * weight. Give it a `country` (ISO 3166-1 alpha-2) or a `language` tag (mapped to
- * a representative country). While that peer package's `flagUrl()` resolves (or
- * if it isn't installed), the host carries `aria-busy="true"` and a skeleton
- * placeholder renders in its place.
+ * a representative country). While that peer package's `flagUrl()` resolves,
+ * the host carries `aria-busy="true"` and a skeleton placeholder renders in its
+ * place. A missing or failed peer resolver fails closed with a localized alert;
+ * an installed resolver returning no URL for an unknown code remains a valid
+ * empty result.
  *
  * **Bundle-size note:** `country`/`language` resolve through the peer package's
  * `flagUrl(code)`, which lazily fetches one requested flag at runtime. A
@@ -120,6 +124,7 @@ export function __setFlagUrlResolverForTesting(value: Promise<FlagUrlResolver | 
  * @example <lr-flag country="es" variant="compact"></lr-flag>
  * @example <lr-flag country="es" variant="detailed"></lr-flag>
  * @csspart image - The underlying <img>.
+ * @csspart error - Localized alert rendered when the optional peer resolver is unavailable or fails.
  * @cssprop [--lr-flag-aspect-ratio=4 / 3] - Rectangular flag aspect ratio.
  * @cssprop [--lr-flag-object-fit=cover] - How the image fits its flag frame.
  * @cssprop --lr-flag-radius - Rectangular flag corner radius.
@@ -192,6 +197,7 @@ export class LyraFlag extends LyraElement {
 
   /** True while the lazy-loaded `@aceshooting/lyra-flags` peer resolver is in flight. */
   @state() private loading = true;
+  @state() private loadError = false;
 
   /**
    * Bumped on every `willUpdate` pass; captured by each in-flight resolver
@@ -232,28 +238,40 @@ export class LyraFlag extends LyraElement {
     const token = ++this.resolveToken; // invalidates any in-flight peer resolution either way
     if (this.src) {
       this.resolvedSrc = undefined;
+      this.loadError = false;
       this.loading = false;
       return;
     }
     const code = this.code;
     if (!code) {
       this.resolvedSrc = undefined;
+      this.loadError = false;
       this.loading = false;
       return;
     }
+    this.resolvedSrc = undefined;
+    this.loadError = false;
     this.loading = true;
     const variant = this.effectiveVariant;
     void loadFlagUrlResolver()
-      .then((resolve) => resolve?.(code, variant === 'standard' ? undefined : { variant }))
-      .then((url) => {
+      .then(async (resolve) => {
+        if (token !== this.resolveToken) return;
+        if (!resolve) {
+          this.loadError = true;
+          this.loading = false;
+          return;
+        }
+        const url = await resolve(code, variant === 'standard' ? undefined : { variant });
         if (token !== this.resolveToken) return; // superseded by a later country/language/src change
         this.resolvedSrc = url;
+        this.loadError = false;
         this.loading = false;
       })
       .catch((err) => {
         if (token !== this.resolveToken) return; // superseded by a later country/language/src change
         console.warn(`<lr-flag> failed to resolve a flag URL for "${code}":`, err);
         this.resolvedSrc = undefined;
+        this.loadError = true;
         this.loading = false;
       });
   }
@@ -265,6 +283,9 @@ export class LyraFlag extends LyraElement {
 
   override render(): TemplateResult {
     if (this.loading) return html`<lr-skeleton variant="rect"></lr-skeleton>`;
+    if (this.loadError) {
+      return html`<span part="error" role="alert">${this.localize(FLAG_LOAD_ERROR_KEY)}</span>`;
+    }
     const url = this.src ?? this.resolvedSrc;
     if (!url) return html``;
     const code = this.code;

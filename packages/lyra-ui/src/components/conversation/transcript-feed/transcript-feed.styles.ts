@@ -20,6 +20,10 @@ export const styles = [
       padding: var(--lr-space-s);
       box-sizing: border-box;
     }
+    [part='base']:focus-visible {
+      outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+      outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    }
     [part='log'],
     [part='interim-area'] {
       display: flex;
@@ -56,7 +60,10 @@ export const styles = [
       font-style: italic;
     }
     [part='speaker'] {
-      flex: 0 0 auto;
+      flex: 1 1 100%;
+      min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow-wrap: anywhere;
       font-weight: var(--lr-font-weight-semibold);
       color: var(--lr-color-text-quiet);
     }
@@ -79,6 +86,8 @@ export const styles = [
       inset-block-end: var(--lr-space-s);
       inset-inline-end: var(--lr-space-s);
       padding: var(--lr-space-2xs) var(--lr-space-s);
+      min-inline-size: var(--lr-icon-button-size);
+      min-block-size: var(--lr-icon-button-size);
       border: var(--lr-border-width-thin) solid var(--lr-color-border);
       border-radius: var(--lr-radius-pill);
       background: var(--lr-color-surface);

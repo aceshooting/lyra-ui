@@ -700,3 +700,107 @@ describe('lr-rubric-form', () => {
     });
   });
 });
+
+it('forwards field labels, descriptions, errors, and option descriptions to composed semantic owners', async () => {
+  const keys: RubricKey[] = [
+    {
+      key: 'score',
+      type: 'score',
+      label: 'Accuracy',
+      description: 'Judge factual correctness',
+      min: 0,
+      max: 5,
+      step: 1,
+    },
+    {
+      key: 'scoreWide',
+      type: 'score',
+      label: 'Confidence',
+      description: 'Use the full confidence range',
+      min: 0,
+      max: 100,
+      step: 1,
+    },
+    {
+      key: 'single',
+      type: 'category',
+      label: 'Quality',
+      description: 'Choose the closest match',
+      required: true,
+      options: [{ value: 'good', label: 'Good', description: 'Meets every requirement' }],
+    },
+    {
+      key: 'multiple',
+      type: 'category',
+      label: 'Flags',
+      multiple: true,
+      options: [{ value: 'unsafe', label: 'Unsafe', description: 'Contains unsafe material' }],
+    },
+    {
+      key: 'notes',
+      type: 'comment',
+      label: 'Notes',
+      description: 'Explain your decision',
+    },
+  ];
+  const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+  const segmented = el.shadowRoot!.querySelector<HTMLElement & { label: string }>(
+    '[data-key="score"] lr-segmented',
+  )!;
+  const slider = el.shadowRoot!.querySelector<HTMLElement & { label: string }>(
+    '[data-key="scoreWide"] lr-slider',
+  )!;
+  expect(segmented.label).to.contain('Accuracy');
+  expect(segmented.label).to.contain('Judge factual correctness');
+  expect(slider.label).to.contain('Confidence');
+  expect(slider.label).to.contain('Use the full confidence range');
+
+  const select = el.shadowRoot!.querySelector('lr-select')!;
+  const selectTrigger = select.shadowRoot!.querySelector('[part="trigger"]') as HTMLElement;
+  const selectLabel = select.shadowRoot!.querySelector(`label[for="${selectTrigger.id}"]`) as HTMLElement;
+  const assignedLabel = selectLabel.querySelector('slot')!.assignedElements({ flatten: true })[0]!;
+  expect(assignedLabel.textContent).to.contain('Quality');
+  expect(selectTrigger.getAttribute('aria-describedby')).to.not.equal(null);
+  expect(select.querySelector('lr-option')!.sub).to.equal('Meets every requirement');
+
+  const checkbox = el.shadowRoot!.querySelector('lr-checkbox')!;
+  expect(checkbox.textContent).to.contain('Contains unsafe material');
+
+  const textarea = el.shadowRoot!.querySelector('lr-textarea')!;
+  const nativeTextarea = textarea.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  expect(nativeTextarea.getAttribute('aria-label')).to.equal(null);
+  expect(nativeTextarea.getAttribute('aria-describedby')).to.not.equal(null);
+});
+
+it('consumes nested control aliases and exposes only the documented aggregate input event', async () => {
+  const keys: RubricKey[] = [{ key: 'notes', type: 'comment', label: 'Notes' }];
+  const el = (await fixture(html`<lr-rubric-form .keys=${keys}></lr-rubric-form>`)) as LyraRubricForm;
+  const events: string[] = [];
+  for (const type of ['input', 'change', 'lr-change', 'lr-input']) {
+    el.addEventListener(type, () => events.push(type));
+  }
+  const textarea = el.shadowRoot!.querySelector('lr-textarea')!;
+  const native = textarea.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  native.value = 'Updated';
+  native.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+
+  expect(events).to.deep.equal(['lr-input']);
+});
+
+it('keeps each keyed composed control with its logical field across reorder', async () => {
+  const a: RubricKey = { key: 'a', type: 'comment', label: 'A' };
+  const b: RubricKey = { key: 'b', type: 'comment', label: 'B' };
+  const el = (await fixture(html`<lr-rubric-form .keys=${[a, b]}></lr-rubric-form>`)) as LyraRubricForm;
+  const originalA = el.shadowRoot!.querySelector('[data-key="a"] lr-textarea');
+  const originalB = el.shadowRoot!.querySelector('[data-key="b"] lr-textarea');
+
+  el.keys = [b, a];
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[data-key="a"] lr-textarea') === originalA).to.be.true;
+  expect(el.shadowRoot!.querySelector('[data-key="b"] lr-textarea') === originalB).to.be.true;
+});
+
+it('uses the on-brand token for the submit action foreground', () => {
+  expect(styles.cssText).to.match(/\[part='submit'\][^}]*color:\s*var\(--lr-color-on-brand\)/s);
+});

@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { FlowRunDecorations, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
 import { styles } from './flow-run-overlay.styles.js';
 
@@ -48,6 +49,7 @@ export class LyraFlowRunOverlay extends LyraElement {
   @state() private liveText = '';
   private readonly announcer = new Announcer({ onFlush: (text) => (this.liveText = text) });
   private canvasEl?: FlowCanvasLike;
+  private canvasWatcher?: MutationObserver;
   /** The exact `FlowRunDecorations` object reference this element itself last wrote into the
    *  canvas -- lets `applyDecorations()`/`disconnectedCallback()` tell "still ours" from "someone
    *  else wrote a different value since" by identity, not deep equality. */
@@ -55,8 +57,8 @@ export class LyraFlowRunOverlay extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.canvasEl = this.resolveCanvas() ?? undefined;
-    this.applyDecorations();
+    this.watchCanvasTarget();
+    this.rebindCanvas();
   }
 
   override disconnectedCallback(): void {
@@ -65,6 +67,9 @@ export class LyraFlowRunOverlay extends LyraElement {
       this.canvasEl.decorations = null;
     }
     this.canvasEl = undefined;
+    this.lastWrittenDecorations = null;
+    this.canvasWatcher?.disconnect();
+    this.canvasWatcher = undefined;
   }
 
   // `announceTransitions()` runs from `willUpdate()`, not `updated()`: it force-flushes into the
@@ -80,6 +85,7 @@ export class LyraFlowRunOverlay extends LyraElement {
   // is already waiting on, with no extra cycle and no dev-mode "scheduled an update after an
   // update completed" warning.
   protected override willUpdate(changed: PropertyValues): void {
+    if (this.hasUpdated && changed.has('for')) this.rebindCanvas();
     if (changed.has('decorations')) {
       this.announceTransitions(changed.get('decorations') as FlowRunDecorations | undefined);
     }
@@ -99,6 +105,24 @@ export class LyraFlowRunOverlay extends LyraElement {
     }
     const ancestor = this.closest(tag('flow-canvas'));
     return (ancestor as unknown as FlowCanvasLike) ?? null;
+  }
+
+  private watchCanvasTarget(): void {
+    if (this.canvasWatcher) return;
+    const root = this.getRootNode() as Document | ShadowRoot;
+    this.canvasWatcher = new MutationObserver(() => this.rebindCanvas());
+    this.canvasWatcher.observe(root, { childList: true, subtree: true });
+  }
+
+  private rebindCanvas(): void {
+    const next = this.resolveCanvas() ?? undefined;
+    if (next === this.canvasEl) return;
+    if (this.canvasEl && this.canvasEl.decorations === this.lastWrittenDecorations) {
+      this.canvasEl.decorations = null;
+    }
+    this.canvasEl = next;
+    this.lastWrittenDecorations = null;
+    this.applyDecorations();
   }
 
   private applyDecorations(): void {
@@ -121,22 +145,23 @@ export class LyraFlowRunOverlay extends LyraElement {
     return this.localize('statusDenied');
   }
 
-  // The announcement interpolates `decoration.status` -- the raw lower-case status literal -- into
-  // `flowRunStepStatus` rather than `statusLabel()`'s localized, capitalized caption: the
-  // announcement's whole sentence is owned by the `flowRunStepStatus` template (a locale override
-  // replaces the sentence, status wording included). Routing the status through
-  // `localize('statusSuccess', decoration.status, ...)` would pass the raw status as a *fallback*
-  // and silently defeat any `registerLyraLocale()` override per this repo's localize() convention,
-  // so it is interpolated as a plain value instead; the visible per-status count spans in
-  // `render()` -- which still go through `statusLabel()` -- remain the localized/capitalized surface.
   private announceTransitions(previous: FlowRunDecorations | undefined): void {
     if (!previous) return; // first assignment -- nothing to compare against, no spam on mount
+    const messages: string[] = [];
     for (const [id, decoration] of Object.entries(this.decorations)) {
       if (previous[id]?.status === decoration.status) continue;
       const node = this.canvasEl?.nodes.find((n) => n.id === id);
       const label = typeof node?.data?.['label'] === 'string' ? node.data['label'] : id;
+      messages.push(
+        this.localize('flowRunStepStatus', undefined, {
+          label,
+          status: this.statusLabel(decoration.status),
+        }),
+      );
+    }
+    if (messages.length > 0) {
       this.announcer.announce(
-        this.localize('flowRunStepStatus', undefined, { label, status: decoration.status }),
+        getListFormat(this.effectiveLocale, { type: 'conjunction', style: 'long' }).format(messages),
         { force: true },
       );
     }
@@ -170,13 +195,21 @@ export class LyraFlowRunOverlay extends LyraElement {
     const label = this.label || this.localize('flowRunOverlayLabel');
     const ariaLabel = this.getAttribute('aria-label') || label;
     const { done, total, counts } = this.summary();
+    const number = getNumberFormat(this.effectiveLocale);
     return html`<div part="base" role="group" aria-label=${ariaLabel}>
       ${this.hideSummary
         ? ''
         : html`
-            <div part="summary">${this.localize('flowRunSummary', undefined, { done, total })}</div>
+            <div part="summary">${this.localize('flowRunSummary', undefined, {
+              done: number.format(done),
+              total: number.format(total),
+            })}</div>
             ${ALL_STATUSES.filter((s) => counts[s] > 0).map(
-              (s) => html`<span part="count" data-status=${s}><span class="tone-dot"></span>${this.statusLabel(s)}: ${counts[s]}</span>`,
+              (s) => html`<span part="count" data-status=${s}><span class="tone-dot"></span>${this.localize(
+                'flowRunStatusCount',
+                undefined,
+                { status: this.statusLabel(s), count: number.format(counts[s]) },
+              )}</span>`,
             )}
           `}
       <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">${this.liveText}</div>

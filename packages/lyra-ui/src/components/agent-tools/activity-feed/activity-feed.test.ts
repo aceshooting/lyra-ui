@@ -37,6 +37,16 @@ it('renders one [part="entry"] row per entry, carrying data-tone', async () => {
   expect(rows[0]!.querySelector('[part="entry-text"]')!.textContent!.trim()).to.equal('Searching the web…');
 });
 
+it('clips the cross axis instead of creating a phantom horizontal scrollbar for long content', async () => {
+  const el = (await fixture(html`<lr-activity-feed
+    expanded
+    .entries=${[{ id: 'long', text: 'x'.repeat(2_000) }]}
+  ></lr-activity-feed>`)) as LyraActivityFeed;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(getComputedStyle(body).overflowX).to.equal('hidden');
+  expect(body.scrollWidth).to.equal(body.clientWidth);
+});
+
 it('renders a literal icon hint when set, a tone dot otherwise', async () => {
   const el = (await fixture(
     html`<lr-activity-feed expanded .entries=${[

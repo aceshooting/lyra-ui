@@ -28,4 +28,56 @@ describe('lr-approval-queue', () => {
     const populated = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
     await expect(populated).to.be.accessible();
   });
+
+  it('honors editable="false" and forwards it to the reused dialog', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue editable="false" .requests=${requests}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.editable).to.be.false;
+    expect((el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & { editable: boolean }).editable).to.be.false;
+  });
+
+  it('keeps parent and reused-dialog open state synchronized after child close', async () => {
+    const el = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
+    (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & {
+      close(reason?: string): void;
+      open: boolean;
+    };
+    dialog.close('api');
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(dialog.open).to.be.true;
+  });
+
+  it('forwards the host aria-label to the semantic section', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue aria-label="Author approvals" label="Visible approvals"></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    expect(el.shadowRoot!.querySelector('section')!.getAttribute('aria-label')).to.equal('Author approvals');
+  });
+
+  it('renders a strings override in the DOM', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue .strings=${{ approvalQueueEmpty: 'Nothing requires review' }}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Nothing requires review');
+  });
+
+  it('allows the selected request border to be rethemed independently', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue
+        style="--lr-approval-queue-selected-border: rgb(1, 2, 3)"
+        selected-id="call-1"
+        .requests=${requests}
+      ></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    const selected = el.shadowRoot!.querySelector('[part="request"][data-selected="true"]') as HTMLElement;
+    expect(getComputedStyle(selected).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
 });

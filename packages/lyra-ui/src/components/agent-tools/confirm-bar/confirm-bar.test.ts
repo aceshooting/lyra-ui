@@ -24,6 +24,31 @@ it('renders the default toolName heading, or the generic-tool fallback when unse
   expect(generic.shadowRoot!.querySelector('[part="tool-name"]')!.textContent).to.equal('tool');
 });
 
+it('renders repeated heading placeholders and does not append a tool omitted by the translation', async () => {
+  const repeated = (await fixture(html`
+    <lr-confirm-bar tool-name="search" .strings=${{ toolApprovalHeading: '{tool} then {tool}?' }}></lr-confirm-bar>
+  `)) as LyraConfirmBar;
+  expect(repeated.shadowRoot!.querySelector('[part="heading"]')!.textContent!.trim()).to.equal('search then search?');
+  expect(repeated.shadowRoot!.querySelectorAll('[part="tool-name"]').length).to.equal(2);
+
+  const omitted = (await fixture(html`
+    <lr-confirm-bar tool-name="search" .strings=${{ toolApprovalHeading: 'Proceed?' }}></lr-confirm-bar>
+  `)) as LyraConfirmBar;
+  expect(omitted.shadowRoot!.querySelector('[part="heading"]')!.textContent!.trim()).to.equal('Proceed?');
+});
+
+it('moves focus to status before a pending decision is finalized externally', async () => {
+  const el = (await fixture(html`<lr-confirm-bar></lr-confirm-bar>`)) as LyraConfirmBar;
+  const approve = el.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton;
+  el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+  approve.click();
+  await el.updateComplete;
+  approve.focus();
+  el.decision = 'approved';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement!.getAttribute('part')).to.equal('status');
+});
+
 it('a free-form heading wins over toolName and renders with no tool-name part', async () => {
   const el = (await fixture(
     html`<lr-confirm-bar tool-name="run_shell" heading="Send this email?"></lr-confirm-bar>`,
@@ -195,6 +220,16 @@ describe('compact', () => {
     // is exactly what makes it wrong for a compact bar dropped into a narrow cell.
     expect(getComputedStyle(regular).containerType).to.equal('inline-size');
     expect(getComputedStyle(part(regular, 'deny-button')).flexGrow).to.equal('1');
+  });
+
+  it('does not match an unrelated narrow ancestor query container while compact', async () => {
+    const wrap = await fixture(html`
+      <div style="container-type:inline-size;inline-size:240px;">
+        <lr-confirm-bar compact tool-name="run_shell"></lr-confirm-bar>
+      </div>
+    `);
+    const compact = wrap.querySelector('lr-confirm-bar') as LyraConfirmBar;
+    expect(getComputedStyle(part(compact, 'deny-button')).flexGrow).to.equal('0');
   });
 
   it('keeps the focus-management contract: focus lands on [part="status"] before the buttons unmount', async () => {

@@ -223,6 +223,32 @@ it('prunes a selected id that no longer exists in documents, without firing lr-s
   expect(fired).to.be.false;
 });
 
+it('normalizes stale and duplicate selectedIds assigned after mount', async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs}></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  el.selectedIds = ['ghost-id', 'd1', 'd1'];
+  await el.updateComplete;
+  expect(el.selectedIds).to.deep.equal(['d1']);
+  expect(el.shadowRoot!.querySelector('[part="selection-count"]')!.textContent!.trim()).to.equal('1 selected');
+});
+
+it('formats the selected count with the effective locale', async () => {
+  const many = Array.from({ length: 1000 }, (_, index) => ({
+    id: `d${index}`,
+    name: `Document ${index}`,
+  }));
+  const el = (await fixture(
+    html`<lr-document-library
+      locale="de-DE"
+      .documents=${many}
+      .selectedIds=${many.map((document) => document.id)}
+    ></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="selection-count"]')!.textContent!.trim()).to.equal('1.000 selected');
+});
+
 it('opens a document via its name button, firing lr-open with the document id', async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs}></lr-document-library>`,
@@ -263,6 +289,31 @@ it('reaches the DOM with a .strings override for the region label and search pla
     'Bibliothèque de documents',
   );
   expect(el.shadowRoot!.querySelector('lr-input')!.getAttribute('placeholder')).to.equal('Rechercher');
+});
+
+it('lets a host aria-label override label on the region and table, including late changes', async () => {
+  const el = (await fixture(
+    html`<lr-document-library
+      label="Library"
+      aria-label="Deployment documents"
+      .documents=${docs}
+    ></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const table = el.shadowRoot!.querySelector('lr-table')!;
+  expect(base.getAttribute('aria-label')).to.equal('Deployment documents');
+  expect(table.getAttribute('aria-label')).to.equal('Deployment documents');
+
+  el.setAttribute('aria-label', 'Runtime documents');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Runtime documents');
+  expect(table.getAttribute('aria-label')).to.equal('Runtime documents');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Library');
+  expect(table.getAttribute('aria-label')).to.equal('Library');
 });
 
 it('renders under dir="rtl" and keeps document-open interaction working', async () => {

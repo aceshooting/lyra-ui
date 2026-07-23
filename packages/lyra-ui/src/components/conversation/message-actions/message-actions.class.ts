@@ -178,8 +178,15 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     if (!this.matches(':focus-within')) this.revealed = false;
   };
 
-  private onFocusIn = (): void => {
+  private onFocusIn = (event: Event): void => {
     this.revealed = true;
+    const stops = this.focusableStops();
+    const path = event.composedPath();
+    const index = stops.findIndex((stop) => path.includes(stop));
+    if (index >= 0) {
+      const focused = path[0] instanceof HTMLElement ? path[0] : undefined;
+      this.setActiveStop(stops, index, focused);
+    }
   };
 
   private onFocusOut = (): void => {
@@ -202,12 +209,39 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     return [...direct, ...slotted];
   }
 
-  private setActiveStop(stops: HTMLElement[], index: number): void {
+  private innerFocusable(stop: HTMLElement): HTMLElement[] {
+    return stop.shadowRoot
+      ? [
+          ...stop.shadowRoot.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+          ),
+        ]
+      : [];
+  }
+
+  private setActiveStop(stops: HTMLElement[], index: number, preferred?: HTMLElement): void {
     this.activeStopIndex = index;
     stops.forEach((el, i) => {
-      if (el.tagName === 'BUTTON') el.tabIndex = i === index ? 0 : -1;
+      const inner = this.innerFocusable(el);
+      if (inner.length === 0) {
+        el.tabIndex = i === index ? 0 : -1;
+        return;
+      }
+      el.removeAttribute('tabindex');
+      const activeInner =
+        (preferred && inner.includes(preferred) ? preferred : undefined) ??
+        (el.shadowRoot?.activeElement instanceof HTMLElement ? el.shadowRoot.activeElement : undefined) ??
+        inner[0];
+      inner.forEach((control) => {
+        control.tabIndex = i === index && control === activeInner ? 0 : -1;
+      });
     });
   }
+
+  private onSlotChange = (): void => {
+    const stops = this.focusableStops();
+    this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
+  };
 
   private onToolbarKeyDown = (e: KeyboardEvent): void => {
     const stops = this.focusableStops();
@@ -269,7 +303,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     return html`
       <div part="base" role="toolbar" aria-label=${label} @keydown=${this.onToolbarKeyDown}>
         ${this.controls.map((type) => this.renderControl(type))}
-        <slot></slot>
+        <slot @slotchange=${this.onSlotChange}></slot>
       </div>
     `;
   }

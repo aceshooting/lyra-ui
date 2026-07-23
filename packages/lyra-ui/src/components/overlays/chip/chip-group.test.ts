@@ -40,6 +40,25 @@ it('defaults max-visible to unset, showing every child and no overflow indicator
   expect(chips.every((c) => !c.hidden)).to.be.true;
 });
 
+it('preserves author-owned hidden state across collapse, expansion, and disconnect', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="1">
+      <lr-chip>one</lr-chip>
+      <lr-chip hidden>author hidden</lr-chip>
+      <lr-chip>three</lr-chip>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
+  expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, true]);
+
+  (el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, false]);
+
+  el.remove();
+  expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, false]);
+});
+
 it('sanitizes a NaN/negative maxVisible to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
 

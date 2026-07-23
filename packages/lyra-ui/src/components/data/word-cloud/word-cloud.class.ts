@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import {
   layoutWordCloud,
@@ -96,6 +97,10 @@ export interface WordCloudLegendItem {
 export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
+  static override get observedAttributes(): string[] {
+    return [...new Set([...super.observedAttributes, 'role'])];
+  }
+
   /** The words to lay out. Re-laid-out whenever this (or a sizing property) changes. */
   @property({ attribute: false }) words: WordCloudWord[] = [];
 
@@ -132,19 +137,16 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   /** Text of the visually-hidden `aria-live="polite"` status announcement. */
   @state() private liveText = '';
 
-  /**
-   * Whether `role`/`aria-label` were present on the host *before* this
-   * element's own code ever wrote to them -- snapshotted once, in the very
-   * first `willUpdate()` (guarded by `hasUpdated`, which Lit only flips to
-   * `true` after that first update commits). Re-checking `hasAttribute()` on
-   * every update instead would self-poison: once this element writes its own
-   * default `aria-label` on the first render, `hasAttribute('aria-label')` is
-   * permanently `true` afterwards, which would wrongly look like an
-   * author-supplied value and freeze the label instead of refreshing it as
-   * `words` changes on later updates.
-   */
-  private authorSuppliedRole = false;
-  private authorSuppliedAriaLabel = false;
+  private authorRole: string | null = null;
+  private authorAriaLabel: string | null = null;
+  private syncingGeneratedSemantics = false;
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (oldValue === value || this.syncingGeneratedSemantics) return;
+    if (name === 'role') this.authorRole = value;
+    if (name === 'aria-label') this.authorAriaLabel = value;
+  }
 
   private fontFamily(): string {
     return getComputedStyle(this).getPropertyValue('--lr-font').trim() || 'sans-serif';
@@ -186,23 +188,16 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     ) {
       this.relayout();
     }
-    if (!this.hasUpdated) {
-      this.authorSuppliedRole = this.hasAttribute('role');
-      this.authorSuppliedAriaLabel = this.hasAttribute('aria-label');
-    }
-    // Only default role/aria-label when the author hasn't already supplied
-    // one -- unconditionally overwriting them on every update (including
-    // ones triggered purely by a `words` re-layout) would silently clobber a
-    // host's own accessible name/role on the very next data refresh.
-    if (!this.authorSuppliedRole) this.setAttribute('role', 'group');
-    if (!this.authorSuppliedAriaLabel) {
-      this.setAttribute(
-        'aria-label',
-        this.localize('wordCloud', undefined, {
-          count: this.cachedLayout.placed.length,
-          word: this.localize(this.cachedLayout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
-        }),
-      );
+    const generatedAriaLabel = this.localize('wordCloud', undefined, {
+      count: this.cachedLayout.placed.length,
+      word: this.localize(this.cachedLayout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
+    });
+    this.syncingGeneratedSemantics = true;
+    try {
+      if (this.authorRole === null) this.setAttribute('role', 'group');
+      if (this.authorAriaLabel === null) this.setAttribute('aria-label', generatedAriaLabel);
+    } finally {
+      this.syncingGeneratedSemantics = false;
     }
   }
 
@@ -256,7 +251,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private announce(word: PlacedWord): void {
-    this.liveText = `${word.text}, ${word.weight}`;
+    this.liveText = this.localize('wordCloudWordAnnouncement', undefined, {
+      text: word.text,
+      weight: getNumberFormat(this.effectiveLocale).format(word.weight),
+    });
   }
 
   private onWordClick = (word: PlacedWord): void => {

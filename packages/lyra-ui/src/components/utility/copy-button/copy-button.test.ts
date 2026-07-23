@@ -92,6 +92,35 @@ describe('lr-copy-button', () => {
     expect(el.shadowRoot!.activeElement).to.equal(null);
   });
 
+  it('forwards host click() to the internal button and respects disabled state', async () => {
+    const el = (await fixture(html`<lr-copy-button value="host"></lr-copy-button>`)) as LyraCopyButton;
+    let copies = 0;
+    el.addEventListener('lr-copy', () => copies++);
+
+    el.click();
+    expect(copies).to.equal(1);
+
+    el.disabled = true;
+    await el.updateComplete;
+    el.click();
+    expect(copies).to.equal(1);
+  });
+
+  it('clears copied feedback state on disconnect so reconnect starts at Copy', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="hello" feedback-duration="10000"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const parent = el.parentElement!;
+    (el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Copied!');
+
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Copy');
+  });
+
   it('uses string overrides for both resting and confirmation labels', async () => {
     const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     el.strings = { copy: 'Copier', copied: 'Copié' };

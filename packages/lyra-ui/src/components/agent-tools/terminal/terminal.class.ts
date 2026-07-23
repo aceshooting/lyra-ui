@@ -46,6 +46,9 @@ const EMPTY_CELL_STYLES: AnsiStyles = {
  *  same-tick chunks into one announcement while keeping a screen-reader user's sense of the log
  *  close to real time, rather than lagging half a second behind the visible text. */
 const ANNOUNCE_THROTTLE_MS = 10;
+/** A search match currently identifies a line, not a character range. Keep occurrence counting
+ * bounded so a single adversarial line cannot allocate an unbounded navigation array. */
+const MAX_SEARCH_MATCHES = 10_000;
 
 // Each tone reads its own scoped cssprop (falling back to today's exact shared token) rather than
 // the bare shared --lr-color-*-quiet token directly -- `accent` in particular would otherwise
@@ -153,6 +156,10 @@ export interface LyraTerminalEventMap {
  *   `danger`-tone highlighted line.
  * @cssprop [--lr-terminal-highlight-neutral-bg=var(--lr-color-surface)] - Background of a
  *   `neutral`-tone highlighted line.
+ * @cssprop [--lr-terminal-search-outline-color=var(--lr-color-warning)] - Outline color for a
+ *   line containing a non-active search match.
+ * @cssprop [--lr-terminal-search-active-outline-color=var(--lr-color-brand)] - Outline color for
+ *   the active search match's line.
  */
 export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -206,7 +213,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.justCopied = false;
+    this.pendingAnnounceText = '';
     this.announcer.cancel();
+    if (this.announceRegionEl) this.announceRegionEl.textContent = '';
   }
 
   override firstUpdated(): void {
@@ -218,6 +228,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       this.resetBuffer();
       this.writeInternal(this.content);
     }
+    if (changed.has('maxScrollback')) this.trimScrollback();
   }
 
   // --- Buffer / cursor model -------------------------------------------------
@@ -236,9 +247,26 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private appendLine(): void {
     this.buffer.push({ number: ++this.lineSeq, cells: [] });
-    const max = Math.max(1, finiteCount(this.maxScrollback, 5000));
-    while (this.buffer.length > max) this.buffer.shift();
+    this.trimScrollback();
     this.column = 0;
+  }
+
+  private trimScrollback(): void {
+    const max = Math.max(1, finiteCount(this.maxScrollback, 5000));
+    let trimmed = false;
+    while (this.buffer.length > max) {
+      this.buffer.shift();
+      trimmed = true;
+    }
+    if (!trimmed) return;
+    this.lines = [...this.buffer];
+    if (this.searchQuery) this.recomputeSearchMatches();
+    if (
+      this.scrollTargetLineNumber !== null &&
+      !this.buffer.some((line) => line.number === this.scrollTargetLineNumber)
+    ) {
+      this.scrollTargetLineNumber = this.buffer[0]?.number ?? null;
+    }
   }
 
   private putChar(ch: string, styles: AnsiStyles): void {
@@ -323,8 +351,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         const idx = haystack.indexOf(needle, from);
         if (idx < 0) break;
         this.searchMatches.push({ lineNumber: line.number });
+        if (this.searchMatches.length >= MAX_SEARCH_MATCHES) break;
         from = idx + needle.length;
       }
+      if (this.searchMatches.length >= MAX_SEARCH_MATCHES) break;
     }
     if (this.searchActiveIndex >= this.searchMatches.length) {
       this.searchActiveIndex = this.searchMatches.length > 0 ? 0 : -1;
@@ -415,7 +445,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (start === undefined) return false;
     const found = this.buffer.some((line) => line.number === start);
     if (!found) return false;
-    this.follow = false;
+    if (this.follow) {
+      this.follow = false;
+      this.emit('lr-follow-change', { following: false });
+    }
     this.scrollTargetLineNumber = start;
     await this.updateComplete;
     return true;
@@ -457,6 +490,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   // --- Follow tracking via virtual-list's visible-range event ---------------
 
   private onVisibleRangeChanged = (e: CustomEvent<VirtualListRange>): void => {
+    e.stopPropagation();
     const atBottom = this.lines.length === 0 || e.detail.end >= this.lines.length - 1;
     if (atBottom !== this.follow) {
       this.follow = atBottom;
@@ -529,7 +563,11 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return {
       cursor: highlight ? 'pointer' : '',
       outline: isMatchLine
-        ? `var(--lr-size-2px) solid ${isActiveMatchLine ? 'var(--lr-color-brand)' : 'var(--lr-color-warning)'}`
+        ? `var(--lr-size-2px) solid ${
+            isActiveMatchLine
+              ? 'var(--lr-terminal-search-active-outline-color, var(--lr-color-brand))'
+              : 'var(--lr-terminal-search-outline-color, var(--lr-color-warning))'
+          }`
         : '',
       background: highlight?.tone ? TONE_BACKGROUND_VAR[highlight.tone] : '',
     };
@@ -550,6 +588,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         data-highlight-tone=${tone ?? nothing}
         tabindex=${highlight ? '0' : nothing}
         role=${highlight ? 'button' : nothing}
+        aria-current=${highlight ? (highlight.id === this.activeHighlightId ? 'true' : 'false') : nothing}
         @click=${highlight ? () => this.activateHighlight(highlight) : nothing}
         @keydown=${highlight ? (e: KeyboardEvent) => this.onLineKeyDown(e, highlight) : nothing}
       >${groupCells(line.cells).map(
@@ -596,6 +635,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         <div
           part="viewport"
           role="log"
+          aria-live="off"
           aria-label=${ariaLabel}
           @keydown=${this.onViewportKeyDown}
           @pointerup=${this.onViewportPointerUp}

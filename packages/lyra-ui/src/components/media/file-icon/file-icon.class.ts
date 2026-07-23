@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/attachment-chip.js';
@@ -56,7 +57,14 @@ export class LyraFileIcon extends LyraElement {
     // false anyway (so no crash), but normalizing here keeps it explicit and consistent with
     // this library's other numeric guards, rather than relying on that comparison quirk.
     const size = finiteRange(this.size, 0, 0);
-    const sizeText = size > 0 ? formatFileSize(size, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit])) : '';
+    const sizeText =
+      size > 0
+        ? formatFileSize(
+            size,
+            (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
+            (value) => getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 }).format(value),
+          )
+        : '';
     const accessibleLabel = sizeText
       ? this.localize('fileTypeWithSize', undefined, { label: localizedLabel, size: sizeText })
       : localizedLabel;

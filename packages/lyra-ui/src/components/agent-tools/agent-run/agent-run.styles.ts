@@ -3,7 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
-    --lr-agent-run-spin: 1s linear;
+    --lr-agent-run-spin: var(--lr-transition-ambient);
   }
   [part='base'] {
     display: flex;
@@ -97,6 +97,9 @@ export const styles = css`
     flex: 0 0 auto;
     font-size: var(--lr-font-size-sm);
   }
+  [part='summary'][hidden] {
+    display: none;
+  }
   [part='metric'] {
     display: inline-flex;
     align-items: baseline;
@@ -110,9 +113,15 @@ export const styles = css`
     font-variant-numeric: tabular-nums;
     font-weight: var(--lr-font-weight-semibold);
   }
-  [part='metric-value'][data-variant='danger'] { color: var(--lr-color-danger); }
-  [part='metric-value'][data-variant='success'] { color: var(--lr-color-success); }
-  [part='metric-value'][data-variant='warning'] { color: var(--lr-color-warning); }
+  [part='metric-value'][data-variant='danger'] {
+    color: var(--lr-agent-run-metric-danger-color, var(--lr-color-danger));
+  }
+  [part='metric-value'][data-variant='success'] {
+    color: var(--lr-agent-run-metric-success-color, var(--lr-color-success));
+  }
+  [part='metric-value'][data-variant='warning'] {
+    color: var(--lr-agent-run-metric-warning-color, var(--lr-color-warning));
+  }
   [part='model'] {
     color: var(--lr-color-text-quiet);
     white-space: nowrap;

@@ -82,6 +82,8 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
   private readonly elements = new Map<string, HTMLElement>();
   private readonly actionHandlers = new WeakMap<HTMLElement, ActionHandlerState>();
   private readonly bindingHandlers = new WeakMap<HTMLElement, BindingHandlerState[]>();
+  private readonly assignedProps = new WeakMap<HTMLElement, Set<string>>();
+  private readonly initialProps = new WeakMap<HTMLElement, Map<string, unknown>>();
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated || changed.has('tree') || changed.has('document') || changed.has('state') || changed.has('registry')) {
@@ -136,6 +138,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     return {
       display: 'flex',
       'flex-direction': node.kind === 'builtin-row' ? 'row' : 'column',
+      'flex-wrap': node.kind === 'builtin-row' ? 'wrap' : 'nowrap',
       ...(gap ? { gap } : {}),
       ...(align ? { 'align-items': align } : {}),
       ...(justify ? { 'justify-content': justify } : {}),
@@ -144,11 +147,11 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   private syncActionHandler(el: HTMLElement, node: ResolvedElement): void {
     const existing = this.actionHandlers.get(el);
-    if (existing && existing.event !== node.actionEvent) {
+    if (existing) {
       el.removeEventListener(existing.event, existing.handler);
       this.actionHandlers.delete(el);
     }
-    if (node.actionEvent && !this.actionHandlers.has(el)) {
+    if (node.actionEvent) {
       const handler: EventListener = (e) => {
         e.stopPropagation();
         if (node.actionId !== undefined) {
@@ -168,6 +171,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     for (const binding of node.bindings) {
       if (!binding.event) continue;
       const handler: EventListener = (event) => {
+        event.stopPropagation();
         const detail = (event as CustomEvent<unknown>).detail;
         const detailValue =
           detail && typeof detail === 'object' && 'value' in detail
@@ -198,9 +202,22 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     const existing = this.elements.get(node.key);
     const el = existing && existing.tagName.toLowerCase() === node.tag ? existing : document.createElement(node.tag);
     if (el !== existing) this.elements.set(node.key, el);
+    const previousKeys = this.assignedProps.get(el) ?? new Set<string>();
+    const initialValues = this.initialProps.get(el) ?? new Map<string, unknown>();
+    const nextKeys = new Set(Object.keys(node.props));
+    for (const key of previousKeys) {
+      if (!nextKeys.has(key)) {
+        (el as unknown as Record<string, unknown>)[key] = initialValues.get(key);
+      }
+    }
     for (const [k, v] of Object.entries(node.props)) {
+      if (!initialValues.has(k)) {
+        initialValues.set(k, (el as unknown as Record<string, unknown>)[k]);
+      }
       (el as unknown as Record<string, unknown>)[k] = v;
     }
+    this.assignedProps.set(el, nextKeys);
+    this.initialProps.set(el, initialValues);
     const slotValue = node.slot ?? '';
     if (el.getAttribute('slot') !== slotValue) {
       if (slotValue) el.setAttribute('slot', slotValue);
@@ -214,7 +231,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   private renderChildValue(node: ResolvedNode): unknown {
     if (node.kind === 'text') {
-      return node.slot ? html`<span slot=${node.slot}>${node.text}</span>` : node.text;
+      return html`<span class="widget-text" slot=${node.slot ?? nothing}>${node.text}</span>`;
     }
     if (node.kind === 'mapped') {
       return this.getOrCreateElement(node) ?? nothing;

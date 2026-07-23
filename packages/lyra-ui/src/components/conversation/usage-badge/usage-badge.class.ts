@@ -15,13 +15,19 @@ interface FormattedDuration {
 /** `820` -> `"820ms"`; `1500` -> `"1.5s"`; `2000` -> `"2s"`. Identical algorithm to
  *  `<lr-tool-call-chip>`'s own `formatDuration`, duplicated locally -- two independent,
  *  separately-consumable components. */
-function formatDuration(ms: number): FormattedDuration {
+function formatDuration(ms: number, locale: string): FormattedDuration {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, ms))) };
+    return {
+      key: 'durationMilliseconds',
+      value: getNumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(Math.max(0, ms))),
+    };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
-  return { key: 'durationSeconds', value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1) };
+  return {
+    key: 'durationSeconds',
+    value: getNumberFormat(locale, { maximumFractionDigits: 1 }).format(rounded),
+  };
 }
 
 /**
@@ -89,9 +95,19 @@ export class LyraUsageBadge extends LyraElement {
   private hovering = false;
   private focused = false;
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues<this>): void {
     if (!this.hasUpdated) {
       this.hasDefaultSlot = Array.from(this.children).length > 0;
+    }
+    if (
+      this.hasUpdated &&
+      (changed.has('tokensIn') ||
+        changed.has('tokensOut') ||
+        changed.has('costText') ||
+        changed.has('latencyMs')) &&
+      !this.hasTooltipContent
+    ) {
+      this.closeTooltipLifecycle();
     }
   }
 
@@ -124,7 +140,7 @@ export class LyraUsageBadge extends LyraElement {
 
   private onDefaultSlotChange = (e: Event): void => {
     this.hasDefaultSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
-    if (!this.hasDefaultSlot && !this.hasVisibleContent) this.hideTooltip();
+    if (!this.hasDefaultSlot && !this.hasVisibleContent) this.closeTooltipLifecycle();
   };
 
   private get hasTokensIn(): boolean {
@@ -163,7 +179,7 @@ export class LyraUsageBadge extends LyraElement {
   }
   private localizedDuration(ms: number): string {
     if (this.formatLatency) return this.formatLatency(ms);
-    const d = formatDuration(ms);
+    const d = formatDuration(ms, this.effectiveLocale);
     return this.localize(d.key, undefined, { value: d.value });
   }
 
@@ -174,6 +190,14 @@ export class LyraUsageBadge extends LyraElement {
   private hideTooltip(): void {
     if (!this.tooltipOpen) return;
     this.tooltipOpen = false;
+  }
+
+  private closeTooltipLifecycle(): void {
+    this.tooltipOpen = false;
+    this.hovering = false;
+    this.focused = false;
+    this.cleanupPositioner?.();
+    this.cleanupPositioner = undefined;
   }
 
   private onMouseEnter = (): void => {
@@ -250,7 +274,9 @@ export class LyraUsageBadge extends LyraElement {
           ${this.hasLatency
             ? html`<div class="row"><span>${this.localize('usageBadgeLatencyLabel')}</span><span>${this.localizedDuration(this.validLatencyMs!)}</span></div>`
             : nothing}
-          <slot @slotchange=${this.onDefaultSlotChange}></slot>
+          <span class="slot-content" inert>
+            <slot @slotchange=${this.onDefaultSlotChange}></slot>
+          </span>
         </div>
       </div>
     `;

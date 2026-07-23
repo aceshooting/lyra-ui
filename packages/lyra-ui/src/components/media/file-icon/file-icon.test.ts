@@ -56,6 +56,13 @@ describe('lr-file-icon', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
 
+  it('formats the size number with the effective locale', async () => {
+    const el = await fixture(html`
+      <lr-file-icon lang="ar-EG" mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.contain('٢٫٣');
+  });
+
   it('renders no size part when size is unset', async () => {
     const el = await fixture(html`<lr-file-icon mime-type="application/pdf" variant="label"></lr-file-icon>`);
     expect(el.shadowRoot!.querySelector('[part="size"]')).to.not.exist;

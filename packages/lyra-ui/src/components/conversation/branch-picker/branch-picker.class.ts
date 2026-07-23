@@ -88,6 +88,12 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
     this.nextButtonEl?.blur();
   }
 
+  /** Activates the currently enabled chevron, matching a click on the shadow control. */
+  override click(): void {
+    const target = this.normalizedIndex > 0 ? this.previousButtonEl : this.nextButtonEl;
+    (target ?? this.previousButtonEl ?? this.nextButtonEl)?.click();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const wasMounting = this.isMounting;
@@ -97,11 +103,16 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
       // navigation like this one is a single, deliberate event, not a burst of streaming updates
       // to throttle, and a delayed/dropped announcement here would read as the control silently
       // failing. Same reasoning as `<lr-chat-message>`'s own forced status-change announcements.
-      this.liveRegion?.announce(
-        this.localize('branchPosition', undefined, { index: this.normalizedIndex + 1, total: this.normalizedCount }),
-        { force: true },
-      );
+      const formatter = getNumberFormat(this.effectiveLocale);
+      this.liveRegion?.announce(this.formatPosition(formatter), { force: true });
     }
+  }
+
+  private formatPosition(formatter = getNumberFormat(this.effectiveLocale)): string {
+    return this.localize('branchPosition', undefined, {
+      index: formatter.format(this.normalizedIndex + 1),
+      total: formatter.format(this.normalizedCount),
+    });
   }
 
   private requestIndex(next: number): void {
@@ -131,7 +142,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
         >
           <span part="previous-glyph">${chevronIcon()}</span>
         </button>
-        <span part="position">${formatter.format(index + 1)} / ${formatter.format(count)}</span>
+        <span part="position">${this.formatPosition(formatter)}</span>
         <button
           part="next-button"
           type="button"

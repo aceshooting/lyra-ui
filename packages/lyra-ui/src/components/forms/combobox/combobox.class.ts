@@ -10,6 +10,7 @@ import { styles } from './combobox.styles.js';
 import { LyraOption } from './option.class.js';
 import './option.class.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -69,7 +70,9 @@ export interface ComboboxSourceRow {
 /** Async row provider for a remote-backed combobox. Receives the current query and an options bag
  *  carrying an `AbortSignal` that the component aborts when a newer query supersedes this one or the
  *  element disconnects — forward it to `fetch(url, { signal })` to cancel stale in-flight requests.
- *  The second parameter is optional, so an existing `(query) => …` source stays assignable. */
+ *  The options parameter is required by the exported type so implementations can consume the
+ *  cancellation signal. A one-parameter `(query) => …` function remains assignable under
+ *  TypeScript's ordinary function-parameter compatibility rules. */
 export type ComboboxSource = (
   query: string,
   options: { signal: AbortSignal },
@@ -147,6 +150,7 @@ export interface LyraComboboxEventMap {
  * @csspart option-overflow - The "+N more" indicator shown when rows are capped by `maxRender`.
  * @csspart tags - The multi-select tag container.
  * @csspart tag - An individual selected tag.
+ * @csspart tag-label - The wrapping/ellipsis-safe selected-tag label.
  * @csspart tag__remove-button - A tag's remove button.
  * @csspart clear-button - The clear button.
  * @csspart expand-icon - The dropdown indicator.
@@ -257,6 +261,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   @state() private hasStartSlot = false;
   @state() private hasEndSlot = false;
   @state() private loading = false;
+  @state() private sourceFailed = false;
   @state() private asyncRows: ComboboxSourceRow[] = [];
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
   private sourceTimer?: ReturnType<typeof setTimeout>;
@@ -439,6 +444,18 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // -- capture that distinction here, while it's still reliable, for
     // `updated()`'s `open`-handling below to consult.
     this._isFirstUpdate = !this.hasUpdated;
+    if (changed.has('source')) {
+      clearTimeout(this.sourceTimer);
+      this.sourceAbort?.abort();
+      this.sourceAbort = undefined;
+      this.sourceToken++;
+      this.loading = false;
+      this.sourceFailed = false;
+      this.asyncRows = [];
+      this.activeIndex = -1;
+      this._sourceWarmed = false;
+      if (this.source && this.open) this.runSource(this.query);
+    }
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -830,7 +847,14 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
     // and re-filter the list from it. Multiple mode is unaffected: its input
     // always shows `query` regardless of `open`, by design (a persistent
     // search box next to the tags).
-    if (!this.multiple) this.query = '';
+    if (!this.multiple) {
+      const queryChanged = this.query !== '';
+      this.query = '';
+      if (queryChanged && this.source) {
+        this.asyncRows = [];
+        this.sourceFailed = false;
+      }
+    }
   }
   private onDocPointer = (e: PointerEvent): void => {
     if (!e.composedPath().includes(this)) this.hide();
@@ -960,7 +984,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   };
 
   private runSource(query: string): void {
-    if (!this.source) return;
+    const source = this.source;
+    if (!source) return;
     clearTimeout(this.sourceTimer);
     // Abort any in-flight request from a prior query so its fetch can be cancelled.
     this.sourceAbort?.abort();
@@ -969,16 +994,22 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
       const controller = new AbortController();
       this.sourceAbort = controller;
       this.loading = true;
+      this.sourceFailed = false;
       // `Promise.resolve().then(() => this.source!(query, ...))` moves the call
       // itself inside a `.then()` callback, so a *synchronous* throw from
       // `this.source(query)` becomes a normal promise rejection the
       // following `.catch()` handles, instead of escaping this `setTimeout`
       // callback as an uncaught exception.
       Promise.resolve()
-        .then(() => this.source!(query, { signal: controller.signal }))
+        .then(() => source(query, { signal: controller.signal }))
         .then((rows) => {
           if (token !== this.sourceToken || !this.isConnected) return;
           this.asyncRows = rows;
+          this.sourceFailed = false;
+          const navigableCount = rows.filter((row) => !row.disabled).length;
+          if (this.activeIndex >= navigableCount) {
+            this.activeIndex = navigableCount ? navigableCount - 1 : -1;
+          }
           const selected = new Set(this._selected);
           for (const row of rows) {
             if (selected.has(row.value)) this._selectedRowCache.set(row.value, row);
@@ -989,6 +1020,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           // A caller that forwarded the signal to fetch() surfaces cancellation as an AbortError;
           // that is expected teardown, not a source failure, so don't warn about it.
           if (err instanceof DOMException && err.name === 'AbortError') return;
+          this.asyncRows = [];
+          this.activeIndex = -1;
+          this.sourceFailed = true;
           console.warn('<lr-combobox> source() rejected:', err);
         })
         .finally(() => {
@@ -1115,15 +1149,30 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
   private renderRows(rows: ComboboxSourceRow[], activeId: string): TemplateResult[] {
     const out: TemplateResult[] = [];
     let currentGroup: string | undefined;
+    let currentGroupRows: TemplateResult[] = [];
+    let groupIndex = 0;
     const selectedSet = new Set(this._selected);
+    const flushGroup = (): void => {
+      if (!currentGroupRows.length) return;
+      if (currentGroup) {
+        const labelId = `${this.listId}-group-${groupIndex++}`;
+        out.push(html`<div role="group" aria-labelledby=${labelId}>
+          <div id=${labelId} class="group-label">${currentGroup}</div>
+          ${currentGroupRows}
+        </div>`);
+      } else {
+        out.push(...currentGroupRows);
+      }
+      currentGroupRows = [];
+    };
     rows.forEach((o, i) => {
       if (o.group !== currentGroup) {
+        flushGroup();
         currentGroup = o.group;
-        if (currentGroup) out.push(html`<div class="group-label">${currentGroup}</div>`);
       }
       const id = `${this.listId}-opt-${i}`;
       const selected = selectedSet.has(o.value);
-      out.push(
+      currentGroupRows.push(
         html`<div
           part="option"
           id=${id}
@@ -1144,6 +1193,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         </div>`,
       );
     });
+    flushGroup();
     return out;
   }
 
@@ -1179,7 +1229,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           <div part="tags">
             ${shownTags.map(
               (v) => html`<span part="tag"
-                >${this.labelFor(v)}<button
+                ><span part="tag-label">${this.labelFor(v)}</span><button
                   part="tag__remove-button"
                   type="button"
                   ?disabled=${this.effectiveDisabled}
@@ -1193,7 +1243,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
                 ></span
               >`,
             )}
-            ${extra > 0 ? html`<span part="tag">+${extra}</span>` : ''}
+            ${extra > 0
+              ? html`<span part="tag">${this.localize('comboboxSelectedOverflow', undefined, {
+                  n: getNumberFormat(this.effectiveLocale).format(extra),
+                })}</span>`
+              : ''}
           </div>
           <input
             id=${this.inputId}
@@ -1204,7 +1258,7 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
             aria-describedby=${describedBy || nothing}
             aria-expanded=${this.open ? 'true' : 'false'}
             aria-controls=${this.listId}
-            aria-activedescendant=${activeId}
+            aria-activedescendant=${activeId || nothing}
             aria-autocomplete="list"
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
@@ -1251,6 +1305,8 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
         >
           ${this.loading
             ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true">${this.localize('loading', this.loadingText || undefined)}</div>`
+            : this.sourceFailed
+              ? html`<div class="source-error" role="alert">${this.localize('comboboxLoadError')}</div>`
             : rows.length === 0
               ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.localize('noMatches', this.emptyText || undefined)}</div>`
               : html`${this.renderRows(rows, activeId)}

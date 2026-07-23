@@ -63,7 +63,7 @@ export const styles = css`
   }
 
   [part='request'][data-selected='true'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-approval-queue-selected-border, var(--lr-color-brand));
   }
 
   [part='request-info'] {

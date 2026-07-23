@@ -68,7 +68,11 @@ export const styles = css`
   }
 
   [part='provider-badge'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
     padding-inline-end: var(--lr-space-xs);
     margin-inline-end: var(--lr-space-xs);
     border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -150,8 +154,8 @@ export const styles = css`
     cursor: not-allowed;
   }
   [part='preview-button'][aria-pressed='true'] {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
+    border-color: var(--lr-voice-picker-preview-active-border, var(--lr-color-brand));
+    color: var(--lr-voice-picker-preview-active-color, var(--lr-color-brand));
   }
 
   [part='listbox'] {
@@ -213,12 +217,16 @@ export const styles = css`
   }
   [part='option']:hover,
   [part='option'][data-active] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-voice-picker-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
-    font-weight: var(--lr-font-weight-semibold);
+    border-color: var(--lr-voice-picker-option-selected-border, var(--lr-color-brand));
+    color: var(--lr-voice-picker-option-selected-color, var(--lr-color-brand));
+    background: var(--lr-voice-picker-option-selected-bg, transparent);
+    font-weight: var(
+      --lr-voice-picker-option-selected-font-weight,
+      var(--lr-font-weight-semibold)
+    );
   }
   [part='option-label'] {
     flex: 1 1 auto;
@@ -259,8 +267,15 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border-radius: var(--lr-radius);
     color: var(--lr-color-text-quiet);
     cursor: pointer;
+  }
+  [part='option-preview']:hover {
+    background: var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
 
   [part='empty'] {

@@ -4,10 +4,6 @@ export const styles = css`
   :host {
     display: inline-flex;
     max-inline-size: 100%;
-    /* Establishes the containment the @container rule below queries against -- without it, that
-       rule is permanently inert unless a consumer happens to declare container-type: inline-size
-       on some ancestor themselves. Matches lr-pagination's identical :host declaration. */
-    container-type: inline-size;
   }
   :host([reveal-on-hover]) {
     opacity: 0;
@@ -61,10 +57,5 @@ export const styles = css`
   [part~='edit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
-  }
-  @container (max-inline-size: 20rem) {
-    [part='base'] {
-      inline-size: 100%;
-    }
   }
 `;

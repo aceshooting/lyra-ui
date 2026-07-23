@@ -100,3 +100,17 @@ export const Sizes: Story = {
     </div>
   `,
 };
+
+/** 320px allocation with long localized labels and a populated grid. */
+export const Narrow: Story = {
+  name: 'Narrow (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-emoji-picker
+        label="Choose an emoji for the international incident-response announcement"
+        hint="Search by a localized name or shortcode; groups and results wrap within this panel."
+        .groups=${groups}
+      ></lr-emoji-picker>
+    </div>
+  `,
+};

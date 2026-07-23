@@ -21,7 +21,7 @@ it('opens a popover from its slotted trigger and wires dialog semantics', async 
 });
 
 it('uses menu semantics for dropdowns', async () => {
-  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
+  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`);
   const trigger = el.querySelector('button') as HTMLButtonElement;
   expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
   trigger.click();
@@ -35,7 +35,7 @@ it('uses menu semantics for dropdowns', async () => {
 // <lr-tooltip>; none of those would catch a menu-semantics regression (e.g. a bad
 // aria-haspopup/role combination) introduced by lr-dropdown's constructor override.
 it('is accessible, both closed and with its menu open', async () => {
-  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
+  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`);
   await expect(el).to.be.accessible();
 
   const trigger = el.querySelector('button') as HTMLButtonElement;
@@ -66,6 +66,36 @@ it('shows a tooltip after focus and describes the trigger', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('promotes actionable tooltip content to a focus-persistent dialog surface', async () => {
+  const outside = document.createElement('button');
+  outside.textContent = 'Outside';
+  document.body.appendChild(outside);
+  try {
+    const el = (await fixture(html`
+      <lr-tooltip delay="0" .strings=${{ popover: 'Helpful actions' }}>
+        <button slot="trigger">Help</button>
+        <button>Learn more</button>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+    const action = el.querySelector('button:not([slot])') as HTMLButtonElement;
+    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    trigger.focus();
+    await el.updateComplete;
+    expect(popup.getAttribute('role')).to.equal('dialog');
+    expect(popup.getAttribute('aria-label')).to.equal('Helpful actions');
+    action.focus();
+    await el.updateComplete;
+    expect(el.open, 'moving focus into actionable content must keep it available').to.be.true;
+    outside.focus();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+    await expect(el).to.be.accessible();
+  } finally {
+    outside.remove();
+  }
+});
+
 it('positions a tooltip that is open on first render against its slotted trigger', async () => {
   const el = (await fixture(html`
     <div style="margin-inline-start: 300px; margin-block-start: 100px">
@@ -85,7 +115,7 @@ it('positions a tooltip that is open on first render against its slotted trigger
 });
 
 it('names a dropdown popup "Menu", not "Popover", since it inherits LyraPopover with popupRole=menu', async () => {
-  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><div>Item</div></lr-dropdown>`);
+  const el = await fixture(html`<lr-dropdown><button slot="trigger">Actions</button><button role="menuitem">Item</button></lr-dropdown>`);
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   expect(popup.getAttribute('aria-label')).to.equal('Menu');
 });
@@ -193,6 +223,115 @@ it('unbinds hover/focus listeners and stale aria-describedby from a trigger swap
   newTrigger.focus();
   await el.updateComplete;
   expect(el.open, 'the newly slotted trigger must drive the tooltip').to.be.true;
+});
+
+it('preserves author trigger ARIA while a tooltip describes it and restores it on replacement', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip delay="0">Info<button slot="trigger" aria-describedby="author-help">A</button></lr-tooltip>
+  `)) as LyraTooltip;
+  const oldTrigger = el.querySelector('button') as HTMLButtonElement;
+  oldTrigger.focus();
+  await el.updateComplete;
+  expect(oldTrigger.getAttribute('aria-describedby')?.split(/\s+/)).to.include('author-help');
+  expect(oldTrigger.getAttribute('aria-describedby')?.split(/\s+/).length).to.equal(2);
+
+  oldTrigger.setAttribute('aria-describedby', 'late-help');
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(oldTrigger.getAttribute('aria-describedby')?.split(/\s+/)).to.include('late-help');
+  expect(oldTrigger.getAttribute('aria-describedby')?.split(/\s+/).length).to.equal(2);
+
+  const replacement = document.createElement('button');
+  replacement.slot = 'trigger';
+  replacement.textContent = 'B';
+  oldTrigger.replaceWith(replacement);
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(oldTrigger.getAttribute('aria-describedby')).to.equal('late-help');
+});
+
+it('restores author popover trigger ARIA when its trigger is replaced', async () => {
+  const el = (await fixture(html`
+    <lr-popover>
+      <button slot="trigger" aria-haspopup="listbox" aria-controls="author-list" aria-expanded="mixed">A</button>
+      <p>Content</p>
+    </lr-popover>
+  `)) as LyraPopover;
+  const oldTrigger = el.querySelector('button') as HTMLButtonElement;
+  oldTrigger.setAttribute('aria-controls', 'late-list');
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(oldTrigger.getAttribute('aria-controls')?.split(/\s+/)).to.include('late-list');
+  expect(oldTrigger.getAttribute('aria-controls')?.split(/\s+/).length).to.equal(2);
+
+  const replacement = document.createElement('button');
+  replacement.slot = 'trigger';
+  replacement.textContent = 'B';
+  oldTrigger.replaceWith(replacement);
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+
+  expect(oldTrigger.getAttribute('aria-haspopup')).to.equal('listbox');
+  expect(oldTrigger.getAttribute('aria-controls')).to.equal('late-list');
+  expect(oldTrigger.getAttribute('aria-expanded')).to.equal('mixed');
+});
+
+it('cancels a delayed tooltip open when manual mode, explicit close, or trigger ownership changes', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip delay="40">Info<button slot="trigger">A</button></lr-tooltip>
+  `)) as LyraTooltip;
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+
+  trigger.dispatchEvent(new FocusEvent('focus'));
+  el.manual = true;
+  await el.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  expect(el.open).to.be.false;
+
+  el.manual = false;
+  trigger.dispatchEvent(new FocusEvent('focus'));
+  el.open = false;
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  expect(el.open).to.be.false;
+
+  trigger.dispatchEvent(new FocusEvent('focus'));
+  const replacement = document.createElement('button');
+  replacement.slot = 'trigger';
+  replacement.textContent = 'B';
+  trigger.replaceWith(replacement);
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  expect(el.open).to.be.false;
+});
+
+it('activates Escape ownership when showAt converts an already-open trigger overlay to a virtual anchor', async () => {
+  const popover = (await fixture(
+    html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+  )) as LyraPopover;
+  await popover.updateComplete;
+  popover.showAt({ x: 30, y: 30 });
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await popover.updateComplete;
+  expect(popover.open).to.be.false;
+
+  const tooltip = (await fixture(
+    html`<lr-tooltip open manual><button slot="trigger">Help</button>Info</lr-tooltip>`,
+  )) as LyraTooltip;
+  await tooltip.updateComplete;
+  tooltip.showAt({ x: 30, y: 30 });
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await tooltip.updateComplete;
+  expect(tooltip.open).to.be.false;
+});
+
+it('contains long tooltip content within a 320px allocation', async () => {
+  const wrapper = (await fixture(html`
+    <div style="inline-size:320px">
+      <lr-tooltip open manual>${'unbroken'.repeat(150)}<button slot="trigger">Help</button></lr-tooltip>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-tooltip') as LyraTooltip;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(popup.getBoundingClientRect().width).to.be.at.most(320);
+  expect(popup.scrollWidth).to.be.at.most(popup.clientWidth);
 });
 
 it('lets a consumer retheme the popover popup width via --lr-overlay-max-inline-size', async () => {

@@ -7,6 +7,8 @@ import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './retrieval-compare.styles.js';
 
+let retrievalCompareInstance = 0;
+
 export interface RetrievalComparisonSet {
   id: string;
   label: string;
@@ -46,6 +48,8 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   @property({ attribute: 'selected-chunk-id' }) selectedChunkId = '';
   @property() label = '';
 
+  private readonly headingIdPrefix = `lr-retrieval-compare-${++retrievalCompareInstance}`;
+
   private get effectiveTopK(): number {
     return Math.max(1, finiteCount(this.topK, 10));
   }
@@ -68,14 +72,33 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     );
   }
 
-  private overlap(): string {
-    if (this.sets.length < 2) return '';
-    const left = new Set(this.orderedChunks(this.sets[0]!).map((chunk) => chunk.id));
-    const right = new Set(this.orderedChunks(this.sets[1]!).map((chunk) => chunk.id));
-    const intersection = [...left].filter((id) => right.has(id)).length;
-    const union = new Set([...left, ...right]).size;
-    const percent = this.formatScore(union ? intersection / union : 0);
-    return this.localize('retrievalCompareOverlap', undefined, { percent });
+  private overlaps(): Array<{
+    left: RetrievalComparisonSet;
+    right: RetrievalComparisonSet;
+    summary: string;
+  }> {
+    const summaries: Array<{
+      left: RetrievalComparisonSet;
+      right: RetrievalComparisonSet;
+      summary: string;
+    }> = [];
+    for (let leftIndex = 0; leftIndex < this.sets.length; leftIndex += 1) {
+      const leftSet = this.sets[leftIndex]!;
+      const left = new Set(this.orderedChunks(leftSet).map((chunk) => chunk.id));
+      for (let rightIndex = leftIndex + 1; rightIndex < this.sets.length; rightIndex += 1) {
+        const rightSet = this.sets[rightIndex]!;
+        const right = new Set(this.orderedChunks(rightSet).map((chunk) => chunk.id));
+        const intersection = [...left].filter((id) => right.has(id)).length;
+        const union = new Set([...left, ...right]).size;
+        const percent = this.formatScore(union ? intersection / union : 0);
+        summaries.push({
+          left: leftSet,
+          right: rightSet,
+          summary: this.localize('retrievalCompareOverlap', undefined, { percent }),
+        });
+      }
+    }
+    return summaries;
   }
 
   private scoreEntries(chunk: RetrievalChunk): Array<[string, number]> {
@@ -88,9 +111,11 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
     ].filter((entry): entry is [string, number] => typeof entry[1] === 'number');
   }
 
-  private renderSet = (set: RetrievalComparisonSet): TemplateResult => html`
-    <section part="set" aria-labelledby=${`set-${set.id}`}>
-      <h3 part="set-heading" id=${`set-${set.id}`}>${set.label}</h3>
+  private renderSet = (set: RetrievalComparisonSet, setIndex: number): TemplateResult => {
+    const headingId = `${this.headingIdPrefix}-set-${setIndex}`;
+    return html`
+    <section part="set" aria-labelledby=${headingId}>
+      <h3 part="set-heading" id=${headingId}>${set.label}</h3>
       <ol part="chunks">
         ${this.orderedChunks(set).map((chunk, index) => {
           const selected = chunk.id === this.selectedChunkId;
@@ -104,7 +129,11 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
                 aria-pressed=${selected ? 'true' : 'false'}
                 @click=${() => this.emit('lr-chunk-select', { setId: set.id, chunk })}
               >
-                <span part="chunk-rank">${this.localize('retrievalCompareRank', undefined, { rank })}</span>
+                <span part="chunk-rank"
+                  >${this.localize('retrievalCompareRank', undefined, {
+                    rank: getNumberFormat(this.effectiveLocale).format(rank),
+                  })}</span
+                >
                 <strong part="chunk-title">${chunk.source.name}</strong>
                 <span part="chunk-text">${chunk.text}</span>
                 <span part="scores">
@@ -121,6 +150,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
       </ol>
     </section>
   `;
+  };
 
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.label || this.localize('retrievalCompareLabel');
@@ -129,11 +159,14 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         <lr-empty part="empty" heading=${this.localize('retrievalCompareEmpty')}></lr-empty>
       </section>`;
     }
-    const overlap = this.overlap();
+    const overlaps = this.overlaps();
     return html`
       <section part="base" aria-label=${label}>
-        ${overlap ? html`<p part="overlap">${overlap}</p>` : nothing}
-        <div part="sets">${this.sets.map(this.renderSet)}</div>
+        ${overlaps.map(
+          ({ left, right, summary }) =>
+            html`<p part="overlap"><span>${left.label}</span><span>${right.label}</span><span>${summary}</span></p>`,
+        )}
+        <div part="sets">${this.sets.map((set, index) => this.renderSet(set, index))}</div>
       </section>
     `;
   }

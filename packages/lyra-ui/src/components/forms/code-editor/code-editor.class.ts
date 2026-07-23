@@ -35,7 +35,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @event input - User edited the code.
  * @event change - Native change timing.
  * @csspart form-control - Outer wrapper.
- * @csspart label - Label.
+ * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
+ * @csspart label - Alias of `form-control-label`.
  * @csspart editor - Editor frame.
  * @csspart gutter - Line-number gutter.
  * @csspart textarea - Native textarea.
@@ -100,11 +101,20 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @state() private hasHintSlot = false;
   @state() private hasErrorSlot = false;
   @query('textarea') private textarea?: HTMLTextAreaElement;
+  override click(): void { if (!this.effectiveDisabled) this.textarea?.click(); }
   override focus(options?: FocusOptions): void { this.textarea?.focus(options); }
   override blur(): void { this.textarea?.blur(); }
   select(): void { this.textarea?.select(); }
   get selectionStart(): number { return this.textarea?.selectionStart ?? 0; }
+  set selectionStart(value: number) { if (this.textarea) this.textarea.selectionStart = value; }
   get selectionEnd(): number { return this.textarea?.selectionEnd ?? 0; }
+  set selectionEnd(value: number) { if (this.textarea) this.textarea.selectionEnd = value; }
+  get selectionDirection(): 'forward' | 'backward' | 'none' {
+    return this.textarea?.selectionDirection ?? 'none';
+  }
+  set selectionDirection(value: 'forward' | 'backward' | 'none') {
+    if (this.textarea) this.textarea.selectionDirection = value;
+  }
   setSelectionRange(start: number, end: number, direction?: 'forward' | 'backward' | 'none'): void { this.textarea?.setSelectionRange(start, end, direction); }
   setRangeText(replacement: string, start?: number, end?: number, selectionMode?: SelectionMode): void {
     const textarea = this.textarea;
@@ -163,9 +173,13 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     const describedBy = [hasError ? 'textarea-error' : '', hasHint ? 'textarea-hint' : ''].filter(Boolean).join(' ');
     const label = this.accessibleLabel || (hasLabel ? nothing : this.localize('codeEditorLabel'));
     return html`<div part="form-control">
-      <label part="label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
+      <label part="label form-control-label" for="textarea" ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
       <div part="editor" data-language=${this.language}>
-        ${this.lineNumbers ? html`<div part="gutter" aria-hidden="true">${Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)}</div>` : nothing}
+        ${this.lineNumbers
+          ? html`<div part="gutter" aria-hidden="true">${lineCount <= 1_000
+              ? Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)
+              : html`<span>${Array.from({ length: lineCount }, (_v, i) => i + 1).join('\n')}</span>`}</div>`
+          : nothing}
         <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${`resize:${this.resize}${tabWidthStyle}`} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
       </div>
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>

@@ -2,6 +2,13 @@ import { expect } from '@open-wc/testing';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS } from './stack-trace-parse.js';
 
 describe('parseStackTrace', () => {
+  it('resets stateful global RegExp patterns before every frame test', () => {
+    const groups = parseStackTrace(
+      ['Error', '    at one (/vendor/a.js:1:1)', '    at two (/vendor/b.js:2:1)'].join('\n'),
+      [/vendor/g],
+    );
+    expect(groups[0]!.frames.map((frame) => frame.internal)).to.deep.equal([true, true]);
+  });
   it('parses a V8/JS trace with function-named frames', () => {
     const trace = [
       'TypeError: Cannot read properties of undefined',

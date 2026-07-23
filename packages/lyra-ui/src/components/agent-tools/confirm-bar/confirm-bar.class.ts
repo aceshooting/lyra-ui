@@ -164,7 +164,15 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
     if (!this.hasUpdated) {
       this.hasBodySlot = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
     }
-    void changed;
+    if (
+      changed.has('decision') &&
+      changed.get('decision') !== undefined &&
+      this.decision != null &&
+      this.pending != null
+    ) {
+      this.statusEl?.focus();
+      this.pending = null;
+    }
   }
 
   private onBodySlotChange = (e: Event): void => {
@@ -198,8 +206,12 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   private renderHeading(): TemplateResult {
     if (this.heading) return html`${this.heading}`;
     const toolName = this.toolName || this.localize('toolApprovalGenericTool');
-    const [before, after] = this.localize('toolApprovalHeading').split('{tool}');
-    return html`${before}<span part="tool-name">${toolName}</span>${after ?? ''}`;
+    const pieces = this.localize('toolApprovalHeading').split('{tool}');
+    return html`${pieces.map((piece, index) =>
+      index < pieces.length - 1
+        ? html`${piece}<span part="tool-name">${toolName}</span>`
+        : piece,
+    )}`;
   }
 
   private statusText(): string {

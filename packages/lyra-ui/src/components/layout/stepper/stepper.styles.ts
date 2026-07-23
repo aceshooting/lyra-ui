@@ -1,10 +1,10 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     gap: var(--lr-space-m);
     /* overflow-y is paired explicitly (never left implicit) alongside every overflow-x here and
@@ -33,7 +33,10 @@ export const styles = css`
       transparent
     );
   }
-  :host([orientation='vertical']) [part='base'] {
+  [part="step-item"] {
+    display: contents;
+  }
+  :host([orientation="vertical"]) [part="base"] {
     flex-direction: column;
     overflow-x: visible;
     overflow-y: visible;
@@ -43,14 +46,14 @@ export const styles = css`
   /* orientationBreakpoint's live axis -- only present while that feature is opted into (see
      stepper.ts's updateEffectiveOrientation()), so it can override the authored orientation rules
      above by source order alone (equal specificity) whenever the effective axis diverges from it. */
-  :host([data-effective-orientation='vertical']) [part='base'] {
+  :host([data-effective-orientation="vertical"]) [part="base"] {
     flex-direction: column;
     overflow-x: visible;
     overflow-y: visible;
     -webkit-mask-image: none;
     mask-image: none;
   }
-  :host([data-effective-orientation='horizontal']) [part='base'] {
+  :host([data-effective-orientation="horizontal"]) [part="base"] {
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
@@ -69,7 +72,7 @@ export const styles = css`
       transparent
     );
   }
-  [part='step'] {
+  [part="step"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
@@ -82,18 +85,18 @@ export const styles = css`
     padding: var(--lr-space-2xs);
     border-radius: var(--lr-radius);
   }
-  [part='step'][aria-disabled='true'] {
+  [part="step"][aria-disabled="true"] {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
      -- (0,1,0) total, so a consumer's own ::part(step):hover override ((0,1,1)) always wins
      without needing !important (mirrors lr-attachment-trigger's identical fix). */
-  :where([part='step']):hover:where(:not([aria-disabled='true'])) {
+  :where([part="step"]):hover:where(:not([aria-disabled="true"])) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-text);
   }
-  [part='step']:focus-visible {
+  [part="step"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -103,25 +106,28 @@ export const styles = css`
      used to require hijacking the shared --lr-color-text/--lr-color-danger/--lr-color-brand tokens,
      which repainted everything else that reads them. Unset, each falls back to the token the rule
      used before, so the rendering is unchanged. */
-  [part='step'][data-state='current'] {
+  [part="step"][data-state="current"] {
     color: var(--lr-stepper-current-color, var(--lr-color-text));
-    font-weight: var(--lr-stepper-current-font-weight, var(--lr-font-weight-semibold));
+    font-weight: var(
+      --lr-stepper-current-font-weight,
+      var(--lr-font-weight-semibold)
+    );
   }
-  [part='step'][data-state='error'] {
+  [part="step"][data-state="error"] {
     color: var(--lr-stepper-error-color, var(--lr-color-danger));
   }
   /* Rendered additionally to, never instead of, step-index/step-check below -- [part="step"]'s
      own gap already spaces it from whichever of those follows, so no margin of its own is
      needed (mirrors lr-segmented's segment-icon, minus its margin-inline-end, which compensates
      for lr-segmented's [part="segment"] having no gap of its own). */
-  [part='step-icon'] {
+  [part="step-icon"] {
     display: inline-flex;
     align-items: center;
     flex: 0 0 auto;
     block-size: var(--lr-size-1em);
     max-inline-size: var(--lr-size-2-5rem);
   }
-  [part='step-index'] {
+  [part="step-index"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -133,15 +139,15 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     flex: 0 0 auto;
   }
-  [part='step'][data-state='current'] [part='step-index'] {
+  [part="step"][data-state="current"] [part="step-index"] {
     background: var(--lr-stepper-current-index-bg, var(--lr-color-brand));
-    color: var(--lr-stepper-current-index-color, var(--lr-color-surface));
+    color: var(--lr-stepper-current-index-color, var(--lr-color-on-brand));
   }
-  [part='step-check'] {
+  [part="step-check"] {
     color: var(--lr-color-success);
     flex: 0 0 auto;
   }
-  [part='step-label'] {
+  [part="step-label"] {
     white-space: nowrap;
   }
 `;

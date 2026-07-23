@@ -49,7 +49,7 @@ export class LyraHandoffDivider extends LyraElement {
   }
 
   override firstUpdated(): void {
-    this.liveRegion?.announce(this.computedLabel, { force: true });
+    this.liveRegion?.announce(this.getAttribute('aria-label') || this.computedLabel, { force: true });
   }
 
   private onAvatarSlotChange = (e: Event): void => {

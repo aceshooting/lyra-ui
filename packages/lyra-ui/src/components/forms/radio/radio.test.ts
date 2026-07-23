@@ -251,6 +251,69 @@ it('clears group-imposed disabled/required on every radio when turned back off',
   expect(radios[1].effectiveRequired).to.be.false;
 });
 
+it('does not move or select from keyboard while the group or fieldset is disabled', async () => {
+  const form = (await fixture(html`
+    <form><fieldset>
+      <lr-radio-group label="Choice">
+        <lr-radio value="a" checked>A</lr-radio>
+        <lr-radio value="b">B</lr-radio>
+      </lr-radio-group>
+    </fieldset></form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-radio-group') as LyraRadioGroup;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const [a, b] = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+  a.checked = true;
+
+  group.disabled = true;
+  await group.updateComplete;
+  a.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(a.checked).to.be.true;
+  expect(b.checked).to.be.false;
+
+  group.disabled = false;
+  fieldset.disabled = true;
+  await group.updateComplete;
+  a.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  expect(a.checked).to.be.true;
+  expect(b.checked).to.be.false;
+});
+
+it('reconciles appended and removed radios and releases group-imposed state', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group name="choice" required disabled>
+      <lr-radio value="a">A</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  group.name = 'choice';
+  const removed = group.querySelector('lr-radio') as LyraRadio;
+  const added = document.createElement('lr-radio') as LyraRadio;
+  added.value = 'b';
+  added.textContent = 'B';
+  const slot = group.shadowRoot!.querySelector('slot:not([name])') as HTMLSlotElement;
+  const appended = oneEvent(slot, 'slotchange');
+  group.append(added);
+  await appended;
+  await added.updateComplete;
+  await group.updateComplete;
+
+  expect(group.querySelectorAll('lr-radio').length).to.equal(2);
+  expect(group.name).to.equal('choice');
+  expect(group.getAttribute('name')).to.equal('choice');
+  expect(added.effectiveDisabled).to.be.true;
+  expect(added.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-required')).to.equal('true');
+  expect(added.shadowRoot!.querySelector('[part="base"]')!.getAttribute('tabindex')).to.equal('-1');
+
+  const removedEvent = oneEvent(slot, 'slotchange');
+  removed.remove();
+  await removedEvent;
+  await removed.updateComplete;
+  await group.updateComplete;
+  expect(removed.effectiveDisabled).to.be.false;
+  expect(removed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-required')).to.equal('false');
+  expect(removed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('tabindex')).to.equal('0');
+});
+
 it('floors the circle with min-* sizing instead of hard-sizing it, so the indicator can never overflow the tap target', async () => {
   const el = (await fixture(html`<lr-radio checked aria-label="One"></lr-radio>`)) as LyraRadio;
   await el.updateComplete;

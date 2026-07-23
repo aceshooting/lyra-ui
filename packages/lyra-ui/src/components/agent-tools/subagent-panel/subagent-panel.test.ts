@@ -14,6 +14,13 @@ it('renders nested runs, localized statuses, tasks, and guarded progress', async
   expect(el.shadowRoot!.querySelector('[data-run-id="writer"]')!.getAttribute('data-depth')).to.equal('1');
   expect(el.shadowRoot!.textContent).to.contain('Find sources');
   expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('aria-valuenow')).to.equal('50');
+  const list = el.shadowRoot!.querySelector('[part="list"]')!;
+  const writer = el.shadowRoot!.querySelector('[data-run-id="writer"]')!;
+  expect(list.getAttribute('role')).to.equal('tree');
+  expect(writer.getAttribute('role')).to.equal('treeitem');
+  expect(writer.getAttribute('aria-level')).to.equal('2');
+  expect(writer.getAttribute('aria-posinset')).to.equal('1');
+  expect(writer.getAttribute('aria-setsize')).to.equal('1');
 });
 
 it('emits full selections plus status-appropriate cancel and retry intents', async () => {
@@ -43,4 +50,37 @@ it('applies per-instance localized strings', async () => {
     .strings=${{ subagentPanelLabel: 'Localized agent hierarchy' }}
   ></lr-subagent-panel>`)) as LyraSubagentPanel;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized agent hierarchy');
+});
+
+it('iteratively bounds a deeply nested hierarchy without overflowing the stack', async () => {
+  const deep: SubagentRun[] = Array.from({ length: 10_000 }, (_, index) => ({
+    id: `run-${index}`,
+    parentId: index === 0 ? undefined : `run-${index - 1}`,
+    label: `Run ${index}`,
+    status: 'done',
+  }));
+  const el = (await fixture(html`<lr-subagent-panel .runs=${deep}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  const rows = el.shadowRoot!.querySelectorAll('[part~="run"]');
+  expect(rows.length).to.equal(500);
+  expect((rows[rows.length - 1] as HTMLElement).style.getPropertyValue('--lr-subagent-depth')).to.equal('12');
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 subagent runs are shown.',
+  );
+});
+
+it('allows selected and progress states to be rethemed independently', async () => {
+  const el = (await fixture(html`
+    <lr-subagent-panel
+      style="
+        --lr-subagent-panel-selected-border: rgb(1, 2, 3);
+        --lr-subagent-panel-progress-fill: rgb(4, 5, 6);
+      "
+      selected-run-id="research"
+      .runs=${runs}
+    ></lr-subagent-panel>
+  `)) as LyraSubagentPanel;
+  const selected = el.shadowRoot!.querySelector('[part~="run-selected"]') as HTMLElement;
+  const fill = el.shadowRoot!.querySelector('[part="progress"] > span') as HTMLElement;
+  expect(getComputedStyle(selected).borderTopColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(fill).backgroundColor).to.equal('rgb(4, 5, 6)');
 });

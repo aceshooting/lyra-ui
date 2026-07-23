@@ -1,3 +1,5 @@
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+
 export interface HistogramBucket {
   label: string;
   count: number;
@@ -17,8 +19,13 @@ export function normalizeHistogramBinCount(binCount: unknown): number {
 /** Splits `values` into `binCount` equal-width buckets and counts membership.
  *  Non-finite `binCount` (or <= 0) yields no buckets; a fractional `binCount`
  *  is floored and an excessive count is capped; non-finite samples in
- *  `values` are dropped rather than corrupting bucket-index math. */
-export function binValues(values: number[], binCount: number): HistogramBucket[] {
+ *  `values` are dropped rather than corrupting bucket-index math. Pass a BCP 47
+ *  `locale` to localize the generated range labels. */
+export function binValues(
+  values: number[],
+  binCount: number,
+  locale?: string,
+): HistogramBucket[] {
   const finite = values.filter((v) => Number.isFinite(v));
   if (finite.length === 0) return [];
   const bins = normalizeHistogramBinCount(binCount);
@@ -39,12 +46,25 @@ export function binValues(values: number[], binCount: number): HistogramBucket[]
   const constant = hi === lo;
   const span = hi - lo || 1;
   const width = span / bins;
+  const numberFormat = getNumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  const formatRange = (
+    numberFormat as Intl.NumberFormat & {
+      formatRange?: (start: number, end: number) => string;
+    }
+  ).formatRange?.bind(numberFormat);
 
   const buckets: HistogramBucket[] = Array.from({ length: bins }, (_, i) => {
     const bLo = lo + i * width;
     const bHi = lo + (i + 1) * width;
     return {
-      label: `${LEFT_TO_RIGHT_ISOLATE}${bLo.toFixed(1)}–${bHi.toFixed(1)}${POP_DIRECTIONAL_ISOLATE}`,
+      label: `${LEFT_TO_RIGHT_ISOLATE}${
+        formatRange
+          ? formatRange(bLo, bHi)
+          : `${numberFormat.format(bLo)}–${numberFormat.format(bHi)}`
+      }${POP_DIRECTIONAL_ISOLATE}`,
       count: 0,
     };
   });

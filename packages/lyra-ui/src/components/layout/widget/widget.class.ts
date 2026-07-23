@@ -1,17 +1,20 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   activateOverlay,
   collectFocusableElements,
   deepActiveElement,
   type OverlayHandle,
-} from '../../../internal/overlay-manager.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
-import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
-import { nextId } from '../../../internal/a11y.js';
-import { chevronIcon, closeIcon, expandIcon } from '../../../internal/icons.js';
-import { styles } from './widget.styles.js';
+} from "../../../internal/overlay-manager.js";
+import { lockScroll } from "../../../internal/scroll-lock.js";
+import {
+  readPersistedState,
+  writePersistedState,
+} from "../../../internal/persisted-state.js";
+import { nextId } from "../../../internal/a11y.js";
+import { chevronIcon, closeIcon, expandIcon } from "../../../internal/icons.js";
+import { styles } from "./widget.styles.js";
 
 export interface WidgetView {
   id: string;
@@ -28,9 +31,9 @@ export interface WidgetView {
 }
 
 export interface LyraWidgetEventMap {
-  'lr-collapse-change': CustomEvent<{ collapsed: boolean }>;
-  'lr-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
-  'lr-view-change': CustomEvent<{ viewId: string }>;
+  "lr-collapse-change": CustomEvent<{ collapsed: boolean }>;
+  "lr-fullscreen-change": CustomEvent<{ fullscreen: boolean }>;
+  "lr-view-change": CustomEvent<{ viewId: string }>;
 }
 /**
  * `<lr-widget>` — a titled panel shell with an optional collapse toggle and
@@ -69,6 +72,8 @@ export interface LyraWidgetEventMap {
  * @csspart actions - The wrapper around the `actions` slot.
  * @csspart view-toggles - The header toggle-button group, only rendered when `views` is non-empty.
  * @csspart view-toggle - A single view toggle button.
+ * @csspart view-icon - Decorative icon content inside a view toggle.
+ * @csspart view-label - Visible label text inside a view toggle.
  * @csspart collapse-button - The collapse/expand toggle button.
  * @csspart fullscreen-button - The fullscreen toggle button.
  * @csspart body - The wrapper around the default slot (the panel body).
@@ -93,29 +98,29 @@ export interface LyraWidgetEventMap {
 export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   static override styles = [LyraElement.styles, styles];
 
-  @property() label = '';
+  @property() label = "";
   /** Overrides the fullscreen dialog's accessible name, taking precedence over both `label` and a
    *  slotted `label`. Fed only by a host `aria-label`, matching `lr-scroller`'s/`lr-carousel`'s
    *  own host-override pattern. */
-  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
-  @property() sublabel = '';
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
+  @property() sublabel = "";
   @property({ type: Boolean, reflect: true }) collapsible = false;
   @property({ type: Boolean, reflect: true }) collapsed = false;
   /** Persists `collapsed` to `localStorage` across reloads when set. Namespaced as
    *  `lr-widget:${storageKey}` -- mirrors `lr-app-rail`'s/`lr-table`'s identical `storage-key`
    *  pattern. Unset (the default) touches storage not at all. */
-  @property({ attribute: 'storage-key' }) storageKey?: string;
+  @property({ attribute: "storage-key" }) storageKey?: string;
   @property({ type: Boolean, reflect: true }) expandable = false;
   @property({ type: Boolean, reflect: true }) fullscreen = false;
   /** Raw CSS `inset` shorthand applied to the fullscreen panel and backdrop instead of the default
    *  `var(--lr-space-l)` on every side — e.g. `"0 0 0 240px"` to leave a 240px persistent sidebar
    *  visible while fullscreen. */
-  @property({ attribute: 'fullscreen-inset' }) fullscreenInset = '';
+  @property({ attribute: "fullscreen-inset" }) fullscreenInset = "";
   /** Overrides the fullscreen *backdrop*'s own inset independent of `fullscreen-inset` -- e.g.
    *  `"0"` to dim the full viewport-to-panel-edge region while the panel itself keeps a narrower
    *  `fullscreen-inset`. Unset (the default) falls back to `fullscreen-inset`, i.e. today's exact
    *  coupled behavior. */
-  @property({ attribute: 'backdrop-inset' }) backdropInset = '';
+  @property({ attribute: "backdrop-inset" }) backdropInset = "";
   /** Tighter header/body padding for constrained spaces. */
   @property({ type: Boolean, reflect: true }) compact = false;
   /** Named alternate views for the panel body -- e.g. a chart/table toggle inside the same card
@@ -127,7 +132,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   /** The currently active view's `id` -- defaults to the first entry of `views` (or `''` when
    *  `views` is empty). Settable directly by a consumer wanting to control the active view
    *  externally; also updated internally when a view toggle is clicked. */
-  @property({ attribute: false }) activeView = '';
+  @property({ attribute: false }) activeView = "";
 
   @state() private hasActionsSlot = false;
   @state() private hasIconSlot = false;
@@ -140,10 +145,22 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   private releaseScrollLock?: () => void;
   private overlayHandle?: OverlayHandle;
   private explicitTrigger?: HTMLElement;
-  private readonly bodyId = nextId('widget-body');
+  private labelSlotObserver?: MutationObserver;
+  private readonly bodyId = nextId("widget-body");
 
   private get storageFullKey(): string | undefined {
     return this.storageKey ? `lr-widget:${this.storageKey}` : undefined;
+  }
+
+  /** Duplicate view ids cannot identify distinct slots or public active states. Keep the first
+   * occurrence so the rendered controls and body expose one deterministic target per id. */
+  private get normalizedViews(): WidgetView[] {
+    const seen = new Set<string>();
+    return this.views.filter((view) => {
+      if (seen.has(view.id)) return false;
+      seen.add(view.id);
+      return true;
+    });
   }
 
   /** Skips the very first `updated()` pass so mounting never writes to storage -- `willUpdate()`
@@ -154,12 +171,24 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
-      this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
-      this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
-      const labelChildren = Array.from(this.children).filter((el) => el.getAttribute('slot') === 'label');
+      this.hasActionsSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "actions"
+      );
+      this.hasIconSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "icon"
+      );
+      const labelChildren = Array.from(this.children).filter(
+        (el) => el.getAttribute("slot") === "label"
+      );
       this.hasLabelSlot = labelChildren.length > 0;
-      this.labelSlotText = labelChildren.map((el) => el.textContent?.trim()).filter(Boolean).join(' ') || undefined;
-      this.hasSublabelSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'sublabel');
+      this.labelSlotText =
+        labelChildren
+          .map((el) => el.textContent?.trim())
+          .filter(Boolean)
+          .join(" ") || undefined;
+      this.hasSublabelSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "sublabel"
+      );
       // Restore a persisted `collapsed` preference once, before the first render, so the restored
       // value folds into the first paint with no follow-up update -- doing this in firstUpdated()
       // (after the first render) would schedule a second update and trip Lit's dev warning. Mirrors
@@ -167,19 +196,23 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       // updated() keeps this restored value from being written straight back.
       const parsed = readPersistedState(
         this.storageFullKey,
-        (v): v is { collapsed?: unknown } => typeof v === 'object' && v !== null,
+        (v): v is { collapsed?: unknown } => typeof v === "object" && v !== null
       );
-      if (parsed && typeof parsed.collapsed === 'boolean') this.collapsed = parsed.collapsed;
+      if (parsed && typeof parsed.collapsed === "boolean")
+        this.collapsed = parsed.collapsed;
     }
-    if (changed.has('fullscreen')) {
+    if (changed.has("fullscreen")) {
       if (this.fullscreen) {
         this.activateFullscreenOverlay();
       } else {
         this.deactivateFullscreenOverlay();
       }
     }
-    if (changed.has('views') && !this.views.some((v) => v.id === this.activeView)) {
-      this.activeView = this.views[0]?.id ?? '';
+    if (changed.has("views")) {
+      const views = this.normalizedViews;
+      if (!views.some((v) => v.id === this.activeView)) {
+        this.activeView = views[0]?.id ?? "";
+      }
     }
   }
 
@@ -201,17 +234,22 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     // Persist `collapsed` whenever it changes, but never on the initial update -- willUpdate()
     // restored it on that pass, so writing it back would be redundant, and with no `storage-key`
     // set `writePersistedState(undefined, ...)` is a silent no-op regardless.
-    if (this.persistReady && changed.has('collapsed')) {
+    if (this.persistReady && changed.has("collapsed")) {
       writePersistedState(this.storageFullKey, { collapsed: this.collapsed });
     }
     this.persistReady = true;
-    if (changed.has('fullscreen') && this.fullscreen) {
+    if (changed.has("fullscreen") && this.fullscreen) {
       this.overlayHandle?.focusInitial();
-    } else if (changed.has('collapsed') && this.fullscreen) {
-      const panel = this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+    } else if (changed.has("collapsed") && this.fullscreen) {
+      const panel =
+        this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
       const active = deepActiveElement(this.ownerDocument);
-      if (panel && !collectFocusableElements(panel).includes(active as HTMLElement)) {
-        if (active && typeof (active as HTMLElement).blur === 'function') (active as HTMLElement).blur();
+      if (
+        panel &&
+        !collectFocusableElements(panel).includes(active as HTMLElement)
+      ) {
+        if (active && typeof (active as HTMLElement).blur === "function")
+          (active as HTMLElement).blur();
         this.overlayHandle?.focusInitial();
       }
     }
@@ -230,8 +268,17 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
       } else {
         this.activateFullscreenOverlay();
       }
-      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      if (!this.releaseScrollLock)
+        this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
+    }
+    if (this.hasUpdated) {
+      queueMicrotask(() => {
+        if (!this.isConnected) return;
+        const slot =
+          this.shadowRoot?.querySelector<HTMLSlotElement>('slot[name="label"]');
+        if (slot) this.syncLabelSlot(slot.assignedElements({ flatten: true }));
+      });
     }
   }
 
@@ -240,13 +287,16 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
+    this.labelSlotObserver?.disconnect();
+    this.labelSlotObserver = undefined;
   }
 
   private activateFullscreenOverlay(): void {
     this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlayHandle = activateOverlay({
       host: this,
-      panel: () => this.shadowRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
+      panel: () =>
+        this.shadowRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
       onEscape: this.dismissFullscreen,
       onBackdrop: this.dismissFullscreen,
       restoreFocusTo: this.explicitTrigger,
@@ -262,44 +312,77 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 
   private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasActionsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private onIconSlotChange = (e: Event): void => {
-    this.hasIconSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasIconSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private onLabelSlotChange = (e: Event): void => {
-    const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
-    this.hasLabelSlot = assigned.length > 0;
-    this.labelSlotText = assigned.map((el) => el.textContent?.trim()).filter(Boolean).join(' ') || undefined;
+    const assigned = (e.target as HTMLSlotElement).assignedElements({
+      flatten: true,
+    });
+    this.syncLabelSlot(assigned);
   };
 
+  private syncLabelSlot(assigned: Element[]): void {
+    this.hasLabelSlot = assigned.length > 0;
+    this.labelSlotText =
+      assigned
+        .map((el) => el.textContent?.trim())
+        .filter(Boolean)
+        .join(" ") || undefined;
+    this.labelSlotObserver?.disconnect();
+    this.labelSlotObserver = undefined;
+    if (assigned.length === 0 || !this.isConnected) return;
+    this.labelSlotObserver = new MutationObserver(() => {
+      this.labelSlotText =
+        assigned
+          .map((el) => el.textContent?.trim())
+          .filter(Boolean)
+          .join(" ") || undefined;
+    });
+    for (const element of assigned) {
+      this.labelSlotObserver.observe(element, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    }
+  }
+
   private onSublabelSlotChange = (e: Event): void => {
-    this.hasSublabelSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasSublabelSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   private setActiveView = (id: string): void => {
     if (id === this.activeView) return;
     this.activeView = id;
-    this.emit('lr-view-change', { viewId: id });
+    this.emit("lr-view-change", { viewId: id });
   };
 
   private toggleCollapsed = (): void => {
     this.collapsed = !this.collapsed;
-    this.emit('lr-collapse-change', { collapsed: this.collapsed });
+    this.emit("lr-collapse-change", { collapsed: this.collapsed });
   };
 
   private toggleFullscreen = (e: MouseEvent): void => {
     if (!this.fullscreen) this.explicitTrigger = e.currentTarget as HTMLElement;
     this.fullscreen = !this.fullscreen;
-    this.emit('lr-fullscreen-change', { fullscreen: this.fullscreen });
+    this.emit("lr-fullscreen-change", { fullscreen: this.fullscreen });
   };
 
   private dismissFullscreen = (): void => {
     if (!this.fullscreen) return;
     this.fullscreen = false;
-    this.emit('lr-fullscreen-change', { fullscreen: false });
+    this.emit("lr-fullscreen-change", { fullscreen: false });
   };
 
   private onBackdropClick = (): void => {
@@ -309,34 +392,44 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   override render(): TemplateResult {
     const hasLabel = this.label.length > 0;
     const hasSublabel = this.sublabel.length > 0;
+    const views = this.normalizedViews;
     return html`
       ${this.fullscreen
         ? html`<div
             part="backdrop"
             style=${(() => {
               const decls: string[] = [];
-              if (this.fullscreenInset) decls.push(`--lr-widget-fullscreen-inset:${this.fullscreenInset}`);
+              if (this.fullscreenInset)
+                decls.push(
+                  `--lr-widget-fullscreen-inset:${this.fullscreenInset}`
+                );
               // A custom property's var() fallback resolves per-element using that element's own
               // cascade, but `:host`'s `--lr-widget-backdrop-inset: var(--lr-widget-fullscreen-inset)`
               // is always *set* (never invalid), so its inherited (already-resolved-at-:host) value
               // wins over this div's own local `--lr-widget-fullscreen-inset` override -- the CSS
               // fallback chain alone can't see it. Resolve the fallback here in JS instead.
               const backdropInset = this.backdropInset || this.fullscreenInset;
-              if (backdropInset) decls.push(`--lr-widget-backdrop-inset:${backdropInset}`);
-              return decls.length ? decls.join(';') : nothing;
+              if (backdropInset)
+                decls.push(`--lr-widget-backdrop-inset:${backdropInset}`);
+              return decls.length ? decls.join(";") : nothing;
             })()}
             @click=${this.onBackdropClick}
           ></div>`
         : nothing}
       <div
         part="base"
-        role=${this.fullscreen ? 'dialog' : nothing}
-        aria-modal=${this.fullscreen ? 'true' : nothing}
+        role=${this.fullscreen ? "dialog" : nothing}
+        aria-modal=${this.fullscreen ? "true" : nothing}
         aria-label=${this.fullscreen
-          ? this.accessibleLabel || this.label || this.labelSlotText || this.localize('widgetFullscreenPanel')
+          ? this.accessibleLabel ||
+            this.label ||
+            this.labelSlotText ||
+            this.localize("widgetFullscreenPanel")
           : nothing}
-        tabindex=${this.fullscreen ? '-1' : nothing}
-        style=${this.fullscreenInset ? `--lr-widget-fullscreen-inset:${this.fullscreenInset}` : nothing}
+        tabindex=${this.fullscreen ? "-1" : nothing}
+        style=${this.fullscreenInset
+          ? `--lr-widget-fullscreen-inset:${this.fullscreenInset}`
+          : nothing}
       >
         <div part="header">
           <div part="title">
@@ -344,16 +437,30 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
               <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
             </span>
             <div part="label-group">
-              <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}><slot name="label" @slotchange=${this.onLabelSlotChange}>${this.label}</slot></span>
-              <span part="sublabel" ?hidden=${!hasSublabel && !this.hasSublabelSlot}><slot name="sublabel" @slotchange=${this.onSublabelSlotChange}>${this.sublabel}</slot></span>
+              <span part="label" ?hidden=${!hasLabel && !this.hasLabelSlot}
+                ><slot name="label" @slotchange=${this.onLabelSlotChange}
+                  >${this.label}</slot
+                ></span
+              >
+              <span
+                part="sublabel"
+                ?hidden=${!hasSublabel && !this.hasSublabelSlot}
+                ><slot name="sublabel" @slotchange=${this.onSublabelSlotChange}
+                  >${this.sublabel}</slot
+                ></span
+              >
             </div>
           </div>
           <div part="actions" ?hidden=${!this.hasActionsSlot}>
             <slot name="actions" @slotchange=${this.onActionsSlotChange}></slot>
           </div>
-          ${this.views.length > 0
-            ? html`<div part="view-toggles" role="group" aria-label=${this.localize('widgetViewGroup')}>
-                ${this.views.map((v) => {
+          ${views.length > 0
+            ? html`<div
+                part="view-toggles"
+                role="group"
+                aria-label=${this.localize("widgetViewGroup")}
+              >
+                ${views.map((v) => {
                   // `label` supplies the accessible name via its own visible text, same as
                   // before -- aria-label is only ever added for an icon-only toggle (`label`
                   // omitted), where `ariaLabel` is the intended name and `id` is the last-resort
@@ -362,10 +469,18 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
                   return html`<button
                     part="view-toggle"
                     type="button"
-                    aria-pressed=${v.id === this.activeView ? 'true' : 'false'}
+                    aria-pressed=${v.id === this.activeView ? "true" : "false"}
                     aria-label=${hasLabel ? nothing : v.ariaLabel || v.id}
                     @click=${() => this.setActiveView(v.id)}
-                  >${v.icon ?? nothing}${v.label ?? nothing}</button>`;
+                  >
+                    ${v.icon
+                      ? html`<span part="view-icon" aria-hidden="true"
+                          >${v.icon}</span
+                        >`
+                      : nothing}${v.label
+                      ? html`<span part="view-label">${v.label}</span>`
+                      : nothing}
+                  </button>`;
                 })}
               </div>`
             : nothing}
@@ -373,8 +488,10 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<button
                 part="collapse-button"
                 type="button"
-                aria-expanded=${this.collapsed ? 'false' : 'true'}
-                aria-label=${this.collapsed ? this.localize('widgetExpand') : this.localize('widgetCollapse')}
+                aria-expanded=${this.collapsed ? "false" : "true"}
+                aria-label=${this.collapsed
+                  ? this.localize("widgetExpand")
+                  : this.localize("widgetCollapse")}
                 aria-controls=${this.bodyId}
                 @click=${this.toggleCollapsed}
               >
@@ -385,19 +502,26 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             ? html`<button
                 part="fullscreen-button"
                 type="button"
-                aria-pressed=${this.fullscreen ? 'true' : 'false'}
-                aria-label=${this.fullscreen ? this.localize('widgetExitFullscreen') : this.localize('widgetExpandToFullscreen')}
+                aria-pressed=${this.fullscreen ? "true" : "false"}
+                aria-label=${this.fullscreen
+                  ? this.localize("widgetExitFullscreen")
+                  : this.localize("widgetExpandToFullscreen")}
                 @click=${this.toggleFullscreen}
               >
-                <slot name="fullscreen-icon">${this.fullscreen ? closeIcon() : expandIcon()}</slot>
+                <slot name="fullscreen-icon"
+                  >${this.fullscreen ? closeIcon() : expandIcon()}</slot
+                >
               </button>`
             : nothing}
         </div>
         <div part="body" id=${this.bodyId} ?hidden=${this.collapsed}>
-          ${this.views.length === 0
+          ${views.length === 0
             ? html`<slot></slot>`
-            : this.views.map(
-                (v) => html`<div ?hidden=${v.id !== this.activeView}><slot name="view-${v.id}"></slot></div>`,
+            : views.map(
+                (v) =>
+                  html`<div ?hidden=${v.id !== this.activeView}>
+                    <slot name="view-${v.id}"></slot>
+                  </div>`
               )}
         </div>
       </div>
@@ -405,9 +529,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-widget': LyraWidget;
+    "lr-widget": LyraWidget;
   }
 }

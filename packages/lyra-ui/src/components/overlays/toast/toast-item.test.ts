@@ -32,6 +32,27 @@ it('auto-dismisses after its duration', async () => {
   expect(el.isConnected).to.be.false;
 });
 
+it('rearms an initial show and a visible auto-dismiss timer after reconnect', async () => {
+  const early = document.createElement('lr-toast-item') as LyraToastItem;
+  early.duration = 0;
+  early.textContent = 'early';
+  document.body.appendChild(early);
+  await early.updateComplete;
+  early.remove();
+  document.body.appendChild(early);
+  await oneEvent(early, 'lr-show');
+  expect(early.hasAttribute('data-visible')).to.be.true;
+  early.remove();
+
+  const visible = (await fixture(html`<lr-toast-item duration="100">visible</lr-toast-item>`)) as LyraToastItem;
+  await oneEvent(visible, 'lr-show');
+  visible.remove();
+  await aTimeout(30);
+  document.body.appendChild(visible);
+  await oneEvent(visible, 'lr-after-hide');
+  expect(visible.isConnected).to.be.false;
+});
+
 it('does not auto-dismiss early after an interleaved pointer+focus pause/resume sequence', async () => {
   // An earlier resumeTimer() call that isn't cleared before a later one
   // orphans its own setTimeout -- that leaked timer keeps running even

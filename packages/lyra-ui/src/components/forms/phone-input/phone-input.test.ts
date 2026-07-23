@@ -58,6 +58,52 @@ it('normalizes live user input to an E.164 form value through an injected adapte
   });
 });
 
+it('reconciles country, visible selection, canonical value, and FormData when countries are replaced', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-phone-input name="phone" default-country="LU" .adapter=${adapter}></lr-phone-input>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+  el.countries = [
+    { code: 'LU', callingCode: '352' },
+    { code: 'FR', callingCode: '33' },
+  ];
+  el.value = '+352621123456';
+  await el.updateComplete;
+  expect(el.country).to.equal('LU');
+
+  el.countries = [{ code: 'FR', callingCode: '33' }];
+  await el.updateComplete;
+  const select = el.shadowRoot!.querySelector('[part="country-select"]') as HTMLSelectElement;
+  expect(el.country).to.equal('FR');
+  expect(select.value).to.equal('FR');
+  expect(el.value).to.equal('+33621123456');
+  expect(new FormData(form).get('phone')).to.equal('+33621123456');
+
+  el.countries = [];
+  el.adapter = undefined;
+  await el.updateComplete;
+  expect(el.country).to.equal('');
+});
+
+it('forwards host click to the telephone input and suppresses it while effectively disabled', async () => {
+  const form = (await fixture(html`
+    <form><fieldset><lr-phone-input></lr-phone-input></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-phone-input') as LyraPhoneInput;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const input = el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+  fieldset.disabled = true;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
 it('keeps an incomplete number editable while excluding it from the canonical form value', async () => {
   const form = (await fixture(html`
     <form>
@@ -514,6 +560,26 @@ it("matches lr-input's own row height at every shared size tier", async () => {
     const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
     expect(getComputedStyle(wrapper).minBlockSize, `size=${size}`).to.equal(px);
   }
+});
+
+it('scales the flag and expand glyphs with the phone-input size tier', async () => {
+  const small = (await fixture(html`
+    <lr-phone-input size="2xs" flags default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  const large = (await fixture(html`
+    <lr-phone-input size="xl" flags default-country="LU" .adapter=${adapter}></lr-phone-input>
+  `)) as LyraPhoneInput;
+  await customElements.whenDefined('lr-flag');
+  expect(
+    parseFloat(getComputedStyle(large.shadowRoot!.querySelector('[part="flag"]')!).fontSize),
+  ).to.be.greaterThan(
+    parseFloat(getComputedStyle(small.shadowRoot!.querySelector('[part="flag"]')!).fontSize),
+  );
+  expect(
+    parseFloat(getComputedStyle(large.shadowRoot!.querySelector('[part="expand-icon"]')!).fontSize),
+  ).to.be.greaterThan(
+    parseFloat(getComputedStyle(small.shadowRoot!.querySelector('[part="expand-icon"]')!).fontSize),
+  );
 });
 
 it('is accessible', async () => {

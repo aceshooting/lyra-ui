@@ -51,17 +51,23 @@ export class LyraHistogram extends LyraChart {
 // change doesn't re-run the O(n) bucketing loop from scratch on every access.
 const bucketCache = new WeakMap<
   LyraHistogram,
-  { values: number[]; bins: number; buckets: HistogramBucket[] }
+  { values: number[]; bins: number; locale: string; buckets: HistogramBucket[] }
 >();
 
 export function binnedBuckets(el: LyraHistogram): HistogramBucket[] {
   const bins = normalizeHistogramBinCount(el.bins);
+  const locale = (el as unknown as { effectiveLocale: string }).effectiveLocale;
   const cached = bucketCache.get(el);
-  if (cached && cached.values === el.values && cached.bins === bins) {
+  if (
+    cached &&
+    cached.values === el.values &&
+    cached.bins === bins &&
+    cached.locale === locale
+  ) {
     return cached.buckets;
   }
-  const buckets = binValues(el.values, bins);
-  bucketCache.set(el, { values: el.values, bins, buckets });
+  const buckets = binValues(el.values, bins, locale);
+  bucketCache.set(el, { values: el.values, bins, locale, buckets });
   return buckets;
 }
 

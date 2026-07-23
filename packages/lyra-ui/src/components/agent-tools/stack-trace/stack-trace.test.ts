@@ -11,6 +11,35 @@ const trace = [
 ].join('\n');
 
 describe('lr-stack-trace', () => {
+  it('expands separate internal runs independently', async () => {
+    const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
+    el.trace = [
+      'Error: boom',
+      '    at first (/app/node_modules/a.js:1:1)',
+      '    at second (/app/node_modules/b.js:2:1)',
+      '    at app (/app/src/app.js:3:1)',
+      '    at third (/app/node_modules/c.js:4:1)',
+      '    at fourth (/app/node_modules/d.js:5:1)',
+    ].join('\n');
+    await el.updateComplete;
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="internal-toggle"]')] as HTMLButtonElement[];
+    expect(toggles).to.have.lengthOf(2);
+    toggles[0]!.click();
+    await el.updateComplete;
+    const updated = [...el.shadowRoot!.querySelectorAll('[part="internal-toggle"]')] as HTMLButtonElement[];
+    expect(updated.map((button) => button.getAttribute('aria-expanded'))).to.deep.equal(['true', 'false']);
+  });
+
+  it('resets copied confirmation across disconnect/reconnect', async () => {
+    const el = (await fixture(html`<lr-stack-trace trace="plain"></lr-stack-trace>`)) as LyraStackTrace;
+    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).textContent!.trim()).to.equal(
+      'Copy',
+    );
+  });
   it('defaults to collapseInternal=true and copyable=true', async () => {
     const el = (await fixture(html`<lr-stack-trace></lr-stack-trace>`)) as LyraStackTrace;
     expect(el.collapseInternal).to.be.true;

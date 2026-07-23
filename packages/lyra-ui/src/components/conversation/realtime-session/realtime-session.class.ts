@@ -1,5 +1,5 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -10,6 +10,8 @@ import '../audio-visualizer/audio-visualizer.class.js';
 import '../push-to-talk/push-to-talk.class.js';
 import '../transcript-feed/transcript-feed.class.js';
 import '../../overlays/badge/badge.class.js';
+import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
+import '../../utility/live-region/live-region.class.js';
 import { styles } from './realtime-session.styles.js';
 
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
@@ -60,6 +62,28 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
   showCapture = true;
   @property({ attribute: 'error-code' }) errorCode = '';
   @property() label = '';
+  @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  private transferActionFocus = false;
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (!changed.has('state')) return;
+    const focused =
+      this.renderRoot instanceof ShadowRoot ? this.renderRoot.activeElement : this.ownerDocument.activeElement;
+    this.transferActionFocus =
+      focused instanceof HTMLElement &&
+      (focused.getAttribute('part') === 'connect' || focused.getAttribute('part') === 'disconnect');
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    if (!changed.has('state')) return;
+    if (changed.get('state') !== undefined) {
+      this.liveRegion?.announce(this.stateLabel(), { force: true });
+    }
+    if (this.transferActionFocus) {
+      this.transferActionFocus = false;
+      (this.renderRoot.querySelector('[part="connect"], [part="disconnect"]') as HTMLElement | null)?.focus();
+    }
+  }
 
   private stateLabel(): string {
     switch (this.state) {
@@ -107,6 +131,7 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
           ? html`<lr-push-to-talk part="capture" .disabled=${!active || this.muted} level-events></lr-push-to-talk>`
           : nothing}
         <lr-transcript-feed part="transcript" .entries=${this.entries}></lr-transcript-feed>
+        <lr-live-region></lr-live-region>
       </section>
     `;
   }
@@ -117,4 +142,3 @@ declare global {
     'lr-realtime-session': LyraRealtimeSession;
   }
 }
-

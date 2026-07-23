@@ -2,6 +2,17 @@ import { fixture, expect, html } from '@open-wc/testing';
 import './result-field.js';
 import type { LyraResultField } from './result-field.js';
 
+it('localizes the label punctuation as a whole template', async () => {
+  const el = (await fixture(html`
+    <lr-result-field
+      label="Status"
+      value="Ready"
+      .strings=${{ resultFieldLabel: '【{label}】' }}
+    ></lr-result-field>
+  `)) as LyraResultField;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('【Status】');
+});
+
 it('renders the label (with trailing colon) and the plain value prop', async () => {
   const el = (await fixture(
     html`<lr-result-field label="Status" value="200 OK"></lr-result-field>`,

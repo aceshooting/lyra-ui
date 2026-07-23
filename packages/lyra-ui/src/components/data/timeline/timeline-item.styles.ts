@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
     --lr-timeline-marker-size: var(--lr-size-1-25rem);
     --lr-timeline-rail-width: var(--lr-border-width-medium);
     --lr-timeline-rail-color: var(--lr-color-border);
@@ -25,6 +26,7 @@ export const styles = css`
 
   [part='base'] {
     display: flex;
+    min-inline-size: 0;
     /* Driven by the --lr-timeline-item-direction custom property inherited from <lr-timeline>'s
        :host across the slot boundary -- row (marker beside content) in vertical-timeline mode,
        column (marker above content) in horizontal-timeline mode. This component has no orientation
@@ -127,6 +129,8 @@ export const styles = css`
 
   [part='title'] {
     min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text);
     font-weight: var(--lr-font-weight-semibold);
     line-height: var(--lr-line-height-snug);

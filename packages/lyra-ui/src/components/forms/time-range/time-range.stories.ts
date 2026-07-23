@@ -124,3 +124,22 @@ export const Sizes: Story = {
     </div>
   `,
 };
+
+/** 320px allocation covering endpoint handles and long wrapping preset labels. */
+export const Narrow: Story = {
+  name: 'Narrow (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-time-range
+        min="0"
+        max="100"
+        start="0"
+        end="100"
+        .presets=${[
+          { label: 'Entire available reporting period', start: 0, end: 100 },
+          { label: 'Most recent thirty business days', start: 70, end: 100 },
+        ]}
+      ></lr-time-range>
+    </div>
+  `,
+};

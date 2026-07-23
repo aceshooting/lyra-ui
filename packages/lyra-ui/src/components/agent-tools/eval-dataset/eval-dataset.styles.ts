@@ -77,6 +77,13 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  :where([part='search-input']):hover:where(:not(:disabled)) {
+    border-color: var(--lr-color-brand);
+  }
+  [part='search-input']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
   [part='tag-filter'] {
     display: block;
   }

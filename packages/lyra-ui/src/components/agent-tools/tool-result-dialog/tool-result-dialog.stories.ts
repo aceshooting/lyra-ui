@@ -182,3 +182,24 @@ export const NamedAndRetimed: Story = {
     </lr-tool-result-dialog>
   `,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow viewport with long localized status',
+  parameters: { viewport: { defaultViewport: 'mobile1' } },
+  render: (_args, context) => html`
+    <lr-tool-result-dialog
+      .open=${context.viewMode !== 'docs'}
+      tool-name="query_customer_database_readonly_with_a_long_identifier"
+      status="running"
+      .strings=${{
+        statusRunning: 'Execution actuellement en cours dans l’environnement sécurisé',
+        maximize: 'Agrandir cette fenêtre de résultat',
+        close: 'Fermer cette fenêtre de résultat',
+      }}
+    >
+      <p slot="body" style="overflow-wrap:anywhere">
+        Long result content remains reachable in the narrow dialog allocation.
+      </p>
+    </lr-tool-result-dialog>
+  `,
+};

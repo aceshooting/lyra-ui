@@ -82,7 +82,7 @@ it('renders one control per property, in schema key order, matched to its type',
 it('uses schema.title as the label, falling back to the property key', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect(field(el, 'city').querySelector('[part="label"]')!.textContent).to.equal('City');
-  expect(field(el, 'units').querySelector('[part="label"]')!.textContent).to.equal('units');
+  expect((field(el, 'units').querySelector('lr-select') as HTMLElement & { label: string }).label).to.equal('units');
 });
 
 it('renders schema.description as helper text under the field', async () => {
@@ -102,7 +102,7 @@ it('marks a required field without applying HTML nonempty semantics to the inner
   expect(input.getAttribute('aria-required')).to.equal('true');
 });
 
-it('marks a required nested lr-select via aria-required without taking over its own validity', async () => {
+it('marks a required nested lr-select through its composed control contract', async () => {
   const schema: ToolParamFormSchema = {
     type: 'object',
     properties: { mode: { type: 'string', enum: ['fast', 'careful'] } },
@@ -110,8 +110,8 @@ it('marks a required nested lr-select via aria-required without taking over its 
   };
   const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
   const select = field(el, 'mode').querySelector('lr-select') as HTMLElement & { required: boolean };
-  expect(select.getAttribute('aria-required')).to.equal('true');
-  expect(select.required).to.be.false;
+  expect(select.required).to.be.true;
+  expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-required')).to.equal('true');
 });
 
 it('falls back to schema default for a field missing from value, without mutating the value property', async () => {
@@ -388,7 +388,7 @@ it('validates every supported property type and string enum even when fields are
   expect(el.errors.amount).to.equal('Must be a finite number.');
   expect(el.errors.count).to.equal('Must be a whole number.');
   expect(el.errors.enabled).to.equal('Must be a boolean.');
-  expect(el.errors.mode).to.equal('Must be one of: fast, safe.');
+  expect(el.errors.mode).to.equal('Must be one of: fast or safe.');
   expect(el.internals.validity.typeMismatch).to.be.true;
   expect(el.internals.validity.stepMismatch).to.be.true;
   expect(el.internals.validity.customError).to.be.true;
@@ -550,7 +550,7 @@ it('ignores a checkbox change event while effectively disabled', async () => {
   expect(el.value).to.deep.equal({});
 });
 
-it("folds the error into the select's aria-label once touched and invalid, leaving it plain otherwise", async () => {
+it("associates a touched select's error through the select's own form-control chrome", async () => {
   const schema: ToolParamFormSchema = {
     type: 'object',
     properties: { mode: { type: 'string', enum: ['fast', 'safe'], title: 'Mode' } },
@@ -559,11 +559,12 @@ it("folds the error into the select's aria-label once touched and invalid, leavi
     html`<lr-tool-param-form .schema=${schema} .value=${{ mode: 'unknown' }}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
   const select = field(el, 'mode').querySelector('lr-select') as HTMLElement;
-  expect(select.getAttribute('aria-label')).to.equal('Mode');
+  expect((select as HTMLElement & { label: string }).label).to.equal('Mode');
 
   field(el, 'mode').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(select.getAttribute('aria-label')).to.equal('Mode. Must be one of: fast, safe.');
+  expect((select as HTMLElement & { errorText: string }).errorText).to.equal('Must be one of: fast or safe.');
+  expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error');
 });
 
 it('emits lr-input on a select field change, driven by the selected option value', async () => {
@@ -613,7 +614,7 @@ it('supports primitive const so a must-confirm boolean is distinct from required
   expect(el.internals.validity.customError).to.be.true;
   expect(el.checkValidity()).to.be.false;
   await el.updateComplete;
-  expect((field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement & { required: boolean }).required).to.be.false;
+  expect((field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement & { required: boolean }).required).to.be.true;
 
   el.value = { confirm: true };
   expect(el.errors).to.deep.equal({});
@@ -747,7 +748,7 @@ it('flags a fractional value on an integer field as invalid, independent of requ
   expect(el.reportValidity()).to.be.false;
 });
 
-it('folds the error into the checkbox\'s aria-label once touched and invalid, leaving it unset otherwise', async () => {
+it("associates a touched checkbox's error through aria-describedby", async () => {
   const requiredBoolSchema: ToolParamFormSchema = {
     type: 'object',
     properties: { confirm: { type: 'boolean', title: 'Confirm' } },
@@ -757,11 +758,12 @@ it('folds the error into the checkbox\'s aria-label once touched and invalid, le
     html`<lr-tool-param-form .schema=${requiredBoolSchema}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
   const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
-  expect(checkbox.hasAttribute('aria-label')).to.be.false;
+  expect(checkbox.hasAttribute('aria-describedby')).to.be.false;
 
   field(el, 'confirm').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
-  expect(checkbox.getAttribute('aria-label')).to.equal('Confirm. This field is required.');
+  expect(checkbox.getAttribute('aria-describedby')).to.include('-err');
+  expect(checkbox.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-describedby')).to.include('-err');
 });
 
 it('participates in a form: submits the resolved value as JSON under name', async () => {
@@ -978,4 +980,63 @@ it('resets the native number spin-button on numeric control fields', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/input\.control\s*\{[^}]*appearance:\s*textfield/);
   expect(css).to.match(/input\.control::-webkit-inner-spin-button/);
+});
+
+it('associates enum and boolean descriptions/errors and exposes boolean required state', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      mode: { type: 'string', enum: ['fast', 'safe'], description: 'Execution mode' },
+      confirm: { type: 'boolean', description: 'Required confirmation' },
+    },
+    required: ['mode', 'confirm'],
+  };
+  const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  el.reportValidity();
+  await el.updateComplete;
+  const select = field(el, 'mode').querySelector('lr-select')!;
+  const checkbox = field(el, 'confirm').querySelector('lr-checkbox')!;
+  expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error select-hint');
+  expect(checkbox.getAttribute('aria-describedby')).to.include('-desc');
+  expect((checkbox as HTMLElement & { required: boolean }).required).to.be.true;
+});
+
+it('forwards schema-defined native editing hints to generated text inputs', async () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      email: {
+        type: 'string',
+        autocomplete: 'email',
+        spellcheck: false,
+        autocapitalize: 'off',
+        autocorrect: 'off',
+        inputmode: 'email',
+        enterkeyhint: 'send',
+      },
+    },
+  } as ToolParamFormSchema;
+  const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const input = field(el, 'email').querySelector('input')!;
+  expect(input.autocomplete).to.equal('email');
+  expect(input.spellcheck).to.be.false;
+  expect(input.inputMode).to.equal('email');
+  expect(input.enterKeyHint).to.equal('send');
+});
+
+it('suppresses raw composed select/checkbox changes and emits only aggregate lr-input', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  let rawChanges = 0;
+  let aggregate = 0;
+  el.addEventListener('change', () => rawChanges++);
+  el.addEventListener('lr-change', () => rawChanges++);
+  el.addEventListener('lr-input', () => aggregate++);
+  field(el, 'units').querySelector('lr-select')!.dispatchEvent(
+    new Event('change', { bubbles: true, composed: true }),
+  );
+  field(el, 'notify').querySelector('lr-checkbox')!.dispatchEvent(
+    new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }),
+  );
+  expect(rawChanges).to.equal(0);
+  expect(aggregate).to.equal(2);
 });

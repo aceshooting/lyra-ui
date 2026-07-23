@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import type { TableColumn } from '../table/table.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
@@ -146,10 +146,15 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   @state() private searchText = '';
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('documents') && this.selectedIds.length > 0) {
+    if ((changed.has('documents') || changed.has('selectedIds')) && this.selectedIds.length > 0) {
       const existing = new Set(this.documents.map((doc) => doc.id));
-      const pruned = this.selectedIds.filter((id) => existing.has(id));
-      if (pruned.length !== this.selectedIds.length) this.selectedIds = pruned;
+      const normalized = [...new Set(this.selectedIds.filter((id) => existing.has(id)))];
+      if (
+        normalized.length !== this.selectedIds.length ||
+        normalized.some((id, index) => id !== this.selectedIds[index])
+      ) {
+        this.selectedIds = normalized;
+      }
     }
   }
 
@@ -384,7 +389,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('documentLibraryLabel');
+    const label = this.getAttribute('aria-label')?.trim() || this.label || this.localize('documentLibraryLabel');
     const visible = this.visibleDocuments;
     const tags = this.allTags;
     const emptyHeading =
@@ -419,7 +424,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
         ${this.selectedIds.length > 0
           ? html`<div part="selection-bar" role="status">
               <span part="selection-count"
-                >${this.localize('documentLibrarySelectedCount', undefined, { count: this.selectedIds.length })}</span
+                >${this.localize('documentLibrarySelectedCount', undefined, {
+                  count: getNumberFormat(this.effectiveLocale).format(this.selectedIds.length),
+                })}</span
               >
               <button type="button" part="clear-selection" @click=${this.clearSelection}>
                 ${this.localize('documentLibraryClearSelection')}

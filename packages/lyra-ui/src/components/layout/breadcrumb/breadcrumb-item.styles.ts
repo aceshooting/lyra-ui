@@ -1,15 +1,26 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
-  [part='base'] {
+  :host {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+  }
+  [part="separator"] {
+    color: var(--lr-color-text-quiet);
+  }
+  :host(:first-child) [part="separator"] {
+    display: none;
+  }
+  [part="base"] {
     color: var(--lr-color-text);
     text-decoration: none;
     border-radius: var(--lr-radius);
   }
-  a[part='base']:hover {
+  a[part="base"]:hover {
     text-decoration: underline;
   }
-  [part='base']:focus-visible {
+  [part="base"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -18,7 +29,7 @@ export const styles = css`
      invalid CSS (an attribute selector cannot follow ::part), so recoloring the current-page label
      used to require hijacking the shared --lr-color-text-quiet token, repainting everything else
      that reads it. Unset, it falls back to that token, so the rendering is unchanged. */
-  [part='base'][aria-current='page'] {
+  [part="base"][aria-current="page"] {
     color: var(--lr-breadcrumb-current-color, var(--lr-color-text-quiet));
     font-weight: var(--lr-font-weight-semibold);
   }

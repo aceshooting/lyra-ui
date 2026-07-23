@@ -16,6 +16,7 @@ export type TimeRangeValueFormatter = (
 
 interface DragState {
   handle: TimeRangeHandle;
+  changed: boolean;
   /** `[part="base"]`'s rect and the resolved direction, snapshotted once in
    *  onPointerDown rather than re-read on every pointermove of the same
    *  gesture: getBoundingClientRect()/getComputedStyle() in a window-level
@@ -128,6 +129,15 @@ export interface LyraTimeRangeEventMap {
  * @cssprop [--lr-time-range-size-scale=1] - Unitless multiplier applied proportionally to the handle,
  *   track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored
  *   at 24px (WCAG 2.5.8).
+ * @cssprop [--lr-time-range-handle-size=14px*scale] - Visible handle diameter.
+ * @cssprop [--lr-time-range-hit-size=max(24px,28px*scale)] - Actual drag hit-area diameter;
+ *   endpoint handles are inset by half this distance so the hit geometry stays inside the host.
+ * @cssprop [--lr-time-range-track-size=4px*scale] - Track and selected-range thickness.
+ * @cssprop [--lr-time-range-base-size=1.5rem*scale] - Brush baseline block size.
+ * @cssprop [--lr-time-range-preset-gap=var(--lr-space-xs)] - Gap between preset buttons.
+ * @cssprop [--lr-time-range-preset-radius=var(--lr-radius)] - Preset button corner radius.
+ * @cssprop --lr-time-range-preset-padding - Preset button padding, scaled by `size`.
+ * @cssprop --lr-time-range-preset-font-size - Preset button font size, scaled by `size`.
  */
 export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   static formAssociated = true;
@@ -193,6 +203,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
   // handle instead of the second pointerdown hijacking which handle the
   // first pointer's subsequent moves apply to.
   private drags = new Map<number, DragState>();
+  private keyboardChanged = false;
 
   constructor() {
     super();
@@ -225,6 +236,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
    */
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
+    if (disabled) this.keyboardChanged = false;
     this.requestUpdate();
   }
 
@@ -235,6 +247,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // window-level listeners — and the closure keeping this instance alive —
     // would otherwise leak indefinitely.
     this.drags.clear();
+    this.keyboardChanged = false;
     window.removeEventListener('pointermove', this.onPointerMove);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('pointercancel', this.onPointerUp);
@@ -265,8 +278,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // recovery. 0% is at least a stable, well-defined position.
     const { lo, hi } = this.domain();
     const safeValue = finiteRange(value, lo, lo, hi);
-    const span = hi - lo || 1;
-    return ((safeValue - lo) / span) * 100;
+    const span = hi - lo;
+    const ratio = Number.isFinite(span) && span !== 0
+      ? (safeValue - lo) / span
+      : (safeValue / 2 - lo / 2) / (hi / 2 - lo / 2 || 1);
+    return Math.min(1, Math.max(0, finiteNumber(ratio, 0))) * 100;
   }
 
   /** Each handle's actual reachable sub-range, bounded by its sibling
@@ -303,20 +319,30 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const step = finiteRange(this.step, 0, 0);
     if (Number.isFinite(step) && step > 0) {
       const stepsFromLo = Math.round((stepped - lo) / step);
-      const factor = 10 ** decimalPlaces(step);
-      stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
+      if (Number.isFinite(stepsFromLo)) {
+        const candidate = lo + stepsFromLo * step;
+        const factor = 10 ** Math.min(decimalPlaces(step), 15);
+        if (Number.isFinite(candidate)) {
+          stepped = Number.isFinite(candidate * factor)
+            ? Math.round(candidate * factor) / factor
+            : candidate;
+        }
+      }
     }
     const bounded = Math.min(hi, Math.max(lo, stepped));
     if (handle === 'start') return Math.min(bounded, finiteRange(this.end, hi, lo, hi));
     return Math.max(bounded, finiteRange(this.start, lo, lo, hi));
   }
 
-  private setValue(handle: TimeRangeHandle, value: number, commit: boolean): void {
+  private setValue(handle: TimeRangeHandle, value: number, commit: boolean): boolean {
     const clamped = this.clamp(handle, value);
+    const previous = handle === 'start' ? this.start : this.end;
+    if (clamped === previous) return false;
     if (handle === 'start') this.start = clamped;
     else this.end = clamped;
     this.emit('lr-input', { start: this.start, end: this.end });
     if (commit) this.emit('lr-change', { start: this.start, end: this.end });
+    return true;
   }
 
   /**
@@ -339,8 +365,11 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const { lo, hi } = this.domain();
     const start = finiteRange(preset.start, lo, lo, hi);
     const end = finiteRange(preset.end, hi, lo, hi);
-    this.start = Math.min(start, end);
-    this.end = Math.max(start, end);
+    const nextStart = Math.min(start, end);
+    const nextEnd = Math.max(start, end);
+    if (nextStart === this.start && nextEnd === this.end) return;
+    this.start = nextStart;
+    this.end = nextEnd;
     this.emit('lr-input', { start: this.start, end: this.end });
     this.emit('lr-change', { start: this.start, end: this.end });
   }
@@ -363,22 +392,28 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
     if (e.key === forwardKey || e.key === 'ArrowUp') {
       e.preventDefault();
-      this.setValue(handle, current + this.step, false);
+      this.keyboardChanged = this.setValue(handle, current + this.step, false) || this.keyboardChanged;
     } else if (e.key === backwardKey || e.key === 'ArrowDown') {
       e.preventDefault();
-      this.setValue(handle, current - this.step, false);
+      this.keyboardChanged = this.setValue(handle, current - this.step, false) || this.keyboardChanged;
     } else if (e.key === 'PageUp') {
       e.preventDefault();
-      this.setValue(handle, current + this.step * PAGE_STEP_MULTIPLIER, false);
+      this.keyboardChanged =
+        this.setValue(handle, current + this.step * PAGE_STEP_MULTIPLIER, false) ||
+        this.keyboardChanged;
     } else if (e.key === 'PageDown') {
       e.preventDefault();
-      this.setValue(handle, current - this.step * PAGE_STEP_MULTIPLIER, false);
+      this.keyboardChanged =
+        this.setValue(handle, current - this.step * PAGE_STEP_MULTIPLIER, false) ||
+        this.keyboardChanged;
     } else if (e.key === 'Home') {
       e.preventDefault();
-      this.setValue(handle, this.reachableBounds(handle).min, false);
+      this.keyboardChanged =
+        this.setValue(handle, this.reachableBounds(handle).min, false) || this.keyboardChanged;
     } else if (e.key === 'End') {
       e.preventDefault();
-      this.setValue(handle, this.reachableBounds(handle).max, false);
+      this.keyboardChanged =
+        this.setValue(handle, this.reachableBounds(handle).max, false) || this.keyboardChanged;
     }
   };
 
@@ -386,14 +421,20 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // Only commit on release of the keys that onKeyDown acts on — releasing
     // an unrelated key (Tab, Shift, ...) while a handle happens to be
     // focused must not emit a spurious lr-change.
-    if (this.effectiveDisabled || !isSliderKey(e.key)) return;
+    if (this.effectiveDisabled || !isSliderKey(e.key) || !this.keyboardChanged) return;
+    this.keyboardChanged = false;
     this.emit('lr-change', { start: this.start, end: this.end });
   };
 
   private onPointerDown = (handle: TimeRangeHandle, e: PointerEvent): void => {
     if (this.effectiveDisabled) return;
     const base = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
-    this.drags.set(e.pointerId, { handle, rect: base.getBoundingClientRect(), rtl: isRtl(this) });
+    this.drags.set(e.pointerId, {
+      handle,
+      changed: false,
+      rect: base.getBoundingClientRect(),
+      rtl: isRtl(this),
+    });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     window.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -430,7 +471,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     const ratio = Math.min(1, Math.max(0, drag.rtl ? 1 - raw : raw));
     const { lo, hi } = this.domain();
     const value = lo + ratio * (hi - lo);
-    this.setValue(drag.handle, value, false);
+    drag.changed = this.setValue(drag.handle, value, false) || drag.changed;
   };
 
   private onPointerUp = (e: PointerEvent): void => {
@@ -439,9 +480,10 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
   private endDrag(pointerId: number, commit: boolean): void {
-    if (!this.drags.has(pointerId)) return;
+    const drag = this.drags.get(pointerId);
+    if (!drag) return;
     this.drags.delete(pointerId);
-    if (commit) this.emit('lr-change', { start: this.start, end: this.end });
+    if (commit && drag.changed) this.emit('lr-change', { start: this.start, end: this.end });
     // Only the last concurrent drag to end tears down the shared window
     // listeners — another pointer (e.g. the other finger of a two-finger
     // drag) may still be down.
@@ -547,6 +589,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           aria-valuemax=${startBounds.max}
           aria-valuenow=${startValue ?? nothing}
           aria-valuetext=${startValueText ?? nothing}
+          ?data-at-domain-start=${startPct === 0}
+          ?data-at-domain-end=${startPct === 100}
           style=${`inset-inline-start:${startPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('start', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('start', e)}
@@ -565,6 +609,8 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
           aria-valuemax=${endBounds.max}
           aria-valuenow=${endValue ?? nothing}
           aria-valuetext=${endValueText ?? nothing}
+          ?data-at-domain-start=${endPct === 0}
+          ?data-at-domain-end=${endPct === 100}
           style=${`inset-inline-start:${endPct}%`}
           @pointerdown=${(e: PointerEvent) => this.onPointerDown('end', e)}
           @keydown=${(e: KeyboardEvent) => this.onKeyDown('end', e)}

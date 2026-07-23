@@ -21,7 +21,7 @@ export const styles = css`
     --lr-attachment-chip-compact-thumbnail-size: var(--lr-size-1-75rem);
     --lr-attachment-chip-compact-font-size: var(--lr-font-size-xs);
     --lr-attachment-chip-compact-gap: var(--lr-size-0-25rem);
-    --lr-attachment-chip-spinner-duration: 0.8s;
+    --lr-attachment-chip-spinner-duration: var(--lr-transition-ambient);
   }
 
   :host([compact]) [part='base'] {
@@ -159,7 +159,7 @@ export const styles = css`
     border-radius: 50%;
     border: var(--lr-border-width-medium) solid var(--lr-color-border);
     border-block-start-color: var(--lr-attachment-chip-accent);
-    animation: lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration) linear infinite;
+    animation: lr-attachment-chip-spin var(--lr-attachment-chip-spinner-duration) infinite;
   }
 
   [part='retry-button'],

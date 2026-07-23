@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   /* Fully transparent to layout -- the visible/clickable surface is entirely
@@ -8,13 +8,13 @@ export const styles = css`
   :host {
     display: contents;
   }
-  [part='trigger'] {
+  [part="trigger"] {
     /* Same reasoning as :host above -- event listeners still fire on a
        display:contents element (only layout/hit-testing are affected), so
        click/keydown delegation from the slotted trigger keeps working. */
     display: contents;
   }
-  [part='popup'] {
+  [part="popup"] {
     position: fixed;
     z-index: var(--lr-layer-dropdown);
     box-sizing: border-box;
@@ -25,8 +25,15 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     min-inline-size: var(--lr-size-10rem);
-    max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-20rem), var(--lr-positioner-available-inline-size, 100vw));
-    max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
+    max-inline-size: min(
+      var(--lr-popover-viewport-clamp),
+      var(--lr-size-20rem),
+      var(--lr-positioner-available-inline-size, 100vw)
+    );
+    max-block-size: min(
+      var(--lr-size-20rem),
+      var(--lr-positioner-available-block-size, var(--lr-size-20rem))
+    );
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -40,18 +47,16 @@ export const styles = css`
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));
-    transition:
-      opacity var(--lr-transition-fast),
-      transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+    transition: opacity var(--lr-transition-fast),
+      transform var(--lr-transition-fast), visibility var(--lr-transition-fast);
   }
-  :host([open]) [part='popup'] {
+  :host([open]) [part="popup"] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='popup'] {
+    [part="popup"] {
       transition: none !important;
     }
   }
@@ -64,24 +69,24 @@ export const styles = css`
      the whitespace-only text nodes Lit leaves inside a part, so the rule
      would silently never match -- the host attributes below are set from the
      slots' own slotchange instead. */
-  [part='header'],
-  [part='footer'] {
+  [part="header"],
+  [part="footer"] {
     flex: 0 0 auto;
     padding: var(--lr-space-xs);
   }
-  :host(:not([data-has-header])) [part='header'],
-  :host(:not([data-has-footer])) [part='footer'] {
+  :host(:not([data-has-header])) [part="header"],
+  :host(:not([data-has-footer])) [part="footer"] {
     display: none;
   }
   /* The divider only earns its keep when there are items on the other side of
      it -- a header above an empty list would otherwise draw a stray rule. */
-  :host(:not([data-list-empty])) [part='header'] {
+  :host(:not([data-list-empty])) [part="header"] {
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  :host(:not([data-list-empty])) [part='footer'] {
+  :host(:not([data-list-empty])) [part="footer"] {
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  [part='list'] {
+  [part="list"] {
     display: flex;
     flex-direction: column;
     /* The list, not a filled header/footer, is what scrolls when the popup
@@ -89,7 +94,11 @@ export const styles = css`
        content height inside the popup's own column. */
     flex: 0 1 auto;
     min-block-size: 0;
-    max-block-size: min(var(--lr-size-20rem), var(--lr-positioner-available-block-size, var(--lr-size-20rem)));
+    max-block-size: min(
+      var(--lr-size-20rem),
+      var(--lr-positioner-available-block-size, var(--lr-size-20rem))
+    );
+    overflow-x: hidden;
     overflow-y: auto;
     padding: var(--lr-space-xs);
     outline: none;

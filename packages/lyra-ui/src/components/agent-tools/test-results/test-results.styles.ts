@@ -58,6 +58,7 @@ export const styles = css`
   [part='suite-header'] {
     font-weight: var(--lr-font-weight-semibold);
     padding-block: var(--lr-space-xs);
+    overflow-wrap: anywhere;
   }
   [part='test'] {
     display: flex;
@@ -96,6 +97,7 @@ export const styles = css`
     flex: 0 0 auto;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
+    overflow-wrap: anywhere;
   }
   [part='test-expand-toggle'] {
     flex: 0 0 auto;

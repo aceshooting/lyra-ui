@@ -53,11 +53,17 @@ export interface LyraChipEventMap {
  * rendered while `removable`.
  * @event lr-chip-select - Fired on click, or Enter/Space while focused, once the chip has
  * opted into toggle mode (via `selected` or `toggleable`) and `removable` is not set.
- * `detail: { value, selected }` -- the chip has already toggled its own `selected` state by the
- * time this fires.
+ * `detail: { value, selected }` contains the proposed next state. Cancelable; preventing it keeps
+ * the current `selected` state unchanged.
+ * @method focus - Forwards focus to the chip's active remove or toggle button.
+ * @method blur - Forwards blur to the chip's active remove or toggle button.
+ * @method click - Activates the chip's active remove or toggle button; passive chips retain the
+ * ordinary `HTMLElement.click()` behavior.
  * @csspart base - The pill's root container.
  * @csspart icon - Wrapper around the `icon` slot. Hidden entirely while empty.
  * @csspart label - Wrapper around the default slot.
+ * @csspart toggle-button - The real toggle control, rendered over the non-interactive label when
+ * toggle mode is active.
  * @csspart remove-button - The remove (×) affordance, only rendered while `removable`.
  * @cssprop [--lr-chip-accent=var(--lr-color-text)] - Text/icon color of the pill. Each `tone` sets
  * it to that tone's loud color.
@@ -77,13 +83,12 @@ export interface LyraChipEventMap {
  * `size` sets it to that step's block padding.
  * @cssprop [--lr-chip-padding-inline=var(--lr-space-s)] - Inline padding of the pill. Each `size`
  * sets it to that step's inline padding.
- * @cssprop [--lr-chip-min-height=var(--lr-size-1-5rem)] - Minimum block size of an interactive
- * (`removable`/`toggleable`) chip's tap target. `size` keeps `3xs`/`2xs`/`xs`/`s`/`m` at the `1.5rem`
- * (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to
- * `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor.
+ * @cssprop [--lr-chip-min-height=var(--lr-size-1-5rem)] - Component density floor for an
+ * interactive chip. The real toggle/remove controls also enforce the shared
+ * `--lr-icon-button-size` target floor.
  * @cssprop --lr-chip-height - Exact block size of the chip. Undeclared by default, so the chip
  * grows to fit its content (floored by `--lr-chip-min-height` when interactive). Set it to pin a
- * fixed height. A value below the 24px interactive target is for non-interactive chips only.
+ * fixed height. A value below the shared interactive target is for non-interactive chips only.
  * @cssprop [--lr-chip-pressed-bg=var(--lr-chip-bg)] - Background while a toggleable chip is
  * selected, independently themeable from its resting background.
  * @cssprop [--lr-chip-pressed-border=var(--lr-chip-accent)] - Border color while a toggleable chip
@@ -103,15 +108,15 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
 
   /** Opt-in toggle/pressed mode -- the current pressed value. Setting `selected` (to `true`, the
    *  common way to start a chip already pressed) opts the chip into toggle mode automatically, so
-   *  `<lr-chip selected>` alone is enough: `[part='base']` becomes focusable and
-   *  keyboard-activatable (Enter/Space, mirroring native `<button>` behavior), reflects
+   *  `<lr-chip selected>` alone is enough: `[part='toggle-button']` renders as a native,
+   *  keyboard-activatable button and reflects
    *  `aria-pressed`, and toggles on click/activation, emitting `lr-chip-select`. That opt-in
    *  (tracked by `toggleable`, see below) persists once made, so toggling `selected` back to
    *  `false` never strips the chip's interactivity -- a chip a user has clicked "off" must stay
-   *  clickable to turn it back "on". Has no effect (no interactive semantics added to
-   *  `[part='base']`) when combined with `removable`, since the remove button already nests inside
-   *  `[part='base']` -- axe-core's `nested-interactive` rule forbids a focusable descendant of a
-   *  `role="button"` ancestor, and this component's two real use cases (a chart-series visibility
+   *  clickable to turn it back "on". Has no effect when combined with `removable`, since that
+   *  mode already owns the chip's one native action. The label slot is inert in toggle mode, so
+   *  unrestricted slotted descendants can never nest inside or double-activate the real button.
+   *  This component's two real use cases (a chart-series visibility
    *  toggle, a category filter chip) never need both at once. `false` (the default, with
    *  `toggleable` also left at its default) reproduces today's exact passive-label-pill output. */
   @property({ type: Boolean, reflect: true }) selected = false;
@@ -135,6 +140,18 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   // in JS instead, the same fix `<lr-stat>`'s `hasIcon`/
   // `<lr-tool-call-chip>`'s `hasDetailSlot` etc. already establish.
   @state() private hasIconSlot = false;
+  private labelObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
+    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  override disconnectedCallback(): void {
+    this.labelObserver?.disconnect();
+    super.disconnectedCallback();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
@@ -183,19 +200,35 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     this.emit<ChipRemoveDetail>('lr-remove', { value: this.value });
   };
 
-  private onBaseClick = (): void => {
-    if (this.removable) return;
-    this.selected = !this.selected;
-    this.emit<ChipSelectDetail>('lr-chip-select', { value: this.value, selected: this.selected });
+  private onToggleClick = (): void => {
+    const selected = !this.selected;
+    const event = this.emit<ChipSelectDetail>(
+      'lr-chip-select',
+      { value: this.value, selected },
+      { cancelable: true },
+    );
+    if (!event.defaultPrevented) this.selected = selected;
   };
 
-  private onBaseKeyDown = (e: KeyboardEvent): void => {
-    if (this.removable) return;
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-      e.preventDefault();
-      this.onBaseClick();
-    }
-  };
+  private get primaryControl(): HTMLButtonElement | null {
+    return this.renderRoot.querySelector<HTMLButtonElement>(
+      this.removable ? '[part="remove-button"]' : '[part="toggle-button"]',
+    );
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.primaryControl?.focus(options);
+  }
+
+  override blur(): void {
+    this.primaryControl?.blur();
+  }
+
+  override click(): void {
+    const control = this.primaryControl;
+    if (control) control.click();
+    else super.click();
+  }
 
   override render(): TemplateResult {
     // `toggleMode` is sticky (see `toggleable`'s doc comment) and gates the chip's structural
@@ -206,16 +239,20 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     return html`
       <span
         part="base"
-        role=${toggleMode ? 'button' : nothing}
-        tabindex=${toggleMode ? '0' : nothing}
-        aria-pressed=${toggleMode ? (pressed ? 'true' : 'false') : nothing}
-        @click=${toggleMode ? this.onBaseClick : nothing}
-        @keydown=${toggleMode ? this.onBaseKeyDown : nothing}
       >
         <span part="icon" aria-hidden="true" ?hidden=${!this.hasIconSlot}>
           <slot name="icon" @slotchange=${this.onIconSlotChange}></slot>
         </span>
-        <span part="label"><slot></slot></span>
+        <span part="label" ?inert=${toggleMode}><slot></slot></span>
+        ${toggleMode
+          ? html`<button
+              part="toggle-button"
+              type="button"
+              aria-label=${this.getAttribute('aria-label') || this.labelText || nothing}
+              aria-pressed=${pressed ? 'true' : 'false'}
+              @click=${this.onToggleClick}
+            ></button>`
+          : nothing}
         ${this.removable
           ? html`<button part="remove-button" type="button" aria-label=${this.accessibleRemoveLabel} @click=${this.onRemoveClick}>
               ${closeIcon()}

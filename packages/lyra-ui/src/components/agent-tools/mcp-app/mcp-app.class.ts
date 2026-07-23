@@ -151,15 +151,14 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     }
   }
 
-  private expectedOrigin(): string | null {
+  private expectedOrigin(): 'null' | null {
     if (this.resource?.html) return 'null';
     const src = safeMediaSrc(this.resource?.src);
     if (!src) return null;
-    try {
-      return new URL(src, document.baseURI).origin;
-    } catch {
-      return null;
-    }
+    // The frame intentionally omits allow-same-origin. Both srcdoc and network documents
+    // therefore have an opaque origin serialized as "null"; the contentWindow identity is
+    // the authentication boundary that distinguishes this frame from every other opaque frame.
+    return 'null';
   }
 
   private onLoad(): void {
@@ -217,7 +216,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     const target = this.frame?.contentWindow;
     if (!target) return;
     const origin = this.expectedOrigin();
-    target.postMessage(message, origin && origin !== 'null' ? origin : '*');
+    target.postMessage(message, origin === 'null' ? '*' : origin ?? '*');
   }
 
   postHostContext(context: unknown): void {

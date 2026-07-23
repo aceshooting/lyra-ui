@@ -74,6 +74,20 @@ export const RightToLeft: Story = {
   `,
 };
 
+export const NarrowLongContent: Story = {
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-known-date
+        label="Extremely long localized birth date label that wraps inside a narrow form column"
+        day-label="Localized day"
+        month-label="Localized month"
+        year-label="Localized year"
+        hint="A long translated hint remains readable without creating horizontal page scrolling."
+      ></lr-known-date>
+    </div>
+  `,
+};
+
 export const PinnedFieldHeight: Story = {
   name: 'Pinned field height (--lr-known-date-field-height)',
   parameters: {

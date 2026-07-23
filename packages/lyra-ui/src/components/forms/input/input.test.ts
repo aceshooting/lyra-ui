@@ -691,3 +691,20 @@ describe('lr-input', () => {
     });
   });
 });
+
+it('forwards host click to the native input and suppresses it while effectively disabled', async () => {
+  const form = (await fixture(html`
+    <form><fieldset><lr-input></lr-input></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-input') as LyraInput;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+  fieldset.disabled = true;
+  el.click();
+  expect(clicks).to.equal(1);
+});

@@ -101,6 +101,8 @@ function slidePreset(edge: 'start' | 'end', mode: 'in' | 'out', dir: 'ltr' | 'rt
 }
 
 const DIRECTIONAL_SLIDE_NAMES = new Set<LyraAnimationPreset>(['slide-in-start', 'slide-in-end', 'slide-out-start', 'slide-out-end']);
+const PLAYBACK_DIRECTIONS = new Set<string>(['normal', 'reverse', 'alternate', 'alternate-reverse']);
+const FILL_MODES = new Set<string>(['none', 'forwards', 'backwards', 'both', 'auto']);
 
 /** Reads and decomposes a compound `--lr-transition-*` token (e.g. `"180ms ease-out"`)
  * into the plain numeric `duration`/string `easing` pair the Web Animations API needs --
@@ -109,13 +111,18 @@ const DIRECTIONAL_SLIDE_NAMES = new Set<LyraAnimationPreset>(['slide-in-start', 
  * `var()` internally never leaks unresolved text into `easing`. */
 function resolveTimingToken(el: HTMLElement, preset: 'fast' | 'base' | 'ambient'): { duration: number; easing: string } {
   const raw = getComputedStyle(el).getPropertyValue(`--lr-transition-${preset}`).trim();
-  const match = /^([\d.]+)(ms|s)\s+(.+)$/.exec(raw);
+  const match = /^((?:\d+(?:\.\d*)?)|(?:\.\d+))(ms|s)\s+(.+)$/.exec(raw);
   if (!match) return { duration: 1000, easing: 'linear' };
   // safe: all three capture groups are non-optional, so a successful match fills them.
   const num = match[1]!;
   const unit = match[2]!;
   const easing = match[3]!;
-  return { duration: unit === 's' ? parseFloat(num) * 1000 : parseFloat(num), easing: easing.trim() };
+  const duration = (unit === 's' ? 1000 : 1) * Number(num);
+  const resolvedEasing = easing.trim();
+  if (!Number.isFinite(duration) || !CSS.supports('animation-timing-function', resolvedEasing)) {
+    return { duration: 1000, easing: 'linear' };
+  }
+  return { duration, easing: resolvedEasing };
 }
 
 /**
@@ -235,6 +242,15 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   private get safePlaybackRate(): number {
     return finiteNumber(this.playbackRate, 1);
   }
+  private get safeDirection(): PlaybackDirection {
+    return PLAYBACK_DIRECTIONS.has(this.direction) ? this.direction : 'normal';
+  }
+  private get safeFill(): FillMode {
+    return FILL_MODES.has(this.fill) ? this.fill : 'auto';
+  }
+  private safeEasing(value: string): string {
+    return CSS.supports('animation-timing-function', value) ? value : 'linear';
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -317,22 +333,29 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       this.play = true;
       return;
     }
-    this.visibilityObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[entries.length - 1];
-        if (!entry) return;
-        if (entry.isIntersecting) {
-          this.play = true;
-          if (!this.playOnVisibleRepeat) {
-            this.visibilityObserver?.disconnect();
-            this.visibilityObserver = undefined;
-          }
-        } else if (this.playOnVisibleRepeat) {
-          this.play = false;
+    const callback: IntersectionObserverCallback = (entries) => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      if (entry.isIntersecting) {
+        this.play = true;
+        if (!this.playOnVisibleRepeat) {
+          this.visibilityObserver?.disconnect();
+          this.visibilityObserver = undefined;
         }
-      },
-      { root: this.root instanceof Element ? this.root : null, rootMargin: this.rootMargin, threshold: this.threshold },
-    );
+      } else if (this.playOnVisibleRepeat) {
+        this.play = false;
+      }
+    };
+    const root = this.root instanceof Element ? this.root : null;
+    try {
+      this.visibilityObserver = new IntersectionObserver(callback, {
+        root,
+        rootMargin: this.rootMargin,
+        threshold: this.threshold,
+      });
+    } catch {
+      this.visibilityObserver = new IntersectionObserver(callback, { root, rootMargin: '0px', threshold: 0 });
+    }
     this.visibilityObserver.observe(target);
   };
 
@@ -362,15 +385,15 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
     const reduced = this.respectReducedMotion && prefersReducedMotion();
     const { duration, easing } =
       this.timingPreset === 'custom'
-        ? { duration: this.safeDuration, easing: this.easing }
+        ? { duration: this.safeDuration, easing: this.safeEasing(this.easing) }
         : resolveTimingToken(this, this.timingPreset);
     const options: KeyframeAnimationOptions = {
       delay: this.safeDelay,
-      direction: this.direction,
+      direction: this.safeDirection,
       duration,
       easing,
       endDelay: this.safeEndDelay,
-      fill: this.fill,
+      fill: this.safeFill,
       iterationStart: this.safeIterationStart,
       iterations: reduced ? Math.min(this.safeIterations, 1) : this.safeIterations,
     };

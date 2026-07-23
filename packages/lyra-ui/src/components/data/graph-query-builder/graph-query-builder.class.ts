@@ -1,9 +1,11 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { finiteInteger } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { nextId } from '../../../internal/a11y.js';
 import { styles } from './graph-query-builder.styles.js';
 import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
@@ -78,6 +80,38 @@ const EMPTY_VALUE: GraphQuery = {
 const EMPTY_OPTIONS: GraphQueryTypeOption[] = [];
 const EMPTY_SAVED: GraphQuerySavedItem[] = [];
 
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((entry): entry is string => typeof entry === 'string'))];
+}
+
+function normalizeGraphQuery(value: unknown): GraphQuery {
+  const record =
+    value !== null && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const direction = record['direction'];
+  return {
+    startId: typeof record['startId'] === 'string' ? record['startId'] : '',
+    endId: typeof record['endId'] === 'string' ? record['endId'] : '',
+    relationshipTypes: stringArray(record['relationshipTypes']),
+    nodeTypes: stringArray(record['nodeTypes']),
+    direction: direction === 'out' || direction === 'in' || direction === 'both' ? direction : 'both',
+    minHops: finiteInteger(
+      typeof record['minHops'] === 'number' ? record['minHops'] : EMPTY_VALUE.minHops,
+      EMPTY_VALUE.minHops,
+      1,
+      20,
+    ),
+    maxHops: finiteInteger(
+      typeof record['maxHops'] === 'number' ? record['maxHops'] : EMPTY_VALUE.maxHops,
+      EMPTY_VALUE.maxHops,
+      1,
+      20,
+    ),
+  };
+}
+
 export interface LyraGraphQueryBuilderEventMap {
   'lr-input': CustomEvent<{ value: GraphQuery }>;
   'lr-validity-change': CustomEvent<{ valid: boolean; errors: Record<string, string> }>;
@@ -129,6 +163,9 @@ export interface LyraGraphQueryBuilderEventMap {
  *
  * @customElement lr-graph-query-builder
  * @slot actions - Extra host controls rendered in the footer beside the Run button.
+ * @slot label - Visible label for the complete form control.
+ * @slot hint - Supporting text for the complete form control.
+ * @slot error - Error text for the complete form control.
  * @event lr-input - `detail: { value }` — any field changed; the full current query.
  * @event lr-validity-change - `detail: { valid, errors }` — fired only on an actual change.
  * @event lr-query-run - The Run button was activated and `reportValidity()` passed. `detail: { query }`.
@@ -139,6 +176,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * @event lr-query-delete - A saved query's delete button was activated. `detail: { id }` — the
  * host is responsible for removing the matching entry from `savedQueries`.
  * @csspart base - The outer wrapper around every section.
+ * @csspart label - Visible label for the complete form control.
+ * @csspart hint - Supporting text for the complete form control.
+ * @csspart error - Error text for the complete form control.
  * @csspart path-fields - The row wrapping the start/end entity inputs and hop-count selects.
  * @csspart start-input - The start-entity `<lr-input>`.
  * @csspart end-input - The end-entity `<lr-input>`.
@@ -187,10 +227,20 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
    *  A host-level `aria-label` attribute wins over both this property and the localized default --
    *  see the class doc's "Accessible name" note. */
   @property() label = '';
+  /** Supporting text rendered below the outer label. */
+  @property() hint = '';
+  /** Caller-supplied outer error text. Field-level validation remains on the affected controls. */
+  @property({ attribute: 'error-text' }) errorText = '';
 
   @state() private _errors: Record<string, string> = {};
   @state() private touchedFields = new Set<string>();
   @state() private saveName = '';
+  @state() private hasHintSlot = false;
+  @state() private hasErrorSlot = false;
+
+  private readonly labelId = nextId('graph-query-builder-label');
+  private readonly hintId = nextId('graph-query-builder-hint');
+  private readonly errorId = nextId('graph-query-builder-error');
 
   private internals: ElementInternals;
   private validityController: AnchoredValidityController;
@@ -261,10 +311,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
   }
   set value(next: GraphQuery) {
     const old = this._value;
-    // Merged over EMPTY_VALUE (not used verbatim) so a partial object assigned programmatically
-    // (or restored from form state -- see formStateRestoreCallback below) still yields every
-    // field the render/validation logic unconditionally reads.
-    this._value = next ? { ...EMPTY_VALUE, ...next } : EMPTY_VALUE;
+    this._value = normalizeGraphQuery(next);
     this.syncFormState();
     this.requestUpdate('value', old);
   }
@@ -368,7 +415,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
       try {
         const parsed: unknown = JSON.parse(state);
         if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          restored = { ...EMPTY_VALUE, ...(parsed as Partial<GraphQuery>) };
+          restored = normalizeGraphQuery(parsed);
         }
       } catch {
         // Invalid persisted state restores the safe empty value.
@@ -448,6 +495,15 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     return Array.from({ length: limit }, (_, i) => i + 1);
   }
 
+  private onChromeSlotChange = (event: Event): void => {
+    const slot = event.currentTarget as HTMLSlotElement;
+    const hasContent = slot.assignedNodes({ flatten: true }).some((node) =>
+      node.nodeType === Node.TEXT_NODE ? Boolean(node.textContent?.trim()) : true,
+    );
+    if (slot.name === 'hint') this.hasHintSlot = hasContent;
+    else if (slot.name === 'error') this.hasErrorSlot = hasContent;
+  };
+
   private labelForType(options: GraphQueryTypeOption[], value: string): string {
     return options.find((o) => o.value === value)?.label ?? value;
   }
@@ -476,6 +532,7 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           .value=${''}
           ?disabled=${disabled}
           @change=${(e: Event) => {
+            e.stopPropagation();
             const el = e.target as LyraSelect;
             add(el.value);
             el.value = '';
@@ -488,7 +545,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             (t) => html`<lr-chip
               ?removable=${!disabled}
               value=${t}
-              @lr-remove=${() => remove(t)}
+              @lr-remove=${(event: Event) => {
+                event.stopPropagation();
+                remove(t);
+              }}
               >${this.labelForType(options, t)}</lr-chip
             >`,
           )}
@@ -504,9 +564,29 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
     const hasStartError = this.touchedFields.has('start-input') && Boolean(this._errors['start-input']);
     const hasHopError = this.touchedFields.has('max-hops') && Boolean(this._errors['max-hops']);
     const regionLabel = this.getAttribute('aria-label') || this.label || this.localize('graphQueryBuilderLabel');
+    const hasHint = this.hasHintSlot || Boolean(this.hint);
+    const hasError = this.hasErrorSlot || Boolean(this.errorText);
+    const describedBy = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ');
+    const hopNumber = getNumberFormat(this.effectiveLocale);
 
     return html`
-      <div part="base" role="group" aria-label=${regionLabel}>
+      <div
+        part="base"
+        role="group"
+        aria-label=${regionLabel}
+        aria-describedby=${describedBy || nothing}
+      >
+        <div part="label" id=${this.labelId}>
+          <slot name="label" @slotchange=${this.onChromeSlotChange}
+            >${this.label || this.localize('graphQueryBuilderLabel')}</slot
+          >
+        </div>
+        <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>
+          ${this.hint}<slot name="hint" @slotchange=${this.onChromeSlotChange}></slot>
+        </div>
+        <div part="error" id=${this.errorId} ?hidden=${!hasError}>
+          ${this.errorText}<slot name="error" @slotchange=${this.onChromeSlotChange}></slot>
+        </div>
         <div part="path-fields">
           <lr-input
             part="start-input"
@@ -535,9 +615,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             label=${this.localize('graphQueryMinHopsLabel')}
             .value=${String(value.minHops)}
             ?disabled=${disabled}
-            @change=${(e: Event) => this.setValue({ ...value, minHops: Number((e.target as LyraSelect).value) })}
+            @change=${(e: Event) => {
+              e.stopPropagation();
+              this.setValue({ ...value, minHops: Number((e.target as LyraSelect).value) });
+            }}
           >
-            ${hops.map((n) => html`<lr-option value=${String(n)}>${n}</lr-option>`)}
+            ${hops.map((n) => html`<lr-option value=${String(n)}>${hopNumber.format(n)}</lr-option>`)}
           </lr-select>
           <lr-select
             part="max-hops"
@@ -545,9 +628,12 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             .value=${String(value.maxHops)}
             error-text=${hasHopError ? this._errors['max-hops'] : ''}
             ?disabled=${disabled}
-            @change=${(e: Event) => this.setValue({ ...value, maxHops: Number((e.target as LyraSelect).value) })}
+            @change=${(e: Event) => {
+              e.stopPropagation();
+              this.setValue({ ...value, maxHops: Number((e.target as LyraSelect).value) });
+            }}
           >
-            ${hops.map((n) => html`<lr-option value=${String(n)}>${n}</lr-option>`)}
+            ${hops.map((n) => html`<lr-option value=${String(n)}>${hopNumber.format(n)}</lr-option>`)}
           </lr-select>
         </div>
 
@@ -573,8 +659,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           label=${this.localize('graphQueryDirectionLabel')}
           .value=${value.direction}
           ?disabled=${disabled}
-          @change=${(e: Event) =>
-            this.setValue({ ...value, direction: (e.target as LyraSelect).value as GraphQueryDirection })}
+          @change=${(e: Event) => {
+            e.stopPropagation();
+            this.setValue({ ...value, direction: (e.target as LyraSelect).value as GraphQueryDirection });
+          }}
         >
           <lr-option value="out">${this.localize('neighborDirectionOut')}</lr-option>
           <lr-option value="in">${this.localize('neighborDirectionIn')}</lr-option>
@@ -615,7 +703,13 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             : html`<ul part="saved-list">
                 ${this.savedQueries.map(
                   (item) => html`<li part="saved-item">
-                    <button part="saved-load-button" type="button" ?disabled=${disabled} @click=${() => this.loadQuery(item)}>
+                    <button
+                      part="saved-load-button"
+                      type="button"
+                      ?disabled=${disabled}
+                      aria-label=${this.localize('graphQueryLoadWithContext', undefined, { name: item.name })}
+                      @click=${() => this.loadQuery(item)}
+                    >
                       ${item.name}
                     </button>
                     <button

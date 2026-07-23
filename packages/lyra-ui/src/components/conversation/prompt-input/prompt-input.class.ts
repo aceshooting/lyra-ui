@@ -9,6 +9,11 @@ import type { MentionItem, LyraMentionPopover } from '../../utility/mention-popo
 import type { LyraChatComposer, ChatComposerStatus } from '../chat-composer/chat-composer.class.js';
 import type { LyraModelCatalog } from '../model-select/model-select.class.js';
 import type { PromptQueueItem } from '../prompt-queue/prompt-queue.class.js';
+import type { PromptQueueChangeDetail } from '../prompt-queue/prompt-queue.class.js';
+import type {
+  AttachmentChipIdDetail,
+  AttachmentChipPreviewDetail,
+} from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraVoiceCatalog } from '../voice-picker/voice-picker.class.js';
 import '../../media/attachment-chip/attachment-chip.js';
 import '../../media/attachment-trigger/attachment-trigger.js';
@@ -45,6 +50,13 @@ export interface LyraPromptInputEventMap {
   'lr-attachment-remove': CustomEvent<{ id: string }>;
   'lr-model-change': CustomEvent<{ value: string; inCatalog: boolean }>;
   'lr-voice-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-sources-change': CustomEvent<{ selectedIds: string[] }>;
+  'lr-queue-change': CustomEvent<PromptQueueChangeDetail>;
+  'lr-send-now': CustomEvent<{ item: PromptQueueItem }>;
+  'lr-camera-request': CustomEvent<undefined>;
+  'lr-audio-request': CustomEvent<undefined>;
+  'lr-attachment-retry': CustomEvent<AttachmentChipIdDetail>;
+  'lr-attachment-preview': CustomEvent<AttachmentChipPreviewDetail>;
 }
 
 /**
@@ -224,6 +236,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     });
   }
 
+  private reemit<K extends keyof LyraPromptInputEventMap>(event: LyraPromptInputEventMap[K], name: K): void {
+    event.stopPropagation();
+    this.emit(name, event.detail);
+  }
+
   private renderAttachment(attachment: PromptInputAttachment): TemplateResult {
     return html`<lr-attachment-chip
       .id=${attachment.id}
@@ -238,6 +255,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         event.stopPropagation();
         this.emit('lr-attachment-remove', { id: attachment.id });
       }}
+      @lr-retry=${(event: CustomEvent<AttachmentChipIdDetail>) =>
+        this.reemit(event, 'lr-attachment-retry')}
+      @lr-preview=${(event: CustomEvent<AttachmentChipPreviewDetail>) =>
+        this.reemit(event, 'lr-attachment-preview')}
     ></lr-attachment-chip>`;
   }
 
@@ -273,6 +294,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               part="source-picker"
               .sources=${this.sources}
               .selectedIds=${this.selectedSourceIds}
+              @lr-sources-change=${(event: CustomEvent<{ selectedIds: string[] }>) =>
+                this.reemit(event, 'lr-sources-change')}
             ></lr-source-picker>
           </details>`
         : nothing}
@@ -283,7 +306,15 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     const label = this.accessibleLabel || this.label || this.localize('promptInputLabel');
     return html`<section part="base" aria-label=${label}>
       ${this.queue.length
-        ? html`<lr-prompt-queue part="queue" .items=${this.queue} .disabled=${this.disabled}></lr-prompt-queue>`
+        ? html`<lr-prompt-queue
+            part="queue"
+            .items=${this.queue}
+            .disabled=${this.disabled}
+            @lr-queue-change=${(event: CustomEvent<PromptQueueChangeDetail>) =>
+              this.reemit(event, 'lr-queue-change')}
+            @lr-send-now=${(event: CustomEvent<{ item: PromptQueueItem }>) =>
+              this.reemit(event, 'lr-send-now')}
+          ></lr-prompt-queue>`
         : nothing}
       <slot name="controls">${this.renderControls()}</slot>
       <lr-chat-composer
@@ -305,6 +336,10 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
               .capabilities=${this.attachmentCapabilities}
               .disabled=${this.disabled}
               @lr-pick=${this.onPick}
+              @lr-camera-request=${(event: CustomEvent<undefined>) =>
+                this.reemit(event, 'lr-camera-request')}
+              @lr-audio-request=${(event: CustomEvent<undefined>) =>
+                this.reemit(event, 'lr-audio-request')}
             ></lr-attachment-trigger>
           </slot>
         </span>

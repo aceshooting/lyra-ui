@@ -15,3 +15,20 @@ const requests: ToolApprovalRequest[] = [
 
 export const Default: Story = { render: () => html`<lr-approval-queue .requests=${requests}></lr-approval-queue>` };
 export const Empty: Story = { render: () => html`<lr-approval-queue></lr-approval-queue>` };
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-approval-queue
+        label="Tool requests awaiting a reviewer decision"
+        .requests=${[
+          {
+            id: 'call-with-a-long-correlation-identifier-for-a-production-agent-run',
+            toolName: 'create_customer_support_escalation_ticket',
+            args: { title: 'Investigate the customer-facing latency regression' },
+          },
+        ]}
+      ></lr-approval-queue>
+    </div>
+  `,
+};

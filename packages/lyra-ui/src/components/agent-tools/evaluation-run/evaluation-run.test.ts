@@ -33,6 +33,17 @@ const toolTrace: ToolTimelineEntry[] = [
   { id: 'call-1', name: 'search', args: { query: 'refund policy' }, status: 'success', result: { hits: 2 } },
 ];
 
+async function expandExample(el: LyraEvaluationRun, index = 0): Promise<HTMLElement> {
+  const row = el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
+  row.dispatchEvent(new CustomEvent('lr-toggle', {
+    bubbles: true,
+    composed: true,
+    detail: { open: true },
+  }));
+  await el.updateComplete;
+  return el.shadowRoot!.querySelectorAll('[part="example"]')[index] as HTMLElement;
+}
+
 it('defaults to examples=[], total=null, label=""', async () => {
   const el = (await fixture(html`<lr-evaluation-run></lr-evaluation-run>`)) as LyraEvaluationRun;
   expect(el.examples).to.deep.equal([]);
@@ -94,7 +105,7 @@ it('renders a per-example status badge with the right text', async () => {
 
 it('renders plain-text input/output via lr-markdown by default', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement;
+  const row = await expandExample(el);
   const input = row.querySelector('[part="input"]') as HTMLElement;
   expect(input.tagName.toLowerCase()).to.equal('lr-markdown');
   expect((input as unknown as { content: string }).content).to.equal('What is the refund policy?');
@@ -102,23 +113,24 @@ it('renders plain-text input/output via lr-markdown by default', async () => {
 
 it('renders code input/output via lr-code-block when the example requests it, with its language', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
-  const input = rows[1]!.querySelector('[part="input"]') as HTMLElement;
+  const row = await expandExample(el, 1);
+  const input = row.querySelector('[part="input"]') as HTMLElement;
   expect(input.tagName.toLowerCase()).to.equal('lr-code-block');
   expect(input.getAttribute('language')).to.equal('python');
 });
 
 it('renders no grounding section when the example carries no grounding assessment', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as HTMLElement[];
-  expect(rows[1]!.querySelector('[part="grounding-section"]')).to.not.exist;
+  const row = await expandExample(el, 1);
+  expect(row.querySelector('[part="grounding-section"]')).to.not.exist;
 });
 
 it('composes lr-grounding-summary with the example assessment and citations when grounding is present', async () => {
   const citations: Citation[] = [{ id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' }];
   const withCitations: EvaluationExampleResult[] = [{ ...examples[0]!, citations }];
   const el = (await fixture(html`<lr-evaluation-run .examples=${withCitations}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const section = el.shadowRoot!.querySelector('[part="grounding-section"]') as HTMLElement;
+  const row = await expandExample(el);
+  const section = row.querySelector('[part="grounding-section"]') as HTMLElement;
   expect(section).to.exist;
   const summary = section.querySelector('[part="grounding-summary"]') as HTMLElement;
   expect(summary.tagName.toLowerCase()).to.equal('lr-grounding-summary');
@@ -151,7 +163,8 @@ it('falls back to an empty language attribute when a code-formatted example omit
     { id: 'ex-nolang', status: { kind: 'done' }, input: 'x = 1', inputFormat: 'code', output: '' },
   ];
   const el = (await fixture(html`<lr-evaluation-run .examples=${noLanguage}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLElement;
+  const row = await expandExample(el);
+  const input = row.querySelector('[part="input"]') as HTMLElement;
   expect(input.tagName.toLowerCase()).to.equal('lr-code-block');
   expect(input.getAttribute('language')).to.equal('');
 });
@@ -171,14 +184,15 @@ it('deletes the id from expandedIds (and reports expanded: false) when an exampl
 
 it('renders no tool-trace section when the example has no toolTrace', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement;
+  const row = await expandExample(el);
   expect(row.querySelector('[part="tool-trace-section"]')).to.not.exist;
 });
 
 it('composes lr-tool-timeline with the example entries for the tool-trace section', async () => {
   const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace }];
   const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const timeline = el.shadowRoot!.querySelector('[part="tool-trace"]') as HTMLElement;
+  const row = await expandExample(el);
+  const timeline = row.querySelector('[part="tool-trace"]') as HTMLElement;
   expect(timeline.tagName.toLowerCase()).to.equal('lr-tool-timeline');
   expect((timeline as unknown as { entries: ToolTimelineEntry[] }).entries).to.deep.equal(toolTrace);
 });
@@ -196,10 +210,8 @@ it('fires lr-example-toggle (not a raw lr-toggle) when an example is expanded', 
 
 it('correlates a nested grounding-summary citation selection with its example id via lr-example-citation-select', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
-  row.open = true;
-  await el.updateComplete;
-  const summary = el.shadowRoot!.querySelector('[part="grounding-summary"]') as HTMLElement;
+  const row = await expandExample(el);
+  const summary = row.querySelector('[part="grounding-summary"]') as HTMLElement;
   const citation: Citation = { id: 'cite-1', sourceId: 'doc-1', label: 'Refund policy doc' };
 
   const firing = oneEvent(el, 'lr-example-citation-select');
@@ -211,10 +223,8 @@ it('correlates a nested grounding-summary citation selection with its example id
 it('correlates a nested tool-approval decision with its example id via lr-example-tool-approval-decide', async () => {
   const withTrace: EvaluationExampleResult[] = [{ ...examples[0]!, toolTrace }];
   const el = (await fixture(html`<lr-evaluation-run .examples=${withTrace}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const row = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
-  row.open = true;
-  await el.updateComplete;
-  const timeline = el.shadowRoot!.querySelector('[part="tool-trace"]') as HTMLElement;
+  const row = await expandExample(el);
+  const timeline = row.querySelector('[part="tool-trace"]') as HTMLElement;
 
   const firing = oneEvent(el, 'lr-example-tool-approval-decide');
   timeline.dispatchEvent(
@@ -304,9 +314,7 @@ it('localizes built-in strings via .strings while an unregistered key still rend
   const el = (await fixture(
     html`<lr-evaluation-run .examples=${examples} .strings=${{ evaluationRunGroundingHeading: 'Ancrage' }}></lr-evaluation-run>`,
   )) as LyraEvaluationRun;
-  const details = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
-  details.open = true;
-  await el.updateComplete;
+  const details = await expandExample(el);
   const heading = details.querySelector('[part="grounding-section"] [part="section-heading"]');
   expect(heading!.textContent!.trim()).to.equal('Ancrage');
 });
@@ -343,10 +351,35 @@ it('is accessible with populated, expanded examples including grounding and a to
     examples[2]!,
   ];
   const el = (await fixture(html`<lr-evaluation-run .examples=${populated}></lr-evaluation-run>`)) as LyraEvaluationRun;
-  const rows = [...el.shadowRoot!.querySelectorAll('[part="example"]')] as (HTMLElement & { open: boolean })[];
-  for (const row of rows) row.open = true;
-  await el.updateComplete;
+  await expandExample(el);
   expect(el.shadowRoot!.querySelector('[part="grounding-summary"]')).to.exist;
   expect(el.shadowRoot!.querySelector('[part="tool-trace"]')).to.exist;
   await expect(el).to.be.accessible();
+});
+
+it('localizes queued and collecting statuses with the existing agent status keys', async () => {
+  const el = (await fixture(html`
+    <lr-evaluation-run
+      .strings=${{
+        agentRunStatusQueued: 'Dans la file',
+        agentRunStatusCollecting: 'Collecte',
+      }}
+      .examples=${[
+        { ...examples[0], status: { kind: 'queued' } },
+        { ...examples[1], status: { kind: 'collecting' } },
+      ]}
+    ></lr-evaluation-run>
+  `)) as LyraEvaluationRun;
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="example-status"]')].map((node) => node.textContent!.trim());
+  expect(labels).to.deep.equal(['Dans la file', 'Collecte']);
+});
+
+it('does not mount heavy example bodies until their disclosure opens', async () => {
+  const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
+  expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(0);
+  const first = el.shadowRoot!.querySelector('[part="example"]') as HTMLElement & { open: boolean };
+  first.open = true;
+  first.dispatchEvent(new CustomEvent('lr-toggle', { bubbles: true, composed: true, detail: { open: true } }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('lr-markdown').length).to.equal(2);
 });

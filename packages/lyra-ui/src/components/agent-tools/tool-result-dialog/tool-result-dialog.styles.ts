@@ -16,7 +16,15 @@ export const styles = css`
       max(var(--lr-space-l), var(--lr-safe-area-inline-end))
       max(var(--lr-space-l), var(--lr-safe-area-bottom))
       max(var(--lr-space-l), var(--lr-safe-area-inline-start));
-    --lr-tool-result-dialog-spin: 1s linear;
+    --lr-tool-result-dialog-spin: var(--lr-transition-ambient);
+    --lr-tool-result-dialog-running-color: var(--lr-color-brand);
+    --lr-tool-result-dialog-running-bg: var(--lr-color-brand-quiet);
+    --lr-tool-result-dialog-success-color: var(--lr-color-success);
+    --lr-tool-result-dialog-success-bg: var(--lr-color-success-quiet);
+    --lr-tool-result-dialog-error-color: var(--lr-color-danger);
+    --lr-tool-result-dialog-error-bg: var(--lr-color-danger-quiet);
+    --lr-tool-result-dialog-denied-color: var(--lr-color-warning);
+    --lr-tool-result-dialog-denied-bg: var(--lr-color-warning-quiet);
     display: none;
     position: fixed;
     inset: 0;
@@ -97,23 +105,23 @@ export const styles = css`
   /* pending stays the neutral/quiet treatment above -- it's the resting
      state before a tool call has done anything worth calling out. */
   :host([status='running']) [part='status'] {
-    color: var(--lr-color-brand);
-    background: var(--lr-color-brand-quiet);
+    color: var(--lr-tool-result-dialog-running-color);
+    background: var(--lr-tool-result-dialog-running-bg);
   }
   :host([status='success']) [part='status'] {
-    color: var(--lr-color-success);
-    background: var(--lr-color-success-quiet);
+    color: var(--lr-tool-result-dialog-success-color);
+    background: var(--lr-tool-result-dialog-success-bg);
   }
   :host([status='error']) [part='status'] {
-    color: var(--lr-color-danger);
-    background: var(--lr-color-danger-quiet);
+    color: var(--lr-tool-result-dialog-error-color);
+    background: var(--lr-tool-result-dialog-error-bg);
   }
   /* 'denied' is a policy rejection, not a runtime failure -- the warning
      (not danger) tinted-background reads that distinction without relying on
      the status text alone. */
   :host([status='denied']) [part='status'] {
-    color: var(--lr-color-warning);
-    background: var(--lr-color-warning-quiet);
+    color: var(--lr-tool-result-dialog-denied-color);
+    background: var(--lr-tool-result-dialog-denied-bg);
   }
   :host([status='running']) [part='status'] svg {
     animation: lr-tool-result-dialog-spin var(--lr-tool-result-dialog-spin) infinite;

@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import '../../overlays/badge/badge.class.js';
@@ -32,6 +33,14 @@ export interface LyraSchemaViewerEventMap {
   'lr-schema-select': CustomEvent<{ path: string; schema: JsonSchemaNode }>;
 }
 
+interface SchemaRenderBudget {
+  remaining: number;
+  truncated: boolean;
+}
+
+const MAX_RENDERED_SCHEMA_NODES = 500;
+const MAX_SCHEMA_DEPTH = 100;
+
 /**
  * `<lr-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,
  * constraints, composition branches, `$ref` display, validation issues, cycle protection, and a
@@ -50,7 +59,13 @@ export interface LyraSchemaViewerEventMap {
  * @csspart description - Caller-supplied schema description.
  * @csspart constraints - Recognized schema constraints.
  * @csspart issue - One caller-supplied validation issue.
+ * @csspart limit - Resource-ceiling status shown when additional nodes are omitted.
  * @csspart empty - The empty state.
+ * @cssprop [--lr-schema-viewer-selected-border=var(--lr-color-brand)] - Selected node branch.
+ * @cssprop [--lr-schema-viewer-error-border=var(--lr-color-danger)] - Error issue border.
+ * @cssprop [--lr-schema-viewer-error-bg=var(--lr-color-danger-quiet)] - Error issue background.
+ * @cssprop [--lr-schema-viewer-warning-border=var(--lr-color-warning)] - Warning issue border.
+ * @cssprop [--lr-schema-viewer-warning-bg=var(--lr-color-warning-quiet)] - Warning issue background.
  */
 export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -58,6 +73,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   @property({ attribute: false }) schema: JsonSchemaNode | null = null;
   @property({ attribute: false }) issues: SchemaValidationIssue[] = [];
   @property({ attribute: 'selected-path' }) selectedPath = '';
+  /** Requested nesting depth, clamped to 100 to keep recursive template construction stack-safe. */
   @property({ type: Number, attribute: 'max-depth' }) maxDepth = 20;
   @property() label = '';
 
@@ -91,7 +107,13 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
     required: boolean,
     depth: number,
     ancestors: Set<object>,
-  ): TemplateResult {
+    budget: SchemaRenderBudget,
+  ): TemplateResult | typeof nothing {
+    if (budget.remaining <= 0) {
+      budget.truncated = true;
+      return nothing;
+    }
+    budget.remaining--;
     const selected = path === this.selectedPath;
     if (ancestors.has(schema)) {
       return html`<li part="node"><span part="description">${this.localize('schemaViewerCircular')}</span></li>`;
@@ -101,22 +123,41 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
     const constraints = this.constraints(schema);
     const issues = this.issues.filter((issue) => issue.path === path);
     const children: Array<{ name: string; node: JsonSchemaNode; path: string; required: boolean }> = [];
-    if (depth < finiteCount(this.maxDepth, 20)) {
-      for (const [key, node] of Object.entries(schema.properties ?? {})) {
-        children.push({
+    const addChild = (child: { name: string; node: JsonSchemaNode; path: string; required: boolean }): boolean => {
+      if (children.length >= budget.remaining) {
+        budget.truncated = true;
+        return false;
+      }
+      children.push(child);
+      return true;
+    };
+    if (depth < finiteCount(this.maxDepth, 20, MAX_SCHEMA_DEPTH)) {
+      const properties = schema.properties ?? {};
+      for (const key in properties) {
+        if (!Object.prototype.hasOwnProperty.call(properties, key)) continue;
+        const node = properties[key];
+        if (!node) continue;
+        if (!addChild({
           name: key,
           node,
           path: `${path}/properties/${this.pointerSegment(key)}`,
           required: schema.required?.includes(key) ?? false,
-        });
+        })) break;
       }
       for (const keyword of ['allOf', 'anyOf', 'oneOf'] as const) {
-        (schema[keyword] ?? []).forEach((node, index) =>
-          children.push({ name: `${keyword}[${index}]`, node, path: `${path}/${keyword}/${index}`, required: false }),
-        );
+        const nodes = schema[keyword] ?? [];
+        for (let index = 0; index < nodes.length; index++) {
+          const node = nodes[index];
+          if (!node || !addChild({
+            name: `${keyword}[${index}]`,
+            node,
+            path: `${path}/${keyword}/${index}`,
+            required: false,
+          })) break;
+        }
       }
       if (schema.items && !Array.isArray(schema.items)) {
-        children.push({ name: 'items', node: schema.items, path: `${path}/items`, required: false });
+        addChild({ name: 'items', node: schema.items, path: `${path}/items`, required: false });
       }
     }
     const nodePart = selected ? 'node node-selected' : 'node';
@@ -141,7 +182,9 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
           (issue) => html`<p part="issue" data-severity=${issue.severity ?? 'error'}>${issue.message}</p>`,
         )}
         ${children.length
-          ? html`<ul>${children.map((child) => this.renderNode(child.name, child.node, child.path, child.required, depth + 1, nextAncestors))}</ul>`
+          ? html`<ul>${children.map((child) =>
+              this.renderNode(child.name, child.node, child.path, child.required, depth + 1, nextAncestors, budget),
+            )}</ul>`
           : nothing}
       </li>
     `;
@@ -154,11 +197,18 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
         <lr-empty part="empty" heading=${this.localize('schemaViewerEmpty')}></lr-empty>
       </section>`;
     }
+    const budget: SchemaRenderBudget = { remaining: MAX_RENDERED_SCHEMA_NODES, truncated: false };
+    const tree = this.renderNode(this.schema.title || '$', this.schema, '', false, 0, new Set(), budget);
     return html`
       <section part="base" aria-label=${label}>
         <ul part="tree">
-          ${this.renderNode(this.schema.title || '$', this.schema, '', false, 0, new Set())}
+          ${tree}
         </ul>
+        ${budget.truncated
+          ? html`<p part="limit" role="status">${this.localize('schemaViewerLimit', undefined, {
+                count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_NODES),
+              })}</p>`
+          : nothing}
       </section>
     `;
   }

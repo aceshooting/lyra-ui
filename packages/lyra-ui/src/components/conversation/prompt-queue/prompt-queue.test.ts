@@ -66,6 +66,18 @@ it('applies per-instance strings to the queue label', async () => {
   );
 });
 
+it('localizes the editable item label as a whole template with a locale-formatted index', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-queue
+      lang="ar"
+      .items=${items}
+      .strings=${{ promptQueueItemLabel: 'ITEM {index}' }}
+    ></lr-prompt-queue>
+  `)) as LyraPromptQueue;
+  const textarea = el.shadowRoot!.querySelector('lr-textarea') as HTMLElement & { label: string };
+  expect(textarea.label).to.equal(`ITEM ${new Intl.NumberFormat('ar').format(1)}`);
+});
+
 it('honors editable="false" and is accessible while populated', async () => {
   const el = (await fixture(
     html`<lr-prompt-queue editable="false" .items=${items}></lr-prompt-queue>`,

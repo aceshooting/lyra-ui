@@ -10,10 +10,10 @@ import type { LyraMessageKey } from '../../../internal/localization.js';
 import { loadChartJs, loadChartJsWithZoom, loadChartJsWithDataLabels } from './chart-loader.js';
 import { styles } from './chart.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { seriesPalette, translucentAreaColor } from './chart-colors.js';
+import { resolveCanvasColor, seriesPalette, translucentAreaColor } from './chart-colors.js';
 
 export { seriesPalette } from './chart-colors.js';
 
@@ -185,6 +185,13 @@ export interface LyraChartEventMap {
   }>;
   'lr-zoom': CustomEvent<{ zoomed: boolean }>;
 }
+
+interface ChartDatum {
+  datasetIndex: number;
+  index: number;
+  label: string | undefined;
+  value: unknown;
+}
 /**
  * `<lr-chart>` — the core Chart.js wrapper every other `lr-*-chart` tag
  * subclasses. Requires the optional peer dep `chart.js`; `chartjs-plugin-zoom`
@@ -208,8 +215,8 @@ export interface LyraChartEventMap {
  *
  * @customElement lr-chart
  * @event lr-zoom - `detail: { zoomed }`.
- * @event lr-point-click - Fired when a click lands on (or nearest,
- *   intersect-only — see `handlePointClick()`) a data point/segment.
+ * @event lr-point-click - Fired when pointer input lands on a data point/segment, when a generated
+ *   data-table value is activated, or when Enter/Space activates the keyboard-current canvas datum.
  *   `detail: { datasetIndex: number, index: number, label: string |
  *   undefined, value: unknown }`.
  * @csspart base - The chart wrapper.
@@ -287,8 +294,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /**
    * Draws each data point's value on the chart via the optional
    * `chartjs-plugin-datalabels` peer. Unset (the default) leaves labels off for
-   * this and every other chart on the page — the plugin registers globally, so
-   * `buildConfig()` explicitly disables it per-chart until this is set. The
+   * this chart; the peer is attached only to instances that opt in, and
+   * `buildConfig()` keeps its per-chart options disabled until this is set. The
    * screen-reader equivalent is the always-present data table (see
    * `show-data-table`); labels are a purely visual, canvas-only addition.
    */
@@ -403,6 +410,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   // driving the plugin so that re-entrant callback is ignored.
   private suppressZoomComplete = false;
   private descriptionId = nextId('chart-description');
+  private datumStatusId = nextId('chart-datum-status');
+  private keyboardDatumIndex = 0;
+  @state() private keyboardDatumAnnouncement = '';
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -599,7 +609,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private seriesToDataset(s: Series, index: number, palette: string[], effectiveType: EffectiveChartType) {
-    const colors = Array.isArray(s.color) ? s.color : s.color ? [s.color] : undefined;
+    const colors = Array.isArray(s.color)
+      ? s.color.map((color) => resolveCanvasColor(this, color, palette[index % palette.length] ?? 'transparent'))
+      : s.color
+        ? [resolveCanvasColor(this, s.color, palette[index % palette.length] ?? 'transparent')]
+        : undefined;
     // Default a color-less series to the categorical palette, keyed by dataset index (matching
     // <lr-lite-chart>). pie/doughnut/polarArea carry one series whose *slices* each need a distinct
     // color, so those default to an array cycled across the palette; every other family is one
@@ -612,6 +626,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const fill = s.fill ?? this.area;
     const backgroundColor = colors ?? sliceColors ?? fallback;
     const datasetType = s.type ?? effectiveType;
+    const segmentColors = s.segmentColors?.map((color) =>
+      resolveCanvasColor(this, color, colors?.[0] ?? fallback ?? 'transparent'),
+    );
     const resolvedBackgroundColor =
       datasetType === 'line' && fill
         ? Array.isArray(backgroundColor)
@@ -642,17 +659,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       borderDash: s.dash ? [4, 4] : undefined,
       backgroundColor: resolvedBackgroundColor,
       borderColor: colors?.[0] ?? fallback,
-      pointBackgroundColor: s.pointColors,
+      pointBackgroundColor: s.pointColors?.map((color) =>
+        resolveCanvasColor(this, color, colors?.[0] ?? fallback ?? 'transparent'),
+      ),
       pointRadius: s.pointRadius,
       // `segment` is Chart.js's per-line-segment scriptable-options hook (line controller only),
       // keyed by the segment's *starting* point index. Only spread in when the series actually
       // sets `segmentColors`, so a series without it produces the exact dataset object it always
       // did — Chart.js treats a present-but-inert `segment` key differently from an absent one.
-      ...(s.segmentColors?.length
+      ...(segmentColors?.length
         ? {
             segment: {
               borderColor: (ctx: { p0DataIndex: number }) =>
-                s.segmentColors![ctx.p0DataIndex % s.segmentColors!.length],
+                segmentColors[ctx.p0DataIndex % segmentColors.length],
             },
           }
         : {}),
@@ -686,9 +705,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   /**
-   * `options.plugins.datalabels`. Always emitted (the plugin is global once
-   * registered, so it must be explicitly gated off per-chart) — returns
-   * `{ display: false }` unless `data-labels`/`stack-totals` is set. The label
+   * `options.plugins.datalabels`. Always emitted so the chart also stays inert if
+   * a consumer independently registers the peer globally — returns `{ display: false }`
+   * unless `data-labels`/`stack-totals` is set. The label
    * color is resolved via `getComputedStyle` (the same `themeColors()` tick
    * color) because Chart.js paints to canvas and cannot read `var()`.
    *
@@ -907,7 +926,101 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const { datasetIndex, index } = hit;
     const label = chart.data.labels?.[index] as string | undefined;
     const value = chart.data.datasets[datasetIndex]?.data?.[index] ?? null;
-    this.emit('lr-point-click', { datasetIndex, index, label, value });
+    this.activateDatum({ datasetIndex, index, label, value });
+  }
+
+  private chartDatums(): ChartDatum[] {
+    const chartData = this.chart?.data;
+    const labels = (chartData?.labels as string[] | undefined) ?? this.labels;
+    const datasets =
+      (chartData?.datasets as OptionalPeerApi[] | undefined) ??
+      this.datasets.map((series) => ({ data: series.points ?? series.data ?? [] }));
+    const datums: ChartDatum[] = [];
+    datasets.forEach((dataset, datasetIndex) => {
+      const values = (dataset.data as unknown[] | undefined) ?? [];
+      values.forEach((value, index) => {
+        if (value == null) return;
+        if (typeof value === 'number' && !Number.isFinite(value)) return;
+        datums.push({ datasetIndex, index, label: labels[index], value });
+      });
+    });
+    return datums;
+  }
+
+  private datumDisplayValue(value: unknown): string {
+    const numeric =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'object' && value !== null
+          ? Number((value as { y?: unknown; r?: unknown; x?: unknown }).y ??
+              (value as { r?: unknown }).r ??
+              (value as { x?: unknown }).x)
+          : Number(value);
+    return Number.isFinite(numeric) ? getNumberFormat(this.effectiveLocale).format(numeric) : String(value);
+  }
+
+  private datumAnnouncement(datum: ChartDatum, position: number, total: number): string {
+    const series =
+      String(this.chart?.data?.datasets?.[datum.datasetIndex]?.label ?? this.datasets[datum.datasetIndex]?.label) ||
+      this.localize('chartSeriesLabel');
+    return this.localize('liteChartMarkSummary', undefined, {
+      series,
+      label:
+        datum.label ??
+        this.localize('chartPointLabel', undefined, {
+          n: getNumberFormat(this.effectiveLocale).format(datum.index + 1),
+        }),
+      value: this.datumDisplayValue(datum.value),
+      index: getNumberFormat(this.effectiveLocale).format(position + 1),
+      total: getNumberFormat(this.effectiveLocale).format(total),
+    });
+  }
+
+  private activateDatum(datum: ChartDatum): void {
+    const datums = this.chartDatums();
+    const position = datums.findIndex(
+      (candidate) =>
+        candidate.datasetIndex === datum.datasetIndex && candidate.index === datum.index,
+    );
+    if (position >= 0) {
+      this.keyboardDatumIndex = position;
+      this.keyboardDatumAnnouncement = this.datumAnnouncement(datum, position, datums.length);
+    }
+    this.emit('lr-point-click', datum);
+  }
+
+  private onCanvasFocus(): void {
+    const datums = this.chartDatums();
+    if (!datums.length) return;
+    this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
+    this.keyboardDatumAnnouncement = this.datumAnnouncement(
+      datums[this.keyboardDatumIndex]!,
+      this.keyboardDatumIndex,
+      datums.length,
+    );
+  }
+
+  private onCanvasKeyDown(event: KeyboardEvent): void {
+    const datums = this.chartDatums();
+    if (!datums.length) return;
+    this.keyboardDatumIndex = Math.min(this.keyboardDatumIndex, datums.length - 1);
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.activateDatum(datums[this.keyboardDatumIndex]!);
+      return;
+    }
+    const rtl = this.effectiveDirection === 'rtl';
+    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
+    let next = this.keyboardDatumIndex;
+    if (event.key === forward || event.key === 'ArrowDown') next = Math.min(datums.length - 1, next + 1);
+    else if (event.key === backward || event.key === 'ArrowUp') next = Math.max(0, next - 1);
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = datums.length - 1;
+    else return;
+    event.preventDefault();
+    this.keyboardDatumIndex = next;
+    this.keyboardDatumAnnouncement = this.datumAnnouncement(datums[next]!, next, datums.length);
   }
 
   /**
@@ -962,7 +1075,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return labels.map((item: OptionalPeerApi) => {
       const value = this.legendValue(item, chart);
       const formatted = this.formatValue(value, 'legend');
-      return formatted === value || formatted === undefined ? item : { ...item, text: `${item.text}: ${formatted}` };
+      return formatted === value || formatted === undefined
+        ? item
+        : {
+            ...item,
+            text: this.localize('chartValueLabel', undefined, {
+              label: String(item.text),
+              value: String(formatted),
+            }),
+          };
     });
   }
 
@@ -972,7 +1093,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       typeof parsed === 'object' && parsed !== null ? parsed.y ?? parsed.r ?? parsed.x : parsed ?? context.raw;
     const formatted = this.formatValue(rawValue, 'tooltip');
     if (formatted === rawValue || formatted === undefined) return undefined;
-    return context.dataset?.label ? `${context.dataset.label}: ${formatted}` : String(formatted);
+    return context.dataset?.label
+      ? this.localize('chartValueLabel', undefined, {
+          label: String(context.dataset.label),
+          value: String(formatted),
+        })
+      : String(formatted);
   }
 
   private updateAutoLegendPosition(): void {
@@ -1239,7 +1365,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       }
       return this.localize('chartSummary', undefined, {
         label: series.label,
-        count: values.length,
+        count: this.formatSummaryValue(values.length),
         min: this.formatSummaryValue(min),
         max: this.formatSummaryValue(max),
         trend,
@@ -1273,16 +1399,35 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         <tbody>
           ${Array.from({ length: rowCount }, (_, index) => html`
             <tr>
-              <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, { n: index + 1 })}</th>
-              ${this.datasets.map((series) => {
+              <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
+                n: this.formatSummaryValue(index + 1),
+              })}</th>
+              ${this.datasets.map((series, datasetIndex) => {
                 const value = series.points ? series.points[index]?.y : series.data?.[index];
-                return html`<td>${value == null || !Number.isFinite(value) ? this.localize('noData') : value}</td>`;
+                if (value == null || !Number.isFinite(value)) {
+                  return html`<td>${this.localize('noData')}</td>`;
+                }
+                const detail: ChartDatum = {
+                  datasetIndex,
+                  index,
+                  label: this.labels[index],
+                  value: series.points?.[index] ?? value,
+                };
+                return html`<td><button
+                  type="button"
+                  tabindex=${this.showDataTable ? '0' : '-1'}
+                  @click=${() => this.activateDatum(detail)}
+                >${this.formatSummaryValue(value)}</button></td>`;
               })}
             </tr>
           `)}
         </tbody>
       </table>
     `;
+  }
+
+  private hasCustomDataTable(): boolean {
+    return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
   }
 
   override render(): TemplateResult {
@@ -1300,11 +1445,24 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         </div>
       `;
     }
-    const label = this.accessibleName(this.datasets.map((d) => d.label).join(', ') || this.localize('chart'));
+    const seriesLabels = this.datasets.map((d) => d.label);
+    const label = this.accessibleName(
+      (seriesLabels.length
+        ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(seriesLabels)
+        : '') || this.localize('chart'),
+    );
     const description = this.chartDescription();
     return html`
       <div part="base">
-        <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
+        <canvas
+          part="canvas"
+          role="img"
+          tabindex="0"
+          aria-label=${label}
+          aria-describedby="${this.descriptionId} ${this.datumStatusId}"
+          @focus=${this.onCanvasFocus}
+          @keydown=${this.onCanvasKeyDown}
+        ></canvas>
         <div
           part="center"
           style=${styleMap(
@@ -1319,9 +1477,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           <slot name="center"></slot>
         </div>
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
+        <p id=${this.datumStatusId} class="sr-only" aria-live="polite">
+          ${this.keyboardDatumAnnouncement}
+        </p>
         <div part="data-table">
-          <slot name="data-table"></slot>
-          ${this.renderDataTable()}
+          <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
+          ${this.hasCustomDataTable() ? nothing : this.renderDataTable()}
         </div>
         ${this.zoom && this.zoomed
           ? html`<button part="reset-zoom-button" type="button" @click=${() => this.resetZoom()}>

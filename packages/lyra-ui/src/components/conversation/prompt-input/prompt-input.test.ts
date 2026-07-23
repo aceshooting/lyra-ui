@@ -124,16 +124,12 @@ it('gates every composed interaction while disabled and forwards host click to t
   expect(sources.inert).to.be.true;
   expect(popover.open).to.be.false;
 
-  let clicks = 0;
-  composer.addEventListener('click', () => {
-    clicks += 1;
-  });
   el.click();
-  expect(clicks).to.equal(0);
+  expect(composer.shadowRoot!.activeElement).to.not.exist;
   el.disabled = false;
   await el.updateComplete;
   el.click();
-  expect(clicks).to.equal(1);
+  expect(composer.shadowRoot!.activeElement?.getAttribute('part')).to.equal('textarea');
 });
 
 it('applies per-instance strings to the prompt label', async () => {

@@ -269,6 +269,13 @@ export class LyraGenerationStatus extends LyraElement<LyraGenerationStatusEventM
       // A `started-at` that arrives (or changes) mid-generation should
       // immediately re-baseline the displayed elapsed time rather than wait
       // up to ~1s for the next tick.
+      if (this.validStartedAt == null) {
+        // Preserve the elapsed duration accumulated against the prior valid clock while switching
+        // to the fallback clock, instead of resetting to zero and leaving no fallback to tick.
+        this.fallbackStartMs = Date.now() - this.elapsedMs;
+      } else {
+        this.fallbackStartMs = undefined;
+      }
       this.elapsedMs = this.computeElapsedMs();
     }
   }

@@ -178,6 +178,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     return this.inputEl ?? null;
   }
 
+  override click(): void {
+    if (!this.effectiveDisabled) this.inputEl?.click();
+  }
+
   override focus(options?: FocusOptions): void {
     this.inputEl?.focus(options);
   }

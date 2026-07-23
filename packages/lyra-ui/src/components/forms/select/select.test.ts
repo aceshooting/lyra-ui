@@ -131,6 +131,32 @@ it('does not refire change/input when reopening and re-clicking the already-sele
   expect(inputFired).to.be.false;
 });
 
+it('routes duplicate-valued rows by occurrence and exposes only the activated occurrence as selected', async () => {
+  const el = (await fixture(html`
+    <lr-select>
+      <lr-option value="same">First occurrence</lr-option>
+      <lr-option value="same">Second occurrence</lr-option>
+      <lr-option value="other">Other</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+
+  rows(el)[1]!.click();
+  await el.updateComplete;
+
+  expect(el.value).to.equal('same');
+  expect(trigger(el).textContent).to.contain('Second occurrence');
+  expect([...rows(el)].map((row) => row.getAttribute('aria-selected'))).to.deep.equal([
+    'false',
+    'true',
+    'false',
+  ]);
+  expect(
+    [...el.querySelectorAll('lr-option')].map((option) => option.hasAttribute('selected')),
+  ).to.deep.equal([false, true, false]);
+});
+
 it('navigates with ArrowDown and selects the active option with Enter', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   const btn = trigger(el);

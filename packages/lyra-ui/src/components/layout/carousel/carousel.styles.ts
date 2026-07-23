@@ -1,40 +1,44 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
   }
-  [part='base'] {
+  [part="base"] {
     display: grid;
     gap: var(--lr-space-s);
     min-inline-size: 0;
   }
-  [part='viewport'] {
+  [part="viewport"] {
     position: relative;
     min-inline-size: 0;
     overflow: hidden;
     outline: none;
   }
-  [part='viewport']:focus-visible {
+  [part="viewport"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='track'] {
+  [part="viewport"]:hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-border-strong);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part="track"] {
     display: block;
     min-inline-size: 0;
   }
-  [part='track'] > ::slotted(*) {
+  [part="track"] > ::slotted(*) {
     min-inline-size: 0;
   }
-  [part='controls'] {
+  [part="controls"] {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--lr-space-s);
   }
-  [part='previous-button'],
-  [part='next-button'] {
+  [part="previous-button"],
+  [part="next-button"] {
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
@@ -42,31 +46,31 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='previous-button'],
-  [part='next-button'] {
+  [part="previous-button"],
+  [part="next-button"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
   }
-  [part='previous-button']:hover,
-  [part='next-button']:hover {
+  [part="previous-button"]:hover,
+  [part="next-button"]:hover {
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);
   }
-  [part='previous-button']:disabled,
-  [part='next-button']:disabled {
+  [part="previous-button"]:disabled,
+  [part="next-button"]:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: not-allowed;
   }
-  [part='previous-button']:focus-visible,
-  [part='next-button']:focus-visible,
-  [part='indicator']:focus-visible {
+  [part="previous-button"]:focus-visible,
+  [part="next-button"]:focus-visible,
+  [part="indicator"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='indicators'] {
+  [part="indicators"] {
     display: flex;
     justify-content: center;
     gap: var(--lr-space-xs);
@@ -76,7 +80,7 @@ export const styles = css`
      [part='swatch']), while the *visible* dot stays a compact --lr-size-0-5rem circle -- rendered
      on the separate [part='indicator-dot'] child below and centered via flex, not by resizing this
      button itself. */
-  [part='indicator'] {
+  [part="indicator"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -88,7 +92,7 @@ export const styles = css`
     background: transparent;
     cursor: pointer;
   }
-  [part='indicator-dot'] {
+  [part="indicator-dot"] {
     display: block;
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
@@ -102,16 +106,22 @@ export const styles = css`
      used to require hijacking the shared --lr-color-brand-quiet/--lr-color-brand tokens, repainting
      everything else that reads them. Unset, each falls back to the token the rule used before, so
      the rendering is unchanged. */
-  [part='indicator'][aria-current='true'] [part='indicator-dot'] {
-    background: var(--lr-carousel-indicator-current-bg, var(--lr-color-brand-quiet));
-    border-color: var(--lr-carousel-indicator-current-border-color, var(--lr-color-brand));
+  [part="indicator"][aria-current="true"] [part="indicator-dot"] {
+    background: var(
+      --lr-carousel-indicator-current-bg,
+      var(--lr-color-brand-quiet)
+    );
+    border-color: var(
+      --lr-carousel-indicator-current-border-color,
+      var(--lr-color-brand)
+    );
   }
-  [part='indicator']:hover [part='indicator-dot'] {
+  [part="indicator"]:hover [part="indicator-dot"] {
     background: var(--lr-color-brand-quiet);
     border-color: var(--lr-color-brand);
   }
-  :host(:dir(rtl)) [part='previous-glyph'],
-  :host(:dir(rtl)) [part='next-glyph'] {
+  :host(:dir(rtl)) [part="previous-glyph"],
+  :host(:dir(rtl)) [part="next-glyph"] {
     transform: scaleX(-1);
   }
 `;

@@ -111,6 +111,10 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-padding-block=var(--lr-space-xs)] - Block padding of the input row, scaled by `size`.
  * @cssprop [--lr-date-input-padding-inline=var(--lr-space-s)] - Inline padding of the input row, scaled by `size`.
  * @cssprop [--lr-date-input-font-size=inherit] - Font size of the text input, scaled by `size`.
+ * @cssprop [--lr-date-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
+ * @cssprop [--lr-date-input-gap=var(--lr-space-xs)] - Gap between input-row children.
+ * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius.
+ * @cssprop [--lr-date-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-date-input-control-min-height=var(--lr-size-2-5rem)] - Minimum block size of the
  *   input row, scaled by `size` to mirror `lr-input`'s own min-height scale. Each default sits
  *   below the row's transitively-pinned height, so it is dead until a consumer raises it -- the
@@ -694,6 +698,11 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   private onInputFocus = (): void => {
     this.emit('focus');
   };
+
+  /** Activate the internal date text input unless the form control is effectively disabled. */
+  override click(): void {
+    if (!this.effectiveDisabled) this.inputElement?.click();
+  }
 
   /** Focus the internal date text input. */
   override focus(options?: FocusOptions): void {

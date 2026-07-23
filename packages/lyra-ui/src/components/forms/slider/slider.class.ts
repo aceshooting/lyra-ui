@@ -255,8 +255,12 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   private percentOf(value: number): number {
     const { lo, hi } = this.domain();
     const safeValue = finiteRange(value, lo, lo, hi);
-    const span = hi - lo || 1;
-    return ((safeValue - lo) / span) * 100;
+    const span = hi - lo;
+    const ratio =
+      Number.isFinite(span) && span !== 0
+        ? (safeValue - lo) / span
+        : (safeValue / 2 - lo / 2) / (hi / 2 - lo / 2 || 1);
+    return Math.min(1, Math.max(0, finiteNumber(ratio, 0))) * 100;
   }
 
   private clampValue(raw: number): number {
@@ -278,8 +282,15 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
       // `step`'s own decimal precision so repeated steps land on exact
       // values like 0.7 instead of 0.7000000000000001.
       const stepsFromLo = Math.round((raw - lo) / step);
-      const factor = 10 ** decimalPlaces(step);
-      stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
+      if (Number.isFinite(stepsFromLo)) {
+        const candidate = lo + stepsFromLo * step;
+        const factor = 10 ** Math.min(decimalPlaces(step), 15);
+        if (Number.isFinite(candidate)) {
+          stepped = Number.isFinite(candidate * factor)
+            ? Math.round(candidate * factor) / factor
+            : candidate;
+        }
+      }
     }
     return Math.min(hi, Math.max(lo, stepped));
   }

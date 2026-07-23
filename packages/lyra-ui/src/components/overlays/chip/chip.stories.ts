@@ -129,7 +129,7 @@ export const ToggleSelection: Story = {
     docs: {
       description: {
         story:
-          'Setting `selected` opts `[part=base]` into toggle/pressed interactive semantics (role="button", tabindex, keyboard activation, a reflected aria-pressed) and clicking flips it, firing `lr-chip-select` -- that opt-in survives toggling `selected` back off, so a chip that starts selected (the chart-series toggle on the left) stays clickable after the first click turns it off. A chip that must be clickable from the outset while starting **unselected** (an inactive category filter, on the right) sets `toggleable` explicitly instead of relying on `selected` alone.',
+          'Setting `selected` opts the chip into toggle mode, backed by a native `[part=toggle-button]` with keyboard activation and reflected `aria-pressed`. The label remains visible but becomes inert, so do not put interactive descendants in the default slot. Activation emits the cancelable `lr-chip-select` event with the proposed next state before mutation; call `preventDefault()` to keep the current selection. The opt-in survives toggling `selected` back off, so a chip that starts selected (left) stays clickable after the first click. A chip that must be clickable from the outset while starting **unselected** (right) sets `toggleable` explicitly.',
       },
     },
   },
@@ -239,14 +239,14 @@ export const ExactHeight: Story = {
     docs: {
       description: {
         story:
-          'Interactive chips floor their tap target with `--lr-chip-min-height` (per tier: `2xs`–`m` share the 24px WCAG minimum, `l`/`xl` raise it). `--lr-chip-height` pins an exact height — below the 24px target it is for non-interactive display chips only.',
+          'Interactive chips floor their tap target with the shared `--lr-icon-button-size` (40px by default), while `--lr-chip-min-height` can make the visible pill taller. `--lr-chip-height` pins an exact visual height; values below the shared target are for non-interactive display chips only.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
       <lr-chip toggleable style="--lr-chip-min-height: 40px;">Tall target</lr-chip>
-      <lr-chip toggleable style="--lr-chip-height: 32px;">Pinned 32px</lr-chip>
+      <lr-chip toggleable style="--lr-chip-height: var(--lr-icon-button-size);">Pinned to the shared target</lr-chip>
       <lr-chip style="--lr-chip-height: 18px;">Compact display</lr-chip>
     </div>
   `,

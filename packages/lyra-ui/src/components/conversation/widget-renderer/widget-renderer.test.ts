@@ -86,6 +86,22 @@ describe('lr-widget-renderer', () => {
     expect(event.detail).to.deep.equal({ actionId: 'submit', payload: { formId: 'f1' } });
   });
 
+  it('refreshes a keyed action handler when the action id and payload change', async () => {
+    const el = (await fixture(html`<lr-widget-renderer></lr-widget-renderer>`)) as LyraWidgetRenderer;
+    el.tree = { type: 'button', id: 'stable', actionId: 'first', payload: 1 };
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('lr-button')!;
+
+    el.tree = { type: 'button', id: 'stable', actionId: 'second', payload: 2 };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-button')).to.equal(button);
+
+    const listener = oneEvent(el, 'lr-widget-action');
+    button.dispatchEvent(new Event('click', { bubbles: true, composed: true }));
+    const event = await listener as CustomEvent<{ actionId: string; payload: unknown }>;
+    expect(event.detail).to.deep.equal({ actionId: 'second', payload: 2 });
+  });
+
   it('emits lr-render-error for a structurally unusable non-null tree', async () => {
     const el = (await fixture(html`<lr-widget-renderer></lr-widget-renderer>`)) as LyraWidgetRenderer;
     const warnings = await captureWarnings(async () => {
@@ -109,11 +125,39 @@ describe('lr-widget-renderer', () => {
     expect((second as HTMLElement & { value: string }).value).to.equal('101');
   });
 
+  it('restores a keyed element property default when a streamed update removes that prop', async () => {
+    const registry = new Map([
+      ['field', { tag: 'input', props: { value: 'string' as const } }],
+    ]);
+    const el = (await fixture(html`<lr-widget-renderer .registry=${registry}></lr-widget-renderer>`)) as LyraWidgetRenderer;
+    el.tree = { type: 'field', id: 'stable', props: { value: 'Ada' } };
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    expect(input.value).to.equal('Ada');
+
+    el.tree = { type: 'field', id: 'stable' };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('input')).to.equal(input);
+    expect(input.value).to.equal('');
+  });
+
   it('renders raw string children as text, and card children default-slotted unless allowlisted', async () => {
     const el = (await fixture(html`<lr-widget-renderer></lr-widget-renderer>`)) as LyraWidgetRenderer;
     el.tree = { type: 'text', children: ['hello world'] };
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="text"]')!.textContent).to.include('hello world');
+  });
+
+  it('wraps long row text so it can shrink without overflowing its allocation', async () => {
+    const el = (await fixture(html`
+      <lr-widget-renderer style="display:block; inline-size:320px"></lr-widget-renderer>
+    `)) as LyraWidgetRenderer;
+    el.tree = { type: 'row', children: ['x'.repeat(500)] };
+    await el.updateComplete;
+    const row = el.shadowRoot!.querySelector('[part="row"]') as HTMLElement;
+    const text = row.querySelector('.widget-text') as HTMLElement;
+    expect(text).to.exist;
+    expect(text.scrollWidth).to.be.at.most(row.clientWidth);
   });
 
   it('a custom per-instance registry overrides the default one', async () => {

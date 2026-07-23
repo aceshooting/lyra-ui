@@ -1,13 +1,18 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeLinkHref } from '../../../internal/safe-url.js';
-import { styles } from './card.styles.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { safeLinkHref } from "../../../internal/safe-url.js";
+import { styles } from "./card.styles.js";
 
-export type CardAppearance = 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain';
+export type CardAppearance =
+  | "accent"
+  | "filled"
+  | "outlined"
+  | "filled-outlined"
+  | "plain";
 
 export interface LyraCardEventMap {
-  'lr-card-activate': CustomEvent<undefined>;
+  "lr-card-activate": CustomEvent<undefined>;
 }
 
 /**
@@ -18,15 +23,15 @@ export interface LyraCardEventMap {
  * `role="button"`), it can only distinguish the two cases at event time.
  */
 const NESTED_CONTROL_SELECTOR = [
-  'a[href]',
-  'button',
-  'input',
-  'select',
-  'textarea',
-  'summary',
-  'audio[controls]',
-  'video[controls]',
-  'label',
+  "a[href]",
+  "button",
+  "input",
+  "select",
+  "textarea",
+  "summary",
+  "audio[controls]",
+  "video[controls]",
+  "label",
   '[contenteditable]:not([contenteditable="false"])',
   '[tabindex]:not([tabindex="-1"])',
   '[role="button"]',
@@ -40,7 +45,7 @@ const NESTED_CONTROL_SELECTOR = [
   '[role="textbox"]',
   '[role="slider"]',
   '[role="spinbutton"]',
-].join(',');
+].join(",");
 
 /**
  * `<lr-card>` — a generic, styled bordered content container: the "small bordered surface with
@@ -58,13 +63,16 @@ const NESTED_CONTROL_SELECTOR = [
  * @slot footer - Footer content, rendered below the body.
  * @slot actions - Small header controls, rendered alongside the header content.
  * @csspart base - The outer container (a `<div>`, or an `<a>` when `href` is set).
+ * @csspart activation-button - The native whole-card action, rendered while `interactive`
+ *   without `href`. It is a sibling of slotted controls, so actionable descendants are never
+ *   nested inside another actionable role.
  * @csspart media - Wrapper around the `media` slot. Hidden entirely when empty.
  * @csspart header - Wrapper around the `header` slot and `actions`. Hidden entirely when both are empty.
  * @csspart actions - Wrapper around the `actions` slot. Hidden entirely when empty.
  * @csspart body - Wrapper around the default slot.
  * @csspart footer - Wrapper around the `footer` slot. Hidden entirely when empty.
- * @event lr-card-activate - The whole card was activated (click, or Enter/Space while
- * `[part='base']` has focus). No detail. Only fired while `interactive` is set **without** `href`
+ * @event lr-card-activate - The whole card was activated (click, or Enter/Space on the native
+ * `activation-button`). No detail. Only fired while `interactive` is set **without** `href`
  * -- with `href` the root is a real `<a>` and native navigation is the activation. Never fired for
  * an interaction that originated in a slotted control (a button, link, input, or anything else
  * focusable), so a card can keep its own action buttons.
@@ -74,7 +82,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   /** Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)
    *  is a bordered surface -- the common "small bordered surface with padding" idiom. */
-  @property({ reflect: true }) appearance: CardAppearance = 'outlined';
+  @property({ reflect: true }) appearance: CardAppearance = "outlined";
 
   /** Opt-in clickable-tile behavior: the hover/focus-visible treatment (border-color shift,
    *  `cursor: pointer`) plus, when `href` is **not** also set, real activation semantics --
@@ -83,6 +91,9 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  stays the activation and `lr-card-activate` is never fired. `false` (the default) reproduces
    *  today's exact static output: no `tabindex`, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) interactive = false;
+
+  /** Host `aria-label` forwarded to the native no-href activation button. */
+  @property({ attribute: "aria-label" }) accessibleLabel: string | null = null;
 
   /** When set, the card's root renders as a real `<a href=...>` instead of a `<div>` -- for a
    *  whole-card link (e.g. a wide CTA tile). Unset (the default) renders a plain `<div>`. */
@@ -99,28 +110,47 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
   @state() private hasMediaSlot = false;
   @state() private hasFooterSlot = false;
   @state() private hasActionsSlot = false;
+  @state() private accessibleContentText = "";
+  private contentObserver?: MutationObserver;
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
-      this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
-      this.hasMediaSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'media');
-      this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
-      this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
+      this.hasHeaderSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "header"
+      );
+      this.hasMediaSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "media"
+      );
+      this.hasFooterSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "footer"
+      );
+      this.hasActionsSlot = Array.from(this.children).some(
+        (el) => el.getAttribute("slot") === "actions"
+      );
+      this.accessibleContentText = this.textContent?.trim() ?? "";
     }
     void changed;
   }
 
   private onHeaderSlotChange = (e: Event): void => {
-    this.hasHeaderSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasHeaderSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
   private onMediaSlotChange = (e: Event): void => {
-    this.hasMediaSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasMediaSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
   private onFooterSlotChange = (e: Event): void => {
-    this.hasFooterSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasFooterSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
   private onActionsSlotChange = (e: Event): void => {
-    this.hasActionsSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasActionsSlot =
+      (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length >
+      0;
   };
 
   /**
@@ -134,30 +164,64 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    * makes this work through a slotted component's own shadow root -- a click on `<lr-button>`
    * retargets to the host, but its composed path still contains the internal native `<button>`.
    */
-  private originatesInNestedControl(e: Event, root: EventTarget | null): boolean {
+  private originatesInNestedControl(
+    e: Event,
+    root: EventTarget | null
+  ): boolean {
     for (const node of e.composedPath()) {
       if (node === root) return false;
-      if (node instanceof Element && node.matches(NESTED_CONTROL_SELECTOR)) return true;
+      if (node instanceof Element && node.matches(NESTED_CONTROL_SELECTOR))
+        return true;
     }
     return false;
   }
 
   private onBaseClick = (e: Event): void => {
+    const origin = e.composedPath()[0];
+    if (
+      origin instanceof Element &&
+      origin.getAttribute("part") === "activation-button"
+    ) {
+      this.emit("lr-card-activate");
+      return;
+    }
     if (this.originatesInNestedControl(e, e.currentTarget)) return;
-    this.emit('lr-card-activate');
+    this.emit("lr-card-activate");
   };
 
-  private onBaseKeyDown = (e: KeyboardEvent): void => {
-    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
-    if (this.originatesInNestedControl(e, e.currentTarget)) return;
-    // Space in particular must be swallowed, or the page scrolls under the focused card.
-    e.preventDefault();
-    this.emit('lr-card-activate');
-  };
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.contentObserver = new MutationObserver(() => {
+      this.accessibleContentText = this.textContent?.trim() ?? "";
+    });
+    this.contentObserver.observe(this, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.contentObserver?.disconnect();
+    this.contentObserver = undefined;
+  }
 
   override render(): TemplateResult {
     const hasHeader = this.hasHeaderSlot || this.hasActionsSlot;
+    const href = safeLinkHref(this.href);
+    const activatable = this.interactive && !href;
     const body = html`
+      ${activatable
+        ? html`<button
+            part="activation-button"
+            type="button"
+            tabindex="0"
+            aria-label=${this.accessibleLabel ||
+            this.accessibleContentText ||
+            nothing}
+          ></button>`
+        : nothing}
       <div part="media" ?hidden=${!this.hasMediaSlot}>
         <slot name="media" @slotchange=${this.onMediaSlotChange}></slot>
       </div>
@@ -172,24 +236,21 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
         <slot name="footer" @slotchange=${this.onFooterSlotChange}></slot>
       </div>
     `;
-    const href = safeLinkHref(this.href);
     // With `href`, the `<a>` is already focusable and Enter-activated natively -- layering the
     // synthetic activation on top would double-fire. Everything below binds to `nothing` when the
     // card has not opted in, so the passive default renders byte-identically to before (mirrors
     // `<lr-chip>`'s `toggleable` gating).
-    const activatable = this.interactive && !href;
     return href
       ? html`<a
           part="base"
           href=${href}
           target=${this.target || nothing}
-          rel=${this.target ? 'noopener noreferrer' : nothing}
-        >${body}</a>`
+          rel=${this.target ? "noopener noreferrer" : nothing}
+          >${body}</a
+        >`
       : html`<div
           part="base"
-          tabindex=${activatable ? '0' : nothing}
           @click=${activatable ? this.onBaseClick : nothing}
-          @keydown=${activatable ? this.onBaseKeyDown : nothing}
         >
           ${body}
         </div>`;
@@ -198,6 +259,6 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-card': LyraCard;
+    "lr-card": LyraCard;
   }
 }

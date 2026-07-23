@@ -5,8 +5,8 @@ export const styles = css`
   [part='base'] { display: block; }
   [part='track'] { overflow: hidden; inline-size: 100%; block-size: var(--lr-progress-height, var(--lr-size-0-5rem)); border-radius: var(--lr-radius-pill); background: var(--lr-color-brand-quiet); }
   [part='indicator'] { block-size: 100%; border-radius: inherit; background: var(--lr-color-brand); transition: inline-size var(--lr-transition-base); }
-  :host([indeterminate]) [part='indicator'] { animation: lr-progress-slide var(--lr-progress-duration, 1.2s) ease-in-out infinite alternate; }
-  [part='label'] { display: flex; justify-content: space-between; gap: var(--lr-space-s); margin-block-end: var(--lr-space-xs); color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
+  :host([indeterminate]) [part='indicator'] { animation: lr-progress-slide var(--lr-progress-duration, var(--lr-transition-ambient)) infinite alternate; }
+  [part='label'] { display: flex; min-inline-size: 0; flex-wrap: wrap; justify-content: space-between; gap: var(--lr-space-s); overflow-wrap: anywhere; margin-block-end: var(--lr-space-xs); color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
   [part='label'][hidden] { display: none; }
   @keyframes lr-progress-slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
   /* The determinate fill mirrors for free (a block box anchors to the inline-start edge, the
@@ -25,7 +25,7 @@ export const ringStyles = css`
   circle { fill: none; stroke-linecap: round; }
   [part='track'] { stroke: var(--lr-color-brand-quiet); }
   [part='indicator'] { stroke: var(--lr-color-brand); transition: stroke-dashoffset var(--lr-transition-base); }
-  :host([indeterminate]) [part='indicator'] { transform-box: fill-box; transform-origin: center; animation: lr-progress-ring-spin var(--lr-progress-duration, 1.2s) linear infinite; }
+  :host([indeterminate]) [part='indicator'] { transform-box: fill-box; transform-origin: center; animation: lr-progress-ring-spin var(--lr-progress-duration, var(--lr-transition-ambient)) infinite; }
   [part='label'] { position: absolute; color: var(--lr-color-text); font-size: var(--lr-font-size-sm); }
   @keyframes lr-progress-ring-spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { [part='indicator'] { transition: none; animation: none !important; } }

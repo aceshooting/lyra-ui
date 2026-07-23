@@ -215,6 +215,10 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
         return this.localize('evaluationRunStatusIdle');
       case 'running':
         return this.localize('statusRunning');
+      case 'queued':
+        return this.localize('agentRunStatusQueued');
+      case 'collecting':
+        return this.localize('agentRunStatusCollecting');
       case 'waiting-input':
         return this.localize('evaluationRunStatusWaitingInput');
       case 'waiting-approval':
@@ -337,27 +341,32 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
 
   private renderExample(example: EvaluationExampleResult, index: number): TemplateResult {
     const kind = example.status.kind;
+    const expanded = this.expandedIds.has(example.id);
     return html`
       <lr-details
         part="example"
         data-status=${kind}
-        .open=${this.expandedIds.has(example.id)}
+        .open=${expanded}
         @lr-toggle=${(e: CustomEvent<{ open: boolean }>) => this.onExampleToggle(example.id, e)}
       >
         <span slot="summary" part="example-summary">
           <span part="example-label">${this.exampleLabel(example, index)}</span>
           <lr-badge part="example-status" variant=${STATUS_VARIANT[kind]}>${this.statusLabel(kind)}</lr-badge>
         </span>
-        <section part="input-section">
-          <h4 part="section-heading">${this.localize('evaluationRunInputHeading')}</h4>
-          ${this.renderContent(example.input, example.inputFormat, example.inputLanguage, 'input')}
-        </section>
-        <section part="output-section">
-          <h4 part="section-heading">${this.localize('evaluationRunOutputHeading')}</h4>
-          ${this.renderContent(example.output, example.outputFormat, example.outputLanguage, 'output')}
-        </section>
-        ${example.grounding ? this.renderGrounding(example, example.grounding) : nothing}
-        ${example.toolTrace && example.toolTrace.length > 0 ? this.renderToolTrace(example, example.toolTrace) : nothing}
+        ${expanded
+          ? html`
+              <section part="input-section">
+                <h4 part="section-heading">${this.localize('evaluationRunInputHeading')}</h4>
+                ${this.renderContent(example.input, example.inputFormat, example.inputLanguage, 'input')}
+              </section>
+              <section part="output-section">
+                <h4 part="section-heading">${this.localize('evaluationRunOutputHeading')}</h4>
+                ${this.renderContent(example.output, example.outputFormat, example.outputLanguage, 'output')}
+              </section>
+              ${example.grounding ? this.renderGrounding(example, example.grounding) : nothing}
+              ${example.toolTrace && example.toolTrace.length > 0 ? this.renderToolTrace(example, example.toolTrace) : nothing}
+            `
+          : nothing}
       </lr-details>
     `;
   }

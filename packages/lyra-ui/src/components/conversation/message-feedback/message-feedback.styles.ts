@@ -79,13 +79,16 @@ export const styles = css`
     display: grid;
     grid-template-rows: 0fr;
     overflow: hidden;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: 0 solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    transition: grid-template-rows var(--lr-transition-base);
+    transition:
+      grid-template-rows var(--lr-transition-base),
+      border-width var(--lr-transition-base);
   }
   [part='panel'][data-open] {
     grid-template-rows: 1fr;
+    border-width: var(--lr-border-width-thin);
   }
   [part='panel'] .panel-inner {
     overflow: hidden;
@@ -120,6 +123,9 @@ export const styles = css`
   [part='comment']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='comment']:hover:not(:disabled) {
+    border-color: var(--lr-color-brand);
   }
   [part='comment']::placeholder {
     color: var(--lr-color-text-quiet);

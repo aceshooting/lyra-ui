@@ -343,6 +343,21 @@ it('re-detects a heading added after the initial render via slotchange', async (
   expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
 });
 
+it('keeps the dialog name synchronized when an already-slotted heading text node changes', async () => {
+  const el = (await fixture(
+    html`<lr-dialog open><h2>Original heading</h2><p>Body</p></lr-dialog>`,
+  )) as LyraDialog;
+  const heading = el.querySelector('h2') as HTMLHeadingElement;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.getAttribute('aria-label')).to.equal('Original heading');
+
+  heading.firstChild!.textContent = 'Updated heading';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+
+  expect(panel.getAttribute('aria-label')).to.equal('Updated heading');
+});
+
 it('renders a visible header with the heading text and uses it for aria-labelledby when no heading is slotted', async () => {
   const el = (await fixture(html`<lr-dialog heading="Title">body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;

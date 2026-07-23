@@ -18,7 +18,9 @@ export const styles = css`
     line-height: var(--lr-line-height-1-4);
   }
   [part='label'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
   }
   [part='value'] {

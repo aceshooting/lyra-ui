@@ -848,6 +848,21 @@ describe('native textarea surface', () => {
     el.blur();
     expect(el.shadowRoot!.activeElement).to.equal(null);
   });
+
+  it('forwards host click() to the textarea unless effectively disabled', async () => {
+    const enabled = (await fixture(
+      html`<lr-chat-composer></lr-chat-composer>`,
+    )) as LyraChatComposer;
+    enabled.click();
+    expect(enabled.shadowRoot!.activeElement === textareaOf(enabled)).to.be.true;
+
+    const fieldset = (await fixture(html`
+      <fieldset disabled><lr-chat-composer></lr-chat-composer></fieldset>
+    `)) as HTMLFieldSetElement;
+    const disabled = fieldset.querySelector('lr-chat-composer') as LyraChatComposer;
+    disabled.click();
+    expect(disabled.shadowRoot!.activeElement === null).to.be.true;
+  });
 });
 
 describe('blur/focus bubbling', () => {

@@ -12,6 +12,24 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-sm);
   }
+  [part='label'] {
+    font-weight: var(--lr-font-weight-semibold);
+  }
+  [part='hint'],
+  [part='error'] {
+    margin-block-start: calc(var(--lr-space-m) * -1);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part='hint'] {
+    color: var(--lr-color-text-quiet);
+  }
+  [part='error'] {
+    color: var(--lr-color-danger);
+  }
+  [part='hint'][hidden],
+  [part='error'][hidden] {
+    display: none;
+  }
 
   [part='path-fields'] {
     display: flex;

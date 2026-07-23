@@ -11,6 +11,9 @@ export const styles = css`
     align-items: baseline;
     margin: 0;
   }
+  [part='base'][data-empty] {
+    display: block;
+  }
   [part='name'] {
     font-family: var(--lr-font-mono, ui-monospace, monospace);
     font-weight: var(--lr-font-weight-semibold);

@@ -5,7 +5,7 @@ import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './known-date.styles.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 
 export type LyraKnownDateSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type LyraKnownDateField = 'day' | 'month' | 'year';
@@ -99,9 +99,9 @@ class LyraKnownDateBase extends LyraElement<LyraKnownDateEventMap> {}
  * don't remove them to "restore" WA parity. Arrow-key field-to-field
  * navigation at a field's text boundary is RTL-aware: the *physical* key that
  * means "toward the next field" flips under an inherited `dir="rtl"`, while
- * the field order itself (locale-derived) does not. Non-digit keystrokes are
- * rejected before they reach a field's state -- no locale-specific numeral
- * input (e.g. Arabic-Indic digits) is supported.
+ * the field order itself (locale-derived) does not. Locale digits such as
+ * Arabic-Indic and Persian numerals are accepted and normalized to the
+ * canonical ASCII digits used by the ISO form value.
  *
  * No resizable text-editing surface exists (three fixed-width digit fields),
  * so resize forwarding doesn't apply, and `spellcheck`/`autocapitalize`/
@@ -476,10 +476,32 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     this.hasErrorSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
 
+  private normalizeFieldDigits(value: string): string {
+    const digitMap = new Map<string, string>([
+      ['٠', '0'], ['١', '1'], ['٢', '2'], ['٣', '3'], ['٤', '4'],
+      ['٥', '5'], ['٦', '6'], ['٧', '7'], ['٨', '8'], ['٩', '9'],
+      ['۰', '0'], ['۱', '1'], ['۲', '2'], ['۳', '3'], ['۴', '4'],
+      ['۵', '5'], ['۶', '6'], ['۷', '7'], ['۸', '8'], ['۹', '9'],
+    ]);
+    try {
+      const formatter = getNumberFormat(this.effectiveLocale || undefined, { useGrouping: false });
+      for (let digit = 0; digit <= 9; digit++) digitMap.set(formatter.format(digit), String(digit));
+    } catch {
+      // The two Unicode decimal ranges above remain available if an invalid locale was assigned.
+    }
+    let normalized = '';
+    for (const character of value) {
+      if (character >= '0' && character <= '9') normalized += character;
+      else normalized += digitMap.get(character) ?? '';
+    }
+    return normalized;
+  }
+
   private onFieldInput = (field: LyraKnownDateField, e: Event): void => {
+    e.stopPropagation();
     const input = e.target as HTMLInputElement;
     const maxLength = field === 'year' ? 4 : 2;
-    const digits = input.value.replace(/\D/g, '').slice(0, maxLength);
+    const digits = this.normalizeFieldDigits(input.value).slice(0, maxLength);
     if (input.value !== digits) input.value = digits;
     this.setFieldText(field, digits);
     this.lastEditedField = field;
@@ -544,6 +566,11 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     (this.renderRoot.querySelector('input:focus') as HTMLInputElement | null)?.blur();
   }
 
+  /** Activates the first native field in locale order. */
+  override click(): void {
+    this.fieldInputElement(this.fieldOrder[0]!)?.click();
+  }
+
   private renderField(field: LyraKnownDateField, describedBy: string, invalid: boolean): TemplateResult {
     const id = this.idFor(field);
     const maxLength = field === 'year' ? 4 : 2;
@@ -567,6 +594,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
           ?disabled=${this.effectiveDisabled}
           ?readonly=${this.readonly}
           @input=${(e: Event) => this.onFieldInput(field, e)}
+          @change=${(e: Event) => e.stopPropagation()}
           @keydown=${(e: KeyboardEvent) => this.onFieldKeydown(field, e)}
           @focus=${this.onFieldFocus}
           @blur=${this.onFieldBlur}

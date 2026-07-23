@@ -6,7 +6,7 @@ import { formatISO, monthMatrix, parseISO, weekdayLabels } from '../../forms/dat
 import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './calendar.styles.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 
 export interface CalendarEvent { id?: string; date: string; title: string; start?: string; end?: string; color?: string; data?: unknown; }
 export interface LyraCalendarEventMap { 'lr-date-select': CustomEvent<{ date: string }>; 'lr-event-select': CustomEvent<{ event: CalendarEvent }>; 'lr-view-change': CustomEvent<{ viewDate: string }>; }
@@ -17,14 +17,9 @@ export type CalendarView = 'month' | 'agenda';
 
 /** `<lr-calendar>` — responsive month calendar with event markers and agenda mode.
  *
- * Month-view event markers are a mouse-only quick-select affordance layered on
- * top of the focusable day cell: the day grid's own roving-tabindex/arrow-key
- * navigation already targets the day `<button>`, and nesting a second
- * focusable control inside that same native `<button>` is not valid (a
- * `<button>` element must not contain interactive/tabindex descendants, and
- * `role="button"` itself forbids focusable descendants regardless). Agenda
- * view renders each event as its own real `<button part="agenda-event">` and
- * is the fully keyboard-accessible way to reach `lr-event-select`.
+ * Month-view event markers are real buttons inside each focusable gridcell, so
+ * keyboard users can activate individual events without switching views.
+ * Agenda view renders the same events as full-width buttons.
  *
  * @customElement lr-calendar
  * @event lr-date-select - A calendar date was selected.
@@ -81,6 +76,8 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
   override render(): TemplateResult {
     const start = this.viewStart; const weeks = this.weeks(); const monthTitle = getDateTimeFormat(this.effectiveLocale, { month: 'long', year: 'numeric' }).format(start); const today = formatISO(new Date()); const label = this.accessibleLabel || this.localize('calendarLabel');
     const dayLabelFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'full' });
+    const agendaDateFmt = getDateTimeFormat(this.effectiveLocale, { dateStyle: 'medium' });
+    const dayNumberFmt = getNumberFormat(this.effectiveLocale);
     const agenda = this.events.filter((event) => event.date.startsWith(this.viewDate.slice(0, 7))).sort((a, b) => a.date.localeCompare(b.date));
     const eventsByDate = this.view === 'month' ? this.bucketEventsByDate() : undefined;
     // The roving tab stop prefers focusedDate/value/today, in that order, but
@@ -92,8 +89,8 @@ export class LyraCalendar extends LyraElement<LyraCalendarEventMap> {
     const rawAnchor = this.focusedDate || this.value || today;
     const rawAnchorDate = parseISO(rawAnchor);
     const anchor = rawAnchorDate && rawAnchorDate >= gridFirst && rawAnchorDate <= gridLast ? rawAnchor : formatISO(start);
-    return html`<section aria-label=${label}><header part="header"><button part="nav" type="button" aria-label=${this.localize('previous')} @click=${() => this.changeMonth(-1)}><span part="nav-glyph" aria-hidden="true">‹</span></button><span part="title">${monthTitle}</span><span part="nav"><button part="nav" type="button" aria-label=${this.localize('next')} @click=${() => this.changeMonth(1)}><span part="nav-glyph" aria-hidden="true">›</span></button></span></header>
-      ${this.view === 'agenda' ? html`<div part="agenda">${agenda.length ? agenda.map((event) => html`<button part="agenda-event" type="button" @click=${() => this.emit('lr-event-select', { event })}><strong>${event.date}</strong> ${event.title}</button>`) : html`<p>${this.localize('calendarEmpty')}</p>`}</div>` : html`<div part="weekdays">${this.weekdays().map((day) => html`<span part="weekday">${day}</span>`)}</div><div part="grid" role="grid" aria-label=${monthTitle}>${weeks.map((week) => html`<div part="week" role="row">${week.map((date) => { const dateIso = formatISO(date); const dayEvents = eventsByDate?.get(dateIso) ?? []; return html`<button part="day" type="button" role="gridcell" data-date=${dateIso} data-outside=${date.getMonth() !== start.getMonth() ? 'true' : 'false'} data-today=${dateIso === today ? 'true' : 'false'} data-selected=${dateIso === this.value ? 'true' : 'false'} aria-selected=${dateIso === this.value ? 'true' : 'false'} aria-label=${dayLabelFmt.format(date)} tabindex=${dateIso === anchor ? '0' : '-1'} @click=${() => this.selectDate(dateIso)} @keydown=${(event: KeyboardEvent) => this.onDayKeyDown(event, date)}><span part="date">${date.getDate()}</span>${dayEvents.map((item) => { const bg = item.color ? sanitizeSwatchColor(item.color) : undefined; return html`<span part="event" style=${styleMap(bg ? { background: bg } : {})} @click=${(event: Event) => { event.stopPropagation(); this.emit('lr-event-select', { event: item }); }}>${item.title}</span>`; })}</button>`; })}</div>`)}</div>`}</section>`;
+    return html`<section aria-label=${label}><header part="header"><button part="nav" type="button" aria-label=${this.localize('calendarPreviousMonth')} @click=${() => this.changeMonth(-1)}><span part="nav-glyph" aria-hidden="true">‹</span></button><span part="title">${monthTitle}</span><span part="nav"><button part="nav" type="button" aria-label=${this.localize('calendarNextMonth')} @click=${() => this.changeMonth(1)}><span part="nav-glyph" aria-hidden="true">›</span></button></span></header>
+      ${this.view === 'agenda' ? html`<div part="agenda">${agenda.length ? agenda.map((event) => { const date = parseISO(event.date); return html`<button part="agenda-event" type="button" @click=${() => this.emit('lr-event-select', { event })}><strong>${date ? agendaDateFmt.format(date) : event.date}</strong> ${event.title}</button>`; }) : html`<p>${this.localize('calendarEmpty')}</p>`}</div>` : html`<div part="weekdays">${this.weekdays().map((day) => html`<span part="weekday">${day}</span>`)}</div><div part="grid" role="grid" aria-label=${monthTitle}>${weeks.map((week) => html`<div part="week" role="row">${week.map((date) => { const dateIso = formatISO(date); const dayEvents = eventsByDate?.get(dateIso) ?? []; return html`<div part="day" role="gridcell" data-date=${dateIso} data-outside=${date.getMonth() !== start.getMonth() ? 'true' : 'false'} data-today=${dateIso === today ? 'true' : 'false'} data-selected=${dateIso === this.value ? 'true' : 'false'} aria-selected=${dateIso === this.value ? 'true' : 'false'} aria-label=${dayLabelFmt.format(date)} tabindex=${dateIso === anchor ? '0' : '-1'} @click=${(event: MouseEvent) => { if (event.target === event.currentTarget || (event.target as HTMLElement).getAttribute('part') === 'date') this.selectDate(dateIso); }} @keydown=${(event: KeyboardEvent) => { if (event.target === event.currentTarget) this.onDayKeyDown(event, date); }}><span part="date">${dayNumberFmt.format(date.getDate())}</span>${dayEvents.map((item) => { const bg = item.color ? sanitizeSwatchColor(item.color) : undefined; return html`<button part="event" type="button" style=${styleMap(bg ? { background: bg } : {})} @click=${(event: Event) => { event.stopPropagation(); this.emit('lr-event-select', { event: item }); }}>${item.title}</button>`; })}</div>`; })}</div>`)}</div>`}</section>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-calendar': LyraCalendar; } }

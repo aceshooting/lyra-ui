@@ -72,3 +72,9 @@ it('spreads constant data across the full bucket range instead of collapsing it 
   expect(buckets[0].count).to.equal(4);
   expect(buckets.slice(1).every((b) => b.count === 0)).to.be.true;
 });
+
+it('formats bucket ranges with the requested locale', () => {
+  const buckets = binValues([1000, 2000], 2, 'de-DE');
+  expect(buckets[0]!.label).to.contain('1.000');
+  expect(buckets[0]!.label).to.not.contain('1000.0');
+});

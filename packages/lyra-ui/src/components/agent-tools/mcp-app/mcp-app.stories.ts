@@ -31,3 +31,19 @@ export const Default: Story = {
     ></lr-mcp-app>
   `,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-mcp-app
+        label="Customer-support weather and incident-response application"
+        .resource=${{
+          uri: 'ui://operations/a-very-long-resource-identifier',
+          title: 'Customer-support weather and incident-response application',
+          html: '<!doctype html><html><body><p style="overflow-wrap:anywhere">Long embedded application content remains inside its sandbox.</p></body></html>',
+        }}
+      ></lr-mcp-app>
+    </div>
+  `,
+};

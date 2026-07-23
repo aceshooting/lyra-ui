@@ -82,9 +82,9 @@ it('keeps a removable/toggleable 3xs chip at the WCAG 2.5.8 minimum tap target',
   const toggleable = (await fixture(html`
     <lr-chip size="3xs" toggleable><span slot="icon">●</span>Tag</lr-chip>
   `)) as LyraChip;
-  const base = toggleable.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(Number.parseFloat(getComputedStyle(base).minBlockSize)).to.be.at.least(24);
-  expect(base.getAttribute('tabindex')).to.equal('0');
+  const toggleButton = toggleable.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+  expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize)).to.be.at.least(40);
+  expect(toggleButton.localName).to.equal('button');
   await expect(toggleable).to.be.accessible();
 });
 
@@ -100,9 +100,9 @@ it('keeps compact removable and toggleable chips keyboard-accessible with adequa
     const toggleable = (await fixture(html`
       <lr-chip size=${size} toggleable><span slot="icon">●</span>Tag</lr-chip>
     `)) as LyraChip;
-    const base = toggleable.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(Number.parseFloat(getComputedStyle(base).minBlockSize), `${size} toggle target`).to.be.at.least(24);
-    expect(base.getAttribute('tabindex')).to.equal('0');
+    const toggleButton = toggleable.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+    expect(Number.parseFloat(getComputedStyle(toggleButton).minBlockSize), `${size} toggle target`).to.be.at.least(40);
+    expect(toggleButton.localName).to.equal('button');
     await expect(toggleable).to.be.accessible();
   }
 });
@@ -265,23 +265,22 @@ describe('selected', () => {
     // mode itself is sticky (see `toggleable`'s doc comment), so once opted in via `selected` the
     // chip keeps announcing `aria-pressed="false"` (not omitting it) once unpressed.
     const el = (await fixture(html`<lr-chip selected value="v1">Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('role')).to.equal('button');
-    expect(base.getAttribute('tabindex')).to.equal('0');
-    expect(base.getAttribute('aria-pressed')).to.equal('true');
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    expect(button.localName).to.equal('button');
+    expect(button.getAttribute('aria-pressed')).to.equal('true');
 
-    setTimeout(() => base.click());
+    setTimeout(() => button.click());
     const ev = await oneEvent(el, 'lr-chip-select');
     expect(ev.detail).to.deep.equal({ value: 'v1', selected: false });
     expect(el.selected).to.be.false;
     await el.updateComplete;
-    expect(base.getAttribute('aria-pressed')).to.equal('false');
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
   });
 
-  it('toggles via Enter/Space while focused, preventing default Space page-scroll', async () => {
+  it('uses native button activation for keyboard and synthetic click paths', async () => {
     const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    setTimeout(() => base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true })));
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    setTimeout(() => button.click());
     await oneEvent(el, 'lr-chip-select');
     expect(el.selected).to.be.false;
   });
@@ -291,6 +290,7 @@ describe('selected', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(base.getAttribute('role')).to.be.null;
     expect(base.hasAttribute('tabindex')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="toggle-button"]').length).to.equal(0);
     await expect(el).to.be.accessible(); // no nested-interactive violation
   });
 
@@ -299,29 +299,76 @@ describe('selected', () => {
     await expect(el).to.be.accessible();
   });
 
+  it('uses a real button outside an inert label slot so interactive slotted descendants cannot nest or double-toggle', async () => {
+    const el = (await fixture(html`
+      <lr-chip toggleable><a href="#destination">Nested link</a></lr-chip>
+    `)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    expect(button?.localName).to.equal('button');
+    expect(button.contains(label)).to.be.false;
+    expect(label.hasAttribute('inert')).to.be.true;
+
+    let changes = 0;
+    el.addEventListener('lr-chip-select', () => changes++);
+    (el.querySelector('a') as HTMLAnchorElement).click();
+    expect(changes).to.equal(0);
+    button.click();
+    expect(changes).to.equal(1);
+  });
+
+  it('emits the proposed selection before mutation and honors preventDefault', async () => {
+    const el = (await fixture(html`<lr-chip toggleable>Tag</lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    let selectedDuringEvent = true;
+    el.addEventListener('lr-chip-select', (event) => {
+      selectedDuringEvent = el.selected;
+      event.preventDefault();
+    });
+    button.click();
+    expect(selectedDuringEvent).to.be.false;
+    expect(el.selected).to.be.false;
+  });
+
+  it('keeps action naming live and forwards host focus/blur/click to the primary control', async () => {
+    const el = (await fixture(html`<lr-chip toggleable><span>Original</span></lr-chip>`)) as LyraChip;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Original');
+    (el.querySelector('span') as HTMLSpanElement).firstChild!.textContent = 'Updated';
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Updated');
+
+    el.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('toggle-button');
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+    el.click();
+    expect(el.selected).to.be.true;
+  });
+
   it('stays clickable after toggling off -- a second click flips selected back to true', async () => {
     // Regression test: [part=base]'s interactive semantics used to be gated on the *current*
     // live value of `selected`, so the very first click (which flips selected to false) stripped
     // role/tabindex/handlers on the next render and the chip could never be clicked again.
     const el = (await fixture(html`<lr-chip selected value="v1">Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
 
-    setTimeout(() => base.click());
+    setTimeout(() => button.click());
     const off = await oneEvent(el, 'lr-chip-select');
     expect(off.detail).to.deep.equal({ value: 'v1', selected: false });
     expect(el.selected).to.be.false;
     await el.updateComplete;
 
     // Still focusable/clickable even though the live value is now false.
-    expect(base.getAttribute('role')).to.equal('button');
-    expect(base.getAttribute('tabindex')).to.equal('0');
+    expect(button.localName).to.equal('button');
 
-    setTimeout(() => base.click());
+    setTimeout(() => button.click());
     const on = await oneEvent(el, 'lr-chip-select');
     expect(on.detail).to.deep.equal({ value: 'v1', selected: true });
     expect(el.selected).to.be.true;
     await el.updateComplete;
-    expect(base.getAttribute('aria-pressed')).to.equal('true');
+    expect(button.getAttribute('aria-pressed')).to.equal('true');
   });
 
   it('supports opting into toggle mode while starting unselected via the toggleable property', async () => {
@@ -329,12 +376,11 @@ describe('selected', () => {
     // clickable from the outset -- `selected` alone can't signal that (its own default is also
     // false), so `toggleable` is the explicit opt-in for this starting state.
     const el = (await fixture(html`<lr-chip toggleable value="v1">Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('role')).to.equal('button');
-    expect(base.getAttribute('tabindex')).to.equal('0');
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    expect(button.localName).to.equal('button');
     expect(el.selected).to.be.false;
 
-    setTimeout(() => base.click());
+    setTimeout(() => button.click());
     const ev = await oneEvent(el, 'lr-chip-select');
     expect(ev.detail).to.deep.equal({ value: 'v1', selected: true });
     expect(el.selected).to.be.true;
@@ -342,11 +388,11 @@ describe('selected', () => {
 
   it('is accessible once toggled off (still interactive, now unselected)', async () => {
     const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    setTimeout(() => base.click());
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    setTimeout(() => button.click());
     await oneEvent(el, 'lr-chip-select');
     await el.updateComplete;
-    expect(base.getAttribute('role')).to.equal('button');
+    expect(button.localName).to.equal('button');
     await expect(el).to.be.accessible();
   });
 });
@@ -400,20 +446,19 @@ describe('pressed-background override', () => {
 describe('aria-pressed', () => {
   it('is omitted entirely when the chip is not in toggle mode', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.hasAttribute('aria-pressed')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="toggle-button"]').length).to.equal(0);
   });
 
   it('is explicitly "false" (not omitted) for a toggleable-but-unpressed chip', async () => {
     const el = (await fixture(html`<lr-chip toggleable>Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-pressed')).to.equal('false');
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
   });
 
   it('is "true" once pressed', async () => {
     const el = (await fixture(html`<lr-chip selected>Tag</lr-chip>`)) as LyraChip;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-pressed')).to.equal('true');
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLElement;
+    expect(button.getAttribute('aria-pressed')).to.equal('true');
   });
 });
 
@@ -428,15 +473,14 @@ describe('per-tier min-height and exact-height hatch', () => {
   });
 
   it('wires --lr-chip-min-height per tier onto interactive chips (rendered min-block-size)', async () => {
-    // Compact tiers share the WCAG 24px floor; the larger tiers get a taller (but still
-    // content-dead) floor so xl and 2xs no longer share a single 1.5rem value.
+    // Toggle controls all use the shared 40px icon-button target floor.
     const expected: Record<string, string> = {
-      '2xs': '24px',
-      xs: '24px',
-      s: '24px',
-      m: '24px',
-      l: '28px',
-      xl: '32px',
+      '2xs': '40px',
+      xs: '40px',
+      s: '40px',
+      m: '40px',
+      l: '40px',
+      xl: '40px',
     };
     for (const [size, px] of Object.entries(expected)) {
       const el = (await fixture(html`<lr-chip size=${size} toggleable>Tag</lr-chip>`)) as LyraChip;
@@ -445,14 +489,14 @@ describe('per-tier min-height and exact-height hatch', () => {
     }
   });
 
-  it('keeps every interactive tier at or above the 24px WCAG target', async () => {
+  it('keeps every interactive tier at or above the shared 40px target', async () => {
     for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl'] as const) {
       const el = (await fixture(html`<lr-chip size=${size} toggleable>Tag</lr-chip>`)) as LyraChip;
       await el.updateComplete;
       expect(
         Number.parseFloat(getComputedStyle(base(el)).minBlockSize),
         `size=${size}`,
-      ).to.be.at.least(24);
+      ).to.be.at.least(40);
     }
   });
 
@@ -461,8 +505,7 @@ describe('per-tier min-height and exact-height hatch', () => {
     await el.updateComplete;
     const b = base(el);
     const natural = getComputedStyle(b).blockSize;
-    // Unset: rendered height is content-driven (above the 28px l floor), byte-identical to today.
-    expect(Number.parseFloat(natural)).to.be.greaterThan(28);
+    expect(Number.parseFloat(natural)).to.be.at.least(40);
     el.style.setProperty('--lr-chip-height', '52px');
     await el.updateComplete;
     expect(getComputedStyle(b).blockSize).to.equal('52px');

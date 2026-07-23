@@ -42,6 +42,7 @@ export const styles = css`
      so layout="fit" (the default) never triggers this rule. */
   :host([layout='scroll']) [part='base'] {
     overflow-x: auto;
+    overflow-y: hidden;
   }
   svg {
     flex: 1 1 auto;
@@ -72,7 +73,8 @@ export const styles = css`
   :where([part='point']):hover {
     filter: brightness(var(--lr-hover-brightness));
   }
-  [part='bar'][data-selected] {
+  [part='bar'][data-selected],
+  [part='point'][data-selected] {
     stroke: var(--lr-lite-chart-selected-outline-color, var(--lr-color-brand));
     stroke-width: var(--lr-size-2px);
   }

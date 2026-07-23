@@ -20,7 +20,7 @@ export interface LyraComparePanelEventMap {
  * @slot a - The first output (any content — a chat message, markdown, a viewer).
  * @slot b - The second output.
  * @slot prompt - Optional shared-input header above both panes.
- * @event lr-vote - `detail: { choice, itemId }`.
+ * @event lr-vote - `detail: { choice, itemId }`. Cancelable; preventing it preserves the prior vote.
  * @csspart base - The outer wrapper.
  * @csspart prompt - The optional prompt header, hidden when the `prompt` slot is empty.
  * @csspart panes - The row (or, under 640px, column) wrapping both panes.
@@ -149,8 +149,7 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
 
   private castVote(choice: CompareVote): void {
     if (this.disabled) return;
-    this.vote = choice;
-    this.emit('lr-vote', { choice, itemId: this.itemId });
+    const itemId = this.itemId;
     const labelAText = this.labelA || this.localize('compareResponseA');
     const labelBText = this.labelB || this.localize('compareResponseB');
     const label =
@@ -161,6 +160,9 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
           : choice === 'tie'
             ? this.localize('compareVoteTie')
             : this.localize('compareVoteBothBad');
+    const event = this.emit('lr-vote', { choice, itemId }, { cancelable: true });
+    if (event.defaultPrevented) return;
+    this.vote = choice;
     this.liveRegion?.announce(this.localize('compareVoteRecorded', undefined, { label }), { force: true });
   }
 

@@ -62,6 +62,9 @@ export const styles = css`
     white-space: pre;
     overflow-wrap: normal;
   }
+  :host(:not([wrap])) lr-virtual-list::part(base) {
+    overflow-x: auto;
+  }
   [part='jump-to-latest'] {
     position: absolute;
     inset-block-end: var(--lr-space-s);

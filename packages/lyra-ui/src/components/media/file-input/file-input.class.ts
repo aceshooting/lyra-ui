@@ -1,5 +1,6 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -98,6 +99,16 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
 
   private dragCounter = 0;
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (changed.has('disabled') && this.disabled) this.resetDragSession();
+  }
+
+  override disconnectedCallback(): void {
+    this.resetDragSession();
+    super.disconnectedCallback();
+  }
+
   /** `maxFileSize` normalized: `0` (explicitly set, or left at the default) or `Infinity`
    *  (explicitly set) both mean "no limit" verbatim -- `null` here signals that. Anything else
    *  that isn't a positive, finite override -- a `NaN` from an invalid `max-file-size` attribute,
@@ -167,12 +178,13 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     rejected.push(...additionalRejected);
     this.rejectedFiles = rejected;
     const messages: string[] = [];
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     if (files.length) {
       messages.push(
         this.localize(
           files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany',
           this.acceptedMessage === '{count} file(s) added.' ? undefined : this.acceptedMessage,
-          { count: files.length },
+          { count: numberFormat.format(files.length) },
         ),
       );
     }
@@ -181,7 +193,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
         this.localize(
           rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany',
           this.rejectedMessage === '{count} file(s) rejected.' ? undefined : this.rejectedMessage,
-          { count: rejected.length },
+          { count: numberFormat.format(rejected.length) },
         ),
       );
     }
@@ -198,6 +210,21 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   /** Focuses the semantic dropzone. */
   override focus(options?: FocusOptions): void {
     this.baseEl?.focus(options);
+  }
+
+  /** Removes focus from the semantic dropzone. */
+  override blur(): void {
+    this.baseEl?.blur();
+  }
+
+  /** Opens the native picker, matching a user click on the semantic dropzone. */
+  override click(): void {
+    this.openPicker();
+  }
+
+  private resetDragSession(): void {
+    this.dragCounter = 0;
+    this.dragState = 'default';
   }
 
   private previewState(fileList: File[]): DragState {
@@ -233,8 +260,7 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     // action unconditionally, before the `disabled` gate.
     e.preventDefault();
     if (this.disabled) return;
-    this.dragCounter = 0;
-    this.dragState = 'default';
+    this.resetDragSession();
     const files = [...(e.dataTransfer?.files ?? [])];
     const folders = [...(e.dataTransfer?.items ?? [])]
       .map((item) => (item as DataTransferItem & { webkitGetAsEntry?: () => FileSystemEntry | null }).webkitGetAsEntry?.())

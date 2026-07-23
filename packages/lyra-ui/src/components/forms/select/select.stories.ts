@@ -104,6 +104,22 @@ export const Disabled: Story = {
   `,
 };
 
+/** Start/end slots remain inside the trigger and shrink around a long selected label. */
+export const Adornments: Story = {
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-select label="Deployment region" value="primary">
+        <span slot="start" aria-hidden="true">◉</span>
+        <kbd slot="end">R</kbd>
+        <lr-option value="primary"
+          >Primary-production-region-with-an-intentionally-long-identifier</lr-option
+        >
+        <lr-option value="backup">Backup region</lr-option>
+      </lr-select>
+    </div>
+  `,
+};
+
 /**
  * When exactly one `<lr-option>` is enabled, the trigger auto-commits that
  * option on click or Arrow Up/Down instead of opening a listbox — no chevron,

@@ -172,6 +172,18 @@ it('is accessible with mixed-tier chunks', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('renders explicit true and false aria-current values for the stateful chunk set', async () => {
+  const el = (await fixture(
+    html`<lr-chunk-inspector active-id="c2" .chunks=${chunks}></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  const rows = [...el.shadowRoot!.querySelectorAll('[part~="chunk"]')];
+  expect(rows.map((row) => row.getAttribute('aria-current'))).to.deep.equal([
+    'false',
+    'true',
+    'false',
+  ]);
+});
+
 describe('current-chunk cssprop escape hatch', () => {
   function resolvedInShadow(el: LyraChunkInspector, declaration: string, property: string): string {
     const probe = document.createElement('span');
@@ -217,7 +229,7 @@ describe('current-chunk cssprop escape hatch', () => {
     const { el, chunk } = await current();
     const currentScore = chunk.querySelector('[part~="score"]') as HTMLElement;
     expect(getComputedStyle(currentScore).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
-    const otherScore = el.shadowRoot!.querySelector('[part~="chunk"]:not([aria-current]) [part~="score"]') as HTMLElement;
+    const otherScore = el.shadowRoot!.querySelector('[part~="chunk"][aria-current="false"] [part~="score"]') as HTMLElement;
     expect(getComputedStyle(otherScore).color).to.equal(
       resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
     );
@@ -299,7 +311,7 @@ describe('row styling across both rendering paths', () => {
         const currentScore = current.querySelector('[part~="score"]') as HTMLElement;
         expect(getComputedStyle(currentScore).color).to.equal(resolvedInShadow(el, 'color: var(--lr-color-text)', 'color'));
 
-        const otherScore = root.querySelector('[part~="chunk"]:not([aria-current]) [part~="score"]') as HTMLElement;
+        const otherScore = root.querySelector('[part~="chunk"][aria-current="false"] [part~="score"]') as HTMLElement;
         expect(getComputedStyle(otherScore).color).to.equal(
           resolvedInShadow(el, 'color: var(--lr-color-text-quiet)', 'color'),
         );
@@ -382,7 +394,7 @@ describe('row styling across both rendering paths', () => {
       const { root } = await render('virtualized');
       const current = root.querySelector('[part~="chunk-current"]') as HTMLElement;
       expect(getComputedStyle(current).outlineColor).to.equal('rgb(4, 5, 6)');
-      const other = root.querySelector('[part~="chunk"]:not([aria-current])') as HTMLElement;
+      const other = root.querySelector('[part~="chunk"][aria-current="false"]') as HTMLElement;
       expect(getComputedStyle(other).outlineColor).to.equal('rgb(1, 2, 3)');
       expect(getComputedStyle(current.querySelector('[part~="score"]') as HTMLElement).letterSpacing).to.equal('4px');
       expect(getComputedStyle(other.querySelector('[part~="score"]') as HTMLElement).letterSpacing).to.equal('3px');

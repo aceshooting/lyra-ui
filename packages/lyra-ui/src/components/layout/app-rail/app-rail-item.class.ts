@@ -1,10 +1,10 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeLinkHref } from '../../../internal/safe-url.js';
-import { place } from '../../../internal/positioner.js';
-import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { styles } from './app-rail-item.styles.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { safeLinkHref } from "../../../internal/safe-url.js";
+import { place } from "../../../internal/positioner.js";
+import { rtlAwarePlacement } from "../../../internal/rtl.js";
+import { styles } from "./app-rail-item.styles.js";
 
 /**
  * `<lr-app-rail-item>` — an explicit icon/label navigation item for
@@ -31,10 +31,10 @@ export class LyraAppRailItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** Optional destination. Without `href`, the item renders as a button. */
-  @property() href = '';
+  @property() href = "";
 
   /** Optional link target. */
-  @property() target = '';
+  @property() target = "";
 
   /** Prevents activation while retaining the item in the rail. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -63,19 +63,19 @@ export class LyraAppRailItem extends LyraElement {
       .filter(
         (n): n is Text | Element =>
           (n.nodeType === Node.TEXT_NODE || n instanceof Element) &&
-          !(n instanceof Element && n.getAttribute('slot') === 'icon'),
+          !(n instanceof Element && n.getAttribute("slot") === "icon")
       )
-      .map((n) => n.textContent ?? '')
-      .join('')
+      .map((n) => n.textContent ?? "")
+      .join("")
       .trim();
   }
 
   private get tooltipText(): string {
-    return this.getAttribute('aria-label') || this.labelText || '';
+    return this.getAttribute("aria-label") || this.labelText || "";
   }
 
   private onFocusShow = (): void => {
-    if (this.tooltip && this.hasAttribute('icon-only')) this.showTooltip = true;
+    if (this.tooltip && this.hasAttribute("icon-only")) this.showTooltip = true;
   };
 
   private onBlurHide = (): void => {
@@ -83,18 +83,24 @@ export class LyraAppRailItem extends LyraElement {
   };
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('showTooltip')) {
+    if (changed.has("showTooltip")) {
       this.stopPositioning?.();
       this.stopPositioning = undefined;
       if (this.showTooltip) {
-        const anchor = this.renderRoot.querySelector('[part="base"]') as HTMLElement;
-        const popup = this.renderRoot.querySelector('[part="tooltip"]') as HTMLElement | null;
+        const anchor = this.renderRoot.querySelector(
+          '[part="base"]'
+        ) as HTMLElement;
+        const popup = this.renderRoot.querySelector(
+          '[part="tooltip"]'
+        ) as HTMLElement | null;
         // 'right' is a physical Floating UI placement -- resolve it through the
         // shared RTL helper (mirrors lr-menu's identical resolution) so the
         // flyout still anchors to the rail item's trailing edge (away from the
         // rail) rather than staying pinned to the physical right under RTL.
         if (anchor && popup)
-          this.stopPositioning = place(anchor, popup, { placement: rtlAwarePlacement('right', this) });
+          this.stopPositioning = place(anchor, popup, {
+            placement: rtlAwarePlacement("right", this),
+          });
       }
     }
   }
@@ -102,48 +108,54 @@ export class LyraAppRailItem extends LyraElement {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.stopPositioning?.();
+    this.stopPositioning = undefined;
+    this.showTooltip = false;
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label');
+    const label = this.getAttribute("aria-label");
     const href = safeLinkHref(this.href);
     const content = html`
       <span part="icon" aria-hidden="true"><slot name="icon"></slot></span>
       <span part="label"><slot></slot></span>
-      ${this.showTooltip ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>` : nothing}
+      ${this.showTooltip
+        ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>`
+        : nothing}
     `;
     if (href && !this.disabled) {
       return html`<a
         part="base"
         href=${href}
         target=${this.target || nothing}
-        rel=${this.target ? 'noopener noreferrer' : nothing}
+        rel=${this.target ? "noopener noreferrer" : nothing}
         aria-label=${label || nothing}
-        aria-current=${this.active ? 'page' : nothing}
+        aria-current=${this.active ? "page" : nothing}
         @mouseenter=${this.onFocusShow}
         @mouseleave=${this.onBlurHide}
         @focus=${this.onFocusShow}
         @blur=${this.onBlurHide}
-      >${content}</a>`;
+        >${content}</a
+      >`;
     }
     return html`<button
       part="base"
       type="button"
       ?disabled=${this.disabled}
-      aria-disabled=${this.disabled ? 'true' : nothing}
+      aria-disabled=${this.disabled ? "true" : nothing}
       aria-label=${label || nothing}
-      aria-current=${this.active ? 'page' : nothing}
+      aria-current=${this.active ? "page" : nothing}
       @mouseenter=${this.onFocusShow}
       @mouseleave=${this.onBlurHide}
       @focus=${this.onFocusShow}
       @blur=${this.onBlurHide}
-    >${content}</button>`;
+    >
+      ${content}
+    </button>`;
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-app-rail-item': LyraAppRailItem;
+    "lr-app-rail-item": LyraAppRailItem;
   }
 }

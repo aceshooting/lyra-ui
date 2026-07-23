@@ -98,13 +98,12 @@ export class LyraFlowControls extends LyraElement {
   private canvasEl?: FlowCanvasLike;
   private unsubscribe?: () => void;
   private lockObserver?: MutationObserver;
-  /** Watches the root for DOM changes while no canvas has resolved yet, so a `for` target or
-   *  ancestor `lr-flow-canvas` that mounts after this element does still gets picked up instead
-   *  of leaving every button permanently disabled. Disconnected once a canvas resolves. */
+  /** Watches target lifecycle so late, removed, and same-id replacement canvases are reconciled. */
   private canvasWatcher?: MutationObserver;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.watchForCanvas();
     this.resolveAndAttach();
   }
 
@@ -126,15 +125,6 @@ export class LyraFlowControls extends LyraElement {
   // produces instead of synchronously scheduling a second cycle from within `updated()`.
   protected override willUpdate(changed: PropertyValues): void {
     if (this.hasUpdated && changed.has('for')) {
-      this.unsubscribe?.();
-      this.unsubscribe = undefined;
-      this.lockObserver?.disconnect();
-      this.lockObserver = undefined;
-      this.canvasWatcher?.disconnect();
-      this.canvasWatcher = undefined;
-      this.canvasEl = undefined;
-      this.snapshot = null;
-      this.locked = false;
       this.resolveAndAttach();
     }
   }
@@ -150,14 +140,16 @@ export class LyraFlowControls extends LyraElement {
   }
 
   private resolveAndAttach(): void {
-    const canvas = this.resolveCanvas();
-    if (!canvas) {
-      this.watchForCanvas();
-      return;
-    }
-    this.canvasWatcher?.disconnect();
-    this.canvasWatcher = undefined;
+    const canvas = this.resolveCanvas() ?? undefined;
+    if (canvas === this.canvasEl) return;
+    this.unsubscribe?.();
+    this.unsubscribe = undefined;
+    this.lockObserver?.disconnect();
+    this.lockObserver = undefined;
+    this.snapshot = null;
+    this.locked = false;
     this.canvasEl = canvas;
+    if (!canvas) return;
     this.locked = canvas.locked;
     this.unsubscribe = canvas.registerCompanion((snapshot) => {
       this.snapshot = snapshot;
@@ -185,7 +177,11 @@ export class LyraFlowControls extends LyraElement {
     const zoom = this.snapshot?.viewport.zoom ?? 1;
     const atMin = this.canvasEl ? zoom <= this.canvasEl.minZoom : false;
     const atMax = this.canvasEl ? zoom >= this.canvasEl.maxZoom : false;
-    return html`<div part="base" role="group" aria-label=${this.localize('flowControlsLabel')}>
+    return html`<div
+      part="base"
+      role="group"
+      aria-label=${this.getAttribute('aria-label') || this.localize('flowControlsLabel')}
+    >
       <button
         part="zoom-in"
         type="button"

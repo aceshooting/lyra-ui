@@ -253,6 +253,18 @@ describe('lr-graph-query-builder', () => {
     expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
   });
 
+  it('gives each saved-query load button an action-specific accessible name', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
+    const el = (await fixture(
+      html`<lr-graph-query-builder
+        .savedQueries=${saved}
+        .strings=${{ graphQueryLoadWithContext: 'Open query {name}' }}
+      ></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    const loadButton = el.shadowRoot!.querySelector('[part="saved-load-button"]') as HTMLButtonElement;
+    expect(loadButton.getAttribute('aria-label')).to.equal('Open query Coworkers');
+  });
+
   it('emits lr-query-delete without mutating savedQueries itself', async () => {
     const saved: GraphQuerySavedItem[] = [{ id: 's1', name: 'Coworkers', query: query() }];
     const el = (await fixture(
@@ -312,6 +324,19 @@ describe('lr-graph-query-builder', () => {
     await el.updateComplete;
     const options = (el.shadowRoot!.querySelector('[part="min-hops"]') as HTMLElement).querySelectorAll('lr-option');
     expect(options.length).to.equal(3);
+  });
+
+  it('locale-formats visible hop option labels while preserving machine values', async () => {
+    const el = (await fixture(
+      html`<lr-graph-query-builder locale="ar" hop-limit="3"></lr-graph-query-builder>`,
+    )) as LyraGraphQueryBuilder;
+    const options = [
+      ...(el.shadowRoot!.querySelector('[part="min-hops"]') as HTMLElement).querySelectorAll('lr-option'),
+    ] as Array<HTMLElement & { value: string }>;
+    expect(options.map((option) => option.value)).to.deep.equal(['1', '2', '3']);
+    expect(options.map((option) => option.textContent)).to.deep.equal(
+      [1, 2, 3].map((value) => new Intl.NumberFormat('ar').format(value)),
+    );
   });
 
   it('renders a .strings override for graphQueryRun and the shared fieldRequired key', async () => {
@@ -412,7 +437,7 @@ describe('lr-graph-query-builder', () => {
     expect(el.value).to.deep.equal(query());
   });
 
-  it('excludes the field from form submission when the current value cannot be JSON-serialized (circular reference)', async () => {
+  it('normalizes away unrelated circular fields before form serialization', async () => {
     const form = (await fixture(html`
       <form>
         <lr-graph-query-builder name="query"></lr-graph-query-builder>
@@ -425,7 +450,7 @@ describe('lr-graph-query-builder', () => {
     el.value = circular as unknown as GraphQuery;
     await el.updateComplete;
     const data = new FormData(form);
-    expect(data.get('query')).to.be.null;
+    expect(JSON.parse(data.get('query') as string)).to.deep.equal(query({ startId: 'node-1' }));
   });
 
   it('formStateRestoreCallback restores a JSON-encoded value', async () => {
@@ -435,6 +460,62 @@ describe('lr-graph-query-builder', () => {
     await el.updateComplete;
     expect(el.value.startId).to.equal('restored-1');
     expect(el.value.relationshipTypes).to.deep.equal(['works_for']);
+  });
+
+  it('normalizes adversarial direct and restored value shapes without throwing or retaining malformed fields', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    expect(() => {
+      el.value = {
+        startId: 42,
+        endId: null,
+        relationshipTypes: 'works_for',
+        nodeTypes: [7, 'person'],
+        direction: 'sideways',
+        minHops: Number.NaN,
+        maxHops: Number.POSITIVE_INFINITY,
+      } as unknown as GraphQuery;
+    }).to.not.throw();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal({
+      startId: '',
+      endId: '',
+      relationshipTypes: [],
+      nodeTypes: ['person'],
+      direction: 'both',
+      minHops: 1,
+      maxHops: 1,
+    });
+
+    expect(() =>
+      el.formStateRestoreCallback(
+        JSON.stringify({ startId: 7, relationshipTypes: 'bad', nodeTypes: ['organization'] }),
+      ),
+    ).to.not.throw();
+    await el.updateComplete;
+    expect(el.value.startId).to.equal('');
+    expect(el.value.relationshipTypes).to.deep.equal([]);
+    expect(el.value.nodeTypes).to.deep.equal(['organization']);
+  });
+
+  it('renders complete outer label, hint, and error chrome with matching slots and descriptions', async () => {
+    const el = (await fixture(html`
+      <lr-graph-query-builder label="Graph path" hint="Choose a path" error-text="Query invalid">
+        <span slot="hint"> with care</span>
+      </lr-graph-query-builder>
+    `)) as LyraGraphQueryBuilder;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+
+    expect(label.textContent).to.contain('Graph path');
+    expect(hint.textContent).to.contain('Choose a path');
+    expect(error.textContent).to.contain('Query invalid');
+    expect(base.getAttribute('aria-describedby')).to.include(hint.id);
+    expect(base.getAttribute('aria-describedby')).to.include(error.id);
+    expect(el.shadowRoot!.querySelector('slot[name="label"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('slot[name="hint"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('slot[name="error"]')).to.exist;
   });
 
   it('formStateRestoreCallback falls back to the empty value for malformed JSON', async () => {

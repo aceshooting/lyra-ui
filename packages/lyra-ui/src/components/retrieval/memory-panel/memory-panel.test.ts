@@ -289,6 +289,82 @@ describe('lr-memory-panel', () => {
     expect(row.contains(el.shadowRoot!.activeElement)).to.be.true;
   });
 
+  it('uses instance-safe disclosure ids for hostile and duplicate caller ids', async () => {
+    const hostile = 'same id\"]';
+    const item = (text: string): LyraMemoryItem => ({
+      id: hostile,
+      text,
+      provenance: { entities: [{ id: 'entity', label: 'Entity', type: 'person' }] },
+    });
+    const first = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
+    const second = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
+    first.shortTerm = [item('First')];
+    first.longTerm = [item('Second')];
+    second.shortTerm = [item('Third')];
+    await Promise.all([first.updateComplete, second.updateComplete]);
+
+    const toggles = [
+      ...first.shadowRoot!.querySelectorAll('[part="expand-toggle"]'),
+      ...second.shadowRoot!.querySelectorAll('[part="expand-toggle"]'),
+    ];
+    const ids = toggles.map((toggle) => toggle.getAttribute('aria-controls')!);
+    expect(new Set(ids).size).to.equal(3);
+    expect(ids.some((id) => id.includes(hostile))).to.be.false;
+    for (const toggle of toggles) {
+      expect(first.shadowRoot!.getElementById(toggle.getAttribute('aria-controls')!) != null ||
+        second.shadowRoot!.getElementById(toggle.getAttribute('aria-controls')!) != null).to.be.true;
+    }
+  });
+
+  it('keys pending confirmations by item identity and scope, not a duplicate public id', async () => {
+    const duplicateShort = { id: 'duplicate', text: 'Short' };
+    const duplicateLong = { id: 'duplicate', text: 'Long' };
+    const el = (await fixture(html`<lr-memory-panel></lr-memory-panel>`)) as LyraMemoryPanel;
+    el.shortTerm = [duplicateShort];
+    el.longTerm = [duplicateLong];
+    await el.updateComplete;
+    const longRow = el.shadowRoot!.querySelector(
+      '[part="section"][data-scope="long-term"] [part="item"]',
+    )!;
+    (longRow.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(1);
+    expect(longRow.querySelector('lr-confirm-bar')?.textContent).to.contain('Long');
+  });
+
+  it('cancels a pending decision when controlled data replaces the captured record', async () => {
+    const el = await populated();
+    const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(1);
+
+    el.shortTerm = [{ ...shortTermItems[0]! }, shortTermItems[1]!];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+  });
+
+  it('moves focus to a surviving row when approval synchronously removes the focused item', async () => {
+    const el = await populated();
+    const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const confirmBar = await readyConfirmBar(row);
+    el.addEventListener(
+      'lr-remove',
+      () => {
+        el.shortTerm = el.shortTerm.slice(1);
+      },
+      { once: true },
+    );
+    (confirmBar.shadowRoot!.querySelector('[part="approve-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-id')).to.equal(
+      's2',
+    );
+  });
+
   it('shrinks to a 320px allocation with long item text without horizontal overflow', async () => {
     const longItems: LyraMemoryItem[] = [
       {

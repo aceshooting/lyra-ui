@@ -189,6 +189,7 @@ export class LyraToolResultView extends LyraElement<LyraToolResultViewEventMap> 
 
   private fail(error: unknown): void {
     this.emit('lr-render-error', { toolName: this.toolName, error });
+    this.status = 'success';
     this.renderState = FALLBACK_STATE;
   }
 

@@ -39,10 +39,25 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private readonly labelId = nextId('radio-group-label');
   private readonly hintId = nextId('radio-group-hint');
   private readonly errorId = nextId('radio-group-error');
+  private managedRadios = new Set<LyraRadio>();
+  private membershipObserver?: MutationObserver;
 
   override connectedCallback(): void {
     super.connectedCallback();
     this.syncRadios();
+    this.membershipObserver = new MutationObserver(() => {
+      queueMicrotask(() => {
+        if (this.isConnected) this.syncRadios();
+      });
+    });
+    this.membershipObserver.observe(this, { childList: true, subtree: true });
+  }
+  override disconnectedCallback(): void {
+    this.membershipObserver?.disconnect();
+    this.membershipObserver = undefined;
+    this.releaseRadios(this.managedRadios);
+    this.managedRadios.clear();
+    super.disconnectedCallback();
   }
   protected override updated(): void { this.syncRadios(); }
   private radios(): LyraRadio[] {
@@ -50,25 +65,39 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   }
   private syncRadios(): void {
     const radios = this.radios();
-    const enabled = radios.filter((radio) => !radio.disabled && !this.disabled);
+    const current = new Set(radios);
+    this.releaseRadios([...this.managedRadios].filter((radio) => !current.has(radio)));
+    this.managedRadios = current;
+    const enabled = radios.filter((radio) => !radio.effectiveDisabled && !this.disabled);
     const checkedRadio = radios.find((radio) => radio.checked);
+    const groupName = this.name || this.getAttribute('name') || '';
     for (const radio of radios) {
-      if (this.name) radio.name = this.name;
+      if (groupName) radio.name = groupName;
       radio.setGroupRequired(this.required);
       radio.setGroupDisabled(this.disabled);
       radio.setGroupTabbable(checkedRadio ? radio === checkedRadio : radio === enabled[0]);
     }
   }
+  private releaseRadios(radios: Iterable<LyraRadio>): void {
+    for (const radio of radios) {
+      radio.setGroupRequired(false);
+      radio.setGroupDisabled(false);
+      radio.setGroupTabbable(true);
+    }
+  }
   /** @internal */
   selectRadio(radio: LyraRadio): void {
+    if (this.disabled || radio.effectiveDisabled || !this.managedRadios.has(radio)) return;
     for (const candidate of this.radios()) candidate.checked = candidate === radio;
     this.syncRadios();
     this.emit('lr-change', { value: radio.value, radio });
   }
   private onKeyDown = (event: KeyboardEvent): void => {
     if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
-    const radios = this.radios().filter((radio) => !radio.disabled);
+    if (this.disabled) return;
+    const radios = this.radios().filter((radio) => !radio.effectiveDisabled);
     const current = event.target as LyraRadio;
+    if (current.effectiveDisabled) return;
     const index = radios.indexOf(current);
     if (index < 0 || radios.length === 0) return;
     event.preventDefault();
@@ -89,6 +118,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     if (slot.name === 'hint') this.hasHintSlot = elements.length > 0;
     if (slot.name === 'error') this.hasErrorSlot = elements.length > 0;
   };
+  private onRadioSlotChange = (): void => {
+    this.syncRadios();
+    queueMicrotask(() => {
+      if (this.isConnected) this.syncRadios();
+    });
+  };
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label);
     const hasHint = this.hasHintSlot || Boolean(this.hint);
@@ -101,7 +136,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         aria-describedby=${described}
         @keydown=${this.onKeyDown}>
         <div part="label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
-        <slot></slot>
+        <slot @slotchange=${this.onRadioSlotChange}></slot>
         <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onSlotChange}></slot></div>
         <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onSlotChange}></slot></div>
       </div>

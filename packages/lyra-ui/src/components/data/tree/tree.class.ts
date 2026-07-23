@@ -99,7 +99,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const acc: LyraTreeNode[] = [];
     const walk = (nodes: LyraTreeNode[]): void => {
       for (const n of nodes) {
-        acc.push(n);
+        if (!n.item?.disabled) acc.push(n);
         if (n.expanded) walk(this.childrenOf(n));
       }
     };
@@ -108,12 +108,39 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   }
 
   private findItem(items: TreeItem[], id: string): TreeItem | undefined {
-    for (const item of items) {
+    const stack = [...items].reverse();
+    const seen = new Set<TreeItem>();
+    while (stack.length > 0) {
+      const item = stack.pop()!;
+      if (seen.has(item)) continue;
+      seen.add(item);
       if (item.id === id) return item;
-      const nested = item.children && this.findItem(item.children, id);
-      if (nested) return nested;
+      if (item.children) {
+        for (let i = item.children.length - 1; i >= 0; i--) {
+          const child = item.children[i];
+          if (child) stack.push(child);
+        }
+      }
     }
     return undefined;
+  }
+
+  private firstEnabledId(items: TreeItem[]): string | null {
+    const stack = [...items].reverse();
+    const seen = new Set<TreeItem>();
+    while (stack.length > 0) {
+      const item = stack.pop()!;
+      if (seen.has(item)) continue;
+      seen.add(item);
+      if (!item.disabled) return item.id;
+      if (item.children) {
+        for (let i = item.children.length - 1; i >= 0; i--) {
+          const child = item.children[i];
+          if (child) stack.push(child);
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -128,11 +155,18 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     items: TreeItem[] = this.data,
     parentId: string | null = null,
   ): { parentId: string | null; siblings: TreeItem[]; index: number } | undefined {
-    const index = items.findIndex((item) => item.id === id);
-    if (index >= 0) return { parentId, siblings: items, index };
-    for (const item of items) {
-      const nested = item.children && this.findSiblings(id, item.children, item.id);
-      if (nested) return nested;
+    const stack: Array<{ items: TreeItem[]; parentId: string | null }> = [{ items, parentId }];
+    const seen = new Set<TreeItem[]>();
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      if (seen.has(current.items)) continue;
+      seen.add(current.items);
+      const index = current.items.findIndex((item) => item.id === id);
+      if (index >= 0) return { parentId: current.parentId, siblings: current.items, index };
+      for (let i = current.items.length - 1; i >= 0; i--) {
+        const item = current.items[i];
+        if (item?.children) stack.push({ items: item.children, parentId: item.id });
+      }
     }
     return undefined;
   }
@@ -163,8 +197,13 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       const focused = this.deepFocusedNode();
       const focusedId = focused?.item?.id ?? null;
       this.syncNodes();
-      if (!this.activeId || !this.findItem(this.data, this.activeId)) {
-        this.activeId = this.data[0]?.id ?? null;
+      const activeItem = this.activeId ? this.findItem(this.data, this.activeId) : undefined;
+      if (
+        !this.activeId ||
+        !activeItem ||
+        activeItem.disabled
+      ) {
+        this.activeId = this.firstEnabledId(this.data);
       }
       // Two distinct ways a `data` reassignment drops real DOM focus, both of
       // which land it on <body> synchronously (per the DOM spec) before this
@@ -244,7 +283,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * same-value, no-op assignment for them.
    */
   private onNodeActivate = (e: Event): void => {
-    this.activeId = (e as CustomEvent<{ id: string }>).detail.id;
+    const id = (e as CustomEvent<{ id: string }>).detail.id;
+    if (!this.findItem(this.data, id)?.disabled) this.activeId = id;
   };
 
   /**

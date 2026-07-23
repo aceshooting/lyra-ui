@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
     /* Internal implementation properties: they ARE declared with @cssprop on <lr-timeline-item>
        (the element that reads them), because an undeclared custom property is invisible to
        web-types/vscode-css-data and to the docs freshness check -- but each declaration says
@@ -34,6 +35,7 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
+    min-inline-size: 0;
     margin: 0;
     padding: 0;
   }

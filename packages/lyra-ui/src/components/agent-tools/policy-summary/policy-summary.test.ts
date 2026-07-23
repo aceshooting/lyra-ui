@@ -34,6 +34,13 @@ const decisions: PolicyDecision[] = [
   },
 ];
 
+it('renders historical explanations without mounting live status or alert roles', async () => {
+  const el = (await fixture(html`<lr-policy-summary .decisions=${decisions}></lr-policy-summary>`)) as LyraPolicySummary;
+  const explanations = [...el.shadowRoot!.querySelectorAll('[part="explanation"]')];
+  expect(explanations.length).to.equal(decisions.length);
+  expect(explanations.every((node) => !node.shadowRoot?.querySelector('[role="status"],[role="alert"]'))).to.be.true;
+});
+
 describe('lr-policy-summary', () => {
   it('renders lr-empty when decisions is empty', async () => {
     const el = (await fixture(html`<lr-policy-summary></lr-policy-summary>`)) as LyraPolicySummary;
@@ -92,21 +99,17 @@ describe('lr-policy-summary', () => {
     expect(reviewBadge.textContent!.trim()).to.equal('Needs review');
   });
 
-  it('renders the always-visible explanation inside an inline lr-callout with the mapped variant', async () => {
+  it('renders the historical explanation as static text without a live-region role', async () => {
     const el = (await fixture(
       html`<lr-policy-summary .decisions=${decisions}></lr-policy-summary>`,
     )) as LyraPolicySummary;
     await el.updateComplete;
     const rows = [...el.shadowRoot!.querySelectorAll('[part="decision"]')];
     const denyRow = rows.find((r) => r.getAttribute('data-state') === 'deny' && r.getAttribute('data-category') === 'permission')!;
-    const callout = denyRow.querySelector('[part="explanation"]') as HTMLElement & {
-      variant: string;
-      inline: boolean;
-    };
-    expect(callout.tagName.toLowerCase()).to.equal('lr-callout');
-    expect(callout.inline).to.be.true;
-    expect(callout.variant).to.equal('danger');
-    expect(callout.textContent!.trim()).to.equal(
+    const explanation = denyRow.querySelector('[part="explanation"]') as HTMLElement;
+    expect(explanation.tagName.toLowerCase()).to.equal('div');
+    expect(explanation.getAttribute('role')).to.equal(null);
+    expect(explanation.textContent!.trim()).to.equal(
       'This agent is not permitted to read customer PII in this workspace.',
     );
   });

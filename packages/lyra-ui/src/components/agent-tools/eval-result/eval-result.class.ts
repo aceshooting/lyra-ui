@@ -131,13 +131,22 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
       item-id=${selected.id}
       ?skippable=${this.reviewSkippable}
       ?disabled=${this.disabled}
-      @lr-input=${(e: CustomEvent<{ value: RubricValue }>) =>
-        this.emit('lr-review-input', { runId: selected.id, value: e.detail.value })}
-      @lr-validity-change=${(e: CustomEvent<{ valid: boolean; errors: Record<string, string> }>) =>
-        this.emit('lr-review-validity-change', { runId: selected.id, valid: e.detail.valid, errors: e.detail.errors })}
-      @lr-submit=${(e: CustomEvent<{ value: RubricValue; itemId: string }>) =>
-        this.emit('lr-review-submit', { runId: e.detail.itemId, value: e.detail.value })}
-      @lr-skip=${(e: CustomEvent<{ itemId: string }>) => this.emit('lr-review-skip', { runId: e.detail.itemId })}
+      @lr-input=${(e: CustomEvent<{ value: RubricValue }>) => {
+        e.stopPropagation();
+        this.emit('lr-review-input', { runId: selected.id, value: e.detail.value });
+      }}
+      @lr-validity-change=${(e: CustomEvent<{ valid: boolean; errors: Record<string, string> }>) => {
+        e.stopPropagation();
+        this.emit('lr-review-validity-change', { runId: selected.id, valid: e.detail.valid, errors: e.detail.errors });
+      }}
+      @lr-submit=${(e: CustomEvent<{ value: RubricValue; itemId: string }>) => {
+        e.stopPropagation();
+        this.emit('lr-review-submit', { runId: e.detail.itemId, value: e.detail.value });
+      }}
+      @lr-skip=${(e: CustomEvent<{ itemId: string }>) => {
+        e.stopPropagation();
+        this.emit('lr-review-skip', { runId: e.detail.itemId });
+      }}
     ></lr-rubric-form>`;
   }
 
@@ -173,7 +182,10 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           .rowKey=${(row: EvalRunResult) => row.id}
           .selectedKey=${this.effectiveSelectedRunId}
           aria-label=${this.getAttribute('aria-label') || nothing}
-          @lr-row-click=${(e: CustomEvent<{ row: EvalRunResult }>) => this.emit('lr-run-select', { runId: e.detail.row.id })}
+          @lr-row-click=${(e: CustomEvent<{ row: EvalRunResult }>) => {
+            e.stopPropagation();
+            this.emit('lr-run-select', { runId: e.detail.row.id });
+          }}
         ></lr-table>
         ${selected ? this.renderReview(selected) : nothing}
         ${selected ? this.renderDiff(selected, this.baselineRun) : nothing}

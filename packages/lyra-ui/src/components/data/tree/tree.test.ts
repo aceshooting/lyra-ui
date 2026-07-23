@@ -17,6 +17,60 @@ const data = [
   { id: '2', label: 'Leaf' },
 ];
 
+it('exposes selection and skips disabled items in interaction and roving focus', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    { id: 'loading', label: 'Loading…', disabled: true },
+    { id: 'selected', label: 'Selected', selected: true },
+  ];
+  await el.updateComplete;
+  const [loading, selected] = [...el.querySelectorAll('lr-tree-node')] as LyraTreeNode[];
+  let selections = 0;
+  el.addEventListener('lr-node-select', () => selections++);
+
+  expect(loading.getAttribute('aria-disabled')).to.equal('true');
+  expect(loading.tabIndex).to.equal(-1);
+  expect(selected.getAttribute('aria-selected')).to.equal('true');
+  expect(selected.tabIndex).to.equal(0);
+  loading.click();
+  expect(selections).to.equal(0);
+});
+
+it('stops rendering a cyclic item graph instead of recursing indefinitely', async () => {
+  const cyclic = { id: 'cycle', label: 'Cycle' } as TreeItem;
+  cyclic.children = [cyclic];
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [cyclic];
+  await el.updateComplete;
+  const root = el.querySelector('lr-tree-node') as LyraTreeNode;
+
+  root.expand();
+  await root.updateComplete;
+  const repeated = root.shadowRoot!.querySelector('lr-tree-node') as LyraTreeNode;
+  expect(repeated).to.exist;
+  expect(repeated.hasChildren).to.be.false;
+});
+
+it('bounds rendering of a valid extremely deep hierarchy', async () => {
+  let item: TreeItem = { id: 'leaf', label: 'Leaf' };
+  for (let depth = 5000; depth > 0; depth--) {
+    item = { id: `level-${depth}`, label: `Level ${depth}`, children: [item] };
+  }
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [item];
+  await el.updateComplete;
+  await el.expandAll();
+
+  let renderedDepth = 0;
+  let current = el.querySelector('lr-tree-node') as LyraTreeNode | null;
+  while (current) {
+    renderedDepth++;
+    current = current.shadowRoot?.querySelector('lr-tree-node') as LyraTreeNode | null;
+  }
+  expect(renderedDepth).to.be.greaterThan(1);
+  expect(renderedDepth).to.be.lessThan(5000);
+});
+
 it('mirrors the collapsed disclosure chevron under RTL while keeping expanded chevrons downward', () => {
   const css = treeNodeStyles.cssText.replace(/\s+/g, ' ');
   expect(css).to.include(":host(:dir(rtl)) [part='toggle'] { transform: rotate(180deg);");

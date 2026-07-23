@@ -14,6 +14,7 @@ import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-m
 import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './tool-result-dialog.styles.js';
 
 /** Same status vocabulary as `<lr-tool-call-chip>`. */
@@ -168,16 +169,16 @@ const statusConverter: ComplexAttributeConverter<ToolResultStatus> = {
  *  localized duration message by the caller. */
 function formatDuration(ms: number): {
   key: 'durationMilliseconds' | 'durationSeconds';
-  value: string;
+  value: number;
 } {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, ms))) };
+    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, ms)) };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
   return {
     key: 'durationSeconds',
-    value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1),
+    value: rounded,
   };
 }
 
@@ -231,7 +232,16 @@ function formatDuration(ms: number): {
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-tool-result-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop color.
  * @cssprop --lr-tool-result-dialog-maximized-inset - Insets for the maximized panel.
- * @cssprop [--lr-tool-result-dialog-spin=1s linear] - Running-status animation duration and timing.
+ * @cssprop [--lr-tool-result-dialog-spin=var(--lr-transition-ambient)] - Running-status animation
+ *   duration and timing.
+ * @cssprop [--lr-tool-result-dialog-running-color=var(--lr-color-brand)] - Running status foreground.
+ * @cssprop [--lr-tool-result-dialog-running-bg=var(--lr-color-brand-quiet)] - Running status background.
+ * @cssprop [--lr-tool-result-dialog-success-color=var(--lr-color-success)] - Success status foreground.
+ * @cssprop [--lr-tool-result-dialog-success-bg=var(--lr-color-success-quiet)] - Success status background.
+ * @cssprop [--lr-tool-result-dialog-error-color=var(--lr-color-danger)] - Error status foreground.
+ * @cssprop [--lr-tool-result-dialog-error-bg=var(--lr-color-danger-quiet)] - Error status background.
+ * @cssprop [--lr-tool-result-dialog-denied-color=var(--lr-color-warning)] - Denied status foreground.
+ * @cssprop [--lr-tool-result-dialog-denied-bg=var(--lr-color-warning-quiet)] - Denied status background.
  */
 export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -375,7 +385,11 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   private localizedDuration(ms: number): string {
     const duration = formatDuration(ms);
-    return this.localize(duration.key, undefined, { value: duration.value });
+    return this.localize(duration.key, undefined, {
+      value: getNumberFormat(this.effectiveLocale, {
+        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
+      }).format(duration.value),
+    });
   }
 
   /** `durationMs` normalized to a finite, non-negative value, or `null` -- `null`/`undefined`

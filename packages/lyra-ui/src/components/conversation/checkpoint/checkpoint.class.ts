@@ -69,8 +69,8 @@ function defaultFormatTimestamp(date: Date, locale: string): string {
  * @csspart confirm-prompt - The confirm prompt text.
  * @csspart confirm-button - Confirms the restore, firing `lr-restore`.
  * @csspart cancel-button - Cancels, reverting to `restore-button`.
- * @cssprop [--lr-checkpoint-spin-duration=1s] - Duration of one restoring-spinner rotation
- *   (stopped under reduced motion).
+ * @cssprop [--lr-checkpoint-spin-duration=var(--lr-transition-ambient)] - Restoring-spinner
+ *   timing, inheriting the shared ambient-motion token by default (stopped under reduced motion).
  */
 export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -141,7 +141,7 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
   }
 
   private onConfirmClick = (): void => {
-    this.confirming = false;
+    this.revertToRestore(true);
     this.fireRestore();
   };
 

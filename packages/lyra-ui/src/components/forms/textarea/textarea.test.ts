@@ -10,6 +10,23 @@ it('gives the textarea field hover feedback matching the keyboard focus-visible 
   expect(css).to.match(/\[part='textarea'\]:hover\s*\{[^}]*border-color:/);
 });
 
+it('forwards host click to the textarea and suppresses it while effectively disabled', async () => {
+  const form = (await fixture(html`
+    <form><fieldset><lr-textarea></lr-textarea></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-textarea') as LyraTextarea;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  let clicks = 0;
+  textarea.addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+  fieldset.disabled = true;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
 it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
   // Monkey-patch LyraElement.prototype.willUpdate (the established pattern, e.g. checkbox.test.ts)
   // to prove LyraTextarea's own willUpdate() override actually calls super.willUpdate(...) rather

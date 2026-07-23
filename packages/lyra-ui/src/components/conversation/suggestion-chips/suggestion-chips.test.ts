@@ -141,6 +141,25 @@ it('preserves focus on a chip whose id survives a suggestions replacement (keyed
   expect(el.shadowRoot!.activeElement).to.equal(secondChip);
 });
 
+it('keeps active identity through reorder and transfers focus when that chip is removed', async () => {
+  const el = (await fixture(
+    html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,
+  )) as LyraSuggestionChips;
+  const chips = () =>
+    [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="chip"]')];
+  chips()[1]!.focus();
+
+  el.suggestions = [suggestions[2]!, suggestions[1]!, suggestions[0]!];
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('b');
+  expect(chips().find((chip) => chip.dataset['suggestionId'] === 'b')?.tabIndex).to.equal(0);
+
+  el.suggestions = [suggestions[2]!, suggestions[0]!];
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.dataset['suggestionId']).to.equal('a');
+  expect(chips().filter((chip) => chip.tabIndex === 0)).to.have.length(1);
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lr-suggestion-chips .suggestions=${suggestions}></lr-suggestion-chips>`,

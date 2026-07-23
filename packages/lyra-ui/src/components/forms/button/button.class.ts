@@ -54,7 +54,7 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * while hovering a non-disabled button.
  * @cssprop [--lr-button-active-scale=0.9875] - `transform: scale()` factor applied while a
  * non-disabled button is pressed.
- * @cssprop [--lr-button-spinner-duration=1s] - Rotation period of the `loading` spinner.
+ * @cssprop [--lr-button-spinner-duration=var(--lr-transition-ambient)] - Timing of the `loading` spinner.
  * @cssprop [--lr-button-accent=var(--lr-color-text)] - Text/glyph color for the chrome-less
  * appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color.
  * @cssprop [--lr-button-fill=var(--lr-color-surface)] - Background of `appearance="filled"`.
@@ -232,8 +232,10 @@ export class LyraButton extends LyraElement {
 
   /** Activates the internal base element. In `<button>` mode this also runs the component's
    *  submit/reset behavior (via the button's own `@click`); in anchor mode it triggers native
-   *  navigation (the anchor has no `@click` handler of its own). */
+   *  navigation (the anchor has no `@click` handler of its own). Disabled and loading buttons
+   *  remain inert in both modes. */
   override click(): void {
+    if (this.effectiveDisabled || this.loading) return;
     this.baseEl?.click();
   }
 
@@ -309,7 +311,7 @@ export class LyraButton extends LyraElement {
     // the href is validated against whichever sink the rendered anchor actually is.
     const href = this.download ? safeDownloadHref(this.href) : safeLinkHref(this.href);
     if (href) {
-      const disabled = this.effectiveDisabled;
+      const disabled = this.effectiveDisabled || this.loading;
       // Per decision D8: a disabled link button omits `href` entirely. An anchor with no `href` is
       // not focusable or activatable, so the button genuinely cannot navigate -- unlike a bare
       // `aria-disabled` on a still-navigable `<a href>`. `@click`/submit-reset are deliberately
@@ -325,6 +327,8 @@ export class LyraButton extends LyraElement {
         aria-expanded=${this.triggerExpanded ?? nothing}
         aria-controls=${this.triggerControls || nothing}
         aria-disabled=${disabled ? 'true' : nothing}
+        aria-busy=${this.loading ? 'true' : 'false'}
+        tabindex=${disabled ? '-1' : nothing}
         >${content}</a
       >`;
     }

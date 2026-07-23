@@ -75,6 +75,8 @@ export type LyraMessageKey =
   | 'pauseWithContext'
   | 'loading'
   | 'loadingDocument'
+  | 'calendarPreviousMonth'
+  | 'calendarNextMonth'
   | 'noMatches'
   | 'previous'
   | 'next'
@@ -96,6 +98,10 @@ export type LyraMessageKey =
   | 'trendOf'
   | 'wordCloud'
   | 'wordCloudLegend'
+  | 'wordCloudWordAnnouncement'
+  | 'comboboxLoadError'
+  | 'comboboxSelectedOverflow'
+  | 'promptQueueItemLabel'
   | 'notInCatalog'
   | 'sendMessage'
   | 'stopGenerating'
@@ -149,6 +155,10 @@ export type LyraMessageKey =
   | 'restore'
   | 'wordCloudWord'
   | 'wordCloudWords'
+  | 'promptStudioVariableName'
+  | 'promptStudioVariableValue'
+  | 'schemaViewerLimit'
+  | 'subagentPanelLimit'
   | 'pollPause'
   | 'pollResume'
   | 'pollRefreshing'
@@ -183,7 +193,10 @@ export type LyraMessageKey =
   | 'citationUnverified'
   | 'contextMeterUsed'
   | 'contextMeterUsedOfTotal'
+  | 'contextMeterLabeledSummary'
   | 'contextMeterSegmentLabel'
+  | 'gaugeLabel'
+  | 'gaugeValueLabel'
   | 'untitledConversation'
   | 'dockPanelCollapse'
   | 'dockPanelExpand'
@@ -279,6 +292,8 @@ export type LyraMessageKey =
   | 'liteChartMarkPosition'
   | 'liteChartMarkSummary'
   | 'liteChartBarLabel'
+  | 'chartValueLabel'
+  | 'liteChartCustomMarkSummary'
   | 'composerLabel'
   | 'composerPlaceholder'
   | 'textareaLabel'
@@ -434,6 +449,11 @@ export type LyraMessageKey =
   | 'trendDecreased'
   | 'trendGoodSuffix'
   | 'trendBadSuffix'
+  | 'statTrendIncreased'
+  | 'statTrendDecreased'
+  | 'statTrendGood'
+  | 'statTrendBad'
+  | 'statTrendAnnouncement'
   | 'streamStalled'
   | 'streamStallAnnounce'
   | 'streamRecoverAnnounce'
@@ -621,6 +641,7 @@ export type LyraMessageKey =
   | 'pushToTalkStop'
   | 'traceTree'
   | 'traceTreeSpanStatus'
+  | 'traceTreeMetricLabel'
   | 'spanKindAgent'
   | 'spanKindLlm'
   | 'spanKindTool'
@@ -753,6 +774,7 @@ export type LyraMessageKey =
   | 'artifactPanelVersionPosition'
   | 'artifactPanelRestore'
   | 'artifactPanelGenerating'
+  | 'resultFieldLabel'
   | 'geojsonViewLabel'
   | 'geojsonViewInvalid'
   | 'geojsonViewFeatureCount'
@@ -796,6 +818,7 @@ export type LyraMessageKey =
   | 'flowSelectionCleared'
   | 'flowNodeMoved'
   | 'flowConnectStarted'
+  | 'flowConnectTarget'
   | 'flowConnectCommitted'
   | 'flowConnectCancelled'
   | 'zoomToFit'
@@ -803,6 +826,8 @@ export type LyraMessageKey =
   | 'flowControlsLabel'
   | 'flowMinimapLabel'
   | 'flowMinimapViewport'
+  | 'flowMinimapInstructions'
+  | 'flowMinimapViewportChanged'
   | 'nodePaletteLabel'
   | 'nodePalettePlaceholder'
   | 'nodePaletteEmpty'
@@ -813,6 +838,7 @@ export type LyraMessageKey =
   | 'flowInputHandle'
   | 'flowOutputHandle'
   | 'flowStatusWithDuration'
+  | 'flowStatusWithDetail'
   | 'neighborListLabel'
   | 'neighborRowLabel'
   | 'neighborDirectionIn'
@@ -824,6 +850,7 @@ export type LyraMessageKey =
   | 'flowRunOverlayLabel'
   | 'flowRunSummary'
   | 'flowRunStepStatus'
+  | 'flowRunStatusCount'
   | 'policySummaryLabel'
   | 'policySummaryAllowCount'
   | 'policySummaryDenyCount'
@@ -1030,6 +1057,7 @@ export type LyraMessageKey =
   | 'documentLibrarySearchPlaceholder'
   | 'documentLibraryFilterByTag'
   | 'documentLibraryClearSelection'
+  | 'documentLibrarySelectedCount'
   | 'documentCompareNoVersion'
   | 'documentCompareLabel'
   | 'agentRunCurrentStepLabel'
@@ -1046,6 +1074,7 @@ export type LyraMessageKey =
   | 'graphQuerySavedQueriesLabel'
   | 'graphQuerySaveNameLabel'
   | 'graphQuerySaveButton'
+  | 'graphQueryLoadWithContext'
   | 'filterBarReset'
   | 'filterBarActiveFilters'
   | 'drilldownDocuments'
@@ -1184,6 +1213,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pauseWithContext: 'Pause {name}',
   loading: 'Loading…',
   loadingDocument: 'Loading document…',
+  calendarPreviousMonth: 'Previous month',
+  calendarNextMonth: 'Next month',
   noMatches: 'No matches',
   previous: 'Previous',
   next: 'Next',
@@ -1205,6 +1236,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   trendOf: 'Trend of {count} values, last {value}',
   wordCloud: 'Word cloud of {count} {word}',
   wordCloudLegend: 'Word cloud color key',
+  wordCloudWordAnnouncement: '{text}, {weight}',
+  comboboxLoadError: 'Could not load options.',
+  comboboxSelectedOverflow: '+{n} more',
+  promptQueueItemLabel: 'Queued prompt {index}',
   notInCatalog: 'not in catalog',
   sendMessage: 'Send message',
   stopGenerating: 'Stop generating',
@@ -1258,6 +1293,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   restore: 'Restore',
   wordCloudWord: 'word',
   wordCloudWords: 'words',
+  promptStudioVariableName: 'Variable {index} name',
+  promptStudioVariableValue: 'Variable {index} value',
+  schemaViewerLimit: 'Only the first {count} schema nodes are shown.',
+  subagentPanelLimit: 'Only the first {count} subagent runs are shown.',
   pollPause: 'Pause',
   pollResume: 'Resume',
   pollRefreshing: 'Refreshing…',
@@ -1292,7 +1331,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   citationUnverified: 'Unverified',
   contextMeterUsed: '{used} used',
   contextMeterUsedOfTotal: '{used} of {total} used',
+  contextMeterLabeledSummary: '{label}: {summary}',
   contextMeterSegmentLabel: '{label}: {count}',
+  gaugeLabel: 'Gauge',
+  gaugeValueLabel: '{label}: {value}',
   untitledConversation: 'Untitled conversation',
   dockPanelCollapse: 'Collapse panel',
   dockPanelExpand: 'Expand panel',
@@ -1388,6 +1430,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   liteChartMarkPosition: '({index} of {total})',
   liteChartMarkSummary: '{series}, {label}: {value} ({index} of {total})',
   liteChartBarLabel: '{series}, {label}: {value}',
+  chartValueLabel: '{label}: {value}',
+  liteChartCustomMarkSummary: '{content} ({index} of {total})',
   composerLabel: 'Message',
   composerPlaceholder: 'Ask anything…',
   textareaLabel: 'Text',
@@ -1550,6 +1594,11 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   trendDecreased: 'decreased {value}%',
   trendGoodSuffix: ', good',
   trendBadSuffix: ', bad',
+  statTrendIncreased: 'increased {value}',
+  statTrendDecreased: 'decreased {value}',
+  statTrendGood: 'good',
+  statTrendBad: 'bad',
+  statTrendAnnouncement: '{trend}, {polarity}',
   streamStalled: 'Taking longer than usual…',
   streamStallAnnounce: 'Connection stalled.',
   streamRecoverAnnounce: 'Connection restored.',
@@ -1730,6 +1779,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   pushToTalkStop: 'Stop recording',
   traceTree: 'Trace tree',
   traceTreeSpanStatus: '{name} — {status}',
+  traceTreeMetricLabel: '{label}: {value}',
   spanKindAgent: 'Agent',
   spanKindLlm: 'LLM',
   spanKindTool: 'Tool',
@@ -1862,6 +1912,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   artifactPanelVersionPosition: 'Version {index} of {count}',
   artifactPanelRestore: 'Restore this version',
   artifactPanelGenerating: 'Generating…',
+  resultFieldLabel: '{label}:',
   geojsonViewLabel: 'Map',
   geojsonViewInvalid: 'This file is not valid GeoJSON.',
   geojsonViewFeatureCount: '{count} feature',
@@ -1906,6 +1957,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   flowNodeMoved: 'Moved {label} to {x}, {y}',
   flowConnectStarted:
     'Connecting from {label}. Use arrow keys to choose a target, Enter to connect, Escape to cancel.',
+  flowConnectTarget: 'Connecting {source} to {target} ({index} of {total})',
   flowConnectCommitted: 'Connected {source} to {target}',
   flowConnectCancelled: 'Connection cancelled',
   zoomToFit: 'Zoom to fit',
@@ -1913,6 +1965,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   flowControlsLabel: 'Canvas controls',
   flowMinimapLabel: 'Workflow overview',
   flowMinimapViewport: 'Visible area',
+  flowMinimapInstructions: 'Arrow keys pan. Plus and minus zoom. Enter or Home fits the workflow.',
+  flowMinimapViewportChanged: 'Position {x}, {y}. Zoom {zoom}.',
   nodePaletteLabel: 'Node palette',
   nodePalettePlaceholder: 'Search nodes…',
   nodePaletteEmpty: 'No matching nodes.',
@@ -1923,6 +1977,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   flowInputHandle: 'Input {id}',
   flowOutputHandle: 'Output {id}',
   flowStatusWithDuration: '{status} ({duration})',
+  flowStatusWithDetail: '{status} — {detail}',
   neighborListLabel: 'Relationships',
   neighborRowLabel: '{label}, {relation}, {direction}',
   neighborDirectionIn: 'Incoming',
@@ -1934,6 +1989,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   flowRunOverlayLabel: 'Run status',
   flowRunSummary: '{done} of {total} steps complete',
   flowRunStepStatus: '{label}: {status}',
+  flowRunStatusCount: '{status}: {count}',
   policySummaryLabel: 'Policy decisions',
   policySummaryAllowCount: '{count} allowed',
   policySummaryDenyCount: '{count} denied',
@@ -2140,6 +2196,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentLibrarySearchPlaceholder: 'Search documents',
   documentLibraryFilterByTag: 'Filter by tag',
   documentLibraryClearSelection: 'Clear selection',
+  documentLibrarySelectedCount: '{count} selected',
   documentCompareNoVersion: 'No version provided.',
   documentCompareLabel: 'Document comparison',
   agentRunCurrentStepLabel: 'Current step',
@@ -2156,6 +2213,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   graphQuerySavedQueriesLabel: 'Saved queries',
   graphQuerySaveNameLabel: 'Query name',
   graphQuerySaveButton: 'Save query',
+  graphQueryLoadWithContext: 'Load {name}',
   filterBarReset: 'Reset filters',
   filterBarActiveFilters: 'Active filters',
   drilldownDocuments: 'Documents',

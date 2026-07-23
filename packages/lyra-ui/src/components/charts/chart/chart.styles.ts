@@ -33,6 +33,34 @@ export const styles = css`
     inline-size: 100% !important;
     block-size: 100% !important;
   }
+  [part='canvas'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+  }
+  [part='canvas']:hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-chart-grid-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='canvas']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='data-table'] button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    border-radius: var(--lr-radius);
+    background: transparent;
+    padding: var(--lr-space-2xs);
+    cursor: pointer;
+  }
+  [part='data-table'] button:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='data-table'] button:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='center'] {
     position: absolute;
     transform: translate(-50%, -50%);

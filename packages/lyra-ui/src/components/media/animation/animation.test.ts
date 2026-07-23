@@ -209,6 +209,81 @@ it('falls back to the constructed default duration/easing when the resolved --lr
   expect(timing.easing).to.equal('linear');
 });
 
+it('rejects malformed timing-token numbers instead of passing NaN into WAAPI', async () => {
+  const el = (await fixture(html`
+    <lr-animation name="fade-in" timing-preset="fast" style="--lr-transition-fast: .ms ease-out" iterations="1">
+      <p>content</p>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+
+  const timing = el.querySelector('p')!.getAnimations()[0].effect!.getComputedTiming();
+  expect(timing.duration).to.equal(1000);
+  expect(timing.easing).to.equal('linear');
+});
+
+it('normalizes invalid WAAPI direction, fill, and easing values without rejecting the update', async () => {
+  const el = document.createElement('lr-animation') as LyraAnimation;
+  el.name = 'fade-in';
+  el.iterations = 1;
+  el.direction = 'sideways' as PlaybackDirection;
+  el.fill = 'painted' as FillMode;
+  el.easing = 'definitely-not-an-easing';
+  const target = document.createElement('p');
+  target.textContent = 'content';
+  el.append(target);
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    const timing = target.getAnimations()[0].effect!.getComputedTiming();
+    expect(timing.direction).to.equal('normal');
+    // WAAPI resolves the safe `auto` input to its computed `none` value.
+    expect(timing.fill).to.equal('none');
+    expect(timing.easing).to.equal('linear');
+  } finally {
+    el.remove();
+  }
+});
+
+it('falls back to safe IntersectionObserver options when rootMargin or threshold is invalid', async () => {
+  const io = stubIntersectionObserver();
+  try {
+    const el = document.createElement('lr-animation') as LyraAnimation;
+    el.name = 'fade-in';
+    el.playOnVisible = true;
+    el.rootMargin = 'not-a-margin';
+    el.threshold = [-1, 2];
+    const target = document.createElement('p');
+    target.textContent = 'content';
+    el.append(target);
+
+    const OriginalObserver = window.IntersectionObserver;
+    let attempts = 0;
+    class ValidatingObserver extends (OriginalObserver as unknown as { new(callback: IntersectionObserverCallback, options?: IntersectionObserverInit): IntersectionObserver }) {
+      constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+        attempts += 1;
+        if (options?.rootMargin === 'not-a-margin') throw new SyntaxError('invalid root margin');
+        super(callback, options);
+      }
+    }
+    window.IntersectionObserver = ValidatingObserver as unknown as typeof IntersectionObserver;
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      // Initial connection and slot assignment may each rebuild the observer; every
+      // invalid attempt must be paired with one safe fallback construction.
+      expect(attempts).to.be.at.least(2);
+      expect(attempts % 2).to.equal(0);
+      expect(io.instances.at(-1)?.options?.rootMargin).to.equal('0px');
+      expect(io.instances.at(-1)?.options?.threshold).to.equal(0);
+    } finally {
+      el.remove();
+    }
+  } finally {
+    io.restore();
+  }
+});
+
 it('a `keyframes` override always wins over `name`, per the documented precedence', async () => {
   const el = (await fixture(html`
     <lr-animation name="fade-in" .keyframes=${[{ opacity: 0.2 }, { opacity: 0.9 }]} iterations="1">

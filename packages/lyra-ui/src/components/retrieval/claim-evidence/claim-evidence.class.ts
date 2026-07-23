@@ -85,7 +85,7 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     const citations = this.resolvedCitations(claim);
     const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
-      <li part=${claimPart} aria-current=${selected ? 'true' : nothing}>
+      <li part=${claimPart} aria-current=${selected ? 'true' : 'false'}>
         <button
           part="claim-trigger"
           type="button"

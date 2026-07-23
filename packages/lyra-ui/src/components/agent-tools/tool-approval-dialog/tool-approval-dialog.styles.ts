@@ -110,6 +110,7 @@ export const styles = css`
 
   [part='footer'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
     gap: var(--lr-space-s);
@@ -140,6 +141,10 @@ export const styles = css`
   }
   [part='edit-button']:hover {
     background: var(--lr-color-brand-quiet);
+  }
+  [part='edit-button']:disabled {
+    cursor: not-allowed;
+    opacity: var(--lr-disabled-opacity);
   }
   [part='edit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

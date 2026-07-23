@@ -80,7 +80,15 @@ function matchV8FrameWithFn(line: string): V8FrameWithFn | null {
 
 function isInternal(file: string | undefined, patterns: (string | RegExp)[]): boolean {
   if (!file) return false;
-  return patterns.some((pattern) => (typeof pattern === 'string' ? file.includes(pattern) : pattern.test(file)));
+  return patterns.some((pattern) => {
+    if (typeof pattern === 'string') return file.includes(pattern);
+    // RegExp instances with `g`/`y` mutate lastIndex on test(). A caller-provided stateful pattern
+    // must classify every frame independently rather than alternating based on prior frames.
+    pattern.lastIndex = 0;
+    const matches = pattern.test(file);
+    pattern.lastIndex = 0;
+    return matches;
+  });
 }
 
 function parseJs(lines: string[], internalPatterns: (string | RegExp)[]): StackGroup[] {

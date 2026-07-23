@@ -114,6 +114,17 @@ it('lets an author-supplied role/aria-label win, and lets the label prop overrid
   expect(withLabelProp.getAttribute('aria-label')).to.equal('On air');
 });
 
+it('preserves a role supplied after mount across later reactive updates', async () => {
+  const el = (await fixture(html`<lr-audio-visualizer></lr-audio-visualizer>`)) as LyraAudioVisualizer;
+  expect(el.getAttribute('role')).to.equal('img');
+
+  el.setAttribute('role', 'presentation');
+  el.state = 'thinking';
+  await el.updateComplete;
+
+  expect(el.getAttribute('role')).to.equal('presentation');
+});
+
 it('clamps bar-count to [1, 64]', async () => {
   const tooLow = (await fixture(html`<lr-audio-visualizer bar-count="0"></lr-audio-visualizer>`)) as LyraAudioVisualizer;
   expect((tooLow as unknown as { effectiveBarCount: number }).effectiveBarCount).to.equal(1);
@@ -827,5 +838,47 @@ describe('draw() defensive branches', () => {
     expect(() => (el as unknown as { draw: (nowMs: number) => void }).draw(0)).to.not.throw();
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.width).to.be.greaterThan(0);
+  });
+
+  it('fits all 64 supported bars inside a 320px drawing surface', async () => {
+    const el = (await fixture(
+      html`<lr-audio-visualizer bar-count="64" level="0.5"></lr-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    const priv = el as unknown as {
+      hostSize?: { width: number; height: number };
+      draw: (nowMs: number) => void;
+    };
+    priv.hostSize = { width: 320, height: 48 };
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const originalFillRect = ctx.fillRect.bind(ctx);
+    const rects: Array<{ x: number; width: number }> = [];
+    ctx.fillRect = ((x: number, y: number, width: number, height: number) => {
+      rects.push({ x, width });
+      originalFillRect(x, y, width, height);
+    }) as typeof ctx.fillRect;
+
+    priv.draw(0);
+
+    expect(rects).to.have.length(64);
+    expect(Math.max(...rects.map((rect) => rect.x + rect.width))).to.be.at.most(320);
+  });
+
+  it('uses the active color while thinking', async () => {
+    const el = (await fixture(
+      html`<lr-audio-visualizer state="thinking" bar-count="1"></lr-audio-visualizer>`,
+    )) as LyraAudioVisualizer;
+    const priv = el as unknown as {
+      hostSize?: { width: number; height: number };
+      resolvedColors?: { active: string; quiet: string };
+      draw: (nowMs: number) => void;
+    };
+    priv.hostSize = { width: 40, height: 48 };
+    priv.resolvedColors = { active: 'rgb(1, 2, 3)', quiet: 'rgb(4, 5, 6)' };
+    priv.draw(0);
+
+    const ctx = (el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement).getContext('2d')!;
+    expect(ctx.fillStyle).to.equal('#010203');
   });
 });

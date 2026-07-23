@@ -194,7 +194,7 @@ describe('timestamp', () => {
 describe('active', () => {
   it('reflects to the active attribute and to aria-current', async () => {
     const el = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
-    expect(optionEl(el).hasAttribute('aria-current')).to.be.false;
+    expect(optionEl(el).getAttribute('aria-current')).to.equal('false');
 
     el.active = true;
     await el.updateComplete;
@@ -290,6 +290,27 @@ describe('selection', () => {
 });
 
 describe('inline rename', () => {
+  it('keeps rename operable when custom content replaces the built-in display row', async () => {
+    const el = (await fixture(html`
+      <lr-conversation-item editable title="Original">
+        <span slot="content">Custom conversation layout</span>
+      </lr-conversation-item>
+    `)) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+    expect(input).to.exist;
+    expect(input.value).to.equal('Original');
+    expect((el.shadowRoot!.querySelector('slot[name="content"]') as HTMLSlotElement).hidden).to.be.true;
+
+    input.value = 'Renamed';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    const renamed = oneEvent(el, 'lr-rename');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect((await renamed as CustomEvent<{ title: string }>).detail.title).to.equal('Renamed');
+  });
+
   it('renders the rename button only while editable and not already renaming', async () => {
     const editable = (await fixture(html`<lr-conversation-item title="A"></lr-conversation-item>`)) as LyraConversationItem;
     expect(editable.shadowRoot!.querySelector('[part="rename-button"]')).to.exist;

@@ -177,3 +177,24 @@ export const Events: Story = {
     </div>
   `,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow viewport with long tool content',
+  parameters: { viewport: { defaultViewport: 'mobile1' } },
+  render: (_args, context) => html`
+    <lr-tool-select-dialog
+      .open=${context.viewMode !== 'docs'}
+      label="Select tools for the multilingual customer-support production assistant"
+      .tools=${[
+        {
+          id: 'long-tool',
+          name: 'Query customer database using the production read-only connection',
+          description: 'Search every configured regional source while preserving customer privacy controls.',
+          category: 'Customer support production operations',
+        },
+        ...TOOLS,
+      ]}
+      .selected=${['long-tool', 'web_search']}
+    ></lr-tool-select-dialog>
+  `,
+};

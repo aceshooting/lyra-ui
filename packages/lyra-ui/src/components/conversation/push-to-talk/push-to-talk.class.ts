@@ -1,4 +1,4 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -139,6 +139,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   }
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  @query('[part="trigger"]') private trigger?: HTMLButtonElement;
 
   private recorder?: MediaRecorder;
   private chunks: Blob[] = [];
@@ -159,6 +160,32 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     if (this._state === 'recording' || this._state === 'requesting') this.cancel();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('disabled') && this.disabled && (this._state === 'recording' || this._state === 'requesting')) {
+      this.cancel();
+    }
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.trigger?.focus(options);
+  }
+
+  override blur(): void {
+    this.trigger?.blur();
+  }
+
+  /** Programmatically starts/stops a take using the component's configured interaction mode. */
+  override click(): void {
+    if (this.disabled || !isPushToTalkSupported()) return;
+    if (this.mode === 'toggle') {
+      this.trigger?.click();
+    } else if (this._state === 'recording') {
+      this.stop();
+    } else {
+      void this.start();
+    }
   }
 
   private resolveMimeType(): string {
@@ -200,7 +227,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         },
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      if (this.cancelRequested) {
+      if (this.disabled || !this.isConnected || this.cancelRequested) {
         for (const track of stream.getTracks()) track.stop();
         this.cancelRequested = false;
         this.setState('idle');
@@ -242,9 +269,18 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       }
       return true;
     } catch (err) {
+      this.teardownStream();
+      if (this.cancelRequested || this.disabled || !this.isConnected) {
+        this.cancelRequested = false;
+        this.setState('idle');
+        this.emit('lr-record-cancel');
+        if (this.isConnected) this.announce(this.localize('pushToTalkCancelled'));
+        return false;
+      }
       const denied = err instanceof DOMException && err.name === 'NotAllowedError';
       this.setState(denied ? 'denied' : 'error');
       this.emit<{ error: DOMException | Error }>('lr-record-error', { error: err as DOMException | Error });
+      this.announce(this.localize(denied ? 'pushToTalkDenied' : 'pushToTalkError'));
       return false;
     }
   }

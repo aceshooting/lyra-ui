@@ -83,9 +83,71 @@ it('clamps a stale selection back to null once the selected example is removed f
   const removeButton = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
   expect(removeButton.disabled).to.be.false;
 
+  const cleared = oneEvent(el, 'lr-example-select');
   el.examples = examples().filter((e) => e.id !== 'ex-1');
   await el.updateComplete;
   expect(removeButton.disabled).to.be.true;
+  expect((await cleared).detail).to.deep.equal({ id: null });
+});
+
+it('clears a private search filter when searchable becomes false', async () => {
+  const el = (await fixture(
+    html`<lr-eval-dataset searchable .examples=${examples()}></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  search.value = 'bonjour';
+  search.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+  expect(gridRowCount(el)).to.equal(1);
+  el.searchable = false;
+  await el.updateComplete;
+  expect(gridRowCount(el)).to.equal(3);
+});
+
+it('gates search, tags, and row selection while disabled', async () => {
+  const el = (await fixture(
+    html`<lr-eval-dataset disabled searchable .examples=${examples()}></lr-eval-dataset>`,
+  )) as LyraEvalDataset;
+  const search = el.shadowRoot!.querySelector<HTMLInputElement>('[part="search-input"]')!;
+  const chip = el.shadowRoot!.querySelector('lr-chip') as HTMLElement & { disabled: boolean };
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { selectionMode: string };
+  expect(search.disabled).to.be.true;
+  expect(chip.disabled).to.be.true;
+  expect(table.selectionMode).to.equal('none');
+  let selected = 0;
+  el.addEventListener('lr-example-select', () => selected++);
+  table.dispatchEvent(new CustomEvent('lr-row-click', {
+    bubbles: true,
+    composed: true,
+    detail: { row: examples()[0] },
+  }));
+  expect(selected).to.equal(0);
+});
+
+it('does not leak raw composed child events alongside its translated request events', async () => {
+  const el = (await fixture(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`)) as LyraEvalDataset;
+  let rawRows = 0;
+  let translatedRows = 0;
+  el.addEventListener('lr-row-click', () => rawRows++);
+  el.addEventListener('lr-example-select', () => translatedRows++);
+  el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-row-click', {
+    bubbles: true,
+    composed: true,
+    detail: { row: examples()[0] },
+  }));
+  expect(rawRows).to.equal(0);
+  expect(translatedRows).to.equal(1);
+});
+
+it('automatically pages catalogs larger than the component rendering ceiling', async () => {
+  const many = Array.from({ length: 250 }, (_, index) => ({
+    id: `ex-${index}`,
+    input: `Input ${index}`,
+  }));
+  const el = (await fixture(html`<lr-eval-dataset .examples=${many}></lr-eval-dataset>`)) as LyraEvalDataset;
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement & { pageSize: number };
+  expect(table.pageSize).to.equal(100);
+  expect(table.shadowRoot!.querySelectorAll('tbody tr[part="row"]').length).to.equal(100);
 });
 
 it('re-emits an accepted file selection from the internal file-input as lr-import-request', async () => {

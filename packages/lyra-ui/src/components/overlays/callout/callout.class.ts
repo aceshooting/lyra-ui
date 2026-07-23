@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './callout.styles.js';
@@ -11,6 +11,8 @@ export interface LyraCalloutEventMap { 'lr-close': CustomEvent<undefined>; }
  * `<lr-callout>` — an inline message surface for status, warning, and error content.
  * Set `inline` for lightweight reactive status/error text: it removes the panel chrome while
  * preserving the semantic role, optional leading icon, and close action.
+ * Initial content is not announced as a new live update. Later message, heading, or variant
+ * changes activate polite announcements, or assertive announcements for `variant="danger"`.
  *
  * @customElement lr-callout
  * @slot - Message content.
@@ -50,6 +52,25 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
   @state() private hasIcon = false;
   @state() private hasHeading = false;
+  @state() private liveActive = false;
+  private contentObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.contentObserver ??= new MutationObserver(() => {
+      if (this.hasUpdated) this.liveActive = true;
+    });
+    this.contentObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  override disconnectedCallback(): void {
+    this.contentObserver?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (this.hasUpdated && (changed.has('heading') || changed.has('variant'))) this.liveActive = true;
+  }
   private close = (): void => {
     const event = this.emit('lr-close', undefined, { cancelable: true });
     if (!event.defaultPrevented) this.open = false;
@@ -63,7 +84,9 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   override render(): TemplateResult {
     if (!this.open) return html``;
     const label = this.accessibleLabel || this.getAttribute('aria-label') || undefined;
-    return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}" aria-label=${label || nothing}>
+    return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}"
+      aria-live=${this.liveActive ? (this.variant === 'danger' ? 'assertive' : 'polite') : 'off'}
+      aria-label=${label || nothing}>
       <span part="icon" ?hidden=${!this.hasIcon}><slot name="icon" @slotchange=${this.onSlotChange}></slot></span>
       <div part="content">
         <div part="heading" ?hidden=${!this.heading && !this.hasHeading}>${this.heading}<slot name="heading" @slotchange=${this.onSlotChange}></slot></div>

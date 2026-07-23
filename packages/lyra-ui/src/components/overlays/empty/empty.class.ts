@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from 'lit';
+import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './empty.styles.js';
@@ -6,6 +6,8 @@ import { styles } from './empty.styles.js';
 /**
  * `<lr-empty>` — a generic empty/no-data state. First-party invention (no
  * Web Awesome equivalent); fills a gap common to dashboard-style apps.
+ * Initial content is not announced as a new live update; later heading,
+ * description, or slotted-content changes activate polite announcements.
  *
  * @customElement lr-empty
  * @slot - Custom icon or illustration (defaults to none).
@@ -51,8 +53,23 @@ export class LyraEmpty extends LyraElement {
   @state() private hasActions = false;
   @state() private hasHeadingSlot = false;
   @state() private hasDescriptionSlot = false;
+  @state() private liveActive = false;
+  private contentObserver?: MutationObserver;
 
-  protected override willUpdate(): void {
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.contentObserver ??= new MutationObserver(() => {
+      if (this.hasUpdated) this.liveActive = true;
+    });
+    this.contentObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  override disconnectedCallback(): void {
+    this.contentObserver?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
     // Set from light-DOM children before the first render so the initial
     // paint is already correct — setting `hasIcon`/`hasActions` from
     // `firstUpdated` (after the update completes) would schedule a second,
@@ -68,6 +85,7 @@ export class LyraEmpty extends LyraElement {
         (el) => el.getAttribute('slot') === 'description',
       );
     }
+    if (this.hasUpdated && (changed.has('heading') || changed.has('description'))) this.liveActive = true;
   }
 
   override firstUpdated(): void {
@@ -134,7 +152,7 @@ export class LyraEmpty extends LyraElement {
     const hasHeading = this.hasHeadingSlot || this.heading.length > 0;
     const hasDescription = this.hasDescriptionSlot || this.description.length > 0;
     return html`
-      <div part="base" role="status" aria-live="polite">
+      <div part="base" role="status" aria-live=${this.liveActive ? 'polite' : 'off'}>
         <div part="icon" ?hidden=${!this.hasIcon}><slot @slotchange=${this.onIconSlotChange}></slot></div>
         <p part="heading" ?hidden=${!hasHeading}>
           <slot name="heading" @slotchange=${this.onHeadingSlotChange}>${this.heading}</slot>

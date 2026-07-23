@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './realtime-session.js';
 import type { LyraRealtimeSession } from './realtime-session.js';
 
@@ -50,4 +50,29 @@ it('applies per-instance localized strings', async () => {
     .strings=${{ realtimeSessionLabel: 'Localized voice session' }}
   ></lr-realtime-session>`)) as LyraRealtimeSession;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized voice session');
+});
+
+it('announces connection transitions after mount without announcing the initial state', async () => {
+  const el = (await fixture(html`
+    <lr-realtime-session
+      .strings=${{ realtimeSessionConnected: 'SESSION READY' }}
+    ></lr-realtime-session>
+  `)) as LyraRealtimeSession;
+  const region = el.shadowRoot!
+    .querySelector('lr-live-region')!
+    .shadowRoot!.querySelector('[part="region"]')!;
+  expect(region.textContent).to.equal('');
+
+  el.state = 'connected';
+  await el.updateComplete;
+  await aTimeout(0);
+  expect(region.textContent).to.equal('SESSION READY');
+});
+
+it('moves focus to the replacement connection action when state changes', async () => {
+  const el = (await fixture(html`<lr-realtime-session></lr-realtime-session>`)) as LyraRealtimeSession;
+  (el.shadowRoot!.querySelector('[part="connect"]') as HTMLButtonElement).focus();
+  el.state = 'connecting';
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
 });

@@ -4,6 +4,23 @@ export const styles = css`
   :host {
     display: block;
     container-type: inline-size;
+    --_lr-trace-tree-bar-column: var(--lr-size-6rem);
+    --_lr-trace-tree-tokens-in-column: 0px;
+    --_lr-trace-tree-tokens-out-column: 0px;
+    --_lr-trace-tree-cost-column: 0px;
+  }
+
+  :host([hide-bars]) {
+    --_lr-trace-tree-bar-column: 0px;
+  }
+
+  :host([show-tokens]) {
+    --_lr-trace-tree-tokens-in-column: var(--lr-size-3-5rem);
+    --_lr-trace-tree-tokens-out-column: var(--lr-size-3-5rem);
+  }
+
+  :host([show-cost]) {
+    --_lr-trace-tree-cost-column: var(--lr-size-3-5rem);
   }
 
   [part='base'] {
@@ -17,7 +34,18 @@ export const styles = css`
 
   [part='header'],
   [part='row'] {
-    display: flex;
+    display: grid;
+    grid-template-columns:
+      var(--lr-icon-button-size)
+      1em
+      minmax(var(--lr-size-4rem), 1fr)
+      minmax(0px, 0.75fr)
+      max-content
+      var(--_lr-trace-tree-bar-column)
+      var(--lr-size-3-5rem)
+      var(--_lr-trace-tree-tokens-in-column)
+      var(--_lr-trace-tree-tokens-out-column)
+      var(--_lr-trace-tree-cost-column);
     align-items: center;
     gap: var(--lr-space-xs);
     padding-block: var(--lr-space-xs);
@@ -70,16 +98,32 @@ export const styles = css`
      Scoped to [part='status-text'] rather than redefining the tokens inside the active row, which
      would silently re-point a consumer's own token override and drag [part='bar'] along with it. */
   [part='row'][data-active] [part='status-text'][data-status='success'] {
-    color: color-mix(in srgb, var(--lr-color-success) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+    color: color-mix(
+      in srgb,
+      var(--lr-trace-tree-success-color, var(--lr-color-success)) 75%,
+      var(--lr-trace-tree-row-active-color, var(--lr-color-text))
+    );
   }
   [part='row'][data-active] [part='status-text'][data-status='error'] {
-    color: color-mix(in srgb, var(--lr-color-danger) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+    color: color-mix(
+      in srgb,
+      var(--lr-trace-tree-error-color, var(--lr-color-danger)) 75%,
+      var(--lr-trace-tree-row-active-color, var(--lr-color-text))
+    );
   }
   [part='row'][data-active] [part='status-text'][data-status='denied'] {
-    color: color-mix(in srgb, var(--lr-color-warning) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+    color: color-mix(
+      in srgb,
+      var(--lr-trace-tree-denied-color, var(--lr-color-warning)) 75%,
+      var(--lr-trace-tree-row-active-color, var(--lr-color-text))
+    );
   }
   [part='row'][data-active] [part='status-text'][data-status='running'] {
-    color: color-mix(in srgb, var(--lr-color-brand) 75%, var(--lr-trace-tree-row-active-color, var(--lr-color-text)));
+    color: color-mix(
+      in srgb,
+      var(--lr-trace-tree-running-color, var(--lr-color-brand)) 75%,
+      var(--lr-trace-tree-row-active-color, var(--lr-color-text))
+    );
   }
 
   [part='toggle'] {
@@ -100,6 +144,13 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     cursor: pointer;
   }
+  [part='toggle']:hover {
+    background: var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet));
+  }
+  [part='toggle']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='toggle'][hidden] {
     display: inline-flex;
     visibility: hidden;
@@ -118,15 +169,14 @@ export const styles = css`
   }
 
   [part='name'] {
-    flex: 1 1 auto;
     min-inline-size: var(--lr-size-4rem);
+    padding-inline-start: calc(var(--_lr-trace-tree-depth, 0) * var(--lr-space-l));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   [part='detail'] {
-    flex: 0 1 auto;
     color: var(--lr-color-text-quiet);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -134,21 +184,29 @@ export const styles = css`
   }
 
   [part='status-text'] {
-    flex: 0 0 auto;
     font-size: var(--lr-font-size-xs);
   }
-  [part='status-text'][data-status='success'] { color: var(--lr-color-success); }
-  [part='status-text'][data-status='error'] { color: var(--lr-color-danger); }
-  [part='status-text'][data-status='denied'] { color: var(--lr-color-warning); }
-  [part='status-text'][data-status='running'] { color: var(--lr-color-brand); }
-  [part='status-text'][data-status='pending'] { color: var(--lr-color-text-quiet); }
+  [part='status-text'][data-status='success'] {
+    color: var(--lr-trace-tree-success-color, var(--lr-color-success));
+  }
+  [part='status-text'][data-status='error'] {
+    color: var(--lr-trace-tree-error-color, var(--lr-color-danger));
+  }
+  [part='status-text'][data-status='denied'] {
+    color: var(--lr-trace-tree-denied-color, var(--lr-color-warning));
+  }
+  [part='status-text'][data-status='running'] {
+    color: var(--lr-trace-tree-running-color, var(--lr-color-brand));
+  }
+  [part='status-text'][data-status='pending'] {
+    color: var(--lr-trace-tree-pending-color, var(--lr-color-text-quiet));
+  }
 
   [part='bar-track'] {
-    flex: 0 0 auto;
     position: relative;
-    inline-size: var(--lr-size-6rem);
+    inline-size: 100%;
     block-size: var(--lr-size-0-5rem);
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-trace-tree-bar-track-bg, var(--lr-color-surface-raised));
     border-radius: var(--lr-radius-xs);
     overflow: hidden;
   }
@@ -157,15 +215,24 @@ export const styles = css`
     inset-block: 0;
     border-radius: inherit;
   }
-  [part='bar'][data-status='success'] { background: var(--lr-color-success); }
-  [part='bar'][data-status='error'] { background: var(--lr-color-danger); }
-  [part='bar'][data-status='denied'] { background: var(--lr-color-warning); }
-  [part='bar'][data-status='pending'] { background: var(--lr-color-text-quiet); }
+  [part='bar'][data-status='success'] {
+    background: var(--lr-trace-tree-success-color, var(--lr-color-success));
+  }
+  [part='bar'][data-status='error'] {
+    background: var(--lr-trace-tree-error-color, var(--lr-color-danger));
+  }
+  [part='bar'][data-status='denied'] {
+    background: var(--lr-trace-tree-denied-color, var(--lr-color-warning));
+  }
+  [part='bar'][data-status='pending'] {
+    background: var(--lr-trace-tree-pending-color, var(--lr-color-text-quiet));
+  }
   [part='bar'][data-status='running'] {
     background-image: repeating-linear-gradient(
       45deg,
-      var(--lr-color-brand) 0 var(--lr-size-6px),
-      var(--lr-color-brand-quiet) var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
+      var(--lr-trace-tree-running-color, var(--lr-color-brand)) 0 var(--lr-size-6px),
+      var(--lr-trace-tree-running-stripe-bg, var(--lr-color-brand-quiet)) var(--lr-size-6px)
+        calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
     animation: lr-trace-tree-stripe var(--lr-transition-ambient) infinite;
@@ -196,8 +263,7 @@ export const styles = css`
   [part='tokens-in'],
   [part='tokens-out'],
   [part='cost'] {
-    flex: 0 0 auto;
-    inline-size: var(--lr-size-3-5rem);
+    min-inline-size: 0;
     text-align: end;
     font-variant-numeric: tabular-nums;
     color: var(--lr-color-text-quiet);
@@ -215,10 +281,31 @@ export const styles = css`
     [part='header'] .col-cost {
       display: none;
     }
+    [part='header'],
+    [part='row'] {
+      grid-template-columns:
+        var(--lr-icon-button-size)
+        1em
+        minmax(var(--lr-size-4rem), 1fr)
+        minmax(0px, 0.75fr)
+        max-content
+        var(--_lr-trace-tree-bar-column)
+        var(--lr-size-3-5rem);
+    }
   }
   @container (max-inline-size: 359.98px) {
     [part='bar-track'] {
       display: none;
+    }
+    [part='header'],
+    [part='row'] {
+      grid-template-columns:
+        var(--lr-icon-button-size)
+        1em
+        minmax(var(--lr-size-4rem), 1fr)
+        minmax(0px, 0.75fr)
+        max-content
+        var(--lr-size-3-5rem);
     }
   }
 `;

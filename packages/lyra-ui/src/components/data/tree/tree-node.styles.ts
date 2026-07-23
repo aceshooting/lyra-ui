@@ -27,6 +27,17 @@ export const styles = css`
   [part='row']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  :host([aria-selected='true']) [part='row'] {
+    color: var(--lr-tree-selected-color, var(--lr-color-brand));
+    background: var(--lr-tree-selected-bg, var(--lr-color-brand-quiet));
+  }
+  :host([aria-disabled='true']) [part='row'] {
+    cursor: default;
+    opacity: var(--lr-opacity-disabled);
+  }
+  :host([aria-disabled='true']) [part='row']:hover {
+    background: transparent;
+  }
   [part='toggle'] {
     /* Keep the chevron glyph compact (the row itself stays a --lr-size-1-75rem-ish
        visual rhythm) while giving the interactive box the shared minimum tappable

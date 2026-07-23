@@ -1,6 +1,7 @@
 import { html, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './gauge.styles.js';
 
@@ -93,36 +94,49 @@ export class LyraGauge extends LyraElement {
    * else the numeric `value`, blanked (like the ARIA attributes and fill) when
    * `value` is non-finite (NaN/undefined/Infinity/-Infinity). */
   private get displayText(): string {
-    return this.valueLabel || (!Number.isFinite(this.value) ? '' : String(this.value));
+    return (
+      this.valueLabel ||
+      (!Number.isFinite(this.value) ? '' : getNumberFormat(this.effectiveLocale).format(this.value))
+    );
   }
 
   protected override willUpdate(): void {
-    this.setAttribute('role', 'meter');
     // Normalize a reversed min > max domain the same way `ratio` does, so the
     // announced aria-value* trio always agrees with the visual fill instead
     // of aria-valuenow pinning to one bound regardless of `value` (and
     // aria-valuemin/valuemax reporting an inverted, invalid ARIA range).
     const { lo, hi } = this.domain;
-    const finiteTrio = Number.isFinite(this.value) && Number.isFinite(lo) && Number.isFinite(hi);
+    const finiteTrio =
+      Number.isFinite(this.value) && Number.isFinite(lo) && Number.isFinite(hi) && lo !== hi;
+    this.setAttribute('role', finiteTrio ? 'meter' : 'img');
     if (finiteTrio) {
       const clamped = Math.min(hi, Math.max(lo, this.value));
       this.setAttribute('aria-valuenow', String(clamped));
+      this.setAttribute('aria-valuemin', String(lo));
+      this.setAttribute('aria-valuemax', String(hi));
     } else {
       this.removeAttribute('aria-valuenow');
+      this.removeAttribute('aria-valuemin');
+      this.removeAttribute('aria-valuemax');
     }
-    if (Number.isFinite(lo)) this.setAttribute('aria-valuemin', String(lo));
-    else this.removeAttribute('aria-valuemin');
-    if (Number.isFinite(hi)) this.setAttribute('aria-valuemax', String(hi));
-    else this.removeAttribute('aria-valuemax');
     const currentAriaLabel = this.getAttribute('aria-label');
     if (currentAriaLabel !== this.appliedAriaLabel) {
       this.explicitAriaLabel = currentAriaLabel;
     }
-    const nextAriaLabel = this.explicitAriaLabel || this.label || null;
-    if (nextAriaLabel) this.setAttribute('aria-label', nextAriaLabel);
-    else this.removeAttribute('aria-label');
+    const defaultName = this.label || this.localize('gaugeLabel');
+    const degenerateValueLabel =
+      Number.isFinite(this.value) && lo === hi
+        ? this.localize('gaugeValueLabel', undefined, {
+            label: defaultName,
+            value: this.displayText,
+          })
+        : defaultName;
+    const nextAriaLabel =
+      this.explicitAriaLabel ||
+      (finiteTrio ? defaultName : degenerateValueLabel);
+    this.setAttribute('aria-label', nextAriaLabel);
     this.appliedAriaLabel = nextAriaLabel;
-    if (this.valueLabel) this.setAttribute('aria-valuetext', this.valueLabel);
+    if (finiteTrio && this.valueLabel) this.setAttribute('aria-valuetext', this.valueLabel);
     else this.removeAttribute('aria-valuetext');
   }
 

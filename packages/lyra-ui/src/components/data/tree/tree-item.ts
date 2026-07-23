@@ -15,6 +15,11 @@ export interface TreeBadge {
 export interface TreeItem {
   id: string;
   label: string;
+  /** Whether this item is the current selection. When set, the treeitem exposes
+   * `aria-selected` and renders the matching selected state. */
+  selected?: boolean;
+  /** Removes this item from roving focus and prevents select/toggle activation. */
+  disabled?: boolean;
   children?: TreeItem[];
   badge?: string | number;
   /** Additive, token-colored chips rendered after the legacy `badge`. Omit for byte-identical

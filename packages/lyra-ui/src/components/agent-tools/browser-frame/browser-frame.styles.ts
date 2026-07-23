@@ -13,6 +13,7 @@ export const styles = css`
   }
   [part='toolbar'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -34,8 +35,10 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-brand);
+    background: var(--lr-browser-frame-controller-background, var(--lr-color-brand-quiet));
+    color: var(--lr-browser-frame-controller-color, var(--lr-color-brand));
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='take-over-button'],
   [part='stop-button'] {
@@ -46,6 +49,9 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-s);
     cursor: pointer;
+    min-inline-size: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   [part='take-over-button']:hover,
   [part='stop-button']:hover {
@@ -78,15 +84,20 @@ export const styles = css`
     pointer-events: none;
   }
   [part='ping'][data-kind='click'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-browser-frame-ping-click-color, var(--lr-color-brand));
   }
   [part='ping'][data-kind='type'] {
-    border-color: var(--lr-color-success);
+    border-color: var(--lr-browser-frame-ping-type-color, var(--lr-color-success));
   }
   [part='ping'][data-kind='scroll'] {
-    border-color: var(--lr-color-warning);
+    border-color: var(--lr-browser-frame-ping-scroll-color, var(--lr-color-warning));
   }
   [part='ping'][data-kind='move'] {
-    border-color: var(--lr-color-text-quiet);
+    border-color: var(--lr-browser-frame-ping-move-color, var(--lr-color-text-quiet));
+  }
+  @container (max-inline-size: 20rem) {
+    [part='url'] {
+      flex-basis: 100%;
+    }
   }
 `;

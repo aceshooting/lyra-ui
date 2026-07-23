@@ -74,7 +74,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   @state() private groups: StackGroup[] = [];
-  @state() private expandedGroups = new Set<number>();
+  @state() private expandedInternalRuns = new Set<string>();
   @state() private justCopied = false;
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
@@ -82,12 +82,13 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.justCopied = false;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('trace') || changed.has('internalPatterns')) {
       this.groups = parseStackTrace(this.trace, this.internalPatterns);
-      this.expandedGroups = new Set();
+      this.expandedInternalRuns = new Set();
     }
   }
 
@@ -109,11 +110,11 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     this.emit('lr-frame-select', { file: frame.file, line: frame.line, column: frame.column, raw: frame.raw });
   }
 
-  private toggleGroupInternal(groupIndex: number): void {
-    const next = new Set(this.expandedGroups);
-    if (next.has(groupIndex)) next.delete(groupIndex);
-    else next.add(groupIndex);
-    this.expandedGroups = next;
+  private toggleInternalRun(runKey: string): void {
+    const next = new Set(this.expandedInternalRuns);
+    if (next.has(runKey)) next.delete(runKey);
+    else next.add(runKey);
+    this.expandedInternalRuns = next;
   }
 
   private renderFrame(frame: StackFrame): TemplateResult {
@@ -132,11 +133,13 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
     if (!this.collapseInternal) {
       return html`<div part="group">${group.frames.map((frame) => this.renderFrame(frame))}</div>`;
     }
-    const expanded = this.expandedGroups.has(groupIndex);
     const rendered: TemplateResult[] = [];
     let run: StackFrame[] = [];
+    let runIndex = 0;
     const flushRun = (): void => {
       if (run.length === 0) return;
+      const runKey = `${groupIndex}:${runIndex++}`;
+      const expanded = this.expandedInternalRuns.has(runKey);
       if (run.length === 1) {
         rendered.push(this.renderFrame(run[0]!));
       } else {
@@ -146,7 +149,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
             part="internal-toggle"
             type="button"
             aria-expanded=${expanded ? 'true' : 'false'}
-            @click=${() => this.toggleGroupInternal(groupIndex)}
+            @click=${() => this.toggleInternalRun(runKey)}
           >
             ${expanded
               ? this.localize('stackTraceHideFrames', undefined, { count })

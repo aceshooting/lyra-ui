@@ -98,6 +98,16 @@ export interface LyraVoicePickerEventMap {
  * @csspart empty - The empty-listbox message.
  * @csspart hint - The hint message.
  * @csspart error - The error message.
+ * @cssprop [--lr-voice-picker-preview-active-border=var(--lr-color-brand)] - Active preview border.
+ * @cssprop [--lr-voice-picker-preview-active-color=var(--lr-color-brand)] - Active preview icon.
+ * @cssprop [--lr-voice-picker-option-active-bg=var(--lr-color-brand-quiet)] - Active option fill.
+ * @cssprop [--lr-voice-picker-option-selected-border=var(--lr-color-brand)] - Selected option border.
+ * @cssprop [--lr-voice-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
+ * @cssprop [--lr-voice-picker-option-selected-bg=transparent] - Selected option fill.
+ * @cssprop [--lr-voice-picker-option-selected-font-weight=var(--lr-font-weight-semibold)] -
+ *   Selected option label weight.
+ * @cssprop [--lr-voice-picker-preview-hover-bg=var(--lr-color-brand-quiet)] - Preview hover fill.
+ * @cssprop [--lr-voice-picker-preview-hover-color=var(--lr-color-brand)] - Preview hover icon.
  */
 export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   static formAssociated = true;
@@ -150,6 +160,8 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private _disabled = false;
   private _required = false;
   private _defaultValue = '';
+  private suppressControlEvents = false;
+  private transferControlFocus = false;
 
   constructor() {
     super();
@@ -199,16 +211,52 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     (this.renderRoot?.querySelector('[part="combobox-input"]') as HTMLInputElement | null)?.focus();
   }
 
+  override focus(options?: FocusOptions): void {
+    (
+      this.renderRoot.querySelector('[part="trigger"], [part="combobox-input"]') as HTMLElement | null
+    )?.focus(options);
+  }
+
+  override blur(): void {
+    (
+      this.renderRoot.querySelector('[part="trigger"], [part="combobox-input"]') as HTMLElement | null
+    )?.blur();
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     this.updateValidity();
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (this.hasUpdated) {
+      const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
+      const switchingMode = renderedClosedMode !== this.closedMode;
+      const focused =
+        this.renderRoot instanceof ShadowRoot ? this.renderRoot.activeElement : this.ownerDocument.activeElement;
+      this.suppressControlEvents = switchingMode;
+      this.transferControlFocus =
+        switchingMode &&
+        focused instanceof HTMLElement &&
+        focused.matches('[part="trigger"], [part="combobox-input"]');
+    }
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
     }
+    if (
+      this.hasUpdated &&
+      (changed.has('catalog') || changed.has('allowCustom') || changed.has('value'))
+    ) {
+      const activeValue = (
+        this.renderRoot.querySelector('[part="option"][data-active]') as HTMLElement | null
+      )?.dataset['value'];
+      const rows = this.closedMode ? this.effectiveEntries : this.filteredEntries;
+      const remapped = activeValue ? rows.findIndex((entry) => entry.id === activeValue) : -1;
+      this.activeIndex =
+        remapped >= 0 ? remapped : Math.min(this.activeIndex, Math.max(-1, rows.length - 1));
+    }
+    if (changed.has('preview') && !this.preview) this.stopInternalPreview();
   }
 
   override disconnectedCallback(): void {
@@ -254,7 +302,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     const old = this._disabled;
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
-    if (this._disabled) this.hide();
+    if (this._disabled) {
+      this.hide();
+      this.stopInternalPreview();
+    }
     this.requestUpdate('disabled', old);
   }
 
@@ -291,7 +342,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
-    if (disabled) this.hide();
+    if (disabled) {
+      this.hide();
+      this.stopInternalPreview();
+    }
     this.requestUpdate();
   }
   checkValidity(): boolean {
@@ -367,6 +421,13 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (changed.has('required') || changed.has('touched') || changed.has('value')) {
       this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
     }
+    if (this.transferControlFocus) {
+      this.transferControlFocus = false;
+      (
+        this.renderRoot.querySelector('[part="trigger"], [part="combobox-input"]') as HTMLElement | null
+      )?.focus();
+    }
+    this.suppressControlEvents = false;
   }
 
   private commitValue(next: string): void {
@@ -436,11 +497,12 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     audio.addEventListener('error', this.onAudioLoadFailure);
     this.audioEl = audio;
     this.previewingId = voiceId;
-    void audio.play().catch(() => this.onAudioLoadFailure());
+    void audio.play().catch(() => this.onAudioLoadFailure(audio));
     this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId });
   }
 
-  private onAudioEnded = (): void => {
+  private onAudioEnded = (event: Event): void => {
+    if (event.currentTarget !== this.audioEl) return;
     this.stopInternalPreview();
   };
 
@@ -454,11 +516,23 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
    * request clears it. `audioEl` already pointing elsewhere (or being unset) means a newer preview
    * or an explicit stop has since superseded this resource, so this is a no-op.
    */
-  private onAudioLoadFailure = (): void => {
-    if (!this.audioEl) return;
-    this.audioEl.removeEventListener('ended', this.onAudioEnded);
-    this.audioEl.removeEventListener('error', this.onAudioLoadFailure);
+  private onAudioLoadFailure = (eventOrAudio: Event | HTMLAudioElement): void => {
+    const failedAudio =
+      eventOrAudio instanceof HTMLAudioElement
+        ? eventOrAudio
+        : eventOrAudio.currentTarget instanceof HTMLAudioElement
+          ? eventOrAudio.currentTarget
+          : undefined;
+    if (!failedAudio) return;
+    failedAudio.removeEventListener('ended', this.onAudioEnded);
+    failedAudio.removeEventListener('error', this.onAudioLoadFailure);
+    failedAudio.pause();
+    if (failedAudio !== this.audioEl) return;
     this.audioEl = undefined;
+    if (this.previewingId !== null) {
+      this.previewingId = null;
+      this.emit<{ voiceId: string | null }>('lr-preview-change', { voiceId: null });
+    }
   };
 
   private stopInternalPreview(): void {
@@ -501,8 +575,13 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.open ? this.hide() : this.show();
   };
   private onTriggerBlur = (): void => {
+    if (this.suppressControlEvents) return;
     this.touched = true;
     this.hide();
+    this.emit('blur');
+  };
+  private onTriggerFocus = (): void => {
+    if (!this.suppressControlEvents) this.emit('focus');
   };
   private onTriggerKeyDown = (e: KeyboardEvent): void => {
     const rows = this.effectiveEntries;
@@ -557,7 +636,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private onInputFocus = (): void => {
     if (!this.open) this.query = this.labelFor(this.value);
     this.show();
-    this.emit('focus');
+    if (!this.suppressControlEvents) this.emit('focus');
   };
   private onInput = (e: Event): void => {
     this.query = (e.target as HTMLInputElement).value;
@@ -565,6 +644,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     this.show();
   };
   private onInputBlur = (): void => {
+    if (this.suppressControlEvents) return;
     this.touched = true;
     this.hide();
     this.emit('blur');
@@ -741,6 +821,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
           ?disabled=${this.effectiveDisabled}
           @click=${this.onTriggerClick}
           @keydown=${this.onTriggerKeyDown}
+          @focus=${this.onTriggerFocus}
           @blur=${this.onTriggerBlur}
         >
           ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}

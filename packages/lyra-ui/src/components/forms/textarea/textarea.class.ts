@@ -160,6 +160,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     if (this.textareaEl) this.textareaEl.selectionDirection = value ?? 'none';
   }
 
+  override click(): void {
+    if (!this.effectiveDisabled) this.textareaEl?.click();
+  }
+
   override focus(options?: FocusOptions): void {
     this.textareaEl?.focus(options);
   }

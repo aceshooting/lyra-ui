@@ -31,6 +31,8 @@ import '../../agent-tools/context-inspector/context-inspector.js';
 import '../../overlays/empty/empty.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
+const MAX_RENDERED_MESSAGES = 500;
+
 export interface LyraAgentWorkspaceEventMap {
   'lr-input': CustomEvent<{ value: string }>;
   'lr-submit': CustomEvent<{ value: string }>;
@@ -54,7 +56,9 @@ export interface LyraAgentWorkspaceEventMap {
  * renders ordered `message.parts` through `<lr-message-parts>` when supplied, otherwise sanitized
  * Markdown from the legacy `message.text`; applications can replace the entire region with the
  * `messages` slot. The `details` slot similarly replaces the built-in details pane while keeping
- * the responsive shell.
+ * the responsive shell. To keep the data-driven fallback bounded, at most the latest 500 messages
+ * are materialized; applications needing a larger retained transcript can supply a virtualized
+ * `messages` slot.
  *
  * @customElement lr-agent-workspace
  * @slot messages - Replaces the data-driven transcript message list.
@@ -171,7 +175,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   }
 
   private get safeUnreadStartIndex(): number | null {
-    return this.unreadStartIndex == null ? null : finiteCount(this.unreadStartIndex);
+    if (this.unreadStartIndex == null) return null;
+    const normalized = finiteCount(this.unreadStartIndex);
+    if (this.hasSlotted('messages')) return normalized;
+    return Math.max(0, normalized - this.messageWindowOffset);
   }
 
   private get safeComposerMinRows(): number {
@@ -224,8 +231,17 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
     if (this.messages.length === 0) {
       return html`<lr-empty part="messages-empty" heading=${this.localize('agentWorkspaceEmpty')}></lr-empty>`;
     }
-    return html`${repeat(this.messages, (message) => message.id, (message) => this.renderMessage(message))}`;
+    const messages = this.messages.slice(this.messageWindowOffset);
+    return html`${repeat(messages, (message) => message.id, (message) => this.renderMessage(message))}`;
   }
+
+  private get messageWindowOffset(): number {
+    return Math.max(0, this.messages.length - MAX_RENDERED_MESSAGES);
+  }
+
+  private onNamedSlotChange = (): void => {
+    this.requestUpdate();
+  };
 
   private renderDetails(): TemplateResult {
     return html`
@@ -293,7 +309,9 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('agentWorkspaceLabel');
     const heading = this.label || this.localize('agentWorkspaceLabel');
-    const hasDetails = this.showDetails && (this.hasSlotted('details') || this.hasBuiltInDetails);
+    const hasSlottedDetails = this.hasSlotted('details');
+    const hasDetails = hasSlottedDetails || (this.showDetails && this.hasBuiltInDetails);
+    const hasSlottedComposer = this.hasSlotted('composer');
     return html`
       <div part="base" role="region" aria-label=${label}>
         <div part="header">
@@ -314,16 +332,20 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
               </div>
             </lr-chat-viewport>
           </section>
-          ${hasDetails
-            ? html`<aside part="details" aria-label=${this.localize('agentWorkspaceDetails')}>
-                <slot name="details">${this.renderDetails()}</slot>
-              </aside>`
-            : nothing}
+          <aside
+            part="details"
+            aria-label=${this.localize('agentWorkspaceDetails')}
+            ?hidden=${!hasDetails}
+          >
+            <slot name="details" @slotchange=${this.onNamedSlotChange}
+              >${this.showDetails ? this.renderDetails() : nothing}</slot
+            >
+          </aside>
         </div>
-        ${this.showComposer
-          ? html`<div part="composer">
-              <slot name="composer">
-                <lr-chat-composer
+        <div part="composer" ?hidden=${!this.showComposer && !hasSlottedComposer}>
+          <slot name="composer" @slotchange=${this.onNamedSlotChange}>
+            ${this.showComposer
+              ? html`<lr-chat-composer
                   part="composer-input"
                   .value=${this.composerValue}
                   .status=${this.composerStatus}
@@ -331,10 +353,10 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
                   .maxRows=${this.safeComposerMaxRows}
                   placeholder=${this.composerPlaceholder || this.localize('composerPlaceholder')}
                   @lr-input=${this.onComposerInput}
-                ></lr-chat-composer>
-              </slot>
-            </div>`
-          : nothing}
+                ></lr-chat-composer>`
+              : nothing}
+          </slot>
+        </div>
       </div>
     `;
   }

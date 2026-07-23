@@ -414,6 +414,38 @@ describe('focus / blur', () => {
     expect(blurEvent.bubbles).to.be.true;
     expect(blurEvent.composed).to.be.true;
   });
+
+  it('forwards host click() to the play button', async () => {
+    const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;
+    await loaded(el);
+    expect(el.play).to.be.false;
+
+    el.click();
+    expect(el.play).to.be.true;
+  });
+});
+
+describe('frozen-frame allocation ceiling', () => {
+  it('downscales a very large DPR backing store to a bounded pixel budget', async () => {
+    const el = (await fixture(html`<lr-animated-image alt="Large image"></lr-animated-image>`)) as LyraAnimatedImage;
+    const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+    const canvas = el.shadowRoot!.querySelector('[part="canvas"]') as HTMLCanvasElement;
+    const originalDpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    Object.defineProperty(img, 'naturalWidth', { value: 20_000, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 20_000, configurable: true });
+    Object.defineProperty(window, 'devicePixelRatio', { value: 4, configurable: true });
+
+    try {
+      img.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      expect(canvas.width).to.be.at.most(8192);
+      expect(canvas.height).to.be.at.most(8192);
+      expect(canvas.width * canvas.height).to.be.at.most(16_777_216);
+    } finally {
+      if (originalDpr) Object.defineProperty(window, 'devicePixelRatio', originalDpr);
+      else delete (window as unknown as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+  });
 });
 
 describe('play-button hover specificity', () => {

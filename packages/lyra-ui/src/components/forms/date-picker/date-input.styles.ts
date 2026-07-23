@@ -6,6 +6,8 @@ export const styles = css`
     --lr-date-input-padding-block: var(--lr-space-xs);
     --lr-date-input-padding-inline: var(--lr-space-s);
     --lr-date-input-font-size: inherit;
+    --lr-date-input-gap: var(--lr-space-xs);
+    --lr-date-input-radius: var(--lr-radius);
     /* Per-tier minimum block size of the input row, reusing lr-input's own min-height scale
        values. This does NOT make the two controls height-matched at a given size, and nothing here
        should be read as promising that: [part='input-wrapper'] has no min-block-size of its own,
@@ -84,7 +86,7 @@ export const styles = css`
   [part='input-wrapper'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-date-input-gap);
     inline-size: 100%;
     box-sizing: border-box;
     min-block-size: var(--lr-date-input-control-height, var(--lr-date-input-control-min-height));
@@ -93,11 +95,11 @@ export const styles = css`
     block-size: var(--lr-date-input-control-height, auto);
     padding: var(--lr-date-input-padding-block) var(--lr-date-input-padding-inline);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-date-input-radius);
     background: var(--lr-color-surface);
   }
   [part='input-wrapper']:focus-within {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-date-input-focus-border-color, var(--lr-color-brand));
   }
   :host(:disabled) [part='input-wrapper'] {
     opacity: var(--lr-opacity-disabled);
@@ -112,6 +114,9 @@ export const styles = css`
     color: inherit;
     font: inherit;
     font-size: var(--lr-date-input-font-size);
+  }
+  [part='input']::placeholder {
+    color: var(--lr-date-input-placeholder-color, var(--lr-color-text-quiet));
   }
   [part='start'],
   [part='end'] {

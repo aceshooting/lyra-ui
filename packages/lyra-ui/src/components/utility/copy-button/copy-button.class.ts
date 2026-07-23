@@ -89,6 +89,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.copyTimeoutId = undefined;
+    this.justCopied = false;
   }
 
   override focus(options?: FocusOptions): void {
@@ -97,6 +99,11 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   override blur(): void {
     this.buttonEl?.blur();
+  }
+
+  /** Activates the native button, matching the host focus/blur forwarding contract. */
+  override click(): void {
+    this.buttonEl?.click();
   }
 
   private writeClipboard(text: string): void {

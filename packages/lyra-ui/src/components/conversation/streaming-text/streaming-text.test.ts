@@ -225,6 +225,25 @@ describe('coalescing', () => {
       'a disconnected element must not still flush a pending burst',
     ).to.equal('');
   });
+
+  it('flushes the latest public content when reconnected after a pending update was cancelled', async () => {
+    const el = (await fixture(
+      html`<lr-streaming-text coalesce-ms="5000" content="first"></lr-streaming-text>`,
+    )) as LyraStreamingText;
+    expect(plainText(el)).to.equal('first');
+    el.content = 'latest while reconnecting';
+    await el.updateComplete;
+    expect(plainText(el)).to.equal('first');
+
+    el.remove();
+    document.body.append(el);
+    try {
+      await el.updateComplete;
+      expect(plainText(el)).to.equal('latest while reconnecting');
+    } finally {
+      el.remove();
+    }
+  });
 });
 
 describe('markdown heuristic memoization', () => {

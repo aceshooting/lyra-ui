@@ -46,3 +46,48 @@ it('applies per-instance localized strings', async () => {
   ></lr-schema-viewer>`)) as LyraSchemaViewer;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized schema browser');
 });
+
+it('bounds broad schemas and exposes a localized truncation status', async () => {
+  const properties = Object.fromEntries(
+    Array.from({ length: 5_000 }, (_, index) => [`property-${index}`, { type: 'string' }]),
+  );
+  const el = (await fixture(html`<lr-schema-viewer
+    .schema=${{ type: 'object', properties }}
+  ></lr-schema-viewer>`)) as LyraSchemaViewer;
+  expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(500);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal(
+    'Only the first 500 schema nodes are shown.',
+  );
+});
+
+it('clamps a hostile maxDepth request so deeply nested schemas stay stack-safe', async () => {
+  const root: Record<string, unknown> = { type: 'object', properties: {} };
+  let current = root;
+  for (let index = 0; index < 1_000; index++) {
+    const child: Record<string, unknown> = { type: 'object', properties: {} };
+    current['properties'] = { child };
+    current = child;
+  }
+  const el = (await fixture(html`
+    <lr-schema-viewer max-depth="10000" .schema=${root}></lr-schema-viewer>
+  `)) as LyraSchemaViewer;
+  expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(101);
+});
+
+it('allows selected and issue states to be rethemed independently', async () => {
+  const el = (await fixture(html`
+    <lr-schema-viewer
+      style="
+        --lr-schema-viewer-selected-border: rgb(1, 2, 3);
+        --lr-schema-viewer-error-border: rgb(4, 5, 6);
+      "
+      selected-path="/properties/query"
+      .schema=${schema}
+      .issues=${[{ path: '/properties/query', message: 'Required' }]}
+    ></lr-schema-viewer>
+  `)) as LyraSchemaViewer;
+  const selected = el.shadowRoot!.querySelector('[part~="node-selected"]') as HTMLElement;
+  const issue = el.shadowRoot!.querySelector('[part="issue"]') as HTMLElement;
+  expect(getComputedStyle(selected).borderInlineStartColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(issue).borderInlineStartColor).to.equal('rgb(4, 5, 6)');
+});

@@ -67,6 +67,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   /** Whether the excess (beyond `max-visible`) children are currently
    *  revealed. Meaningless (and never rendered) while there's no overflow. */
   @state() private expanded = false;
+  private readonly authorHidden = new Map<HTMLElement, boolean>();
 
   protected override willUpdate(): void {
     if (!this.hasUpdated) {
@@ -101,6 +102,11 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this.syncChildVisibility();
   }
 
+  override disconnectedCallback(): void {
+    this.restoreChildVisibility();
+    super.disconnectedCallback();
+  }
+
   private get hasOverflow(): boolean {
     // `maxVisible`'s own accessor already sanitizes to a finite, non-negative integer (or
     // `undefined`) on assignment, so no further finiteness check is needed here.
@@ -113,9 +119,24 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const overflowing = this.hasOverflow;
     const slot = this.shadowRoot?.querySelector('slot');
     const assignedChildren = slot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
+    const current = new Set(assignedChildren as HTMLElement[]);
+    for (const [child, hidden] of this.authorHidden) {
+      if (!current.has(child)) {
+        child.hidden = hidden;
+        this.authorHidden.delete(child);
+      }
+    }
     assignedChildren.forEach((child, i) => {
-      (child as HTMLElement).hidden = overflowing && !this.expanded && i >= (max as number);
+      const element = child as HTMLElement;
+      if (!this.authorHidden.has(element)) this.authorHidden.set(element, element.hasAttribute('hidden'));
+      const authored = this.authorHidden.get(element) ?? false;
+      element.hidden = authored || (overflowing && !this.expanded && i >= (max as number));
     });
+  }
+
+  private restoreChildVisibility(): void {
+    for (const [child, hidden] of this.authorHidden) child.hidden = hidden;
+    this.authorHidden.clear();
   }
 
   private onSlotChange = (e: Event): void => {

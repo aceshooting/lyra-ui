@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './avatar-group.styles.js';
@@ -126,6 +127,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   // Tracks the default slot's assigned-element count, the same connectedCallback/willUpdate +
   // slotchange convention `<lr-chip-group>`'s `childCount` already establishes.
   @state() private childCount = 0;
+  private readonly overflowHiddenChildren = new Map<HTMLElement, boolean>();
 
   protected override willUpdate(): void {
     if (!this.hasUpdated) {
@@ -146,6 +148,11 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     this.syncChildVisibility();
   }
 
+  override disconnectedCallback(): void {
+    this.restoreOverflowHiddenChildren();
+    super.disconnectedCallback();
+  }
+
   private get hasOverflow(): boolean {
     // `max`'s own accessor already sanitizes to a finite, non-negative integer (or `undefined`)
     // on assignment, so no further finiteness check is needed here.
@@ -161,10 +168,32 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     const overflowing = this.hasOverflow;
     const max = this.max as number;
     const slot = this.shadowRoot?.querySelector('slot');
-    const assignedChildren = slot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
-    assignedChildren.forEach((child, i) => {
-      (child as HTMLElement).hidden = overflowing && i >= max;
-    });
+    const assignedChildren = (slot?.assignedElements({ flatten: true }) ??
+      Array.from(this.children)) as HTMLElement[];
+    const shouldHide = new Set(
+      overflowing ? assignedChildren.filter((_child, index) => index >= max) : [],
+    );
+
+    for (const [child, authorHidden] of this.overflowHiddenChildren) {
+      if (!shouldHide.has(child)) {
+        child.hidden = authorHidden;
+        this.overflowHiddenChildren.delete(child);
+      }
+    }
+
+    for (const child of shouldHide) {
+      if (!this.overflowHiddenChildren.has(child)) {
+        this.overflowHiddenChildren.set(child, child.hidden);
+      }
+      child.hidden = true;
+    }
+  }
+
+  private restoreOverflowHiddenChildren(): void {
+    for (const [child, authorHidden] of this.overflowHiddenChildren) {
+      child.hidden = authorHidden;
+    }
+    this.overflowHiddenChildren.clear();
   }
 
   private onSlotChange = (e: Event): void => {
@@ -188,6 +217,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     // position", so the margin override is computed here instead of in CSS.
     const badgeIsFirstVisible = overflowing && hiddenCount === this.childCount;
     const accessibleLabel = this.getAttribute('aria-label') || this.label || nothing;
+    const localizedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>
@@ -197,9 +227,13 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
               part="overflow-badge"
               type="button"
               style=${styleMap({ marginInlineStart: badgeIsFirstVisible ? '0' : undefined })}
-              aria-label=${this.localize('showMoreCount', undefined, { count: hiddenCount })}
+              aria-label=${this.localize('showMoreCount', undefined, {
+                count: localizedHiddenCount,
+              })}
               @click=${this.onOverflowClick}
-            >${this.localize('showMoreCollapsed', undefined, { count: hiddenCount })}</button>`
+            >${this.localize('showMoreCollapsed', undefined, {
+              count: localizedHiddenCount,
+            })}</button>`
           : nothing}
       </div>
     `;

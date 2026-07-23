@@ -101,6 +101,16 @@ describe('restoring state', () => {
     const svg = el.shadowRoot!.querySelector('.restore-spinner svg') as SVGElement;
     expect(getComputedStyle(svg).animationDuration).to.equal('3s');
   });
+
+  it('inherits the shared ambient timing token when its spinner duration is not overridden', async () => {
+    const el = (await fixture(
+      html`<lr-checkpoint restoring style="--lr-transition-ambient: 2.4s linear"></lr-checkpoint>`,
+    )) as LyraCheckpoint;
+    const svg = el.shadowRoot!.querySelector('.restore-spinner svg') as SVGElement;
+    const style = getComputedStyle(svg);
+    expect(style.animationDuration).to.equal('2.4s');
+    expect(style.animationTimingFunction).to.equal('linear');
+  });
 });
 
 describe('confirm flow (confirmRestore=true, the default)', () => {
@@ -142,6 +152,8 @@ describe('confirm flow (confirmRestore=true, the default)', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="confirm-group"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="restore-button"]')).to.exist;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('restore-button');
   });
 
   it('reverts to the restore button and refocuses it on Cancel click', async () => {
@@ -216,6 +228,22 @@ it('renders default-slotted supplemental content under the marker row', async ()
     html`<lr-checkpoint>Two files changed since this point.</lr-checkpoint>`,
   )) as LyraCheckpoint;
   expect(el.shadowRoot!.querySelector('slot:not([name])')).to.exist;
+});
+
+it('honors strings overrides in the visible label and restore controls', async () => {
+  const el = (await fixture(html`
+    <lr-checkpoint
+      .strings=${{
+        checkpointLabel: 'Point de reprise',
+        checkpointRestore: 'Restaurer',
+        checkpointRestoreWithContext: 'Restaurer vers {label}',
+      }}
+    ></lr-checkpoint>
+  `)) as LyraCheckpoint;
+  expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent!.trim()).to.equal('Point de reprise');
+  const button = el.shadowRoot!.querySelector('[part="restore-button"]') as HTMLButtonElement;
+  expect(button.textContent!.trim()).to.equal('Restaurer');
+  expect(button.getAttribute('aria-label')).to.equal('Restaurer vers Point de reprise');
 });
 
 it('is accessible in the resting state', async () => {

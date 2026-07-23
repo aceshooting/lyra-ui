@@ -43,5 +43,12 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-02em);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+  [part='diff-label-old'],
+  [part='diff-label-new'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
 `;

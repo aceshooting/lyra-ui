@@ -66,6 +66,45 @@ it('defaults to slotted mode (empty threads) and only fires lr-filter-change in 
   expect(el.querySelector('lr-conversation-item')).to.exist;
 });
 
+it('applies the host accessible name to the element that owns the list role', async () => {
+  const el = (await fixture(html`
+    <lr-thread-list aria-label="Saved chats">
+      <lr-conversation-item title="Manual row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('aria-label')).to.equal(
+    'Saved chats',
+  );
+});
+
+it('restores injected slotted roles outside slotted mode and reapplies them on return/reconnect', async () => {
+  const el = (await fixture(html`
+    <lr-thread-list>
+      <lr-conversation-item title="Manual row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  const row = el.querySelector('lr-conversation-item')!;
+  expect(row.getAttribute('role')).to.equal('listitem');
+
+  el.threads = [{ id: 'data', title: 'Data row' }];
+  await el.updateComplete;
+  expect(row.hasAttribute('role')).to.be.false;
+
+  el.threads = [];
+  await el.updateComplete;
+  expect(row.getAttribute('role')).to.equal('listitem');
+
+  el.remove();
+  expect(row.hasAttribute('role')).to.be.false;
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(row.getAttribute('role')).to.equal('listitem');
+  } finally {
+    el.remove();
+  }
+});
+
 describe('data mode', () => {
   it('renders one lr-conversation-item per non-archived thread by default, grouped by date', async () => {
     const el = (await fixture(
@@ -140,6 +179,9 @@ describe('data mode', () => {
     );
     expect(groupLabels).to.deep.equal(['beta:1', 'alpha:2']);
     expect(dataRows(el).map((row) => row.id)).to.deep.equal(['b1', 'a1', 'a2']);
+    const toggles = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')];
+    expect(toggles.every((toggle) => !toggle.hasAttribute('aria-label'))).to.be.true;
+    expect(toggles.map((toggle) => toggle.textContent?.trim())).to.deep.equal(['beta:1', 'alpha:2']);
   });
 
   it('keeps group collapse controlled and removes collapsed rows from virtual-list measurement', async () => {
@@ -215,11 +257,14 @@ describe('data mode', () => {
     ).to.equal(1);
     expect(selectEvents[0]!.detail).to.deep.equal({ id: 't1' });
 
+    const rawRenames: CustomEvent[] = [];
+    el.addEventListener('lr-rename', (event) => rawRenames.push(event as CustomEvent));
     const renamePromise = oneEvent(el, 'lr-thread-rename');
     row.dispatchEvent(
       new CustomEvent('lr-rename', { detail: { title: 'New title' }, bubbles: true, composed: true }),
     );
     expect((await renamePromise).detail).to.deep.equal({ id: 't1', title: 'New title' });
+    expect(rawRenames).to.have.length(0);
   });
 
   describe('empty slot', () => {
@@ -530,6 +575,33 @@ describe('data mode', () => {
       expect(renderedThreadIds(el)).to.deep.equal(['t1']);
     });
 
+    it('case-folds search with the effective locale and locale-formats announced match counts', async () => {
+      const el = (await fixture(html`
+        <lr-thread-list
+          lang="tr-u-nu-arab"
+          style="block-size:400px"
+          searchable
+          grouping="none"
+          .threads=${[
+            { id: 'one', title: 'ISPARTA' },
+            { id: 'two', title: 'IĞDIR' },
+          ]}
+          .strings=${{ threadListMatchAnnouncePlural: 'MATCHES {count}' }}
+        ></lr-thread-list>
+      `)) as LyraThreadList;
+      const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+      input.value = 'ı';
+      input.dispatchEvent(new Event('input'));
+      await el.updateComplete;
+      expect(renderedThreadIds(el)).to.deep.equal(['one', 'two']);
+      const region = el.shadowRoot!
+        .querySelector('lr-live-region')!
+        .shadowRoot!.querySelector('[part="region"]')!;
+      expect(region.textContent).to.equal(
+        `MATCHES ${new Intl.NumberFormat('tr-u-nu-arab').format(2)}`,
+      );
+    });
+
     it('supports a custom filter override', async () => {
       const el = (await fixture(
         html`<lr-thread-list
@@ -633,6 +705,30 @@ describe('data mode', () => {
     expect(rows[1].shadowRoot!.activeElement).to.equal(secondOption);
   });
 
+  it('does not reinterpret row-navigation keys originating on a group toggle', async () => {
+    const el = (await fixture(html`
+      <lr-thread-list
+        style="block-size:400px"
+        grouping="custom"
+        .threads=${[
+          { id: 'a', title: 'Alpha', group: 'first' },
+          { id: 'b', title: 'Beta', group: 'second' },
+        ]}
+        .groupBy=${(thread: { group: string }) => thread.group}
+      ></lr-thread-list>
+    `)) as LyraThreadList;
+    await nextFrame();
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const toggles = [
+      ...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]'),
+    ];
+    toggles[1]!.focus();
+    toggles[1]!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }),
+    );
+    expect(list.shadowRoot!.activeElement?.textContent?.trim()).to.contain('second');
+  });
+
   it('warns and prefers threads (data mode) when both threads and slotted content are supplied', async () => {
     const originalWarn = console.warn;
     const calls: unknown[][] = [];
@@ -681,6 +777,23 @@ it('renders first-class leading, meta, and row-content hooks inside virtualized 
   expect(row.querySelector('[slot="meta"] [data-testid="meta"]')).to.exist;
   expect(row.querySelector('[slot="content"] [data-testid="content"]')).to.exist;
   expect(row.shadowRoot!.querySelector('[part="title"]')).to.not.exist;
+});
+
+it('makes injected row-content hooks noninteractive inside the selectable option', async () => {
+  const el = (await fixture(html`
+    <lr-thread-list
+      grouping="none"
+      .threads=${threads.slice(0, 1)}
+      .renderLeading=${() => html`<button type="button">Nested action</button>`}
+    ></lr-thread-list>
+  `)) as LyraThreadList;
+  await nextFrame();
+  const row = dataRows(el)[0]!;
+  const wrapper = row.querySelector('[slot="leading"]') as HTMLElement;
+  const nested = wrapper.querySelector('button')!;
+  expect(wrapper.inert).to.be.true;
+  nested.focus();
+  expect(row.querySelector(':focus')?.localName).to.not.equal('button');
 });
 
 it('renders a renderExcerpt hook into the row item\'s excerpt slot, winning over the excerpt property', async () => {

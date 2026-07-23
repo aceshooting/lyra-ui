@@ -81,7 +81,14 @@ export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-evaluation-run .examples=${examples}></lr-evaluation-run>
+      <lr-evaluation-run
+        label="Evaluation run for the multilingual customer-support production benchmark"
+        .strings=${{
+          evaluationRunProgressSummary:
+            '{completed} of {total} customer-support benchmark examples have completed evaluation',
+        }}
+        .examples=${examples}
+      ></lr-evaluation-run>
     </div>
   `,
 };

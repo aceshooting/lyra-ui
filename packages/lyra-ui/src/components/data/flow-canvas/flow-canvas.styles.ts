@@ -24,6 +24,10 @@ export const styles = css`
     touch-action: none;
     cursor: grab;
   }
+  [part='viewport']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
   [part='background'],
   [part='edges'] {
     position: absolute;
@@ -68,6 +72,10 @@ export const styles = css`
     inset-inline-start: 0;
     will-change: transform;
   }
+  [part='node-control'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+  }
   [part='node']:focus-within {
     z-index: var(--lr-layer-content);
   }
@@ -75,6 +83,13 @@ export const styles = css`
     fill: none;
     stroke: var(--lr-color-border);
     stroke-width: 1.5;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+  [part='edge-hit-area'] {
+    fill: none;
+    stroke: transparent;
+    stroke-width: var(--lr-icon-button-size);
     pointer-events: stroke;
     cursor: pointer;
   }
@@ -143,13 +158,17 @@ export const styles = css`
   [part='edge']:hover {
     stroke-width: 2.5;
   }
-  [part='node']:focus-visible,
+  [part='node']:has([part='node-control']:focus-visible),
   [part='edge']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='node'][aria-current='true'] {
-    outline: var(--lr-size-2px) solid var(--lr-flow-canvas-node-current-outline-color, var(--lr-color-brand));
+  [part='node'][data-selected] {
+    outline: var(--lr-size-2px) solid
+      var(
+        --lr-flow-canvas-node-selected-outline-color,
+        var(--lr-flow-canvas-node-current-outline-color, var(--lr-color-brand))
+      );
     outline-offset: var(--lr-size-2px);
     border-radius: var(--lr-radius);
   }

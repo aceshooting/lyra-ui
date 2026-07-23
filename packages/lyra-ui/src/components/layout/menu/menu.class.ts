@@ -1,23 +1,26 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
-import { property } from 'lit/decorators.js';
-import type { Placement } from '@floating-ui/dom';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { place } from '../../../internal/positioner.js';
-import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { nextId } from '../../../internal/a11y.js';
-import { collectFocusableElements, deepActiveElement } from '../../../internal/overlay-manager.js';
-import { styles } from './menu.styles.js';
-import { LyraMenuItem } from './menu-item.class.js';
-import './menu-item.class.js';
+import { html, type TemplateResult, type PropertyValues } from "lit";
+import { property } from "lit/decorators.js";
+import type { Placement } from "@floating-ui/dom";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { place } from "../../../internal/positioner.js";
+import { rtlAwarePlacement } from "../../../internal/rtl.js";
+import { nextId } from "../../../internal/a11y.js";
+import {
+  collectFocusableElements,
+  deepActiveElement,
+} from "../../../internal/overlay-manager.js";
+import { styles } from "./menu.styles.js";
+import { LyraMenuItem } from "./menu-item.class.js";
+import "./menu-item.class.js";
 
 export interface MenuSelectDetail {
   value: string;
 }
 
 export interface LyraMenuEventMap {
-  'lr-show': CustomEvent<undefined>;
-  'lr-hide': CustomEvent<undefined>;
-  'lr-menu-select': CustomEvent<MenuSelectDetail>;
+  "lr-show": CustomEvent<undefined>;
+  "lr-hide": CustomEvent<undefined>;
+  "lr-menu-select": CustomEvent<MenuSelectDetail>;
 }
 /**
  * `<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened
@@ -161,7 +164,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  localized default, matching `lr-select`/`lr-model-select`'s
    *  established `this.getAttribute('aria-label') || <computed default>`
    *  precedence (see `effectiveLabel`). */
-  @property() label = 'Menu';
+  @property() label = "Menu";
 
   /** Extends the Escape-closes-and-refocuses-trigger behavior to keydown
    *  events originating from non-item content slotted into the **default**
@@ -175,7 +178,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  `[part="list"]` and always close on Escape. Prefer those for composed
    *  controls: they are keyboard-reachable and ARIA-valid, whereas arbitrary
    *  content inside `role="menu"` is an `aria-required-children` violation. */
-  @property({ type: Boolean, attribute: 'close-on-escape-anywhere' }) closeOnEscapeAnywhere = false;
+  @property({ type: Boolean, attribute: "close-on-escape-anywhere" })
+  closeOnEscapeAnywhere = false;
 
   // Plain instance fields, not @state() -- render()'s template never reads
   // either (items render via the plain default <slot>; there is no
@@ -190,14 +194,14 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private cleanup?: () => void;
   private itemStateObserver?: MutationObserver;
   private _isFirstUpdate = true;
-  private pendingFocus: 'first' | 'last' = 'first';
-  private readonly generatedHostId = nextId('menu');
-  private readonly listId = nextId('menu-list');
+  private pendingFocus: "first" | "last" = "first";
+  private readonly generatedHostId = nextId("menu");
+  private readonly listId = nextId("menu-list");
   // Standard menu type-ahead, mirroring lr-select's identical listbox
   // trio: printable keystrokes accumulate into this buffer and reset ~500ms
   // after the last one, so "d" then "e" narrows to "de" instead of
   // restarting the search on every keystroke.
-  private typeAheadBuffer = '';
+  private typeAheadBuffer = "";
   private typeAheadTimer?: ReturnType<typeof setTimeout>;
 
   override connectedCallback(): void {
@@ -234,15 +238,23 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    */
   private syncRegionState(): void {
     const assigned = (selector: string): number =>
-      this.renderRoot.querySelector<HTMLSlotElement>(selector)?.assignedElements({ flatten: true }).length ?? 0;
-    this.toggleAttribute('data-has-header', assigned('slot[name="header"]') > 0);
-    this.toggleAttribute('data-has-footer', assigned('slot[name="footer"]') > 0);
-    this.toggleAttribute('data-list-empty', assigned('slot:not([name])') === 0);
+      this.renderRoot
+        .querySelector<HTMLSlotElement>(selector)
+        ?.assignedElements({ flatten: true }).length ?? 0;
+    this.toggleAttribute(
+      "data-has-header",
+      assigned('slot[name="header"]') > 0
+    );
+    this.toggleAttribute(
+      "data-has-footer",
+      assigned('slot[name="footer"]') > 0
+    );
+    this.toggleAttribute("data-list-empty", assigned("slot:not([name])") === 0);
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('open')) {
+    if (changed.has("open")) {
       this.cleanup?.();
       this.cleanup = undefined;
       // All open-driven side effects (positioning, the click-outside
@@ -252,8 +264,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       // paths, or a consumer/test setting `el.open` directly, which bypasses
       // both. Mirrors lr-select's identical updated()-centralized approach.
       if (this.open) {
-        document.addEventListener('pointerdown', this.onDocPointer);
-        if (!this._isFirstUpdate) this.emit('lr-show');
+        document.addEventListener("pointerdown", this.onDocPointer);
+        if (!this._isFirstUpdate) this.emit("lr-show");
         // Both reposition() and focusRoving() no-op gracefully if triggerEl/
         // items aren't populated yet -- for markup that renders `open` true
         // from the start, the trigger/default slots' *own* slotchange events
@@ -264,7 +276,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         this.reposition();
         this.focusRoving(this.pendingFocus);
       } else {
-        document.removeEventListener('pointerdown', this.onDocPointer);
+        document.removeEventListener("pointerdown", this.onDocPointer);
         // The roving state is reset here, not in hide(), for the same reason every other
         // open-driven side effect lives here: `open` can become false through hide(), through a
         // consumer writing `el.open = false` directly, or through disconnectedCallback()'s
@@ -274,10 +286,10 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
         // also fire it on the disconnectedCallback() path, stealing focus during teardown.
         this.activeIndex = -1;
         this.applyRovingTabIndex();
-        if (!this._isFirstUpdate) this.emit('lr-hide');
+        if (!this._isFirstUpdate) this.emit("lr-hide");
       }
       this.syncTriggerA11y();
-    } else if (this.open && changed.has('placement')) {
+    } else if (this.open && changed.has("placement")) {
       // A placement change while already open must move the popup immediately --
       // otherwise the Floating UI subscription established at open time keeps
       // running with the stale placement baked into its computePosition options,
@@ -290,10 +302,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   private reposition(): void {
     this.cleanup?.();
     this.cleanup = undefined;
-    const popup = this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null;
+    const popup = this.renderRoot.querySelector(
+      '[part="popup"]'
+    ) as HTMLElement | null;
     if (this.triggerEl && popup) {
-      const placement = this.placement && rtlAwarePlacement(this.placement, this);
-      this.cleanup = place(this.triggerEl, popup, placement ? { placement } : {});
+      const placement =
+        this.placement && rtlAwarePlacement(this.placement, this);
+      this.cleanup = place(
+        this.triggerEl,
+        popup,
+        placement ? { placement } : {}
+      );
     }
   }
 
@@ -302,9 +321,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     this.cleanup?.();
     this.cleanup = undefined;
     clearTimeout(this.typeAheadTimer);
+    this.typeAheadTimer = undefined;
+    this.typeAheadBuffer = "";
     this.itemStateObserver?.disconnect();
     this.itemStateObserver = undefined;
-    document.removeEventListener('pointerdown', this.onDocPointer);
+    document.removeEventListener("pointerdown", this.onDocPointer);
     // Reset so a reconnect (e.g. a drag-drop reparent) re-triggers
     // `updated()`'s `open`-driven branch -- without this, `open` stays
     // `true` across the disconnect/reconnect and `changed.has('open')` never
@@ -322,7 +343,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * listener, the `lr-show`/`lr-hide` events, and the initial focus move, so `el.open = true`
    * behaves identically apart from the focus target.
    */
-  show(focus: 'first' | 'last' = 'first'): void {
+  show(focus: "first" | "last" = "first"): void {
     if (this.open) return;
     this.pendingFocus = focus;
     this.open = true;
@@ -358,20 +379,20 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // A safety net for a menu with zero navigable items: focus never leaves
     // the trigger in that edge case (see focusRoving()), so onListKeyDown's
     // own Escape handling would otherwise never run.
-    if (e.key === 'Escape' && this.open) {
+    if (e.key === "Escape" && this.open) {
       e.preventDefault();
       this.hide({ focusTrigger: true });
       return;
     }
     if (this.open) return;
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
-        this.show('first');
+        this.show("first");
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
-        this.show('last');
+        this.show("last");
         break;
       default:
         return;
@@ -379,13 +400,15 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private onTriggerSlotChange = (e: Event): void => {
-    const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    const assigned = (e.target as HTMLSlotElement).assignedElements({
+      flatten: true,
+    });
     const next = assigned[0] as HTMLElement | undefined;
     if (next === this.triggerEl) return;
     if (this.triggerEl) {
-      this.triggerEl.removeAttribute('aria-haspopup');
-      this.triggerEl.removeAttribute('aria-expanded');
-      this.triggerEl.removeAttribute('aria-controls');
+      this.triggerEl.removeAttribute("aria-haspopup");
+      this.triggerEl.removeAttribute("aria-expanded");
+      this.triggerEl.removeAttribute("aria-controls");
     }
     this.triggerEl = next;
     this.syncTriggerA11y();
@@ -400,9 +423,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  shadow root and cannot form a valid reference from the trigger -- see the class doc. */
   private syncTriggerA11y(): void {
     if (!this.triggerEl) return;
-    this.triggerEl.setAttribute('aria-haspopup', 'menu');
-    this.triggerEl.setAttribute('aria-expanded', this.open ? 'true' : 'false');
-    this.triggerEl.setAttribute('aria-controls', this.id);
+    this.triggerEl.setAttribute("aria-haspopup", "menu");
+    this.triggerEl.setAttribute("aria-expanded", this.open ? "true" : "false");
+    this.triggerEl.setAttribute("aria-controls", this.id);
   }
 
   private onItemsSlotChange = (e: Event): void => {
@@ -411,20 +434,25 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // reordering items while open shifts survivors to new indices, so an
     // in-range activeIndex starts pointing at a different item. Re-resolve by
     // identity instead.
-    const previouslyActive = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+    const previouslyActive =
+      this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     this.items = (e.target as HTMLSlotElement)
       .assignedElements({ flatten: true })
       .filter((el): el is LyraMenuItem => el instanceof LyraMenuItem);
-    if (typeof MutationObserver !== 'undefined') {
-      this.itemStateObserver = new MutationObserver(() => this.onItemStateChange());
+    if (typeof MutationObserver !== "undefined") {
+      this.itemStateObserver = new MutationObserver(() =>
+        this.onItemStateChange()
+      );
       for (const item of this.items) {
         this.itemStateObserver.observe(item, {
           attributes: true,
-          attributeFilter: ['disabled', 'hidden', 'aria-hidden'],
+          attributeFilter: ["disabled", "hidden", "aria-hidden"],
         });
       }
     }
-    this.activeIndex = previouslyActive ? this.items.indexOf(previouslyActive) : -1;
+    this.activeIndex = previouslyActive
+      ? this.items.indexOf(previouslyActive)
+      : -1;
     this.applyRovingTabIndex();
     this.syncRegionState();
     if (this.open) {
@@ -444,13 +472,20 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   };
 
   private isNavigable(item: LyraMenuItem): boolean {
-    return !item.disabled && !item.hidden && item.getAttribute('aria-hidden') !== 'true';
+    return (
+      !item.disabled &&
+      !item.hidden &&
+      item.getAttribute("aria-hidden") !== "true"
+    );
   }
 
   /** Rehomes roving focus immediately when an active item becomes disabled or hidden. */
   private onItemStateChange = (): void => {
     const navigable = this.items.filter((item) => this.isNavigable(item));
-    if (this.activeIndex >= 0 && !this.isNavigable(this.items[this.activeIndex]!)) {
+    if (
+      this.activeIndex >= 0 &&
+      !this.isNavigable(this.items[this.activeIndex]!)
+    ) {
       const current = this.activeIndex;
       const next =
         navigable.find((item) => this.items.indexOf(item) > current) ??
@@ -473,7 +508,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // without stopping it here it would keep bubbling straight through this component under its
     // own, undocumented name, right behind the consolidated lr-menu-select below.
     e.stopPropagation();
-    this.emit<MenuSelectDetail>('lr-menu-select', { value: item.value });
+    this.emit<MenuSelectDetail>("lr-menu-select", { value: item.value });
     this.hide({ focusTrigger: true });
   };
 
@@ -489,10 +524,11 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   /** Moves the roving focus (and real DOM focus) to the first/last
    *  non-disabled item. A no-op when there are none -- focus then simply
    *  stays on the trigger (see onTriggerKeyDown's Escape safety net). */
-  private focusRoving(which: 'first' | 'last'): void {
+  private focusRoving(which: "first" | "last"): void {
     const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
-    const item = which === 'first' ? navigable[0] : navigable[navigable.length - 1];
+    const item =
+      which === "first" ? navigable[0] : navigable[navigable.length - 1];
     if (!item) return; // navigable is non-empty (checked above), so item is always defined
     this.setActiveItem(item);
   }
@@ -528,42 +564,48 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // every other key below stays scoped to real LyraMenuItem targets so it
     // never hijacks keydown from arbitrary slotted content (the bug the
     // instanceof guard below exists to prevent).
-    if (e.key === 'Escape' && (isItemTarget || this.closeOnEscapeAnywhere)) {
+    if (e.key === "Escape" && (isItemTarget || this.closeOnEscapeAnywhere)) {
       e.preventDefault();
       this.hide({ focusTrigger: true });
       return;
     }
     if (!isItemTarget) return;
     const navigable = this.items.filter((i) => this.isNavigable(i));
-    const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+    const current =
+      this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentNavIndex = current ? navigable.indexOf(current) : -1;
 
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
         if (navigable.length) {
-          const next = navigable[(currentNavIndex + 1 + navigable.length) % navigable.length];
+          const next =
+            navigable[
+              (currentNavIndex + 1 + navigable.length) % navigable.length
+            ];
           if (next) this.setActiveItem(next); // modulo navigable.length keeps the index in-bounds
         }
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
         if (navigable.length) {
-          const prevIndex = currentNavIndex <= 0 ? navigable.length - 1 : currentNavIndex - 1;
+          const prevIndex =
+            currentNavIndex <= 0 ? navigable.length - 1 : currentNavIndex - 1;
           const prev = navigable[prevIndex];
           if (prev) this.setActiveItem(prev); // prevIndex is in [0, navigable.length - 1]
         }
         break;
-      case 'Home':
+      case "Home":
         e.preventDefault();
         if (navigable.length) this.setActiveItem(navigable[0]!); // safe: navigable non-empty
         break;
-      case 'End':
+      case "End":
         e.preventDefault();
-        if (navigable.length) this.setActiveItem(navigable[navigable.length - 1]!); // safe: navigable non-empty
+        if (navigable.length)
+          this.setActiveItem(navigable[navigable.length - 1]!); // safe: navigable non-empty
         break;
-      case 'Enter':
-      case ' ':
+      case "Enter":
+      case " ":
         // Mirrors lr-tree calling current.select() from its own delegated
         // keydown handler, rather than each row wiring its own keydown.
         e.preventDefault();
@@ -581,7 +623,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     }
   };
 
-  private popupPart(name: 'popup' | 'header' | 'list' | 'footer'): HTMLElement | null {
+  private popupPart(
+    name: "popup" | "header" | "list" | "footer"
+  ): HTMLElement | null {
     return this.renderRoot.querySelector<HTMLElement>(`[part="${name}"]`);
   }
 
@@ -600,9 +644,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * walked out of the popup while the menu stayed open).
    */
   private tabWouldLeavePopup(e: KeyboardEvent): boolean {
-    const header = this.popupPart('header');
-    const footer = this.popupPart('footer');
-    const listEl = this.popupPart('list');
+    const header = this.popupPart("header");
+    const footer = this.popupPart("footer");
+    const listEl = this.popupPart("list");
     const backwards = e.shiftKey;
     const active = deepActiveElement(this.ownerDocument) as HTMLElement | null;
     const headerStops = header ? collectFocusableElements(header) : [];
@@ -617,13 +661,18 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     const path = e.composedPath();
     if (footer && path.includes(footer)) {
       if (hasNeighbor(footerStops)) return false;
-      return backwards ? listStops.length === 0 && headerStops.length === 0 : true;
+      return backwards
+        ? listStops.length === 0 && headerStops.length === 0
+        : true;
     }
     if (header && path.includes(header)) {
       if (hasNeighbor(headerStops)) return false;
-      return backwards ? true : listStops.length === 0 && footerStops.length === 0;
+      return backwards
+        ? true
+        : listStops.length === 0 && footerStops.length === 0;
     }
-    if (!(e.target instanceof LyraMenuItem) && hasNeighbor(listStops)) return false;
+    if (!(e.target instanceof LyraMenuItem) && hasNeighbor(listStops))
+      return false;
     return backwards ? headerStops.length === 0 : footerStops.length === 0;
   }
 
@@ -637,8 +686,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * the list is left entirely to `onListKeyDown`.
    */
   private onPopupKeyDown = (e: KeyboardEvent): void => {
-    const listEl = this.popupPart('list');
-    if (e.key === 'Escape') {
+    const listEl = this.popupPart("list");
+    if (e.key === "Escape") {
       if (listEl && e.composedPath().includes(listEl)) return;
       e.preventDefault();
       this.hide({ focusTrigger: true });
@@ -647,7 +696,7 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
     // No preventDefault for Tab, in either branch -- the browser's own default
     // navigation is left to proceed untouched, only the (now-stale) open menu
     // closes, and only when Tab is actually leaving the popup.
-    if (e.key === 'Tab' && this.tabWouldLeavePopup(e)) this.hide();
+    if (e.key === "Tab" && this.tabWouldLeavePopup(e)) this.hide();
   };
 
   /** Standard WAI-ARIA APG menu-button type-ahead: moves the roving focus to
@@ -656,20 +705,26 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  -- mirrors `<lr-select>`'s identical listbox type-ahead. */
   private typeAhead(char: string): void {
     clearTimeout(this.typeAheadTimer);
-    this.typeAheadBuffer += char.toLowerCase();
+    this.typeAheadBuffer += char.toLocaleLowerCase(this.effectiveLocale);
     this.typeAheadTimer = setTimeout(() => {
-      this.typeAheadBuffer = '';
+      this.typeAheadBuffer = "";
     }, 500);
 
     const navigable = this.items.filter((i) => this.isNavigable(i));
     if (!navigable.length) return;
-    const current = this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
+    const current =
+      this.activeIndex >= 0 ? this.items[this.activeIndex] : undefined;
     const currentIndex = current ? navigable.indexOf(current) : -1;
     const n = navigable.length;
     for (let step = 1; step <= n; step++) {
       const candidate = navigable[(currentIndex + step + n) % n];
       if (!candidate) continue; // modulo n keeps the index in-bounds; guard satisfies the checker
-      if ((candidate.textContent ?? '').trim().toLowerCase().startsWith(this.typeAheadBuffer)) {
+      if (
+        (candidate.textContent ?? "")
+          .trim()
+          .toLocaleLowerCase(this.effectiveLocale)
+          .startsWith(this.typeAheadBuffer)
+      ) {
         this.setActiveItem(candidate);
         return;
       }
@@ -682,12 +737,19 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    *  routes through `this.localize()` so a locale/`.strings` override applies without
    *  requiring `label` itself to be set. */
   private get effectiveLabel(): string {
-    return this.getAttribute('aria-label') || this.localize('menuLabel', this.label === 'Menu' ? undefined : this.label);
+    return (
+      this.getAttribute("aria-label") ||
+      this.localize("menuLabel", this.label === "Menu" ? undefined : this.label)
+    );
   }
 
   override render(): TemplateResult {
     return html`
-      <div part="trigger" @click=${this.onTriggerClick} @keydown=${this.onTriggerKeyDown}>
+      <div
+        part="trigger"
+        @click=${this.onTriggerClick}
+        @keydown=${this.onTriggerKeyDown}
+      >
         <slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot>
       </div>
       <div part="popup" @keydown=${this.onPopupKeyDown}>
@@ -714,9 +776,8 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-menu': LyraMenu;
+    "lr-menu": LyraMenu;
   }
 }

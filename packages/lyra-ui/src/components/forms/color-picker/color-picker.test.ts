@@ -109,3 +109,58 @@ it("scales the swatch across every tier, matching lr-input's own min-height ladd
     expect(getComputedStyle(input).inlineSize, `size=${size}`).to.equal(px);
   }
 });
+
+it('keeps the visible default, host value, validity, reset value, and FormData in sync', async () => {
+  const form = (await fixture(html`
+    <form><lr-color-picker name="accent" required></lr-color-picker></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+
+  expect(input.value).to.equal('#000000');
+  expect(el.value).to.equal('#000000');
+  expect(new FormData(form).get('accent')).to.equal('#000000');
+  expect(el.checkValidity()).to.be.true;
+
+  input.value = '#ff0000';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  form.reset();
+  await el.updateComplete;
+  expect(el.value).to.equal('#000000');
+  expect(input.value).to.equal('#000000');
+  expect(new FormData(form).get('accent')).to.equal('#000000');
+});
+
+it('forwards host click/focus/blur and suppresses click when effectively disabled', async () => {
+  const form = (await fixture(html`
+    <form><fieldset><lr-color-picker></lr-color-picker></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+  el.focus();
+  expect(el.shadowRoot!.activeElement === input).to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement === input).to.be.false;
+
+  fieldset.disabled = true;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
+it('visually marks direct and fieldset-cascaded disabled state', async () => {
+  const form = (await fixture(html`
+    <form><fieldset disabled><lr-color-picker></lr-color-picker></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-color-picker') as LyraColorPicker;
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  expect(getComputedStyle(el).opacity).to.equal(
+    getComputedStyle(el).getPropertyValue('--lr-opacity-disabled').trim(),
+  );
+  expect(getComputedStyle(input).cursor).to.equal('not-allowed');
+});

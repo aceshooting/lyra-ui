@@ -6,7 +6,7 @@ export const styles = css`
     /* Makes the host a query container so the @container rule below reacts to the bar's own
        allocated width (a chat transcript, a split pane, a narrow dialog) instead of the
        viewport's. */
-    container-type: inline-size;
+    container: lr-confirm-bar / inline-size;
     min-inline-size: 0;
     max-inline-size: 100%;
   }
@@ -69,7 +69,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  @container (max-inline-size: 20rem) {
+  @container lr-confirm-bar (max-inline-size: 20rem) {
     [part='footer'] {
       justify-content: stretch;
     }
@@ -90,7 +90,7 @@ export const styles = css`
        always and stretch the buttons to fill -- the exact opposite of the intent. Dropping the
        query container is what neutralizes it: with no containment here and (normally) no ancestor
        container either, the max-inline-size: 20rem query simply never matches. */
-    container-type: normal;
+    container: none;
   }
   :host([compact]) [part='base'] {
     flex-direction: row;

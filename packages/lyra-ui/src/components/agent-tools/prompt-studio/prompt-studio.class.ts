@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './prompt-studio.styles.js';
 
@@ -59,6 +60,11 @@ export interface LyraPromptStudioEventMap {
  * @csspart preview - Resolved read-only preview.
  * @csspart save - The save action.
  * @csspart run - The run action.
+ * @cssprop [--lr-prompt-studio-field-hover-border=var(--lr-color-brand)] - Enabled field hover border.
+ * @cssprop [--lr-prompt-studio-version-selected-border=var(--lr-color-brand)] - Selected version border.
+ * @cssprop [--lr-prompt-studio-version-selected-bg=var(--lr-color-brand-quiet)] - Selected version background.
+ * @cssprop [--lr-prompt-studio-version-selected-color=var(--lr-color-text)] - Selected version foreground.
+ * @cssprop [--lr-prompt-studio-version-selected-hover-bg=var(--lr-color-brand-quiet)] - Selected version hover background.
  */
 export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -106,7 +112,14 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   }
 
   private addMessage(): void {
-    const id = `message-${Date.now()}-${this.messages.length}`;
+    const existingIds = new Set(this.messages.map((message) => message.id));
+    const base = `message-${Date.now()}-${this.messages.length}`;
+    let id = base;
+    let suffix = 1;
+    while (existingIds.has(id)) {
+      id = `${base}-${suffix}`;
+      suffix++;
+    }
     this.emitChange([...this.messages, { id, role: 'user', content: '' }]);
   }
 
@@ -189,26 +202,27 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
             ? html`
                 <section part="variables" aria-label=${this.localize('promptStudioVariables')}>
                   <h3>${this.localize('promptStudioVariables')}</h3>
-                  ${this.variables.map(
-                    (variable, index) => html`
+                  ${this.variables.map((variable, index) => {
+                    const displayIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
+                    return html`
                       <div part="variable">
                         <input
-                          aria-label=${this.localize('promptStudioVariables')}
+                          aria-label=${this.localize('promptStudioVariableName', undefined, { index: displayIndex })}
                           .value=${variable.name}
                           ?disabled=${this.disabled}
                           @input=${(event: Event) =>
                             this.updateVariable(index, { name: (event.target as HTMLInputElement).value })}
                         />
                         <input
-                          aria-label=${variable.name}
+                          aria-label=${this.localize('promptStudioVariableValue', undefined, { index: displayIndex })}
                           .value=${variable.value}
                           ?disabled=${this.disabled}
                           @input=${(event: Event) =>
                             this.updateVariable(index, { value: (event.target as HTMLInputElement).value })}
                         />
                       </div>
-                    `,
-                  )}
+                    `;
+                  })}
                 </section>
               `
             : nothing}
@@ -249,4 +263,3 @@ declare global {
     'lr-prompt-studio': LyraPromptStudio;
   }
 }
-

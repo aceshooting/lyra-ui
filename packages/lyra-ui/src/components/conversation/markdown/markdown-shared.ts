@@ -264,7 +264,7 @@ export function parseMarkdownDocument(options: ParseMarkdownOptions): { html: st
           if (!failedHighlightKeys.has(key)) pendingKeys.push({ key, lang, code: body });
         }
         const cls = lang ? ` class="language-${escapeHtml(lang)}"` : '';
-        return `<pre part="code-block"><code${cls}>${text}</code></pre>\n`;
+        return `<pre part="code-block" tabindex="0"><code${cls}>${text}</code></pre>\n`;
       },
       codespan(this: OptionalPeerApi, token: OptionalPeerApi) {
         // Mirrors marked's own default codespan() renderer's escaping exactly (it does not

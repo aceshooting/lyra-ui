@@ -2,6 +2,7 @@ import { html, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './rating.styles.js';
 
 const DEFAULT_MAX = 5;
@@ -35,6 +36,9 @@ function starSolid(): SVGTemplateResult {
  *
  * @customElement lr-rating
  * @event lr-change - The rating changed. `detail: { value }`.
+ * @method focus - Forwards focus to the internal slider control.
+ * @method blur - Forwards blur to the internal slider control.
+ * @method click - Forwards activation to the internal slider control.
  * @csspart base - The slider-like rating control.
  * @csspart star - Each visual star.
  * @csspart star-fill - The filled overlay inside each star, clipped to that
@@ -91,6 +95,23 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     if (event.key === 'Home') { event.preventDefault(); this.setValue(0); }
     if (event.key === 'End') { event.preventDefault(); this.setValue(this.safeMax); }
   };
+
+  private get control(): HTMLElement | null {
+    return this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.control?.focus(options);
+  }
+
+  override blur(): void {
+    this.control?.blur();
+  }
+
+  override click(): void {
+    this.control?.click();
+  }
+
   override render(): TemplateResult {
     const safeMax = this.safeMax;
     const safeValue = this.safeValue;
@@ -98,6 +119,7 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
     return html`<div part="base" role="slider" tabindex=${this.disabled ? '-1' : '0'}
       aria-label=${this.getAttribute('aria-label') || this.accessibleLabel || this.localize('rating')}
       aria-valuemin="0" aria-valuemax=${safeMax} aria-valuenow=${safeValue}
+      aria-valuetext=${getNumberFormat(this.effectiveLocale).format(safeValue)}
       aria-disabled=${this.disabled ? 'true' : 'false'} aria-readonly=${this.readonly ? 'true' : 'false'}
       @click=${this.onClick} @keydown=${this.onKeyDown}>
       ${Array.from({ length: count }, (_, index) => {

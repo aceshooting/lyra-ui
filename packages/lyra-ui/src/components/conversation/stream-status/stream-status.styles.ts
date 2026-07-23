@@ -3,6 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     vertical-align: middle;
     /* Swapped per-phase by the :host([phase]) rules below, rather than
        repeating color/opacity per rule -- same one-custom-property-per-tone
@@ -30,6 +32,9 @@ export const styles = css`
 
   [part='base'] {
     display: inline-flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     align-items: center;
     gap: var(--lr-space-s);
     border-radius: var(--lr-radius);
@@ -86,6 +91,8 @@ export const styles = css`
   }
 
   [part='message'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     color: var(--lr-color-warning);
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
@@ -93,6 +100,9 @@ export const styles = css`
   }
 
   [part='actions'] {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    flex-wrap: wrap;
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);

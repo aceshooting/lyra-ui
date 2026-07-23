@@ -19,3 +19,27 @@ export const Default: Story = {
   ></lr-prompt-studio>`,
 };
 
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long content and selected version)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-prompt-studio
+        label="Multilingual customer-support prompt development workspace"
+        selected-version-id="production"
+        .messages=${[
+          ...messages,
+          {
+            id: 'assistant',
+            role: 'assistant' as const,
+            content: 'A deliberately long preview value: {{long_variable_name_for_customer_context}}',
+          },
+        ]}
+        .variables=${[{ name: 'long_variable_name_for_customer_context', value: 'Enterprise customer in Luxembourg' }]}
+        .versions=${[
+          { id: 'production', label: 'Production prompt with multilingual safeguards', messages },
+          { id: 'candidate', label: 'Candidate experiment', messages },
+        ]}
+      ></lr-prompt-studio>
+    </div>
+  `,
+};

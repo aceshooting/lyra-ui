@@ -37,6 +37,35 @@ describe('lr-compare-panel', () => {
     expect((buttons[0] as HTMLElement).getAttribute('aria-pressed')).to.equal('true');
   });
 
+  it('emits the cancelable vote before mutation and honors a veto', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
+    let voteDuringEvent: unknown = 'unset';
+    el.addEventListener('lr-vote', (event) => {
+      voteDuringEvent = el.vote;
+      event.preventDefault();
+    });
+    (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(voteDuringEvent).to.equal(null);
+    expect(el.vote).to.equal(null);
+  });
+
+  it('announces the voted pair snapshot when a listener synchronously advances the item', async () => {
+    const el = (await fixture(html`
+      <lr-compare-panel item-id="pair-1" label-a="Original A" label-b="Original B"></lr-compare-panel>
+    `)) as LyraComparePanel;
+    el.addEventListener('lr-vote', () => {
+      el.itemId = 'pair-2';
+      el.labelA = 'Next A';
+      el.labelB = 'Next B';
+    });
+    (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const live = el.shadowRoot!.querySelector('lr-live-region')!;
+    expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Original A');
+  });
+
   it('emits lr-vote for the B pane and marks the B button pressed', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-2"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;

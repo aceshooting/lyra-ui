@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './icon-button.js';
 import '../../media/flag/flag.js';
 import { styles } from './icon-button.styles.js';
+import type { LyraIconButton } from './icon-button.js';
 
 /** A 1x1 inline SVG, so `<lr-flag>` renders synchronously with no peer-package round trip. */
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
@@ -319,6 +320,46 @@ it('is accessible', async () => {
 it('is accessible while disabled', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss" disabled></lr-icon-button>`);
   await expect(el).to.be.accessible();
+});
+
+it('inherits fieldset disabled state and cannot submit while effectively disabled', async () => {
+  const form = (await fixture(html`
+    <form>
+      <fieldset>
+        <lr-icon-button icon="close" aria-label="Save" type="submit"></lr-icon-button>
+      </fieldset>
+    </form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const el = form.querySelector('lr-icon-button') as LyraIconButton;
+  const button = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
+  let submits = 0;
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submits++;
+  });
+
+  fieldset.disabled = true;
+  await el.updateComplete;
+  expect(button.disabled).to.be.true;
+  el.click();
+  expect(submits).to.equal(0);
+
+  fieldset.disabled = false;
+  await el.updateComplete;
+  el.click();
+  expect(submits).to.equal(1);
+});
+
+it('remains constructible when attachInternals is unavailable', () => {
+  const original = HTMLElement.prototype.attachInternals;
+  // @ts-expect-error simulates an SSR/test DOM without ElementInternals.
+  delete HTMLElement.prototype.attachInternals;
+  try {
+    expect(() => document.createElement('lr-icon-button')).to.not.throw();
+  } finally {
+    HTMLElement.prototype.attachInternals = original;
+  }
 });
 
 it('is accessible with slotted content instead of a named glyph', async () => {

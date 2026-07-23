@@ -19,6 +19,13 @@ class ToolResultDialogTestShadowInput extends HTMLElement {
 }
 customElements.define('tool-result-dialog-test-shadow-input', ToolResultDialogTestShadowInput);
 
+it('formats fractional duration numbers with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-tool-result-dialog lang="de-DE" open duration-ms="1500"></lr-tool-result-dialog>`,
+  )) as LyraToolResultDialog;
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent!.trim()).to.equal('1,5s');
+});
+
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python"></lr-tool-result-dialog>`,
@@ -546,4 +553,19 @@ it('defaults to English "Tool call"/"Running"/"Maximize" when no strings overrid
   expect((el.shadowRoot!.querySelector('[part="maximize-button"]') as HTMLElement).getAttribute('aria-label')).to.equal(
     'Maximize',
   );
+});
+
+it('retints status chrome through component-scoped state hooks', async () => {
+  const el = (await fixture(html`
+    <lr-tool-result-dialog
+      status="error"
+      style="
+        --lr-tool-result-dialog-error-color: rgb(1, 2, 3);
+        --lr-tool-result-dialog-error-bg: rgb(4, 5, 6);
+      "
+    ></lr-tool-result-dialog>
+  `)) as LyraToolResultDialog;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  expect(getComputedStyle(status).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(status).backgroundColor).to.equal('rgb(4, 5, 6)');
 });

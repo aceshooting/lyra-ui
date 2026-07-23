@@ -267,7 +267,7 @@ it('exposes a customizable accessible description and a data-table alternative',
   const description = el.shadowRoot!.querySelector('[part="description"]') as HTMLElement;
   const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
   expect(canvas.getAttribute('aria-label')).to.equal('Revenue history');
-  expect(canvas.getAttribute('aria-describedby')).to.equal(description.id);
+  expect(canvas.getAttribute('aria-describedby')?.split(/\s+/)).to.include(description.id);
   expect(description.textContent).to.equal('Revenue rises from January through March.');
   expect(table.querySelectorAll('tbody tr')).to.have.length(3);
   expect(table.querySelector('tbody tr td')!.textContent).to.equal('1');
@@ -1272,8 +1272,8 @@ it('never overrides an explicitly supplied series color with the default palette
   await el.updateComplete;
 
   const ds = (el as any).buildConfig().data.datasets[0];
-  expect(ds.backgroundColor).to.deep.equal(['#123456']);
-  expect(ds.borderColor).to.equal('#123456');
+  expect(ds.backgroundColor).to.deep.equal(['rgb(18, 52, 86)']);
+  expect(ds.borderColor).to.equal('rgb(18, 52, 86)');
 });
 
 // pie/doughnut/polarArea color per *slice*, not per dataset: one uncolored series with N points
@@ -1438,8 +1438,8 @@ it('passes an explicit per-slice color array through unchanged instead of wrappi
   await el.updateComplete;
 
   const ds = (el as any).buildConfig().data.datasets[0];
-  expect(ds.backgroundColor).to.deep.equal(['#111111', '#222222']);
-  expect(ds.borderColor).to.equal('#111111');
+  expect(ds.backgroundColor).to.deep.equal(['rgb(17, 17, 17)', 'rgb(34, 34, 34)']);
+  expect(ds.borderColor).to.equal('rgb(17, 17, 17)');
 });
 
 it('seriesToDataset leaves the palette fallback color undefined when given an empty palette', () => {
@@ -1714,8 +1714,8 @@ it('maps segmentColors to Chart.js segment.borderColor', async () => {
   el.datasets = [{ label: 'S', data: [1, 2, 3], segmentColors: ['red', 'green'] }];
   const config = (el as any).buildConfig();
   const segmentBorderColor = config.data.datasets[0].segment.borderColor;
-  expect(segmentBorderColor({ p0DataIndex: 0 })).to.equal('red');
-  expect(segmentBorderColor({ p0DataIndex: 1 })).to.equal('green');
+  expect(segmentBorderColor({ p0DataIndex: 0 })).to.equal('rgb(255, 0, 0)');
+  expect(segmentBorderColor({ p0DataIndex: 1 })).to.equal('rgb(0, 128, 0)');
 });
 
 it('exposes seriesPalette() publicly', async () => {
@@ -1787,8 +1787,8 @@ it('cycles segmentColors when the array is shorter than the segment count', asyn
   el.datasets = [{ label: 'S', data: [1, 2, 3, 4], segmentColors: ['red'] }];
 
   const segmentBorderColor = (el as any).buildConfig().data.datasets[0].segment.borderColor;
-  expect(segmentBorderColor({ p0DataIndex: 0 })).to.equal('red');
-  expect(segmentBorderColor({ p0DataIndex: 2 })).to.equal('red');
+  expect(segmentBorderColor({ p0DataIndex: 0 })).to.equal('rgb(255, 0, 0)');
+  expect(segmentBorderColor({ p0DataIndex: 2 })).to.equal('rgb(255, 0, 0)');
 });
 
 it('drops an empty segmentColors array rather than emitting an inert segment key', async () => {
@@ -1842,15 +1842,155 @@ it('returns a fresh array from the detached-host fallback branch too, so a calle
   }
 });
 
+describe('review remediation regressions', () => {
+  it('lets a focused canvas activate the same datum detail as pointer input', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.type = 'bar';
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'Revenue', data: [10, 20] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    expect(canvas.getAttribute('tabindex')).to.equal('0');
+    const details: unknown[] = [];
+    el.addEventListener('lr-point-click', (event) => details.push((event as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(details).to.deep.equal([{ datasetIndex: 0, index: 1, label: 'B', value: 20 }]);
+  });
+
+  it('renders activation controls in the generated data table with the documented datum detail', async () => {
+    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'Revenue', data: [10] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const activation = el.shadowRoot!.querySelector('[part="data-table"] tbody button') as HTMLButtonElement;
+    expect(activation?.textContent?.trim()).to.equal('10');
+    let detail: unknown;
+    el.addEventListener('lr-point-click', (event) => (detail = (event as CustomEvent).detail), {
+      once: true,
+    });
+    activation.click();
+    expect(detail).to.deep.equal({ datasetIndex: 0, index: 0, label: 'A', value: 10 });
+  });
+
+  it('suppresses the generated fallback table when custom data-table content is supplied', async () => {
+    const el = (await fixture(html`
+      <lr-chart>
+        <table slot="data-table"><tbody><tr><td>Custom table</td></tr></tbody></table>
+      </lr-chart>
+    `)) as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{ label: 'Revenue', data: [10] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    await aTimeout(0);
+
+    expect(el.shadowRoot!.querySelectorAll('[part="data-table"] > table')).to.have.length(0);
+    expect(el.querySelectorAll('table[slot="data-table"]')).to.have.length(1);
+  });
+
+  it('locale-formats generated table values, row ordinals, and summary counts', async () => {
+    const el = (await fixture(html`<lr-chart locale="ar-EG" show-data-table></lr-chart>`)) as LyraChart;
+    el.labels = [];
+    el.datasets = [{ label: 'Revenue', data: [1234.5] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const formatter = new Intl.NumberFormat(el.effectiveLocale);
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
+    expect(table.querySelector('tbody th')?.textContent).to.contain(formatter.format(1));
+    expect(table.querySelector('tbody td')?.textContent).to.equal(formatter.format(1234.5));
+    expect(el.shadowRoot!.querySelector('[part="description"]')?.textContent).to.contain(
+      formatter.format(1),
+    );
+  });
+
+  it('lets string overrides replace fixed legend and tooltip punctuation', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.strings = { chartValueLabel: '{label} equals {value}' };
+    el.valueFormatter = (value, context) => `${context}-${value}`;
+
+    expect(
+      (el as any).tooltipLabel({
+        parsed: { y: 20 },
+        dataset: { label: 'Revenue' },
+      }),
+    ).to.equal('Revenue equals tooltip-20');
+    const labels = (el as any).legendLabels({
+      data: { datasets: [{ label: 'Revenue', data: [10, 20] }] },
+    });
+    expect(labels[0].text).to.equal('Revenue equals legend-30');
+  });
+
+  it('materializes CSS expressions for every caller-supplied canvas color route', async () => {
+    const el = (await fixture(html`
+      <lr-chart
+        style="
+          --series-color: rgb(10, 20, 30);
+          --slice-color: rgb(40, 50, 60);
+          --point-color: rgb(70, 80, 90);
+          --segment-color: rgb(100, 110, 120);
+        "
+      ></lr-chart>
+    `)) as LyraChart;
+    el.datasets = [
+      {
+        label: 'Revenue',
+        data: [1, 2],
+        color: ['var(--series-color)', 'var(--slice-color)'],
+        pointColors: ['var(--point-color)'],
+        segmentColors: ['var(--segment-color)'],
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const dataset = (el as any).buildConfig().data.datasets[0];
+    expect(dataset.backgroundColor).to.deep.equal(['rgb(10, 20, 30)', 'rgb(40, 50, 60)']);
+    expect(dataset.borderColor).to.equal('rgb(10, 20, 30)');
+    expect(dataset.pointBackgroundColor).to.deep.equal(['rgb(70, 80, 90)']);
+    expect(dataset.segment.borderColor({ p0DataIndex: 0 })).to.equal('rgb(100, 110, 120)');
+  });
+
+  it('does not confuse a legitimate sentinel-like canvas color with an invalid expression', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.datasets = [{ label: 'Revenue', data: [1], color: 'rgb(1, 2, 3)' }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    expect((el as any).buildConfig().data.datasets[0].borderColor).to.equal('rgb(1, 2, 3)');
+  });
+
+  it('materializes currentColor and falls back from unresolved canvas variables', async () => {
+    const el = (await fixture(html`
+      <lr-chart style="color: rgb(21, 31, 41)"></lr-chart>
+    `)) as LyraChart;
+    el.datasets = [
+      { label: 'Current', data: [1], color: 'currentColor' },
+      { label: 'Missing', data: [2], color: 'var(--missing-series-color)' },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const datasets = (el as any).buildConfig().data.datasets;
+    expect(datasets[0].borderColor).to.equal('rgb(21, 31, 41)');
+    expect(datasets[1].borderColor).to.equal(seriesPalette(el)[1]);
+  });
+});
+
 describe('data labels and stack totals', () => {
   it('leaves the datalabels plugin display disabled when data-labels is unset (additive-guarantee)', () => {
     const el = document.createElement('lr-chart') as LyraChart;
     el.labels = ['Jan', 'Feb'];
     el.datasets = [{ label: 'Revenue', data: [10, 20] }];
     const config = (el as any).buildConfig();
-    // Because chartjs-plugin-datalabels draws on EVERY dataset once globally
-    // registered, an unset chart MUST explicitly disable it so a sibling
-    // <lr-chart data-labels> on the same page cannot leak labels onto this one.
+    // Keep an unset chart explicitly disabled even if a consumer independently
+    // registers chartjs-plugin-datalabels globally.
     expect(config.options.plugins.datalabels.display).to.equal(false);
   });
 

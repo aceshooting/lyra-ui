@@ -26,3 +26,24 @@ export const Default: Story = {
     </div>
   `,
 };
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px), long selection',
+  render: () => html`
+    <div style="position: relative; inline-size: 320px; max-inline-size: 100%; min-block-size: 12rem;">
+      <p>
+        A deliberately long selected passage keeps all toolbar actions reachable when its preferred
+        viewport position collides with both inline edges.
+      </p>
+      <lr-selection-toolbar
+        open
+        text="A deliberately long selected passage with an unbroken locator abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        .anchor=${{
+          kind: 'text-quote',
+          quote: 'A deliberately long selected passage with an unbroken locator',
+        }}
+        .rect=${new DOMRect(300, 150, 80, 28)}
+      ></lr-selection-toolbar>
+    </div>
+  `,
+};

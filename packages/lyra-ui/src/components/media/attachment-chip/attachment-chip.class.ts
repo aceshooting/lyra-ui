@@ -1,4 +1,4 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -6,6 +6,7 @@ import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './attachment-chip.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
 
@@ -67,16 +68,18 @@ export const FILE_SIZE_UNIT_KEYS: Record<(typeof BYTE_UNITS)[number], string> = 
 export function formatFileSize(
   bytes: number,
   unitLabel: (unit: (typeof BYTE_UNITS)[number]) => string = (unit) => unit,
+  numberLabel: (value: number, fractionDigits: number) => string = (value, fractionDigits) =>
+    value.toFixed(fractionDigits),
 ): string {
   if (!Number.isFinite(bytes) || bytes < 0) return '';
-  if (bytes < 1024) return `${Math.round(bytes)} ${unitLabel('B')}`;
+  if (bytes < 1024) return `${numberLabel(Math.round(bytes), 0)} ${unitLabel('B')}`;
   let value = bytes;
   let unitIndex = 0;
   while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
     value /= 1024;
     unitIndex++;
   }
-  return `${value.toFixed(1)} ${unitLabel(BYTE_UNITS[unitIndex]!)}`; // safe: unitIndex ∈ [0, BYTE_UNITS.length - 1]
+  return `${numberLabel(value, 1)} ${unitLabel(BYTE_UNITS[unitIndex]!)}`; // safe: unitIndex ∈ [0, BYTE_UNITS.length - 1]
 }
 
 /** Visible (not just color-coded) text for every non-resting status --
@@ -313,7 +316,18 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     this.objectUrlFile = undefined;
   }
 
-  protected override willUpdate(): void {
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) this.requestUpdate();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (
+      this.hasUpdated &&
+      (changed.has('file') || changed.has('previewSrc') || changed.has('mimeType') || changed.has('name'))
+    ) {
+      this.previewOpen = false;
+    }
     // Prepare or revoke the non-reactive cache before render. This keeps URL
     // allocation out of the render phase and also handles a file changing to
     // a non-image or to undefined, where no thumbnail render would otherwise
@@ -324,6 +338,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.previewOpen = false;
     this.revokeObjectUrl();
   }
 
@@ -378,14 +393,24 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
     // supplied) -- hide the part entirely rather than show a literal "0 B".
     const sizeText =
       this.effectiveSize > 0
-        ? formatFileSize(this.effectiveSize, (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]))
+        ? formatFileSize(
+            this.effectiveSize,
+            (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
+            (value, fractionDigits) =>
+              getNumberFormat(this.effectiveLocale, {
+                minimumFractionDigits: fractionDigits,
+                maximumFractionDigits: fractionDigits,
+              }).format(value),
+          )
         : '';
     // Same override-wins-verbatim rule as `untitledLabel` above.
     const uploadFailedLabel = this.localize(
       'attachmentUploadFailed',
       this.uploadFailedLabel === 'Upload failed' ? undefined : this.uploadFailedLabel,
     );
-    const progressPercent = Math.round(this.clampedProgress);
+    const progressPercent = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 }).format(
+      Math.round(this.clampedProgress),
+    );
     const uploadingText = this.hasNumericProgress
       ? this.localize(
           'attachmentUploadingProgress',

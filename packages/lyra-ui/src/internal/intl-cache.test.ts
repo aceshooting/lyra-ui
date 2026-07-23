@@ -3,6 +3,7 @@ import {
   getCollator,
   getDateTimeFormat,
   getDisplayNames,
+  getListFormat,
   getNumberFormat,
 } from './intl-cache.js';
 
@@ -41,6 +42,13 @@ it('memoizes Intl.Collator and applies locale-aware numeric ordering', () => {
   expect(a === b).to.be.true;
   expect(['item10', 'item2'].sort(a.compare)).to.deep.equal(['item2', 'item10']);
   expect(a === getCollator('en-US', { numeric: false })).to.be.false;
+});
+
+it('memoizes Intl.ListFormat and formats locale-aware lists', () => {
+  const a = getListFormat('en-US', { style: 'long', type: 'conjunction' });
+  const b = getListFormat('en-US', { type: 'conjunction', style: 'long' });
+  expect(a === b).to.be.true;
+  expect(a.format(['Alpha', 'Beta', 'Gamma'])).to.equal('Alpha, Beta, and Gamma');
 });
 
 it('evicts the least recently used entry once a kind exceeds its bound', () => {

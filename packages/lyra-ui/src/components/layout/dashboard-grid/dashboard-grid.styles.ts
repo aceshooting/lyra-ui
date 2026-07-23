@@ -1,4 +1,4 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
@@ -10,19 +10,22 @@ export const styles = css`
     min-inline-size: 0;
   }
 
-  [part='base'] {
+  [part="base"] {
     display: grid;
-    grid-template-columns: repeat(var(--lr-dashboard-grid-columns, 12), minmax(0, 1fr));
+    grid-template-columns: repeat(
+      var(--lr-dashboard-grid-columns, 12),
+      minmax(0, 1fr)
+    );
     grid-auto-rows: var(--lr-dashboard-grid-row-height, var(--lr-size-5rem));
     gap: var(--lr-dashboard-grid-gap, var(--lr-space-m));
     align-items: stretch;
   }
 
-  [part='empty'] {
+  [part="empty"] {
     grid-column: 1 / -1;
   }
 
-  [part='cell'] {
+  [part="cell"] {
     position: relative;
     display: flex;
     min-inline-size: 0;
@@ -36,35 +39,39 @@ export const styles = css`
      below, so it stays visible above any occluding content, matching the :focus-visible ring's
      own reliably-visible treatment for the exact same real, keyboard-navigable/draggable
      target. */
-  [part='cell']:hover {
+  [part="cell"]:hover {
     outline: var(--lr-border-width-thin) solid
-      var(--lr-dashboard-grid-cell-hover-outline-color, var(--lr-color-border-strong));
+      var(
+        --lr-dashboard-grid-cell-hover-outline-color,
+        var(--lr-color-border-strong)
+      );
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
 
-  [part='cell']:focus-visible {
+  [part="cell"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  [part='cell'] ::slotted(*) {
+  [part="cell"] ::slotted(*) {
     min-inline-size: 0;
     min-block-size: 0;
     inline-size: 100%;
   }
 
-  [part='cell'][data-dragging],
-  [part='cell'][data-resizing] {
+  [part="cell"][data-dragging],
+  [part="cell"][data-resizing] {
     z-index: var(--lr-layer-content);
     box-shadow: var(--lr-shadow);
   }
 
-  [part='cell'][data-collision] {
-    outline: var(--lr-size-2px) solid var(--lr-color-danger);
+  [part="cell"][data-collision] {
+    outline: var(--lr-size-2px) solid
+      var(--lr-dashboard-grid-collision-outline-color, var(--lr-color-danger));
     outline-offset: var(--lr-size-2px);
   }
 
-  [part='resize-handle'] {
+  [part="resize-handle"] {
     position: absolute;
     inset-block-end: 0;
     inset-inline-end: 0;
@@ -79,11 +86,11 @@ export const styles = css`
     touch-action: none;
   }
 
-  [part='resize-handle']:hover {
+  [part="resize-handle"]:hover {
     background: var(--lr-color-brand-quiet);
   }
 
-  :host(:dir(rtl)) [part='resize-handle'] {
+  :host(:dir(rtl)) [part="resize-handle"] {
     cursor: nesw-resize;
   }
 
@@ -92,12 +99,12 @@ export const styles = css`
      cells still render in row-major (sortSpatial) DOM order, so the reading order stays the same
      one the grid itself would have shown. */
   @container (max-inline-size: 40rem) {
-    [part='base'] {
+    [part="base"] {
       display: flex;
       flex-direction: column;
     }
 
-    [part='cell'] {
+    [part="cell"] {
       inline-size: 100%;
     }
   }

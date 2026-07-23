@@ -218,7 +218,7 @@ export class LyraKbd extends LyraElement {
 
     if (this.hasCustomContent) {
       return html`
-        <span part="base" aria-label=${explicitLabel || nothing}>
+        <span part="base">
           <slot @slotchange=${this.onSlotChange}></slot>
         </span>
       `;

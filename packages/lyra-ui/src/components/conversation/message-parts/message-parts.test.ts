@@ -51,12 +51,32 @@ it('forwards citation activation as a typed citation selection', async () => {
   const el = (await fixture(
     html`<lr-message-parts .parts=${[parts[4]!]}></lr-message-parts>`,
   )) as LyraMessageParts;
+  let rawLeaked = false;
+  el.addEventListener('lr-citation-activate', () => {
+    rawLeaked = true;
+  });
   const selected = oneEvent(el, 'lr-citation-select');
   el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
     new CustomEvent('lr-citation-activate', { bubbles: true, composed: true, detail: { index: 1 } }),
   );
   const event = await selected as CustomEvent<CitationSelectEventDetail>;
   expect(event.detail.citation.id).to.equal('cite-1');
+  expect(rawLeaked).to.be.false;
+});
+
+it('declares and preserves intentional composed child-event passthroughs', async () => {
+  const el = (await fixture(
+    html`<lr-message-parts .parts=${[parts[1]!]}></lr-message-parts>`,
+  )) as LyraMessageParts;
+  const toggled = oneEvent(el, 'lr-toggle');
+  el.shadowRoot!.querySelector('lr-thinking-panel')!.dispatchEvent(
+    new CustomEvent('lr-toggle', {
+      bubbles: true,
+      composed: true,
+      detail: { expanded: true },
+    }),
+  );
+  expect((await toggled as CustomEvent<{ expanded: boolean }>).detail).to.deep.equal({ expanded: true });
 });
 
 it('supports host rendering overrides without changing the ordered data model', async () => {

@@ -16,6 +16,31 @@ it('defaults to an empty for/label', async () => {
   expect(el.label).to.equal('');
 });
 
+it('gives a live host aria-label precedence over the label property', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-minimap
+        slot="bottom-end"
+        label="Overview"
+        aria-label="Workflow overview"
+      ></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const base = minimap.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Workflow overview');
+  minimap.setAttribute('aria-label', 'Changed overview');
+  await minimap.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Changed overview');
+  minimap.removeAttribute('aria-label');
+  await minimap.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Overview');
+});
+
 it('renders an inert, aria-hidden frame when no canvas can be resolved', async () => {
   const el = (await fixture(html`<lr-flow-minimap></lr-flow-minimap>`)) as LyraFlowMinimap;
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-hidden')).to.equal('true');
@@ -52,6 +77,33 @@ it('resolves a canvas by id via the for attribute', async () => {
   const minimap = root.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   expect(minimap.shadowRoot!.querySelectorAll('[part="node"]').length).to.equal(2);
+});
+
+it('adopts a same-id replacement canvas instead of retaining the removed target snapshot', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lr-flow-canvas id="wf"></lr-flow-canvas>
+      <lr-flow-minimap for="wf"></lr-flow-minimap>
+    </div>
+  `)) as HTMLElement;
+  const original = root.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+  original.nodes = nodes;
+  await original.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = root.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]')).to.have.lengthOf(2);
+
+  original.remove();
+  const replacement = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  replacement.id = 'wf';
+  replacement.nodes = [nodes[0]!];
+  root.prepend(replacement);
+  await replacement.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelectorAll('[part="node"]')).to.have.lengthOf(1);
 });
 
 it('draws no edges, only node rects', async () => {
@@ -138,8 +190,11 @@ it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive 
   const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
   await minimap.updateComplete;
   const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
-  expect(rect.getAttribute('role')).to.equal('button');
+  expect(rect.getAttribute('role')).to.equal('group');
   expect(rect.getAttribute('aria-label')).to.equal('Visible area');
+  const instructions = minimap.shadowRoot!.querySelector('[part="instructions"]') as HTMLElement;
+  expect(rect.getAttribute('aria-describedby')).to.equal(instructions.id);
+  expect(instructions.textContent).to.contain('Arrow keys');
   const zoomBefore = wrapper.viewport.zoom;
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.zoom).to.be.greaterThan(zoomBefore);
@@ -202,9 +257,13 @@ it('arrow keys pan the canvas viewport in each physical direction', async () => 
 
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.x).to.be.lessThan(0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await minimap.updateComplete;
+  expect(minimap.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('Zoom');
 
+  const rightX = wrapper.viewport.x;
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
-  expect(wrapper.viewport.x).to.be.greaterThan(0);
+  expect(wrapper.viewport.x).to.be.greaterThan(rightX);
 
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.y).to.be.lessThan(0);

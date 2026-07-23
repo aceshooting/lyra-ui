@@ -270,3 +270,47 @@ it('does not warn for the normal children-drive-value flow', async () => {
   expect(el!.value).to.deep.equal(['a']);
   expect(calls).to.deep.equal([]);
 });
+
+it('consumes child native-style events before emitting one group event surface', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const events: Array<{ type: string; target: EventTarget | null }> = [];
+  el.addEventListener('input', (event) => events.push({ type: event.type, target: event.target }));
+  el.addEventListener('change', (event) => events.push({ type: event.type, target: event.target }));
+  el.addEventListener('lr-change', (event) => events.push({ type: event.type, target: event.target }));
+
+  (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+
+  expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
+  expect(events.every(({ target }) => target === el)).to.be.true;
+});
+
+it('settles its public and form values after child defaults are restored on form reset', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-checkbox-group name="topics" required>
+        <lr-checkbox value="a" checked>A</lr-checkbox>
+        <lr-checkbox value="b">B</lr-checkbox>
+      </lr-checkbox-group>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const [a, b] = [...group.querySelectorAll('lr-checkbox')] as LyraCheckbox[];
+  a.checked = false;
+  b.checked = true;
+  b.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+    new Event('change', { bubbles: true, composed: true }),
+  );
+
+  form.reset();
+  await a.updateComplete;
+  await b.updateComplete;
+  await group.updateComplete;
+
+  expect(a.checked).to.be.true;
+  expect(b.checked).to.be.false;
+  expect(group.value).to.deep.equal(['a']);
+  expect(new FormData(form).getAll('topics')).to.deep.equal(['a']);
+  expect(group.checkValidity()).to.be.true;
+});

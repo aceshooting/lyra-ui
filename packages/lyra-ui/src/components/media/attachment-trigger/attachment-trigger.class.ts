@@ -233,6 +233,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   };
 
   private onMenuSelect = (e: CustomEvent<MenuSelectDetail>): void => {
+    e.stopPropagation();
     this.activateCapability(e.detail.value as AttachmentCapability);
   };
 
@@ -263,8 +264,33 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     // event next time, matching <lr-file-input>'s identical reset.
     input.value = '';
   };
-  private onNativeFocus = (): void => { this.emit('focus'); };
-  private onNativeBlur = (): void => { this.emit('blur'); };
+  private onControlFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+  private onControlBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
+  private stopInternalEvent = (event: Event): void => {
+    event.stopPropagation();
+  };
+
+  private primaryControl(): HTMLButtonElement | undefined {
+    return this.renderRoot.querySelector<HTMLButtonElement>('[part="trigger"], [part="menu-trigger"]') ?? undefined;
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.primaryControl()?.focus(options);
+  }
+
+  override blur(): void {
+    this.primaryControl()?.blur();
+  }
+
+  override click(): void {
+    this.primaryControl()?.click();
+  }
 
   private renderHiddenInput(): TemplateResult {
     return html`
@@ -276,8 +302,6 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         ?multiple=${this.multiple}
         ?disabled=${this.disabled}
         @change=${this.onInputChange}
-        @focus=${this.onNativeFocus}
-        @blur=${this.onNativeBlur}
       />
     `;
   }
@@ -293,6 +317,8 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         title=${this.triggerTitle ?? nothing}
         ?disabled=${this.disabled}
         @click=${this.onTriggerClick}
+        @focus=${this.onControlFocus}
+        @blur=${this.onControlBlur}
       >
         ${meta.icon()}
       </button>
@@ -302,7 +328,13 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
     return html`
-      <lr-menu part="menu" label=${addLabel} @lr-menu-select=${this.onMenuSelect}>
+      <lr-menu
+        part="menu"
+        label=${addLabel}
+        @lr-menu-select=${this.onMenuSelect}
+        @lr-show=${this.stopInternalEvent}
+        @lr-hide=${this.stopInternalEvent}
+      >
         <button
           slot="trigger"
           part="menu-trigger"
@@ -311,6 +343,8 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
           aria-label=${addLabel}
           title=${this.triggerTitle ?? nothing}
           ?disabled=${this.disabled}
+          @focus=${this.onControlFocus}
+          @blur=${this.onControlBlur}
         >
           ${paperclipIcon()}
           <span part="expand-icon" aria-hidden="true">${chevronIcon()}</span>

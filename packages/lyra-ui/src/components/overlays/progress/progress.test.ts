@@ -20,6 +20,27 @@ it('shows the computed percent, not the raw value, in the show-value label when 
   expect(label?.textContent).to.equal('50%');
 });
 
+it('locale-formats visible percentage output and forwards live host naming to both progress roles', async () => {
+  const bar = (await fixture(
+    html`<lr-progress-bar lang="ar" value="25" max="50" show-value aria-label="Upload"></lr-progress-bar>`,
+  )) as LyraProgressBar;
+  const barBase = bar.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(bar.shadowRoot!.querySelector('[part="label"] span')?.textContent).to.equal(
+    new Intl.NumberFormat('ar', { style: 'percent', maximumFractionDigits: 0 }).format(0.5),
+  );
+  expect(barBase.getAttribute('aria-label')).to.equal('Upload');
+  bar.setAttribute('aria-label', 'Download');
+  await bar.updateComplete;
+  expect(barBase.getAttribute('aria-label')).to.equal('Download');
+
+  const ring = await fixture(html`<lr-progress-ring lang="de" value="25" max="50" aria-label="Sync"></lr-progress-ring>`);
+  const ringBase = ring.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(ring.shadowRoot!.querySelector('[part="label"]')?.textContent).to.equal(
+    new Intl.NumberFormat('de', { style: 'percent', maximumFractionDigits: 0 }).format(0.5),
+  );
+  expect(ringBase.getAttribute('aria-label')).to.equal('Sync');
+});
+
 it('applies --lr-progress-height to the track', async () => {
   const el = (await fixture(
     html`<lr-progress-bar style="--lr-progress-height: 10px"></lr-progress-bar>`,
@@ -107,4 +128,20 @@ it('spins the indeterminate ring indicator and disables the animation under pref
   expect(ringStyles.cssText).to.match(
     /@media \(prefers-reduced-motion: reduce\) \{[^}]*\[part='indicator'\][^}]*animation: none !important/,
   );
+});
+
+it('inherits the shared ambient timing token for indeterminate bar and ring motion', async () => {
+  const bar = await fixture(
+    html`<lr-progress-bar indeterminate style="--lr-transition-ambient: 3s linear"></lr-progress-bar>`,
+  );
+  const barIndicator = bar.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  expect(getComputedStyle(barIndicator).animationDuration).to.equal('3s');
+  expect(getComputedStyle(barIndicator).animationTimingFunction).to.equal('linear');
+
+  const ring = await fixture(
+    html`<lr-progress-ring indeterminate style="--lr-transition-ambient: 2.5s linear"></lr-progress-ring>`,
+  );
+  const ringIndicator = ring.shadowRoot!.querySelector('[part="indicator"]') as HTMLElement;
+  expect(getComputedStyle(ringIndicator).animationDuration).to.equal('2.5s');
+  expect(getComputedStyle(ringIndicator).animationTimingFunction).to.equal('linear');
 });

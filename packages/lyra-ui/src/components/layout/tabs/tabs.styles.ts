@@ -1,15 +1,15 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
   }
-  [part='base'] {
+  [part="base"] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
   }
-  [part='tablist'] {
+  [part="tablist"] {
     display: flex;
     align-items: stretch;
     gap: var(--lr-space-m);
@@ -32,7 +32,7 @@ export const styles = css`
       transparent
     );
   }
-  [part='tab'] {
+  [part="tab"] {
     appearance: none;
     background: none;
     border: none;
@@ -52,11 +52,10 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);
-    transition:
-      color var(--lr-transition-fast),
+    transition: color var(--lr-transition-fast),
       border-color var(--lr-transition-fast);
   }
-  [part='tab-icon'] {
+  [part="tab-icon"] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -66,38 +65,46 @@ export const styles = css`
      selectors' specificity contribution, leaving only :hover itself -- (0,1,0) total, so a
      consumer's own ::part(tab):hover override ((0,1,1)) always wins without needing !important
      (mirrors lr-attachment-trigger's identical fix). */
-  :where([part='tab']):hover:where(:not([aria-disabled='true'])) {
+  :where([part="tab"]):hover:where(:not([aria-disabled="true"])) {
     color: var(--lr-tabs-hover-color, var(--lr-color-text));
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor and a :host declaration can never shadow that. Unset, each falls back to the token the
      rule used before the hooks existed, so the rendering is unchanged. */
-  [part='tab'][aria-selected='true'] {
+  [part="tab"][aria-selected="true"] {
     color: var(--lr-tabs-selected-color, var(--lr-color-brand));
-    border-block-end-color: var(--lr-tabs-indicator-color, var(--lr-color-brand));
+    border-block-end-color: var(
+      --lr-tabs-indicator-color,
+      var(--lr-color-brand)
+    );
   }
-  [part='tab'][aria-disabled='true'] {
+  [part="tab"][aria-disabled="true"] {
     cursor: not-allowed;
     /* No :hover color change and no pointer feedback -- the click handler
        already no-ops on a disabled tab, this just matches it visually. */
     pointer-events: none;
     opacity: var(--lr-opacity-disabled);
   }
-  [part='tab']:focus-visible {
+  [part="tab"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
     border-radius: var(--lr-radius);
   }
-  [part='panel'] {
+  [part="panel"] {
     padding-block-start: var(--lr-space-xs);
   }
-  [part='panel']:focus-visible {
+  [part="panel"]:hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-color-border);
+    outline-offset: var(--lr-focus-ring-offset);
+    border-radius: var(--lr-radius);
+  }
+  [part="panel"]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
     border-radius: var(--lr-radius);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='tab'] {
+    [part="tab"] {
       transition: none !important;
     }
   }

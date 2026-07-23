@@ -365,7 +365,8 @@ it('mirrors the drag ratio under dir="rtl", since the track is positioned with i
   // to ratio 0.2 -> value 20 on a [0,100] domain (0 renders at the right
   // edge in RTL, so the *left* 20% of physical space is still "near zero").
   window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 160 }));
-  expect(inputDetail!.start).to.equal(20);
+  expect(el.start).to.equal(20);
+  expect(inputDetail).to.equal(undefined);
 });
 
 it('mirrors ArrowRight/ArrowLeft under dir="rtl" to keep the physical direction consistent with dragging', async () => {
@@ -1333,6 +1334,26 @@ it('scales the drag-handle hit-area proportionally, floored at 24px', async () =
   }
 });
 
+it('exposes independent handle, hit-area, track, and base size hooks', async () => {
+  const el = (await fixture(html`
+    <lr-time-range
+      style="
+        --lr-time-range-handle-size: 20px;
+        --lr-time-range-hit-size: 30px;
+        --lr-time-range-track-size: 6px;
+        --lr-time-range-base-size: 36px;
+      "
+    ></lr-time-range>
+  `)) as LyraTimeRange;
+  const handle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(handle).inlineSize).to.equal('20px');
+  expect(getComputedStyle(handle, '::before').inlineSize).to.equal('30px');
+  expect(getComputedStyle(track).blockSize).to.equal('6px');
+  expect(getComputedStyle(base).blockSize).to.equal('36px');
+});
+
 it('defaults to size "m" and reflects a size attribute', async () => {
   const defaultEl = (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange;
   expect(defaultEl.size).to.equal('m');
@@ -1371,4 +1392,49 @@ it('floors the preset-button hit-area at 24px at the 2xs tier, without disturbin
   const unflooredHeight = parseFloat(getComputedStyle(buttonM).blockSize);
   expect(flooredHeight).to.equal(unflooredHeight);
   expect(flooredHeight).to.be.at.least(24);
+});
+
+it('stays silent when keyboard normalization or a repeated preset leaves the effective range unchanged', async () => {
+  const el = (await fixture(html`
+    <lr-time-range min="0" max="10" start="0" end="10" step="1"></lr-time-range>
+  `)) as LyraTimeRange;
+  el.presets = [{ label: 'All', start: 0, end: 10 }];
+  await el.updateComplete;
+  const events: string[] = [];
+  el.addEventListener('lr-input', () => events.push('input'));
+  el.addEventListener('lr-change', () => events.push('change'));
+
+  const start = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  start.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  start.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft', bubbles: true }));
+  (el.shadowRoot!.querySelector('[part="preset-button"]') as HTMLButtonElement).click();
+
+  expect(events).to.deep.equal([]);
+});
+
+it('keeps near-overflow domains and tiny steps finite during keyboard interaction', async () => {
+  const el = (await fixture(html`<lr-time-range></lr-time-range>`)) as LyraTimeRange;
+  el.min = -Number.MAX_VALUE;
+  el.max = Number.MAX_VALUE;
+  el.start = 0;
+  el.end = Number.MAX_VALUE;
+  el.step = Number.MIN_VALUE;
+  await el.updateComplete;
+  const start = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  start.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+
+  expect(Number.isFinite(el.start)).to.be.true;
+  expect(Number.isFinite(el.end)).to.be.true;
+  expect(start.getAttribute('style')).to.not.contain('NaN');
+  expect(start.getAttribute('style')).to.not.contain('Infinity');
+});
+
+it('keeps endpoint hit geometry inside a 320px allocation', async () => {
+  const el = (await fixture(html`
+    <lr-time-range style="inline-size:320px" start="0" end="100"></lr-time-range>
+  `)) as LyraTimeRange;
+  expect(el.scrollWidth).to.be.at.most(320);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth);
 });

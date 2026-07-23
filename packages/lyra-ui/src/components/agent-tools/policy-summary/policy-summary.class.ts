@@ -3,7 +3,6 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
-import '../../overlays/callout/callout.class.js';
 import '../../layout/details/details.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './policy-summary.styles.js';
@@ -67,11 +66,9 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * decisions, each carrying an `allow` / `deny` / `needs-review` state and an always-visible,
  * accessible explanation of why that decision was made -- never conveyed by color alone.
  *
- * Composes `<lr-badge>` for the compact per-decision state indicator and `<lr-callout inline>`
- * for the explanation text: the callout's own `role="alert"`/`role="status"` semantics already
- * carry the right urgency per state (`deny` renders as an alert, `allow`/`needs-review` as
- * status), so this component only needs to pick the matching `variant` rather than re-implement
- * that wiring. `<lr-details>` renders a decision's optional richer `detail` (matched rule text,
+ * Composes `<lr-badge>` for the compact per-decision state indicator and renders the historical
+ * explanation as ordinary text, so mounting an existing policy record does not announce it as a
+ * fresh alert or status change. `<lr-details>` renders a decision's optional richer `detail` (matched rule text,
  * policy id, cited evidence) behind progressive disclosure, collapsed by default, instead of
  * always showing it alongside the shorter `explanation`.
  *
@@ -92,7 +89,7 @@ const STATES: PolicyDecisionState[] = ['allow', 'deny', 'needs-review'];
  * @csspart category - The decision's localized category text.
  * @csspart label - The decision's `label` text.
  * @csspart state-badge - The resolved `<lr-badge>` state indicator.
- * @csspart explanation - The `<lr-callout inline>` wrapping the always-visible `explanation` text.
+ * @csspart explanation - The always-visible historical `explanation` text.
  * @csspart detail - The `<lr-details>` progressive-disclosure panel for `detail`, only rendered
  *   when a decision defines one.
  * @csspart empty - The `<lr-empty>` shown when `decisions` is empty.
@@ -124,7 +121,7 @@ export class LyraPolicySummary extends LyraElement {
           <span part="label">${decision.label}</span>
           <lr-badge part="state-badge" variant=${variant}>${this.localize(STATE_LABEL_KEY[decision.state])}</lr-badge>
         </div>
-        <lr-callout part="explanation" variant=${variant} inline>${decision.explanation}</lr-callout>
+        <div part="explanation" data-state=${decision.state}>${decision.explanation}</div>
         ${decision.detail
           ? html`<lr-details part="detail" summary=${this.localize('policySummaryDetailLabel')}
               >${decision.detail}</lr-details

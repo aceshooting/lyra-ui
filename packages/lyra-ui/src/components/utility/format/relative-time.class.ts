@@ -37,9 +37,18 @@ export class LyraRelativeTime extends LyraElement {
     // order is already largest-to-smallest, matching the desired selection order exactly.
     const divisors: Record<RelativeTimeUnit, number> = { year: 31_536_000, quarter: 7_884_000, month: 2_628_000, week: 604_800, day: 86_400, hour: 3_600, minute: 60, second: 1 };
     const units = Object.keys(divisors) as RelativeTimeUnit[];
-    const selected = this.unit === 'auto' ? units.find((candidate) => Math.abs(seconds) >= divisors[candidate]) ?? 'second' : this.unit;
+    const requestedUnit = this.unit === 'auto' || units.includes(this.unit as RelativeTimeUnit) ? this.unit : 'auto';
+    const selected =
+      requestedUnit === 'auto'
+        ? units.find((candidate) => Math.abs(seconds) >= divisors[candidate]) ?? 'second'
+        : requestedUnit;
     const value = Math.round(seconds / divisors[selected]);
-    return getRelativeTimeFormat(this.effectiveLocale || undefined, { numeric: this.numeric }).format(value, selected);
+    const numeric = this.numeric === 'always' ? 'always' : 'auto';
+    try {
+      return getRelativeTimeFormat(this.effectiveLocale || undefined, { numeric }).format(value, selected);
+    } catch {
+      return getRelativeTimeFormat(undefined, { numeric: 'auto' }).format(value, selected);
+    }
   }
   override render(): TemplateResult { return html`${this.relative()}`; }
 }

@@ -1,10 +1,10 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
-import { repeat } from 'lit/directives/repeat.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { isRtl } from '../../../internal/rtl.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
-import { styles } from './segmented.styles.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { isRtl } from "../../../internal/rtl.js";
+import { prefersReducedMotion } from "../../../internal/motion.js";
+import { styles } from "./segmented.styles.js";
 
 export interface SegmentedItem {
   value: string;
@@ -16,10 +16,10 @@ export interface SegmentedItem {
   disabled?: boolean;
 }
 
-export type LyraSegmentedSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
+export type LyraSegmentedSize = "2xs" | "xs" | "s" | "m" | "l" | "xl";
 
 export interface LyraSegmentedEventMap {
-  'lr-change': CustomEvent<{ value: string }>;
+  "lr-change": CustomEvent<{ value: string }>;
 }
 
 /**
@@ -69,6 +69,9 @@ export interface LyraSegmentedEventMap {
  *   segment's padding. Re-set per `size`; this default applies at the unset/`m` size.
  * @cssprop [--lr-segmented-font-size=var(--lr-font-size-sm)] - Each segment's font size. Re-set per
  *   `size`; this default applies at the unset/`m` size.
+ * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
+ * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.
+ * @cssprop [--lr-segmented-track-padding=var(--lr-size-0-125rem)] - Track inset padding.
  */
 export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -77,46 +80,53 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   @property({ attribute: false }) items: SegmentedItem[] = [];
 
   /** The currently selected item's `value`. */
-  @property() value = '';
+  @property() value = "";
 
   /** Accessible name for the radiogroup, used when no visible label context
    *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
    *  as `aria-label` on the `role="radiogroup"` element. A plain `aria-label`
    *  attribute on the host itself is honored as a fallback when this is left
    *  unset, matching `<lr-slider>`. */
-  @property() label = '';
+  @property() label = "";
 
   /** Visual size — same `2xs`-`xl` scale as `<lr-select>`/`<lr-combobox>` (`s` through `xl`)
    *  and `<lr-input>` (`2xs`). Reflects as the `size` attribute. The default `m` tier is
    *  identical to this component's pre-`size` rendering, so leaving it unset never changes
    *  output. */
-  @property({ reflect: true }) size: LyraSegmentedSize = 'm';
+  @property({ reflect: true }) size: LyraSegmentedSize = "m";
+
+  @state() private selectedItem?: SegmentedItem;
 
   private select(item: SegmentedItem): void {
-    if (item.disabled || item.value === this.value) return;
-    this.value = item.value;
-    this.emit<{ value: string }>('lr-change', { value: item.value });
+    if (item.disabled || item === this.selectedItem) return;
+    const valueChanged = item.value !== this.value;
+    this.selectedItem = item;
+    if (valueChanged) {
+      this.value = item.value;
+      this.emit<{ value: string }>("lr-change", { value: item.value });
+    }
   }
 
-  private segmentButton(value: string): HTMLElement | null {
+  private segmentButtonAt(index: number): HTMLElement | null {
     return this.renderRoot.querySelector(
-      `[part="segment"][data-value="${CSS.escape(value)}"]`,
+      `[part="segment"][data-index="${index}"]`
     ) as HTMLElement | null;
   }
 
-  private focusItem(value: string): void {
+  private focusItem(index: number): void {
     // Keyboard nav already reveals the focused segment implicitly (native focus() scrolls it into
     // view). scrollToValue below closes the equivalent gap for programmatic `value` changes.
-    this.segmentButton(value)?.focus();
+    this.segmentButtonAt(index)?.focus();
   }
 
   /** Scroll the segment with the given `value` into view within the (possibly overflowing) track.
    *  Public so a consumer can reveal a segment without selecting it. */
   scrollToValue(value: string): void {
-    this.segmentButton(value)?.scrollIntoView({
-      block: 'nearest',
-      inline: 'nearest',
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    const index = this.items.findIndex((item) => item.value === value);
+    this.segmentButtonAt(index)?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
   }
 
@@ -125,31 +135,67 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     // Reveal a programmatically-changed selection. Guard the first render so an initial mount
     // never scrolls an ancestor page to the selected segment. Keyboard-driven changes already
     // reveal via focusItem()'s focus(), and re-scrolling there is harmless/idempotent.
-    if (changed.has('value') && changed.get('value') !== undefined && this.value) {
+    if (
+      changed.has("value") &&
+      changed.get("value") !== undefined &&
+      this.value
+    ) {
       this.scrollToValue(this.value);
     }
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    if (
+      changed.has("value") ||
+      (changed.has("items") &&
+        (!this.selectedItem ||
+          !this.items.includes(this.selectedItem) ||
+          this.selectedItem.value !== this.value))
+    ) {
+      this.selectedItem = this.items.find(
+        (item) => item.value === this.value && !item.disabled
+      );
+    }
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
-    const navigable = this.items.filter((i) => !i.disabled);
+    const navigable = this.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.disabled);
     if (navigable.length === 0) return;
-    const currentIndex = navigable.findIndex((i) => i.value === this.value);
+    const focusedIndex = Number(
+      ((this.renderRoot as ShadowRoot).activeElement as HTMLElement | null)
+        ?.dataset["index"]
+    );
+    const selectedIndex = this.items.indexOf(this.selectedItem!);
+    const currentIndex =
+      selectedIndex < 0
+        ? -1
+        : navigable.findIndex(
+            ({ index }) =>
+              index ===
+              (Number.isInteger(focusedIndex) ? focusedIndex : selectedIndex)
+          );
     const rtl = isRtl(this);
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
 
     let targetIndex: number;
     switch (e.key) {
       case forwardKey:
-        targetIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
+        targetIndex =
+          currentIndex < 0 ? 0 : (currentIndex + 1) % navigable.length;
         break;
       case backwardKey:
-        targetIndex = currentIndex < 0 ? navigable.length - 1 : (currentIndex - 1 + navigable.length) % navigable.length;
+        targetIndex =
+          currentIndex < 0
+            ? navigable.length - 1
+            : (currentIndex - 1 + navigable.length) % navigable.length;
         break;
-      case 'Home':
+      case "Home":
         targetIndex = 0;
         break;
-      case 'End':
+      case "End":
         targetIndex = navigable.length - 1;
         break;
       default:
@@ -157,35 +203,56 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     }
     e.preventDefault();
     const target = navigable[targetIndex]!;
-    this.select(target);
-    this.focusItem(target.value);
+    this.select(target.item);
+    this.focusItem(target.index);
   };
 
   override render(): TemplateResult {
-    const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
+    const ariaLabel = this.label || this.getAttribute("aria-label") || nothing;
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no
     // checked item at all -- falling back to `item.value === this.value` alone
     // would then match nothing and drop every button out of the tab order, so
     // fall back to the first non-disabled item when nothing is selected (or the
     // selected value doesn't match a current, non-disabled item).
-    const selectedIndex = this.items.findIndex((item) => item.value === this.value && !item.disabled);
-    const tabbableIndex = selectedIndex !== -1 ? selectedIndex : this.items.findIndex((item) => !item.disabled);
+    const selectedIndex = this.items.indexOf(this.selectedItem!);
+    const fallbackSelectedIndex =
+      selectedIndex >= 0
+        ? selectedIndex
+        : this.items.findIndex(
+            (item) => item.value === this.value && !item.disabled
+          );
+    const tabbableIndex =
+      fallbackSelectedIndex !== -1
+        ? fallbackSelectedIndex
+        : this.items.findIndex((item) => !item.disabled);
     return html`
-      <div part="base" role="radiogroup" aria-label=${ariaLabel} @keydown=${this.onKeyDown}>
+      <div
+        part="base"
+        role="radiogroup"
+        aria-label=${ariaLabel}
+        @keydown=${this.onKeyDown}
+      >
         ${repeat(
           this.items,
-          (item) => item.value,
+          (item, index) => `${item.value}\u0000${index}`,
           (item, index) => html`<button
             type="button"
             part="segment"
             data-value=${item.value}
+            data-index=${index}
             role="radio"
-            aria-checked=${item.value === this.value ? 'true' : 'false'}
-            aria-disabled=${item.disabled ? 'true' : 'false'}
-            tabindex=${index === tabbableIndex ? '0' : '-1'}
+            aria-checked=${index === fallbackSelectedIndex ? "true" : "false"}
+            aria-disabled=${item.disabled ? "true" : "false"}
+            tabindex=${index === tabbableIndex ? "0" : "-1"}
             @click=${() => this.select(item)}
-          >${item.icon ? html`<span part="segment-icon" aria-hidden="true">${item.icon}</span>` : nothing}<span part="segment-label">${item.label}</span></button>`,
+          >
+            ${item.icon
+              ? html`<span part="segment-icon" aria-hidden="true"
+                  >${item.icon}</span
+                >`
+              : nothing}<span part="segment-label">${item.label}</span>
+          </button>`
         )}
       </div>
     `;
@@ -194,6 +261,6 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-segmented': LyraSegmented;
+    "lr-segmented": LyraSegmented;
   }
 }

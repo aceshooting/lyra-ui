@@ -36,6 +36,9 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart hint - Supporting text.
  * @csspart error - The validation message.
  * @cssprop --lr-color-picker-swatch-size - The swatch's inline and block size, scaled by `size`.
+ * @cssprop [--lr-color-picker-gap=var(--lr-space-xs)] - Gap between field chrome.
+ * @cssprop [--lr-color-picker-radius=var(--lr-radius)] - Swatch corner radius.
+ * @cssprop [--lr-color-picker-hover-border-color=var(--lr-color-brand)] - Hover border color.
  */
 export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   static override styles = [LyraElement.styles, styles];
@@ -52,6 +55,26 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   private hintId = nextId('color-picker-hint');
   private errorId = nextId('color-picker-error');
   @query('input') private inputEl?: HTMLInputElement;
+  override connectedCallback(): void {
+    if (!this.hasAttribute('value') && !this.value) this.value = '#000000';
+    super.connectedCallback();
+  }
+  override formResetCallback(): void {
+    super.formResetCallback();
+    if (!this.hasAttribute('value')) {
+      this.value = '#000000';
+      if (this.inputEl) this.inputEl.value = '#000000';
+    }
+  }
+  override click(): void {
+    if (!this.effectiveDisabled) this.inputEl?.click();
+  }
+  override focus(options?: FocusOptions): void {
+    this.inputEl?.focus(options);
+  }
+  override blur(): void {
+    this.inputEl?.blur();
+  }
   private onInput = (): void => {
     if (!this.inputEl) return;
     this.value = this.inputEl.value;

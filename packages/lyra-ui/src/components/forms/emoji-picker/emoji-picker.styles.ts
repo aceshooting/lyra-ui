@@ -7,6 +7,9 @@ export const styles = css`
     --lr-emoji-picker-item-size: var(--lr-icon-button-size);
     --lr-emoji-picker-glyph-size: var(--lr-font-size-lg);
     --lr-emoji-picker-gap: var(--lr-space-2xs);
+    --lr-emoji-picker-control-gap: var(--lr-space-xs);
+    --lr-emoji-picker-radius: var(--lr-radius);
+    --lr-emoji-picker-item-radius: var(--lr-radius-xs);
     --lr-emoji-picker-row-height: calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l));
   }
   :host([size='2xs']) {
@@ -32,7 +35,7 @@ export const styles = css`
   [part='form-control'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-emoji-picker-control-gap);
   }
   [part='form-control-label'] {
     color: var(--lr-color-text);
@@ -61,9 +64,9 @@ export const styles = css`
   [part='base'] {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-emoji-picker-control-gap);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-emoji-picker-radius);
     padding: var(--lr-space-s);
     background: var(--lr-color-surface);
   }
@@ -83,7 +86,7 @@ export const styles = css`
   [part='search'] {
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-xs);
+    border-radius: var(--lr-emoji-picker-item-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
@@ -92,6 +95,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='search']:hover:not(:disabled) {
+    border-color: var(--lr-emoji-picker-search-hover-border-color, var(--lr-color-brand));
+  }
   [part='search']::-webkit-search-cancel-button,
   [part='search']::-webkit-search-decoration {
     appearance: none;
@@ -99,7 +105,7 @@ export const styles = css`
   [part='grid'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lr-space-2xs);
+    gap: var(--lr-emoji-picker-gap);
     max-block-size: var(--lr-size-16rem);
     overflow-y: auto;
   }
@@ -171,10 +177,10 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-emoji-picker-item-size);
     block-size: var(--lr-emoji-picker-item-size);
-    min-inline-size: var(--lr-icon-button-size);
-    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: max(var(--lr-size-1-5rem), var(--lr-emoji-picker-item-size));
+    min-block-size: max(var(--lr-size-1-5rem), var(--lr-emoji-picker-item-size));
     border: none;
-    border-radius: var(--lr-radius-xs);
+    border-radius: var(--lr-emoji-picker-item-radius);
     background: transparent;
     font-size: var(--lr-emoji-picker-glyph-size);
     cursor: pointer;

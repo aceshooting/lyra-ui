@@ -22,6 +22,13 @@ it('reflects status changes onto the host attribute', async () => {
   expect(el.getAttribute('status')).to.equal('error');
 });
 
+it('formats fractional duration numbers with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-tool-call-chip lang="de-DE" duration-ms="1500"></lr-tool-call-chip>`,
+  )) as LyraToolCallChip;
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent!.trim()).to.equal('1,5s');
+});
+
 it('is a real <button type="button"> — Enter/Space activation is native, no custom keydown handler needed', async () => {
   const el = (await fixture(html`<lr-tool-call-chip name="web_search"></lr-tool-call-chip>`)) as LyraToolCallChip;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;

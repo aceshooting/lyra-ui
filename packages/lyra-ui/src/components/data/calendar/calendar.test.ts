@@ -161,6 +161,53 @@ it('renders every event for a day in its cell, in order, and none in event-free 
   expect(el.shadowRoot!.querySelectorAll('[data-date="2026-07-16"] [part="event"]')).to.have.length(0);
 });
 
+it('renders month events as valid focusable controls that keyboard users can activate', async () => {
+  const event = { date: '2026-07-15', title: 'Keyboard event' };
+  const el = (await fixture(
+    html`<lr-calendar view-date="2026-07-01" .events=${[event]}></lr-calendar>`,
+  )) as LyraCalendar;
+  const marker = el.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="event"]') as HTMLButtonElement;
+  expect(marker.localName).to.equal('button');
+  expect(marker.closest('button')).to.equal(marker);
+  marker.focus();
+  const selected = oneEvent(el, 'lr-event-select');
+  marker.click();
+  expect((await selected).detail.event).to.equal(event);
+});
+
+it('locale-formats visible month day numbers and agenda dates', async () => {
+  const event = { date: '2026-07-15', title: 'Localized date' };
+  const month = (await fixture(
+    html`<lr-calendar locale="ar" view-date="2026-07-01" .events=${[event]}></lr-calendar>`,
+  )) as LyraCalendar;
+  expect(
+    month.shadowRoot!.querySelector('[data-date="2026-07-15"] [part="date"]')!.textContent,
+  ).to.equal(new Intl.NumberFormat('ar').format(15));
+
+  month.view = 'agenda';
+  await month.updateComplete;
+  const visibleDate = month.shadowRoot!.querySelector('[part="agenda-event"] strong')!.textContent;
+  expect(visibleDate).to.equal(
+    new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(2026, 6, 15)),
+  );
+  expect(visibleDate).to.not.equal('2026-07-15');
+});
+
+it('uses calendar-specific localized names for month navigation', async () => {
+  const el = (await fixture(
+    html`<lr-calendar
+      .strings=${{
+        calendarPreviousMonth: 'Earlier month',
+        calendarNextMonth: 'Later month',
+      }}
+    ></lr-calendar>`,
+  )) as LyraCalendar;
+  const previous = el.shadowRoot!.querySelector('button[part="nav"]') as HTMLButtonElement;
+  const next = el.shadowRoot!.querySelector('[part="nav"] button') as HTMLButtonElement;
+  expect(previous.getAttribute('aria-label')).to.equal('Earlier month');
+  expect(next.getAttribute('aria-label')).to.equal('Later month');
+});
+
 it('themes the title and date weights through the shared semibold token', async () => {
   const el = (await fixture(
     html`<lr-calendar view-date="2026-07-01" style="--lr-font-weight-semibold: 700"></lr-calendar>`,

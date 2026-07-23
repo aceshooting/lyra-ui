@@ -9,7 +9,7 @@ export const styles = css`
     border: var(--lr-spinner-track-width, var(--lr-border-width-medium)) solid var(--lr-color-brand-quiet);
     border-block-start-color: var(--lr-color-brand);
     border-radius: var(--lr-radius-pill);
-    animation: lr-spin var(--lr-spinner-duration, 800ms) linear infinite;
+    animation: lr-spin var(--lr-spinner-duration, var(--lr-transition-ambient)) infinite;
   }
   /* 'after' renders the slotted label in flow next to the spinner; 'none' keeps it sr-only
      (still hit by the [hidden] attribute set in spinner.class.ts, but scoping the clip here too

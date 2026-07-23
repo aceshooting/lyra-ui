@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { FlowHandle, FlowRunStatus } from '../flow-canvas/flow-canvas.class.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './flow-node.styles.js';
 
 const DEFAULT_INPUTS: FlowHandle[] = [{ id: 'in' }];
@@ -147,7 +148,14 @@ export class LyraFlowNode extends LyraElement {
             </div>`
           : nothing}
         ${clampedProgress != null
-          ? html`<div part="progress"><div class="progress-fill" style="inline-size:${clampedProgress}%"></div></div>`
+          ? html`<div
+              part="progress"
+              role="progressbar"
+              aria-label=${this.localize('progress')}
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow=${clampedProgress}
+            ><div class="progress-fill" style="inline-size:${clampedProgress}%"></div></div>`
           : nothing}
         <div part="body"><slot></slot></div>
         <div part="toolbar"><slot name="toolbar"></slot></div>
@@ -159,16 +167,19 @@ export class LyraFlowNode extends LyraElement {
   private formattedDuration(): string {
     const durationMs = this.safeDurationMs;
     if (durationMs == null) return '';
+    const formatter = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 });
     return durationMs < 1000
-      ? this.localize('durationMilliseconds', undefined, { value: Math.round(durationMs) })
-      : this.localize('durationSeconds', undefined, { value: Math.round(durationMs / 100) / 10 });
+      ? this.localize('durationMilliseconds', undefined, { value: formatter.format(Math.round(durationMs)) })
+      : this.localize('durationSeconds', undefined, { value: formatter.format(Math.round(durationMs / 100) / 10) });
   }
 
   private statusText(): string {
     const label = this.statusLabel();
     const duration = this.formattedDuration();
     const withDuration = duration ? this.localize('flowStatusWithDuration', undefined, { status: label, duration }) : label;
-    return this.statusDetail ? `${withDuration} — ${this.statusDetail}` : withDuration;
+    return this.statusDetail
+      ? this.localize('flowStatusWithDetail', undefined, { status: withDuration, detail: this.statusDetail })
+      : withDuration;
   }
 
   private get pulsesRing(): boolean {

@@ -1,7 +1,8 @@
-import { html, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ringStyles } from './progress.styles.js';
 
 const DEFAULT_MAX = 100;
@@ -16,6 +17,7 @@ const DEFAULT_MAX = 100;
  * @csspart indicator - The SVG indicator.
  * @csspart label - The center label.
  * @cssprop [--lr-progress-ring-size=var(--lr-size-2-5rem)] - Outer diameter of the ring.
+ * @cssprop [--lr-progress-duration=var(--lr-transition-ambient)] - Indeterminate rotation timing.
  */
 export class LyraProgressRing extends LyraElement {
   static override styles = [LyraElement.styles, ringStyles];
@@ -40,19 +42,27 @@ export class LyraProgressRing extends LyraElement {
     return (this.safeValue / this.safeMax) * 100;
   }
 
+  private get formattedPercent(): string {
+    return getNumberFormat(this.effectiveLocale, {
+      style: 'percent',
+      maximumFractionDigits: 0,
+    }).format(this.percent / 100);
+  }
+
   override render(): TemplateResult {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - this.percent / 100);
-    const label = this.accessibleLabel || this.localize('progress');
+    const label = this.getAttribute('aria-label') || this.accessibleLabel || this.localize('progress');
     return html`<div part="base" role="progressbar" aria-label=${label}
-      aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? null : this.safeValue}>
+      aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
+      aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
       <svg viewBox="0 0 100 100" aria-hidden="true">
         <circle part="track" cx="50" cy="50" r=${radius} stroke-width="10"></circle>
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
           stroke-dasharray=${circumference} stroke-dashoffset=${this.indeterminate ? circumference * 0.65 : offset}></circle>
       </svg>
-      <span part="label"><slot>${this.indeterminate ? '' : `${Math.round(this.percent)}%`}</slot></span>
+      <span part="label"><slot>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
     </div>`;
   }
 }

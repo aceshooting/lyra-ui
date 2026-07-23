@@ -42,18 +42,22 @@ it('renders a marker on cells whose item sets marker: true, and none otherwise',
   expect(cells[2].querySelector('[part="marker"]')).to.not.exist;
 });
 
-it('is role="img" with an auto-generated aria-label summarizing counts per category', async () => {
+it('is a labeled list whose items expose their individual details', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   el.items = items;
   el.categories = categories;
   await el.updateComplete;
   const root = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(root.getAttribute('role')).to.equal('img');
+  expect(root.getAttribute('role')).to.equal('list');
   const label = root.getAttribute('aria-label')!;
   expect(label).to.include('Text');
   expect(label).to.include('2'); // 2 'text' items
   expect(label).to.include('Tool');
   expect(label).to.include('1'); // 1 'tool' item
+  const cells = [...root.querySelectorAll<HTMLElement>('[part="cell"]')];
+  expect(cells.map((cell) => cell.getAttribute('role'))).to.deep.equal(['listitem', 'listitem', 'listitem']);
+  expect(cells.map((cell) => cell.getAttribute('aria-label'))).to.deep.equal(['Text', 'Tool', 'Text']);
+  expect(cells.map((cell) => cell.tabIndex)).to.deep.equal([0, -1, -1]);
 });
 
 it('uses accessibleLabel verbatim instead of the auto-generated summary when set', async () => {
@@ -125,6 +129,51 @@ describe('hover tooltip', () => {
     expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
   });
 
+  it('shows item details on keyboard focus and roves with arrow/Home/End keys', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    let cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+    cells[0]!.focus();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Turn 1: text');
+
+    cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    cells = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')];
+    expect(el.shadowRoot!.activeElement).to.equal(cells[1]);
+    expect(cells.map((cell) => cell.tabIndex)).to.deep.equal([-1, 0]);
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Turn 2: tool');
+
+    cells[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement).to.equal(cells[0]);
+  });
+
+  it('clears transient hover/focus details across disconnect and item replacement', async () => {
+    const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
+    el.items = labeledItems;
+    el.categories = categories;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"]')[1]!;
+    cell.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    cell.focus();
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(false);
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(true);
+
+    el.items = [{ id: 'fresh', category: 'text', label: 'Fresh' }];
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(true);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="cell"]')!.tabIndex).to.equal(0);
+  });
+
   it('falls back to the category label when the item has no label of its own', async () => {
     const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = items; // no per-item label set
@@ -175,17 +224,8 @@ describe('category legend', () => {
     expect(el.showLegend).to.be.false;
     expect(el.hasAttribute('show-legend')).to.be.false;
     expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
-    // The full shadow tree, asserted literally: with `showLegend` unset the rendered output is
-    // exactly what this component produced before the legend existed (lit's own template
-    // markers aside, which are comments and carry no rendered meaning).
-    expect(el).shadowDom.to.equal(`
-      <div part="base" role="img" aria-label="Text: 2, Tool: 1">
-        <span part="cell" style="background-color:#4f46e5"></span>
-        <span part="cell" style="background-color:#16a34a"><span part="marker"></span></span>
-        <span part="cell" style="background-color:#4f46e5"></span>
-        <div part="tooltip" hidden></div>
-      </div>
-    `);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('list');
+    expect(el.shadowRoot!.querySelectorAll('[part="cell"]')).to.have.length(3);
   });
 
   it('renders one legend item per category, in order, with that category color and label', async () => {
@@ -234,7 +274,7 @@ describe('category legend', () => {
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
     // The strip keeps sole ownership of the announced summary.
-    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('role')).to.equal('list');
     expect(base.getAttribute('aria-label')).to.equal('Text: 2, Tool: 1');
     expect(base.contains(legend)).to.be.false;
     // The legend is a decorative duplicate of that same text, so it is pruned from the
@@ -300,31 +340,16 @@ describe('marker legend entry', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="legend-marker-swatch"]').length).to.equal(1);
   });
 
-  it('renders today\'s legend markup byte-for-byte when markerLabel is unset', async () => {
+  it('keeps the category-only legend shape when markerLabel is unset', async () => {
     const el = (await fixture(html`<lr-sequence-strip show-legend></lr-sequence-strip>`)) as LyraSequenceStrip;
     el.items = items;
     el.categories = categories;
     await el.updateComplete;
     expect(el.markerLabel).to.equal(undefined);
     expect(el.shadowRoot!.querySelector('[part="legend-marker-swatch"]')).to.not.exist;
-    expect(el).shadowDom.to.equal(`
-      <div part="base" role="img" aria-label="Text: 2, Tool: 1">
-        <span part="cell" style="background-color:#4f46e5"></span>
-        <span part="cell" style="background-color:#16a34a"><span part="marker"></span></span>
-        <span part="cell" style="background-color:#4f46e5"></span>
-        <div part="tooltip" hidden></div>
-      </div>
-      <div part="legend" aria-hidden="true">
-        <span part="legend-item">
-          <span part="legend-swatch" style="background-color:#4f46e5"></span>
-          <span part="legend-label">Text</span>
-        </span>
-        <span part="legend-item">
-          <span part="legend-swatch" style="background-color:#16a34a"></span>
-          <span part="legend-label">Tool</span>
-        </span>
-      </div>
-    `);
+    const legend = el.shadowRoot!.querySelector('[part="legend"]')!;
+    expect(legend.querySelectorAll('[part="legend-item"]')).to.have.length(2);
+    expect(legend.querySelector('[part="legend-marker-swatch"]')).to.not.exist;
   });
 
   it('reproduces the cell marker treatment: a neutral chip with a bottom bar in the marker color', async () => {

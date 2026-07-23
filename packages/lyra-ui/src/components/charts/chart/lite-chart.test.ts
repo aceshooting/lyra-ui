@@ -294,7 +294,9 @@ it('sets an aria-label on the svg from the dataset labels (role=group, not img, 
   ></lr-lite-chart>`);
   const svg = el.shadowRoot!.querySelector('svg')!;
   expect(svg.getAttribute('role')).to.equal('group');
-  expect(svg.getAttribute('aria-label')).to.equal('A, B');
+  expect(svg.getAttribute('aria-label')).to.equal(
+    new Intl.ListFormat(el.effectiveLocale, { type: 'conjunction' }).format(['A', 'B']),
+  );
 });
 
 it('is accessible', async () => {
@@ -1822,6 +1824,182 @@ it('floors a tiny non-stacked bar to at least minBarHeight px (separate code pat
 });
 
 // --- roundedBars: only the active mark carries tabindex=0 among several marks --------------------
+
+describe('review remediation regressions', () => {
+  it('locale-formats default ticks, mark positions, and multi-series table cells', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        locale="ar-EG"
+        type="line"
+        .labels=${['Q1']}
+        .datasets=${[
+          { label: 'Revenue', data: [1234.5] },
+          { label: 'Cost', data: [12.5] },
+        ]}
+      ></lr-lite-chart>
+    `);
+    const formatter = new Intl.NumberFormat(el.effectiveLocale, { maximumFractionDigits: 6 });
+    const axisLabels = [...el.shadowRoot!.querySelectorAll('[part="axis-label"]')].map(
+      (node) => node.textContent?.trim(),
+    );
+    expect(axisLabels).to.include(formatter.format(0));
+    const cells = [...el.shadowRoot!.querySelectorAll('[part="data-table"] tbody td')].map(
+      (node) => node.textContent?.trim(),
+    );
+    expect(cells).to.deep.equal([formatter.format(1234.5), formatter.format(12.5)]);
+  });
+
+  it('transfers focus to a surviving mark when focused data shrinks', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        .labels=${['A', 'B', 'C']}
+        .datasets=${[{ label: 'Revenue', data: [1, 2, 3] }]}
+      ></lr-lite-chart>
+    `);
+    const marks = () =>
+      [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
+    marks()[2]!.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('2');
+
+    el.labels = ['A', 'B'];
+    el.datasets = [{ label: 'Revenue', data: [1, 2] }];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('1');
+    expect(marks().filter((mark) => mark.getAttribute('tabindex') === '0')).to.have.length(1);
+  });
+
+  it('transfers focus to the chart group when the last focused mark disappears', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [1] }]}
+      ></lr-lite-chart>
+    `);
+    const mark = el.shadowRoot!.querySelector('[part="bar"]') as SVGGraphicsElement;
+    mark.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('bar');
+
+    el.labels = [];
+    el.datasets = [];
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    expect(svg.getAttribute('tabindex')).to.equal('0');
+    expect(el.shadowRoot!.activeElement?.localName).to.equal('svg');
+  });
+
+  it('keeps selected state explicit for every bar and point', async () => {
+    const bar = await mount(html`
+      <lr-lite-chart
+        .labels=${['A', 'B']}
+        .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+        .selectedIndex=${[1]}
+      ></lr-lite-chart>
+    `);
+    expect(
+      [...bar.shadowRoot!.querySelectorAll('[part="bar"]')].map((mark) =>
+        mark.getAttribute('aria-pressed'),
+      ),
+    ).to.deep.equal(['false', 'true']);
+
+    const line = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['A', 'B']}
+        .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+        .selectedIndex=${[1]}
+      ></lr-lite-chart>
+    `);
+    const points = [...line.shadowRoot!.querySelectorAll('[part="point"]')];
+    expect(points.map((point) => point.getAttribute('aria-pressed'))).to.deep.equal([
+      'false',
+      'true',
+    ]);
+    expect(points.map((point) => point.hasAttribute('data-selected'))).to.deep.equal([false, true]);
+  });
+
+  it('renders transparent pointer hit geometry around line points and zero-height bars', async () => {
+    const line = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [1] }]}
+      ></lr-lite-chart>
+    `);
+    const pointHit = line.shadowRoot!.querySelector('[data-mark-hit-target="point"]')!;
+    expect(Number(pointHit.getAttribute('r')) * 2).to.be.at.least(24);
+    let detail: unknown;
+    line.addEventListener('lr-point-click', (event) => {
+      detail = (event as CustomEvent).detail;
+    }, { once: true });
+    pointHit.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail).to.deep.equal({ datasetIndex: 0, index: 0, label: 'A', value: 1 });
+
+    const bars = await mount(html`
+      <lr-lite-chart
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [0] }]}
+      ></lr-lite-chart>
+    `);
+    const barHit = bars.shadowRoot!.querySelector('[data-mark-hit-target="bar"]')!;
+    expect(Number(barHit.getAttribute('height'))).to.be.at.least(24);
+    expect(Number(barHit.getAttribute('width'))).to.be.at.least(24);
+  });
+
+  it('localizes custom mark announcement positions without appending fixed punctuation', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        locale="ar-EG"
+        .labels=${['A', 'B']}
+        .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+        .pointText=${(label: string) => `Custom ${label}`}
+        .strings=${{ liteChartCustomMarkSummary: '{content} [{index}/{total}]' }}
+      ></lr-lite-chart>
+    `);
+    const marks = [...el.shadowRoot!.querySelectorAll('[part="bar"]')] as SVGGraphicsElement[];
+    marks[1]!.focus();
+
+    const formatter = new Intl.NumberFormat(el.effectiveLocale);
+    const region = el.shadowRoot!
+      .querySelector('lr-live-region')!
+      .shadowRoot!.querySelector('[part="region"]');
+    expect(region?.textContent).to.equal(
+      `Custom B [${formatter.format(2)}/${formatter.format(2)}]`,
+    );
+  });
+
+  it('contains the non-scrolling axis when horizontal chart scrolling is enabled', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        layout="scroll"
+        .labels=${Array.from({ length: 20 }, (_, index) => String(index))}
+        .datasets=${[{ label: 'Revenue', data: Array.from({ length: 20 }, () => 1) }]}
+      ></lr-lite-chart>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(getComputedStyle(base).overflowX).to.equal('auto');
+    expect(getComputedStyle(base).overflowY).to.equal('hidden');
+  });
+
+  it('bounds extreme finite domains without throwing or generating non-finite geometry', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['Low', 'High']}
+        .datasets=${[{ label: 'Range', data: [-Number.MAX_VALUE, Number.MAX_VALUE] }]}
+      ></lr-lite-chart>
+    `);
+    const geometry = [...el.shadowRoot!.querySelectorAll('[d], [cx], [cy], [x1], [x2], [y1], [y2]')]
+      .flatMap((node) =>
+        ['d', 'cx', 'cy', 'x1', 'x2', 'y1', 'y2']
+          .map((name) => node.getAttribute(name))
+          .filter((value): value is string => value != null),
+      )
+      .join(' ');
+    expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+});
 
 it('gives only the active mark tabindex=0 among multiple roundedBars marks, the rest tabindex=-1', async () => {
   const el = await mount(html`<lr-lite-chart type="bar" rounded-bars .labels=${['a', 'b']} .datasets=${[{ label: 's', data: [1, 2] }]}></lr-lite-chart>`);

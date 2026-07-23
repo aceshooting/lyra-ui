@@ -6,6 +6,7 @@ import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool
 import '../tool-approval-dialog/tool-approval-dialog.js';
 import '../../overlays/badge/badge.js';
 import { styles } from './approval-queue.styles.js';
+import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type ApprovalRequestStatus = 'pending' | 'approved' | 'denied';
 
@@ -31,7 +32,7 @@ export interface LyraApprovalQueueEventMap {
  * @customElement lr-approval-queue
  * @event lr-approval-select - A request was selected. `detail: { invocationId }`.
  * @event lr-approval-decision - A request was approved or denied. `detail: { invocationId,
- *   approved, args? }`.
+ *   approved, args? }`. Cancelable; preventing it keeps the nested dialog pending.
  * @event lr-approval-close - The nested decision dialog closed. `detail: { invocationId, reason }`.
  * @csspart base - The root queue wrapper.
  * @csspart heading-row - The heading and pending-count row.
@@ -44,6 +45,7 @@ export interface LyraApprovalQueueEventMap {
  * @csspart request-id - The stable request id.
  * @csspart status - The request status badge.
  * @csspart empty - The empty state.
+ * @cssprop [--lr-approval-queue-selected-border=var(--lr-color-brand)] - Selected request border.
  */
 export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -55,7 +57,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   /** Whether the decision dialog is open. */
   @property({ type: Boolean, reflect: true }) open = false;
   /** Allows argument editing in the nested approval dialog. */
-  @property({ type: Boolean }) editable = true;
+  @property({ type: Boolean, converter: trueDefaultBooleanConverter }) editable = true;
   /** Accessible name and visible heading. */
   @property() label = '';
 
@@ -87,19 +89,30 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
     event.stopPropagation();
     const request = this.selectedRequest;
     if (!request) return;
-    this.emit('lr-approval-decision', { invocationId: request.id, approved: true, args: event.detail.args });
+    const translated = this.emit(
+      'lr-approval-decision',
+      { invocationId: request.id, approved: true, args: event.detail.args },
+      { cancelable: true },
+    );
+    if (translated.defaultPrevented) event.preventDefault();
   };
 
   private onDeny = (event: CustomEvent<undefined>): void => {
     event.stopPropagation();
     const request = this.selectedRequest;
     if (!request) return;
-    this.emit('lr-approval-decision', { invocationId: request.id, approved: false });
+    const translated = this.emit(
+      'lr-approval-decision',
+      { invocationId: request.id, approved: false },
+      { cancelable: true },
+    );
+    if (translated.defaultPrevented) event.preventDefault();
   };
 
   private onClose = (event: CustomEvent<ToolApprovalDialogCloseReason>): void => {
     event.stopPropagation();
     const request = this.selectedRequest;
+    this.open = false;
     if (request) this.emit('lr-approval-close', { invocationId: request.id, reason: event.detail });
   };
 
@@ -120,7 +133,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   override render(): TemplateResult {
     const label = this.label || this.localize('approvalQueueLabel');
     const request = this.selectedRequest;
-    return html`<section part="base" aria-label=${label}>
+    return html`<section part="base" aria-label=${this.getAttribute('aria-label') || label}>
       <div part="heading-row">
         <h2 part="heading">${label}</h2>
         <span part="count">${this.localize('approvalQueuePendingCount', undefined, { count: this.pendingCount() })}</span>

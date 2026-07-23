@@ -41,6 +41,8 @@ export interface LyraPaginationEventMap {
  * @csspart live-region - The visually hidden applied-page announcement.
  * @cssprop --lr-pagination-control-size - Control inline/block size; defaults from the `size` variant.
  * @cssprop --lr-pagination-font-size - Control font size; defaults from the `size` variant.
+ * @cssprop [--lr-pagination-control-radius=var(--lr-radius)] - Border radius of navigation
+ * buttons and the page input.
  * @cssprop [--lr-pagination-control-padding=var(--lr-space-xs)] - Inner padding of the nav buttons
  * and the page input. Uniform across every `size` (the control footprint is fixed by
  * `--lr-pagination-control-size`, so this only adjusts the icon/digit inset).
@@ -83,6 +85,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Blur the editable page-jump input. */
   override blur(): void {
     this.pageInput?.blur();
+  }
+
+  /** Forward host activation to the primary editable page control. */
+  override click(): void {
+    if (!this.controlsDisabled) this.pageInput?.click();
   }
 
   /** Read-time-safe view of `totalItems` -- non-negative, finite, truncated to a whole item count. */

@@ -4,6 +4,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './context-meter.styles.js';
 
 export type ContextMeterTone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -56,10 +57,13 @@ function formatCount(n: number, locale: string): string {
  * @csspart segment - One occupied segment. Carries `data-tone` for styling and
  *   `--lr-context-meter-segment-color` when `color` is set.
  * @csspart label - The visible caption, when `label` is set.
+ * @csspart semantic - The visually-hidden meter/group carrying aggregate range semantics.
+ * @csspart segment-list - The visually-hidden list exposing the segment breakdown.
+ * @csspart segment-item - One visually-hidden segment label/count pair.
  * @cssprop [--lr-context-meter-segment-color] - Per-segment color. Set inline on `[part="segment"]` by the component itself whenever that segment supplies a `color`; unset (and the token unread) otherwise, leaving the `data-tone` palette in charge.
  */
 export class LyraContextMeter extends LyraElement {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, srOnly, styles];
 
   /** Occupied segments, each an absolute quantity against `total` — never a percentage. */
   @property({ attribute: false }) segments: ContextMeterSegment[] = [];
@@ -72,12 +76,12 @@ export class LyraContextMeter extends LyraElement {
   /** Overall accessible label/caption, e.g. `"128K context window"`. */
   @property() label = '';
 
-  private appliedAriaLabel: string | null = null;
-  private explicitAriaLabel: string | null = null;
-
   /** Sum of segment values, clamped so a negative/NaN entry can't produce a negative total. */
   private get usedTotal(): number {
-    return this.segments.reduce((sum, s) => sum + Math.max(0, finiteNumber(s.value, 0)), 0);
+    return this.segments.reduce((sum, segment) => {
+      const next = sum + Math.max(0, finiteNumber(segment.value, 0));
+      return finiteNumber(next, Number.MAX_VALUE);
+    }, 0);
   }
 
   /** Per-segment ratio of `value` to `total`, clamped to [0,1] and capped so the
@@ -120,30 +124,9 @@ export class LyraContextMeter extends LyraElement {
             total: formatCount(totalValue, this.effectiveLocale),
           })
         : this.localize('contextMeterUsed', undefined, { used });
-    return this.label ? `${this.label} — ${phrase}` : phrase;
-  }
-
-  protected override willUpdate(): void {
-    // role="meter" + a real aria-valuenow/aria-valuemin/aria-valuemax trio
-    // (rather than exposing the SVG/bar internals to the accessibility
-    // tree) genuinely mirrors lr-gauge's "meter" role convention: the
-    // occupancy is exposed as a queryable numeric value, not just baked
-    // into a single static string. aria-label still carries the full
-    // human-readable summary (used/total, optionally prefixed by `label`)
-    // as the accessible name, same as before.
-    this.setAttribute('role', 'meter');
-    const currentAriaLabel = this.getAttribute('aria-label');
-    if (currentAriaLabel !== this.appliedAriaLabel) {
-      this.explicitAriaLabel = currentAriaLabel;
-    }
-    const nextAriaLabel = this.explicitAriaLabel || this.summary;
-    this.setAttribute('aria-label', nextAriaLabel);
-    this.appliedAriaLabel = nextAriaLabel;
-    const { used, total } = this.clampedUsedTotal;
-    this.setAttribute('aria-valuenow', String(used));
-    this.setAttribute('aria-valuemin', '0');
-    if (total > 0) this.setAttribute('aria-valuemax', String(total));
-    else this.removeAttribute('aria-valuemax');
+    return this.label
+      ? this.localize('contextMeterLabeledSummary', undefined, { label: this.label, summary: phrase })
+      : phrase;
   }
 
   /** Hover/`<title>` text for one segment. Templated so a locale controls
@@ -157,6 +140,27 @@ export class LyraContextMeter extends LyraElement {
 
   private segmentColor(segment: ContextMeterSegment): string | undefined {
     return segment.color ? sanitizeSwatchColor(segment.color) : undefined;
+  }
+
+  private renderSemantics(): TemplateResult {
+    const { used, total } = this.clampedUsedTotal;
+    const accessibleName = this.getAttribute('aria-label')?.trim() || this.summary;
+    return html`
+      <div
+        part="semantic"
+        class="sr-only"
+        role=${total > 0 ? 'meter' : 'group'}
+        aria-label=${accessibleName}
+        aria-valuenow=${total > 0 ? String(used) : nothing}
+        aria-valuemin=${total > 0 ? '0' : nothing}
+        aria-valuemax=${total > 0 ? String(total) : nothing}
+      ></div>
+      <ul part="segment-list" class="sr-only">
+        ${this.segments.map(
+          (segment) => html`<li part="segment-item">${this.segmentTitle(segment)}</li>`,
+        )}
+      </ul>
+    `;
   }
 
   private renderBar(): TemplateResult {
@@ -221,7 +225,10 @@ export class LyraContextMeter extends LyraElement {
   }
 
   override render(): TemplateResult {
-    return this.variant === 'ring' ? this.renderRing() : this.renderBar();
+    return html`
+      ${this.variant === 'ring' ? this.renderRing() : this.renderBar()}
+      ${this.renderSemantics()}
+    `;
   }
 }
 

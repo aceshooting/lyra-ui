@@ -149,6 +149,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
+  private headingObserver?: MutationObserver;
   private readonly srLabelId = nextId('dialog-label');
   private readonly headingId = nextId('dialog-heading');
 
@@ -176,6 +177,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.headingObserver ??= new MutationObserver(() => this.detectHeading());
+    this.headingObserver.observe(this, { childList: true, characterData: true, subtree: true });
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so willUpdate never reruns to
@@ -192,6 +195,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.headingObserver?.disconnect();
     super.disconnectedCallback();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -227,11 +231,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // Only direct children are scanned -- a heading nested several layers deep
   // (or inside a slotted custom element's own shadow root) is left to the
   // consumer to label explicitly via `label` instead. Same depth limit
-  // lr-widget applies to its own actions-slot presence check. Recomputed
-  // only on slot assignment changes, not on every render -- a consumer that
-  // mutates an already-slotted heading's textContent in place (rather than
-  // replacing the node) won't retroactively update aria-label; set `label`
-  // instead for a title that needs to change live.
+  // lr-widget applies to its own actions-slot presence check. Slot assignment
+  // changes and light-DOM character mutations both feed this method so the
+  // copied shadow-owner name never becomes stale.
   private detectHeading(): void {
     const heading = Array.from(this.children).find(
       (el) => el.getAttribute('slot') !== 'footer' && el.matches(HEADING_SELECTOR),

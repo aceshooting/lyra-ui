@@ -11,6 +11,16 @@ it('renders status content and a localized close action', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('does not announce static content on mount but activates its live policy for later content changes', async () => {
+  const el = (await fixture(html`<lr-callout>Historical status</lr-callout>`)) as LyraCallout;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-live')).to.equal('off');
+  el.firstChild!.textContent = 'Fresh status';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(base.getAttribute('aria-live')).to.equal('polite');
+});
+
 it('renders closed when open="false" is set as a plain HTML attribute', async () => {
   // Regression test: `open` defaults `true`, and Lit's default presence-based `type: Boolean`
   // converter cannot distinguish an absent attribute from the literal string "false" -- only a

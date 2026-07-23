@@ -57,10 +57,13 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part='state-badge'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='explanation'] {
     font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
   [part='detail'] {
     font-size: var(--lr-font-size-sm);

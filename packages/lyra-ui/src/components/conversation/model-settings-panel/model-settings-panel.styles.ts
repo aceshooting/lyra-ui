@@ -32,7 +32,7 @@ export const styles = css`
 
   [part='temperature-row'] {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--lr-space-s);
     min-inline-size: 0;
@@ -44,7 +44,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   [part='temperature-value'] {
     font-size: var(--lr-font-size-sm);

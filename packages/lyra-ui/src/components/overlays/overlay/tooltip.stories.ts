@@ -14,6 +14,24 @@ export const Default: Story = {
     >`,
 };
 
+export const ActionableContent: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Actionable default-slot content promotes the popup from `role="tooltip"` to a named `role="dialog"` and keeps it open while pointer or focus is inside. Use `<lr-popover>` instead when the trigger should own conventional click-to-open behavior.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-tooltip .open=${context.viewMode !== 'docs'} manual delay="0" accessible-label="Helpful actions">
+      <button slot="trigger">Hover or focus</button>
+      <a href="#tooltip-action-target">Learn more</a>
+    </lr-tooltip>
+    <span id="tooltip-action-target"></span>
+  `,
+};
+
 function onSurfaceClick(e: MouseEvent): void {
   const surface = e.currentTarget as HTMLElement;
   const tooltip = surface.parentElement!.querySelector('lr-tooltip') as LyraTooltip;

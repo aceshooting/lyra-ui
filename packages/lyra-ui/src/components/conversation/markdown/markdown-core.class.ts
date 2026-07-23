@@ -90,7 +90,7 @@ function markdownCodeTransformer(lang: string) {
     name: 'lr-markdown-code-block',
     pre(node: OptionalPeerApi) {
       node.properties.part = ['code-block'];
-      delete node.properties.tabindex;
+      node.properties.tabindex = '0';
     },
     code(node: OptionalPeerApi) {
       const classes = Array.isArray(node.properties.class)
@@ -214,6 +214,14 @@ class LyraMarkdownCoreBase extends LyraElement<LyraMarkdownCoreEventMap> {}
  * @csspart blockquote - Every rendered `<blockquote>`.
  * @csspart img - Every rendered `<img>`.
  * @csspart math - A rendered inline or block math span (`data-display="inline"|"block"`).
+ * @cssprop [--lr-markdown-highlight-accent-bg=var(--lr-color-brand-quiet)] - Accent highlight fill.
+ * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
+ * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.
+ * @cssprop [--lr-markdown-highlight-danger-bg=var(--lr-color-danger-quiet)] - Danger highlight fill.
+ * @cssprop [--lr-markdown-highlight-neutral-bg=var(--lr-color-surface)] - Neutral highlight fill.
+ * @cssprop [--lr-markdown-highlight-active-bg=var(--lr-color-brand-quiet)] - Active highlight fill.
+ * @cssprop [--lr-markdown-highlight-active-outline-color=var(--lr-color-brand)] - Active
+ *   highlight outline.
  * @cssprop [--lr-code-block-tab-size=2] - Tab width for a rendered fenced/indented `code-block`.
  *   Deliberately the same token (and default) `lr-code-block` and `lr-code-editor` use, so a
  *   consumer sets one tab width for every code surface — it is declared here rather than
@@ -463,8 +471,15 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
       changed.has('escapeHtml') ||
       changed.has('streaming') ||
       changed.has('headingAnchors') ||
-      changed.has('math')
+      changed.has('math') ||
+      changed.has('highlightCode') ||
+      changed.has('languages')
     ) {
+      if (changed.has('highlightCode') || changed.has('languages')) {
+        this.highlightToken++;
+        this.failedHighlightKeys.clear();
+        if (changed.has('languages')) this.highlightCache.clear();
+      }
       if (this.streaming && changed.has('content')) this.scheduleStreamingRender();
       else {
         if (this.streamingRenderRaf !== undefined) {
@@ -642,6 +657,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
         return;
       }
       const hl = await loadShikiHighlighterCore(languages);
+      if (token !== this.highlightToken || !this.isConnected) return;
       if (!hl) {
         this.failedHighlightKeys.add(pending.key);
         return;
@@ -849,7 +865,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
   override render(): TemplateResult {
     const isFallback = this.renderedHtml === null;
     return html`
-      <div part="content" ?data-fallback=${isFallback} @click=${this.onContentClick}>
+      <div part="content" tabindex="0" ?data-fallback=${isFallback} @click=${this.onContentClick}>
         ${isFallback ? this.content : unsafeHTML(this.renderedHtml)}
       </div>
       ${this.renderAnchorLiveRegion()}

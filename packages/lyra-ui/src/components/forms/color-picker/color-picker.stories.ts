@@ -17,3 +17,16 @@ export const Sizes: StoryObj = {
     `;
   },
 };
+
+/** 320px allocation with long field chrome, used by responsive visual coverage. */
+export const Narrow: StoryObj = {
+  name: 'Narrow (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-color-picker
+        label="Choose the organization-wide visualization accent color"
+        hint="This color is reused across charts, status summaries, and exported reports."
+      ></lr-color-picker>
+    </div>
+  `,
+};

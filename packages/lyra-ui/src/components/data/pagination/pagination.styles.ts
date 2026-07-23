@@ -7,6 +7,7 @@ export const styles = css`
     container-type: inline-size;
     --lr-pagination-control-size: var(--lr-size-2-5rem);
     --lr-pagination-font-size: var(--lr-font-size-md-sm);
+    --lr-pagination-control-radius: var(--lr-radius);
     /* Inner padding of the nav buttons and the page input. Exposed as a single knob (previously
        a hardcoded var(--lr-space-xs) repeated at both sites) so a consumer can adjust the icon /
        digit inset. Kept uniform across every tier -- today's padding is identical at every tier,
@@ -55,12 +56,12 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    inline-size: var(--lr-pagination-control-size);
-    min-inline-size: var(--lr-pagination-control-size);
-    block-size: var(--lr-pagination-control-size);
+    inline-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
+    min-inline-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
+    block-size: max(var(--lr-pagination-control-size), var(--lr-icon-button-size));
     padding: var(--lr-pagination-control-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-pagination-control-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
@@ -70,7 +71,8 @@ export const styles = css`
      so a consumer's ::part(previous-button):hover / ::part(next-button):hover override
      ((0,1,1)) wins without needing !important. */
   :where([part='previous-button']):hover:where(:not(:disabled)),
-  :where([part='next-button']):hover:where(:not(:disabled)) {
+  :where([part='next-button']):hover:where(:not(:disabled)),
+  :where([part='page-input']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
   }
   [part='previous-button']:focus-visible,
@@ -117,7 +119,7 @@ export const styles = css`
     block-size: var(--lr-pagination-control-size);
     padding: var(--lr-pagination-control-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-pagination-control-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
@@ -158,4 +160,3 @@ export const styles = css`
     }
   }
 `;
-

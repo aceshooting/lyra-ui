@@ -254,8 +254,10 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
   }
 
-  private emitChange = (event?: Event): void => {
-    if (this.effectiveDisabled || event?.target === this) return;
+  private onChildEvent = (event: Event): void => {
+    if (event.target === this) return;
+    event.stopImmediatePropagation();
+    if (event.type !== 'change' || this.effectiveDisabled) return;
     this.sync();
     this.emit('input', { value: this.value });
     this.emit('change', { value: this.value });
@@ -272,14 +274,18 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.addEventListener('change', this.emitChange as EventListener);
+    this.addEventListener('input', this.onChildEvent);
+    this.addEventListener('change', this.onChildEvent);
+    this.addEventListener('lr-change', this.onChildEvent);
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
   }
 
   override disconnectedCallback(): void {
-    this.removeEventListener('change', this.emitChange as EventListener);
+    this.removeEventListener('input', this.onChildEvent);
+    this.removeEventListener('change', this.onChildEvent);
+    this.removeEventListener('lr-change', this.onChildEvent);
     super.disconnectedCallback();
   }
 

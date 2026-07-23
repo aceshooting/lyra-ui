@@ -35,6 +35,53 @@ describe('lr-file-tree', () => {
     expect(appItem.description).to.include('-1');
   });
 
+  it('formats visible diff counts with the effective locale', async () => {
+    const el = (await fixture(html`<lr-file-tree lang="ar"></lr-file-tree>`)) as LyraFileTree;
+    el.nodes = [{ path: 'changed.ts', additions: 1234, deletions: 56 }];
+    await el.updateComplete;
+    const tree = el.shadowRoot!.querySelector('lr-tree')!;
+    const description = tree.data[0].description as string;
+
+    expect(description).to.include(new Intl.NumberFormat('ar').format(1234));
+    expect(description).to.include(new Intl.NumberFormat('ar').format(56));
+  });
+
+  it('forwards a live host aria-label to the internal tree with author precedence', async () => {
+    const el = (await fixture(
+      html`<lr-file-tree label="Files" aria-label="Workspace files"></lr-file-tree>`,
+    )) as LyraFileTree;
+    const tree = el.shadowRoot!.querySelector('lr-tree')!;
+    expect(tree.label).to.equal('Workspace files');
+
+    el.setAttribute('aria-label', 'Changed files');
+    await el.updateComplete;
+    expect(tree.label).to.equal('Changed files');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(tree.label).to.equal('Files');
+  });
+
+  it('marks the selected path in the derived tree data', async () => {
+    const el = (await fixture(html`<lr-file-tree selected-path="README.md"></lr-file-tree>`)) as LyraFileTree;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const tree = el.shadowRoot!.querySelector('lr-tree')!;
+
+    expect(tree.data[0].selected).to.be.false;
+    expect(tree.data[1].selected).to.be.true;
+  });
+
+  it('represents a lazy loading placeholder as disabled status content, not a selectable stop', async () => {
+    const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
+    el.nodes = [{ path: 'lazy-dir', kind: 'directory', hasChildren: true }];
+    await el.updateComplete;
+    const tree = el.shadowRoot!.querySelector('lr-tree')!;
+    const placeholder = tree.data[0].children![0];
+
+    expect(placeholder.disabled).to.be.true;
+  });
+
   it('emits lr-file-select when a file row is activated', async () => {
     const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
     el.nodes = nodes;
@@ -45,6 +92,28 @@ describe('lr-file-tree', () => {
     );
     const event = (await listener) as CustomEvent<{ path: string }>;
     expect(event.detail.path).to.equal('README.md');
+  });
+
+  it('consumes the internal tree selection event before emitting the wrapper event', async () => {
+    const wrapper = await fixture(html`<div><lr-file-tree></lr-file-tree></div>`);
+    const el = wrapper.querySelector('lr-file-tree') as LyraFileTree;
+    el.nodes = nodes;
+    await el.updateComplete;
+    let internalEvents = 0;
+    let wrapperEvents = 0;
+    wrapper.addEventListener('lr-node-select', () => internalEvents++);
+    wrapper.addEventListener('lr-file-select', () => wrapperEvents++);
+
+    el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
+      new CustomEvent('lr-node-select', {
+        detail: { id: 'README.md' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(internalEvents).to.equal(0);
+    expect(wrapperEvents).to.equal(1);
   });
 
   it('emits lr-file-open on a second select of an already-selected file (keyboard-open parity)', async () => {

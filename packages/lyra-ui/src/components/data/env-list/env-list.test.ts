@@ -64,6 +64,52 @@ describe('lr-env-list', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
   });
 
+  it('remasks revealed secrets when revealability is revoked', async () => {
+    const el = (await fixture(
+      html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}></lr-env-list>`,
+    )) as LyraEnvList;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset.masked).to.equal('false');
+
+    el.revealable = false;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="value"]') as HTMLElement).dataset.masked).to.equal('true');
+    expect(el.shadowRoot!.querySelectorAll('[part="reveal-button"]').length).to.equal(0);
+  });
+
+  it('forwards a host aria-label to the populated list and reacts to late changes', async () => {
+    const el = (await fixture(
+      html`<lr-env-list
+        label="Environment"
+        aria-label="Deployment variables"
+        .entries=${[{ name: 'NODE_ENV', value: 'production', secret: false }]}
+      ></lr-env-list>`,
+    )) as LyraEnvList;
+    await el.updateComplete;
+    const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base().getAttribute('aria-label')).to.equal('Deployment variables');
+
+    el.setAttribute('aria-label', 'Runtime variables');
+    await el.updateComplete;
+    expect(base().getAttribute('aria-label')).to.equal('Runtime variables');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base().getAttribute('aria-label')).to.equal('Environment');
+  });
+
+  it('forwards a host aria-label to an empty-state semantic owner', async () => {
+    const el = (await fixture(
+      html`<lr-env-list aria-label="Deployment variables"></lr-env-list>`,
+    )) as LyraEnvList;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('group');
+    expect(base.getAttribute('aria-label')).to.equal('Deployment variables');
+  });
+
   it('accepts revealable="false" and copyable="false" as plain-HTML attribute strings, not just property bindings', async () => {
     const el = (await fixture(
       html`<lr-env-list revealable="false" copyable="false"></lr-env-list>`,

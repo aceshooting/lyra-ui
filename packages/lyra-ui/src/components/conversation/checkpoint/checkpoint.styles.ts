@@ -71,7 +71,7 @@ export const styles = css`
   }
   .restore-spinner svg {
     display: block;
-    animation: lr-checkpoint-spin var(--lr-checkpoint-spin-duration, 1s) linear infinite;
+    animation: lr-checkpoint-spin var(--lr-checkpoint-spin-duration, var(--lr-transition-ambient)) infinite;
   }
   [part='confirm-group'] {
     display: flex;

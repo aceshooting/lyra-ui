@@ -46,6 +46,8 @@ function createNoopInternals(): ElementInternals {
 export interface LyraTokenInputEventMap {
   input: CustomEvent<{ value: string[] }>;
   change: CustomEvent<{ value: string[] }>;
+  focus: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
   'lr-add': CustomEvent<{ value: string }>;
   'lr-remove': CustomEvent<{ value: string; index: number }>;
   'lr-token-edit': CustomEvent<{ value: string; previousValue: string; index: number }>;
@@ -71,6 +73,10 @@ const delimiterConverter = {
  * @slot label - Visible label content.
  * @slot hint - Supporting text.
  * @slot error - Validation message.
+ * @event input - Native-style composed event emitted after a user changes the token list.
+ * @event change - Native-style composed commit event emitted with `input`.
+ * @event focus - Re-dispatched from the draft input as a bubbling, composed event.
+ * @event blur - Re-dispatched from the draft input as a bubbling, composed event.
  * @event lr-add - A token was added; detail is `{ value }`.
  * @event lr-remove - A token is about to be removed; detail is `{ value, index }`. Cancelable --
  *   call `preventDefault()` to veto the removal (e.g. pending an async confirmation or a
@@ -90,6 +96,14 @@ const delimiterConverter = {
  * @cssprop [--lr-token-input-min-input-inline-size=var(--lr-size-4rem)] - Inline-size floor of the native text input, so it stays usable once tokens wrap.
  * @cssprop [--lr-token-input-editor-inline-size=var(--lr-size-6rem)] - Inline size of the inline token editor opened by `editable`.
  * @cssprop --lr-token-input-padding - Input-wrapper padding, scaled by `size`.
+ * @cssprop --lr-token-input-token-padding - Per-token chip padding, scaled by `size`.
+ * @cssprop [--lr-token-input-gap=var(--lr-space-xs)] - Gap between form/row children.
+ * @cssprop [--lr-token-input-token-gap=var(--lr-space-2xs)] - Gap inside token chips.
+ * @cssprop [--lr-token-input-radius=var(--lr-radius)] - Row/token corner radius.
+ * @cssprop [--lr-token-input-token-bg=var(--lr-color-brand-quiet)] - Token chip background.
+ * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
+ * @cssprop [--lr-token-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
+ * @cssprop [--lr-token-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.
  * @cssprop --lr-token-input-font-size - Input-wrapper/token font size, scaled by `size`.
  * @cssprop --lr-token-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
  * @cssprop --lr-token-input-control-height - Exact input-wrapper height. Unset by default, which
@@ -162,7 +176,18 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
 
   @property({ attribute: false })
   get value(): string[] { return this._value; }
-  set value(next: string[]) { const old = this._value; this._value = Array.isArray(next) ? [...next] : []; this.requestUpdate('value', old); if (this.internals) this.syncValidity(); }
+  set value(next: string[]) {
+    const old = this._value;
+    const normalized = Array.isArray(next) ? [...next] : [];
+    if (this.editingIndex >= 0 && normalized !== old) {
+      this.editingIndex = -1;
+      this.editDraft = '';
+      this.focusEditorPending = false;
+    }
+    this._value = normalized;
+    this.requestUpdate('value', old);
+    if (this.internals) this.syncValidity();
+  }
 
   /** The form submission key, reflected synchronously for native form APIs.
    *  This control keys its `FormData` entries directly off `name` (see
@@ -411,9 +436,9 @@ export class LyraTokenInput extends LyraElement<LyraTokenInputEventMap> {
     const described = [hasHint ? this.hintId : '', hasError ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
     return html`<div part="form-control">
       <label part="form-control-label" ?hidden=${!hasLabel} for="input" id=${this.labelId}>${this.label}<slot name="label" @slotchange=${this.onLabelSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</label>
-      <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing} aria-describedby=${described}>
+      <div part="input-wrapper" role="group" aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-label=${this.accessibleLabel || nothing}>
         ${this.value.map((token, index) => this.editable ? this.renderEditableToken(token, index) : html`<span part="token"><span>${token}</span><button part="remove" type="button" aria-label=${this.localize('removeWithContext', undefined, { label: token })} ?disabled=${this.effectiveDisabled} @click=${() => this.removeToken(index)}>${closeIcon()}</button></span>`)}
-        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
+        <input id="input" part="input" .value=${this.draft} placeholder=${this.placeholder} ?disabled=${this.effectiveDisabled} aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : hasLabel ? this.labelId : nothing} aria-describedby=${described} aria-required=${this.required ? 'true' : 'false'} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} @input=${this.onInput} @keydown=${this.onKeyDown} @blur=${this.onBlur} @focus=${this.onFocus} />
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div part="error" id=${this.errorId} ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

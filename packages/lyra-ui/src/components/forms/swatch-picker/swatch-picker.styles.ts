@@ -32,9 +32,10 @@ export const styles = css`
        needs one precisely because box-shadow doesn't reach into a transparent box's own content). */
     --lr-swatch-picker-shine-duration: 0s;
     --lr-swatch-picker-gemstone-selected-blur: var(--lr-size-0-5rem);
-    --lr-swatch-picker-gemstone-shine-duration: 1.8s;
+    --lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);
     --lr-swatch-picker-hit-size: var(--lr-size-2-5rem);
     --lr-swatch-picker-fill-size: var(--lr-size-1-5rem);
+    --lr-swatch-picker-gap: var(--lr-space-xs);
   }
   :host([size='2xs']) {
     --lr-swatch-picker-hit-size: var(--lr-size-1-5rem);
@@ -64,7 +65,7 @@ export const styles = css`
     display: inline-flex;
     flex-wrap: wrap;
     min-inline-size: 0;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-swatch-picker-gap);
   }
   [part='swatch'] {
     box-sizing: border-box;
@@ -129,7 +130,7 @@ export const styles = css`
   }
   [part='swatch'][aria-checked='true'] [part='swatch-fill'] {
     box-shadow: 0 0 var(--lr-swatch-picker-selected-blur) var(--lr-border-width-thick) var(--lr-swatch-picker-selected-color);
-    animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
+    animation: lr-swatch-picker-shine var(--lr-swatch-picker-shine-duration) infinite;
   }
   @keyframes lr-swatch-picker-shine {
     0%,
@@ -155,7 +156,7 @@ export const styles = css`
      (--lr-swatch-picker-shine-duration: 0s, and prefers-reduced-motion). */
   [part='swatch'][aria-checked='true'] [part='swatch-icon'] {
     filter: drop-shadow(0 0 var(--lr-swatch-picker-selected-blur) var(--lr-swatch-picker-selected-color));
-    animation: lr-swatch-picker-shine-icon var(--lr-swatch-picker-shine-duration) ease-in-out infinite;
+    animation: lr-swatch-picker-shine-icon var(--lr-swatch-picker-shine-duration) infinite;
   }
   @keyframes lr-swatch-picker-shine-icon {
     0%,

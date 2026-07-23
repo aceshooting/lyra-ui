@@ -17,6 +17,18 @@ describe('<lr-intersection-observer>', () => {
     expect(el.threshold).to.deep.equal([0, 0.5, 1]);
   });
 
+  it('normalizes invalid rootMargin and threshold options instead of rejecting an update', async () => {
+    const el = await fixture<LyraIntersectionObserver>(
+      html`<lr-intersection-observer><div>Observed</div></lr-intersection-observer>`,
+    );
+    el.rootMargin = 'not a margin';
+    el.threshold = [-1, 0.5, 2, Number.NaN];
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect((el as unknown as { observer?: IntersectionObserver }).observer).to.exist;
+  });
+
   it('re-observes slotted content when the default slot changes, via the inline @slotchange binding on the shadow <slot>', async () => {
     const el = await fixture<LyraIntersectionObserver>(html`<lr-intersection-observer><div>Observed</div></lr-intersection-observer>`);
     await el.updateComplete;

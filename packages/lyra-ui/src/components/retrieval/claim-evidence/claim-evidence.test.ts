@@ -65,6 +65,17 @@ it('uses the host aria-label and exposes selected state without changing the con
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('renders explicit true and false aria-current values for the stateful claim set', async () => {
+  const el = (await fixture(
+    html`<lr-claim-evidence selected-claim-id="claim-2" .claims=${claims}></lr-claim-evidence>`,
+  )) as LyraClaimEvidence;
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part~="claim"]')].map((claim) =>
+      claim.getAttribute('aria-current'),
+    ),
+  ).to.deep.equal(['false', 'true']);
+});
+
 it('applies per-instance strings to the evidence region label', async () => {
   const el = (await fixture(html`<lr-claim-evidence
     .strings=${{ claimEvidenceLabel: 'Localized evidence review' }}

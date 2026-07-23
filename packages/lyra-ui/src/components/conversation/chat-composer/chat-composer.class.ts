@@ -252,6 +252,11 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
     this.textareaEl?.blur();
   }
 
+  /** Focuses the primary textarea, matching activation of the wrapped native control. */
+  override click(): void {
+    if (!this.effectiveDisabled) this.textareaEl?.focus();
+  }
+
   select(): void {
     this.textareaEl?.select();
   }

@@ -96,6 +96,7 @@ export class LyraIconButton extends LyraElement {
   };
 
   private _disabled = false;
+  private _fieldsetDisabled = false;
 
   get disabled(): boolean {
     return this._disabled;
@@ -110,6 +111,11 @@ export class LyraIconButton extends LyraElement {
     // the next update cycle.
     this.toggleAttribute('disabled', this._disabled);
     this.requestUpdate('disabled', old);
+  }
+
+  /** Whether the control is disabled directly or by an ancestor fieldset. */
+  get effectiveDisabled(): boolean {
+    return this._disabled || this._fieldsetDisabled;
   }
 
   @property() icon = '';
@@ -131,11 +137,18 @@ export class LyraIconButton extends LyraElement {
 
   constructor() {
     super();
-    this.attachInternals();
+    if (typeof this.attachInternals === 'function') {
+      try {
+        this.attachInternals();
+      } catch {
+        // Partial DOM implementations can expose but not implement ElementInternals.
+      }
+    }
   }
 
   /** Activates the internal native button, including submit/reset behavior. */
   override click(): void {
+    if (this.effectiveDisabled) return;
     this.buttonEl?.click();
   }
 
@@ -143,12 +156,18 @@ export class LyraIconButton extends LyraElement {
   override blur(): void { this.buttonEl?.blur(); }
 
   private onClick = (): void => {
+    if (this.effectiveDisabled) return;
     if (this.type === 'submit') {
       this.closest('form')?.requestSubmit();
     } else if (this.type === 'reset') {
       this.closest('form')?.reset();
     }
   };
+
+  formDisabledCallback(disabled: boolean): void {
+    this._fieldsetDisabled = disabled;
+    this.requestUpdate();
+  }
 
   private onSlotChange = (): void => {
     const assigned = this.slotEl?.assignedElements({ flatten: true }) ?? [];
@@ -181,7 +200,7 @@ export class LyraIconButton extends LyraElement {
     return html`<button
       part="button"
       type="button"
-      ?disabled=${this.disabled}
+      ?disabled=${this.effectiveDisabled}
       aria-label=${label}
       aria-haspopup=${this.triggerHasPopup ?? nothing}
       aria-expanded=${this.triggerExpanded ?? nothing}

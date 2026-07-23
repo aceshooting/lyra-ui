@@ -17,6 +17,9 @@ export const styles = css`
     font: inherit;
   }
   [part='message-content'] { min-block-size: var(--lr-size-6rem); padding: var(--lr-space-s); resize: vertical; }
+  :where([part='message-role'], [part='message-content'], [part='variable'] input):hover:where(:not(:disabled)) {
+    border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
+  }
   [part='variables'], [part='versions'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
   [part='variables'] h3, [part='preview'] h3 { margin: 0; font-size: var(--lr-font-size-base); }
   [part='variable'] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--lr-space-xs); }
@@ -33,6 +36,14 @@ export const styles = css`
     cursor: pointer;
   }
   [part='toolbar'] button:hover, [part='remove-message']:hover, [part='add-message']:hover, [part='version']:hover { background: var(--lr-color-surface-raised); }
+  [part='version'][aria-pressed='true'] {
+    border-color: var(--lr-prompt-studio-version-selected-border, var(--lr-color-brand));
+    background: var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-prompt-studio-version-selected-color, var(--lr-color-text));
+  }
+  [part='version'][aria-pressed='true']:hover {
+    background: var(--lr-prompt-studio-version-selected-hover-bg, var(--lr-color-brand-quiet));
+  }
   [part='toolbar'] button:focus-visible, [part='remove-message']:focus-visible, [part='add-message']:focus-visible, [part='version']:focus-visible,
   [part='message-role']:focus-visible, [part='message-content']:focus-visible, [part='variable'] input:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);

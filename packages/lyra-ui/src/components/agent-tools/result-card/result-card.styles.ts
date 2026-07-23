@@ -57,7 +57,9 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    flex-wrap: wrap;
   }
   [part='actions'][hidden] {
     display: none;

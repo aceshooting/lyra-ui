@@ -365,6 +365,23 @@ describe('jump pill', () => {
     expect(pill.textContent).to.include('2'); // 10 total - 8 unread-start = 2 new
   });
 
+  it('formats the unread count with the effective locale and honors a strings override', async () => {
+    const el = (await fixture(html`
+      <lr-chat-viewport
+        lang="ar-EG"
+        style="block-size:100px"
+        unread-start-index="8"
+        .strings=${{ newMessagesCount: '{count} رسائل جديدة' }}
+      >
+        ${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}
+      </lr-chat-viewport>
+    `)) as LyraChatViewport;
+    el.follow = false;
+    await el.updateComplete;
+    const pill = el.shadowRoot!.querySelector('[part="jump-pill"]')!;
+    expect(pill.textContent?.trim()).to.equal('٢ رسائل جديدة');
+  });
+
   it('activating the pill calls scrollToBottom()', async () => {
     const el = (await fixture(
       html`<lr-chat-viewport style="block-size:100px"
@@ -518,6 +535,15 @@ describe('virtual mode', () => {
     expect(parseFloat(slottedScroll.paddingTop)).to.be.greaterThan(0);
   });
 
+  it('removes the dead wrapper tab stop while the virtual list owns scrolling and focus', async () => {
+    const el = (await fixture(virtualFixtureMarkup(20))) as LyraChatViewport;
+    await el.updateComplete;
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]')!;
+    const list = el.querySelector('lr-virtual-list') as LyraVirtualList;
+    expect(scroll.hasAttribute('tabindex')).to.be.false;
+    expect(list.shadowRoot!.querySelector('[part="base"]')!.getAttribute('tabindex')).to.equal('0');
+  });
+
   it('sizes the slotted list to the full bounded viewport with no consumer CSS', async () => {
     const wrapper = await fixture(
       unsizedVirtualFixtureMarkup(60, 'block-size:700px; display:flex; flex-direction:column;'),
@@ -634,6 +660,29 @@ describe('virtual mode', () => {
     expect(fired, 'a same-burst append must not be misattributed as a user release').to.be.false;
     expect(el.follow).to.be.true;
   });
+});
+
+it('clears an interrupted scrollbar drag across disconnect and reconnect', async () => {
+  const el = (await fixture(
+    html`<lr-chat-viewport style="block-size:100px"
+      >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lr-chat-viewport
+    >`,
+  )) as LyraChatViewport;
+  const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+  scroll.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  expect((el as unknown as { scrollbarDragActive: boolean }).scrollbarDragActive).to.be.true;
+
+  el.remove();
+  document.body.append(el);
+  await el.updateComplete;
+  expect((el as unknown as { scrollbarDragActive: boolean }).scrollbarDragActive).to.be.false;
+
+  let fired = false;
+  el.addEventListener('lr-follow-change', () => (fired = true));
+  scroll.scrollTop = 0;
+  scroll.dispatchEvent(new Event('scroll', { bubbles: true }));
+  expect(fired).to.be.false;
+  expect(el.follow).to.be.true;
 });
 
 it('is accessible in slotted mode with an unread divider and a released follow', async () => {

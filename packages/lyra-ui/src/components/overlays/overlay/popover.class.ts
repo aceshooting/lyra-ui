@@ -47,6 +47,15 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   /** Semantic role used by the popup. Dropdown subclasses set this to `menu`. */
   @property({ attribute: 'popup-role' }) popupRole: LyraPopupRole = 'dialog';
   @state() private trigger?: HTMLElement;
+  private triggerA11y?: {
+    hasPopup: boolean;
+    popup: string | null;
+    hasExpanded: boolean;
+    expanded: string | null;
+    hasControls: boolean;
+    controls: string | null;
+  };
+  private triggerA11yObserver?: MutationObserver;
   /** The virtual anchor set by `showAt()`, taking priority over `trigger` for positioning while
    *  set. Cleared whenever the popover closes, so a later `open = true` with no fresh `showAt()`
    *  call reverts to plain trigger-based behavior. */
@@ -97,6 +106,10 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   }
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.trigger && !this.triggerA11y) {
+      this.snapshotTriggerA11y(this.trigger);
+      this.syncTriggerA11y();
+    }
     // A reconnect (e.g. a drag-and-drop reparent keeping this same element
     // instance) fires disconnectedCallback then connectedCallback
     // synchronously with no update in between, so updated() never reruns to
@@ -116,6 +129,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     this.cleanup = undefined;
     document.removeEventListener('pointerdown', this.onDocumentPointer);
     this.overlayHandle?.suspend();
+    this.restoreTriggerA11y();
     super.disconnectedCallback();
   }
   /** Registers this virtual-anchor-opened popover with the shared overlay manager
@@ -125,6 +139,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    *  DOM node to own focus, so background inerting and Tab trapping (both opt-in via `modal`/
    *  `trapFocus`) would be meaningless here -- only Escape ownership is needed. */
   private activateVirtualAnchorOverlay(): void {
+    if (this.overlayHandle?.isActive()) return;
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
@@ -161,7 +176,10 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   ): void {
     this.virtualAnchor = virtualAnchorFromRect(rect);
     this.returnFocusTo = options?.returnFocusTo;
-    if (this.open) this.position();
+    if (this.open) {
+      this.activateVirtualAnchorOverlay();
+      this.position();
+    }
     else this.open = true;
   }
   private position(): void {
@@ -175,12 +193,84 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   }
   private syncTriggerA11y(): void {
     if (!this.trigger) return;
-    this.trigger.setAttribute('aria-haspopup', this.popupRole);
-    this.trigger.setAttribute('aria-expanded', this.open ? 'true' : 'false');
-    this.trigger.setAttribute('aria-controls', this.popupId);
+    const expanded = this.open ? 'true' : 'false';
+    if (this.trigger.getAttribute('aria-haspopup') !== this.popupRole) {
+      this.trigger.setAttribute('aria-haspopup', this.popupRole);
+    }
+    if (this.trigger.getAttribute('aria-expanded') !== expanded) {
+      this.trigger.setAttribute('aria-expanded', expanded);
+    }
+    if (this.trigger.getAttribute('aria-controls') !== this.generatedControls) {
+      this.trigger.setAttribute('aria-controls', this.generatedControls);
+    }
+  }
+  private get generatedControls(): string {
+    const controls = new Set((this.triggerA11y?.controls ?? '').split(/\s+/).filter(Boolean));
+    controls.add(this.popupId);
+    return [...controls].join(' ');
+  }
+  private snapshotTriggerA11y(trigger: HTMLElement): void {
+    this.triggerA11y = {
+      hasPopup: trigger.hasAttribute('aria-haspopup'),
+      popup: trigger.getAttribute('aria-haspopup'),
+      hasExpanded: trigger.hasAttribute('aria-expanded'),
+      expanded: trigger.getAttribute('aria-expanded'),
+      hasControls: trigger.hasAttribute('aria-controls'),
+      controls: trigger.getAttribute('aria-controls'),
+    };
+    this.triggerA11yObserver ??= new MutationObserver((records) => {
+      if (!this.trigger || !this.triggerA11y) return;
+      let authorChanged = false;
+      for (const { attributeName } of records) {
+        if (!attributeName) continue;
+        const current = this.trigger.getAttribute(attributeName);
+        const generated =
+          attributeName === 'aria-haspopup'
+            ? this.popupRole
+            : attributeName === 'aria-expanded'
+              ? this.open
+                ? 'true'
+                : 'false'
+              : this.generatedControls;
+        if (current === generated) continue;
+        authorChanged = true;
+        const had = this.trigger.hasAttribute(attributeName);
+        if (attributeName === 'aria-haspopup') {
+          this.triggerA11y.hasPopup = had;
+          this.triggerA11y.popup = current;
+        } else if (attributeName === 'aria-expanded') {
+          this.triggerA11y.hasExpanded = had;
+          this.triggerA11y.expanded = current;
+        } else {
+          this.triggerA11y.hasControls = had;
+          this.triggerA11y.controls = current;
+        }
+      }
+      if (authorChanged) this.syncTriggerA11y();
+    });
+    this.triggerA11yObserver.observe(trigger, {
+      attributes: true,
+      attributeFilter: ['aria-haspopup', 'aria-expanded', 'aria-controls'],
+    });
+  }
+  private restoreTriggerA11y(): void {
+    if (!this.trigger || !this.triggerA11y) return;
+    this.triggerA11yObserver?.disconnect();
+    const restore = (name: string, had: boolean, value: string | null): void => {
+      if (had) this.trigger!.setAttribute(name, value ?? '');
+      else this.trigger!.removeAttribute(name);
+    };
+    restore('aria-haspopup', this.triggerA11y.hasPopup, this.triggerA11y.popup);
+    restore('aria-expanded', this.triggerA11y.hasExpanded, this.triggerA11y.expanded);
+    restore('aria-controls', this.triggerA11y.hasControls, this.triggerA11y.controls);
+    this.triggerA11y = undefined;
   }
   private onTriggerSlotChange = (event: Event): void => {
-    this.trigger = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    const next = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    if (next === this.trigger) return;
+    this.restoreTriggerA11y();
+    this.trigger = next;
+    if (this.trigger) this.snapshotTriggerA11y(this.trigger);
     this.syncTriggerA11y();
     if (this.open) this.position();
   };
@@ -192,7 +282,11 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     if (event.key === 'Escape') { event.preventDefault(); this.open = false; this.trigger?.focus(); }
   };
   private onDocumentPointer = (event: PointerEvent): void => {
-    if (!event.composedPath().includes(this)) this.open = false;
+    if (!event.composedPath().includes(this)) {
+      const returnFocusTarget = this.virtualAnchor ? this.returnFocusTo : undefined;
+      this.open = false;
+      returnFocusTarget?.focus();
+    }
   };
 
   /** Programmatically close the popover. Pass `{ focusTrigger: true }` to return focus to the

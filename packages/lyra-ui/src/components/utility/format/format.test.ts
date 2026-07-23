@@ -65,6 +65,38 @@ it('falls back to the browser time zone when time-zone is invalid instead of thr
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
 });
 
+it('falls back safely for invalid Intl number/date/relative-time option values', async () => {
+  const number = (await fixture(html`<lr-format-number value="1234"></lr-format-number>`)) as LyraFormatNumber;
+  number.notation = 'invalid' as Intl.NumberFormatOptions['notation'];
+  number.currency = 'not-a-currency';
+  await number.updateComplete;
+  expect(number.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  const date = (await fixture(html`
+    <lr-format-date date="2024-01-01T00:00:00Z"></lr-format-date>
+  `)) as LyraFormatDate;
+  date.year = 'invalid' as Intl.DateTimeFormatOptions['year'];
+  date.dateStyle = 'invalid' as Intl.DateTimeFormatOptions['dateStyle'];
+  await date.updateComplete;
+  expect(date.shadowRoot?.textContent?.trim()).to.not.equal('');
+
+  const relative = (await fixture(html`
+    <lr-relative-time date="2030-01-01T00:00:00Z"></lr-relative-time>
+  `)) as LyraRelativeTime;
+  relative.unit = 'invalid' as LyraRelativeTime['unit'];
+  relative.numeric = 'invalid' as LyraRelativeTime['numeric'];
+  await relative.updateComplete;
+  expect(relative.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
+it('falls back safely when an explicit locale is invalid', async () => {
+  const el = (await fixture(html`
+    <lr-format-number value="1234" locale="not_a_locale"></lr-format-number>
+  `)) as LyraFormatNumber;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
+});
+
 it('inherits locale from an ancestor when no explicit locale is set', async () => {
   const el = await fixture(html`<div lang="de-DE"><lr-format-number value="1234.5"></lr-format-number></div>`);
   expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');

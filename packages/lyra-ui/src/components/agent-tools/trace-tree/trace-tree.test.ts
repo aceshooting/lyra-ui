@@ -136,6 +136,81 @@ describe('lr-trace-tree', () => {
     const llmRow = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
     expect(llmRow.getAttribute('aria-current')).to.equal('true');
     expect(llmRow.hasAttribute('data-active')).to.be.true;
+    expect(el.shadowRoot!.querySelector('[data-id="root"]')!.getAttribute('aria-current')).to.equal('false');
+  });
+
+  it('includes visible token and cost metadata in each explicit row name', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    const label = el.shadowRoot!.querySelector('[data-id="search"]')!.getAttribute('aria-label')!;
+    expect(label).to.include('Tokens in: 12');
+    expect(label).to.include('Tokens out: 340');
+    expect(label).to.include('Cost: $0.0021');
+  });
+
+  it('formats duration numbers with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree
+        lang="de-DE"
+        .spans=${[{ id: 'one', name: 'One', kind: 'agent', status: 'success', startMs: 0, endMs: 1500 }]}
+      ></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('1,5s');
+  });
+
+  it('moves actual focus to the surviving ancestor before collapse removes a focused child', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    const child = el.shadowRoot!.querySelector('[data-id="search"]') as HTMLElement;
+    child.focus();
+    (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[data-id="root"]'));
+  });
+
+  it('normalizes duplicate/cyclic/non-finite data and bounds deep rendering', async () => {
+    const deep = Array.from({ length: 2_000 }, (_, index) => ({
+      id: `deep-${index}`,
+      parentId: index === 0 ? undefined : `deep-${index - 1}`,
+      name: `Deep ${index}`,
+      kind: 'agent' as const,
+      status: 'success' as const,
+      startMs: index,
+      endMs: index + 1,
+    }));
+    deep.push({ ...deep[0]!, name: 'duplicate' });
+    deep.push({ ...deep[0]!, id: 'invalid', startMs: Number.NaN });
+    const el = (await fixture(html`<lr-trace-tree .spans=${deep}></lr-trace-tree>`)) as LyraTraceTree;
+    const rows = el.shadowRoot!.querySelectorAll('[part="row"]');
+    expect(rows.length).to.be.at.most(500);
+    expect(el.shadowRoot!.querySelectorAll('[data-id="deep-0"]')).to.have.lengthOf(1);
+    expect(el.shadowRoot!.querySelector('[data-id="invalid"]')).to.not.exist;
+
+    el.spans = [
+      { id: 'a', parentId: 'b', name: 'A', kind: 'agent', status: 'success', startMs: 0 },
+      { id: 'b', parentId: 'a', name: 'B', kind: 'agent', status: 'success', startMs: 1 },
+    ];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="row"]')).to.have.lengthOf(2);
+  });
+
+  it('reveals and scrolls a controlled active row when data arrives under a collapsed ancestor', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    el.activeSpanId = 'search';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-id="search"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[data-id="search"]')!.hasAttribute('data-active')).to.be.true;
+  });
+
+  it('keeps a newest running span visibly nonzero on the duration scale', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree
+        .spans=${[{ id: 'run', name: 'Run', kind: 'agent', status: 'running', startMs: 100 }]}
+      ></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    expect((el.shadowRoot!.querySelector('[part="bar"]') as HTMLElement).style.inlineSize).to.equal('1%');
   });
 
   it('shows tokens/cost columns only when show-tokens/show-cost are set', async () => {
@@ -147,6 +222,25 @@ describe('lr-trace-tree', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tokens-in"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part="cost"]')).to.exist;
+  });
+
+  it('keeps duration, token, and cost headers on the same grid tracks as row values', async () => {
+    const container = document.createElement('div');
+    container.style.inlineSize = '900px';
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${SPANS} show-tokens show-cost></lr-trace-tree>`,
+      { parentNode: container },
+    )) as LyraTraceTree;
+    const pairs = [
+      ['.col-duration', '[part="duration"]'],
+      ['.col-tokens', '[part="tokens-in"]'],
+      ['.col-cost', '[part="cost"]'],
+    ] as const;
+    for (const [headerSelector, rowSelector] of pairs) {
+      const header = el.shadowRoot!.querySelector(headerSelector) as HTMLElement;
+      const row = el.shadowRoot!.querySelector(`[data-id="root"] ${rowSelector}`) as HTMLElement;
+      expect(Math.abs(header.getBoundingClientRect().left - row.getBoundingClientRect().left)).to.be.lessThan(1);
+    }
   });
 
   it('expandAll() and collapseAll() control every collapsible row', async () => {
@@ -232,6 +326,20 @@ describe('lr-trace-tree', () => {
     await new Promise((resolve) => setTimeout(resolve, 60));
     const region = live.shadowRoot!.querySelector('[part="region"]')!;
     expect(region.textContent).to.equal('Status Success for gpt-turbo');
+  });
+
+  it('does not let a hidden descendant status overwrite the visible tree announcement channel', async () => {
+    const el = (await fixture(html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`)) as LyraTraceTree;
+    const live = el.shadowRoot!.querySelector('lr-live-region')!;
+    live.throttleMs = 0;
+    (el.shadowRoot!.querySelector('[data-id="root"] [part="toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    el.spans = SPANS.map((span) =>
+      span.id === 'search' ? { ...span, status: 'error' as const } : span,
+    );
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.equal('');
   });
 
   it('is accessible', async () => {

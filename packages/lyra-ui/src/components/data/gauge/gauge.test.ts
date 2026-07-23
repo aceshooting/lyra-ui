@@ -22,6 +22,25 @@ it('preserves an explicit host accessible name instead of replacing it with the 
   expect(el.getAttribute('aria-label')).to.equal('Overall quality score');
 });
 
+it('provides a localized accessible name when neither label nor host aria-label is set', async () => {
+  const el = (await fixture(html`<lr-gauge value="30"></lr-gauge>`)) as LyraGauge;
+  expect(el.getAttribute('aria-label')).to.equal('Gauge');
+  el.strings = { gaugeLabel: 'Messwert' };
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Messwert');
+});
+
+it('reacts to late host aria-label replacement and removal', async () => {
+  const el = (await fixture(html`<lr-gauge label="CPU" value="30"></lr-gauge>`)) as LyraGauge;
+  el.setAttribute('aria-label', 'Processor load');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('Processor load');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.getAttribute('aria-label')).to.equal('CPU');
+});
+
 it('normalizes a reversed min > max domain in aria-value* so it agrees with the visual fill instead of pinning aria-valuenow', async () => {
   const lowValue = (await fixture(
     html`<lr-gauge value="5" min="100" max="0"></lr-gauge>`,
@@ -70,6 +89,18 @@ it('guards against a degenerate min===max range instead of a NaN/Infinity dashof
   const dashoffset = Number(fill.getAttribute('stroke-dashoffset'));
   expect(dashoffset).to.not.be.NaN;
   expect(Number.isFinite(dashoffset)).to.be.true;
+  expect(el.getAttribute('role')).to.equal('img');
+  expect(el.hasAttribute('aria-valuenow')).to.equal(false);
+  expect(el.hasAttribute('aria-valuemin')).to.equal(false);
+  expect(el.hasAttribute('aria-valuemax')).to.equal(false);
+  expect(el.getAttribute('aria-label')).to.equal('Gauge: 50');
+});
+
+it('formats the visible fallback value with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-gauge locale="de-DE" value="1234.5" max="2000" label="Score"></lr-gauge>`,
+  )) as LyraGauge;
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('1.234,5');
 });
 
 it('guards against a NaN/undefined value instead of leaking "NaN" into aria-valuenow and stroke-dashoffset', async () => {

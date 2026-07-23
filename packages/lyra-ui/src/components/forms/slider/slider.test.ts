@@ -35,6 +35,22 @@ it('defaults min=0, max=100, step=1, and seeds an unset value to the domain midp
   expect(thumb.getAttribute('aria-valuenow')).to.equal('50');
 });
 
+it('keeps extreme finite domains and tiny steps finite instead of overflowing rounding math', async () => {
+  const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
+  el.min = -Number.MAX_VALUE;
+  el.max = Number.MAX_VALUE;
+  el.step = Number.MIN_VALUE;
+  el.valueAsNumber = 0;
+  await el.updateComplete;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  await el.updateComplete;
+
+  expect(Number.isFinite(el.valueAsNumber)).to.be.true;
+  expect(thumb.getAttribute('style')).to.not.contain('NaN');
+  expect(thumb.getAttribute('style')).to.not.contain('Infinity');
+});
+
 it('honors a declared value attribute instead of the midpoint default', async () => {
   const el = (await fixture(html`<lr-slider value="70"></lr-slider>`)) as LyraSlider;
   expect(el.value).to.equal('70');

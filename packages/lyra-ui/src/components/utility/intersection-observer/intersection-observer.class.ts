@@ -66,11 +66,27 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
     if (this.disabled || typeof IntersectionObserver === 'undefined') return;
     const targets = slottedElementTargets(this.renderRoot);
     if (targets.length === 0) return;
-    this.observer = new IntersectionObserver((entries) => this.emit('lr-intersection', { entries: [...entries] }), {
+    const callback: IntersectionObserverCallback = (entries) =>
+      this.emit('lr-intersection', { entries: [...entries] });
+    const values = (Array.isArray(this.threshold) ? this.threshold : [this.threshold])
+      .filter((value) => Number.isFinite(value) && value >= 0 && value <= 1);
+    const threshold = values.length > 0 ? (Array.isArray(this.threshold) ? values : values[0]!) : 0;
+    const options: IntersectionObserverInit = {
       root: this.root instanceof Element ? this.root : null,
       rootMargin: this.rootMargin,
-      threshold: this.threshold,
-    });
+      threshold,
+    };
+    try {
+      this.observer = new IntersectionObserver(callback, options);
+    } catch {
+      // Native parsing owns the root-margin grammar. Invalid public options fall back to the
+      // platform defaults rather than rejecting the scheduled update.
+      this.observer = new IntersectionObserver(callback, {
+        root: options.root,
+        rootMargin: '0px',
+        threshold,
+      });
+    }
     targets.forEach((target) => this.observer!.observe(target));
   };
 

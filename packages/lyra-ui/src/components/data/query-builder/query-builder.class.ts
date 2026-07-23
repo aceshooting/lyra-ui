@@ -322,6 +322,11 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     this.commit({ ...this._value, conditions });
   }
 
+  private consumeChildEvent(event: Event, action: () => void): void {
+    event.stopPropagation();
+    action();
+  }
+
   protected override updated(): void {
     if (this.pendingFocusAdd) {
       this.pendingFocusAdd = false;
@@ -337,7 +342,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
         aria-label=${this.localize('queryBuilderCombinatorLabel')}
         .value=${combinator}
         ?disabled=${this.disabled}
-        @change=${(e: Event) => this.setCombinator((e.target as LyraSelect).value as QueryBuilderCombinator)}
+        @change=${(event: Event) =>
+          this.consumeChildEvent(event, () =>
+            this.setCombinator((event.target as LyraSelect).value as QueryBuilderCombinator),
+          )}
       >
         <lr-option value="and">${this.localize('queryBuilderCombinatorAnd')}</lr-option>
         <lr-option value="or">${this.localize('queryBuilderCombinatorOr')}</lr-option>
@@ -360,7 +368,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           aria-label=${valueLabel}
           .value=${selected}
           ?disabled=${this.disabled}
-          @change=${(e: Event) => this.setConditionValue(condition.id, (e.target as LyraCombobox).value as string[])}
+          @change=${(event: Event) =>
+            this.consumeChildEvent(event, () =>
+              this.setConditionValue(condition.id, (event.target as LyraCombobox).value as string[]),
+            )}
         >
           ${(field.options ?? []).map((o) => html`<lr-option value=${o.value}>${o.label ?? o.value}</lr-option>`)}
         </lr-combobox>
@@ -376,7 +387,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           placeholder=${this.localize('queryBuilderValuePlaceholder')}
           .value=${current}
           ?disabled=${this.disabled}
-          @change=${(e: Event) => this.setConditionValue(condition.id, (e.target as LyraSelect).value === 'true')}
+          @change=${(event: Event) =>
+            this.consumeChildEvent(event, () =>
+              this.setConditionValue(condition.id, (event.target as LyraSelect).value === 'true'),
+            )}
         >
           <lr-option value="true">${this.localize('queryBuilderBooleanTrue')}</lr-option>
           <lr-option value="false">${this.localize('queryBuilderBooleanFalse')}</lr-option>
@@ -392,7 +406,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           aria-label=${valueLabel}
           .value=${current}
           ?disabled=${this.disabled}
-          @change=${(e: Event) => this.setConditionValue(condition.id, (e.target as LyraDateInput).value)}
+          @change=${(event: Event) =>
+            this.consumeChildEvent(event, () =>
+              this.setConditionValue(condition.id, (event.target as LyraDateInput).value),
+            )}
         ></lr-date-input>
       `;
     }
@@ -406,7 +423,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           placeholder=${this.localize('queryBuilderValuePlaceholder')}
           .value=${current}
           ?disabled=${this.disabled}
-          @change=${(e: Event) => this.setConditionValue(condition.id, (e.target as LyraSelect).value)}
+          @change=${(event: Event) =>
+            this.consumeChildEvent(event, () =>
+              this.setConditionValue(condition.id, (event.target as LyraSelect).value),
+            )}
         >
           ${(field.options ?? []).map((o) => html`<lr-option value=${o.value}>${o.label ?? o.value}</lr-option>`)}
         </lr-select>
@@ -422,11 +442,12 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           aria-label=${valueLabel}
           .value=${current}
           ?disabled=${this.disabled}
-          @input=${(e: Event) => {
-            const raw = (e.target as LyraInput).value;
-            const parsed = raw === '' ? undefined : Number(raw);
-            this.setConditionValue(condition.id, parsed !== undefined && Number.isNaN(parsed) ? undefined : parsed);
-          }}
+          @input=${(event: Event) =>
+            this.consumeChildEvent(event, () => {
+              const raw = (event.target as LyraInput).value;
+              const parsed = raw === '' ? undefined : Number(raw);
+              this.setConditionValue(condition.id, parsed !== undefined && Number.isNaN(parsed) ? undefined : parsed);
+            })}
         ></lr-input>
       `;
     }
@@ -440,7 +461,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
         aria-label=${valueLabel}
         .value=${current}
         ?disabled=${this.disabled}
-        @input=${(e: Event) => this.setConditionValue(condition.id, (e.target as LyraInput).value)}
+        @input=${(event: Event) =>
+          this.consumeChildEvent(event, () =>
+            this.setConditionValue(condition.id, (event.target as LyraInput).value),
+          )}
       ></lr-input>
     `;
   }
@@ -457,7 +481,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           placeholder=${this.localize('queryBuilderFieldPlaceholder')}
           .value=${condition.field}
           ?disabled=${this.disabled}
-          @change=${(e: Event) => this.setConditionField(condition.id, (e.target as LyraSelect).value)}
+          @change=${(event: Event) =>
+            this.consumeChildEvent(event, () =>
+              this.setConditionField(condition.id, (event.target as LyraSelect).value),
+            )}
         >
           ${this._fields.map((f) => html`<lr-option value=${f.name}>${f.label ?? f.name}</lr-option>`)}
         </lr-select>
@@ -469,7 +496,10 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           placeholder=${this.localize('queryBuilderOperatorPlaceholder')}
           .value=${condition.operator}
           ?disabled=${this.disabled || !field}
-          @change=${(e: Event) => this.setConditionOperator(condition.id, (e.target as LyraSelect).value as QueryBuilderOperator)}
+          @change=${(event: Event) =>
+            this.consumeChildEvent(event, () =>
+              this.setConditionOperator(condition.id, (event.target as LyraSelect).value as QueryBuilderOperator),
+            )}
         >
           ${operators.map((op) => html`<lr-option value=${op}>${this.operatorLabel(op, field?.type)}</lr-option>`)}
         </lr-select>

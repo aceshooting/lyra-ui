@@ -225,7 +225,7 @@ it('supports label, hint, and error slots with same-shadow description ids', asy
     </lr-code-editor>
   `)) as LyraCodeEditor;
   await el.updateComplete;
-  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part~="label"]') as HTMLElement;
   const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
   const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   expect(label.hidden).to.be.false;
@@ -330,4 +330,28 @@ it('dims via the :disabled pseudo-class when disabled only through an ancestor f
   expect(textarea.disabled).to.be.true;
   expect(getComputedStyle(el).opacity).to.equal('0.5');
   expect(getComputedStyle(el).cursor).to.equal('not-allowed');
+});
+
+it('forwards click and the writable native selection surface to the textarea', async () => {
+  const el = (await fixture(html`<lr-code-editor value="abcdef"></lr-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  let clicks = 0;
+  textarea.addEventListener('click', () => clicks++);
+
+  el.click();
+  el.selectionStart = 1;
+  el.selectionEnd = 4;
+  el.selectionDirection = 'backward';
+
+  expect(clicks).to.equal(1);
+  expect(textarea.selectionStart).to.equal(1);
+  expect(textarea.selectionEnd).to.equal(4);
+  expect(textarea.selectionDirection).to.equal('backward');
+});
+
+it('does not create one gutter element per line for very large values', async () => {
+  const value = Array.from({ length: 10_000 }, (_, index) => String(index)).join('\n');
+  const el = (await fixture(html`<lr-code-editor .value=${value}></lr-code-editor>`)) as LyraCodeEditor;
+  expect(el.shadowRoot!.querySelectorAll('[part="gutter"] > *').length).to.be.lessThan(100);
+  expect(el.shadowRoot!.querySelector('[part="gutter"]')!.textContent).to.contain('10000');
 });

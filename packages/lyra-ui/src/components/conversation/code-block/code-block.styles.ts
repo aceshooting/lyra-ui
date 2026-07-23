@@ -23,6 +23,7 @@ export const styles = css`
   }
   [part='header'] {
     display: flex;
+    min-inline-size: 0;
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
@@ -89,7 +90,12 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   [part='language'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     padding: var(--lr-size-0-0625rem) var(--lr-size-0-4375rem);
     border-radius: var(--lr-radius-pill);
     /* --lr-color-brand + -brand-quiet (not -text-quiet + -surface) --
@@ -227,7 +233,8 @@ export const styles = css`
   /* Native button reset for interactive-lines' gutter-button rendering (renderPlainCode() only --
      the shiki-highlighted path doesn't render gutter buttons, see the class doc) -- an interactive
      line's <button class="line"> must look like the plain <span class="line"> it replaces. */
-  [part='pre'] button.line {
+  [part='pre'] button.line,
+  [part='pre'] [role='button'].line {
     display: block;
     inline-size: 100%;
     margin: 0;
@@ -244,10 +251,11 @@ export const styles = css`
      ((0,3,1)) but now losing (on the pseudo-element tiebreak) to a consumer's own
      \`::part(line-button):hover\` override ((0,1,1)) without that consumer needing !important --
      same fix shape as lr-attachment-trigger's/lr-copy-button's own :where()-wrapped hover rule. */
-  :where([part='pre']) :where(button.line):hover {
+  :where([part='pre']) :where(button.line, [role='button'].line):hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='pre'] button.line:focus-visible {
+  [part='pre'] button.line:focus-visible,
+  [part='pre'] [role='button'].line:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }

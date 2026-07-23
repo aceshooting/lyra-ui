@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './selection-toolbar.js';
 import type {
   LyraSelectionToolbar,
@@ -59,4 +59,78 @@ it('applies per-instance localized strings', async () => {
     .strings=${{ selectionToolbarLabel: 'Localized selection actions' }}
   ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
   expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.getAttribute('aria-label')).to.equal('Localized selection actions');
+});
+
+it('keeps every viewport-edge placement inside the visible viewport', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  for (const rect of [
+    new DOMRect(0, 0, 1, 1),
+    new DOMRect(window.innerWidth - 1, 0, 1, 1),
+    new DOMRect(0, window.innerHeight - 1, 1, 1),
+    new DOMRect(window.innerWidth - 1, window.innerHeight - 1, 1, 1),
+  ]) {
+    el.rect = rect;
+    await el.updateComplete;
+    await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+    await aTimeout(0);
+    const positioned = toolbar.getBoundingClientRect();
+    expect(positioned.left).to.be.at.least(0);
+    expect(positioned.top).to.be.at.least(0);
+    expect(positioned.right).to.be.at.most(window.innerWidth);
+    expect(positioned.bottom).to.be.at.most(window.innerHeight);
+  }
+});
+
+it('maintains one roving toolbar stop and moves it from the directly focused action', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await aTimeout(0);
+  const actions = [...el.shadowRoot!.querySelectorAll('lr-button[data-action]')] as Array<
+    HTMLElement & { updateComplete: Promise<unknown> }
+  >;
+  await Promise.all(actions.map((action) => action.updateComplete));
+  const controls = actions.map(
+    (action) => action.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement,
+  );
+  expect(controls.map((control) => control.tabIndex)).to.deep.equal([0, -1, -1, -1]);
+
+  actions[2]!.focus();
+  await aTimeout(0);
+  controls[2]!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }),
+  );
+  await aTimeout(0);
+  expect(controls.map((control) => control.tabIndex)).to.deep.equal([-1, -1, -1, 0]);
+  expect(actions[3]!.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('snapshots selection detail before awaiting clipboard writes', async () => {
+  const originalWriteText = navigator.clipboard.writeText;
+  let release: (() => void) | undefined;
+  navigator.clipboard.writeText = () =>
+    new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  try {
+    const oldAnchor = { kind: 'text-quote' as const, quote: 'old text' };
+    const el = (await fixture(html`
+      <lr-selection-toolbar open text="old text" .anchor=${oldAnchor}></lr-selection-toolbar>
+    `)) as LyraSelectionToolbar;
+    const activated = oneEvent(el, 'lr-selection-action');
+    (el.shadowRoot!.querySelector('[data-action="copy"]') as HTMLElement).click();
+    await waitUntil(() => release !== undefined);
+    el.text = 'new text';
+    el.anchor = { kind: 'text-quote', quote: 'new text' };
+    release!();
+
+    const event = (await activated) as CustomEvent<SelectionActionDetail>;
+    expect(event.detail.text).to.equal('old text');
+    expect(event.detail.anchor).to.deep.equal(oldAnchor);
+  } finally {
+    navigator.clipboard.writeText = originalWriteText;
+  }
 });

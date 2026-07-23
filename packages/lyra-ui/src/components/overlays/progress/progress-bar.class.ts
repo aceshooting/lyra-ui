@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './progress.styles.js';
 
 export type ProgressVariant = 'brand' | 'success' | 'warning' | 'danger';
@@ -18,6 +19,7 @@ const DEFAULT_MAX = 100;
  * @csspart indicator - The filled progress indicator.
  * @csspart label - The label row.
  * @cssprop [--lr-progress-height=var(--lr-size-0-5rem)] - Block size of the progress track.
+ * @cssprop [--lr-progress-duration=var(--lr-transition-ambient)] - Indeterminate sweep timing.
  */
 export class LyraProgressBar extends LyraElement {
   static override styles = [LyraElement.styles, styles];
@@ -44,12 +46,19 @@ export class LyraProgressBar extends LyraElement {
     return (this.safeValue / this.safeMax) * 100;
   }
 
+  private get formattedPercent(): string {
+    return getNumberFormat(this.effectiveLocale, {
+      style: 'percent',
+      maximumFractionDigits: 0,
+    }).format(this.percent / 100);
+  }
+
   override render(): TemplateResult {
-    const value = this.indeterminate ? nothing : String(Math.round(this.percent));
-    const label = this.accessibleLabel || this.localize('progress');
+    const label = this.getAttribute('aria-label') || this.accessibleLabel || this.localize('progress');
     return html`<div part="base" role="progressbar" aria-label=${label}
-      aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}>
-      <div part="label" ?hidden=${!this.showValue}><slot name="label"></slot>${this.showValue && !this.indeterminate ? html`<span>${value}%</span>` : nothing}</div>
+      aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
+      aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
+      <div part="label" ?hidden=${!this.showValue}><slot name="label"></slot>${this.showValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
       <div part="track"><div part="indicator" style="inline-size:${this.indeterminate ? '40%' : `${this.percent}%`}"></div></div>
     </div>`;
   }

@@ -34,19 +34,84 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = { idle: 'neutral', queued: 
  * @csspart run-meta - Status and metric value.
  * @csspart run-status - A run status badge.
  * @csspart empty - The empty history message.
+ * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
+ * @cssprop [--lr-agent-eval-dashboard-active-background=var(--lr-color-brand-quiet)] - Active metric background.
  */
 export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEventMap> {
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: false }) metrics: AgentEvaluationMetric[] = [];
   @property({ attribute: false }) runs: AgentEvaluationDashboardRun[] = [];
   @property({ attribute: 'metric-id' }) metricId = '';
+  /** ISO 4217 currency code used by metrics whose format is `currency`. Invalid codes use USD. */
+  @property() currency = 'USD';
   @property() label = '';
   @property({ type: Boolean, attribute: 'show-chart', reflect: true, converter: trueDefaultBooleanConverter }) showChart = true;
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
   private get activeMetric(): AgentEvaluationMetric | undefined { return this.metrics.find((metric) => metric.id === this.metricId) ?? this.metrics[0]; }
   private statusLabel(status: string): string { const keys: Record<string, string> = { idle: 'agentRunStatusIdle', queued: 'agentRunStatusQueued', running: 'statusRunning', collecting: 'agentRunStatusCollecting', 'waiting-input': 'agentRunStatusWaitingInput', 'waiting-approval': 'agentRunStatusWaitingApproval', done: 'agentRunStatusDone', error: 'statusError', cancelled: 'agentRunStatusCancelled' }; return keys[status] ? this.localize(keys[status]) : status.replace(/[-_]+/g, ' '); }
-  private formatMetric(metric: AgentEvaluationMetric, value = metric.value): string { const safe = Number.isFinite(value) ? value : 0; switch (metric.format) { case 'percent': return `${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 }).format(safe * 100)}%`; case 'milliseconds': return `${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0 }).format(safe)} ms`; case 'currency': return getNumberFormat(this.effectiveLocale, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(safe); default: return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(safe); } }
+  private formatMetric(metric: AgentEvaluationMetric, value = metric.value): string {
+    const safe = Number.isFinite(value) ? value : 0;
+    switch (metric.format) {
+      case 'percent':
+        return getNumberFormat(this.effectiveLocale, {
+          style: 'percent',
+          maximumFractionDigits: 1,
+        }).format(safe);
+      case 'milliseconds':
+        return getNumberFormat(this.effectiveLocale, {
+          style: 'unit',
+          unit: 'millisecond',
+          unitDisplay: 'short',
+          maximumFractionDigits: 0,
+        }).format(safe);
+      case 'currency': {
+        try {
+          return getNumberFormat(this.effectiveLocale, {
+            style: 'currency',
+            currency: this.currency,
+            maximumFractionDigits: 2,
+          }).format(safe);
+        } catch {
+          return getNumberFormat(this.effectiveLocale, {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 2,
+          }).format(safe);
+        }
+      }
+      default:
+        return getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(safe);
+    }
+  }
   private renderRuns(): TemplateResult { if (!this.runs.length) return html`<p part="empty">${this.localize('evaluationDashboardNoRuns')}</p>`; const active = this.activeMetric; return html`<section part="runs" aria-label=${this.localize('evaluationDashboardRunsLabel')}><h3 part="runs-heading">${this.localize('evaluationDashboardRunsLabel')}</h3>${this.runs.map((run) => html`<button part="run" type="button" @click=${() => this.emit('lr-run-select', { runId: run.id })}><span part="run-label">${run.label}</span><span part="run-meta"><lr-badge part="run-status" variant=${STATUS_VARIANT[run.status] ?? 'neutral'}>${this.statusLabel(run.status)}</lr-badge>${active && run.metrics?.[active.id] != null ? html`<span>${this.formatMetric(active, run.metrics[active.id])}</span>` : nothing}</span></button>`)}</section>`; }
-  override render(): TemplateResult { const label = this.label || this.localize('evaluationDashboardLabel'); const active = this.activeMetric; const values = this.runs.map((run) => { const value = active ? run.metrics?.[active.id] : undefined; return value != null && Number.isFinite(value) ? value : null; }); return html`<section part="base" aria-label=${label}><h2 part="heading">${label}</h2>${this.metrics.length ? html`<div part="metrics">${this.metrics.map((metric) => html`<lr-stat part="metric" appearance="plain" .label=${metric.label} .value=${this.formatMetric(metric)}></lr-stat>`)}</div>` : nothing}${this.showChart && active && this.runs.length ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${this.runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} legend accessible-label=${active.label}></lr-lite-chart></div>` : nothing}${this.renderRuns()}</section>`; }
+  override render(): TemplateResult {
+    const label = this.label || this.localize('evaluationDashboardLabel');
+    const semanticLabel = this.getAttribute('aria-label') || label;
+    const active = this.activeMetric;
+    const values = this.runs.map((run) => {
+      const value = active ? run.metrics?.[active.id] : undefined;
+      return value != null && Number.isFinite(value) ? value : null;
+    });
+    return html`<section part="base" aria-label=${semanticLabel}>
+      <h2 part="heading">${label}</h2>
+      ${this.metrics.length
+        ? html`<div part="metrics">${this.metrics.map((metric) => {
+            const value = this.formatMetric(metric);
+            return html`<button
+              part="metric"
+              type="button"
+              data-metric-id=${metric.id}
+              aria-pressed=${active?.id === metric.id ? 'true' : 'false'}
+              aria-label=${`${metric.label}: ${value}`}
+              @click=${() => this.emit('lr-metric-change', { metricId: metric.id })}
+            ><lr-stat appearance="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
+          })}</div>`
+        : nothing}
+      ${this.showChart && active && this.runs.length
+        ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${this.runs.map((run) => run.label)} .datasets=${[{ label: active.label, data: values }]} legend accessible-label=${active.label}></lr-lite-chart></div>`
+        : nothing}
+      ${this.renderRuns()}
+    </section>`;
+  }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-agent-eval-dashboard': LyraAgentEvalDashboard; } }

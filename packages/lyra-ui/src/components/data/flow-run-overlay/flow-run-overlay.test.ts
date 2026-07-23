@@ -64,6 +64,49 @@ it('does not clear the canvas decorations on disconnect once something else has 
   expect(wrapper.decorations).to.equal(foreign);
 });
 
+it('adopts a late target and transfers owned decorations when for changes', async () => {
+  const host = await fixture(html`<div>
+    <lr-flow-run-overlay
+      for="first"
+      .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
+    ></lr-flow-run-overlay>
+  </div>`);
+  const overlay = host.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
+  const first = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  first.id = 'first';
+  host.append(first);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(first.decorations).to.deep.equal({ fetch: { status: 'running' } });
+
+  const second = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  second.id = 'second';
+  host.append(second);
+  overlay.for = 'second';
+  await overlay.updateComplete;
+  expect(first.decorations).to.equal(null);
+  expect(second.decorations).to.deep.equal({ fetch: { status: 'running' } });
+});
+
+it('adopts a same-id replacement target and releases the removed canvas', async () => {
+  const host = (await fixture(html`<div>
+    <lr-flow-canvas id="target"></lr-flow-canvas>
+    <lr-flow-run-overlay
+      for="target"
+      .decorations=${{ fetch: { status: 'success' } } as FlowRunDecorations}
+    ></lr-flow-run-overlay>
+  </div>`)) as HTMLElement;
+  const original = host.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+  expect(original.decorations).to.deep.equal({ fetch: { status: 'success' } });
+  original.remove();
+  const replacement = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  replacement.id = 'target';
+  host.prepend(replacement);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(original.decorations).to.equal(null);
+  expect(replacement.decorations).to.deep.equal({ fetch: { status: 'success' } });
+});
+
 it('warns when a foreign decorations value is about to be overwritten', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>
@@ -139,7 +182,53 @@ it('announces a step status transition, not the initial mount', async () => {
   overlay.decorations = { fetch: { status: 'success' } };
   await overlay.updateComplete;
   const liveRegion = overlay.shadowRoot!.querySelector('[part="live-region"]')!;
-  expect(liveRegion.textContent).to.equal('Fetch data: success');
+  expect(liveRegion.textContent).to.equal('Fetch data: Success');
+});
+
+it('announces every simultaneous step transition in one live-region update', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-run-overlay
+        slot="top-end"
+        .decorations=${{
+          fetch: { status: 'running' },
+          summarize: { status: 'pending' },
+        } as FlowRunDecorations}
+      ></lr-flow-run-overlay>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  const overlay = wrapper.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
+  overlay.decorations = {
+    fetch: { status: 'success' },
+    summarize: { status: 'error' },
+  };
+  await overlay.updateComplete;
+  const announcement = overlay.shadowRoot!.querySelector('[part="live-region"]')!.textContent!;
+  expect(announcement).to.include('Fetch data: Success');
+  expect(announcement).to.include('Summarize: Error');
+});
+
+it('locale-formats summary/count numbers and localizes each count as a whole template', async () => {
+  const overlay = (await fixture(html`
+    <lr-flow-run-overlay
+      locale="ar"
+      .strings=${{ flowRunStatusCount: '{count} / {status}' }}
+      .decorations=${{
+        a: { status: 'success' },
+        b: { status: 'success' },
+        c: { status: 'running' },
+      } as FlowRunDecorations}
+    ></lr-flow-run-overlay>
+  `)) as LyraFlowRunOverlay;
+  const number = new Intl.NumberFormat('ar');
+  expect(overlay.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include(number.format(2));
+  expect(overlay.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include(number.format(3));
+  const counts = [...overlay.shadowRoot!.querySelectorAll('[part="count"]')].map((item) =>
+    item.textContent!.trim(),
+  );
+  expect(counts).to.include(`${number.format(2)} / Success`);
 });
 
 it('renders extra host chrome from the default slot', async () => {

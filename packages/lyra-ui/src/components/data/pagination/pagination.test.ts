@@ -77,6 +77,34 @@ it('forwards public focus and blur to the page input', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(null);
 });
 
+it('forwards host click to the page input and suppresses it while effectively disabled', async () => {
+  const el = await pagination();
+  const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+
+  el.disabled = true;
+  await el.updateComplete;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
+it('keeps previous and next actions at the shared hit-area floor in every size', async () => {
+  for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
+    const el = await pagination(
+      html`<lr-pagination size=${size} total-items="95" page-size="10"></lr-pagination>`,
+    );
+    for (const part of ['previous-button', 'next-button']) {
+      const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(button.getBoundingClientRect().width, `${size} ${part}`).to.be.at.least(40);
+      expect(button.getBoundingClientRect().height, `${size} ${part}`).to.be.at.least(40);
+    }
+  }
+});
+
 it('bridges internal focus and blur as bubbling, composed host events', async () => {
   const el = await pagination();
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;

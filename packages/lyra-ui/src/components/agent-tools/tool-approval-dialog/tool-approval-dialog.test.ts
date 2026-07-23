@@ -722,6 +722,18 @@ describe('deny/approve as lr-button', () => {
 });
 
 describe('async pending decisions', () => {
+  it('freezes the editor and Edit/Cancel affordance while a decision is pending', async () => {
+    const el = (await fixture(
+      html`<lr-tool-approval-dialog open tool-name="search" .args=${{ q: 'one' }}></lr-tool-approval-dialog>`,
+    )) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    el.addEventListener('lr-approve', (event) => event.preventDefault(), { once: true });
+    approveButton(el).click();
+    await el.updateComplete;
+    expect(textarea(el).readOnly).to.be.true;
+    expect(editButton(el).disabled).to.be.true;
+  });
   it('lr-approve/lr-deny are cancelable; preventDefault() sets pending instead of closing', async () => {
     const approveEl = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,

@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './rag-answer.js';
 import type { LyraRagAnswer } from './rag-answer.class.js';
 describe('lr-rag-answer', () => {
@@ -26,5 +26,15 @@ describe('lr-rag-answer', () => {
     )) as LyraRagAnswer;
     const summary = el.shadowRoot!.querySelector('lr-grounding-summary') as HTMLElement & { showClaims: boolean };
     expect(summary.showClaims).to.be.false;
+  });
+  it('emits lr-retry from the underlying button click contract', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer error="Retrieval failed"></lr-rag-answer>`,
+    )) as LyraRagAnswer;
+    const pending = oneEvent(el, 'lr-retry');
+    (el.shadowRoot!.querySelector('[part="retry"]') as HTMLElement).shadowRoot!
+      .querySelector('button')!
+      .click();
+    expect((await pending).type).to.equal('lr-retry');
   });
 });

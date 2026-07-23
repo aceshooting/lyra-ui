@@ -67,10 +67,11 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
     this.disconnect();
     if (this.disabled || typeof MutationObserver === 'undefined') return;
     const targets = slottedElementTargets(this.renderRoot);
-    if (targets.length === 0 || (!this.childList && !this.observeAttributes && !this.characterData)) return;
+    const observesAttributes = this.observeAttributes || this.attributeFilter.length > 0;
+    if (targets.length === 0 || (!this.childList && !observesAttributes && !this.characterData)) return;
     const options: MutationObserverInit = {
       childList: this.childList,
-      attributes: this.observeAttributes,
+      attributes: observesAttributes,
       characterData: this.characterData,
       subtree: this.subtree,
     };

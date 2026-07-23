@@ -39,4 +39,11 @@ export const styles = css`
     inline-size: 100% !important;
     block-size: 100% !important;
   }
+  [part='error'] {
+    margin: 0;
+    padding: var(--lr-space-l);
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-md-sm);
+    text-align: center;
+  }
 `;

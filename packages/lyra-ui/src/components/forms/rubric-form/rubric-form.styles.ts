@@ -65,7 +65,7 @@ export const styles = css`
   [part='submit'] {
     background: var(--lr-color-brand);
     border-color: var(--lr-color-brand);
-    color: var(--lr-color-surface);
+    color: var(--lr-color-on-brand);
   }
   [part='submit']:hover {
     filter: brightness(var(--lr-hover-brightness));
@@ -91,6 +91,12 @@ export const styles = css`
   [part='unsupported'] {
     margin: 0;
     color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-xs);
+  }
+
+  .option-description {
+    display: block;
+    color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }
 `;

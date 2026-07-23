@@ -68,16 +68,25 @@ it('renders heading, description, and slotted content', async () => {
   expect(actionsSlot.assignedElements().length).to.equal(1);
 });
 
+it('does not announce the initial empty state as a live update, then announces later content changes', async () => {
+  const el = (await fixture(html`<lr-empty heading="No results"></lr-empty>`)) as LyraEmpty;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-live')).to.equal('off');
+  el.heading = 'No matching results';
+  await el.updateComplete;
+  expect(base.getAttribute('aria-live')).to.equal('polite');
+});
+
 it('is accessible', async () => {
   const el = (await fixture(html`<lr-empty heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   await expect(el).to.be.accessible();
 });
 
-it('announces the empty state to assistive tech via a live region', async () => {
+it('retains status semantics while suppressing an initial mount announcement', async () => {
   const el = (await fixture(html`<lr-empty heading="Nothing here"></lr-empty>`)) as LyraEmpty;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute('role')).to.equal('status');
-  expect(base.getAttribute('aria-live')).to.equal('polite');
+  expect(base.getAttribute('aria-live')).to.equal('off');
 });
 
 it('collapses the icon wrapper when no default-slot content is provided', async () => {

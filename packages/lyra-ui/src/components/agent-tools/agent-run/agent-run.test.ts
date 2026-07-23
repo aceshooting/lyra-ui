@@ -178,9 +178,11 @@ describe('model + cost summary', () => {
     expect(el.shadowRoot!.querySelector('lr-usage-badge')!.getAttribute('cost-text')).to.equal('$0.012');
   });
 
-  it('omits the whole summary section when neither model nor costEstimate is set', async () => {
+  it('keeps an empty summary section hidden while preserving its late-slot observer', async () => {
     const el = (await fixture(html`<lr-agent-run .run=${makeRun()}></lr-agent-run>`)) as LyraAgentRun;
-    expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    expect(summary.hidden).to.be.true;
+    expect(summary.querySelector('slot[name="summary"]')).to.exist;
   });
 });
 
@@ -302,6 +304,7 @@ describe('tasks slot default content', () => {
       { id: 'e', kind: 'x', label: 'e', status: { kind: 'done' } },
       { id: 'f', kind: 'x', label: 'f', status: { kind: 'error' } },
       { id: 'g', kind: 'x', label: 'g', status: { kind: 'cancelled' } },
+      { id: 'h', kind: 'x', label: 'h', status: { kind: 'collecting' } },
     ];
     const el = (await fixture(
       html`<lr-agent-run .run=${makeRun({ steps: mapped })}></lr-agent-run>`,
@@ -315,7 +318,42 @@ describe('tasks slot default content', () => {
       'success',
       'error',
       'error',
+      'running',
     ]);
+  });
+
+  it('does not route non-finite timestamps into elapsed-time rendering', async () => {
+    const el = (await fixture(html`
+      <lr-agent-run
+        .run=${makeRun({ status: { kind: 'running' }, startedAt: Number.POSITIVE_INFINITY })}
+      ></lr-agent-run>
+    `)) as LyraAgentRun;
+    expect(el.shadowRoot!.querySelector('lr-generation-status')).to.not.exist;
+    expect(el.shadowRoot!.textContent).to.not.include('Infinity');
+    expect(el.shadowRoot!.textContent).to.not.include('NaN');
+  });
+
+  it('formats a terminal duration number with the effective locale', async () => {
+    const el = (await fixture(html`
+      <lr-agent-run
+        lang="de-DE"
+        .run=${makeRun({ status: { kind: 'done' }, startedAt: 0, endedAt: 2500 })}
+      ></lr-agent-run>
+    `)) as LyraAgentRun;
+    expect(el.shadowRoot!.querySelector('[part="elapsed-static"]')!.textContent!.trim()).to.equal('2,5s');
+  });
+
+  it('observes a summary slotted after the initially summary-free render', async () => {
+    const el = (await fixture(html`
+      <lr-agent-run .run=${makeRun({ model: undefined, costEstimate: undefined })}></lr-agent-run>
+    `)) as LyraAgentRun;
+    expect(el.shadowRoot!.querySelector('slot[name="summary"]')).to.exist;
+    const summary = document.createElement('span');
+    summary.slot = 'summary';
+    summary.textContent = 'Late summary';
+    el.append(summary);
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('slot[name="summary"]') as HTMLSlotElement).assignedElements().length).to.equal(1);
   });
 
   it('renders no fallback content when run.steps is empty', async () => {
@@ -646,4 +684,16 @@ it('is accessible in the populated compact + plain states', async () => {
     ></lr-agent-run>`,
   )) as LyraAgentRun;
   await expect(plainEl).to.be.accessible();
+});
+
+it('allows semantic metric colors to be rethemed without changing shared status tokens', async () => {
+  const el = (await fixture(html`
+    <lr-agent-run
+      style="--lr-agent-run-metric-danger-color: rgb(1, 2, 3)"
+      .run=${makeRun()}
+      .metrics=${[{ id: 'failures', label: 'Failures', value: 2, variant: 'danger' }]}
+    ></lr-agent-run>
+  `)) as LyraAgentRun;
+  const value = el.shadowRoot!.querySelector('[part="metric-value"]') as HTMLElement;
+  expect(getComputedStyle(value).color).to.equal('rgb(1, 2, 3)');
 });

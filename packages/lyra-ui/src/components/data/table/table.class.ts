@@ -1303,8 +1303,14 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     this.filterText = input.value;
     this.emit('lr-filter-change', { text: this.filterText });
   };
-  private onNativeFocus = (): void => { this.emit('focus'); };
-  private onNativeBlur = (): void => { this.emit('blur'); };
+  private onNativeFocus = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('focus');
+  };
+  private onNativeBlur = (event: FocusEvent): void => {
+    event.stopPropagation();
+    this.emit('blur');
+  };
 
   private onPaginationChange = (event: Event): void => {
     event.stopPropagation();
@@ -1987,6 +1993,19 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // column (the same way hasExpand/hasRowTotal were each added) only has to be added here once.
     const spanningColspan = this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0);
     const renderedEntries = this.renderedEntries();
+    const renderedGroupKeys = this.groupBy
+      ? renderedEntries.map((entry) => this.groupBy!(entry.row))
+      : [];
+    const renderedGroupRows = new Map<string | number, T[]>();
+    if (this.groupLabel) {
+      renderedEntries.forEach((entry, index) => {
+        const groupKey = renderedGroupKeys[index];
+        if (groupKey === undefined) return;
+        const rows = renderedGroupRows.get(groupKey);
+        if (rows) rows.push(entry.row);
+        else renderedGroupRows.set(groupKey, [entry.row]);
+      });
+    }
     const hasPagination = this.normalizedPageSize > 0;
     const filterLabel = this.localize('tableFilterLabel', this.filterLabel || undefined);
     const filterPlaceholder = this.localize('tableFilterPlaceholder', this.filterPlaceholder || undefined);
@@ -2074,9 +2093,8 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                   const selected = (this.selectedKey !== null && this.selectedKey === key) || this.selectedKeys.has(key);
                   const canExpandRow = hasExpand && (this.canExpand ? this.canExpand(row) : true);
                   const rowExpanded = canExpandRow && this.expandedKeys.has(key);
-                  const groupKey = this.groupBy?.(row);
-                  const previousGroupKey =
-                    entryIndex > 0 ? this.groupBy?.(renderedEntries[entryIndex - 1]!.row) : undefined;
+                  const groupKey = renderedGroupKeys[entryIndex];
+                  const previousGroupKey = entryIndex > 0 ? renderedGroupKeys[entryIndex - 1] : undefined;
                   const isNewGroup =
                     this.groupBy !== undefined && (entryIndex === 0 || groupKey !== previousGroupKey);
                   return [
@@ -2090,9 +2108,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                             ${this.groupLabel
                               ? this.groupLabel(
                                   groupKey!,
-                                  renderedEntries
-                                    .filter((candidate) => this.groupBy?.(candidate.row) === groupKey)
-                                    .map((candidate) => candidate.row),
+                                  renderedGroupRows.get(groupKey!) ?? [],
                                 )
                               : String(groupKey)}
                           </td>
@@ -2103,7 +2119,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                       role="row"
                       data-row-key=${encodeKey(key)}
                       ?data-stripe=${entryIndex % 2 === 0}
-                      aria-selected=${selected ? 'true' : 'false'}
+                      aria-selected=${this.selectionMode === 'none' ? nothing : selected ? 'true' : 'false'}
                       tabindex=${encodeKey(key) === focusedRow ? '0' : '-1'}
                     >
                       ${hasExpand

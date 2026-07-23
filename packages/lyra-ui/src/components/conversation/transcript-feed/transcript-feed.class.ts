@@ -132,9 +132,10 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     return !prev || prev.speaker !== current.speaker;
   }
 
-  private formatTs(epochMs: number): string {
+  private formatTs(epochMs: number): string | null {
+    if (!Number.isFinite(epochMs)) return null;
     if (this.formatTimestamp) return this.formatTimestamp(epochMs);
-    return getDateTimeFormat(this.effectiveLocale || 'en', { hour: 'numeric', minute: '2-digit' }).format(
+    return getDateTimeFormat(this.effectiveLocale, { hour: 'numeric', minute: '2-digit' }).format(
       new Date(epochMs),
     );
   }
@@ -142,13 +143,14 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   private renderEntry(entry: LyraTranscriptEntry, showSpeaker: boolean, interim: boolean): TemplateResult {
     const parts = ['entry'];
     if (interim) parts.push('interim');
+    const timestamp = entry.timestamp == null ? null : this.formatTs(entry.timestamp);
     return html`
       <div part=${parts.join(' ')} ?data-interim=${interim}>
         ${showSpeaker && entry.speaker ? html`<span part="speaker">${entry.speaker}</span>` : nothing}
         <span part="text" dir="auto">${entry.text}</span>
         ${interim ? html`<span class="sr-only">${this.localize('transcriptFeedInterim')}</span>` : nothing}
-        ${this.showTimestamps && entry.timestamp != null
-          ? html`<span part="timestamp">${this.formatTs(entry.timestamp)}</span>`
+        ${this.showTimestamps && timestamp !== null
+          ? html`<span part="timestamp">${timestamp}</span>`
           : nothing}
       </div>
     `;
@@ -159,7 +161,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     const interims = this.interimEntries;
     const empty = this.entries.length === 0;
     return html`
-      <div part="base" @scroll=${this.onScroll}>
+      <div part="base" tabindex="0" @scroll=${this.onScroll}>
         ${empty
           ? html`<div part="empty"><slot name="empty">${this.localize('transcriptFeedEmpty')}</slot></div>`
           : html`

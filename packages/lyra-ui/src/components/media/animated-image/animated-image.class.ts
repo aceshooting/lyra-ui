@@ -7,6 +7,9 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { styles } from './animated-image.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
+const MAX_FROZEN_FRAME_DIMENSION = 8192;
+const MAX_FROZEN_FRAME_PIXELS = 16_777_216;
+
 export interface LyraAnimatedImageEventMap {
   'lr-load': CustomEvent<undefined>;
   'lr-error': CustomEvent<undefined>;
@@ -202,14 +205,28 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
       const width = img.naturalWidth;
       const height = img.naturalHeight;
       const dpr = window.devicePixelRatio || 1;
+      const requestedWidth = width * dpr;
+      const requestedHeight = height * dpr;
+      const dimensionScale = Math.min(
+        1,
+        MAX_FROZEN_FRAME_DIMENSION / Math.max(1, requestedWidth),
+        MAX_FROZEN_FRAME_DIMENSION / Math.max(1, requestedHeight),
+      );
+      const pixelScale = Math.min(
+        1,
+        Math.sqrt(MAX_FROZEN_FRAME_PIXELS / Math.max(1, requestedWidth * requestedHeight)),
+      );
+      const backingScale = Math.min(dimensionScale, pixelScale);
+      const backingWidth = Math.max(1, Math.floor(requestedWidth * backingScale));
+      const backingHeight = Math.max(1, Math.floor(requestedHeight * backingScale));
       // Setting width/height resets any prior transform, so a fresh
       // ctx.scale() below is always relative to an untransformed canvas --
       // safe to call again on every subsequent src's own load.
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
+      canvas.width = backingWidth;
+      canvas.height = backingHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.scale(dpr, dpr);
+        ctx.scale(backingWidth / Math.max(1, width), backingHeight / Math.max(1, height));
         ctx.drawImage(img, 0, 0, width, height);
       }
     }
@@ -234,6 +251,11 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
   /** Blur the play/pause control. */
   override blur(): void {
     this.playButtonEl?.blur();
+  }
+
+  /** Activate the play/pause control. */
+  override click(): void {
+    this.playButtonEl?.click();
   }
 
   private onControlFocus = (event: FocusEvent): void => {

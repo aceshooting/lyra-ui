@@ -143,6 +143,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     this.downButtonEl?.blur();
   }
 
+  /** Activates the thumb matching the current value (the up thumb when unset). */
+  override click(): void {
+    if (this.disabled) return;
+    (this.value === 'down' ? this.downButtonEl : this.upButtonEl)?.click();
+  }
+
   private get hasDetailContent(): boolean {
     return this.reasons.length > 0 || this.commentable;
   }
@@ -196,6 +202,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   };
 
   private toggleReason(id: string): void {
+    if (this.disabled) return;
     this.selectedReasonIds = this.selectedReasonIds.includes(id)
       ? this.selectedReasonIds.filter((r) => r !== id)
       : [...this.selectedReasonIds, id];
@@ -254,7 +261,14 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         <div part="thumbs">${this.renderThumb('up')}${this.renderThumb('down')}</div>
         ${this.hasDetailContent
           ? html`
-              <div part="panel" id=${this.panelId} ?data-open=${this.panelOpen} @keydown=${this.onPanelKeyDown}>
+              <div
+                part="panel"
+                id=${this.panelId}
+                ?data-open=${this.panelOpen}
+                ?inert=${!this.panelOpen}
+                aria-hidden=${this.panelOpen ? 'false' : 'true'}
+                @keydown=${this.onPanelKeyDown}
+              >
                 <div class="panel-inner">
                   ${this.reasons.length > 0
                     ? html`
@@ -264,6 +278,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                               <lr-chip
                                 toggleable
                                 ?selected=${this.selectedReasonIds.includes(reason.id)}
+                                .disabled=${this.disabled}
                                 @lr-chip-select=${() => this.toggleReason(reason.id)}
                                 >${reason.label}</lr-chip
                               >

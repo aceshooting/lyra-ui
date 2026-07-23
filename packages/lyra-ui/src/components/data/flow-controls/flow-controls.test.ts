@@ -132,6 +132,35 @@ it('resolves a for-target canvas that mounts into the document after the control
   expect((controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).disabled).to.be.false;
 });
 
+it('adopts a same-id replacement canvas and unsubscribes from the removed target', async () => {
+  const root = (await fixture(html`
+    <div>
+      <lr-flow-canvas id="wf"></lr-flow-canvas>
+      <lr-flow-controls for="wf"></lr-flow-controls>
+    </div>
+  `)) as HTMLElement;
+  const original = root.querySelector('lr-flow-canvas') as LyraFlowCanvas;
+  original.nodes = nodes;
+  await original.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const controls = root.querySelector('lr-flow-controls') as LyraFlowControls;
+
+  original.remove();
+  const replacement = document.createElement('lr-flow-canvas') as LyraFlowCanvas;
+  replacement.id = 'wf';
+  replacement.nodes = nodes;
+  root.prepend(replacement);
+  await replacement.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const oldZoom = original.viewport.zoom;
+  const newZoom = replacement.viewport.zoom;
+  (controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement).click();
+
+  expect(original.viewport.zoom).to.equal(oldZoom);
+  expect(replacement.viewport.zoom).to.be.greaterThan(newZoom);
+});
+
 it('dims a disabled toolbar button through the shared disabled-opacity token', async () => {
   const wrapper = (await fixture(
     html`<div style="--lr-theme-opacity-disabled: 0.25"><lr-flow-controls></lr-flow-controls></div>`,
@@ -161,6 +190,20 @@ it('renders per-element .strings overrides in the control button labels', async 
   expect(el.shadowRoot!.querySelector('[part="zoom-in"]')!.getAttribute('aria-label')).to.equal('Zoomer');
   expect(el.shadowRoot!.querySelector('[part="fit"]')!.getAttribute('aria-label')).to.equal('Ajuster');
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Commandes du canevas');
+});
+
+it('forwards a live host aria-label to the semantic group', async () => {
+  const el = (await fixture(
+    html`<lr-flow-controls aria-label="Workflow controls"></lr-flow-controls>`,
+  )) as LyraFlowControls;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-label')).to.equal('Workflow controls');
+  el.setAttribute('aria-label', 'Canvas controls');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(base.getAttribute('aria-label')).to.equal('Canvas controls');
 });
 
 describe('appearance', () => {

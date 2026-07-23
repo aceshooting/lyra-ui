@@ -42,7 +42,14 @@ export function codeBlockBodyLabel(localize: LyraLocalizeFn, filename: string, l
  * normalized to ascending order. An invalid segment is skipped (with a `console.warn`) rather
  * than throwing or discarding the otherwise-valid segments around it.
  */
-export function parseHighlightLines(spec: string): Set<number> {
+export function addBoundedLineRange(lines: Set<number>, start: number, end: number, maxLine: number): void {
+  if (!Number.isFinite(start) || !Number.isFinite(end) || maxLine < 1) return;
+  const low = Math.max(1, Math.min(Math.trunc(start), Math.trunc(end)));
+  const high = Math.min(Math.trunc(maxLine), Math.max(Math.trunc(start), Math.trunc(end)));
+  for (let line = low; line <= high; line++) lines.add(line);
+}
+
+export function parseHighlightLines(spec: string, maxLine = Number.MAX_SAFE_INTEGER): Set<number> {
   const lines = new Set<number>();
   for (const raw of spec.split(',')) {
     const segment = raw.trim();
@@ -51,12 +58,12 @@ export function parseHighlightLines(spec: string): Set<number> {
     if (rangeMatch) {
       const a = Number(rangeMatch[1]);
       const b = Number(rangeMatch[2]);
-      for (let n = Math.min(a, b); n <= Math.max(a, b); n++) lines.add(n);
+      addBoundedLineRange(lines, a, b, maxLine);
       continue;
     }
     const single = /^(\d+)$/.exec(segment);
     if (single) {
-      lines.add(Number(single[1]));
+      addBoundedLineRange(lines, Number(single[1]), Number(single[1]), maxLine);
       continue;
     }
     console.warn(`highlight-lines: ignored invalid segment "${segment}"`);
@@ -66,8 +73,11 @@ export function parseHighlightLines(spec: string): Set<number> {
 
 export interface CodeBlockLineTransformerOptions {
   lineNumbers: boolean;
+  interactiveLines: boolean;
+  focusedLine: number;
   highlightedLines: Set<number>;
   activeLines: Set<number>;
+  lineDescription: (line: number) => string;
 }
 
 /**
@@ -98,10 +108,18 @@ export function codeBlockLineTransformer(options: CodeBlockLineTransformerOption
     },
     line(node: OptionalPeerApi, line: number) {
       node.properties['data-line'] = String(line);
+      const parts: string[] = [];
+      if (options.interactiveLines && options.lineNumbers) {
+        parts.push('line-button');
+        node.properties.role = 'button';
+        node.properties.tabindex = String(options.focusedLine === line ? 0 : -1);
+        node.properties['aria-description'] = options.lineDescription(line);
+      }
       if (options.highlightedLines.has(line)) {
-        node.properties.part = ['line-highlight'];
+        parts.push('line-highlight');
         node.properties['data-highlighted'] = '';
       }
+      if (parts.length > 0) node.properties.part = parts;
       if (options.activeLines.has(line)) node.properties['data-active'] = '';
     },
   };
@@ -159,7 +177,7 @@ export function renderCodeBlockPlainCode(options: CodeBlockPlainCodeOptions): Te
               data-line=${lineNumber}
               ?data-highlighted=${isHighlighted}
               ?data-active=${isActive}
-              aria-label=${options.localize('codeBlockLineLabel', undefined, { line: lineNumber })}
+              aria-description=${options.localize('codeBlockLineLabel', undefined, { line: lineNumber })}
               tabindex=${options.focusedLine === lineNumber ? 0 : -1}
               @click=${() => options.onLineActivate(lineNumber)}
               @keydown=${(e: KeyboardEvent) => options.onLineKeyDown(e, lineNumber)}

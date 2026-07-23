@@ -72,7 +72,7 @@ it('uses logical size containment and an internal overflow surface at a narrow a
 
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(getComputedStyle(el).maxInlineSize).to.equal('100%');
-  expect(getComputedStyle(content).minInlineSize).to.equal('0px');
+  expect(getComputedStyle(content).minInlineSize).to.equal('40px');
   expect(getComputedStyle(content).maxInlineSize).to.equal('100%');
   expect(getComputedStyle(content).overflowInline).to.equal('auto');
   // Paired-axis overflow: leaving the block axis unset would force it to the browser's own

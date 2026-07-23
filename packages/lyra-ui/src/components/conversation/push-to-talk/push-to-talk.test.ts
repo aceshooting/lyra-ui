@@ -82,13 +82,14 @@ function stubSuccessfulCapture(): () => void {
 
 /** Stubs getUserMedia with a promise the test controls, to simulate a still-pending permission
  *  prompt (state === 'requesting') and exercise release-while-requesting handling. */
-function stubDeferredCapture(): { restore: () => void; resolve: () => void } {
+function stubDeferredCapture(): { restore: () => void; resolve: () => void; stream: FakeStream } {
   const original = navigator.mediaDevices.getUserMedia;
   const originalMediaRecorder = window.MediaRecorder;
+  const stream = new FakeStream();
   let resolveFn: () => void = () => {};
   navigator.mediaDevices.getUserMedia = (() =>
     new Promise<MediaStream>((resolve) => {
-      resolveFn = () => resolve(new FakeStream() as unknown as MediaStream);
+      resolveFn = () => resolve(stream as unknown as MediaStream);
     })) as typeof navigator.mediaDevices.getUserMedia;
   window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
   return {
@@ -97,6 +98,7 @@ function stubDeferredCapture(): { restore: () => void; resolve: () => void } {
       window.MediaRecorder = originalMediaRecorder;
     },
     resolve: () => resolveFn(),
+    stream,
   };
 }
 
@@ -458,6 +460,86 @@ it('disabled suppresses start() entirely', async () => {
   }
 });
 
+it('host click forwards to the configured recording control', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
+    const started = oneEvent(el, 'lr-record-start');
+    el.click();
+    await started;
+    expect(el.state).to.equal('recording');
+
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.click();
+    await stopped;
+    expect(el.state).to.equal('idle');
+  } finally {
+    restore();
+  }
+});
+
+it('disabling an active recording cancels it and stops the granted track', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    await el.start();
+    const stream = el.stream as unknown as FakeStream;
+    const cancelled = oneEvent(el, 'lr-record-cancel');
+    el.disabled = true;
+    await el.updateComplete;
+    await cancelled;
+    expect(el.state).to.equal('idle');
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+  } finally {
+    restore();
+  }
+});
+
+it('rechecks disabled after pending permission resolves and stops the newly granted track', async () => {
+  const deferred = stubDeferredCapture();
+  try {
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    const started = el.start();
+    await el.updateComplete;
+    expect(el.state).to.equal('requesting');
+    el.disabled = true;
+    await el.updateComplete;
+    const cancelled = oneEvent(el, 'lr-record-cancel');
+    deferred.resolve();
+    expect(await started).to.be.false;
+    await cancelled;
+    expect(el.state).to.equal('idle');
+    expect(deferred.stream.getTracks()[0]?.stopped).to.be.true;
+  } finally {
+    deferred.restore();
+  }
+});
+
+it('stops the granted stream when MediaRecorder construction fails', async () => {
+  const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+  const originalMediaRecorder = window.MediaRecorder;
+  const stream = new FakeStream();
+  navigator.mediaDevices.getUserMedia = (async () => stream as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
+  window.MediaRecorder = class {
+    static isTypeSupported(): boolean {
+      return true;
+    }
+    constructor() {
+      throw new Error('recorder construction failed');
+    }
+  } as unknown as typeof MediaRecorder;
+  try {
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    expect(await el.start()).to.be.false;
+    expect(el.state).to.equal('error');
+    expect(stream.getTracks()[0]?.stopped).to.be.true;
+    expect(el.stream).to.equal(null);
+  } finally {
+    navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+    window.MediaRecorder = originalMediaRecorder;
+  }
+});
+
 // -- Chunked streaming -------------------------------------------------------
 
 it('emits lr-record-chunk once per timeslice when timeslice-ms > 0, and never when it is 0', async () => {
@@ -616,6 +698,28 @@ it('announces start/stop/cancel via the internal live region', async () => {
     expect(liveRegionText(el)).to.equal('Recording stopped');
   } finally {
     restore();
+  }
+});
+
+it('announces permission and generic recording failures via the internal live region', async () => {
+  const deniedRestore = stubDeniedCapture();
+  try {
+    const denied = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    await denied.start();
+    await aTimeout(20);
+    expect(liveRegionText(denied)).to.equal('Microphone access denied');
+  } finally {
+    deniedRestore();
+  }
+
+  const errorRestore = stubErroringCapture();
+  try {
+    const failed = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+    await failed.start();
+    await aTimeout(20);
+    expect(liveRegionText(failed)).to.equal('Recording failed');
+  } finally {
+    errorRestore();
   }
 });
 

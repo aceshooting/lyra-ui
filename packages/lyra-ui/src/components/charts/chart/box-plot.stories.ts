@@ -89,3 +89,21 @@ export const ThemedTokensAndRefresh: Story = {
     `;
   },
 };
+
+/** Supplying the accessibility-table slot replaces, rather than duplicates, the generated table. */
+export const CustomDataTable: Story = {
+  render: () => html`
+    <lr-box-plot
+      .labels=${['Production']}
+      .boxes=${[
+        { label: 'Latency', data: [{ min: 100, q1: 180, median: 240, q3: 330, max: 510 }] },
+      ]}
+    >
+      <table slot="data-table">
+        <caption>Latency distribution</caption>
+        <thead><tr><th>Environment</th><th>Median</th></tr></thead>
+        <tbody><tr><th>Production</th><td>240</td></tr></tbody>
+      </table>
+    </lr-box-plot>
+  `,
+};

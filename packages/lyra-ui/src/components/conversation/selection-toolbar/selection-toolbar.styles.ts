@@ -11,6 +11,8 @@ export const styles = css`
     inset-inline-start: var(--lr-selection-toolbar-inline-start);
     inset-block-start: var(--lr-selection-toolbar-block-start);
     display: flex;
+    flex-wrap: wrap;
+    max-inline-size: calc(100vw - var(--lr-space-m));
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -22,6 +24,20 @@ export const styles = css`
 
   :host(:dir(rtl)) [part='toolbar'] {
     transform: translate(50%, calc(-100% - var(--lr-space-xs)));
+  }
+
+  [part='toolbar'][data-positioned] {
+    transform: translate(
+      calc(-50% + var(--lr-selection-toolbar-inline-shift, 0px)),
+      calc(-100% + var(--lr-selection-toolbar-block-shift, 0px))
+    );
+  }
+
+  :host(:dir(rtl)) [part='toolbar'][data-positioned] {
+    transform: translate(
+      calc(50% + var(--lr-selection-toolbar-inline-shift, 0px)),
+      calc(-100% + var(--lr-selection-toolbar-block-shift, 0px))
+    );
   }
 
   [part~='action'] {

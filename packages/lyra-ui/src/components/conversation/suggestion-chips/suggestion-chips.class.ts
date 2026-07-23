@@ -47,11 +47,28 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
   @property() label = '';
 
   @state() private activeIndex = 0;
+  private refocusAfterUpdate = false;
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('suggestions')) {
-      this.activeIndex = Math.min(this.activeIndex, Math.max(0, this.suggestions.length - 1));
+      const previous = changed.get('suggestions') as ChatSuggestion[] | undefined;
+      const activeId = previous?.[this.activeIndex]?.id;
+      const focusedId =
+        (this.shadowRoot?.activeElement as HTMLElement | null)?.dataset['suggestionId'];
+      const remapped = activeId ? this.suggestions.findIndex((suggestion) => suggestion.id === activeId) : -1;
+      this.activeIndex =
+        remapped >= 0 ? remapped : Math.min(this.activeIndex, Math.max(0, this.suggestions.length - 1));
+      this.refocusAfterUpdate =
+        focusedId !== undefined &&
+        !this.suggestions.some((suggestion) => suggestion.id === focusedId) &&
+        this.suggestions.length > 0;
     }
+  }
+
+  protected override updated(): void {
+    if (!this.refocusAfterUpdate) return;
+    this.refocusAfterUpdate = false;
+    this.focusChip(this.activeIndex);
   }
 
   private select(suggestion: ChatSuggestion): void {
@@ -91,6 +108,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
       <button
         type="button"
         part="chip"
+        data-suggestion-id=${suggestion.id}
         tabindex=${index === this.activeIndex ? '0' : '-1'}
         @click=${() => this.select(suggestion)}
         @focus=${() => this.onChipFocus(index)}

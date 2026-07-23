@@ -1,6 +1,7 @@
 import { html, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './file-tree.styles.js';
 // The registering barrels (not the bare *.class.js modules) -- these side effects are what make
@@ -121,19 +122,20 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     const hasDiff = node.additions !== undefined || node.deletions !== undefined;
     const description = hasDiff
       ? this.localize('fileTreeDiffSummary', undefined, {
-          additions: node.additions ?? 0,
-          deletions: node.deletions ?? 0,
+          additions: getNumberFormat(this.effectiveLocale).format(node.additions ?? 0),
+          deletions: getNumberFormat(this.effectiveLocale).format(node.deletions ?? 0),
         })
       : undefined;
     let children: TreeItem[] | undefined;
     if (isLazyUnloaded(node)) {
-      children = [{ id: `${node.path} loading`, label: this.localize('loading') }];
+      children = [{ id: `${node.path} loading`, label: this.localize('loading'), disabled: true }];
     } else if (node.children) {
       children = node.children.map((c) => this.toTreeItem(c));
     }
     return {
       id: node.path,
       label: node.name ?? baseName(node.path),
+      selected: this.selectedPath === node.path,
       children,
       badges: badges.length > 0 ? badges : undefined,
       description,
@@ -152,6 +154,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   private onNodeSelect = (e: Event): void => {
+    e.stopPropagation();
     const { id } = (e as CustomEvent<{ id: string }>).detail;
     const node = this.nodesByPath.get(id);
     if (!node || id.includes(' loading')) return;
@@ -164,6 +167,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   };
 
   private onNodeToggle = (e: Event): void => {
+    e.stopPropagation();
     const { id, expanded } = (e as CustomEvent<{ id: string; expanded: boolean }>).detail;
     if (!expanded) return;
     const node = this.nodesByPath.get(id);
@@ -239,7 +243,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
       <div part="base">
         <lr-tree
           .data=${this.treeItems}
-          label=${this.label || this.localize('fileTreeLabel')}
+          label=${this.getAttribute('aria-label') || this.label || this.localize('fileTreeLabel')}
           @lr-node-select=${this.onNodeSelect}
           @lr-node-toggle=${this.onNodeToggle}
         ></lr-tree>

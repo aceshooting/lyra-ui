@@ -145,6 +145,20 @@ it("matches lr-input's own row height at every shared size tier when empty", asy
   }
 });
 
+it('scales token-chip padding with the token-input size tier', async () => {
+  const small = (await fixture(
+    html`<lr-token-input size="2xs" .value=${['alpha']}></lr-token-input>`,
+  )) as LyraTokenInput;
+  const large = (await fixture(
+    html`<lr-token-input size="xl" .value=${['alpha']}></lr-token-input>`,
+  )) as LyraTokenInput;
+  const smallToken = small.shadowRoot!.querySelector('[part="token"]') as HTMLElement;
+  const largeToken = large.shadowRoot!.querySelector('[part="token"]') as HTMLElement;
+  expect(parseFloat(getComputedStyle(largeToken).paddingInlineStart)).to.be.greaterThan(
+    parseFloat(getComputedStyle(smallToken).paddingInlineStart),
+  );
+});
+
 it('keeps the remove-button hit-area fixed across every size tier', async () => {
   const sizes = ['2xs', 'xs', 's', 'm', 'l', 'xl'];
   for (const size of sizes) {
@@ -195,6 +209,40 @@ it('lets an explicit aria-label win over the computed aria-labelledby', async ()
     wrapper.hasAttribute('aria-labelledby'),
     'an explicit aria-label must suppress the computed labelledby id',
   ).to.be.false;
+});
+
+it('applies the host name and field descriptions to the actual draft textbox', async () => {
+  const el = (await fixture(html`
+    <lr-token-input aria-label="Choose recipients" hint="Separate names with commas"
+      error-text="At least one recipient is required"></lr-token-input>
+  `)) as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  expect(input.getAttribute('aria-label')).to.equal('Choose recipients');
+  const described = input.getAttribute('aria-describedby')!.split(' ');
+  expect(described).to.include(el.shadowRoot!.querySelector('[part="hint"]')!.id);
+  expect(described).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
+});
+
+it('closes positional edit state rather than transferring it to a reordered replacement', async () => {
+  const el = (await fixture(html`
+    <lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>
+  `)) as LyraTokenInput;
+  (el.shadowRoot!.querySelectorAll('[part="token-label"]')[0] as HTMLElement).click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="token-editor"]').length).to.equal(1);
+
+  el.value = ['beta', 'alpha'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="token-editor"]').length).to.equal(0);
+});
+
+it('contains a single unbroken token inside a 320px allocation', async () => {
+  const el = (await fixture(html`
+    <lr-token-input style="inline-size:320px" .value=${['x'.repeat(120)]}></lr-token-input>
+  `)) as LyraTokenInput;
+  const token = el.shadowRoot!.querySelector('[part="token"]') as HTMLElement;
+  expect(token.scrollWidth).to.be.at.most(token.clientWidth);
+  expect(el.scrollWidth).to.be.at.most(320);
 });
 
 it('marks the draft input aria-invalid once touched with a validation failure, and clears it once valid', async () => {

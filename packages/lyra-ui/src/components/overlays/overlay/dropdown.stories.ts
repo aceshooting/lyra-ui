@@ -10,6 +10,6 @@ export default meta;
 export const Default: StoryObj = {
   render: (_args, context) =>
     html`<lr-dropdown .open=${context.viewMode !== 'docs'}
-      ><button slot="trigger">Open menu</button><div>Menu content</div></lr-dropdown
+      ><button slot="trigger">Open menu</button><button role="menuitem" type="button">Menu action</button></lr-dropdown
     >`,
 };

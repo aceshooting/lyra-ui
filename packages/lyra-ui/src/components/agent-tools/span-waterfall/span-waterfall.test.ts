@@ -198,3 +198,38 @@ describe('lr-span-waterfall', () => {
     });
   });
 });
+
+it('drops invalid span timestamps before they can poison otherwise valid geometry', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      .spans=${[
+        { id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 10 },
+        { id: 'invalid', name: 'Invalid', kind: 'tool', status: 'error', startMs: Number.NaN, endMs: Infinity },
+      ]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"]').length).to.equal(1);
+  expect(el.shadowRoot!.innerHTML).to.not.include('NaN');
+  expect(el.shadowRoot!.innerHTML).to.not.include('Infinity');
+});
+
+it('keeps a tabbable row when activeSpanId is dangling', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      active-span-id="missing"
+      .spans=${[{ id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 10 }]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"][tabindex="0"]').length).to.equal(1);
+});
+
+it('formats durations with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      lang="de-DE"
+      hide-axis
+      .spans=${[{ id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 2500 }]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent).to.equal('2,5 Sek.');
+});

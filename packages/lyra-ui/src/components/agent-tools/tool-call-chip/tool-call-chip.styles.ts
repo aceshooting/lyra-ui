@@ -11,7 +11,7 @@ export const styles = css`
     --lr-tool-call-chip-accent: var(--lr-color-text-quiet);
     --lr-tool-call-chip-bg: var(--lr-color-surface);
     --lr-tool-call-chip-border: var(--lr-color-border);
-    --lr-tool-call-chip-spin: 1s linear;
+    --lr-tool-call-chip-spin: var(--lr-transition-ambient);
   }
 
   :host([status='running']) {

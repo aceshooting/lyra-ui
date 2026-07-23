@@ -18,6 +18,21 @@ it('exposes a keyboard-accessible rating slider', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('locale-formats the spoken slider value and forwards host focus/blur/click to the control', async () => {
+  const el = (await fixture(html`<lr-rating lang="ar" value="2.5" precision="0.5"></lr-rating>`)) as LyraRating;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.getAttribute('aria-valuetext')).to.equal(new Intl.NumberFormat('ar').format(2.5));
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+  let clicked = 0;
+  base.addEventListener('click', () => clicked++);
+  el.click();
+  expect(clicked).to.equal(1);
+});
+
 it('reverses horizontal value movement under RTL', async () => {
   const el = (await fixture(html`<div dir="rtl"><lr-rating value="2"></lr-rating></div>`)).querySelector('lr-rating') as LyraRating;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

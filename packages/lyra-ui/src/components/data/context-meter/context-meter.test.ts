@@ -99,7 +99,7 @@ it('clamps the aria-label summary to total, not the raw segment sum, when segmen
 
   // Raw sum is 160, but the accessible summary must report the same clamped
   // 100 the visual fill is capped to, not an impossible "160 of 100 used".
-  expect(el.getAttribute('aria-label')).to.equal('100 of 100 used');
+  expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal('100 of 100 used');
 });
 
 it('treats a negative or NaN segment value as 0 instead of producing a negative width', async () => {
@@ -122,11 +122,12 @@ it('computes a "used of total" aria-label summary from the segment sum, ignoring
   el.segments = SEGMENTS;
   await el.updateComplete;
 
-  expect(el.getAttribute('role')).to.equal('meter');
-  expect(el.getAttribute('aria-label')).to.equal('8,000 of 10,000 used');
-  expect(el.getAttribute('aria-valuenow')).to.equal('8000');
-  expect(el.getAttribute('aria-valuemin')).to.equal('0');
-  expect(el.getAttribute('aria-valuemax')).to.equal('10000');
+  const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect(semantic.getAttribute('role')).to.equal('meter');
+  expect(semantic.getAttribute('aria-label')).to.equal('8,000 of 10,000 used');
+  expect(semantic.getAttribute('aria-valuenow')).to.equal('8000');
+  expect(semantic.getAttribute('aria-valuemin')).to.equal('0');
+  expect(semantic.getAttribute('aria-valuemax')).to.equal('10000');
 });
 
 it('prefixes the aria-label summary with the label when provided', async () => {
@@ -136,7 +137,9 @@ it('prefixes the aria-label summary with the label when provided', async () => {
   el.segments = SEGMENTS;
   await el.updateComplete;
 
-  expect(el.getAttribute('aria-label')).to.equal('128K context window — 8,000 of 10,000 used');
+  expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal(
+    '128K context window: 8,000 of 10,000 used',
+  );
 });
 
 it('preserves an explicit host aria-label instead of replacing it with the generated summary', async () => {
@@ -146,8 +149,67 @@ it('preserves an explicit host aria-label instead of replacing it with the gener
   el.segments = SEGMENTS;
   await el.updateComplete;
 
-  expect(el.getAttribute('aria-label')).to.equal('Context window occupancy');
-  expect(el.getAttribute('role')).to.equal('meter');
+  const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect(semantic.getAttribute('aria-label')).to.equal('Context window occupancy');
+  expect(semantic.getAttribute('role')).to.equal('meter');
+});
+
+it('updates the semantic owner when a host aria-label is added, replaced, or removed after mount', async () => {
+  const el = (await fixture(html`<lr-context-meter total="100"></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = [{ label: 'Prompt', value: 25 }];
+  await el.updateComplete;
+
+  const semantic = () => el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
+
+  el.setAttribute('aria-label', 'Custom occupancy');
+  await el.updateComplete;
+  expect(semantic().getAttribute('aria-label')).to.equal('Custom occupancy');
+
+  el.setAttribute('aria-label', 'Replacement occupancy');
+  await el.updateComplete;
+  expect(semantic().getAttribute('aria-label')).to.equal('Replacement occupancy');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(semantic().getAttribute('aria-label')).to.equal('25 of 100 used');
+});
+
+it('exposes each segment label and locale-formatted count in an accessible breakdown', async () => {
+  const el = (await fixture(html`<lr-context-meter locale="de-DE" total="10000"></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = SEGMENTS;
+  await el.updateComplete;
+
+  const items = Array.from(el.shadowRoot!.querySelectorAll('[part="segment-item"]')).map((item) =>
+    item.textContent?.trim(),
+  );
+  expect(items).to.deep.equal(['System prompt: 2.000', 'History: 5.000', 'Tools: 1.000']);
+});
+
+it('uses non-range semantics when total is unknown instead of exposing an implicit meter maximum', async () => {
+  const el = (await fixture(html`<lr-context-meter></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = [{ label: 'Prompt', value: 5 }];
+  await el.updateComplete;
+
+  const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect(semantic.getAttribute('role')).to.equal('group');
+  expect(semantic.getAttribute('aria-label')).to.equal('5 used');
+  expect(semantic.hasAttribute('aria-valuenow')).to.equal(false);
+  expect(semantic.hasAttribute('aria-valuemin')).to.equal(false);
+  expect(semantic.hasAttribute('aria-valuemax')).to.equal(false);
+});
+
+it('keeps accumulated segment totals finite when individually finite values overflow', async () => {
+  const el = (await fixture(html`<lr-context-meter></lr-context-meter>`)) as LyraContextMeter;
+  el.segments = [
+    { label: 'A', value: Number.MAX_VALUE },
+    { label: 'B', value: Number.MAX_VALUE },
+  ];
+  await el.updateComplete;
+
+  const semantic = el.shadowRoot!.querySelector('[part="semantic"]')!;
+  expect(Number.isFinite(Number(semantic.getAttribute('aria-label')!.replaceAll(/[^\d.-]/g, '')))).to.equal(true);
+  expect(semantic.getAttribute('aria-label')).to.not.contain('Infinity');
 });
 
 it('formats its generated summary with the effective locale', async () => {
@@ -157,14 +219,16 @@ it('formats its generated summary with the effective locale', async () => {
   el.segments = SEGMENTS;
   await el.updateComplete;
 
-  expect(el.getAttribute('aria-label')).to.equal('8.000 of 10.000 used');
+  expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal(
+    '8.000 of 10.000 used',
+  );
 });
 
 it('falls back to a used-only summary when total is 0 or unset', async () => {
   const el = (await fixture(html`<lr-context-meter></lr-context-meter>`)) as LyraContextMeter;
   el.segments = [{ label: 'a', value: 5 }];
   await el.updateComplete;
-  expect(el.getAttribute('aria-label')).to.equal('5 used');
+  expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal('5 used');
 });
 
 describe('summary localization', () => {
@@ -175,7 +239,9 @@ describe('summary localization', () => {
     `)) as LyraContextMeter;
     el.segments = SEGMENTS;
     await el.updateComplete;
-    expect(el.getAttribute('aria-label')).to.equal('8,000 sur 10,000 utilisés');
+    expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal(
+      '8,000 sur 10,000 utilisés',
+    );
   });
 
   it('localizes the used-only summary via this.localize() when .strings overrides contextMeterUsed', async () => {
@@ -184,7 +250,22 @@ describe('summary localization', () => {
     `)) as LyraContextMeter;
     el.segments = [{ label: 'a', value: 5 }];
     await el.updateComplete;
-    expect(el.getAttribute('aria-label')).to.equal('5 utilisés');
+    expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal('5 utilisés');
+  });
+
+  it('lets a locale reorder the visible label and aggregate summary as one message', async () => {
+    const el = (await fixture(html`
+      <lr-context-meter
+        total="10000"
+        label="Budget"
+        .strings=${{ contextMeterLabeledSummary: '{summary} — {label}' }}
+      ></lr-context-meter>
+    `)) as LyraContextMeter;
+    el.segments = SEGMENTS;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="semantic"]')!.getAttribute('aria-label')).to.equal(
+      '8,000 of 10,000 used — Budget',
+    );
   });
 
   it('builds segment titles from the contextMeterSegmentLabel template, so a locale controls label/count order', async () => {

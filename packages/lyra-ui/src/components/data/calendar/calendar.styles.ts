@@ -54,7 +54,12 @@ export const styles = css`
   [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); outline-offset: calc(var(--lr-border-width-medium) * -1); }
   [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
-  [part='event'] { overflow: hidden; margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font-size: var(--lr-font-size-sm); text-overflow: ellipsis; white-space: nowrap; }
+  [part='event'] { overflow: hidden; inline-size: 100%; margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  [part='event']:hover { filter: brightness(var(--lr-hover-brightness)); }
+  [part='event']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
   [part='agenda-event'] { padding: var(--lr-space-s); border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-brand); background: var(--lr-color-surface); }
   @container (max-inline-size: 28rem) { [part='day'] { min-block-size: var(--lr-calendar-day-min-block-size-narrow, var(--lr-size-4rem)); } [part='event'] { font-size: var(--lr-font-size-xs); } }

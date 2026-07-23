@@ -6,6 +6,8 @@ export const styles = css`
   }
   [part='base'] {
     display: flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-direction: column;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-m);
@@ -41,6 +43,8 @@ export const styles = css`
     display: none;
   }
   [part='label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-xs);
     font-weight: var(--lr-font-weight-semibold);
     text-transform: uppercase;
@@ -54,10 +58,15 @@ export const styles = css`
   }
   [part='value-row'] {
     display: flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
     align-items: baseline;
     gap: var(--lr-space-xs);
   }
   [part='value'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-2xl);
     font-weight: var(--lr-font-weight-bold);
     font-family: var(--lr-font-mono);
@@ -83,6 +92,9 @@ export const styles = css`
     cursor: help;
   }
   [part='unit'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -136,6 +148,8 @@ export const styles = css`
     display: none;
   }
   [part='sub'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-semibold);
   }
@@ -143,6 +157,8 @@ export const styles = css`
     display: none;
   }
   [part='caption'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -151,6 +167,7 @@ export const styles = css`
   }
   [part='rows'] {
     display: flex;
+    min-inline-size: 0;
     flex-direction: column;
     /* Slightly tighter than the card's own --lr-space-xs gap so the
        breakdown list reads as one nested group rather than siblings of
@@ -162,15 +179,22 @@ export const styles = css`
   }
   [part='row'] {
     display: flex;
+    flex-wrap: wrap;
+    min-inline-size: 0;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
   }
   [part='row-label'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
   }
   [part='row-value'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-family: var(--lr-font-mono);
     font-weight: var(--lr-font-weight-semibold);
   }

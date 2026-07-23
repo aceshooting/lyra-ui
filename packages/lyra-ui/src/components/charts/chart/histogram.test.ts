@@ -113,3 +113,22 @@ it('can shrink to a 320px allocation with a long series label', async () => {
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
+
+it('invalidates localized bucket labels when the effective locale changes', async () => {
+  const el = (await fixture(html`
+    <lr-histogram locale="en-US" .values=${[1000, 2000]} bins="2"></lr-histogram>
+  `)) as LyraHistogram;
+  const english = binnedBuckets(el)[0]!.label;
+  el.locale = 'de-DE';
+  await el.updateComplete;
+  const german = binnedBuckets(el)[0]!.label;
+  expect(german).to.not.equal(english);
+  expect(german).to.contain('1.000');
+});
+
+it('allows a strings override to reach the histogram dataset label', async () => {
+  const el = (await fixture(html`
+    <lr-histogram .values=${[1, 2]} .strings=${{ histogramFrequency: 'Häufigkeit' }}></lr-histogram>
+  `)) as LyraHistogram;
+  expect(el.datasets[0]?.label).to.equal('Häufigkeit');
+});

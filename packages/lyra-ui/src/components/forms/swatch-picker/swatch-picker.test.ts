@@ -76,6 +76,34 @@ describe('lr-swatch-picker', () => {
     expect(el.value).to.equal('green');
   });
 
+  it('keeps duplicate-valued swatches as distinct occurrences for selection and navigation', async () => {
+    const duplicateOptions = [
+      { value: 'same', color: '#0969da', label: 'First occurrence' },
+      { value: 'same', color: '#1a7f37', label: 'Second occurrence' },
+      { value: 'other', color: '#cf222e', label: 'Other' },
+    ];
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${duplicateOptions}></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    const buttons = swatches(el);
+    buttons[1]!.click();
+    await el.updateComplete;
+
+    expect(buttons.map((button) => button.getAttribute('aria-checked'))).to.deep.equal([
+      'false',
+      'true',
+      'false',
+    ]);
+    expect(buttons.map((button) => button.tabIndex)).to.deep.equal([-1, 0, -1]);
+
+    buttons[1]!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(el.value).to.equal('other');
+    expect(swatches(el)[2]!.getAttribute('aria-checked')).to.equal('true');
+  });
+
   it('selects on ArrowRight (automatic activation) and wraps cyclically at the end', async () => {
     const el = (await fixture(
       html`<lr-swatch-picker .options=${options()} value="red"></lr-swatch-picker>`,
@@ -239,6 +267,9 @@ describe('lr-swatch-picker', () => {
   it('defaults --lr-swatch-picker-shine-duration to 0s (no-op) and pulses brightness via a dedicated keyframe when set', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.include('--lr-swatch-picker-shine-duration: 0s;');
+    expect(css).to.include(
+      '--lr-swatch-picker-gemstone-shine-duration: var(--lr-transition-ambient);',
+    );
     expect(css).to.match(
       /\[part='swatch'\]\[aria-checked='true'\]\s*\[part='swatch-fill'\]\s*\{[^}]*animation:\s*lr-swatch-picker-shine var\(--lr-swatch-picker-shine-duration\)/,
     );

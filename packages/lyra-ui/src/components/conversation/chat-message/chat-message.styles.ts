@@ -18,6 +18,17 @@ export const styles = css`
     --lr-chat-message-bubble-color: var(--lr-color-text);
     --lr-chat-message-user-bubble-bg: var(--lr-color-brand-quiet);
     --lr-chat-message-user-bubble-color: var(--lr-color-text);
+    --lr-chat-message-system-color: var(--lr-color-text-quiet);
+    --lr-chat-message-streaming-border-color: var(--lr-color-brand);
+    --lr-chat-message-failed-border-color: var(--lr-color-danger);
+    --lr-chat-message-failed-bg: var(--lr-color-danger-quiet);
+    --lr-chat-message-footer-color: var(--lr-color-text-quiet);
+    --lr-chat-message-user-footer-color: var(--lr-color-text);
+    --lr-chat-message-failed-footer-color: var(--lr-color-danger);
+    --lr-chat-message-indicator-color: var(--lr-color-text-quiet);
+    --lr-chat-message-streaming-indicator-color: var(--lr-color-brand);
+    --lr-chat-message-failed-indicator-color: var(--lr-color-danger);
+    --lr-chat-message-failed-status-color: var(--lr-color-danger);
     font-size: var(--lr-font-size-md-sm);
     line-height: var(--lr-line-height-normal);
   }
@@ -57,7 +68,7 @@ export const styles = css`
   }
   :host([data-role='system']) [part='bubble'] {
     margin-inline-end: auto;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-chat-message-system-color);
     font-style: italic;
     border-style: dashed;
   }
@@ -67,11 +78,11 @@ export const styles = css`
      alone (see [part='status-text']); 'streaming' is a quieter accent plus
      the pulsing dot below. */
   :host([status='failed']) [part='bubble'] {
-    border-color: var(--lr-color-danger);
-    background: var(--lr-color-danger-quiet);
+    border-color: var(--lr-chat-message-failed-border-color);
+    background: var(--lr-chat-message-failed-bg);
   }
   :host([status='streaming']) [part='bubble'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-chat-message-streaming-border-color);
   }
 
   [part='header'] {
@@ -169,7 +180,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-chat-message-footer-color);
   }
   [part='actions'] {
     display: flex;
@@ -192,13 +203,13 @@ export const styles = css`
      rule so an equal-specificity failed user message still gets the danger
      footer that matches its danger-quiet background. */
   :host([data-role='user']) [part='footer'] {
-    color: var(--lr-color-text);
+    color: var(--lr-chat-message-user-footer-color);
   }
   /* Same contrast reasoning against the danger-quiet bubble background a
      'failed' message gets underneath it, so the whole footer switches to
      the same --lr-color-danger already used for [part='status-text']. */
   :host([status='failed']) [part='footer'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-chat-message-failed-footer-color);
   }
 
   [part='status-indicator'] {
@@ -206,20 +217,20 @@ export const styles = css`
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: 50%;
-    background: var(--lr-color-text-quiet);
+    background: var(--lr-chat-message-indicator-color);
   }
   :host([status='streaming']) [part='status-indicator'] {
-    background: var(--lr-color-brand);
+    background: var(--lr-chat-message-streaming-indicator-color);
     animation: lr-chat-message-pulse var(--lr-transition-ambient) infinite;
   }
   :host([status='failed']) [part='status-indicator'] {
-    background: var(--lr-color-danger);
+    background: var(--lr-chat-message-failed-indicator-color);
   }
   [part='status-text'] {
     white-space: nowrap;
   }
   :host([status='failed']) [part='status-text'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-chat-message-failed-status-color);
     font-weight: var(--lr-font-weight-semibold);
   }
   @keyframes lr-chat-message-pulse {

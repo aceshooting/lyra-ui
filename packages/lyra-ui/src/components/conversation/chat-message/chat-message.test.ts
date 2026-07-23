@@ -155,6 +155,15 @@ it('keeps focus inside the message when a lr-retry listener flips status away fr
   expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="bubble"]'));
 });
 
+it('does not steal focus from retry when the host leaves the failed state unchanged', async () => {
+  const el = (await fixture(html`<lr-chat-message status="failed">hi</lr-chat-message>`)) as LyraChatMessage;
+  const button = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
+  button.focus();
+  button.click();
+  await el.updateComplete;
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('retry-button');
+});
+
 it('shows visible status text (not color alone) for sending/streaming/failed, and none for sent', async () => {
   const el = (await fixture(html`<lr-chat-message status="sending">hi</lr-chat-message>`)) as LyraChatMessage;
   expect((el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement).textContent).to.equal('Sending…');
@@ -459,6 +468,40 @@ it('retints the generic bubble fill/text via --lr-chat-message-bubble-bg/-color'
 
   expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(bubble).color).to.equal('rgb(4, 5, 6)');
+});
+
+it('retints streaming, failed, system, footer, and indicator states through component hooks', async () => {
+  const el = (await fixture(html`
+    <lr-chat-message
+      data-role="system"
+      status="failed"
+      style="
+        --lr-chat-message-system-color: rgb(1, 2, 3);
+        --lr-chat-message-failed-border-color: rgb(4, 5, 6);
+        --lr-chat-message-failed-bg: rgb(7, 8, 9);
+        --lr-chat-message-failed-footer-color: rgb(10, 11, 12);
+        --lr-chat-message-failed-indicator-color: rgb(13, 14, 15);
+        --lr-chat-message-failed-status-color: rgb(16, 17, 18);
+      "
+    >hi</lr-chat-message>
+  `)) as LyraChatMessage;
+  const bubble = el.shadowRoot!.querySelector('[part="bubble"]') as HTMLElement;
+  const footer = el.shadowRoot!.querySelector('[part="footer"]') as HTMLElement;
+  const indicator = el.shadowRoot!.querySelector('[part="status-indicator"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status-text"]') as HTMLElement;
+  expect(getComputedStyle(bubble).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(bubble).borderColor).to.equal('rgb(4, 5, 6)');
+  expect(getComputedStyle(bubble).backgroundColor).to.equal('rgb(7, 8, 9)');
+  expect(getComputedStyle(footer).color).to.equal('rgb(10, 11, 12)');
+  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(13, 14, 15)');
+  expect(getComputedStyle(status).color).to.equal('rgb(16, 17, 18)');
+
+  el.status = 'streaming';
+  await el.updateComplete;
+  el.style.setProperty('--lr-chat-message-streaming-border-color', 'rgb(19, 20, 21)');
+  el.style.setProperty('--lr-chat-message-streaming-indicator-color', 'rgb(22, 23, 24)');
+  expect(getComputedStyle(bubble).borderColor).to.equal('rgb(19, 20, 21)');
+  expect(getComputedStyle(indicator).backgroundColor).to.equal('rgb(22, 23, 24)');
 });
 
 it('retints the user-role bubble fill/text via --lr-chat-message-user-bubble-bg/-color, independent of the generic pair', async () => {

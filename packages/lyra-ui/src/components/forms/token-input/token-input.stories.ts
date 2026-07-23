@@ -43,3 +43,20 @@ export const Editable: Story = {
       console.log('lr-token-edit', event.detail)}
   ></lr-token-input>`,
 };
+
+/** 320px allocation with one adversarial unbroken token and editable state. */
+export const Narrow: Story = {
+  name: 'Narrow (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-token-input
+        editable
+        label="Permission rules with long generated identifiers"
+        hint="Every token and action remains reachable without widening the containing panel."
+        .value=${[
+          'Bash(git-status-with-an-intentionally-unbroken-generated-scope-identifier-that-must-stay-contained:*)',
+        ]}
+      ></lr-token-input>
+    </div>
+  `,
+};

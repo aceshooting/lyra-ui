@@ -19,6 +19,7 @@ export const styles = css`
     block-size: var(--lr-size-1-25rem);
     margin-inline-start: var(--lr-span-waterfall-name-width);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+    overflow: hidden;
   }
   [part='tick'] {
     position: absolute;

@@ -320,6 +320,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   }
 
   private toggleEdit = (): void => {
+    if (this.pending != null) return;
     if (this.editing) {
       this.editing = false;
       this.draftText = '';
@@ -332,6 +333,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
   };
 
   private onDraftInput = (e: Event): void => {
+    if (this.pending != null) return;
     const value = (e.target as HTMLTextAreaElement).value;
     this.draftText = value;
     try {
@@ -383,7 +385,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
     // Split (rather than interpolate outright) so `toolName` can still land in
     // its own `part="tool-name"` node -- the localized template supplies the
     // surrounding text either side of the `{tool}` placeholder.
-    const [headingBefore, headingAfter] = this.localize('toolApprovalHeading').split('{tool}');
+    const headingParts = this.localize('toolApprovalHeading').split('{tool}');
     const toolName = this.toolName || this.localize('toolApprovalGenericTool');
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
@@ -396,7 +398,10 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         tabindex="-1"
       >
         <div part="header">
-          <h2 id=${this.titleId} dir="auto">${headingBefore}<span part="tool-name">${toolName}</span>${headingAfter ?? ''}</h2>
+          <h2 id=${this.titleId} dir="auto">${headingParts.map(
+            (part, index) =>
+              html`${index > 0 ? html`<span part="tool-name">${toolName}</span>` : nothing}${part}`,
+          )}</h2>
         </div>
         <div part="body">
           ${this.editing
@@ -413,6 +418,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
                   aria-label=${this.localize('toolApprovalArgsLabel')}
                   aria-invalid=${hasError ? 'true' : 'false'}
                   aria-describedby=${hasError ? this.errorId : nothing}
+                  ?readonly=${this.pending != null}
                   .value=${this.draftText}
                   @input=${this.onDraftInput}
                   @focus=${this.onEditorFocus}
@@ -434,7 +440,12 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
             @click=${this.onDeny}
           >${this.localize('deny')}</lr-button>
           ${this.editable
-            ? html`<button part="edit-button" type="button" @click=${this.toggleEdit}>
+            ? html`<button
+                part="edit-button"
+                type="button"
+                ?disabled=${this.pending != null}
+                @click=${this.toggleEdit}
+              >
                 ${this.editing ? this.localize('cancel') : this.localize('edit')}
               </button>`
             : nothing}

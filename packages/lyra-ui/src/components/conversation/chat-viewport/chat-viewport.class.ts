@@ -6,7 +6,7 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { LyraVirtualList, type VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
-import { getPluralRules } from '../../../internal/intl-cache.js';
+import { getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export type ChatViewportLive = 'off' | 'polite' | 'assertive';
@@ -60,8 +60,9 @@ export interface LyraChatViewportEventMap {
  * @event lr-follow-change - `detail: { following }` -- fired whenever `follow` flips (user
  *   scroll-up release, or reaching the bottom again). Never fired for the initial mount state.
  * @csspart base - The positioning root.
- * @csspart scroll - The scroll container (`role="log"`, `tabindex="0"`). In virtual mode it stops
- *   scrolling itself (the slotted list scrolls) but keeps the role.
+ * @csspart scroll - The scroll container (`role="log"` and, in slotted mode, `tabindex="0"`). In
+ *   virtual mode it stops scrolling itself and drops its tab stop because the slotted list owns
+ *   both scrolling and keyboard focus.
  * @csspart content - The slotted-content wrapper the growth observers watch.
  * @csspart jump-pill - The built-in jump-to-latest button, absent while `follow` is engaged.
  * @csspart unread-divider - The "New messages" separator (slotted mode only).
@@ -153,7 +154,8 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     window.removeEventListener('pointercancel', this.onPointerUp);
     window.removeEventListener('lostpointercapture', this.onPointerUp);
     // Safety net for a still-scheduled proactive user-intent expiry (see markUserIntent()).
-    this.cancelPendingUserIntentExpiry();
+    this.clearUserIntent();
+    this.scrollbarDragActive = false;
   }
 
   override firstUpdated(): void {
@@ -250,7 +252,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (count <= 0) return this.localize('jumpToLatest');
     const key =
       getPluralRules(this.effectiveLocale).select(count) === 'one' ? 'newMessageCount' : 'newMessagesCount';
-    return this.localize(key, undefined, { count });
+    return this.localize(key, undefined, { count: getNumberFormat(this.effectiveLocale).format(count) });
   }
 
   private updateUnreadDividerPosition(): void {
@@ -515,7 +517,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
           role="log"
           aria-live=${this.live}
           aria-label=${label}
-          tabindex="0"
+          tabindex=${virtual ? nothing : '0'}
           @scroll=${this.onScroll}
           @wheel=${this.markUserIntent}
           @touchmove=${this.markUserIntent}

@@ -182,6 +182,13 @@ export class LyraStreamingText extends LyraElement {
     });
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.displayedContent !== this.content) {
+      this.coalescer.announce(this.content, { force: true });
+    }
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('coalesceMs')) {
       this.coalescer.throttleMs = this.safeCoalesceMs;
@@ -256,4 +263,3 @@ declare global {
     'lr-streaming-text': LyraStreamingText;
   }
 }
-

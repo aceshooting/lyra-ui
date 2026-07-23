@@ -104,6 +104,13 @@ describe('duration display', () => {
     expect(postHocDuration.textContent!.trim()).to.equal('Thought for 820ms');
   });
 
+  it('formats duration numbers with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-thinking-panel lang="de-DE" mode="post-hoc" duration-ms="4200"></lr-thinking-panel>`,
+    )) as LyraThinkingPanel;
+    expect(el.shadowRoot!.querySelector('[part="duration"]')!.textContent!.trim()).to.equal('Thought for 4,2s');
+  });
+
   it('treats a NaN duration-ms like unset (pending placeholder in live mode, nothing in post-hoc), and clamps a negative one to 0', async () => {
     const liveNan = (await fixture(
       html`<lr-thinking-panel mode="live"></lr-thinking-panel>`,

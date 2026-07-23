@@ -3,6 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     flex-direction: column;
     align-items: center;
     gap: var(--lr-space-xs);
@@ -76,6 +78,8 @@ export const styles = css`
     }
   }
   [part='status'] {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
     text-align: center;

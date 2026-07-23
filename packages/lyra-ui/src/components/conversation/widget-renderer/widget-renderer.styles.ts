@@ -10,5 +10,11 @@ export const styles = css`
   [part='row'],
   [part='col'] {
     min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .widget-text {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 `;

@@ -166,6 +166,12 @@ describe('lr-terminal', () => {
     expect(event.detail).to.deep.equal({ query: 'error', matchCount: 2, activeIndex: 0 });
   });
 
+  it('bounds the number of occurrence matches retained for an adversarial single line', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a'.repeat(12_000));
+    expect(await el.search('a')).to.equal(10_000);
+  });
+
   it('searchNext()/searchPrevious() wrap around the match list', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.write('a\nb\na');
@@ -219,6 +225,22 @@ describe('lr-terminal', () => {
     expect(term.follow).to.be.false;
   });
 
+  it('does not leak the child virtual-list visible-range event through the terminal wrapper', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('one\ntwo');
+    await el.updateComplete;
+    let leaked = false;
+    el.addEventListener('lr-visible-range-changed', () => (leaked = true));
+    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(
+      new CustomEvent('lr-visible-range-changed', {
+        detail: { start: 0, end: 1 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    expect(leaked).to.be.false;
+  });
+
   it('accessible label defaults to the localized terminalLabel and honors aria-label override', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]')!;
@@ -228,6 +250,11 @@ describe('lr-terminal', () => {
     expect(labeled.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal(
       'Build output',
     );
+  });
+
+  it('disables the log role implicit live behavior so announce-output has one dedicated announcer', async () => {
+    const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    expect(el.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-live')).to.equal('off');
   });
 
   it('renders a line-range highlight with data-highlight-tone and emits lr-highlight-activate on click', async () => {
@@ -244,6 +271,8 @@ describe('lr-terminal', () => {
     line.click();
     const event = (await listener) as CustomEvent<{ id: string }>;
     expect(event.detail.id).to.equal('h1');
+    await el.updateComplete;
+    expect(line.getAttribute('aria-current')).to.equal('true');
   });
 
   it('retints an accent-tone highlighted line via --lr-terminal-highlight-accent-bg, decoupled from the shared --lr-color-brand-quiet token used by the toolbar-button hover state', async () => {
@@ -279,6 +308,16 @@ describe('lr-terminal', () => {
     expect(await el.scrollToAnchor({ kind: 'line-range', start: 99 })).to.be.false;
   });
 
+  it('scrollToAnchor emits follow=false when it disengages following', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb');
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lr-follow-change');
+    expect(await el.scrollToAnchor({ kind: 'line-range', start: 1 })).to.be.true;
+    const event = (await listener) as CustomEvent<{ following: boolean }>;
+    expect(event.detail.following).to.be.false;
+  });
+
   it('announce-output routes appended text into the visually-hidden announcer region', async () => {
     const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
     el.write('build started');
@@ -295,6 +334,28 @@ describe('lr-terminal', () => {
     await el.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal('');
+  });
+
+  it('clears transient copied and pending announcement state across disconnect/reconnect', async () => {
+    const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    el.write('pending');
+    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).textContent!.trim()).to.equal(
+      'Copy',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.equal('');
+  });
+
+  it('trims immediately when maxScrollback is lowered after output already exists', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('one\ntwo\nthree');
+    el.maxScrollback = 2;
+    await el.updateComplete;
+    expect(el.getPlainText()).to.equal('two\nthree');
   });
 
   it('emits lr-text-select with a resolved line-range anchor when a selection lands inside two mounted lines', async () => {

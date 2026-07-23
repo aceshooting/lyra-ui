@@ -12,6 +12,7 @@ import type { LyraSelect } from '../../forms/select/select.class.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
 import '../../forms/checkbox/checkbox.class.js';
+import { getListFormat } from '../../../internal/intl-cache.js';
 
 /** The four leaf property types this flat-schema renderer understands. */
 export type ToolParamFormPropertyType = 'string' | 'number' | 'integer' | 'boolean';
@@ -33,6 +34,13 @@ export interface ToolParamFormProperty {
   default?: unknown;
   /** Exact primitive value required when the property is present. */
   const?: ToolParamFormPrimitive;
+  /** Native editing-assistance hints forwarded when this property renders a text input. */
+  autocomplete?: string;
+  spellcheck?: boolean;
+  autocapitalize?: string;
+  autocorrect?: string;
+  inputmode?: string;
+  enterkeyhint?: string;
 }
 
 /**
@@ -431,7 +439,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       }
 
       if (type === 'string' && Array.isArray(prop.enum) && !prop.enum.includes(v as string)) {
-        addError(key, this.localize('fieldMustBeOneOf', undefined, { values: prop.enum.join(', ') }));
+        addError(
+          key,
+          this.localize('fieldMustBeOneOf', undefined, {
+            values: getListFormat(this.effectiveLocale, { style: 'long', type: 'disjunction' }).format(prop.enum),
+          }),
+        );
         flags.customError = true;
         continue;
       }
@@ -606,10 +619,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   }
 
   private onSelectChange(key: string, e: Event): void {
+    e.stopPropagation();
     this.setFieldValue(key, (e.target as LyraSelect).value);
   }
 
   private onCheckboxChange(key: string, e: CustomEvent<{ checked: boolean }>): void {
+    e.stopPropagation();
     this.setFieldValue(key, e.detail.checked);
   }
 
@@ -635,19 +650,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     effective: unknown,
   ): TemplateResult {
     if (prop.type === 'string' && prop.enum && prop.enum.length > 0) {
-      // <lr-select>/<lr-checkbox> don't forward a host-level
-      // aria-describedby to their internal focusable element (neither
-      // reads it — and this component doesn't own either file to add that),
-      // so a plain aria-describedby here would silently do nothing for
-      // assistive tech. Fold the error into aria-label instead, which both
-      // select.ts and checkbox.ts *do* read from the host and thread
-      // through -- the description text still reads fine from its adjacent,
-      // DOM-order-following <p part="description"> even without a formal
-      // aria-describedby association.
       return html`<lr-select
         id=${fieldId}
-        aria-label=${errorMessage ? `${label}. ${errorMessage}` : label}
-        aria-required=${required ? 'true' : nothing}
+        .label=${label}
+        .hint=${prop.description ?? ''}
+        .errorText=${errorMessage}
+        .required=${required}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @change=${(e: Event) => this.onSelectChange(key, e)}
@@ -663,6 +671,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         aria-describedby=${describedBy || nothing}
         aria-required=${required ? 'true' : nothing}
         aria-invalid=${errorMessage ? 'true' : nothing}
+        autocomplete=${prop.autocomplete || nothing}
+        .spellcheck=${prop.spellcheck ?? true}
+        autocapitalize=${prop.autocapitalize || nothing}
+        autocorrect=${prop.autocorrect || nothing}
+        inputmode=${prop.inputmode || nothing}
+        enterkeyhint=${prop.enterkeyhint || nothing}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
         @input=${(e: Event) => this.onTextInput(key, e)}
@@ -699,7 +713,8 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       // the slot per lr-checkbox's own documented contract.
       return html`<lr-checkbox
         id=${fieldId}
-        aria-label=${errorMessage ? `${label}. ${errorMessage}` : nothing}
+        aria-describedby=${describedBy || nothing}
+        .required=${required}
         ?checked=${effective === true}
         ?disabled=${this.effectiveDisabled}
         @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
@@ -726,19 +741,22 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     const errorMessage = hasError ? (this._errors[key] ?? '') : '';
     const effective = this._effectiveValue[key];
     const isBoolean = prop.type === 'boolean';
+    const isComposedSelect = prop.type === 'string' && Boolean(prop.enum?.length);
 
     return html`
       <div part="field" class="field" data-key=${key} data-type=${prop.type} ?data-required=${required}
         @focusout=${() => this.markTouched(key)}
       >
-        ${isBoolean
+        ${isBoolean || isComposedSelect
           ? nothing
           : html`<label part="label" for=${fieldId}>${label}</label>`}
         ${this.renderControl(key, prop, fieldId, label, required, describedBy, errorMessage, effective)}
-        ${prop.description
+        ${prop.description && !isComposedSelect
           ? html`<p part="description" id=${descId}>${prop.description}</p>`
           : nothing}
-        ${hasError ? html`<p part="error" id=${errId} role="alert">${this._errors[key]}</p>` : nothing}
+        ${hasError && !isComposedSelect
+          ? html`<p part="error" id=${errId} role="alert">${this._errors[key]}</p>`
+          : nothing}
       </div>
     `;
   }

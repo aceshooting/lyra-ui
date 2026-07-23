@@ -20,7 +20,9 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   [part='header-label'] {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-font-size-md-sm);
     color: var(--lr-color-text);
@@ -30,7 +32,9 @@ export const styles = css`
     min-inline-size: 0;
   }
   [part='summary'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }

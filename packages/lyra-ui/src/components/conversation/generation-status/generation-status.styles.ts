@@ -3,12 +3,14 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-flex;
+    min-inline-size: 0;
     vertical-align: middle;
     max-inline-size: 100%;
   }
 
   [part='base'] {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     max-inline-size: 100%;
     font-size: var(--lr-font-size-sm);
@@ -27,8 +29,9 @@ export const styles = css`
   }
   [part='tokens'],
   [part='throughput'] {
+    min-inline-size: 0;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   /* Segments are joined with a middot rather than a flex gap + separate

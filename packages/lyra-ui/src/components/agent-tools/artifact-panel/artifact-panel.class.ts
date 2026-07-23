@@ -1,7 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { safeMediaSrc } from '../../../internal/safe-url.js';
+import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { styles } from './artifact-panel.styles.js';
 // Import the registering barrel (not the bare `.class.js` module) so
 // `<lr-live-region>` is actually defined by the time this component renders it.
@@ -94,7 +94,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   /** The text copied to the clipboard by the copy button. Empty hides the button. */
   @property({ attribute: 'copy-text' }) copyText = '';
 
-  /** The download URL, sanitized through `safeMediaSrc()` before use. Empty hides the button. */
+  /** The download URL, sanitized through `safeDownloadHref()` before use. Empty hides the button. */
   @property({ attribute: 'download-src' }) downloadSrc = '';
 
   /** The suggested filename reported in the `lr-download` event detail. */
@@ -150,7 +150,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   };
 
   private onDownload = (): void => {
-    const safeSrc = safeMediaSrc(this.downloadSrc);
+    const safeSrc = safeDownloadHref(this.downloadSrc);
     if (!safeSrc) return;
     this.emit('lr-download', { filename: this.downloadName, src: safeSrc });
   };

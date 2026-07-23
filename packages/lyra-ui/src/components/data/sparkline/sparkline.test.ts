@@ -108,6 +108,15 @@ it('skips non-finite values instead of letting one bad sample truncate the path'
   expect(commands.length).to.equal(4);
 });
 
+it('counts only rendered finite samples in its accessible summary', async () => {
+  const el = (await fixture(html`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
+  el.values = [1, Number.NaN, 2, Number.POSITIVE_INFINITY, 3];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal(
+    'Trend of 3 values, last 3',
+  );
+});
+
 it('formats the last value in aria-label instead of announcing raw float noise', async () => {
   const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
   el.values = [1, 2, 3.456789123];
@@ -123,7 +132,7 @@ it('announces the last finite value instead of literal "NaN" when the series end
   await el.updateComplete;
   const label = el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')!;
   expect(label).not.to.contain('NaN');
-  expect(label).to.equal('Trend of 4 values, last 2');
+  expect(label).to.equal('Trend of 3 values, last 2');
 });
 
 it('formats announced values with the effective locale', async () => {

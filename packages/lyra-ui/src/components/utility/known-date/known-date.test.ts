@@ -82,6 +82,21 @@ it('fires input on every keystroke with live per-field text, even while incomple
   expect(event.detail.field).to.equal('day');
 });
 
+it('emits one translated input event and suppresses raw private input/change events', async () => {
+  const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+  let inputs = 0;
+  let changes = 0;
+  el.addEventListener('input', () => inputs++);
+  el.addEventListener('change', () => changes++);
+
+  const day = fieldFor(el, 'day');
+  typeInto(day, '5');
+  day.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+
+  expect(inputs).to.equal(1);
+  expect(changes).to.equal(0);
+});
+
 it('leaves value empty and out of FormData while any field is blank', async () => {
   const form = (await fixture(html`
     <form><lr-known-date name="dob" locale="en-GB"></lr-known-date></form>
@@ -566,6 +581,52 @@ it('rejects non-digit keystrokes before they reach a field state', async () => {
   typeInto(day, 'ab');
   await el.updateComplete;
   expect(day.value).to.equal('');
+});
+
+it('accepts Arabic-Indic and Persian digits and canonicalizes them to ISO ASCII', async () => {
+  const arabic = (await fixture(html`<lr-known-date locale="ar"></lr-known-date>`)) as LyraKnownDate;
+  typeInto(fieldFor(arabic, 'day'), '٢٧');
+  typeInto(fieldFor(arabic, 'month'), '٠٣');
+  typeInto(fieldFor(arabic, 'year'), '٢٠٠٧');
+  await arabic.updateComplete;
+  expect(arabic.value).to.equal('2007-03-27');
+  expect(fieldFor(arabic, 'day').value).to.equal('27');
+
+  const persian = (await fixture(html`<lr-known-date locale="fa"></lr-known-date>`)) as LyraKnownDate;
+  typeInto(fieldFor(persian, 'day'), '۲۷');
+  typeInto(fieldFor(persian, 'month'), '۰۳');
+  typeInto(fieldFor(persian, 'year'), '۲۰۰۷');
+  await persian.updateComplete;
+  expect(persian.value).to.equal('2007-03-27');
+});
+
+it('forwards host click() to the first field in locale order', async () => {
+  const el = (await fixture(html`<lr-known-date locale="en-US"></lr-known-date>`)) as LyraKnownDate;
+  let clicks = 0;
+  fieldFor(el, 'month').addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+
+  el.disabled = true;
+  await el.updateComplete;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
+it('contains long labels and messages inside a narrow allocation', async () => {
+  const wrapper = await fixture(html`
+    <div style="inline-size: 320px; overflow: auto;">
+      <lr-known-date
+        label="ExtremelyLongUnbrokenLocalizedBirthDateFieldLabelThatMustWrap"
+        day-label="ExtremelyLongUnbrokenDayLabelThatMustWrap"
+        hint="ExtremelyLongUnbrokenLocalizedHintThatMustWrapInsideTheControl"
+      ></lr-known-date>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-known-date') as LyraKnownDate;
+  await el.updateComplete;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });
 
 describe('per-tier field min-height and exact-height hatch', () => {

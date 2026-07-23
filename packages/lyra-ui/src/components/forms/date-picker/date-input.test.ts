@@ -13,6 +13,23 @@ it('parses typed input into an ISO value and emits change', async () => {
   expect(el.value).to.equal('2026-07-15');
 });
 
+it('forwards host click to the native input and suppresses it while effectively disabled', async () => {
+  const form = (await fixture(html`
+    <form><fieldset><lr-date-input></lr-date-input></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const input = el.shadowRoot!.querySelector('input[part="input"]') as HTMLInputElement;
+  let clicks = 0;
+  input.addEventListener('click', () => clicks++);
+
+  el.click();
+  expect(clicks).to.equal(1);
+  fieldset.disabled = true;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
 it('reverts an unparseable typed date to the last committed display text and flags badInput', async () => {
   const el = (await fixture(html`<lr-date-input value="2026-07-15"></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;
@@ -1128,6 +1145,39 @@ it('defaults the clear/expand/dialog labels to English but lets them be overridd
   expect(clearBtn().getAttribute('aria-label')).to.equal('Effacer');
   expect(expandBtn().getAttribute('aria-label')).to.equal('Ouvrir le calendrier');
   expect(popup().getAttribute('aria-label')).to.equal('Choisir une date');
+});
+
+it('routes clear, expand, and dialog labels through .strings', async () => {
+  const el = (await fixture(
+    html`<lr-date-input with-clear value="2026-07-15"></lr-date-input>`,
+  )) as LyraDateInput;
+  el.strings = {
+    clear: 'Effacer via strings',
+    openCalendar: 'Ouvrir via strings',
+    chooseDate: 'Choisir via strings',
+  };
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[part="clear-button"]')!.getAttribute('aria-label')).to.equal(
+    'Effacer via strings',
+  );
+  expect(el.shadowRoot!.querySelector('[part="expand-button"]')!.getAttribute('aria-label')).to.equal(
+    'Ouvrir via strings',
+  );
+  expect(el.shadowRoot!.querySelector('[part="popup"]')!.getAttribute('aria-label')).to.equal(
+    'Choisir via strings',
+  );
+});
+
+it('themes the native placeholder through the component placeholder-color hook', async () => {
+  const el = (await fixture(html`
+    <lr-date-input
+      placeholder="Choose a date"
+      style="--lr-date-input-placeholder-color: rgb(12, 34, 56)"
+    ></lr-date-input>
+  `)) as LyraDateInput;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  expect(getComputedStyle(input, '::placeholder').color).to.equal('rgb(12, 34, 56)');
 });
 
 describe('spellcheck/autocapitalize/autocorrect passthrough', () => {

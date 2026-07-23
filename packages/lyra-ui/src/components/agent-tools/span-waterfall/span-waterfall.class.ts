@@ -1,8 +1,9 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state, query } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import '../../overlays/empty/empty.class.js';
@@ -108,19 +109,30 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   @property({ type: Boolean, attribute: 'hide-axis' }) hideAxis = false;
   @property() label = '';
 
-  @state() private focusedId: string | null = null;
+  private focusedId: string | null = null;
+  private sortedSource?: LyraSpan[];
+  private sortedCache: LyraSpan[] = [];
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
   private sortedSpans(): LyraSpan[] {
-    return this.spans
+    if (this.sortedSource === this.spans) return this.sortedCache;
+    this.sortedSource = this.spans;
+    this.sortedCache = this.spans
+      .filter((span) => Number.isFinite(span.startMs) && (span.endMs == null || Number.isFinite(span.endMs)))
+      .map((span) => {
+        const startMs = Math.max(0, span.startMs);
+        const endMs = span.endMs == null ? undefined : Math.max(startMs, span.endMs);
+        return { ...span, startMs, endMs };
+      })
       .map((s, i) => ({ s, i }))
       .sort((a, b) => a.s.startMs - b.s.startMs || a.i - b.i)
       .map((x) => x.s);
+    return this.sortedCache;
   }
 
   private viewWindow(): ViewWindow {
-    const extentEnd = this.spans.reduce((m, s) => Math.max(m, s.endMs ?? s.startMs, s.startMs), 0);
+    const extentEnd = this.sortedSpans().reduce((m, s) => Math.max(m, s.endMs ?? s.startMs, s.startMs), 0);
     const fallbackEnd = Math.max(extentEnd, 1);
     // `null` means "fit the whole trace"; a non-null-but-NaN value (a bad attribute) falls back
     // to that same default instead of flowing NaN into axisTicks()/barGeometry(). Both bounds are
@@ -145,19 +157,32 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private formatDuration(ms: number | undefined): string {
-    if (ms == null) return '';
-    return ms < 1000
-      ? this.localize('durationMilliseconds', undefined, { value: Math.round(ms) })
-      : this.localize('durationSeconds', undefined, { value: (ms / 1000).toFixed(1) });
+    if (ms == null || !Number.isFinite(ms)) return '';
+    const milliseconds = Math.max(0, ms);
+    return milliseconds < 1000
+      ? getNumberFormat(this.effectiveLocale, {
+          style: 'unit',
+          unit: 'millisecond',
+          unitDisplay: 'short',
+          maximumFractionDigits: 0,
+        }).format(milliseconds)
+      : getNumberFormat(this.effectiveLocale, {
+          style: 'unit',
+          unit: 'second',
+          unitDisplay: 'short',
+          maximumFractionDigits: 1,
+        }).format(milliseconds / 1000);
   }
 
   private focusRow(span: LyraSpan | undefined): void {
     if (!span) return;
+    const previous = this.renderRoot.querySelector<HTMLElement>('[part="bar"][tabindex="0"]');
     this.focusedId = span.id;
     this.announceFocus(span);
-    void this.updateComplete.then(() => {
-      (this.renderRoot.querySelector(`[data-id="${CSS.escape(span.id)}"]`) as HTMLElement | null)?.focus();
-    });
+    previous?.setAttribute('tabindex', '-1');
+    const next = this.renderRoot.querySelector<HTMLElement>(`[data-id="${CSS.escape(span.id)}"]`);
+    next?.setAttribute('tabindex', '0');
+    next?.focus();
   }
 
   private announceFocus(span: LyraSpan): void {
@@ -213,16 +238,20 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('spans')) {
+      this.sortedSource = undefined;
       const ids = new Set(this.spans.map((s) => s.id));
       if (this.focusedId == null || !ids.has(this.focusedId)) {
         this.focusedId = this.activeSpanId && ids.has(this.activeSpanId) ? this.activeSpanId : (this.sortedSpans()[0]?.id ?? null);
       }
     }
+    if (changed.has('activeSpanId') && this.activeSpanId) {
+      const ids = new Set(this.sortedSpans().map((span) => span.id));
+      if (ids.has(this.activeSpanId)) this.focusedId = this.activeSpanId;
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
     if (changed.has('activeSpanId') && this.activeSpanId) {
-      this.focusedId = this.activeSpanId;
       const bar = this.renderRoot.querySelector(`[data-id="${CSS.escape(this.activeSpanId)}"]`) as HTMLElement | null;
       bar?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     }

@@ -19,6 +19,11 @@ export const styles = css`
     align-items: flex-end;
     justify-content: center;
   }
+  [part='cell']:hover,
+  [part='cell']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+  }
   /* Round the strip's own outer ends via the first/last cell, not overflow:hidden on [part='base'] --
      that would clip [part='tooltip'], which is deliberately positioned outside the base's own box. */
   [part='cell']:first-child {

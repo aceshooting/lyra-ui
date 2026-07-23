@@ -187,6 +187,39 @@ it('renders an opt-in native button overlay with persistent per-cell semantics',
   await expect(el).to.be.accessible();
 });
 
+it('gives adjacent accessible matrix and calendar cells non-overlapping shared minimum hit areas', async () => {
+  const matrix = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      .rowLabels=${['A']}
+      .colLabels=${['X', 'Y']}
+      .values=${[[1, 2]]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await matrix.updateComplete;
+  const matrixCells = [...matrix.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+  const firstMatrixRect = matrixCells[0]!.getBoundingClientRect();
+  const secondMatrixRect = matrixCells[1]!.getBoundingClientRect();
+  expect(firstMatrixRect.width).to.be.at.least(40);
+  expect(firstMatrixRect.height).to.be.at.least(40);
+  expect(secondMatrixRect.left).to.be.at.least(firstMatrixRect.right);
+
+  const calendar = (await fixture(html`
+    <lr-heatmap
+      accessible-cells
+      mode="calendar"
+      .days=${[{ date: '2026-03-01', value: 7 }]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await calendar.updateComplete;
+  const calendarCells = [...calendar.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+  const firstCalendarRect = calendarCells[0]!.getBoundingClientRect();
+  const secondCalendarRect = calendarCells[1]!.getBoundingClientRect();
+  expect(firstCalendarRect.width).to.be.at.least(40);
+  expect(firstCalendarRect.height).to.be.at.least(40);
+  expect(secondCalendarRect.top).to.be.at.least(firstCalendarRect.bottom);
+});
+
 it('moves focus through accessible cells with physical (non-mirrored) arrow keys even under dir="rtl" and emits the same click event', async () => {
   // The canvas grid is deliberately non-mirrored under RTL (column 0 always paints at the physical
   // left), so arrow keys must stay physical too -- ArrowRight still moves from column 0 to column 1
@@ -764,6 +797,9 @@ describe('per-cell hover/focus/click + accessible values', () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.tabIndex).to.equal(0);
+    expect(canvas.getAttribute('role')).to.equal('group');
+    expect(canvas.getAttribute('aria-label')).to.equal(el.getAttribute('aria-label'));
+    expect(canvas.getAttribute('aria-describedby')).to.equal('live-region');
   });
 
   it('matrix mode: shows a tooltip with the row/col label and value on hover, hidden on pointerleave', async () => {
@@ -793,6 +829,38 @@ describe('per-cell hover/focus/click + accessible values', () => {
     canvas.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
     await el.updateComplete;
     expect(tooltip.hidden).to.equal(true);
+  });
+
+  it('clears transient hover and keyboard feedback when disconnected and reconnected', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        cell-size="22"
+        .rowLabels=${['A']}
+        .colLabels=${['X']}
+        .values=${[[1]]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', {
+        clientX: rect.left + 71,
+        clientY: rect.top + 31,
+        bubbles: true,
+      }),
+    );
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.not.equal('');
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('');
   });
 
   it('matrix mode: hovering outside the grid does not show a tooltip', async () => {
@@ -1066,6 +1134,30 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
       .values=${[[5]]}
     ></lr-heatmap>`)) as LyraHeatmap;
     expect(el.getAttribute('role')).to.equal('group');
+  });
+
+  it('honors late host role/aria-label changes and restores generated defaults after removal', async () => {
+    const el = (await fixture(html`<lr-heatmap
+      .rowLabels=${['R1']}
+      .colLabels=${['C1']}
+      .values=${[[5]]}
+    ></lr-heatmap>`)) as LyraHeatmap;
+    await el.updateComplete;
+
+    el.setAttribute('role', 'application');
+    el.setAttribute('aria-label', 'Late custom');
+    await el.updateComplete;
+    el.values = [[9]];
+    await el.updateComplete;
+    expect(el.getAttribute('role')).to.equal('application');
+    expect(el.getAttribute('aria-label')).to.equal('Late custom');
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Late custom');
+
+    el.removeAttribute('role');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(el.getAttribute('aria-label')).to.contain('Heatmap of 1 × 1 cells');
   });
 
   it('uses a custom cellText formatter for the tooltip and live-region text when provided', async () => {
@@ -1652,6 +1744,27 @@ describe('cellColor resolves CSS custom properties for canvas fillStyle', () => 
     const dpr = window.devicePixelRatio || 1;
     const pixel = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
     expect(Array.from(pixel.slice(0, 3))).to.deep.equal([9, 9, 9]);
+  });
+
+  it('falls back for an invalid literal instead of reusing the previous cell fillStyle', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="matrix"
+        style="--lr-heatmap-no-data-fill: rgb(128, 128, 128);"
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[1, 2]]}
+        .cellColor=${(_pos: MatrixCellPos, value: number) => value === 1 ? 'rgb(255, 0, 0)' : 'not-a-color'}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const ctx = canvas.getContext('2d')!;
+    const dpr = window.devicePixelRatio || 1;
+    const first = ctx.getImageData(Math.round(65 * dpr), Math.round(25 * dpr), 1, 1).data;
+    const second = ctx.getImageData(Math.round(87 * dpr), Math.round(25 * dpr), 1, 1).data;
+    expect(Array.from(first.slice(0, 3))).to.deep.equal([255, 0, 0]);
+    expect(Array.from(second.slice(0, 3))).to.deep.equal([128, 128, 128]);
   });
 });
 

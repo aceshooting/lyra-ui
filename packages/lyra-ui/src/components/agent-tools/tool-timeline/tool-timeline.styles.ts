@@ -49,13 +49,13 @@ export const styles = css`
     background: var(--lr-color-border);
   }
   [part='entry'][data-status='running'] [part='entry-marker']::before {
-    background: var(--lr-color-brand);
+    background: var(--lr-tool-timeline-running-marker-color, var(--lr-color-brand));
   }
   [part='entry'][data-status='success'] [part='entry-marker']::before {
-    background: var(--lr-color-success);
+    background: var(--lr-tool-timeline-success-marker-color, var(--lr-color-success));
   }
   [part='entry'][data-status='error'] [part='entry-marker']::before {
-    background: var(--lr-color-danger);
+    background: var(--lr-tool-timeline-error-marker-color, var(--lr-color-danger));
   }
   [part='entry'][data-status='denied'] [part='entry-marker']::before {
     background: var(--lr-tool-timeline-denied-marker-color);
@@ -74,6 +74,9 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-s);
+  }
+  [part='entry-header'] > * {
+    min-inline-size: 0;
   }
 
   [part='entry'][data-pending-approval='true'] [part='entry-body'] {
@@ -120,12 +123,12 @@ export const styles = css`
     letter-spacing: var(--lr-size-0-03em);
   }
   [part='entry-approval-status'][data-decision='approved'] {
-    background: var(--lr-color-success-quiet);
-    color: var(--lr-color-success);
+    background: var(--lr-tool-timeline-approved-bg, var(--lr-color-success-quiet));
+    color: var(--lr-tool-timeline-approved-color, var(--lr-color-success));
   }
   [part='entry-approval-status'][data-decision='denied'] {
-    background: var(--lr-color-danger-quiet);
-    color: var(--lr-color-danger);
+    background: var(--lr-tool-timeline-denied-bg, var(--lr-color-danger-quiet));
+    color: var(--lr-tool-timeline-denied-color, var(--lr-color-danger));
   }
 
   [part='entry-redacted-indicator'] {
@@ -144,7 +147,8 @@ export const styles = css`
 
   [part='entry-error'] {
     margin: 0;
-    color: var(--lr-color-danger);
+    color: var(--lr-tool-timeline-error-color, var(--lr-color-danger));
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;
   }

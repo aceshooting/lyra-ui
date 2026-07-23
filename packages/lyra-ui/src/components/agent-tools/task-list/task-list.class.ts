@@ -136,7 +136,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  * @csspart item-label - The item's `label` text.
  * @csspart item-detail - The item's optional `detail` text.
  * @csspart item-children - The nested `role="list"` wrapper around a top-level item's children.
- * @cssprop [--lr-task-list-spin=1s linear] - Running-status icon spin animation duration/timing.
+ * @cssprop [--lr-task-list-spin=var(--lr-transition-ambient)] - Running-status icon spin
+ *   animation duration/timing.
  * @cssprop [--lr-task-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
  *   `[part="header"]` padding while `compact`.
  * @cssprop [--lr-task-list-compact-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s item

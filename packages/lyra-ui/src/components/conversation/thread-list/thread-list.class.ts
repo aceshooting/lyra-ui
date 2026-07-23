@@ -15,7 +15,7 @@ import '../../layout/virtual-list/virtual-list.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.js';
 import { styles } from './thread-list.styles.js';
-import { getDateTimeFormat, getPluralRules } from '../../../internal/intl-cache.js';
+import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 export interface ChatThread {
@@ -102,8 +102,11 @@ function trashIcon(): SVGTemplateResult {
   `;
 }
 
-function defaultFilter(thread: ChatThread, query: string): boolean {
-  return thread.title.toLowerCase().includes(query) || (thread.excerpt ?? '').toLowerCase().includes(query);
+function defaultFilter(thread: ChatThread, query: string, locale: string): boolean {
+  return (
+    thread.title.toLocaleLowerCase(locale).includes(query) ||
+    (thread.excerpt ?? '').toLocaleLowerCase(locale).includes(query)
+  );
 }
 
 /**
@@ -328,6 +331,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  private readonly injectedListItemRoles = new Set<Element>();
 
   // Slotted mode is only for a host that's actually relying on it (real slotted content present)
   // and hasn't also supplied `threads` -- empty `threads` with nothing slotted is still data mode,
@@ -344,6 +348,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       this.markAsListItems(defaultSlotted);
     }
     if (changed.has('threads') && this.threads.length > 0 && this.hasDefaultSlotContent) {
+      this.restoreInjectedListItemRoles();
       console.warn(
         '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
       );
@@ -359,16 +364,33 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   // Never overrides a role a consumer set explicitly.
   private markAsListItems(elements: Element[]): void {
     for (const el of elements) {
-      if (!el.hasAttribute('role')) el.setAttribute('role', 'listitem');
+      if (!el.hasAttribute('role')) {
+        el.setAttribute('role', 'listitem');
+        this.injectedListItemRoles.add(el);
+      }
     }
   }
 
+  private restoreInjectedListItemRoles(keep = new Set<Element>()): void {
+    for (const element of this.injectedListItemRoles) {
+      if (keep.has(element)) continue;
+      if (element.getAttribute('role') === 'listitem') element.removeAttribute('role');
+      this.injectedListItemRoles.delete(element);
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.restoreInjectedListItemRoles();
+    super.disconnectedCallback();
+  }
+
   private get visibleThreads(): ChatThread[] {
-    const q = this.searchText.trim().toLowerCase();
+    const q = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
     const withArchiveFilter = this.threads.filter((t) => this.showArchived || !t.archived);
     if (q === '') return withArchiveFilter;
-    const fn = this.filter ?? defaultFilter;
-    return withArchiveFilter.filter((t) => fn(t, q));
+    return withArchiveFilter.filter((t) =>
+      this.filter ? this.filter(t, q) : defaultFilter(t, q, this.effectiveLocale),
+    );
   }
 
   private bucketFor(thread: ChatThread, now: Date): ThreadBucketKey {
@@ -446,7 +468,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
         kind: 'group',
         id,
         label,
-        accessibleLabel: typeof label === 'string' ? label : id,
+        accessibleLabel: typeof label === 'string' ? label : '',
         collapsed: collapsedIds.has(id),
       });
       if (!collapsedIds.has(id)) {
@@ -515,7 +537,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       getPluralRules(this.effectiveLocale).select(count) === 'one'
         ? 'threadListMatchAnnounce'
         : 'threadListMatchAnnouncePlural';
-    this.liveRegion?.announce(this.localize(key, undefined, { count }));
+    this.liveRegion?.announce(
+      this.localize(key, undefined, { count: getNumberFormat(this.effectiveLocale).format(count) }),
+    );
   }
 
   private onSearchKeyDown = (e: KeyboardEvent): void => {
@@ -559,6 +583,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private onListKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+    const origin = e.composedPath()[0];
+    if (origin instanceof Element && origin.closest('[part="group-toggle"]')) return;
     const rows = this.rowElements();
     if (rows.length === 0) return;
     const currentIndex = this.focusedRowIndex(rows);
@@ -659,9 +685,11 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           type="button"
           part="group-toggle"
           aria-expanded=${item.collapsed ? 'false' : 'true'}
-          aria-label=${this.localize(item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse', undefined, {
-            label: item.accessibleLabel,
-          })}
+          aria-label=${item.accessibleLabel
+            ? this.localize(item.collapsed ? 'threadGroupExpand' : 'threadGroupCollapse', undefined, {
+                label: item.accessibleLabel,
+              })
+            : nothing}
           @click=${() => this.emit('lr-group-toggle', { id: item.id, collapsed: nextCollapsed })}
         >
           <span part="group-icon" aria-hidden="true">${item.collapsed ? '+' : '−'}</span>
@@ -690,23 +718,25 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           e.stopPropagation();
           this.emit('lr-select', { id: thread.id });
         }}
-        @lr-rename=${(e: CustomEvent<{ title: string }>) =>
-          this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title })}
+        @lr-rename=${(e: CustomEvent<{ title: string }>) => {
+          e.stopPropagation();
+          this.emit('lr-thread-rename', { id: thread.id, title: e.detail.title });
+        }}
       >
         ${this.renderLeading
-          ? html`<span slot="leading" part="row-leading">${this.renderLeading(thread)}</span>`
+          ? html`<span slot="leading" part="row-leading" inert>${this.renderLeading(thread)}</span>`
           : nothing}
         ${this.renderExcerpt
-          ? html`<span slot="excerpt" part="row-excerpt">${this.renderExcerpt(thread)}</span>`
+          ? html`<span slot="excerpt" part="row-excerpt" inert>${this.renderExcerpt(thread)}</span>`
           : nothing}
         ${this.renderRowContent
-          ? html`<span slot="content" part="row-content">${this.renderRowContent(thread)}</span>`
+          ? html`<span slot="content" part="row-content" inert>${this.renderRowContent(thread)}</span>`
           : nothing}
         ${thread.pinned
           ? html`<span slot="meta" part="row-meta pin-glyph" aria-hidden="true">${pinIcon()}</span>`
           : nothing}
         ${this.renderMeta
-          ? html`<span slot="meta" part="row-meta">${this.renderMeta(thread)}</span>`
+          ? html`<span slot="meta" part="row-meta" inert>${this.renderMeta(thread)}</span>`
           : nothing}
         ${this.rowActions.length > 0 || this.renderActions ? this.renderRowActions(thread) : nothing}
       </lr-conversation-item>
@@ -752,6 +782,8 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private onDefaultSlotChange = (e: Event): void => {
     const assigned = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    const keep = new Set(assigned);
+    this.restoreInjectedListItemRoles(keep);
     this.markAsListItems(assigned);
     this.hasDefaultSlotContent = assigned.length > 0;
   };
@@ -779,7 +811,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('threadListLabel');
+    const label = this.getAttribute('aria-label') || this.label || this.localize('threadListLabel');
     if (!this.dataMode) {
       return html`
         <div part="base">

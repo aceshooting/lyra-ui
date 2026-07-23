@@ -32,6 +32,28 @@ export const Multiple: Story = {
   `,
 };
 
+/** 320px allocation with selected unbroken content and long option metadata. */
+export const Narrow: Story = {
+  name: 'Narrow (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-combobox
+        multiple
+        label="Long generated deployment identifiers"
+        hint="Selected tags remain inside this narrow panel."
+      >
+        <lr-option
+          value="deployment-with-an-intentionally-unbroken-generated-identifier-that-must-not-widen-the-panel"
+          selected
+          sub="Production environment with long metadata"
+          >deployment-with-an-intentionally-unbroken-generated-identifier-that-must-not-widen-the-panel</lr-option
+        >
+        <lr-option value="secondary" sub="Backup environment">Secondary deployment</lr-option>
+      </lr-combobox>
+    </div>
+  `,
+};
+
 export const Sizes: Story = {
   render: () => html`
     <div style="display: grid; gap: 1rem; max-width: 24rem">

@@ -127,6 +127,21 @@ describe('<lr-mutation-observer>', () => {
     });
   });
 
+  it('treats a non-empty attributeFilter as enabling attribute observation', async () => {
+    const el = await fixture<LyraMutationObserver>(
+      html`<lr-mutation-observer child-list="false"><div></div></lr-mutation-observer>`,
+    );
+    el.attributeFilter = ['data-state'];
+    await el.updateComplete;
+    await aTimeout(0);
+
+    const target = el.querySelector('div')!;
+    const event = oneEvent(el, 'lr-mutation');
+    target.setAttribute('data-state', 'ready');
+    const result = (await event) as CustomEvent<{ records: MutationRecord[] }>;
+    expect(result.detail.records.length).to.equal(1);
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraMutationObserver>(html`<lr-mutation-observer><button>Observed</button></lr-mutation-observer>`);
     await expect(el).to.be.accessible();

@@ -149,6 +149,16 @@ describe('lr-artifact-panel', () => {
     expect(event.detail).to.deep.equal({ filename: 'f.md', src: 'https://example.com/f.md' });
   });
 
+  it('rejects active-document data URLs from the download event sink', async () => {
+    const el = (await fixture(html`
+      <lr-artifact-panel download-src="data:text/html,<script>alert(1)</script>"></lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    let calls = 0;
+    el.addEventListener('lr-download', () => calls++);
+    (el.shadowRoot!.querySelector('[part="download-button"]') as HTMLButtonElement).click();
+    expect(calls).to.equal(0);
+  });
+
   it('is accessible with versions, streaming, and both slots populated', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel

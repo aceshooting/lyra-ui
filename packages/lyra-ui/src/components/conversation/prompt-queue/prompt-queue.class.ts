@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import type { DocumentRef } from '../../../ai/types.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import '../../forms/button/button.js';
 import '../../forms/textarea/textarea.js';
 import { styles } from './prompt-queue.styles.js';
@@ -83,15 +84,22 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
   }
 
   private renderItem(item: PromptQueueItem, index: number): TemplateResult {
+    const formattedIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
+    const editorLabel = this.localize('promptQueueItemLabel', undefined, {
+      index: formattedIndex,
+    });
     return html`<li part="item" data-id=${item.id}>
       ${this.editable
         ? html`<lr-textarea
             part="editor"
             .value=${item.value}
             .disabled=${this.disabled}
-            .label=${`${this.localize('promptQueueLabel')} ${index + 1}`}
+            .label=${editorLabel}
             resize="auto"
-            @lr-input=${(event: CustomEvent<{ value: string }>) => this.edit(item, event.detail.value)}
+            @lr-input=${(event: CustomEvent<{ value: string }>) => {
+              event.stopPropagation();
+              this.edit(item, event.detail.value);
+            }}
           ></lr-textarea>`
         : html`<span part="value">${item.value}</span>`}
       <div part="actions">

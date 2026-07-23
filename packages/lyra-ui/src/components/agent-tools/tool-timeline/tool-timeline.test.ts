@@ -14,6 +14,14 @@ function chipIn(entry: HTMLElement): LyraToolCallChip {
 function resultViewIn(entry: HTMLElement): LyraToolResultView {
   return entry.querySelector('lr-tool-result-view') as LyraToolResultView;
 }
+async function openEntry(el: LyraToolTimeline, index = 0): Promise<HTMLElement> {
+  const row = entriesEl(el)[index]!;
+  row.querySelector('lr-details')!.dispatchEvent(
+    new CustomEvent('lr-toggle', { detail: { open: true }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  return entriesEl(el)[index]!;
+}
 function dialog(el: LyraToolTimeline): LyraToolApprovalDialog {
   return el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
 }
@@ -27,6 +35,66 @@ function makeEntry(overrides: Partial<ToolTimelineEntry> = {}): ToolTimelineEntr
     ...overrides,
   };
 }
+
+it('suppresses both chip-selection events while opening a pending approval', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  let leaked = 0;
+  el.addEventListener('lr-tool-call-chip-select', () => leaked++);
+  el.addEventListener('lr-tool-chip-select', () => leaked++);
+  const chip = chipIn(entriesEl(el)[0]);
+  chip.dispatchEvent(new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }));
+  chip.dispatchEvent(new CustomEvent('lr-tool-chip-select', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(leaked).to.equal(0);
+  expect(dialog(el).open).to.be.true;
+});
+
+it('preserves the dialog pending contract when the wrapper approval event is vetoed', async () => {
+  const entry = makeEntry({ needsApproval: true, approved: undefined });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  chipIn(entriesEl(el)[0]).dispatchEvent(
+    new CustomEvent('lr-tool-call-chip-select', { bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  el.addEventListener('lr-tool-approval-decide', (event) => event.preventDefault(), { once: true });
+  dialog(el).shadowRoot!.querySelector<HTMLElement>('[part="approve-button"]')!.click();
+  await dialog(el).updateComplete;
+  expect(dialog(el).open).to.be.true;
+  expect(dialog(el).pending).to.equal('approve');
+});
+
+it('uses prototype-safe redaction clones', async () => {
+  const args = JSON.parse('{"safe":"yes","__proto__":{"secret":"value"}}') as Record<string, unknown>;
+  const entry = makeEntry({ args, redactedFields: ['args.safe'] });
+  const el = (await fixture(html`<lr-tool-timeline .entries=${[entry]}></lr-tool-timeline>`)) as LyraToolTimeline;
+  const details = entriesEl(el)[0].querySelector('lr-details') as HTMLElement & { open: boolean };
+  details.open = true;
+  details.dispatchEvent(new CustomEvent('lr-toggle', { detail: { open: true }, bubbles: true, composed: true }));
+  await el.updateComplete;
+  const view = resultViewIn(entriesEl(el)[0]);
+  expect(Object.getPrototypeOf(view.args)).to.equal(null);
+  expect((view.args as Record<string, unknown>).secret).to.be.undefined;
+});
+
+it('does not mount heavy result views until an entry is disclosed', async () => {
+  const entries = Array.from({ length: 100 }, (_, index) => makeEntry({ id: `call-${index}` }));
+  const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
+  expect(el.shadowRoot!.querySelectorAll('lr-tool-result-view')).to.have.lengthOf(0);
+});
+
+it('sorts non-finite timestamps with untimed entries after valid chronology', async () => {
+  const el = (await fixture(html`
+    <lr-tool-timeline
+      .entries=${[
+        makeEntry({ id: 'nan', startedAt: Number.NaN }),
+        makeEntry({ id: 'later', startedAt: 200 }),
+        makeEntry({ id: 'earlier', startedAt: 100 }),
+      ]}
+    ></lr-tool-timeline>
+  `)) as LyraToolTimeline;
+  expect(entriesEl(el).map((row) => chipIn(row).callId)).to.deep.equal(['earlier', 'later', 'nan']);
+});
 
 it('defaults to entries=[] and approvalEditable=true, rendering an empty list with no dialog decision affordance', async () => {
   const el = (await fixture(html`<lr-tool-timeline></lr-tool-timeline>`)) as LyraToolTimeline;
@@ -81,7 +149,7 @@ it('composes lr-tool-result-view per entry, wiring tool-name/args/result', async
     makeEntry({ args: { query: 'x' }, result: { count: 3 } }),
   ];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
-  const view = resultViewIn(entriesEl(el)[0]);
+  const view = resultViewIn(await openEntry(el));
   expect(view.toolName).to.equal('web_search');
   expect(view.args).to.deep.equal({ query: 'x' });
   expect(view.result).to.deep.equal({ count: 3 });
@@ -96,7 +164,7 @@ it('redacts top-level and nested fields named in redactedFields with the localiz
     }),
   ];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
-  const view = resultViewIn(entriesEl(el)[0]);
+  const view = resultViewIn(await openEntry(el));
   expect(view.args).to.deep.equal({ apiKey: 'Value hidden', query: 'ok' });
   expect(view.result).to.deep.equal({ rows: [{ ssn: 'Value hidden', name: 'ok' }] });
   expect(entriesEl(el)[0].querySelector('[part="entry-redacted-indicator"]')).to.exist;
@@ -105,7 +173,7 @@ it('redacts top-level and nested fields named in redactedFields with the localiz
 it('renders no redacted-indicator and leaves args/result untouched when redactedFields is unset', async () => {
   const entries: ToolTimelineEntry[] = [makeEntry({ args: { query: 'ok' }, result: { count: 1 } })];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
-  const row = entriesEl(el)[0];
+  const row = await openEntry(el);
   expect(row.querySelector('[part="entry-redacted-indicator"]')).to.not.exist;
   expect(resultViewIn(row).args).to.deep.equal({ query: 'ok' });
 });
@@ -115,7 +183,7 @@ it('a dangling redaction path is a no-op rather than throwing, and does not affe
     makeEntry({ args: { query: 'ok' }, redactedFields: ['args.doesNotExist.deeper'] }),
   ];
   const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
-  expect(resultViewIn(entriesEl(el)[0]).args).to.deep.equal({ query: 'ok' });
+  expect(resultViewIn(await openEntry(el)).args).to.deep.equal({ query: 'ok' });
 });
 
 it('never redacts the args handed to the approval dialog, even when redactedFields would mask them in the result view', async () => {
@@ -252,7 +320,7 @@ it('honors a `.strings` override for the reused "envListValueHidden" redaction p
   const el = (await fixture(
     html`<lr-tool-timeline .entries=${entries} .strings=${{ envListValueHidden: 'Masqué' }}></lr-tool-timeline>`,
   )) as LyraToolTimeline;
-  expect(resultViewIn(entriesEl(el)[0]).args).to.deep.equal({ apiKey: 'Masqué' });
+  expect(resultViewIn(await openEntry(el)).args).to.deep.equal({ apiKey: 'Masqué' });
 });
 
 it('forwards a host aria-label onto the internal list element', async () => {
@@ -330,6 +398,26 @@ it('falls back both denied-marker and pending-approval-border colors to the shar
 
   expect(getComputedStyle(deniedMarker, '::before').backgroundColor).to.equal(warningColor);
   expect(getComputedStyle(pendingBody).borderInlineStartColor).to.equal(warningColor);
+});
+
+it('retints success markers and approval badges through component-scoped state hooks', async () => {
+  const entries: ToolTimelineEntry[] = [
+    makeEntry({ id: 'c-approved', status: 'success', approved: true }),
+  ];
+  const el = (await fixture(html`
+    <lr-tool-timeline
+      style="
+        --lr-tool-timeline-success-marker-color: rgb(1, 2, 3);
+        --lr-tool-timeline-approved-color: rgb(4, 5, 6);
+      "
+      .entries=${entries}
+    ></lr-tool-timeline>
+  `)) as LyraToolTimeline;
+  const row = entriesEl(el)[0];
+  const marker = row.querySelector('[part="entry-marker"]') as HTMLElement;
+  const approval = row.querySelector('[part="entry-approval-status"]') as HTMLElement;
+  expect(getComputedStyle(marker, '::before').backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(approval).color).to.equal('rgb(4, 5, 6)');
 });
 
 it('is accessible with a populated timeline and the approval dialog open', async () => {

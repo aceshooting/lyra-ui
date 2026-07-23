@@ -125,6 +125,21 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   override firstUpdated(): void {
+    this.scheduleShow();
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (!this.hasUpdated || this.hiding) return;
+    if (!this.hasAttribute('data-visible')) {
+      this.scheduleShow();
+    } else if (this.timerStarted && !this.hovering && !this.focused) {
+      this.resumeTimer();
+    }
+  }
+
+  private scheduleShow(): void {
+    if (this.showRafId !== undefined || this.hiding) return;
     this.showRafId = requestAnimationFrame(() => {
       this.showRafId = undefined;
       // hide() may have already run synchronously before this frame fired
@@ -150,7 +165,9 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.cancelShowAnimation = undefined;
     this.cancelHideAnimation?.();
     this.cancelHideAnimation = undefined;
-    this.clearTimer();
+    this.pauseTimer();
+    this.hovering = false;
+    this.focused = false;
   }
 
   private startTimer(): void {

@@ -7,6 +7,8 @@ export const styles = css`
     --lr-locale-picker-trigger-min-height: var(--lr-size-2-5rem);
     --lr-locale-picker-font-size: var(--lr-font-size-md);
     --lr-locale-picker-expand-size: var(--lr-size-1-75rem);
+    --lr-locale-picker-gap: var(--lr-space-xs);
+    --lr-locale-picker-radius: var(--lr-radius);
     /* --lr-locale-picker-trigger-height is intentionally NOT declared here -- see lr-select's
        identical convention: it is a consumer-facing escape hatch consumed only through the
        var() fallback on [part='trigger'] below, so leaving it genuinely undeclared keeps that
@@ -62,14 +64,14 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-locale-picker-gap);
     inline-size: 100%;
     min-block-size: var(--lr-locale-picker-trigger-height, var(--lr-locale-picker-trigger-min-height));
     box-sizing: border-box;
     block-size: var(--lr-locale-picker-trigger-height, auto);
     padding: var(--lr-locale-picker-trigger-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-locale-picker-radius);
     background: var(--lr-color-surface);
     color: inherit;
     font: inherit;
@@ -85,10 +87,10 @@ export const styles = css`
      matches lr-select's/lr-model-select's fixed convention, so a consumer's own
      ::part(trigger):hover override ((0,1,1)) still wins without needing !important. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet));
   }
   :host([open]) [part='trigger'] {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-locale-picker-open-border-color, var(--lr-color-brand));
   }
   :host(:disabled) [part='trigger'] {
     opacity: var(--lr-opacity-disabled);
@@ -130,7 +132,7 @@ export const styles = css`
     padding: var(--lr-space-xs);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-locale-picker-radius);
     box-shadow: var(--lr-shadow);
     visibility: hidden;
     opacity: 0;
@@ -154,12 +156,12 @@ export const styles = css`
   [part='option'] {
     display: flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-locale-picker-gap);
     inline-size: 100%;
     box-sizing: border-box;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid transparent;
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-locale-picker-radius);
     background: none;
     color: inherit;
     font: inherit;
@@ -171,8 +173,8 @@ export const styles = css`
     background: var(--lr-locale-picker-option-active-bg, var(--lr-color-brand-quiet));
   }
   [part='option'][aria-selected='true'] {
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
+    border-color: var(--lr-locale-picker-option-selected-border-color, var(--lr-color-brand));
+    color: var(--lr-locale-picker-option-selected-color, var(--lr-color-brand));
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='option-flag'] {

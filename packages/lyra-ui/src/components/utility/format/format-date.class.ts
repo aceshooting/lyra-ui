@@ -32,11 +32,18 @@ export class LyraFormatDate extends LyraElement {
     if (!Number.isNaN(value.getTime())) {
       try {
         text = getDateTimeFormat(this.effectiveLocale || undefined, options).format(value);
-      } catch (error) {
-        if (!(error instanceof RangeError) || !this.timeZone) throw error;
+      } catch {
         const localOptions = { ...options };
         delete localOptions.timeZone;
-        text = getDateTimeFormat(this.effectiveLocale || undefined, localOptions).format(value);
+        try {
+          text = getDateTimeFormat(this.effectiveLocale || undefined, localOptions).format(value);
+        } catch {
+          text = getDateTimeFormat(undefined, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }).format(value);
+        }
       }
     }
     return html`${text || html`<slot></slot>`}`;

@@ -67,6 +67,9 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
   @state() private revealed = new Map<string, boolean>();
 
   protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('revealable') && !this.revealable && this.revealed.size > 0) {
+      this.revealed = new Map();
+    }
     if (changed.has('entries')) {
       // Carry a row's reveal state forward only when that row's position still holds
       // the same name it held before this update -- reordering, inserting, or
@@ -102,12 +105,20 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     this.emit('lr-copy', { text: entry.value });
   }
 
+  private get accessibleLabel(): string {
+    return this.getAttribute('aria-label')?.trim() || this.label || this.localize('envListLabel');
+  }
+
   override render(): TemplateResult {
     if (this.entries.length === 0) {
-      return html`<lr-empty heading=${this.localize('noData')}></lr-empty>`;
+      return html`
+        <div part="base" data-empty role="group" aria-label=${this.accessibleLabel}>
+          <lr-empty heading=${this.localize('noData')}></lr-empty>
+        </div>
+      `;
     }
     return html`
-      <dl part="base" aria-label=${this.label || this.localize('envListLabel')}>
+      <dl part="base" aria-label=${this.accessibleLabel}>
         ${this.entries.map((entry) => {
           const secret = entry.secret ?? true;
           const isRevealed = this.revealed.get(entry.name) ?? false;

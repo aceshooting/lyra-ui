@@ -129,6 +129,20 @@ export const ClickToFilter: Story = {
   },
 };
 
+/** Controlled selection is exposed visually and as explicit pressed state on every data mark. */
+export const SelectedLinePoint: Story = {
+  render: () => html`
+    <lr-lite-chart
+      type="line"
+      height="16rem"
+      style="width: 22rem"
+      .labels=${['Q1', 'Q2', 'Q3', 'Q4']}
+      .datasets=${[{ label: 'Runs', data: [12, 19, 14, 22] }]}
+      .selectedIndex=${[1]}
+    ></lr-lite-chart>
+  `,
+};
+
 /** `tickFormat` customizes y-axis tick labels (e.g. currency) instead of the built-in nice-number formatter. */
 export const CurrencyTickFormat: Story = {
   render: () => {

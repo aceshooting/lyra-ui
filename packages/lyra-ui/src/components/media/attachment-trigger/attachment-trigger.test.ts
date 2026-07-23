@@ -220,6 +220,51 @@ it('disables the trigger button and the hidden input, and ignores click activati
   expect(clicked).to.be.false;
 });
 
+describe('host control forwarding', () => {
+  it('forwards focus(), blur(), and click() to the single-capability trigger', async () => {
+    const el = (await fixture(html`<lr-attachment-trigger .capabilities=${['camera']}></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+    const button = trigger(el);
+    el.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.be.null;
+
+    const request = oneEvent(el, 'lr-camera-request');
+    el.click();
+    await request;
+    expect(button.disabled).to.be.false;
+  });
+
+  it('forwards focus() to the menu trigger and suppresses click() while disabled', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-trigger .capabilities=${['files', 'camera']}></lr-attachment-trigger>
+    `)) as LyraAttachmentTrigger;
+    el.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('menu-trigger');
+
+    el.disabled = true;
+    await el.updateComplete;
+    let selected = false;
+    el.addEventListener('lr-camera-request', () => (selected = true));
+    el.click();
+    expect(selected).to.be.false;
+  });
+
+  it('bridges focus and blur from the actual single/menu trigger buttons', async () => {
+    const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+    const focusEvent = oneEvent(el, 'focus');
+    trigger(el).focus();
+    expect((await focusEvent).composed).to.be.true;
+
+    el.capabilities = ['files', 'camera'];
+    await el.updateComplete;
+    const blurEvent = oneEvent(el, 'blur');
+    menuTriggerButton(el).focus();
+    menuTriggerButton(el).blur();
+    expect((await blurEvent).bubbles).to.be.true;
+  });
+});
+
 // --- multi-capability menu shape ---
 
 it('renders a lr-menu with one item per capability, in order, once more than one is configured', async () => {
@@ -278,6 +323,20 @@ it('selecting the files menu item clicks the hidden native input', async () => {
   clickItem(menuItems(el).find((i) => i.value === 'files')!);
 
   expect(clicked).to.be.true;
+});
+
+it('does not leak the internal menu selection/open/close events from the wrapper', async () => {
+  const el = (await fixture(html`
+    <lr-attachment-trigger .capabilities=${['files', 'camera']}></lr-attachment-trigger>
+  `)) as LyraAttachmentTrigger;
+  const leaked: string[] = [];
+  for (const type of ['lr-menu-select', 'lr-show', 'lr-hide']) {
+    el.addEventListener(type, () => leaked.push(type));
+  }
+  clickItem(menuItems(el).find((item) => item.value === 'camera')!);
+  menuEl(el).dispatchEvent(new CustomEvent('lr-show', { bubbles: true, composed: true }));
+  menuEl(el).dispatchEvent(new CustomEvent('lr-hide', { bubbles: true, composed: true }));
+  expect(leaked).to.deep.equal([]);
 });
 
 it('selecting the camera menu item fires lr-camera-request', async () => {

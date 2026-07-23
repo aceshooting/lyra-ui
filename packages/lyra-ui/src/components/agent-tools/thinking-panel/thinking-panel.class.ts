@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './thinking-panel.styles.js';
 
 export type ThinkingPanelMode = 'live' | 'post-hoc';
@@ -27,15 +28,15 @@ const NEAR_BOTTOM_PX = 48;
  *  `formatDuration` -- duplicated rather than imported (three independent,
  *  separately-consumable components) but kept in lockstep so the same
  *  elapsed time reads identically everywhere it's shown in this library. */
-function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSeconds'; value: string } {
+function formatDuration(ms: number): { key: 'durationMilliseconds' | 'durationSeconds'; value: number } {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, Number.isFinite(ms) ? ms : 0))) };
+    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, Number.isFinite(ms) ? ms : 0)) };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
   return {
     key: 'durationSeconds',
-    value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1),
+    value: rounded,
   };
 }
 
@@ -236,9 +237,12 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
     const durationMs = this.safeDurationMs;
     if (durationMs != null) {
       const duration = formatDuration(durationMs);
+      const value = getNumberFormat(this.effectiveLocale, {
+        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
+      }).format(duration.value);
       return {
         text: this.localize('thoughtFor', undefined, {
-          duration: this.localize(duration.key, undefined, { value: duration.value }),
+          duration: this.localize(duration.key, undefined, { value }),
         }),
         pending: false,
       };

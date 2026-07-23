@@ -1,6 +1,7 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './sequence-strip.styles.js';
 
 export interface SequenceStripItem {
@@ -9,9 +10,8 @@ export interface SequenceStripItem {
   /** A small marker rendered at the bottom of this cell — a secondary boolean annotation
    *  independent of the primary category color (e.g. a subagent-dispatched turn). */
   marker?: boolean;
-  /** Per-item text shown in the hover tooltip (falls back to the category's own `label`, or its
-   *  `key`, when unset) — not read by this component's own auto-generated `aria-label`, which
-   *  summarizes by category/count only. */
+  /** Per-item text shown in the hover/focus tooltip and exposed as the item's accessible name
+   *  (falls back to the category's own `label`, or its `key`, when unset). */
   label?: string;
 }
 
@@ -27,16 +27,16 @@ export interface SequenceStripCategory {
  * `<lr-sequence-strip>` — a compact, one-thin-cell-per-item strip visualizing a sequence of
  * categorical states, with an optional secondary per-cell marker. Pure CSS/flex, no chart.js/SVG/
  * canvas — sized/named consistently with the sparkline/heatmap family, but a glanceable aggregate
- * visualization (`role="img"`, one summarizing `aria-label`), not a `role="list"` of
- * separately-operable items: no per-cell keyboard focus, no per-cell click event, matching
- * `<lr-sparkline>`'s accessibility model rather than `<lr-heatmap>`'s heavier canvas +
- * keyboard-roving one.
+ * visualization. The strip is a labeled `role="list"` and each cell is a named list item.
+ * Exactly one cell is tabbable; Left/Right and Home/End rove through the items and show the same
+ * detail tooltip as pointer hover. Cells are inspectable rather than actionable, so they do not
+ * emit an activation event.
  *
  * @customElement lr-sequence-strip
- * @csspart base - The root strip wrapper (`role="img"`).
- * @csspart cell - Each item's cell, background-colored by its category.
+ * @csspart base - The root strip wrapper (`role="list"`).
+ * @csspart cell - Each named, roving-focus item cell, background-colored by its category.
  * @csspart marker - The small bottom marker on a cell whose item sets `marker: true`.
- * @csspart tooltip - The hover tooltip showing the hovered item's label.
+ * @csspart tooltip - The hover/focus tooltip showing the active item's label.
  * @csspart legend - The static category key rendered below the strip when `showLegend` is set
  * (`aria-hidden` — it repeats the strip's own `aria-label` visually).
  * @csspart legend-item - One swatch + label pair in the legend, one per `categories` entry (plus one
@@ -75,10 +75,23 @@ export class LyraSequenceStrip extends LyraElement {
    *  and no extra summary clause. */
   @property({ attribute: 'marker-label' }) markerLabel?: string;
 
-  /** The item index currently under the pointer (`null` when not hovering any cell) — drives
-   *  `[part="tooltip"]`, mirroring `<lr-heatmap>`'s own `hoverCell` pattern. No keyboard/focus
-   *  equivalent — see the class doc for why this component has no per-cell focus target at all. */
+  /** The item index currently under the pointer (`null` when not hovering any cell). */
   @state() private hoverIndex: number | null = null;
+  /** The roving keyboard-focus index (`null` while focus is outside the strip). */
+  @state() private keyboardIndex: number | null = null;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('items')) {
+      this.hoverIndex = null;
+      this.keyboardIndex = null;
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.hoverIndex = null;
+    this.keyboardIndex = null;
+    super.disconnectedCallback();
+  }
 
   private categoryColor(key: string): string {
     return this.categories.find((c) => c.key === key)?.color ?? 'transparent';
@@ -117,6 +130,31 @@ export class LyraSequenceStrip extends LyraElement {
     this.hoverIndex = null;
   }
 
+  private onCellFocus(index: number): void {
+    this.keyboardIndex = index;
+  }
+
+  private onStripFocusOut(e: FocusEvent): void {
+    const next = e.relatedTarget;
+    if (!(next instanceof Element) || next.getAttribute('part') !== 'cell') this.keyboardIndex = null;
+  }
+
+  private onCellKeyDown(e: KeyboardEvent, index: number): void {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || this.items.length === 0) return;
+    e.preventDefault();
+    const forwardKey = isRtl(this) ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = isRtl(this) ? 'ArrowRight' : 'ArrowLeft';
+    let next = index;
+    if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = this.items.length - 1;
+    else if (e.key === forwardKey) next = Math.min(this.items.length - 1, index + 1);
+    else if (e.key === backwardKey) next = Math.max(0, index - 1);
+    this.keyboardIndex = next;
+    void this.updateComplete.then(() => {
+      this.shadowRoot?.querySelectorAll<HTMLElement>('[part="cell"]')[next]?.focus();
+    });
+  }
+
   /** The legend repeats, in visible form, exactly the category names the strip already announces
    *  through `[part="base"]`'s `role="img"` + `aria-label` summary. Exposing it to assistive
    *  technology as well would read the same scheme out twice, so the whole subtree is
@@ -147,22 +185,32 @@ export class LyraSequenceStrip extends LyraElement {
 
   override render(): TemplateResult {
     const ariaLabel = this.accessibleLabel || this.autoSummary();
-    const hovered = this.hoverIndex !== null ? this.items[this.hoverIndex] : undefined;
+    const activeIndex = this.hoverIndex ?? this.keyboardIndex;
+    const active = activeIndex !== null ? this.items[activeIndex] : undefined;
+    const tabStop = this.keyboardIndex ?? 0;
     return html`
-      <div part="base" role="img" aria-label=${ariaLabel}>
+      <div part="base" role="list" aria-label=${ariaLabel} @focusout=${this.onStripFocusOut}>
         ${this.items.map(
           (item, index) => html`
             <span
               part="cell"
+              role="listitem"
+              aria-label=${this.itemLabel(item)}
+              aria-posinset=${index + 1}
+              aria-setsize=${this.items.length}
+              aria-describedby=${this.keyboardIndex === index ? 'sequence-strip-tooltip' : nothing}
+              tabindex=${index === tabStop ? '0' : '-1'}
               style="background-color:${this.categoryColor(item.category)}"
               @pointerenter=${() => this.onCellEnter(index)}
               @pointerleave=${() => this.onCellLeave()}
+              @focus=${() => this.onCellFocus(index)}
+              @keydown=${(e: KeyboardEvent) => this.onCellKeyDown(e, index)}
             >
               ${item.marker ? html`<span part="marker"></span>` : nothing}
             </span>
           `,
         )}
-        <div part="tooltip" ?hidden=${!hovered}>${hovered ? this.itemLabel(hovered) : ''}</div>
+        <div id="sequence-strip-tooltip" part="tooltip" ?hidden=${!active}>${active ? this.itemLabel(active) : ''}</div>
       </div>
       ${this.showLegend ? this.renderLegend() : nothing}
     `;

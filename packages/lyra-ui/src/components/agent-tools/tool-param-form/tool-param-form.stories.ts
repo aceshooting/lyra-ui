@@ -18,6 +18,12 @@ const weatherSchema: ToolParamFormSchema = {
       type: 'string',
       title: 'City',
       description: 'Where to look up the forecast.',
+      autocomplete: 'address-level2',
+      spellcheck: false,
+      autocapitalize: 'words',
+      autocorrect: 'off',
+      inputmode: 'text',
+      enterkeyhint: 'next',
     },
     units: {
       type: 'string',
@@ -128,5 +134,39 @@ const enumHeavySchema: ToolParamFormSchema = {
 export const AllFieldKinds: Story = {
   render: () => html`
     <lr-tool-param-form style="max-width: 24rem" .schema=${enumHeavySchema}></lr-tool-param-form>
+  `,
+};
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long labels and errors)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-tool-param-form
+        .schema=${{
+          type: 'object',
+          properties: {
+            long_customer_support_escalation_identifier: {
+              type: 'string',
+              title: 'Customer support escalation identifier with a deliberately long label',
+              description: 'This long description must wrap without widening the generated form.',
+            },
+            required_approval_mode: {
+              type: 'string',
+              title: 'Approval mode for high-risk production changes',
+              enum: ['workspace-administrator', 'security-and-compliance-reviewer'],
+            },
+            acknowledge_risk: {
+              type: 'boolean',
+              title: 'I acknowledge the production risk and want to continue',
+            },
+          },
+          required: [
+            'long_customer_support_escalation_identifier',
+            'required_approval_mode',
+            'acknowledge_risk',
+          ],
+        } satisfies ToolParamFormSchema}
+      ></lr-tool-param-form>
+    </div>
   `,
 };

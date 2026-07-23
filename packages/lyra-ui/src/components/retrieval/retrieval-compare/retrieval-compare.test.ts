@@ -57,3 +57,52 @@ it('applies per-instance strings to the comparison region label', async () => {
     'Localized retrieval comparison',
   );
 });
+
+it('uses instance-safe heading ids instead of caller set ids', async () => {
+  const hostileSets: RetrievalComparisonSet[] = [
+    { id: 'same id', label: 'First', chunks: [chunk('a', 0.8)] },
+    { id: 'same id', label: 'Second', chunks: [chunk('b', 0.7)] },
+  ];
+  const first = (await fixture(
+    html`<lr-retrieval-compare .sets=${hostileSets}></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  const second = (await fixture(
+    html`<lr-retrieval-compare .sets=${hostileSets}></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  const headings = [
+    ...first.shadowRoot!.querySelectorAll('[part="set-heading"]'),
+    ...second.shadowRoot!.querySelectorAll('[part="set-heading"]'),
+  ];
+  const ids = headings.map((heading) => heading.id);
+  expect(new Set(ids).size).to.equal(4);
+  expect(ids.some((id) => id.includes('same id'))).to.be.false;
+  for (const set of first.shadowRoot!.querySelectorAll('[part="set"]')) {
+    expect(set.getAttribute('aria-labelledby')).to.equal(
+      set.querySelector('[part="set-heading"]')!.id,
+    );
+  }
+});
+
+it('formats ranks with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-compare lang="ar-u-nu-arab" .sets=${sets}></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  expect(el.shadowRoot!.querySelector('[part="chunk-rank"]')!.textContent).to.contain('١');
+});
+
+it('renders a labeled overlap summary for every pair of result sets', async () => {
+  const threeSets: RetrievalComparisonSet[] = [
+    ...sets,
+    { id: 'hybrid', label: 'Hybrid', chunks: [chunk('a', 0.9), chunk('d', 0.6)] },
+  ];
+  const el = (await fixture(
+    html`<lr-retrieval-compare .sets=${threeSets}></lr-retrieval-compare>`,
+  )) as LyraRetrievalCompare;
+  const summaries = [...el.shadowRoot!.querySelectorAll('[part="overlap"]')];
+  expect(summaries.length).to.equal(3);
+  expect(summaries.map((summary) => summary.textContent)).to.deep.include.members([
+    'BaselineRerankedTop-k overlap: 33.3%',
+    'BaselineHybridTop-k overlap: 33.3%',
+    'RerankedHybridTop-k overlap: 33.3%',
+  ]);
+});

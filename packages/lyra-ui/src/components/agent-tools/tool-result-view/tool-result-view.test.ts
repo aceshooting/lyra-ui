@@ -26,6 +26,23 @@ it('defaults to fallback="json" and falls back to lr-json-viewer when nothing is
   expect(base(el).querySelector('lr-json-viewer')).to.exist;
 });
 
+it('resets renderer-owned status when falling back to a different unsupported tool', async () => {
+  registerToolRenderer('denied', {
+    render: (_result, _args, context) => {
+      context.reportStatus('denied');
+      return litHtml`denied`;
+    },
+  });
+  const el = (await fixture(
+    html`<lr-tool-result-view tool-name="denied" .result=${{}}></lr-tool-result-view>`,
+  )) as LyraToolResultView;
+  await waitUntil(() => Boolean(el.shadowRoot!.textContent?.includes('denied')));
+  el.toolName = 'unsupported';
+  await el.updateComplete;
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('lr-json-viewer')));
+  expect(el.status).to.equal('success');
+});
+
 it('emits lr-render-error (with the tool name and an Error) before falling back when no renderer matches', async () => {
   const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
   const el = document.createElement('lr-tool-result-view') as LyraToolResultView;

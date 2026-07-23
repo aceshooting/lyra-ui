@@ -168,10 +168,10 @@ describe('lr-button', () => {
     await expect(el).to.be.accessible();
   });
 
-  it('exposes the loading spinner rotation period as an overridable custom property, defaulting to 1s', async () => {
+  it('exposes the loading spinner timing as an override layered over the shared ambient token', async () => {
     const el = (await fixture(html`<lr-button .loading=${true}>Save</lr-button>`)) as LyraButton;
     const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
-    expect(getComputedStyle(spinner).animationDuration).to.equal('1s');
+    expect(getComputedStyle(spinner).animationDuration).to.equal('1.8s');
 
     el.style.setProperty('--lr-button-spinner-duration', '2.4s');
     await el.updateComplete;
@@ -836,4 +836,23 @@ describe('lr-button', () => {
       });
     });
   });
+});
+
+it('makes a loading anchor busy and fully inoperable', async () => {
+  const el = (await fixture(
+    html`<lr-button href="https://example.com" loading>Save</lr-button>`,
+  )) as LyraButton;
+  const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+  let clicks = 0;
+  anchor.addEventListener('click', (event) => {
+    clicks++;
+    event.preventDefault();
+  });
+
+  expect(anchor.hasAttribute('href')).to.be.false;
+  expect(anchor.getAttribute('aria-disabled')).to.equal('true');
+  expect(anchor.getAttribute('aria-busy')).to.equal('true');
+  expect(anchor.tabIndex).to.equal(-1);
+  el.click();
+  expect(clicks).to.equal(0);
 });

@@ -138,6 +138,27 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
     expect(resolved!.payload).to.deep.equal({ formId: 'f1' });
   });
 
+  it('drops interactive descendants from an actionable mapped content model', () => {
+    const registry: WidgetTypeRegistry = new Map([
+      ['button', { tag: 'lr-button', action: { event: 'click' } }],
+    ]);
+    const warnings: string[] = [];
+    const resolved = resolveTree(
+      {
+        type: 'button',
+        actionId: 'outer',
+        children: [
+          'Outer label',
+          { type: 'button', actionId: 'inner', children: ['Invalid nested action'] },
+        ],
+      },
+      ctx(registry, warnings),
+    );
+    expect(resolved!.children).to.have.lengthOf(1);
+    expect(resolved!.children[0].kind).to.equal('text');
+    expect(warnings.some((warning) => warning.includes('interactive descendant'))).to.be.true;
+  });
+
   it('keys a node by id when present, else by structural path', () => {
     const registry: WidgetTypeRegistry = new Map([['row', {}]]);
     const node: WidgetNode = { type: 'row', children: [{ type: 'row', id: 'stable-1' }, { type: 'row' }] };

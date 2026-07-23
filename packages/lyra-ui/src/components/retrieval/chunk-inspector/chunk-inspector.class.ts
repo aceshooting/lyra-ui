@@ -168,7 +168,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
       <div
         part=${current ? 'chunk chunk-current' : 'chunk'}
         role=${virtualized ? nothing : 'listitem'}
-        aria-current=${current ? 'true' : nothing}
+        aria-current=${current ? 'true' : 'false'}
       >
         <div part=${current ? 'score score-current' : 'score'}>
           <span>${this.localize('chunkScore', undefined, { percent })}</span>

@@ -95,8 +95,8 @@ describe('shiki highlighting (real peer)', () => {
       html`<lr-code-block language="javascript" .code=${jsSample}></lr-code-block>`,
     )) as LyraCodeBlock;
     expect(el.getAttribute('aria-busy')).to.equal('true');
-    expect(el.shadowRoot!.querySelector('lr-skeleton')).to.exist;
-    expect(el.shadowRoot!.querySelector('[part="pre"] span')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('lr-skeleton') !== null).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="pre"] span') === null).to.be.true;
 
     // 8000ms already flaked under load (8-way default @web/test-runner concurrency on this
     // machine's 16 cores starves the real, unmocked shiki WASM+grammar load) -- same class of
@@ -111,7 +111,7 @@ describe('shiki highlighting (real peer)', () => {
     );
 
     expect(el.hasAttribute('aria-busy')).to.be.false;
-    expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('lr-skeleton') === null).to.be.true;
     const pre = el.shadowRoot!.querySelector('[part="pre"]')!;
     expect(pre.querySelector('[part="code"]')).to.exist;
     // partTransformer strips shiki's own tabindex="0" -- [part="body"] is
@@ -316,6 +316,17 @@ describe('languagesOnly', () => {
     const el = (await fixture(html`<lr-code-block language="bash" .code=${'echo hi'}></lr-code-block>`)) as LyraCodeBlock;
     await waitUntil(() => internalsOf(el).shikiReady, 'shiki never finished loading', { timeout: 8000 });
     expect(internalsOf(el).shikiReady).to.be.true;
+  });
+
+  it('starts the default highlighter when languagesOnly is disabled at runtime', async () => {
+    const el = (await fixture(
+      html`<lr-code-block languages-only language="json" .code=${'{"ok":true}'}></lr-code-block>`,
+    )) as LyraCodeBlock;
+    expect(el.shadowRoot!.querySelector('.shiki') === null).to.be.true;
+    el.languagesOnly = false;
+    await waitUntil(() => el.shadowRoot!.querySelector('.shiki') !== null, 'runtime opt-out never highlighted', {
+      timeout: 8000,
+    });
   });
 });
 
@@ -852,6 +863,27 @@ describe('interactive-lines', () => {
     await el.updateComplete;
     const line2 = el.shadowRoot!.querySelector('[data-line="2"]')!;
     expect(line2.getAttribute('part')).to.equal('line-button line-highlight');
+  });
+
+  it('keeps interactive line controls after shiki highlighting and exposes the source as their name', async () => {
+    const el = (await fixture(html`
+      <lr-code-block
+        language="json"
+        .languages=${{ json: jsonGrammar }}
+        .code=${'{"a":1}\n{"b":2}'}
+        line-numbers
+        interactive-lines
+      ></lr-code-block>
+    `)) as LyraCodeBlock;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('.shiki [data-line][role="button"]'), 'interactive shiki lines missing', {
+      timeout: 8000,
+    });
+    const line = el.shadowRoot!.querySelector('.shiki [data-line="1"]') as HTMLElement;
+    expect(line.hasAttribute('aria-label')).to.be.false;
+    expect(line.textContent).to.contain('"a"');
+    const event = oneEvent(el, 'lr-line-click');
+    line.click();
+    expect(((await event) as CustomEvent<{ line: number }>).detail.line).to.equal(1);
   });
 });
 

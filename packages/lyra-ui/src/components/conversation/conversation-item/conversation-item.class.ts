@@ -288,14 +288,27 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.emit('lr-select');
   }
 
+  /** Activates the selectable row, matching a native button host. */
+  override click(): void {
+    if (this.renaming) this.titleInput?.click();
+    else (this.renderRoot.querySelector('[part="option"]') as HTMLElement | null)?.click();
+  }
+
   private startRename(): void {
     if (!this.editable || this.renaming) return;
     this.draftTitle = this.title;
     this.renaming = true;
   }
 
-  private commitRename(): void {
+  private restoreOptionFocus(): void {
+    void this.updateComplete.then(() => {
+      (this.renderRoot.querySelector('[part="option"]') as HTMLElement | null)?.focus();
+    });
+  }
+
+  private commitRename(restoreFocus = false): void {
     this.renaming = false;
+    if (restoreFocus) this.restoreOptionFocus();
     const next = this.draftTitle.trim();
     // An empty or unchanged draft has nothing meaningful to commit -- treat
     // it the same as Escape rather than firing a no-op (or blanking) rename
@@ -304,8 +317,9 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.emit<ConversationItemRenameDetail>('lr-rename', { title: next });
   }
 
-  private cancelRename(): void {
+  private cancelRename(restoreFocus = false): void {
     this.renaming = false;
+    if (restoreFocus) this.restoreOptionFocus();
   }
 
   private onOptionClick = (): void => {
@@ -347,10 +361,10 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     e.stopPropagation();
     if (e.key === 'Enter') {
       e.preventDefault();
-      this.commitRename();
+      this.commitRename(true);
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      this.cancelRename();
+      this.cancelRename(true);
     }
   };
 
@@ -409,7 +423,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
           part="option"
           role=${this.renaming ? nothing : 'button'}
           tabindex=${this.renaming ? nothing : '0'}
-          aria-current=${this.renaming || !this.active ? nothing : 'true'}
+          aria-current=${this.renaming ? nothing : this.active ? 'true' : 'false'}
           aria-label=${this.renaming ? nothing : this.getAttribute('aria-label') || displayTitle}
           @click=${this.onOptionClick}
           @keydown=${this.onOptionKeyDown}
@@ -418,25 +432,25 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
             <slot name="leading" @slotchange=${this.onLeadingSlotChange}></slot>
           </span>
           <div part="content">
-            <slot name="content" @slotchange=${this.onContentSlotChange}></slot>
-            ${!this.hasContentSlot
+            <slot name="content" ?hidden=${this.renaming} @slotchange=${this.onContentSlotChange}></slot>
+            ${this.renaming
+              ? html`<input
+                  part="title-input"
+                  type="text"
+                  dir="auto"
+                  .value=${this.draftTitle}
+                  aria-label=${renameLabel}
+                  spellcheck=${this.spellcheck}
+                  autocapitalize=${this.autocapitalize || nothing}
+                  autocorrect=${this.autoCorrect || nothing}
+                  @input=${this.onTitleInputChange}
+                  @keydown=${this.onTitleInputKeyDown}
+                  @focus=${this.onTitleInputFocus}
+                  @blur=${this.onTitleInputBlur}
+                />`
+              : !this.hasContentSlot
               ? html`
-                  ${this.renaming
-                    ? html`<input
-                        part="title-input"
-                        type="text"
-                        dir="auto"
-                        .value=${this.draftTitle}
-                        aria-label=${renameLabel}
-                        spellcheck=${this.spellcheck}
-                        autocapitalize=${this.autocapitalize || nothing}
-                        autocorrect=${this.autoCorrect || nothing}
-                        @input=${this.onTitleInputChange}
-                        @keydown=${this.onTitleInputKeyDown}
-                        @focus=${this.onTitleInputFocus}
-                        @blur=${this.onTitleInputBlur}
-                      />`
-                    : html`<span part="title" dir="auto" title=${displayTitle}>${displayTitle}</span>`}
+                  <span part="title" dir="auto" title=${displayTitle}>${displayTitle}</span>
                   <span part="excerpt" dir="auto" ?hidden=${!(this.hasExcerptSlot || this.excerpt)}>
                     <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
                     ${!this.hasExcerptSlot && this.excerpt ? this.excerpt : nothing}

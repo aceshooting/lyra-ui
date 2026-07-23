@@ -244,9 +244,8 @@ export class LyraAudioVisualizer extends LyraElement {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has('stream') || (changed.has('variant') && this.stream)) this.syncAnalyser();
-    if (!this.hasUpdated) {
-      this.authorSuppliedRole = this.hasAttribute('role');
-    }
+    const currentRole = this.getAttribute('role');
+    this.authorSuppliedRole = currentRole !== null && currentRole !== 'img';
     if (!this.authorSuppliedRole) this.setAttribute('role', 'img');
     const currentAriaLabel = this.getAttribute('aria-label');
     const consumerSuppliedAriaLabel = currentAriaLabel !== null && currentAriaLabel !== this.generatedAriaLabel;
@@ -400,7 +399,11 @@ export class LyraAudioVisualizer extends LyraElement {
     this.resolvedColors ??= this.resolveColors();
     const { active: activeColor, quiet: quietColor } = this.resolvedColors;
     const amplitudes = this.currentAmplitudes(nowMs);
-    const active = this.hasLiveSignal || this.state === 'listening' || this.state === 'speaking';
+    const active =
+      this.hasLiveSignal ||
+      this.state === 'listening' ||
+      this.state === 'thinking' ||
+      this.state === 'speaking';
     ctx.fillStyle = active ? activeColor : quietColor;
     ctx.strokeStyle = active ? activeColor : quietColor;
 
@@ -417,7 +420,7 @@ export class LyraAudioVisualizer extends LyraElement {
       ctx.stroke();
     } else {
       const n = amplitudes.length;
-      const gap = 4;
+      const gap = n > 1 ? Math.max(0, Math.min(4, (w - n * 2) / (n - 1))) : 0;
       const barWidth = Math.max(2, (w - gap * (n - 1)) / n);
       amplitudes.forEach((amp, i) => {
         const barH = Math.max(2, Math.min(h, amp * h * gain));

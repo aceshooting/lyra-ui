@@ -670,3 +670,54 @@ it('resets the native search-cancel glyph on the search field', () => {
   expect(css).to.match(/\[part='search-input'\]::-webkit-search-cancel-button/);
   expect(css).to.match(/\[part='search-input'\]::-webkit-search-decoration/);
 });
+
+it('uses locale-aware case folding for the built-in search', async () => {
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      lang="tr"
+      open
+      .tools=${[{ id: 'one', name: 'İstanbul' }]}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+  const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+  input.value = 'istanbul';
+  input.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]')).to.have.lengthOf(1);
+});
+
+it('ignores programmatic child toggles while a tool is logically disabled', async () => {
+  const tool: ToolSelectDialogTool = { id: 'locked', name: 'Locked', disabled: true };
+  const el = (await fixture(
+    html`<lr-tool-select-dialog open .tools=${[tool]}></lr-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  el.shadowRoot!.querySelector('lr-checkbox')!.dispatchEvent(
+    new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }),
+  );
+  expect(el.selected).to.deep.equal([]);
+});
+
+it('counts only unique known selected ids in the summary', async () => {
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      open
+      .tools=${[
+        { id: 'one', name: 'One' },
+        { id: 'two', name: 'Two' },
+      ]}
+      .selected=${['one', 'one', 'missing']}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+  expect(el.shadowRoot!.querySelector('[part="subtitle"]')!.textContent!.trim()).to.equal('1 of 2 tools enabled');
+});
+
+it('bounds the initially rendered large catalog', async () => {
+  const tools: ToolSelectDialogTool[] = Array.from({ length: 1_000 }, (_, index) => ({
+    id: `tool-${index}`,
+    name: `Tool ${index}`,
+  }));
+  const el = (await fixture(
+    html`<lr-tool-select-dialog open .tools=${tools}></lr-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  expect(el.shadowRoot!.querySelectorAll('[part="tool-row"]').length).to.equal(200);
+});

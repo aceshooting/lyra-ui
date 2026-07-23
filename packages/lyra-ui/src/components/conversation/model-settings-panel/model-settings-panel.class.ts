@@ -109,7 +109,7 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     const hasStep = step > 0;
     let stepped = finiteNumber(raw, lo);
     if (hasStep) {
-      const stepsFromLo = Math.round((raw - lo) / step);
+      const stepsFromLo = Math.round((stepped - lo) / step);
       const factor = 10 ** decimalPlaces(step);
       stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
     }
@@ -146,7 +146,12 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   };
 
   protected override willUpdate(changed: PropertyValues<this>): void {
-    if (changed.has('temperatureMin') || changed.has('temperatureMax') || changed.has('temperatureStep')) {
+    if (
+      changed.has('temperature') ||
+      changed.has('temperatureMin') ||
+      changed.has('temperatureMax') ||
+      changed.has('temperatureStep')
+    ) {
       const clamped = this.clampTemperature(this.temperature);
       if (clamped !== this.temperature) this.temperature = clamped;
     }

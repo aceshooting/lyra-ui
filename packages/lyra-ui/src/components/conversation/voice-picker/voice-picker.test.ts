@@ -149,20 +149,25 @@ it('clicking preview fires cancelable lr-preview-request with the resolved previ
 });
 
 it('an unprevented request with a previewUrl plays through an internal <audio>, firing lr-preview-change, and the same voice toggles it off', async () => {
-  const el = (await fixture(
-    html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
-  )) as LyraVoicePicker;
-  const changePromise = oneEvent(el, 'lr-preview-change');
-  previewButton(el).click();
-  const ev = await changePromise;
-  expect(ev.detail).to.deep.equal({ voiceId: 'aria' });
-  expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    const changePromise = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click();
+    const ev = await changePromise;
+    expect(ev.detail).to.deep.equal({ voiceId: 'aria' });
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('true');
 
-  const stopPromise = oneEvent(el, 'lr-preview-change');
-  previewButton(el).click(); // same voice -- toggles off, no new lr-preview-request
-  const stopEv = await stopPromise;
-  expect(stopEv.detail).to.deep.equal({ voiceId: null });
-  expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+    const stopPromise = oneEvent(el, 'lr-preview-change');
+    previewButton(el).click(); // same voice -- toggles off, no new lr-preview-request
+    const stopEv = await stopPromise;
+    expect(stopEv.detail).to.deep.equal({ voiceId: null });
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
 });
 
 it('preventDefault()ing lr-preview-request suppresses internal playback entirely', async () => {
@@ -632,21 +637,26 @@ it('a play() rejection that resolves after the preview was already stopped is a 
 });
 
 it("clicking the same row's preview icon again stops it (per-row toggle)", async () => {
-  const el = (await fixture(
-    html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`,
-  )) as LyraVoicePicker;
-  el.open = true;
-  await el.updateComplete;
-  const icon = rows(el)[0].querySelector('[part="option-preview"]') as HTMLElement;
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG}></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    el.open = true;
+    await el.updateComplete;
+    const icon = rows(el)[0].querySelector('[part="option-preview"]') as HTMLElement;
 
-  const startPromise = oneEvent(el, 'lr-preview-change');
-  icon.click();
-  await startPromise;
+    const startPromise = oneEvent(el, 'lr-preview-change');
+    icon.click();
+    await startPromise;
 
-  const stopPromise = oneEvent(el, 'lr-preview-change');
-  icon.click();
-  const stopEv = await stopPromise;
-  expect(stopEv.detail).to.deep.equal({ voiceId: null });
+    const stopPromise = oneEvent(el, 'lr-preview-change');
+    icon.click();
+    const stopEv = await stopPromise;
+    expect(stopEv.detail).to.deep.equal({ voiceId: null });
+  } finally {
+    restore();
+  }
 });
 
 it('the standalone preview button handler no-ops when there is no candidate (defensive -- the button is otherwise always disabled in that case)', async () => {

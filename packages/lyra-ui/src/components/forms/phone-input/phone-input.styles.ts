@@ -6,6 +6,10 @@ export const styles = css`
     min-inline-size: 0;
     --lr-phone-input-padding-block: var(--lr-space-s);
     --lr-phone-input-font-size: var(--lr-font-size-md-sm);
+    --lr-phone-input-flag-size: var(--lr-font-size-lg);
+    --lr-phone-input-glyph-size: var(--lr-font-size-md-sm);
+    --lr-phone-input-gap: var(--lr-space-xs);
+    --lr-phone-input-radius: var(--lr-radius);
     --lr-phone-input-control-min-height: var(--lr-size-2-5rem);
     /* --lr-phone-input-control-height is intentionally NOT declared here -- same convention as
        lr-input/lr-select/lr-combobox/lr-date-input: a consumer-facing exact-height escape hatch
@@ -15,26 +19,36 @@ export const styles = css`
   :host([size='2xs']) {
     --lr-phone-input-padding-block: var(--lr-size-0-0625rem);
     --lr-phone-input-font-size: var(--lr-font-size-2xs);
+    --lr-phone-input-flag-size: var(--lr-font-size-sm);
+    --lr-phone-input-glyph-size: var(--lr-font-size-2xs);
     --lr-phone-input-control-min-height: var(--lr-size-1-25rem);
   }
   :host([size='xs']) {
     --lr-phone-input-padding-block: var(--lr-size-0-125rem);
     --lr-phone-input-font-size: var(--lr-font-size-xs);
+    --lr-phone-input-flag-size: var(--lr-font-size-md-sm);
+    --lr-phone-input-glyph-size: var(--lr-font-size-xs);
     --lr-phone-input-control-min-height: var(--lr-size-1-5rem);
   }
   :host([size='s']) {
     --lr-phone-input-padding-block: var(--lr-space-xs);
     --lr-phone-input-font-size: var(--lr-font-size-sm);
+    --lr-phone-input-flag-size: var(--lr-font-size-md);
+    --lr-phone-input-glyph-size: var(--lr-font-size-sm);
     --lr-phone-input-control-min-height: var(--lr-size-1-875rem);
   }
   :host([size='l']) {
     --lr-phone-input-padding-block: var(--lr-space-m);
     --lr-phone-input-font-size: var(--lr-font-size-lg);
+    --lr-phone-input-flag-size: var(--lr-font-size-xl);
+    --lr-phone-input-glyph-size: var(--lr-font-size-lg);
     --lr-phone-input-control-min-height: var(--lr-size-3rem);
   }
   :host([size='xl']) {
     --lr-phone-input-padding-block: var(--lr-space-l);
     --lr-phone-input-font-size: var(--lr-font-size-xl);
+    --lr-phone-input-flag-size: var(--lr-font-size-2xl);
+    --lr-phone-input-glyph-size: var(--lr-font-size-xl);
     --lr-phone-input-control-min-height: var(--lr-size-3-5rem);
   }
 
@@ -71,19 +85,19 @@ export const styles = css`
     block-size: var(--lr-phone-input-control-height, auto);
     font-size: var(--lr-phone-input-font-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-phone-input-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
   }
 
   [part='input-wrapper']:focus-within {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-phone-input-focus-border-color, var(--lr-color-brand));
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
 
   :host([data-invalid]) [part='input-wrapper'] {
-    border-color: var(--lr-color-danger);
+    border-color: var(--lr-phone-input-invalid-border-color, var(--lr-color-danger));
   }
 
   /* :host(:disabled), not :host([disabled]) -- this is a form-associated
@@ -150,15 +164,15 @@ export const styles = css`
   [part='country-trigger'] {
     display: inline-flex;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-phone-input-gap);
     padding-inline: var(--lr-space-s);
-    border-start-start-radius: var(--lr-radius);
-    border-end-start-radius: var(--lr-radius);
+    border-start-start-radius: var(--lr-phone-input-radius);
+    border-end-start-radius: var(--lr-phone-input-radius);
     transition: background-color var(--lr-transition-fast);
   }
 
   [part='country-select']:not(:disabled):hover + [part='country-trigger'] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-phone-input-country-hover-bg, var(--lr-color-brand-quiet));
   }
 
   /* The wrapper's focus-within ring marks the whole field; this inner ring additionally marks
@@ -169,7 +183,7 @@ export const styles = css`
   }
 
   [part='flag'] {
-    font-size: var(--lr-font-size-lg);
+    font-size: var(--lr-phone-input-flag-size);
   }
 
   [part='country-code'] {
@@ -187,7 +201,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-md-sm);
+    font-size: var(--lr-phone-input-glyph-size);
     line-height: var(--lr-line-height-none);
   }
 

@@ -73,6 +73,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     max-block-size: var(--lr-activity-feed-max-height);
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -144,6 +145,7 @@ export const styles = css`
   lr-virtual-list::part(entry-text) {
     flex: 1 1 auto;
     min-inline-size: var(--lr-size-3ch);
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
   }
   [part='entry-timestamp'],

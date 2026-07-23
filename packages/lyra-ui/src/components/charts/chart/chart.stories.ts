@@ -199,7 +199,8 @@ export const ThemedTokens: Story = {
 
 /**
  * `lr-point-click` fires whenever a click lands on (or nearest,
- * intersect-only) a data point/segment — covers any `type`, not just bars.
+ * intersect-only) a data point/segment. The focused canvas exposes the same
+ * points through Arrow/Home/End navigation and Enter/Space activation.
  * `refreshTheme()` forces a redraw so an out-of-band theme change (e.g. a
  * host-level dark-mode toggle that doesn't touch any `lr-chart` property)
  * is picked up immediately, rather than waiting for the next reactive update.
@@ -229,4 +230,21 @@ export const PointClickAndRefreshTheme: Story = {
       </button>
     `;
   },
+};
+
+/** Supplying the accessibility-table slot replaces, rather than duplicates, the generated table. */
+export const CustomDataTable: Story = {
+  render: () => html`
+    <lr-chart
+      type="bar"
+      .labels=${['Q1', 'Q2']}
+      .datasets=${[{ label: 'Revenue', data: [12, 19] }]}
+    >
+      <table slot="data-table">
+        <caption>Quarterly revenue</caption>
+        <thead><tr><th>Quarter</th><th>Revenue</th></tr></thead>
+        <tbody><tr><th>Q1</th><td>12</td></tr><tr><th>Q2</th><td>19</td></tr></tbody>
+      </table>
+    </lr-chart>
+  `,
 };

@@ -1,19 +1,25 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
-import { property, state, query } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
-import { lockScroll } from '../../../internal/scroll-lock.js';
-import { isRtl } from '../../../internal/rtl.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
+import { property, state, query } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import {
+  activateOverlay,
+  type OverlayHandle,
+} from "../../../internal/overlay-manager.js";
+import { lockScroll } from "../../../internal/scroll-lock.js";
+import { isRtl } from "../../../internal/rtl.js";
+import { finiteRange } from "../../../internal/numbers.js";
 import {
   CollapseBreakpointController,
   OrientationBreakpointController,
   type BreakpointBasis,
   type OrientationBreakpointBasis,
-} from '../../../internal/orientation-breakpoint.js';
-import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
-import { resolveCssLength } from '../../../internal/css-length.js';
-import { styles } from './split.styles.js';
+} from "../../../internal/orientation-breakpoint.js";
+import {
+  readPersistedState,
+  writePersistedState,
+} from "../../../internal/persisted-state.js";
+import { resolveCssLength } from "../../../internal/css-length.js";
+import { styles } from "./split.styles.js";
 
 const KEYBOARD_STEP = 2;
 
@@ -45,9 +51,9 @@ export interface PanelConstraint {
 }
 
 export type SplitConstraintIssueReason =
-  | 'minimum-total'
-  | 'maximum-total'
-  | 'minimum-exceeds-maximum';
+  | "minimum-total"
+  | "maximum-total"
+  | "minimum-exceeds-maximum";
 
 export interface SplitConstraintIssueDetail {
   reason: SplitConstraintIssueReason;
@@ -64,17 +70,17 @@ interface ConstraintResolution {
 }
 
 /** Which pane (if any) participates in responsive collapse (see `collapse`). */
-export type SplitCollapseMode = 'start' | 'end' | 'none';
+export type SplitCollapseMode = "start" | "end" | "none";
 
 /** The collapsing pane's current responsive state — `'wide'` is the normal
  *  drag-resizable percent layout (identical to `collapse="none"`); `'rail'`
  *  clamps it to `railWidth`; `'floating'` lifts it out of the flex flow as an
  *  overlay above the other pane. */
-export type SplitCollapseState = 'wide' | 'rail' | 'floating';
+export type SplitCollapseState = "wide" | "rail" | "floating";
 
 /** What can be *assigned* to `collapseState` -- `'auto'` is a write-only
  *  sentinel; see the `collapseState` accessor doc. */
-export type SplitCollapseStateInput = SplitCollapseState | 'auto';
+export type SplitCollapseStateInput = SplitCollapseState | "auto";
 
 export interface SplitCollapseChangeDetail {
   state: SplitCollapseState;
@@ -84,17 +90,17 @@ export interface SplitResizeDetail {
   sizes: number[];
 }
 
-export type SplitOrientation = 'horizontal' | 'vertical';
+export type SplitOrientation = "horizontal" | "vertical";
 
 export interface SplitOrientationChangeDetail {
   orientation: SplitOrientation;
 }
 
 export interface LyraSplitEventMap {
-  'lr-resize': CustomEvent<SplitResizeDetail>;
-  'lr-split-collapse-change': CustomEvent<SplitCollapseChangeDetail>;
-  'lr-split-constraints-invalid': CustomEvent<SplitConstraintIssueDetail>;
-  'lr-split-orientation-change': CustomEvent<SplitOrientationChangeDetail>;
+  "lr-resize": CustomEvent<SplitResizeDetail>;
+  "lr-split-collapse-change": CustomEvent<SplitCollapseChangeDetail>;
+  "lr-split-constraints-invalid": CustomEvent<SplitConstraintIssueDetail>;
+  "lr-split-orientation-change": CustomEvent<SplitOrientationChangeDetail>;
 }
 /**
  * `<lr-split>` — resizable panels for dashboard layouts. Direct light-DOM
@@ -175,7 +181,11 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   // form already reads fine) so the reflected attribute stays kebab-case,
   // matching this file's other attribute-reflected properties.
   static override properties = {
-    collapseState: { reflect: true, attribute: 'collapse-state', noAccessor: true },
+    collapseState: {
+      reflect: true,
+      attribute: "collapse-state",
+      noAccessor: true,
+    },
   };
 
   @property({ attribute: false }) sizes: number[] = [];
@@ -189,7 +199,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  not sum to ~100 is still rejected). */
   @property({ attribute: false }) defaultSizes: (number | string)[] = [];
   @property({ type: Number }) min = 10;
-  @property({ reflect: true }) orientation: SplitOrientation = 'horizontal';
+  @property({ reflect: true }) orientation: SplitOrientation = "horizontal";
   /** Opt-in inline-size breakpoint for this component's *own* measured allocation. Below it,
    *  `narrowOrientation` becomes effective. Unset by default — the whole responsive-orientation
    *  feature (and its `ResizeObserver`) is off, and `effectiveOrientation` just tracks
@@ -209,7 +219,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  `calc()` (which would mix reference boxes against an element-relative measurement) — behaves
    *  exactly as unset. Set `orientationBreakpointBasis="viewport"` for a viewport-relative
    *  breakpoint instead. */
-  @property({ attribute: 'orientation-breakpoint' }) orientationBreakpoint?: number | string;
+  @property({ attribute: "orientation-breakpoint" }) orientationBreakpoint?:
+    | number
+    | string;
   /** Which box `orientationBreakpoint` measures. `'container'` (the default) observes this
    *  component's own `[part="base"]` inline size via `ResizeObserver`, comparing strictly `<`.
    *  `'viewport'` instead evaluates `matchMedia('(max-width: <breakpoint>)')`, which is inclusive
@@ -221,17 +233,19 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  the transition, so no self-measured threshold can express it. `'viewport'` also lets the
    *  browser resolve a `rem` breakpoint with real `@media` semantics, keeping it in step with such
    *  a rule across browser zoom and user font-size preferences. */
-  @property({ reflect: true, attribute: 'orientation-breakpoint-basis' })
-  orientationBreakpointBasis: OrientationBreakpointBasis = 'container';
+  @property({ reflect: true, attribute: "orientation-breakpoint-basis" })
+  orientationBreakpointBasis: OrientationBreakpointBasis = "container";
   /** Layout/resize axis used below `orientationBreakpoint`. */
-  @property({ reflect: true, attribute: 'narrow-orientation' }) narrowOrientation: SplitOrientation = 'vertical';
-  @property({ attribute: 'storage-key' }) storageKey?: string;
+  @property({ reflect: true, attribute: "narrow-orientation" })
+  narrowOrientation: SplitOrientation = "vertical";
+  @property({ attribute: "storage-key" }) storageKey?: string;
   /** Optional fixed-pixel min/max per panel, index-aligned with `sizes`. A
    *  `null`/missing entry leaves that panel purely percent-based (the
    *  existing `min`-only behavior). `sizes`, the `lr-resize` payload, and
    *  localStorage persistence stay percent-based regardless — only the
    *  effective clamp bounds change for a constrained panel. */
-  @property({ attribute: false }) panelConstraints: (PanelConstraint | null)[] = [];
+  @property({ attribute: false }) panelConstraints: (PanelConstraint | null)[] =
+    [];
   /** Opts a pane in to responsive collapse: `'start'` is the first light-DOM
    *  panel (index 0), `'end'` is the last. Both are LOGICAL positions, same
    *  as CSS `inset-inline-start`/`-end` — see the `collapsingIndex` getter
@@ -240,9 +254,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  delta sign mirrors). Default `'none'`: none of the collapse behavior
    *  below applies, and rendering/behavior is identical to before this
    *  property existed. */
-  @property({ reflect: true }) collapse: SplitCollapseMode = 'none';
+  @property({ reflect: true }) collapse: SplitCollapseMode = "none";
   /** Fixed CSS length the collapsing pane clamps to in the `'rail'` state. */
-  @property({ attribute: 'rail-width' }) railWidth = '3.5rem';
+  @property({ attribute: "rail-width" }) railWidth = "3.5rem";
   /** Width below which the collapsing pane switches from its normal percent width to the fixed
    *  `railWidth` (`'rail'` state). Must stay above `floatBreakpoint` — an inverted pair is
    *  sanitized by raising this one to match, which collapses the `'rail'` band away rather than
@@ -262,13 +276,17 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  back to). A negative length is floored at `0`, i.e. never crossed.
    *
    *  Default: `640`. */
-  @property({ attribute: 'rail-breakpoint' }) railBreakpoint: number | string = 640;
+  @property({ attribute: "rail-breakpoint" }) railBreakpoint:
+    | number
+    | string = 640;
   /** Width below which the collapsing pane instead becomes an absolutely-positioned overlay above
    *  the other pane (`'floating'` state). Same accepted forms, basis, and sanitization as
    *  `railBreakpoint`; an unparseable value falls back to the `400` default.
    *
    *  Default: `400`. */
-  @property({ attribute: 'float-breakpoint' }) floatBreakpoint: number | string = 400;
+  @property({ attribute: "float-breakpoint" }) floatBreakpoint:
+    | number
+    | string = 400;
   /** Which box `railBreakpoint`/`floatBreakpoint` measure. `'container'` (the default) observes
    *  this component's own `[part="base"]` inline size via `ResizeObserver`, comparing strictly `<`.
    *  `'viewport'` instead evaluates `matchMedia('(max-width: <breakpoint>)')` for each of the two
@@ -289,8 +307,8 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  no `ResizeObserver` round-trip — and the initial state is not announced as a transition.
    *
    *  Default: `'container'`. */
-  @property({ reflect: true, attribute: 'collapse-breakpoint-basis' })
-  collapseBreakpointBasis: BreakpointBasis = 'container';
+  @property({ reflect: true, attribute: "collapse-breakpoint-basis" })
+  collapseBreakpointBasis: BreakpointBasis = "container";
   /** Whether the `'floating'` collapse state's drawer is shown. Only
    *  meaningful while `collapseState` is `'floating'` — the value is
    *  preserved (not reset) while another state is active, but no drawer
@@ -303,10 +321,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  and the total panel count (`lr-split` supports N panels, so a single fixed string can't
    *  express every divider's label; a function can). Unset (the default) keeps today's exact
    *  localized `Resize divider between panel {a} and panel {b}` template (see `this.localize()`). */
-  @property({ attribute: false }) dividerLabel?: (index: number, panelCount: number) => string;
+  @property({ attribute: false }) dividerLabel?: (
+    index: number,
+    panelCount: number
+  ) => string;
 
   @state() private panelCount = 0;
-  private _collapseState: SplitCollapseState = 'wide';
+  private sizesReconciledForMembership = false;
+  private _collapseState: SplitCollapseState = "wide";
   // Whether ResizeObserver-driven measurement is currently ignored because a
   // consumer forced a specific collapseState -- see the accessor doc.
   private _forced = false;
@@ -328,22 +350,23 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   // lr-split-authored styles cleared instead of carrying them around stale
   // forever.
   private stylizedPanels = new Set<HTMLElement>();
-  private constraintIssueKey = '';
+  private constraintIssueKey = "";
   private initializedSizes = false;
   private measuredInlineSize = Number.POSITIVE_INFINITY;
-  private _effectiveOrientation: SplitOrientation = 'horizontal';
+  private _effectiveOrientation: SplitOrientation = "horizontal";
   @query('[part="base"]') private baseEl?: HTMLElement;
   private collapseResizeObserver?: ResizeObserver;
   /** Owns breakpoint resolution, basis selection, and the viewport `MediaQueryList` lifecycle
    *  (including teardown on disconnect) — see `OrientationBreakpointController`. */
-  private orientationBreakpoints = new OrientationBreakpointController(this, () =>
-    this.updateEffectiveOrientation(this.measuredInlineSize, true),
+  private orientationBreakpoints = new OrientationBreakpointController(
+    this,
+    () => this.updateEffectiveOrientation(this.measuredInlineSize, true)
   );
   /** Owns both collapse thresholds together, their basis, and the viewport `MediaQueryList`
    *  lifecycle — see `CollapseBreakpointController` for why the three-state classification can't
    *  be two independent single-threshold controllers. */
   private collapseBreakpoints = new CollapseBreakpointController(this, () =>
-    this.updateCollapseState(this.measuredInlineSize, true),
+    this.updateCollapseState(this.measuredInlineSize, true)
   );
 
   override connectedCallback(): void {
@@ -383,7 +406,8 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       } else {
         this.activateFloatingOverlay();
       }
-      if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
+      if (!this.releaseScrollLock)
+        this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
   }
@@ -392,10 +416,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     super.disconnectedCallback();
     // Clean up any remaining event listeners from an in-flight drag.
     this.drags.clear();
-    window.removeEventListener('pointermove', this.onPointerMove);
-    window.removeEventListener('pointerup', this.onPointerUp);
-    window.removeEventListener('pointercancel', this.onPointerUp);
-    window.removeEventListener('lostpointercapture', this.onPointerUp);
+    window.removeEventListener("pointermove", this.onPointerMove);
+    window.removeEventListener("pointerup", this.onPointerUp);
+    window.removeEventListener("pointercancel", this.onPointerUp);
+    window.removeEventListener("lostpointercapture", this.onPointerUp);
     this.collapseResizeObserver?.disconnect();
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
@@ -425,17 +449,35 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     if (!this.initializedSizes) {
       this.initializeSizes();
       this.initializedSizes = true;
-    } else if (changed.has('sizes') || this.sizes.length === 0) {
+    } else if (changed.has("sizes")) {
+      const previous = changed.get("sizes");
+      if (this.sizesReconciledForMembership) {
+        this.sizesReconciledForMembership = false;
+      } else if (!this.validLiveSizes(this.sizes)) {
+        if (Array.isArray(previous) && this.validLiveSizes(previous)) {
+          this.sizes = [...previous];
+        } else {
+          this.sizes = [];
+          this.ensureSizes();
+        }
+      }
+    } else if (this.sizes.length === 0) {
       this.ensureSizes();
     }
-    if (changed.has('orientationBreakpoint') || changed.has('orientationBreakpointBasis')) {
-      this.orientationBreakpoints.configure(this.orientationBreakpoint, this.orientationBreakpointBasis);
+    if (
+      changed.has("orientationBreakpoint") ||
+      changed.has("orientationBreakpointBasis")
+    ) {
+      this.orientationBreakpoints.configure(
+        this.orientationBreakpoint,
+        this.orientationBreakpointBasis
+      );
     }
     if (
-      changed.has('orientation') ||
-      changed.has('narrowOrientation') ||
-      changed.has('orientationBreakpoint') ||
-      changed.has('orientationBreakpointBasis')
+      changed.has("orientation") ||
+      changed.has("narrowOrientation") ||
+      changed.has("orientationBreakpoint") ||
+      changed.has("orientationBreakpointBasis")
     ) {
       // Under 'viewport' basis, `configure()` just above (re-)armed `matchMedia` synchronously,
       // so `isBelow()` here already reflects a live, authoritative read -- exactly the "fresh
@@ -449,19 +491,23 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       // otherwise announce a transition that never happened. The initial axis is not a change.
       this.updateEffectiveOrientation(
         this.measuredInlineSize,
-        this.hasUpdated && this.orientationBreakpointBasis === 'viewport',
+        this.hasUpdated && this.orientationBreakpointBasis === "viewport"
       );
     }
-    if (changed.has('collapse') && this.collapse === 'none') {
+    if (changed.has("collapse") && this.collapse === "none") {
       this.resetCollapseState();
     }
     if (
-      changed.has('collapse') ||
-      changed.has('railBreakpoint') ||
-      changed.has('floatBreakpoint') ||
-      changed.has('collapseBreakpointBasis')
+      changed.has("collapse") ||
+      changed.has("railBreakpoint") ||
+      changed.has("floatBreakpoint") ||
+      changed.has("collapseBreakpointBasis")
     ) {
-      this.collapseBreakpoints.configure(this.railBreakpoint, this.floatBreakpoint, this.collapseBreakpointBasis);
+      this.collapseBreakpoints.configure(
+        this.railBreakpoint,
+        this.floatBreakpoint,
+        this.collapseBreakpointBasis
+      );
       // Classifying here, rather than waiting for the shared `ResizeObserver`'s first callback, is
       // what makes `data-collapse-state` correct on the *first paint* under viewport basis --
       // `configure()` just armed both queries synchronously, so `classify()` is already a live,
@@ -477,8 +523,8 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       // happened. The initial state is not a change.
       this.updateCollapseState(this.measuredInlineSize, this.hasUpdated);
     }
-    if (changed.has('open') || changed.has('collapseState')) {
-      const next = this._collapseState === 'floating' && this.open;
+    if (changed.has("open") || changed.has("collapseState")) {
+      const next = this._collapseState === "floating" && this.open;
       if (next !== this.overlayActive) {
         this.overlayActive = next;
         if (next) {
@@ -501,7 +547,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     return this._collapseState;
   }
   set collapseState(next: SplitCollapseStateInput) {
-    if (next === 'auto') {
+    if (next === "auto") {
       this._forced = false;
       this.updateCollapseState(this.currentMeasuredWidth());
       return;
@@ -533,7 +579,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  width. Collapse's basis therefore changes only which values `classify()` consults, never
    *  whether the split measures itself. */
   private get responsiveObservationEnabled(): boolean {
-    return this.collapse !== 'none' || this.orientationBreakpoints.containerObservationEnabled;
+    return (
+      this.collapse !== "none" ||
+      this.orientationBreakpoints.containerObservationEnabled
+    );
   }
 
   /** Classifies a measured inline size into the effective resize/layout axis and, only on an
@@ -557,7 +606,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this._effectiveOrientation = next;
     this.requestUpdate();
     if (shouldEmit) {
-      this.emit<SplitOrientationChangeDetail>('lr-split-orientation-change', { orientation: next });
+      this.emit<SplitOrientationChangeDetail>("lr-split-orientation-change", {
+        orientation: next,
+      });
     }
   }
 
@@ -577,10 +628,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  off entirely), not a state transition a consumer forced or observed. */
   private resetCollapseState(): void {
     this._forced = false;
-    if (this._collapseState === 'wide') return;
+    if (this._collapseState === "wide") return;
     const old = this._collapseState;
-    this._collapseState = 'wide';
-    this.requestUpdate('collapseState', old);
+    this._collapseState = "wide";
+    this.requestUpdate("collapseState", old);
   }
 
   /** Applies an actual `collapseState` transition (no-op if `next` matches
@@ -593,22 +644,42 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  overlay when `mode` leaves `'mobile'` while open. `shouldEmit` is true for every path except
    *  the first render's viewport-basis classification (see `updateCollapseState()`), which is the
    *  starting state rather than a transition away from anything. */
-  private applyCollapseStateChange(next: SplitCollapseState, shouldEmit = true): void {
+  private applyCollapseStateChange(
+    next: SplitCollapseState,
+    shouldEmit = true
+  ): void {
     if (next === this._collapseState) return;
     const old = this._collapseState;
     this._collapseState = next;
-    this.requestUpdate('collapseState', old);
-    if (shouldEmit) this.emit<SplitCollapseChangeDetail>('lr-split-collapse-change', { state: next });
-    if (next !== 'floating' && this.open) this.open = false;
+    this.requestUpdate("collapseState", old);
+    if (shouldEmit)
+      this.emit<SplitCollapseChangeDetail>("lr-split-collapse-change", {
+        state: next,
+      });
+    if (next !== "floating" && this.open) this.open = false;
   }
 
   private get storageFullKey(): string | undefined {
-    return this.storageKey ? `lr-split:${this.storageKey}:${this.panelCount}` : undefined;
+    return this.storageKey
+      ? `lr-split:${this.storageKey}:${this.panelCount}`
+      : undefined;
   }
 
   private validInitialSizes(value: number[]): boolean {
     if (!Array.isArray(value) || value.length !== this.panelCount) return false;
-    if (!value.every((size) => Number.isFinite(size) && size >= this.safeMin)) return false;
+    if (!value.every((size) => Number.isFinite(size) && size >= this.safeMin))
+      return false;
+    return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
+  }
+
+  /** Post-mount assignments use the feasible shared floor. A configured `min` can exceed the
+   * aggregate available space, in which case interaction deliberately falls back to
+   * `normalizedDefaultMin()` rather than freezing every divider. */
+  private validLiveSizes(value: number[]): boolean {
+    if (!Array.isArray(value) || value.length !== this.panelCount) return false;
+    const floor = this.normalizedDefaultMin();
+    if (!value.every((size) => Number.isFinite(size) && size >= floor))
+      return false;
     return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
   }
 
@@ -620,7 +691,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  and then normalized to percentages. */
   private resolveDefaultSizes(): number[] | null {
     if (this.defaultSizes.length === 0) return null;
-    const hasLengthString = this.defaultSizes.some((entry) => typeof entry === 'string');
+    const hasLengthString = this.defaultSizes.some(
+      (entry) => typeof entry === "string"
+    );
     if (!hasLengthString) {
       const numbers = this.defaultSizes as number[];
       return this.validInitialSizes(numbers) ? [...numbers] : null;
@@ -629,11 +702,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // which is when `initializeSizes()` runs from `willUpdate()`; fall back to the host's own box --
     // [part="base"] is `inline-size: 100%` of the host, so they are equal (the same stand-in
     // `connectedCallback()` uses to seed `measuredInlineSize`).
-    const containerSize = this.currentMeasuredWidth() || this.getBoundingClientRect().width;
+    const containerSize =
+      this.currentMeasuredWidth() || this.getBoundingClientRect().width;
     if (!(containerSize > 0)) return null;
     const resolvedPx: number[] = [];
     for (const entry of this.defaultSizes) {
-      if (typeof entry === 'number') {
+      if (typeof entry === "number") {
         if (!Number.isFinite(entry)) return null;
         resolvedPx.push((entry / 100) * containerSize); // a bare number is percent-of-container
         continue;
@@ -669,7 +743,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   }
 
   private loadPersisted(): boolean {
-    const parsed = readPersistedState(this.storageFullKey, (v): v is number[] => Array.isArray(v));
+    const parsed = readPersistedState(this.storageFullKey, (v): v is number[] =>
+      Array.isArray(v)
+    );
     if (parsed && this.validInitialSizes(parsed)) {
       this.sizes = parsed;
       return true;
@@ -705,14 +781,19 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       ];
     } else {
       const kept = this.sizes.slice(0, this.panelCount);
-      const removedTotal = this.sizes.slice(this.panelCount).reduce((sum, s) => sum + s, 0);
+      const removedTotal = this.sizes
+        .slice(this.panelCount)
+        .reduce((sum, s) => sum + s, 0);
       const keptTotal = kept.reduce((sum, s) => sum + s, 0) || 1;
       this.sizes = kept.map((s) => s + (s / keptTotal) * removedTotal);
     }
   }
 
   private onSlotChange = (): void => {
-    this.panelCount = this.children.length;
+    const nextPanelCount = this.children.length;
+    if (nextPanelCount === this.panelCount) return;
+    this.panelCount = nextPanelCount;
+    this.sizesReconciledForMembership = true;
     this.ensureSizes();
   };
 
@@ -721,7 +802,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  `onPointerMove` already does via `drag.base.clientWidth/clientHeight`. */
   private getContainerSize(): number {
     if (!this.baseEl) return 0;
-    return this.effectiveOrientation === 'vertical' ? this.baseEl.clientHeight : this.baseEl.clientWidth;
+    return this.effectiveOrientation === "vertical"
+      ? this.baseEl.clientHeight
+      : this.baseEl.clientWidth;
   }
 
   /** The physical panel index `collapse: 'start' | 'end'` resolves to, or
@@ -739,15 +822,15 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  bug against this component's own RTL rendering, not a fix for one.
    */
   private get collapsingIndex(): number {
-    if (this.collapse === 'none' || this.panelCount < 2) return -1;
-    return this.collapse === 'start' ? 0 : this.panelCount - 1;
+    if (this.collapse === "none" || this.panelCount < 2) return -1;
+    return this.collapse === "start" ? 0 : this.panelCount - 1;
   }
 
   /** Whether a pane is actually collapsed (rail or floating) right now —
    *  `false` whenever `collapse === 'none'`, since `collapseState` then
    *  never leaves its `'wide'` default. */
   private get collapseActive(): boolean {
-    return this.collapsingIndex !== -1 && this.collapseState !== 'wide';
+    return this.collapsingIndex !== -1 && this.collapseState !== "wide";
   }
 
   /** Dragging/keyboard-resizing is disabled on the one divider immediately
@@ -771,9 +854,12 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  `shouldEmit` is false only for the very first render's viewport-basis classification, which
    *  establishes the starting state rather than transitioning to it — see `willUpdate()`. */
   private updateCollapseState(width: number, shouldEmit = true): void {
-    if (this.collapse === 'none') return;
+    if (this.collapse === "none") return;
     if (this._forced) return;
-    this.applyCollapseStateChange(this.collapseBreakpoints.classify(width), shouldEmit);
+    this.applyCollapseStateChange(
+      this.collapseBreakpoints.classify(width),
+      shouldEmit
+    );
   }
 
   /** Creates (idempotently) and (re-)observes `[part="base"]` with the shared collapse-state/
@@ -787,7 +873,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     if (!this.collapseResizeObserver) {
       this.collapseResizeObserver = new ResizeObserver((entries) => {
         const box = entries[0]?.contentBoxSize?.[0];
-        const width = box ? box.inlineSize : (this.baseEl?.getBoundingClientRect().width ?? 0);
+        const width = box
+          ? box.inlineSize
+          : this.baseEl?.getBoundingClientRect().width ?? 0;
         this.measuredInlineSize = width;
         this.updateCollapseState(width);
         this.updateEffectiveOrientation(width, true);
@@ -838,7 +926,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  exposing a divider whose minimum is greater than its maximum. */
   private resolveConstraintBounds(containerSize: number): ConstraintResolution {
     const fallbackMin = this.normalizedDefaultMin();
-    const fallback = Array.from({ length: this.panelCount }, () => ({ min: fallbackMin, max: Infinity }));
+    const fallback = Array.from({ length: this.panelCount }, () => ({
+      min: fallbackMin,
+      max: Infinity,
+    }));
     if (this.panelCount <= 0) return { bounds: [], usePanelConstraints: true };
 
     const bounds: Array<{ min: number; max: number }> = [];
@@ -854,44 +945,78 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       let minSet = false;
       let maxSet = false;
       if (constraint) {
-        if (constraint.minPx != null && Number.isFinite(constraint.minPx) && constraint.minPx >= 0 && containerSize > 0) {
+        if (
+          constraint.minPx != null &&
+          Number.isFinite(constraint.minPx) &&
+          constraint.minPx >= 0 &&
+          containerSize > 0
+        ) {
           min = (constraint.minPx / containerSize) * 100;
           minSet = true;
         }
-        if (constraint.minPercent != null && Number.isFinite(constraint.minPercent) && constraint.minPercent >= 0) {
+        if (
+          constraint.minPercent != null &&
+          Number.isFinite(constraint.minPercent) &&
+          constraint.minPercent >= 0
+        ) {
           // The stricter (larger) of a px-derived and a directly-specified percent minimum —
           // px alone still simply overwrites the component-wide safeMin floor, matching the
           // pre-existing minPx-only behavior.
-          min = minSet ? Math.max(min, constraint.minPercent) : constraint.minPercent;
+          min = minSet
+            ? Math.max(min, constraint.minPercent)
+            : constraint.minPercent;
           minSet = true;
         }
-        if (constraint.maxPx != null && Number.isFinite(constraint.maxPx) && constraint.maxPx >= 0 && containerSize > 0) {
+        if (
+          constraint.maxPx != null &&
+          Number.isFinite(constraint.maxPx) &&
+          constraint.maxPx >= 0 &&
+          containerSize > 0
+        ) {
           max = (constraint.maxPx / containerSize) * 100;
           maxSet = true;
         }
-        if (constraint.maxPercent != null && Number.isFinite(constraint.maxPercent) && constraint.maxPercent >= 0) {
+        if (
+          constraint.maxPercent != null &&
+          Number.isFinite(constraint.maxPercent) &&
+          constraint.maxPercent >= 0
+        ) {
           // The stricter (smaller) of a px-derived and a directly-specified percent maximum.
-          max = maxSet ? Math.min(max, constraint.maxPercent) : constraint.maxPercent;
+          max = maxSet
+            ? Math.min(max, constraint.maxPercent)
+            : constraint.maxPercent;
           maxSet = true;
         }
         if (
-          (constraint.minPx != null && (!Number.isFinite(constraint.minPx) || constraint.minPx < 0)) ||
-          (constraint.maxPx != null && (!Number.isFinite(constraint.maxPx) || constraint.maxPx < 0)) ||
-          (constraint.minPercent != null && (!Number.isFinite(constraint.minPercent) || constraint.minPercent < 0)) ||
-          (constraint.maxPercent != null && (!Number.isFinite(constraint.maxPercent) || constraint.maxPercent < 0))
+          (constraint.minPx != null &&
+            (!Number.isFinite(constraint.minPx) || constraint.minPx < 0)) ||
+          (constraint.maxPx != null &&
+            (!Number.isFinite(constraint.maxPx) || constraint.maxPx < 0)) ||
+          (constraint.minPercent != null &&
+            (!Number.isFinite(constraint.minPercent) ||
+              constraint.minPercent < 0)) ||
+          (constraint.maxPercent != null &&
+            (!Number.isFinite(constraint.maxPercent) ||
+              constraint.maxPercent < 0))
         ) {
-          issueReason ??= 'minimum-exceeds-maximum';
+          issueReason ??= "minimum-exceeds-maximum";
         }
       }
-      if (min > max) issueReason ??= 'minimum-exceeds-maximum';
+      if (min > max) issueReason ??= "minimum-exceeds-maximum";
       bounds.push({ min, max });
       minimumTotal += min;
       if (Number.isFinite(max)) maximumTotal += max;
       else hasUnboundedMaximum = true;
     }
 
-    if (issueReason == null && minimumTotal > 100 + 1e-9) issueReason = 'minimum-total';
-    if (issueReason == null && !hasUnboundedMaximum && maximumTotal < 100 - 1e-9) issueReason = 'maximum-total';
+    if (issueReason == null && minimumTotal > 100 + 1e-9)
+      issueReason = "minimum-total";
+    if (
+      issueReason == null &&
+      !hasUnboundedMaximum &&
+      maximumTotal < 100 - 1e-9
+    )
+      issueReason = "maximum-total";
     if (issueReason == null) return { bounds, usePanelConstraints: true };
 
     return {
@@ -907,14 +1032,30 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     };
   }
 
-  private percentBounds(index: number, containerSize: number): { min: number; max: number } {
-    return this.resolveConstraintBounds(containerSize).bounds[index] ?? { min: 0, max: Infinity };
+  private percentBounds(
+    index: number,
+    containerSize: number
+  ): { min: number; max: number } {
+    return (
+      this.resolveConstraintBounds(containerSize).bounds[index] ?? {
+        min: 0,
+        max: Infinity,
+      }
+    );
   }
 
   /** Whether a panel's constraint needs the clamp()-based flex-basis branch at all (as opposed to
    *  the plain bare-percent branch) — true whenever any px or percent bound is set. */
-  private hasClampConstraint(constraint: PanelConstraint | null | undefined): boolean {
-    return !!constraint && (constraint.minPx != null || constraint.maxPx != null || constraint.minPercent != null || constraint.maxPercent != null);
+  private hasClampConstraint(
+    constraint: PanelConstraint | null | undefined
+  ): boolean {
+    return (
+      !!constraint &&
+      (constraint.minPx != null ||
+        constraint.maxPx != null ||
+        constraint.minPercent != null ||
+        constraint.maxPercent != null)
+    );
   }
 
   /** Builds the min side of a constrained panel's CSS `clamp()` flex-basis. A single specified
@@ -926,33 +1067,54 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  overwrite-vs-combine split for the JS-side percent bounds). */
   private minSideExpr(constraint: PanelConstraint | null | undefined): string {
     const terms: string[] = [];
-    if (constraint?.minPx != null && Number.isFinite(constraint.minPx) && constraint.minPx >= 0) {
+    if (
+      constraint?.minPx != null &&
+      Number.isFinite(constraint.minPx) &&
+      constraint.minPx >= 0
+    ) {
       terms.push(`${constraint.minPx}px`);
     }
-    if (constraint?.minPercent != null && Number.isFinite(constraint.minPercent) && constraint.minPercent >= 0) {
+    if (
+      constraint?.minPercent != null &&
+      Number.isFinite(constraint.minPercent) &&
+      constraint.minPercent >= 0
+    ) {
       terms.push(`${constraint.minPercent}%`);
     }
     if (terms.length === 0) return `${NO_MIN_PX}px`;
     if (terms.length === 1) return terms[0]!; // safe: exactly one term
-    return `max(${this.safeMin}%, ${terms.join(', ')})`;
+    return `max(${this.safeMin}%, ${terms.join(", ")})`;
   }
 
   /** The max-side mirror of `minSideExpr()` — uses CSS `min()` (stricter = smaller) when combining
    *  both unit types; no equivalent shared floor exists to fold in for the max side. */
   private maxSideExpr(constraint: PanelConstraint | null | undefined): string {
     const terms: string[] = [];
-    if (constraint?.maxPx != null && Number.isFinite(constraint.maxPx) && constraint.maxPx >= 0) {
+    if (
+      constraint?.maxPx != null &&
+      Number.isFinite(constraint.maxPx) &&
+      constraint.maxPx >= 0
+    ) {
       terms.push(`${constraint.maxPx}px`);
     }
-    if (constraint?.maxPercent != null && Number.isFinite(constraint.maxPercent) && constraint.maxPercent >= 0) {
+    if (
+      constraint?.maxPercent != null &&
+      Number.isFinite(constraint.maxPercent) &&
+      constraint.maxPercent >= 0
+    ) {
       terms.push(`${constraint.maxPercent}%`);
     }
     if (terms.length === 0) return `${NO_MAX_PX}px`;
     if (terms.length === 1) return terms[0]!; // safe: exactly one term
-    return `min(${terms.join(', ')})`;
+    return `min(${terms.join(", ")})`;
   }
 
-  private clampPair(sizes: number[], i: number, delta: number, containerSize = 0): number[] {
+  private clampPair(
+    sizes: number[],
+    i: number,
+    delta: number,
+    containerSize = 0
+  ): number[] {
     const next = [...sizes];
     const currentA = next[i];
     const currentB = next[i + 1];
@@ -978,8 +1140,13 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   }
 
   private applyDelta(index: number, delta: number, commit: boolean): void {
-    this.sizes = this.clampPair(this.sizes, index, delta, this.getContainerSize());
-    this.emit('lr-resize', { sizes: [...this.sizes] });
+    this.sizes = this.clampPair(
+      this.sizes,
+      index,
+      delta,
+      this.getContainerSize()
+    );
+    this.emit("lr-resize", { sizes: [...this.sizes] });
     if (commit) this.persist();
   }
 
@@ -990,7 +1157,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
    *  inline styles in `updated()`. */
   private get floatingPanelEl(): HTMLElement | null {
     const index = this.collapsingIndex;
-    return index === -1 ? null : ((this.children[index] as HTMLElement | undefined) ?? null);
+    return index === -1
+      ? null
+      : (this.children[index] as HTMLElement | undefined) ?? null;
   }
 
   private activateFloatingOverlay(): void {
@@ -1025,32 +1194,38 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // so baseEl is guaranteed to be already rendered here.
     this.drags.set(e.pointerId, {
       index,
-      startPos: this.effectiveOrientation === 'vertical' ? e.clientY : e.clientX,
+      startPos:
+        this.effectiveOrientation === "vertical" ? e.clientY : e.clientX,
       base: this.baseEl!,
       appliedDelta: 0,
     });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    window.addEventListener('pointermove', this.onPointerMove);
-    window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener("pointermove", this.onPointerMove);
+    window.addEventListener("pointerup", this.onPointerUp);
     // A drag can end without a pointerup: a system gesture / palm rejection
     // can fire `pointercancel`, and losing capture (e.g. element removed)
     // fires `lostpointercapture` — both need the same teardown as pointerup
     // or the divider keeps "resizing" in response to unrelated movement.
-    window.addEventListener('pointercancel', this.onPointerUp);
-    window.addEventListener('lostpointercapture', this.onPointerUp);
+    window.addEventListener("pointercancel", this.onPointerUp);
+    window.addEventListener("lostpointercapture", this.onPointerUp);
   };
 
   private onPointerMove = (e: PointerEvent): void => {
     const drag = this.drags.get(e.pointerId);
     if (!drag) return;
-    const total = this.effectiveOrientation === 'vertical' ? drag.base.clientHeight : drag.base.clientWidth;
-    const pos = this.effectiveOrientation === 'vertical' ? e.clientY : e.clientX;
+    const total =
+      this.effectiveOrientation === "vertical"
+        ? drag.base.clientHeight
+        : drag.base.clientWidth;
+    const pos =
+      this.effectiveOrientation === "vertical" ? e.clientY : e.clientX;
     let cumulativeDelta = ((pos - drag.startPos) / total) * 100;
     // Panels are ordered along the inline axis via CSS `order`, so under RTL
     // `flex-direction: row` already renders panel[i] to the *right* of
     // panel[i+1] — a physically-rightward drag has to shrink index instead
     // of growing it to keep matching the visible panel under the pointer.
-    if (this.effectiveOrientation === 'horizontal' && isRtl(this)) cumulativeDelta = -cumulativeDelta;
+    if (this.effectiveOrientation === "horizontal" && isRtl(this))
+      cumulativeDelta = -cumulativeDelta;
     // Clamp against the *current* live sizes, not this pointer's own drag-start
     // snapshot -- two adjacent dividers dragged concurrently share one panel
     // between them, and each clamp pass must see whatever the other pointer's
@@ -1088,7 +1263,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     next[drag.index] = pairedA;
     next[drag.index + 1] = pairedB;
     this.sizes = next;
-    this.emit('lr-resize', { sizes: [...this.sizes] });
+    this.emit("lr-resize", { sizes: [...this.sizes] });
   };
 
   private onPointerUp = (e: PointerEvent): void => {
@@ -1096,10 +1271,10 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     this.drags.delete(e.pointerId);
     this.persist();
     if (this.drags.size === 0) {
-      window.removeEventListener('pointermove', this.onPointerMove);
-      window.removeEventListener('pointerup', this.onPointerUp);
-      window.removeEventListener('pointercancel', this.onPointerUp);
-      window.removeEventListener('lostpointercapture', this.onPointerUp);
+      window.removeEventListener("pointermove", this.onPointerMove);
+      window.removeEventListener("pointerup", this.onPointerUp);
+      window.removeEventListener("pointercancel", this.onPointerUp);
+      window.removeEventListener("lostpointercapture", this.onPointerUp);
     }
   };
 
@@ -1107,9 +1282,19 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // Same rail/floating-adjacent guard as onPointerDown.
     if (this.isDividerDisabled(index)) return;
     // Mirror the same swap as onPointerMove for horizontal+RTL.
-    const rtl = this.effectiveOrientation === 'horizontal' && isRtl(this);
-    const forwardKey = this.effectiveOrientation === 'vertical' ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = this.effectiveOrientation === 'vertical' ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
+    const rtl = this.effectiveOrientation === "horizontal" && isRtl(this);
+    const forwardKey =
+      this.effectiveOrientation === "vertical"
+        ? "ArrowDown"
+        : rtl
+        ? "ArrowLeft"
+        : "ArrowRight";
+    const backwardKey =
+      this.effectiveOrientation === "vertical"
+        ? "ArrowUp"
+        : rtl
+        ? "ArrowRight"
+        : "ArrowLeft";
     if (e.key === forwardKey) {
       e.preventDefault();
       this.applyDelta(index, KEYBOARD_STEP, true);
@@ -1121,9 +1306,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     if (
-      changed.has('collapse') ||
-      changed.has('orientationBreakpoint') ||
-      changed.has('orientationBreakpointBasis')
+      changed.has("collapse") ||
+      changed.has("orientationBreakpoint") ||
+      changed.has("orientationBreakpointBasis")
     ) {
       this.syncCollapseObserver();
     }
@@ -1133,18 +1318,29 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // so a viewport-basis breakpoint still publishes the marker even though `resolved` is
     // meaningless there -- see OrientationBreakpointController's class doc.
     if (this.orientationBreakpoints.active) {
-      this.setAttribute('data-effective-orientation', this._effectiveOrientation);
+      this.setAttribute(
+        "data-effective-orientation",
+        this._effectiveOrientation
+      );
     } else {
-      this.removeAttribute('data-effective-orientation');
+      this.removeAttribute("data-effective-orientation");
     }
-    const constraintResolution = this.resolveConstraintBounds(this.getContainerSize());
+    const constraintResolution = this.resolveConstraintBounds(
+      this.getContainerSize()
+    );
     const issue = constraintResolution.issue;
     const issueKey = issue
-      ? `${issue.reason}:${issue.panelCount}:${issue.minimumTotal}:${issue.maximumTotal ?? 'unbounded'}`
-      : '';
+      ? `${issue.reason}:${issue.panelCount}:${issue.minimumTotal}:${
+          issue.maximumTotal ?? "unbounded"
+        }`
+      : "";
     if (issueKey !== this.constraintIssueKey) {
       this.constraintIssueKey = issueKey;
-      if (issue) this.emit<SplitConstraintIssueDetail>('lr-split-constraints-invalid', issue);
+      if (issue)
+        this.emit<SplitConstraintIssueDetail>(
+          "lr-split-constraints-invalid",
+          issue
+        );
     }
     const panels = [...this.children] as HTMLElement[];
     const current = new Set(panels);
@@ -1155,15 +1351,15 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // re-slotted into another split/container).
     for (const stale of this.stylizedPanels) {
       if (!current.has(stale)) {
-        stale.style.removeProperty('flex');
-        stale.style.removeProperty('order');
-        stale.style.removeProperty('position');
-        stale.style.removeProperty('inset-block');
-        stale.style.removeProperty('inset-inline-start');
-        stale.style.removeProperty('inset-inline-end');
-        stale.style.removeProperty('inline-size');
+        stale.style.removeProperty("flex");
+        stale.style.removeProperty("order");
+        stale.style.removeProperty("position");
+        stale.style.removeProperty("inset-block");
+        stale.style.removeProperty("inset-inline-start");
+        stale.style.removeProperty("inset-inline-end");
+        stale.style.removeProperty("inline-size");
         stale.hidden = false;
-        delete stale.dataset['collapseState'];
+        delete stale.dataset["collapseState"];
       }
     }
     // Resolved once per pass rather than per panel: which physical index (if
@@ -1191,10 +1387,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       let growableTotal = 0;
       for (let i = 0; i < panels.length; i++) {
         const percent = this.sizes[i] ?? 0;
-        const constraint = constraintResolution.usePanelConstraints ? this.panelConstraints[i] : undefined;
+        const constraint = constraintResolution.usePanelConstraints
+          ? this.panelConstraints[i]
+          : undefined;
         if (this.hasClampConstraint(constraint)) {
           const bounds = constraintResolution.bounds[i];
-          const clamped = bounds ? Math.min(Math.max(percent, bounds.min), bounds.max) : percent;
+          const clamped = bounds
+            ? Math.min(Math.max(percent, bounds.min), bounds.max)
+            : percent;
           if (clamped < percent) freedPercent += percent - clamped;
         } else {
           growableIndexes.push(i);
@@ -1203,27 +1403,34 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
       }
       if (freedPercent > 0 && growableTotal > 0) {
         for (const i of growableIndexes) {
-          redistributedShare[i] = freedPercent * ((this.sizes[i] ?? 0) / growableTotal);
+          redistributedShare[i] =
+            freedPercent * ((this.sizes[i] ?? 0) / growableTotal);
         }
       }
     }
     panels.forEach((panel, i) => {
       const percent = this.sizes[i] ?? 0;
-      const constraint = constraintResolution.usePanelConstraints ? this.panelConstraints[i] : undefined;
+      const constraint = constraintResolution.usePanelConstraints
+        ? this.panelConstraints[i]
+        : undefined;
       // Collapse-only inline styles are always cleared first, then
       // re-applied below only for the panel(s) that need them this pass —
       // simpler than diffing which of the 5 properties changed.
-      panel.style.removeProperty('position');
-      panel.style.removeProperty('inset-block');
-      panel.style.removeProperty('inset-inline-start');
-      panel.style.removeProperty('inset-inline-end');
-      panel.style.removeProperty('inline-size');
+      panel.style.removeProperty("position");
+      panel.style.removeProperty("inset-block");
+      panel.style.removeProperty("inset-inline-start");
+      panel.style.removeProperty("inset-inline-end");
+      panel.style.removeProperty("inline-size");
       panel.hidden = false;
 
-      if (collapsingIndex === i && this.collapseState === 'rail') {
+      if (collapsingIndex === i && this.collapseState === "rail") {
         // Fixed rail width instead of the normal clamp()/percent flex-basis.
         panel.style.flex = `0 0 ${this.railWidth}`;
-      } else if (collapsingIndex === i && this.collapseState === 'floating' && !this.open) {
+      } else if (
+        collapsingIndex === i &&
+        this.collapseState === "floating" &&
+        !this.open
+      ) {
         // Hidden-by-default drawer (see the class doc): rendering nothing
         // (not just visually collapsed, so it's out of the accessibility
         // tree too) until a consumer sets `open`. The pane still vacates the
@@ -1231,9 +1438,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         // `hidden`'s UA `display: none` rather than `position: absolute`, so
         // the other pane below still grows to fill the space regardless of
         // which of the two branches applied.
-        panel.style.flex = 'none';
+        panel.style.flex = "none";
         panel.hidden = true;
-      } else if (collapsingIndex === i && this.collapseState === 'floating') {
+      } else if (collapsingIndex === i && this.collapseState === "floating") {
         // `this.open` is true here. Lifted out of the flex flow entirely as
         // an overlay card, anchored to its own logical start/end edge,
         // spanning the full cross-axis extent — [part="base"] carries
@@ -1241,11 +1448,14 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         // split.styles.ts). Sized at its own normal percent width (i.e. what
         // it would render at in the `'wide'` state), so there's no visual
         // size jump the moment it un-floats.
-        panel.style.flex = 'none';
-        panel.style.position = 'absolute';
-        panel.style.setProperty('inset-block', '0');
-        panel.style.setProperty(collapsingIndex === 0 ? 'inset-inline-start' : 'inset-inline-end', '0');
-        panel.style.setProperty('inline-size', `${percent}%`);
+        panel.style.flex = "none";
+        panel.style.position = "absolute";
+        panel.style.setProperty("inset-block", "0");
+        panel.style.setProperty(
+          collapsingIndex === 0 ? "inset-inline-start" : "inset-inline-end",
+          "0"
+        );
+        panel.style.setProperty("inline-size", `${percent}%`);
       } else if (collapsingIndex !== -1 && i !== collapsingIndex) {
         // The pane(s) sharing the split with a currently rail/floating
         // collapsed pane: grow to fill whatever space that pane no longer
@@ -1257,7 +1467,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         // sibling doesn't grow past its own maxPx (or below its own minPx)
         // just because an adjacent pane collapsed.
         panel.style.flex = this.hasClampConstraint(constraint)
-          ? `0 1 clamp(${this.minSideExpr(constraint)}, ${percent}%, ${this.maxSideExpr(constraint)})`
+          ? `0 1 clamp(${this.minSideExpr(
+              constraint
+            )}, ${percent}%, ${this.maxSideExpr(constraint)})`
           : `${percent} 1 0%`;
       } else {
         // clamp() mixes units natively, so a constrained panel stays pinned
@@ -1274,15 +1486,17 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         // never itself a redistribution target.
         const adjustedPercent = percent + (redistributedShare[i] ?? 0);
         panel.style.flex = this.hasClampConstraint(constraint)
-          ? `0 1 clamp(${this.minSideExpr(constraint)}, ${percent}%, ${this.maxSideExpr(constraint)})`
+          ? `0 1 clamp(${this.minSideExpr(
+              constraint
+            )}, ${percent}%, ${this.maxSideExpr(constraint)})`
           : `0 1 ${adjustedPercent}%`;
       }
       panel.style.order = String(i * 2);
 
       if (collapsingIndex === i) {
-        panel.dataset['collapseState'] = this.collapseState;
+        panel.dataset["collapseState"] = this.collapseState;
       } else {
-        delete panel.dataset['collapseState'];
+        delete panel.dataset["collapseState"];
       }
     });
     this.stylizedPanels = current;
@@ -1293,9 +1507,9 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
     // Absent whenever there's nothing collapsed to report (`collapse ===
     // 'none'` or still `'wide'`), same as the per-panel marker.
     if (collapsingIndex !== -1) {
-      this.setAttribute('data-collapse-state', this.collapseState);
+      this.setAttribute("data-collapse-state", this.collapseState);
     } else {
-      this.removeAttribute('data-collapse-state');
+      this.removeAttribute("data-collapse-state");
     }
 
     // Runs after this render (not willUpdate) so the floating panel's
@@ -1330,33 +1544,36 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         role="separator"
         aria-label=${this.dividerLabel
           ? this.dividerLabel(i, this.panelCount)
-          : this.localize('resizeDivider', undefined, {
+          : this.localize("resizeDivider", undefined, {
               a: i + 1,
               b: i + 2,
             })}
-        aria-orientation=${this.effectiveOrientation === 'vertical' ? 'horizontal' : 'vertical'}
+        aria-orientation=${this.effectiveOrientation === "vertical"
+          ? "horizontal"
+          : "vertical"}
         aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
         aria-valuemin=${Math.round(valueMin)}
         aria-valuemax=${Math.round(valueMax)}
-        aria-disabled=${disabled ? 'true' : nothing}
-        tabindex=${disabled ? '-1' : '0'}
+        aria-disabled=${disabled ? "true" : nothing}
+        tabindex=${disabled ? "-1" : "0"}
         style=${`order:${i * 2 + 1}`}
         @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, i)}
         @keydown=${(e: KeyboardEvent) => this.onDividerKeyDown(e, i)}
       ></div>`);
     }
-    const showBackdrop = this.collapseState === 'floating' && this.open;
+    const showBackdrop = this.collapseState === "floating" && this.open;
     return html`<div part="base">
       <slot @slotchange=${this.onSlotChange}></slot>
       ${dividers}
-      ${showBackdrop ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>` : nothing}
+      ${showBackdrop
+        ? html`<div part="backdrop" @click=${this.onBackdropClick}></div>`
+        : nothing}
     </div>`;
   }
 }
 
-
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-split': LyraSplit;
+    "lr-split": LyraSplit;
   }
 }

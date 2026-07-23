@@ -120,7 +120,7 @@ export class LyraTimelineItem extends LyraElement {
    *  informational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs
    *  attention; `'danger'` is a failed/error event. Same five-value set as `BadgeVariant`/
    *  `CalloutVariant`. */
-  @property() variant: TimelineItemVariant = 'neutral';
+  @property({ reflect: true }) variant: TimelineItemVariant = 'neutral';
 
   /** Marks this as the current/in-progress item (e.g. "the agent is executing this step right now"),
    *  as opposed to a resolved past entry. Drives a pulsing marker (disabled under

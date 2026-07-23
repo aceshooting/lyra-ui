@@ -1,12 +1,22 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
-import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
-import { styles } from './carousel.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { html, nothing, type PropertyValues, type TemplateResult } from "lit";
+import { property, query } from "lit/decorators.js";
+import { LyraElement } from "../../../internal/lyra-element.js";
+import { finiteDuration, finiteInteger } from "../../../internal/numbers.js";
+import { styles } from "./carousel.styles.js";
+import { trueDefaultBooleanConverter } from "../../../internal/converters.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
+import { tag } from "../../../internal/prefix.js";
+
+interface SlideSnapshot {
+  hidden: boolean | "until-found";
+  role: string | null;
+  ariaLabel: string | null;
+  ariaRoleDescription: string | null;
+  ariaHidden: string | null;
+}
 
 export interface LyraCarouselEventMap {
-  'lr-slide-change': CustomEvent<{ index: number }>;
+  "lr-slide-change": CustomEvent<{ index: number }>;
 }
 
 /**
@@ -45,40 +55,59 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   @property({ type: Number, reflect: true }) index = 0;
   @property({ type: Boolean, reflect: true }) loop = false;
   @property({ type: Boolean, reflect: true }) autoplay = false;
-  @property({ type: Number, attribute: 'autoplay-interval' }) autoplayInterval = 5000;
-  @property({ attribute: 'show-indicators', converter: trueDefaultBooleanConverter }) showIndicators = true;
-  @property({ attribute: 'accessible-label' }) accessibleLabel = '';
-  @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
-  @query('slot') private slideSlot?: HTMLSlotElement;
+  @property({ type: Number, attribute: "autoplay-interval" })
+  autoplayInterval = 5000;
+  @property({
+    attribute: "show-indicators",
+    converter: trueDefaultBooleanConverter,
+  })
+  showIndicators = true;
+  @property({ attribute: "accessible-label" }) accessibleLabel = "";
+  @property({ attribute: "aria-label" }) private hostAccessibleLabel:
+    | string
+    | null = null;
+  @query("slot") private slideSlot?: HTMLSlotElement;
 
   private timer?: number;
   private reduceMotion = false;
   private mediaQuery?: MediaQueryList;
+  private readonly slideSnapshots = new Map<HTMLElement, SlideSnapshot>();
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.mediaQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
+    this.mediaQuery =
+      typeof matchMedia === "function"
+        ? matchMedia("(prefers-reduced-motion: reduce)")
+        : undefined;
     this.reduceMotion = this.mediaQuery?.matches ?? false;
-    this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    this.mediaQuery?.addEventListener("change", this.onMotionPreferenceChange);
     this.restartAutoplay();
   }
 
   override disconnectedCallback(): void {
     this.stopAutoplay();
-    this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
+    this.mediaQuery?.removeEventListener(
+      "change",
+      this.onMotionPreferenceChange
+    );
     this.mediaQuery = undefined;
+    this.restoreSlides();
     super.disconnectedCallback();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('index') && this.slideSlot) {
+    if (changed.has("index") && this.slideSlot) {
       this.index = this.normalizedIndex();
     }
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('index') || changed.has('loop') || changed.has('showIndicators')) this.syncSlides();
-    if (changed.has('autoplay') || changed.has('autoplayInterval')) this.restartAutoplay();
+    // Slide metadata depends on locale and `.strings` as well as the carousel-specific
+    // properties. LyraElement requests an update for those inherited inputs, so reconcile on
+    // every update instead of leaving already-assigned slides in an old language.
+    this.syncSlides();
+    if (changed.has("autoplay") || changed.has("autoplayInterval"))
+      this.restartAutoplay();
   }
 
   private onMotionPreferenceChange = (event: MediaQueryListEvent): void => {
@@ -88,7 +117,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private slides(): HTMLElement[] {
     return (this.slideSlot?.assignedElements({ flatten: true }) ?? []).filter(
-      (element): element is HTMLElement => element instanceof HTMLElement,
+      (element): element is HTMLElement => element instanceof HTMLElement
     );
   }
 
@@ -100,26 +129,94 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return finiteInteger(this.index, 0, 0, count - 1);
   }
 
+  private restoreAttribute(
+    slide: HTMLElement,
+    name: string,
+    value: string | null
+  ): void {
+    if (value === null) slide.removeAttribute(name);
+    else slide.setAttribute(name, value);
+  }
+
+  private restoreSlide(slide: HTMLElement, snapshot: SlideSnapshot): void {
+    slide.hidden = snapshot.hidden;
+    this.restoreAttribute(slide, "role", snapshot.role);
+    this.restoreAttribute(slide, "aria-label", snapshot.ariaLabel);
+    this.restoreAttribute(
+      slide,
+      "aria-roledescription",
+      snapshot.ariaRoleDescription
+    );
+    this.restoreAttribute(slide, "aria-hidden", snapshot.ariaHidden);
+  }
+
+  private restoreSlides(): void {
+    for (const [slide, snapshot] of this.slideSnapshots)
+      this.restoreSlide(slide, snapshot);
+    this.slideSnapshots.clear();
+  }
+
   private syncSlides = (): void => {
     const slides = this.slides();
+    const assigned = new Set(slides);
+    for (const [slide, snapshot] of this.slideSnapshots) {
+      if (!assigned.has(slide)) {
+        this.restoreSlide(slide, snapshot);
+        this.slideSnapshots.delete(slide);
+      }
+    }
     const current = this.normalizedIndex(slides.length);
     if (this.index !== current) this.index = current;
     slides.forEach((slide, slideIndex) => {
-      const canUseGroupRole = !['IMG', 'VIDEO', 'AUDIO', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(
-        slide.tagName,
-      );
-      if (canUseGroupRole) slide.setAttribute('role', 'group');
-      else if (slide.getAttribute('role') === 'group') slide.removeAttribute('role');
-      slide.setAttribute('aria-roledescription', this.localize('carouselSlide'));
-      slide.setAttribute(
-        'aria-label',
-        this.localize('carouselSlidePosition', undefined, {
-          index: slideIndex + 1,
-          total: slides.length,
-        }),
-      );
-      slide.toggleAttribute('hidden', slideIndex !== current);
-      slide.setAttribute('aria-hidden', slideIndex === current ? 'false' : 'true');
+      const existing = this.slideSnapshots.get(slide);
+      const snapshot: SlideSnapshot = existing ?? {
+        hidden: slide.hidden,
+        role: slide.getAttribute("role"),
+        ariaLabel: slide.getAttribute("aria-label"),
+        ariaRoleDescription: slide.getAttribute("aria-roledescription"),
+        ariaHidden: slide.getAttribute("aria-hidden"),
+      };
+      if (!existing) {
+        this.slideSnapshots.set(slide, snapshot);
+      }
+
+      // Arbitrary assigned elements keep their own native/author semantics. The optional
+      // carousel-item wrapper is the one slide owner whose contract permits generated group
+      // metadata, and even there explicit author attributes win.
+      if (slide.localName === tag("carousel-item")) {
+        this.restoreAttribute(slide, "role", snapshot.role ?? "group");
+        this.restoreAttribute(
+          slide,
+          "aria-roledescription",
+          snapshot.ariaRoleDescription ?? this.localize("carouselSlide")
+        );
+        const format = getNumberFormat(this.effectiveLocale);
+        this.restoreAttribute(
+          slide,
+          "aria-label",
+          snapshot.ariaLabel ??
+            this.localize("carouselSlidePosition", undefined, {
+              index: format.format(slideIndex + 1),
+              total: format.format(slides.length),
+            })
+        );
+      } else {
+        this.restoreAttribute(slide, "role", snapshot.role);
+        this.restoreAttribute(
+          slide,
+          "aria-roledescription",
+          snapshot.ariaRoleDescription
+        );
+        this.restoreAttribute(slide, "aria-label", snapshot.ariaLabel);
+      }
+
+      if (slideIndex === current) {
+        slide.hidden = snapshot.hidden;
+        this.restoreAttribute(slide, "aria-hidden", snapshot.ariaHidden);
+      } else {
+        slide.hidden = true;
+        slide.setAttribute("aria-hidden", "true");
+      }
     });
   };
 
@@ -131,7 +228,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     else next = Math.min(count - 1, Math.max(0, index));
     if (next === this.index) return;
     this.index = next;
-    this.emit('lr-slide-change', { index: next });
+    this.emit("lr-slide-change", { index: next });
   }
 
   next = (): void => this.changeTo(this.index + 1);
@@ -163,19 +260,19 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
-    const rtl = this.effectiveDirection === 'rtl';
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const rtl = this.effectiveDirection === "rtl";
+    const forwardKey = rtl ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = rtl ? "ArrowRight" : "ArrowLeft";
     if (event.key === forwardKey) {
       event.preventDefault();
       this.next();
     } else if (event.key === backwardKey) {
       event.preventDefault();
       this.previous();
-    } else if (event.key === 'Home') {
+    } else if (event.key === "Home") {
       event.preventDefault();
       this.goTo(0);
-    } else if (event.key === 'End') {
+    } else if (event.key === "End") {
       event.preventDefault();
       this.goTo(this.slides().length - 1);
     }
@@ -184,16 +281,25 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   override render(): TemplateResult {
     const count = this.slides().length;
     const current = this.normalizedIndex(count);
-    const label = this.hostAccessibleLabel || this.accessibleLabel || this.localize('carouselLabel');
-    const previousLabel = this.localize('previous');
-    const nextLabel = this.localize('next');
-    return html`<section part="base" role="region" aria-roledescription=${this.localize('carousel')} aria-label=${label}>
+    const label =
+      this.hostAccessibleLabel ||
+      this.accessibleLabel ||
+      this.localize("carouselLabel");
+    const previousLabel = this.localize("previous");
+    const nextLabel = this.localize("next");
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    return html`<section
+      part="base"
+      role="region"
+      aria-roledescription=${this.localize("carousel")}
+      aria-label=${label}
+    >
       <div
         part="viewport"
         role="group"
         aria-label=${label}
         tabindex="0"
-        aria-live=${this.autoplay ? 'off' : 'polite'}
+        aria-live=${this.autoplay ? "off" : "polite"}
         @keydown=${this.onViewportKeyDown}
       >
         <div part="track"><slot @slotchange=${this.onSlotChange}></slot></div>
@@ -206,16 +312,29 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
               aria-label=${previousLabel}
               ?disabled=${!this.loop && current === 0}
               @click=${this.previous}
-            ><span part="previous-glyph" aria-hidden="true">‹</span></button>
+            >
+              <span part="previous-glyph" aria-hidden="true">‹</span>
+            </button>
             ${this.showIndicators
-              ? html`<div part="indicators" role="group" aria-label=${this.localize('carouselIndicators')}>
-                  ${Array.from({ length: count }, (_, slideIndex) => html`<button
-                    part="indicator"
-                    type="button"
-                    aria-label=${this.localize('carouselGoTo', undefined, { index: slideIndex + 1 })}
-                    aria-current=${slideIndex === current ? 'true' : 'false'}
-                    @click=${() => this.goTo(slideIndex)}
-                  ><span part="indicator-dot" aria-hidden="true"></span></button>`)}
+              ? html`<div
+                  part="indicators"
+                  role="group"
+                  aria-label=${this.localize("carouselIndicators")}
+                >
+                  ${Array.from(
+                    { length: count },
+                    (_, slideIndex) => html`<button
+                      part="indicator"
+                      type="button"
+                      aria-label=${this.localize("carouselGoTo", undefined, {
+                        index: numberFormat.format(slideIndex + 1),
+                      })}
+                      aria-current=${slideIndex === current ? "true" : "false"}
+                      @click=${() => this.goTo(slideIndex)}
+                    >
+                      <span part="indicator-dot" aria-hidden="true"></span>
+                    </button>`
+                  )}
                 </div>`
               : nothing}
             <button
@@ -224,7 +343,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
               aria-label=${nextLabel}
               ?disabled=${!this.loop && current === count - 1}
               @click=${this.next}
-            ><span part="next-glyph" aria-hidden="true">›</span></button>
+            >
+              <span part="next-glyph" aria-hidden="true">›</span>
+            </button>
           </div>`
         : nothing}
     </section>`;
@@ -233,6 +354,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-carousel': LyraCarousel;
+    "lr-carousel": LyraCarousel;
   }
 }

@@ -50,6 +50,43 @@ describe('lr-browser-frame', () => {
     expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
   });
 
+  it('clears image-specific ping geometry when slotted content replaces the image', async () => {
+    const el = (await fixture(html`
+      <lr-browser-frame
+        frame-src="https://example.com/shot.png"
+        .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
+      ></lr-browser-frame>
+    `)) as LyraBrowserFrame;
+    const img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
+    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
+    img.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left).to.include('px');
+    const replacement = document.createElement('video');
+    el.append(replacement);
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect((el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left).to.equal('50%');
+  });
+
+  it('keeps all toolbar controls reachable in a 320px allocation with long localized text', async () => {
+    const wrap = await fixture(html`
+      <div style="inline-size:320px">
+        <lr-browser-frame
+          url="https://example.com/a/very/long/path/that/must/shrink"
+          .strings=${{
+            browserFrameTakeOver: 'Take control of this browser session now',
+            browserFrameStop: 'Stop browser session now',
+          }}
+        ></lr-browser-frame>
+      </div>
+    `);
+    const el = wrap.querySelector('lr-browser-frame') as LyraBrowserFrame;
+    const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+    expect(toolbar.scrollWidth).to.be.at.most(toolbar.clientWidth);
+  });
+
   it('take-over button emits lr-take-over with controller "user", and hand-back with "agent"', async () => {
     const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     await el.updateComplete;

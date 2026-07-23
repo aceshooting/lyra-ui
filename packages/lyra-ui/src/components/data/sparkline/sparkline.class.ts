@@ -1,6 +1,7 @@
 import { html, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
 
@@ -103,8 +104,11 @@ export class LyraSparkline extends LyraElement {
     // Real-world computed data (ratios, averages, percentages) carries
     // floating-point noise that isn't meaningful to announce -- round it for
     // the label the same way a human-facing value would be formatted.
-    const formattedLast = last.toLocaleString(this.effectiveLocale || undefined, { maximumFractionDigits: 2 });
-    return this.localize('trendOf', undefined, { count: v.length, value: formattedLast });
+    const formattedLast = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(last);
+    return this.localize('trendOf', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(finite.length),
+      value: formattedLast,
+    });
   }
 
   override render(): TemplateResult {

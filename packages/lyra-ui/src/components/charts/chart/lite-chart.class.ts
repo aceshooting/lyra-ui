@@ -2,7 +2,7 @@ import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'li
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { escapeCsvField } from '../../utility/export-button/csv.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -73,19 +73,66 @@ function niceStep(span: number, count: number): number {
   return niceResidual * magnitude;
 }
 
+function saturatingAdd(left: number, right: number): number {
+  const sum = left + right;
+  if (Number.isFinite(sum)) return sum;
+  return right < 0 ? -Number.MAX_VALUE : Number.MAX_VALUE;
+}
+
+function domainFraction(value: number, lo: number, hi: number): number {
+  const span = hi - lo;
+  if (Number.isFinite(span) && span > 0) {
+    return Math.min(1, Math.max(0, (value - lo) / span));
+  }
+  const scale = Math.max(Math.abs(value), Math.abs(lo), Math.abs(hi), 1);
+  const scaledSpan = hi / scale - lo / scale;
+  if (!Number.isFinite(scaledSpan) || scaledSpan <= 0) return 0;
+  const fraction = (value / scale - lo / scale) / scaledSpan;
+  return Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
+}
+
+function safeDomainTicks(lo: number, hi: number, count: number): number[] {
+  return Array.from({ length: Math.max(1, count) + 1 }, (_, index) => {
+    if (index === 0) return lo;
+    if (index === count) return hi;
+    const ratio = index / count;
+    return lo * (1 - ratio) + hi * ratio;
+  }).filter(Number.isFinite);
+}
+
 /** Nice-rounded [lo, hi, ticks[]] for an axis covering `dataLo..dataHi`. */
 function niceDomain(dataLo: number, dataHi: number, beginAtZero: boolean, count: number) {
   let lo = beginAtZero ? Math.min(0, dataLo) : dataLo;
   let hi = beginAtZero ? Math.max(0, dataHi) : dataHi;
   if (lo === hi) {
-    lo -= 1;
-    hi += 1;
+    if (Math.abs(lo) > Number.MAX_VALUE / 2) {
+      lo = lo > 0 ? lo / 2 : lo;
+      hi = hi < 0 ? hi / 2 : hi;
+    } else {
+      lo -= 1;
+      hi += 1;
+    }
   }
-  const step = niceStep(hi - lo, count);
-  lo = Math.floor(lo / step) * step;
-  hi = Math.ceil(hi / step) * step;
+  const span = hi - lo;
+  if (!Number.isFinite(span)) return { lo, hi, ticks: safeDomainTicks(lo, hi, count) };
+  const step = niceStep(span, count);
+  if (!Number.isFinite(step) || step <= 0) {
+    return { lo, hi, ticks: safeDomainTicks(lo, hi, count) };
+  }
+  const roundedLo = Math.floor(lo / step) * step;
+  const roundedHi = Math.ceil(hi / step) * step;
+  if (Number.isFinite(roundedLo)) lo = roundedLo;
+  if (Number.isFinite(roundedHi)) hi = roundedHi;
+  const slots = Math.floor((hi - lo) / step);
+  if (!Number.isFinite(slots) || slots < 0 || slots > 100) {
+    return { lo, hi, ticks: safeDomainTicks(lo, hi, count) };
+  }
   const ticks: number[] = [];
-  for (let v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v / step) * step);
+  for (let index = 0; index <= slots; index++) {
+    const value = lo + index * step;
+    if (Number.isFinite(value)) ticks.push(value);
+  }
+  if (ticks.at(-1) !== hi) ticks.push(hi);
   return { lo, hi, ticks };
 }
 
@@ -165,9 +212,11 @@ export interface LyraLiteChartEventMap {
  * @csspart grid-line - Each horizontal gridline.
  * @csspart axis-label - Each axis tick label.
  * @csspart axis-title - The x/y axis title text, when set.
- * @csspart bar - Each bar rect (type="bar"). Carries `data-selected` when its category index is in `selectedIndex`.
+ * @csspart bar - Each bar rect (type="bar"). Carries `data-selected` and `aria-pressed="true"`
+ *   when its category index is in `selectedIndex`.
  * @csspart line - Each series' stroked line path (type="line").
- * @csspart point - Each series' per-point hit target (type="line").
+ * @csspart point - Each series' per-point keyboard target (type="line"). Carries
+ *   `data-selected` and explicit `aria-pressed` state.
  * @csspart legend - The legend row, when `legend` is set.
  * @csspart legend-item - Each legend entry.
  * @csspart legend-swatch - Each legend entry's color swatch.
@@ -253,13 +302,15 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  (that's `skipZero`'s job, not this one's). Unset (the default) reproduces today's
    *  `Math.max(0, y2 - y1)` exactly, with no floor. */
   @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
-  /** Category indexes to mark `data-selected` on every bar/segment at that index, across every
+  /** Category indexes to mark `data-selected` and `aria-pressed="true"` on every bar/point at
+   *  that index, across every
    *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the
-   *  default) reproduces today's exact output: no bar carries `data-selected`. Style the highlight
-   *  via the `--lr-lite-chart-selected-outline-color` custom property -- `::part(bar)[data-selected]`
-   *  is invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), so the outline is
+   *  default) reproduces today's exact output: no mark carries `data-selected`. Style the highlight
+   *  via the `--lr-lite-chart-selected-outline-color` custom property -- selectors such as
+   *  `::part(bar)[data-selected]` and `::part(point)[data-selected]` are invalid CSS (Shadow Parts
+   *  forbids an attribute selector after `::part()`), so the outline is
    *  painted inside the shadow root and exposed through that token. This component takes no opinion
-   *  on what the highlight looks like, only which bars it applies to. */
+   *  on what the highlight looks like, only which marks it applies to. */
   @property({ attribute: false }) selectedIndex: number[] = [];
   /** Overrides the `<svg>`'s auto-derived `aria-label` (`datasets.map(d => d.label).join(', ') ||
    *  'Chart'`) — for a consumer with a real, localized chart description. A host `aria-label`
@@ -275,6 +326,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @query('svg') private svgEl?: SVGSVGElement;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
   private resizeObserver?: ResizeObserver;
+  private refocusMarkAfterUpdate = false;
+  private refocusChartAfterUpdate = false;
 
   /**
    * Appends one streamed category to every series and optionally keeps only the newest `maxPoints`
@@ -349,9 +402,47 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     if (this.svgEl) this.resizeObserver?.observe(this.svgEl);
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    const marksChanged = ['type', 'labels', 'datasets', 'skipZero'].some((name) => changed.has(name));
+    if (!marksChanged) return;
+    const active = this.shadowRoot?.activeElement ?? null;
+    const hadFocusedMark = active?.matches('[part="bar"], [part="point"]') ?? false;
+    const priorPosition = Number(active?.getAttribute('data-mark-index') ?? this.activeMarkIndex);
+    const datasetAttribute = active?.getAttribute('data-dataset-index');
+    const indexAttribute = active?.getAttribute('data-index');
+    const datasetIndex = Number(datasetAttribute);
+    const index = Number(indexAttribute);
+    const marks = this.interactiveMarks();
+    const sameIdentity =
+      datasetAttribute !== null && datasetAttribute !== undefined &&
+      indexAttribute !== null && indexAttribute !== undefined
+        ? marks.findIndex(
+            (mark) => mark.datasetIndex === datasetIndex && mark.index === index,
+          )
+        : -1;
+    this.activeMarkIndex = marks.length
+      ? sameIdentity >= 0
+        ? sameIdentity
+        : Math.min(Math.max(priorPosition, 0), marks.length - 1)
+      : 0;
+    this.refocusMarkAfterUpdate = hadFocusedMark && marks.length > 0;
+    this.refocusChartAfterUpdate = hadFocusedMark && marks.length === 0;
+  }
+
   protected override updated(changed: PropertyValues): void {
     if (changed.has('height')) {
       this.style.setProperty('--lr-chart-height', this.height);
+    }
+    if (this.refocusMarkAfterUpdate) {
+      this.refocusMarkAfterUpdate = false;
+      const marks = this.renderRoot.querySelectorAll<SVGGraphicsElement>(
+        '[part="bar"], [part="point"]',
+      );
+      marks[this.normalizedMarkIndex()]?.focus();
+    }
+    if (this.refocusChartAfterUpdate) {
+      this.refocusChartAfterUpdate = false;
+      this.svgEl?.focus();
     }
   }
 
@@ -404,15 +495,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const series = this.datasets[mark.datasetIndex]?.label ?? this.localize('chartSeriesLabel');
     const custom = this.resolvePointText(mark.label, mark.value, mark.datasetIndex);
     if (custom) {
-      const position = this.localize('liteChartMarkPosition', undefined, { index: index + 1, total: marks.length });
-      return `${custom} ${position}`;
+      return this.localize('liteChartCustomMarkSummary', undefined, {
+        content: custom,
+        index: getNumberFormat(this.effectiveLocale).format(index + 1),
+        total: getNumberFormat(this.effectiveLocale).format(marks.length),
+      });
     }
     return this.localize('liteChartMarkSummary', undefined, {
       series,
       label: mark.label,
       value: getNumberFormat(this.effectiveLocale).format(mark.value),
-      index: index + 1,
-      total: marks.length,
+      index: getNumberFormat(this.effectiveLocale).format(index + 1),
+      total: getNumberFormat(this.effectiveLocale).format(marks.length),
     });
   }
 
@@ -457,8 +551,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const frac = Math.sqrt(Math.min(domainMax, Math.max(0, value)) / domainMax);
       return plotY + plotH - frac * plotH;
     }
-    const span = hi - lo || 1;
-    return plotY + plotH - ((value - lo) / span) * plotH;
+    return plotY + plotH - domainFraction(value, lo, hi) * plotH;
   }
 
   /** Normalizes `minBarHeight` to a non-negative pixel floor, or `undefined` when left unset -- a
@@ -496,8 +589,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         for (const s of this.datasets) {
           const v = s.data[i];
           if (v == null || !Number.isFinite(v)) continue;
-          if (v >= 0) pos += v;
-          else neg += v;
+          if (v >= 0) pos = saturatingAdd(pos, v);
+          else neg = saturatingAdd(neg, v);
         }
         lo = Math.min(lo, neg);
         hi = Math.max(hi, pos);
@@ -551,10 +644,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private renderGrid(plotX: number, plotY: number, plotW: number, plotH: number, ticks: number[], lo: number, hi: number) {
-    const span = hi - lo || 1;
     const rtl = this.effectiveDirection === 'rtl';
     return ticks.map((t) => {
-      const y = plotY + plotH - ((t - lo) / span) * plotH;
+      const y = plotY + plotH - domainFraction(t, lo, hi) * plotH;
       return svg`
         <line part="grid-line" x1=${plotX} y1=${y} x2=${plotX + plotW} y2=${y}></line>
         <text
@@ -563,7 +655,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           y=${y}
           text-anchor="end"
           dominant-baseline="middle"
-        >${this.tickFormat ? this.tickFormat(t) : formatTick(t)}</text>
+        >${this.tickFormat ? this.tickFormat(t) : formatTick(t, this.effectiveLocale)}</text>
       `;
     });
   }
@@ -607,7 +699,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // regardless of `lo` (correct only when lo === 0, i.e. no negative values in the domain). Both
     // the plain-stacked and stackedSqrt branches below anchor their positive/negative stacks here,
     // matching renderGrid()'s own zero gridline position.
-    const zeroY = plotY + plotH - ((0 - lo) / (hi - lo || 1)) * plotH;
+    const zeroY = plotY + plotH - domainFraction(0, lo, hi) * plotH;
     // Available pixel room on each side of the zero line -- the positive stack's compressed height is
     // scaled against posAvailH (not the full plotH) so it stops at the zero line instead of bleeding
     // into the negative side's own region, and likewise for the negative stack against negAvailH.
@@ -623,8 +715,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
           const v = s.data[i];
           if (v == null || !Number.isFinite(v)) continue;
           if (this.skipZero && v === 0) continue;
-          if (v >= 0) pos += v;
-          else neg += v;
+          if (v >= 0) pos = saturatingAdd(pos, v);
+          else neg = saturatingAdd(neg, v);
         }
         posTotals.push(pos);
         negTotals.push(neg);
@@ -743,9 +835,26 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = this.selectedIndex.includes(i);
+        const hitWidth = Math.max(24, w);
+        const hitHeight = Math.max(24, h);
+        const hitX = rectX - (hitWidth - w) / 2;
+        const hitY = y1 - (hitHeight - h) / 2;
+        const hitTarget = svg`
+          <rect
+            data-mark-hit-target="bar"
+            aria-hidden="true"
+            x=${hitX}
+            y=${hitY}
+            width=${hitWidth}
+            height=${hitHeight}
+            style="fill: transparent; pointer-events: all"
+            @click=${() => this.emitPoint(di, i)}
+          ></rect>
+        `;
         bars.push(
           this.roundedBars
             ? svg`
+          ${hitTarget}
           <path
             part="bar"
             d=${this.roundedBarPath(rectX, y1, w, h)}
@@ -753,13 +862,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
             role="button"
             aria-label=${ariaLabel}
+            aria-pressed=${selected ? 'true' : 'false'}
             ?data-selected=${selected}
+            data-mark-index=${markIndex}
+            data-dataset-index=${di}
+            data-index=${i}
             @click=${() => this.emitPoint(di, i)}
             @focus=${() => this.onMarkFocus(markIndex)}
             @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
           ><title>${titleText}</title></path>
         `
             : svg`
+          ${hitTarget}
           <rect
             part="bar"
             x=${rectX}
@@ -770,7 +884,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
             role="button"
             aria-label=${ariaLabel}
+            aria-pressed=${selected ? 'true' : 'false'}
             ?data-selected=${selected}
+            data-mark-index=${markIndex}
+            data-dataset-index=${di}
+            data-index=${i}
             @click=${() => this.emitPoint(di, i)}
             @focus=${() => this.onMarkFocus(markIndex)}
             @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
@@ -783,10 +901,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private renderLines(plotX: number, plotY: number, plotW: number, plotH: number, lo: number, hi: number) {
-    const span = hi - lo || 1;
     const n = this.labels.length;
     const xFor = (i: number) => plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
-    const yFor = (v: number) => plotY + plotH - ((v - lo) / span) * plotH;
+    const yFor = (v: number) => plotY + plotH - domainFraction(v, lo, hi) * plotH;
     const markIndexes = this.markIndexMap();
     const activeMarkIndex = this.normalizedMarkIndex();
     // Hoisted out of the per-point loop for the same reason as renderBars(): the whole SVG
@@ -820,7 +937,17 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const ariaLabel = barText;
         const titleText = barText;
         const markIndex = markIndexes.get(`${di}:${i}`)!;
+        const selected = this.selectedIndex.includes(i);
         return svg`
+          <circle
+            data-mark-hit-target="point"
+            aria-hidden="true"
+            cx=${xFor(i)}
+            cy=${yFor(v)}
+            r="12"
+            style="fill: transparent; pointer-events: all"
+            @click=${() => this.emitPoint(di, i)}
+          ></circle>
           <circle
             part="point"
             cx=${xFor(i)}
@@ -830,6 +957,11 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
             role="button"
             aria-label=${ariaLabel}
+            aria-pressed=${selected ? 'true' : 'false'}
+            ?data-selected=${selected}
+            data-mark-index=${markIndex}
+            data-dataset-index=${di}
+            data-index=${i}
             @click=${() => this.emitPoint(di, i)}
             @focus=${() => this.onMarkFocus(markIndex)}
             @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
@@ -924,10 +1056,13 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       return svg`<text part="axis-label" x=${x} y=${plotY + plotH + 14} text-anchor="middle">${label}</text>`;
     });
 
+    const datasetLabels = this.datasets.map((dataset) => dataset.label);
     const chartLabel =
       this.getAttribute('aria-label') ||
       this.accessibleLabel ||
-      this.datasets.map((d) => d.label).join(', ') ||
+      (datasetLabels.length
+        ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(datasetLabels)
+        : '') ||
       this.localize('chart');
     const marksForA11y = this.interactiveMarks();
 
@@ -970,7 +1105,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 ${this.labels.map(
                   (label, index) => html`<tr>
                     <th scope="row">${label}</th>
-                    ${this.datasets.map((series) => html`<td>${series.data[index] ?? ''}</td>`)}
+                    ${this.datasets.map((series) => {
+                      const value = series.data[index];
+                      return html`<td>${value == null || !Number.isFinite(value)
+                        ? ''
+                        : getNumberFormat(this.effectiveLocale).format(value)}</td>`;
+                    })}
                   </tr>`,
                 )}
               </tbody>
@@ -997,10 +1137,10 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 }
 
-function formatTick(v: number): string {
+function formatTick(v: number, locale: string): string {
   // Avoid float noise (e.g. 0.30000000000000004) from the niceStep() math
   // above without hardcoding a fixed decimal count that'd butcher large ints.
-  return Number(v.toFixed(6)).toString();
+  return getNumberFormat(locale, { maximumFractionDigits: 6 }).format(Number(v.toFixed(6)));
 }
 
 declare global {

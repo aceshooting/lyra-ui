@@ -91,6 +91,8 @@ export const styles = css`
     color: transparent;
     cursor: pointer;
     pointer-events: auto;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='cell']:hover {
     outline: var(--lr-size-1px) solid var(--lr-heatmap-focus-ring-color);

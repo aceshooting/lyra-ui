@@ -4,6 +4,9 @@ export const styles = css`
   :host {
     display: inline-block;
     --lr-cell-size: var(--lr-size-2-25rem);
+    --lr-date-picker-month-gap: var(--lr-space-l);
+    --lr-date-picker-header-gap: var(--lr-space-s);
+    --lr-date-picker-radius: var(--lr-radius);
   }
   :host([size='2xs']) {
     --lr-cell-size: var(--lr-size-1-5rem);
@@ -31,17 +34,17 @@ export const styles = css`
        second month onto its own line keeps every day cell reachable instead
        of the row overflowing its allocation. */
     flex-wrap: wrap;
-    gap: var(--lr-space-l);
+    gap: var(--lr-date-picker-month-gap);
     padding: var(--lr-space-s);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-date-picker-radius);
   }
   [part='header'] {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--lr-space-s);
+    gap: var(--lr-date-picker-header-gap);
     margin-block-end: var(--lr-space-xs);
   }
   [part='title'] {
@@ -62,7 +65,7 @@ export const styles = css`
     font-size: var(--lr-size-1-1rem);
     line-height: var(--lr-line-height-none);
     padding: var(--lr-space-xs);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-date-picker-radius);
   }
   [part='previous']:hover,
   [part='next']:hover {
@@ -115,7 +118,7 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text);
     font: inherit;
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-date-picker-radius);
   }
   [part~='day']:hover {
     background: var(--lr-color-brand-quiet);

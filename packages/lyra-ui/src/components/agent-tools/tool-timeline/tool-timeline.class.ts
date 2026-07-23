@@ -83,7 +83,7 @@ function redactBranch(value: unknown, currentPath: string, paths: readonly strin
     return value.map((item, index) => redactBranch(item, `${currentPath}.${index}`, paths, placeholder));
   }
   if (value !== null && typeof value === 'object') {
-    const result: Record<string, unknown> = {};
+    const result = Object.create(null) as Record<string, unknown>;
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
       result[key] = redactBranch(item, `${currentPath}.${key}`, paths, placeholder);
     }
@@ -133,7 +133,8 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  * @customElement lr-tool-timeline
  * @event lr-tool-approval-decide - A pending entry's approval dialog was resolved.
  *   `detail: { invocationId, approved, args? }` — `args` (the dialog's current, possibly
- *   host-edited arguments) is present only when `approved` is `true`.
+ *   host-edited arguments) is present only when `approved` is `true`. Cancelable; preventing it
+ *   preserves the pending dialog and its current argument edits.
  * @csspart base - The root `<ol>`.
  * @csspart entry - One entry's `<li>`; carries `data-status` (the entry's `status`) and
  *   `data-pending-approval` (`"true"`/`"false"`).
@@ -160,6 +161,14 @@ function redactField(value: unknown, root: string, paths: readonly string[], pla
  *   retint either independently.
  * @cssprop [--lr-tool-timeline-pending-approval-border-color=var(--lr-color-warning)] - Color of
  *   the entry body's leading border while `data-pending-approval="true"`.
+ * @cssprop [--lr-tool-timeline-running-marker-color=var(--lr-color-brand)] - Running rail dot.
+ * @cssprop [--lr-tool-timeline-success-marker-color=var(--lr-color-success)] - Success rail dot.
+ * @cssprop [--lr-tool-timeline-error-marker-color=var(--lr-color-danger)] - Error rail dot.
+ * @cssprop [--lr-tool-timeline-approved-bg=var(--lr-color-success-quiet)] - Approved badge background.
+ * @cssprop [--lr-tool-timeline-approved-color=var(--lr-color-success)] - Approved badge foreground.
+ * @cssprop [--lr-tool-timeline-denied-bg=var(--lr-color-danger-quiet)] - Denied badge background.
+ * @cssprop [--lr-tool-timeline-denied-color=var(--lr-color-danger)] - Denied badge foreground.
+ * @cssprop [--lr-tool-timeline-error-color=var(--lr-color-danger)] - Expanded error text.
  */
 export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -178,6 +187,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
   /** The `id` of the entry currently under review in the shared approval dialog, or `undefined`
    *  while it's closed. */
   @state() private reviewingEntryId?: string;
+  @state() private openedEntryIds = new Set<string>();
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('entries') && this.reviewingEntryId !== undefined) {
@@ -192,8 +202,8 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return this.entries
       .map((entry, index) => ({ entry, index }))
       .sort((a, b) => {
-        const ak = a.entry.startedAt ?? Number.POSITIVE_INFINITY;
-        const bk = b.entry.startedAt ?? Number.POSITIVE_INFINITY;
+        const ak = Number.isFinite(a.entry.startedAt) ? a.entry.startedAt! : Number.POSITIVE_INFINITY;
+        const bk = Number.isFinite(b.entry.startedAt) ? b.entry.startedAt! : Number.POSITIVE_INFINITY;
         return ak !== bk ? ak - bk : a.index - b.index;
       })
       .map(({ entry }) => entry);
@@ -217,8 +227,9 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
-  private onChipSelect(entry: ToolTimelineEntry): void {
+  private onChipSelect(entry: ToolTimelineEntry, event: Event): void {
     if (entry.needsApproval && entry.approved === undefined) {
+      event.stopPropagation();
       this.reviewingEntryId = entry.id;
     }
   }
@@ -227,26 +238,50 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
     event.stopPropagation();
     const invocationId = this.reviewingEntryId;
     if (invocationId === undefined) return;
+    const wrapperEvent = this.emit<ToolTimelineApprovalDetail>(
+      'lr-tool-approval-decide',
+      {
+        invocationId,
+        approved: true,
+        args: event.detail.args,
+      },
+      { cancelable: true },
+    );
+    if (wrapperEvent.defaultPrevented) {
+      event.preventDefault();
+      return;
+    }
     this.reviewingEntryId = undefined;
-    this.emit<ToolTimelineApprovalDetail>('lr-tool-approval-decide', {
-      invocationId,
-      approved: true,
-      args: event.detail.args,
-    });
   };
 
   private onDialogDeny = (event: CustomEvent): void => {
     event.stopPropagation();
     const invocationId = this.reviewingEntryId;
     if (invocationId === undefined) return;
+    const wrapperEvent = this.emit<ToolTimelineApprovalDetail>(
+      'lr-tool-approval-decide',
+      { invocationId, approved: false },
+      { cancelable: true },
+    );
+    if (wrapperEvent.defaultPrevented) {
+      event.preventDefault();
+      return;
+    }
     this.reviewingEntryId = undefined;
-    this.emit<ToolTimelineApprovalDetail>('lr-tool-approval-decide', { invocationId, approved: false });
   };
 
   private onDialogClose = (event: CustomEvent): void => {
     event.stopPropagation();
     this.reviewingEntryId = undefined;
   };
+
+  private onDetailsToggle(entryId: string, event: CustomEvent<{ open: boolean }>): void {
+    event.stopPropagation();
+    const next = new Set(this.openedEntryIds);
+    if (event.detail.open) next.add(entryId);
+    else next.delete(entryId);
+    this.openedEntryIds = next;
+  }
 
   private entryTemplate(entry: ToolTimelineEntry, placeholder: string): TemplateResult {
     const started = this.normalizedDate(entry.startedAt);
@@ -260,6 +295,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
       entry.error !== undefined && redactedFields.includes('error') ? placeholder : entry.error;
     const pendingApproval = entry.needsApproval === true && entry.approved === undefined;
     const formatter = this.formatTimestamp ?? ((date: Date) => defaultFormatTimestamp(date, this.effectiveLocale));
+    const detailsOpened = this.openedEntryIds.has(entry.id);
 
     return html`
       <li
@@ -279,7 +315,8 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
               .status=${entry.status}
               .durationMs=${durationMs}
               call-id=${entry.id}
-              @lr-tool-call-chip-select=${() => this.onChipSelect(entry)}
+              @lr-tool-call-chip-select=${(event: Event) => this.onChipSelect(entry, event)}
+              @lr-tool-chip-select=${(event: Event) => this.onChipSelect(entry, event)}
             ></lr-tool-call-chip>
             ${retryCount > 0
               ? html`<span part="entry-retries">
@@ -300,14 +337,22 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
               ? html`<span part="entry-redacted-indicator" aria-hidden="true">${eyeOffIcon()}</span>`
               : nothing}
           </div>
-          <lr-details part="entry-details">
-            <lr-tool-result-view
-              part="entry-result"
-              tool-name=${entry.name}
-              .args=${redactedArgs}
-              .result=${redactedResult}
-            ></lr-tool-result-view>
-            ${redactedError !== undefined ? html`<p part="entry-error">${redactedError}</p>` : nothing}
+          <lr-details
+            part="entry-details"
+            .open=${detailsOpened}
+            @lr-toggle=${(event: CustomEvent<{ open: boolean }>) => this.onDetailsToggle(entry.id, event)}
+          >
+            ${detailsOpened
+              ? html`
+                  <lr-tool-result-view
+                    part="entry-result"
+                    tool-name=${entry.name}
+                    .args=${redactedArgs}
+                    .result=${redactedResult}
+                  ></lr-tool-result-view>
+                  ${redactedError !== undefined ? html`<p part="entry-error">${redactedError}</p>` : nothing}
+                `
+              : nothing}
           </lr-details>
         </div>
       </li>

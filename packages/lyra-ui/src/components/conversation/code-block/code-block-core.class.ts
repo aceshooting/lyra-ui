@@ -19,6 +19,7 @@ import {
   codeBlockCopyLabel,
   codeBlockBodyLabel,
   codeBlockLineTransformer,
+  addBoundedLineRange,
   parseHighlightLines,
   renderCodeBlockPlainCode,
 } from './code-block-shared.js';
@@ -227,6 +228,8 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.copyTimeoutId = undefined;
+    this.justCopied = false;
     this.stopWatchingTheme?.();
   }
 
@@ -242,11 +245,12 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
    *  slice of `highlights`. Shared by both the shiki transformer options and the plain-text
    *  fallback path so their emphasis is always identical. */
   private lineHighlightSet(): Set<number> {
-    const merged = parseHighlightLines(this.highlightLines);
+    const maxLine = this.lineCount();
+    const merged = parseHighlightLines(this.highlightLines, maxLine);
     for (const highlight of this.highlights) {
       if (highlight.anchor.kind !== 'line-range') continue;
       const end = highlight.anchor.end ?? highlight.anchor.start;
-      for (let n = highlight.anchor.start; n <= end; n++) merged.add(n);
+      addBoundedLineRange(merged, highlight.anchor.start, end, maxLine);
     }
     return merged;
   }
@@ -257,7 +261,7 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     const result = new Set<number>();
     if (!active || active.anchor.kind !== 'line-range') return result;
     const end = active.anchor.end ?? active.anchor.start;
-    for (let n = active.anchor.start; n <= end; n++) result.add(n);
+    addBoundedLineRange(result, active.anchor.start, end, this.lineCount());
     return result;
   }
 
@@ -282,8 +286,15 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
   }
 
   private onLineActivate(line: number): void {
-    this.focusedLine = line;
+    this.setFocusedLine(line);
     this.emit('lr-line-click', { line });
+  }
+
+  private setFocusedLine(line: number): void {
+    this.focusedLine = line;
+    for (const target of this.renderRoot.querySelectorAll<HTMLElement>('[data-line][part~="line-button"]')) {
+      target.tabIndex = Number(target.dataset['line']) === line ? 0 : -1;
+    }
   }
 
   // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
@@ -302,10 +313,35 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
     }
     if (next === null || next === line) return;
     e.preventDefault();
-    this.focusedLine = next;
+    this.setFocusedLine(next);
     this.updateComplete.then(() => {
-      this.renderRoot.querySelector<HTMLButtonElement>(`[data-line="${next}"]`)?.focus();
+      this.renderRoot.querySelector<HTMLElement>(`[data-line="${next}"]`)?.focus();
     });
+  };
+
+  private eventLine(e: Event): number | null {
+    const target = e.composedPath()[0];
+    if (!(target instanceof Element)) return null;
+    const lineElement = target.closest<HTMLElement>('[data-line][part~="line-button"]');
+    const line = Number(lineElement?.dataset['line']);
+    return Number.isInteger(line) && line >= 1 ? line : null;
+  }
+
+  private onBodyClick = (e: MouseEvent): void => {
+    if ((e.composedPath()[0] as Element | undefined)?.closest?.('button.line')) return;
+    const line = this.eventLine(e);
+    if (line !== null) this.onLineActivate(line);
+  };
+
+  private onBodyKeyDown = (e: KeyboardEvent): void => {
+    if ((e.composedPath()[0] as Element | undefined)?.closest?.('button.line')) return;
+    const line = this.eventLine(e);
+    if (line !== null) this.onLineKeyDown(e, line);
+  };
+
+  private onBodyFocusIn = (e: FocusEvent): void => {
+    const line = this.eventLine(e);
+    if (line !== null) this.setFocusedLine(line);
   };
 
   /** Anchors a text selection ending inside `[part="body"]` to the `line-range` it spans, so a
@@ -357,7 +393,8 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
         changed.has('highlightLines') ||
         changed.has('highlights') ||
         changed.has('activeHighlightId') ||
-        changed.has('lineNumbers')
+        changed.has('lineNumbers') ||
+        changed.has('interactiveLines')
       )
     )
       return;
@@ -435,8 +472,11 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
         transformers: [
           codeBlockLineTransformer({
             lineNumbers: this.lineNumbers,
+            interactiveLines: this.interactiveLines,
+            focusedLine: this.focusedLine,
             highlightedLines: this.lineHighlightSet(),
             activeLines: this.activeHighlightLineSet(),
+            lineDescription: (line) => this.localize('codeBlockLineLabel', undefined, { line }),
           }),
         ],
       });
@@ -557,6 +597,9 @@ export class LyraCodeBlockCore extends LyraElement<LyraCodeBlockCoreEventMap> {
           data-dark-theme=${this.isDarkTheme ? 'true' : nothing}
           style=${this.maxHeight ? `--lr-code-block-max-height:${this.maxHeight}` : nothing}
           @mouseup=${this.onBodyMouseUp}
+          @click=${this.onBodyClick}
+          @keydown=${this.onBodyKeyDown}
+          @focusin=${this.onBodyFocusIn}
         >
           ${showSkeleton
             ? html`<lr-skeleton variant="rect"></lr-skeleton>`

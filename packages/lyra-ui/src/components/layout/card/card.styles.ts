@@ -1,10 +1,11 @@
-import { css } from 'lit';
+import { css } from "lit";
 
 export const styles = css`
   :host {
     display: block;
   }
-  [part='base'] {
+  [part="base"] {
+    position: relative;
     display: flex;
     flex-direction: column;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -22,42 +23,52 @@ export const styles = css`
     text-decoration: none;
     overflow: hidden;
   }
-  :host([appearance='filled']) [part='base'] {
+  :host([appearance="filled"]) [part="base"] {
     border-color: transparent;
     background: var(--lr-color-brand-quiet);
   }
-  :host([appearance='filled-outlined']) [part='base'] {
+  :host([appearance="filled-outlined"]) [part="base"] {
     background: var(--lr-color-brand-quiet);
   }
-  :host([appearance='accent']) [part='base'] {
+  :host([appearance="accent"]) [part="base"] {
     border-color: transparent;
     border-inline-start: var(--lr-size-3px) solid var(--lr-color-brand);
   }
-  :host([appearance='plain']) [part='base'] {
+  :host([appearance="plain"]) [part="base"] {
     border-color: transparent;
     background: transparent;
   }
-  :host([interactive]) [part='base'] {
+  :host([interactive]) [part="base"] {
     cursor: pointer;
     transition: border-color var(--lr-transition-fast);
   }
-  :host([interactive]) [part='base']:hover {
+  :host([interactive]) [part="base"]:hover {
     border-color: var(--lr-color-brand);
   }
-  :host([interactive]) [part='base']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+  [part="activation-button"] {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    pointer-events: none;
   }
-  [part='media'][hidden],
-  [part='header'][hidden],
-  [part='footer'][hidden] {
+  [part="activation-button"]:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+  }
+  [part="media"][hidden],
+  [part="header"][hidden],
+  [part="footer"][hidden] {
     display: none;
   }
-  [part='media'] ::slotted(*) {
+  [part="media"] ::slotted(*) {
     display: block;
     inline-size: 100%;
   }
-  [part='header'] {
+  [part="header"] {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -66,26 +77,26 @@ export const styles = css`
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  ::slotted([slot='header']) {
+  ::slotted([slot="header"]) {
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  [part='actions'] {
+  [part="actions"] {
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
     flex: 0 0 auto;
     margin-inline-start: auto;
   }
-  [part='actions'][hidden] {
+  [part="actions"][hidden] {
     display: none;
   }
-  [part='body'] {
+  [part="body"] {
     padding: var(--lr-space-m);
     flex: 1 1 auto;
   }
-  [part='footer'] {
+  [part="footer"] {
     padding: var(--lr-space-s) var(--lr-space-m);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }

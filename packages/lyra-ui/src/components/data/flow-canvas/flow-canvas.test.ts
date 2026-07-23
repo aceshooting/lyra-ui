@@ -33,6 +33,11 @@ it('renders lr-empty with the noData message when nodes is empty', async () => {
   expect(empty!.getAttribute('heading')).to.equal('No data');
 });
 
+it('forwards the host accessible label in the empty state', async () => {
+  const el = (await fixture(html`<lr-flow-canvas aria-label="Empty pipeline"></lr-flow-canvas>`)) as LyraFlowCanvas;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Empty pipeline');
+});
+
 it('does not render the empty state once nodes has at least one entry', async () => {
   const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
   el.nodes = [{ id: 'a' }] as FlowNode[];
@@ -60,6 +65,13 @@ const nodes: FlowNode[] = [
   { id: 'b', position: { x: 200, y: 0 }, data: { label: 'Summarize' } },
 ];
 const edges: FlowEdge[] = [{ id: 'a-b', source: 'a', target: 'b', label: 'then' }];
+
+function nodeControl(el: LyraFlowCanvas, id?: string): HTMLButtonElement {
+  const selector = id
+    ? `[part="node"][data-node-id="${CSS.escape(id)}"] [part="node-control"]`
+    : '[part="node-control"]';
+  return el.shadowRoot!.querySelector(selector) as HTMLButtonElement;
+}
 
 describe('static rendering', () => {
   it('adopts a default lr-flow-node card per node into slot="node-{id}"', async () => {
@@ -290,6 +302,17 @@ describe('auto-layout', () => {
 });
 
 describe('pan & zoom', () => {
+  it('renders a visible focus indicator on the keyboard-operable viewport', async () => {
+    const el = (await fixture(html`<lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = nodes;
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    viewport.focus();
+    const outline = getComputedStyle(viewport);
+    expect(outline.outlineStyle).to.not.equal('none');
+    expect(Number.parseFloat(outline.outlineWidth)).to.be.greaterThan(0);
+  });
+
   it('zoomIn/zoomOut/resetZoom change viewport.zoom, clamped to [minZoom, maxZoom]', async () => {
     const el = (await fixture(html`<lr-flow-canvas min-zoom="0.5" max-zoom="1.5"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -460,6 +483,25 @@ describe('pan & zoom', () => {
 });
 
 describe('selection & roving focus', () => {
+  it('uses a separate pressed node control so slotted controls keep their own semantics', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas .nodes=${nodes}>
+        <button node-id="a">Nested action</button>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.selectedNodeIds = ['a'];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const control = wrapper.querySelector('[part="node-control"]') as HTMLButtonElement;
+    expect(wrapper.getAttribute('role')).to.equal('group');
+    expect(wrapper.hasAttribute('aria-current')).to.be.false;
+    expect(control).to.exist;
+    expect(control.tagName).to.equal('BUTTON');
+    expect(control.getAttribute('aria-pressed')).to.equal('true');
+    expect(control.tabIndex).to.equal(0);
+    expect(el.querySelector('button[node-id="a"]')).to.exist;
+  });
+
   it('click on a node emits lr-node-click and replaces selection with just that node', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -479,7 +521,7 @@ describe('selection & roving focus', () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
     await el.updateComplete;
-    const nodeEls = el.shadowRoot!.querySelectorAll('[part="node"]');
+    const nodeEls = el.shadowRoot!.querySelectorAll('[part="node-control"]');
     (nodeEls[0] as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true }));
     (nodeEls[1] as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
     expect(el.selectedNodeIds.sort()).to.deep.equal(['a', 'b']);
@@ -506,7 +548,7 @@ describe('selection & roving focus', () => {
     el.nodes = nodes;
     el.edges = edges;
     await el.updateComplete;
-    const nodeEls = el.shadowRoot!.querySelectorAll('[part="node"]');
+    const nodeEls = el.shadowRoot!.querySelectorAll('[part="node-control"]');
     const edgeEls = el.shadowRoot!.querySelectorAll('[part="edge"]');
     expect((nodeEls[0] as HTMLElement).getAttribute('tabindex')).to.equal('0');
     expect((nodeEls[1] as HTMLElement).getAttribute('tabindex')).to.equal('-1');
@@ -518,10 +560,10 @@ describe('selection & roving focus', () => {
     el.nodes = nodes;
     el.edges = edges;
     await el.updateComplete;
-    const first = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    const first = nodeControl(el, 'a');
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelectorAll('[part="node"]')[1] as HTMLElement).getAttribute('tabindex')).to.equal('0');
+    expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
   });
 
   it('Enter on a node toggles selection and emits lr-node-click', async () => {
@@ -530,7 +572,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     let fired = false;
     el.addEventListener('lr-node-click', () => (fired = true));
-    (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
+    nodeControl(el, 'a').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
     );
     expect(fired).to.be.true;
@@ -543,7 +585,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     el.selectedNodeIds = ['a'];
     await el.updateComplete;
-    (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
+    nodeControl(el, 'a').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     );
     expect(el.selectedNodeIds).to.deep.equal([]);
@@ -556,7 +598,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     let detail: { nodeIds: string[]; edgeIds: string[] } | undefined;
     el.addEventListener('lr-selection-delete', (e) => (detail = (e as CustomEvent).detail));
-    (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
+    nodeControl(el, 'a').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }),
     );
     expect(detail).to.deep.equal({ nodeIds: ['a'], edgeIds: [] });
@@ -569,7 +611,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     let fired = false;
     el.addEventListener('lr-selection-delete', () => (fired = true));
-    (el.shadowRoot!.querySelector('[part="node"]') as HTMLElement).dispatchEvent(
+    nodeControl(el, 'a').dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }),
     );
     expect(fired).to.be.false;
@@ -591,7 +633,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     el.focusNode('b');
     await el.updateComplete;
-    expect((el.shadowRoot!.querySelectorAll('[part="node"]')[1] as HTMLElement).getAttribute('tabindex')).to.equal('0');
+    expect(nodeControl(el, 'b').getAttribute('tabindex')).to.equal('0');
   });
 
   it('ArrowRight resolves the roving focus target by node id, not DOM order, when nodes are not spatially pre-sorted', async () => {
@@ -603,8 +645,8 @@ describe('selection & roving focus', () => {
       { id: 'b', position: { x: 0, y: 0 } },
     ];
     await el.updateComplete;
-    const aEl = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
-    const bEl = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
+    const aEl = nodeControl(el, 'a');
+    const bEl = nodeControl(el, 'b');
     expect(bEl.getAttribute('tabindex')).to.equal('0');
     expect(aEl.getAttribute('tabindex')).to.equal('-1');
 
@@ -625,7 +667,7 @@ describe('selection & roving focus', () => {
     await el.updateComplete;
     el.focusNode('a');
     await el.updateComplete;
-    const aEl = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const aEl = nodeControl(el, 'a');
     expect(aEl.getAttribute('tabindex')).to.equal('0');
     expect(el.shadowRoot!.activeElement).to.equal(aEl);
   });
@@ -638,13 +680,13 @@ describe('selection & roving focus', () => {
       { id: 'real', source: 'a', target: 'b' },
     ];
     await el.updateComplete;
-    const firstNode = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    const firstNode = nodeControl(el, 'a');
     // Two ArrowRight presses from the first node must reach the one real, focusable edge --
     // a dangling edge still occupying a roving slot would strand the active index on a
     // non-existent element for one extra keypress.
     firstNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await el.updateComplete;
-    const secondNode = el.shadowRoot!.querySelectorAll('[part="node"]')[1] as HTMLElement;
+    const secondNode = nodeControl(el, 'b');
     secondNode.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await el.updateComplete;
     const realEdgePath = el.shadowRoot!.querySelector('[data-edge-id="real"] [part="edge"]') as HTMLElement;
@@ -666,7 +708,7 @@ describe('node drag', () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 21, clientY: 5 }));
@@ -680,7 +722,7 @@ describe('node drag', () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
     wrapper.setPointerCapture = () => {};
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1, clientX: 0, clientY: 0, bubbles: true }));
     window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 40, clientY: 0 }));
@@ -718,7 +760,7 @@ describe('node drag', () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 40, y: 40 } }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    const wrapper = nodeControl(el, 'a');
     let detail: { id: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
     el.addEventListener('lr-node-move', (e) => (detail = (e as CustomEvent).detail));
     wrapper.dispatchEvent(
@@ -737,7 +779,7 @@ describe('node drag', () => {
     const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 40, y: 40 } }];
     await el.updateComplete;
-    const wrapper = el.shadowRoot!.querySelector('[part="node"]') as HTMLElement;
+    const wrapper = nodeControl(el, 'a');
     let detail: { id: string; position: { x: number; y: number }; previous: { x: number; y: number } } | undefined;
     el.addEventListener('lr-node-move', (e) => (detail = (e as CustomEvent).detail));
     const fire = (key: string) =>
@@ -856,10 +898,11 @@ describe('connect gesture', () => {
     ];
     await el.updateComplete;
     const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const controlA = nodeControl(el, 'a');
     let detail: { source: string; target: string; sourceHandle: string; targetHandle: string } | undefined;
     el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     // Deviation from the plan brief's literal expected value (`{ source: 'a', target: 'b' }`): the
     // brief's own `commitKeyboardConnect()` implementation code, the `LyraFlowCanvasEventMap` type
     // (Slice A: `'lr-connect': CustomEvent<{ source; target; sourceHandle; targetHandle }>`), the
@@ -883,30 +926,63 @@ describe('connect gesture', () => {
     const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
     const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
     const wrapperC = el.shadowRoot!.querySelector('[data-node-id="c"]') as HTMLElement;
+    const controlA = nodeControl(el, 'a');
 
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
 
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(wrapperC.hasAttribute('data-connect-target')).to.be.true;
     expect(wrapperB.hasAttribute('data-connect-target')).to.be.false;
 
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
 
     // An unrelated key while connect mode is active falls through every case and is swallowed
     // rather than leaking to node activation/roving-nav handling below.
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(wrapperB.hasAttribute('data-connect-target')).to.be.true;
 
     let detail: { source: string; target: string; sourceHandle: string; targetHandle: string } | undefined;
     el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(detail).to.deep.equal({ source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'in' });
+  });
+
+  it('announces keyboard connection targets and commits with accessible node labels', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas
+        connectable
+        .strings=${{
+          flowConnectTarget: 'TARGET {source} -> {target} ({index}/{total})',
+          flowConnectCommitted: 'DONE {source} -> {target}',
+        }}
+      ></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'opaque-a', accessibleLabel: 'Readable source', position: { x: 0, y: 0 } },
+      { id: 'opaque-b', accessibleLabel: 'Readable target', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+    const control = el.shadowRoot!.querySelector('[data-node-id="opaque-a"] [part="node-control"]') as HTMLElement;
+    control.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent!.trim()).to.equal(
+      'TARGET Readable source -> Readable target (1/1)',
+    );
+
+    control.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent!.trim()).to.equal(
+      'DONE Readable source -> Readable target',
+    );
   });
 
   it('does not enter connect mode via keyboard when there are no eligible targets', async () => {
@@ -914,12 +990,13 @@ describe('connect gesture', () => {
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
     await el.updateComplete;
     const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    const controlA = nodeControl(el, 'a');
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
     await el.updateComplete;
     expect(wrapperA.hasAttribute('data-connect-target')).to.be.false;
     let fired = false;
     el.addEventListener('lr-connect', () => (fired = true));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(fired).to.be.false;
   });
 
@@ -930,8 +1007,8 @@ describe('connect gesture', () => {
       { id: 'b', position: { x: 200, y: 0 } },
     ];
     await el.updateComplete;
-    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    const controlA = nodeControl(el, 'a');
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
     await el.updateComplete;
     // 'b' was the only eligible target when connect mode started; removing it from `nodes` (a
     // controlled component never resets keyboard-connect state on its own here) leaves the commit
@@ -940,7 +1017,7 @@ describe('connect gesture', () => {
     await el.updateComplete;
     let fired = false;
     el.addEventListener('lr-connect', () => (fired = true));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(fired).to.be.false;
   });
 
@@ -951,7 +1028,7 @@ describe('connect gesture', () => {
       { id: 'b', position: { x: 200, y: 0 }, inputs: [] },
     ];
     await el.updateComplete;
-    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const wrapperA = nodeControl(el, 'a');
     let detail: { source: string; target: string; sourceHandle: string; targetHandle: string } | undefined;
     el.addEventListener('lr-connect', (e) => (detail = (e as CustomEvent).detail));
     wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
@@ -1026,12 +1103,12 @@ describe('connect gesture', () => {
       { id: 'b', position: { x: 200, y: 0 } },
     ];
     await el.updateComplete;
-    const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const controlA = nodeControl(el, 'a');
     let fired = false;
     el.addEventListener('lr-connect', () => (fired = true));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(fired).to.be.false;
   });
 });
@@ -1220,6 +1297,7 @@ describe('locked (consolidated)', () => {
 
     const viewportEl = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
     const wrapperA = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    const controlA = nodeControl(el, 'a');
 
     // Pan/zoom: wheel is a no-op.
     viewportEl.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, clientX: 50, clientY: 50, bubbles: true, cancelable: true }));
@@ -1233,8 +1311,8 @@ describe('locked (consolidated)', () => {
     window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 40, clientY: 0 }));
 
     // Connect: 'c' does not enter connect mode.
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
-    wrapperA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }));
+    controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     let connected = false;
     el.addEventListener('lr-connect', () => (connected = true));
     expect(connected).to.be.false;
@@ -1318,6 +1396,21 @@ describe('disconnect/reconnect', () => {
 // the grid-snap division, and the auto-layout gapX/gapY, poisoning viewport.zoom, snapped
 // positions, and auto-laid-out node positions with NaN.
 describe('finite-number normalization', () => {
+  it('rejects non-finite public node/viewport/fit geometry before it reaches layout or emitted state', async () => {
+    const el = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px"></lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    el.nodes = [{ id: 'a', position: { x: Number.NaN, y: Number.POSITIVE_INFINITY } }];
+    await el.updateComplete;
+    const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+    expect(wrapper.style.transform).to.not.match(/NaN|Infinity/);
+
+    el.setViewport({ x: Number.NaN, y: Number.POSITIVE_INFINITY, zoom: Number.NaN });
+    expect(Object.values(el.viewport).every(Number.isFinite)).to.equal(true);
+    el.fit({ padding: Number.POSITIVE_INFINITY });
+    expect(Object.values(el.viewport).every(Number.isFinite)).to.equal(true);
+  });
+
   it('clamps a non-finite/negative min-zoom or max-zoom so viewport.zoom never becomes NaN', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;
@@ -1381,6 +1474,82 @@ describe('finite-number normalization', () => {
     const wrapperB = el.shadowRoot!.querySelector('[data-node-id="b"]') as HTMLElement;
     expect(wrapperB.style.transform).to.not.match(/NaN|Infinity/);
   });
+
+  it('prunes cached positions, measurements, and observed wrappers when node ids are removed', async () => {
+    const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = Array.from({ length: 12 }, (_, index) => ({ id: `node-${index}` }));
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const internal = el as unknown as {
+      autoPositions: Map<string, unknown>;
+      measuredSizes: Map<string, unknown>;
+      observedNodeEls: Set<Element>;
+    };
+    expect(internal.autoPositions.size).to.be.greaterThan(0);
+    expect(internal.observedNodeEls.size).to.equal(12);
+
+    el.nodes = [];
+    await el.updateComplete;
+    expect(internal.autoPositions.size).to.equal(0);
+    expect(internal.measuredSizes.size).to.equal(0);
+    expect(internal.observedNodeEls.size).to.equal(0);
+  });
+});
+
+describe('edge interaction target', () => {
+  it('adds a transparent shared-size hit path that forwards edge activation', async () => {
+    const el = (await fixture(html`<lr-flow-canvas .nodes=${nodes} .edges=${edges}></lr-flow-canvas>`)) as LyraFlowCanvas;
+    await el.updateComplete;
+    const hitArea = el.shadowRoot!.querySelector('[part="edge-hit-area"]') as SVGPathElement;
+    expect(hitArea).to.exist;
+    expect(Number.parseFloat(getComputedStyle(hitArea).strokeWidth)).to.be.at.least(40);
+    let detail: { id: string } | undefined;
+    el.addEventListener('lr-edge-click', (event) => {
+      detail = (event as CustomEvent).detail;
+    });
+    hitArea.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(detail?.id).to.equal('a-b');
+  });
+});
+
+describe('localized numeric output', () => {
+  it('formats summary counts, roving positions, and nudge coordinates with the effective locale', async () => {
+    const el = (await fixture(html`<lr-flow-canvas lang="ar" nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.strings = {
+      flowCanvasSummary: '{nodeCount}|{edgeCount}',
+      flowItemAnnouncement: '{index}|{total}|{item}',
+      flowNodeMoved: '{x}|{y}|{label}',
+    };
+    el.grid = 1;
+    el.nodes = [
+      { id: 'a', accessibleLabel: 'Alpha', position: { x: 1234.5, y: 9876.5 } },
+      { id: 'b', accessibleLabel: 'Beta', position: { x: 200, y: 0 } },
+    ];
+    el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+    await el.updateComplete;
+    const number = new Intl.NumberFormat('ar');
+    expect(el.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal(
+      `${number.format(2)}|${number.format(1)}`,
+    );
+
+    (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+    const control = nodeControl(el, 'a');
+    control.focus();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent!.trim()).to.equal(
+      `${number.format(2)}|${number.format(3)}|Alpha`,
+    );
+
+    control.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowDown', ctrlKey: true, bubbles: true, cancelable: true }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent!.trim()).to.equal(
+      `${number.format(1234.5)}|${number.format(9877.5)}|Alpha`,
+    );
+  });
 });
 
 describe('--lr-flow-canvas-node-current-outline-color', () => {
@@ -1392,17 +1561,17 @@ describe('--lr-flow-canvas-node-current-outline-color', () => {
     return el;
   };
 
-  it('retints the aria-current node outline via the cssprop', async () => {
+  it('retints the selected node outline via the cssprop', async () => {
     const el = await currentFixture();
     el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'rgb(10, 20, 30)');
-    const node = el.shadowRoot!.querySelector('[part="node"][aria-current="true"]') as HTMLElement;
+    const node = el.shadowRoot!.querySelector('[part="node"][data-selected]') as HTMLElement;
     expect(node).to.exist;
     expect(getComputedStyle(node).outlineColor).to.equal('rgb(10, 20, 30)');
   });
 
   it('renders byte-identically to the brand token default when unset', async () => {
     const el = await currentFixture();
-    const node = el.shadowRoot!.querySelector('[part="node"][aria-current="true"]') as HTMLElement;
+    const node = el.shadowRoot!.querySelector('[part="node"][data-selected]') as HTMLElement;
     const unset = getComputedStyle(node).outlineColor;
     el.style.setProperty('--lr-flow-canvas-node-current-outline-color', 'var(--lr-color-brand)');
     expect(getComputedStyle(node).outlineColor).to.equal(unset);

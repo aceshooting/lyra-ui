@@ -70,6 +70,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
+    overflow-wrap: anywhere;
   }
   /* [part] always contains a literal <slot> child regardless of assigned
      content, so :empty never matches -- real emptiness is tracked in JS
@@ -95,11 +96,13 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-2xs);
+    min-inline-size: 0;
   }
 
   [part='field-label'] {
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
   }
 
   [part='field-input'] {
@@ -151,6 +154,7 @@ export const styles = css`
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
   }
   [part='hint'][hidden] {
     display: none;
@@ -159,6 +163,7 @@ export const styles = css`
     margin-block-start: var(--lr-space-xs);
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-danger);
+    overflow-wrap: anywhere;
   }
   [part='error'][hidden] {
     display: none;

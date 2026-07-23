@@ -70,6 +70,37 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   expect(leaked).to.be.false;
 });
 
+it('authenticates remote uniquely-origin sandbox messages by frame window and opaque origin', async () => {
+  const el = (await fixture(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://remote/app', src: 'https://apps.example.test/weather' }}
+  ></lr-mcp-app>`)) as LyraMcpApp;
+  const iframe = el.shadowRoot!.querySelector('iframe')!;
+  let calls = 0;
+  el.addEventListener('lr-mcp-tool-call', () => calls++);
+  const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'weather', args: {} };
+
+  window.dispatchEvent(new MessageEvent('message', {
+    source: iframe.contentWindow,
+    origin: 'https://apps.example.test',
+    data,
+  }));
+  expect(calls).to.equal(0);
+
+  window.dispatchEvent(new MessageEvent('message', {
+    source: window,
+    origin: 'null',
+    data,
+  }));
+  expect(calls).to.equal(0);
+
+  window.dispatchEvent(new MessageEvent('message', {
+    source: iframe.contentWindow,
+    origin: 'null',
+    data,
+  }));
+  expect(calls).to.equal(1);
+});
+
 it('applies per-instance strings to the unavailable state', async () => {
   const el = (await fixture(
     html`<lr-mcp-app

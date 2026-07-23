@@ -46,16 +46,33 @@ export class LyraFormatNumber extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const options: Intl.NumberFormatOptions = { notation: this.notation };
-    if (this.currency) { options.style = 'currency'; options.currency = this.currency; }
+    const notation =
+      this.notation === 'compact' ||
+      this.notation === 'scientific' ||
+      this.notation === 'engineering'
+        ? this.notation
+        : 'standard';
+    const options: Intl.NumberFormatOptions = { notation };
+    if (this.currency) {
+      options.style = 'currency';
+      options.currency = this.currency;
+    }
     const { minimumFractionDigits, maximumFractionDigits } = this.fractionDigits;
     if (minimumFractionDigits !== undefined) options.minimumFractionDigits = minimumFractionDigits;
     if (maximumFractionDigits !== undefined) options.maximumFractionDigits = maximumFractionDigits;
     // Guaranteed finite by the check below; routed through the shared helper anyway so this call
     // can never see a non-finite value even if the guard changes shape.
-    const text = Number.isFinite(this.value)
-      ? getNumberFormat(this.effectiveLocale || undefined, options).format(finiteNumber(this.value, 0))
-      : '';
+    let text = '';
+    if (Number.isFinite(this.value)) {
+      const value = finiteNumber(this.value, 0);
+      try {
+        text = getNumberFormat(this.effectiveLocale || undefined, options).format(value);
+      } catch {
+        // Invalid locale/currency/option values are untyped-JS reachable despite the public
+        // TypeScript surface. Preserve a useful readout rather than rejecting Lit's update.
+        text = getNumberFormat(undefined, { notation: 'standard' }).format(value);
+      }
+    }
     return html`${text || html`<slot></slot>`}`;
   }
 }

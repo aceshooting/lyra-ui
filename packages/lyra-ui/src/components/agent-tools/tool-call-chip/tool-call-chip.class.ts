@@ -12,6 +12,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 import { styles } from './tool-call-chip.styles.js';
 
@@ -137,16 +138,16 @@ const statusConverter: ComplexAttributeConverter<ToolCallStatus> = {
  *  value is interpolated through a localized duration message by the caller. */
 function formatDuration(ms: number): {
   key: 'durationMilliseconds' | 'durationSeconds';
-  value: string;
+  value: number;
 } {
   if (!Number.isFinite(ms) || ms < 1000) {
-    return { key: 'durationMilliseconds', value: String(Math.round(Math.max(0, ms))) };
+    return { key: 'durationMilliseconds', value: Math.round(Math.max(0, ms)) };
   }
   const seconds = ms / 1000;
   const rounded = Math.round(seconds * 10) / 10;
   return {
     key: 'durationSeconds',
-    value: Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1),
+    value: rounded,
   };
 }
 
@@ -201,7 +202,8 @@ function formatDuration(ms: number): {
  * @csspart status-text - The visible text twin of the status glyph/color — carries the state in text, not just color.
  * @csspart duration - The formatted `duration-ms`, when set.
  * @csspart tooltip - The floating detail popup (only meaningful while open).
- * @cssprop [--lr-tool-call-chip-spin=1s linear] - Running-icon animation duration and timing.
+ * @cssprop [--lr-tool-call-chip-spin=var(--lr-transition-ambient)] - Running-icon animation
+ *   duration and timing.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Pending-icon pulse duration and timing.
  * @cssprop [--lr-tool-call-chip-accent=var(--lr-color-text-quiet)] - Per-status accent color for the status glyph and status text. Reassigned by this component's own `:host([status="…"])` rules (`running` → brand, `success` → success, `error` → danger, `denied` → warning), so a page-level override only wins for the default/`pending` tone.
  * @cssprop [--lr-tool-call-chip-bg=var(--lr-color-surface)] - Per-status chip background. Reassigned by the same `:host([status="…"])` rules (each status's `-quiet` tint).
@@ -385,7 +387,11 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   private localizedDuration(ms: number): string {
     const duration = formatDuration(ms);
-    return this.localize(duration.key, undefined, { value: duration.value });
+    return this.localize(duration.key, undefined, {
+      value: getNumberFormat(this.effectiveLocale, {
+        maximumFractionDigits: duration.key === 'durationSeconds' ? 1 : 0,
+      }).format(duration.value),
+    });
   }
 
   override render(): TemplateResult {

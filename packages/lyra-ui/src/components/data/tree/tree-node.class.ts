@@ -9,6 +9,8 @@ import { cascadeUpdateComplete } from './update-cascade.js';
 import { styles } from './tree-node.styles.js';
 import type { TreeItem } from './tree-item.js';
 
+const MAX_RENDER_DEPTH = 64;
+
 export interface LyraTreeNodeEventMap {
   'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
   'lr-node-select': CustomEvent<{ id: string }>;
@@ -47,6 +49,8 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   @property({ type: Boolean, reflect: true }) expanded = false;
   /** The id of the tree's roving-tabindex-focused item, pushed down from `<lr-tree>`. */
   @property({ attribute: false }) activeId: string | null = null;
+  /** Ancestor object identities used to stop cyclic caller graphs before recursive rendering. */
+  @property({ attribute: false }) ancestry: TreeItem[] = [];
 
   private _depth = 0;
   /** Nesting depth, 0 = top-level. Feeds `aria-level` (`depth + 1`) in `willUpdate()` below and the
@@ -99,7 +103,11 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     // `item` is required in normal use (`<lr-tree>` always assigns it), but a
     // bare `document.createElement('lr-tree-node')` reaches the first update
     // with it unset — degrade to a leaf instead of throwing mid-lifecycle.
-    return Boolean(this.item?.children?.length);
+    return Boolean(
+      this.item?.children?.length &&
+        this.depth < MAX_RENDER_DEPTH &&
+        !this.ancestry.includes(this.item),
+    );
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -112,19 +120,26 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     else this.removeAttribute('aria-expanded');
     if (this.item?.accessibleLabel) this.setAttribute('aria-label', this.item.accessibleLabel);
     else this.removeAttribute('aria-label');
-    this.tabIndex = this.item?.id === this.activeId ? 0 : -1;
+    if (this.item?.selected !== undefined) {
+      this.setAttribute('aria-selected', String(this.item.selected));
+    } else {
+      this.removeAttribute('aria-selected');
+    }
+    if (this.item?.disabled) this.setAttribute('aria-disabled', 'true');
+    else this.removeAttribute('aria-disabled');
+    this.tabIndex = !this.item?.disabled && this.item?.id === this.activeId ? 0 : -1;
   }
 
   /** Expand this node (no-op if already expanded or a leaf). */
   expand(): void {
-    if (!this.hasChildren || this.expanded) return;
+    if (this.item?.disabled || !this.hasChildren || this.expanded) return;
     this.expanded = true;
     this.emit('lr-node-toggle', { id: this.item.id, expanded: true });
   }
 
   /** Collapse this node (no-op if already collapsed or a leaf). */
   collapse(): void {
-    if (!this.hasChildren || !this.expanded) return;
+    if (this.item?.disabled || !this.hasChildren || !this.expanded) return;
     this.expanded = false;
     this.emit('lr-node-toggle', { id: this.item.id, expanded: false });
   }
@@ -140,6 +155,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
    * clicked, not one render late.
    */
   select(): void {
+    if (this.item?.disabled) return;
     this.emit('lr-node-select', { id: this.item.id });
     this.focus();
   }
@@ -212,6 +228,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
               (child, i) => html`<lr-tree-node
                 .item=${child}
                 .depth=${this.depth + 1}
+                .ancestry=${[...this.ancestry, this.item]}
                 .activeId=${this.activeId}
                 .setSize=${this.item.children!.length}
                 .posInSet=${i + 1}

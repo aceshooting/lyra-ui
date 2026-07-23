@@ -224,6 +224,25 @@ it('does not overwrite an author-supplied role/aria-label, including on a later 
   expect(el.getAttribute('aria-label')).to.equal('Custom');
 });
 
+it('honors late host role/aria-label changes and restores generated defaults after removal', async () => {
+  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+
+  el.setAttribute('role', 'application');
+  el.setAttribute('aria-label', 'Late custom');
+  await el.updateComplete;
+  el.words = [{ text: 'fresh', weight: 1 }];
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('application');
+  expect(el.getAttribute('aria-label')).to.equal('Late custom');
+
+  el.removeAttribute('role');
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('group');
+  expect(el.getAttribute('aria-label')).to.equal('Word cloud of 1 word');
+});
+
 it('singularizes the aria-label for exactly one word', async () => {
   const el = (await fixture(html`<lr-word-cloud .words=${[{ text: 'solo', weight: 1 }]}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
@@ -437,6 +456,21 @@ it('constrains its rendered SVG to a host-assigned height instead of overflowing
   expect(Math.round(svgRect.height)).to.equal(Math.round(hostRect.height));
 });
 
+it('contains long unbroken legend labels at a 320px allocation', async () => {
+  const el = (await fixture(html`<lr-word-cloud
+    style="inline-size: 320px;"
+    show-legend
+    .words=${[{ text: 'alpha', weight: 1, color: 'rgb(1, 2, 3)' }]}
+    .legend=${[{ label: 'ExtremelyLongUnbrokenLegendLabelThatMustRemainInsideTheAllocatedComponentWidth', color: 'rgb(1, 2, 3)' }]}
+  ></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+
+  const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="legend-label"]') as HTMLElement;
+  expect(legend.scrollWidth).to.be.at.most(legend.clientWidth);
+  expect(label.getBoundingClientRect().right).to.be.at.most(legend.getBoundingClientRect().right);
+});
+
 it('relays out when the font-family theme token changes', async () => {
   const el = (await fixture(
     html`<lr-word-cloud
@@ -502,6 +536,19 @@ it("localizes the wordCloud aria-label's pluralized noun via this.localize()", a
   el.strings = { wordCloudWords: 'mots' };
   await el.updateComplete;
   expect(el.getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} mots`);
+});
+
+it('localizes the whole focused-word announcement and formats its weight with the effective locale', async () => {
+  const el = (await fixture(html`<lr-word-cloud
+    locale="de-DE"
+    .strings=${{ wordCloudWordAnnouncement: '{weight} :: {text}' }}
+    .words=${[{ text: 'alpha', weight: 1234.5 }]}
+  ></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+
+  keydown(el, 'ArrowRight');
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('1.234,5 :: alpha');
 });
 
 it('defaults to English "word"/"words" when no strings override is set', async () => {

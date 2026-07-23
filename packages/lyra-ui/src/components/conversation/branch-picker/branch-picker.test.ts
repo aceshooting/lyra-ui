@@ -93,6 +93,49 @@ it('focus() delegates to the enabled chevron button', async () => {
   expect(el.shadowRoot!.activeElement).to.equal(next);
 });
 
+it('click() delegates to the enabled chevron button', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker index="0" count="3"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  const eventPromise = oneEvent(el, 'lr-branch-change');
+  el.click();
+  const event = await eventPromise;
+  expect(event.detail).to.deep.equal({ index: 1 });
+});
+
+it('formats and localizes the complete visible position and live announcement', async () => {
+  const el = (await fixture(html`
+    <lr-branch-picker
+      index="0"
+      count="3"
+      lang="ar-EG"
+      .strings=${{ branchPosition: 'الموضع {index} من {total}' }}
+    ></lr-branch-picker>
+  `)) as LyraBranchPicker;
+  const position = el.shadowRoot!.querySelector('[part="position"]')!.textContent!.trim();
+  expect(position).to.equal('الموضع ١ من ٣');
+
+  el.index = 1;
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const region = el.shadowRoot!
+    .querySelector('lr-live-region')!
+    .shadowRoot!.querySelector('[part="region"]')!;
+  expect(region.textContent).to.equal('الموضع ٢ من ٣');
+});
+
+it('keeps both chevron actions at the shared icon-button hit-area floor', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker index="1" count="3"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  const buttons = Array.from(el.shadowRoot!.querySelectorAll('button'));
+  for (const button of buttons) {
+    const rect = button.getBoundingClientRect();
+    expect(rect.width).to.be.at.least(40);
+    expect(rect.height).to.be.at.least(40);
+  }
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lr-branch-picker index="1" count="3"></lr-branch-picker>`,

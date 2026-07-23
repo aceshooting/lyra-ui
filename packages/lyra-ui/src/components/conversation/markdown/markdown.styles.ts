@@ -13,8 +13,9 @@ export const styles = css`
     line-height: var(--lr-line-height-loose);
   }
   [part='content'] {
+    min-block-size: var(--lr-icon-button-size);
     box-sizing: border-box;
-    min-inline-size: 0;
+    min-inline-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     overflow-inline: auto;
     /* Paired with overflow-inline above: per the CSS overflow spec, pinning one axis to a
@@ -24,6 +25,11 @@ export const styles = css`
        lr-tabs's tablist fix (overflow-x: auto; overflow-y: hidden) for the identical bug. */
     overflow-block: hidden;
     overflow-wrap: anywhere;
+  }
+  [part='content']:focus-visible,
+  [part='code-block']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   /* Shared by both the "still loading" and "fell back after a failure"
      states -- see the renderedHtml field doc in markdown.ts. */
@@ -126,43 +132,44 @@ export const styles = css`
      below never matches on that path); the <mark>-wrap fallback path styles the real elements
      text-highlights.ts creates in this same shadow tree. Both are kept in sync by tone. */
   ::highlight(lr-highlight-accent) {
-    background-color: var(--lr-color-brand-quiet);
+    background-color: var(--lr-markdown-highlight-accent-bg, var(--lr-color-brand-quiet));
   }
   ::highlight(lr-highlight-success) {
-    background-color: var(--lr-color-success-quiet);
+    background-color: var(--lr-markdown-highlight-success-bg, var(--lr-color-success-quiet));
   }
   ::highlight(lr-highlight-warning) {
-    background-color: var(--lr-color-warning-quiet);
+    background-color: var(--lr-markdown-highlight-warning-bg, var(--lr-color-warning-quiet));
   }
   ::highlight(lr-highlight-danger) {
-    background-color: var(--lr-color-danger-quiet);
+    background-color: var(--lr-markdown-highlight-danger-bg, var(--lr-color-danger-quiet));
   }
   ::highlight(lr-highlight-neutral) {
-    background-color: var(--lr-color-surface);
+    background-color: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface));
   }
   ::highlight(lr-highlight-active) {
-    background-color: var(--lr-color-brand-quiet);
+    background-color: var(--lr-markdown-highlight-active-bg, var(--lr-color-brand-quiet));
     text-decoration: underline;
   }
   [part='content'] mark[data-lr-highlight-tone] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-markdown-highlight-accent-bg, var(--lr-color-brand-quiet));
     color: inherit;
     border-radius: calc(var(--lr-radius) * 0.5);
   }
   [part='content'] mark[data-lr-highlight-tone='success'] {
-    background: var(--lr-color-success-quiet);
+    background: var(--lr-markdown-highlight-success-bg, var(--lr-color-success-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='warning'] {
-    background: var(--lr-color-warning-quiet);
+    background: var(--lr-markdown-highlight-warning-bg, var(--lr-color-warning-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='danger'] {
-    background: var(--lr-color-danger-quiet);
+    background: var(--lr-markdown-highlight-danger-bg, var(--lr-color-danger-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='neutral'] {
-    background: var(--lr-color-surface);
+    background: var(--lr-markdown-highlight-neutral-bg, var(--lr-color-surface));
   }
   [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-markdown-highlight-active-outline-color, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
 `;

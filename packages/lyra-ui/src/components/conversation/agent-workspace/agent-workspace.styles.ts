@@ -114,9 +114,12 @@ export const styles = css`
   @container (max-inline-size: 48rem) {
     [part='body'] {
       grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+    }
+    [part='body'][data-details='true'] {
+      grid-template-rows: minmax(0, 1fr) minmax(0, 45%);
     }
     [part='details'] {
-      max-block-size: 45%;
       border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
       border-inline-start: 0;
     }

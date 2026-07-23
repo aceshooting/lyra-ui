@@ -156,6 +156,17 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-bubble-color=var(--lr-color-text)] - Bubble text color for every role except `user`.
  * @cssprop [--lr-chat-message-user-bubble-bg=var(--lr-color-brand-quiet)] - Bubble fill for `data-role="user"`.
  * @cssprop [--lr-chat-message-user-bubble-color=var(--lr-color-text)] - Bubble text color for `data-role="user"`.
+ * @cssprop [--lr-chat-message-system-color=var(--lr-color-text-quiet)] - System-message text color.
+ * @cssprop [--lr-chat-message-streaming-border-color=var(--lr-color-brand)] - Streaming bubble border.
+ * @cssprop [--lr-chat-message-failed-border-color=var(--lr-color-danger)] - Failed bubble border.
+ * @cssprop [--lr-chat-message-failed-bg=var(--lr-color-danger-quiet)] - Failed bubble fill.
+ * @cssprop [--lr-chat-message-footer-color=var(--lr-color-text-quiet)] - Default footer text.
+ * @cssprop [--lr-chat-message-user-footer-color=var(--lr-color-text)] - User-message footer text.
+ * @cssprop [--lr-chat-message-failed-footer-color=var(--lr-color-danger)] - Failed-message footer text.
+ * @cssprop [--lr-chat-message-indicator-color=var(--lr-color-text-quiet)] - Default status indicator.
+ * @cssprop [--lr-chat-message-streaming-indicator-color=var(--lr-color-brand)] - Streaming indicator.
+ * @cssprop [--lr-chat-message-failed-indicator-color=var(--lr-color-danger)] - Failed indicator.
+ * @cssprop [--lr-chat-message-failed-status-color=var(--lr-color-danger)] - Failed status text.
  * @cssprop [--lr-chat-message-bubble-padding=var(--lr-space-m)] - Bubble padding. Prefer this over a `::part(bubble)` padding override: an outer-tree `::part` declaration outranks every rule in this shadow tree, which silently suppresses the per-`status` and per-role bubble styling below it.
  * @cssprop [--lr-chat-message-bubble-radius=var(--lr-radius)] - Bubble corner radius. Bubble-only by design — `collapse-button` and `retry-button` keep reading the shared `--lr-radius`, so a rounder bubble never desyncs the controls from the rest of the library.
  * @cssprop [--lr-transition-ambient=1.8s ease-in-out] - Streaming-indicator animation duration
@@ -377,11 +388,11 @@ export class LyraChatMessage extends LyraElement<LyraChatMessageEventMap> {
   private onRetryClick = (): void => {
     // A `lr-retry` listener is documented to respond by flipping `status`
     // away from `"failed"`, which removes this very button on the next
-    // render. Move focus to the always-rendered bubble first, synchronously,
-    // so it lands somewhere stable inside the message instead of silently
-    // reverting to `<body>` once the button it was on disappears.
-    this.bubbleEl?.focus();
+    // render. Emit first so a no-op or asynchronous listener leaves focus on
+    // the still-actionable button; only a synchronous accepted transition
+    // moves focus to the always-rendered bubble before the next render.
     this.emit('lr-retry', { messageId: this.messageId || undefined });
+    if (this.status !== 'failed') this.bubbleEl?.focus();
   };
 
   override render(): TemplateResult {

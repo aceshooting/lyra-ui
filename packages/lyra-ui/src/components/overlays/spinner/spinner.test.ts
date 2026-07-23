@@ -38,3 +38,12 @@ it('stops the spin animation under prefers-reduced-motion', () => {
   expect(reducedMotion, 'expected a reduced-motion override for [part="spinner"]').to.not.equal(null);
   expect(reducedMotion![1]).to.include('animation: none');
 });
+
+it('inherits the shared ambient timing token unless its component duration is overridden', async () => {
+  const el = (await fixture(
+    html`<lr-spinner style="--lr-transition-ambient: 3s linear"></lr-spinner>`,
+  )) as LyraSpinner;
+  const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement;
+  expect(getComputedStyle(spinner).animationDuration).to.equal('3s');
+  expect(getComputedStyle(spinner).animationTimingFunction).to.equal('linear');
+});

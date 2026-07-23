@@ -8,6 +8,7 @@ import { styles } from './tool-select-dialog.styles.js';
 import '../../forms/checkbox/checkbox.class.js';
 import '../../forms/switch/switch.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** One selectable agent tool. `category` groups the row; tools with no
  *  `category` (or an empty one) fall into the trailing "Other" bucket. */
@@ -53,10 +54,14 @@ export interface LyraToolSelectDialogEventMap {
 }
 
 const OTHER_CATEGORY = 'Other';
+const MAX_RENDERED_TOOLS = 200;
 
 /** Default `filter`: case-insensitive substring match against the tool's name and description. */
-function defaultFilter(tool: ToolSelectDialogTool, query: string): boolean {
-  return tool.name.toLowerCase().includes(query) || (tool.description ?? '').toLowerCase().includes(query);
+function defaultFilter(tool: ToolSelectDialogTool, query: string, locale: string): boolean {
+  return (
+    tool.name.toLocaleLowerCase(locale).includes(query) ||
+    (tool.description ?? '').toLocaleLowerCase(locale).includes(query)
+  );
 }
 
 interface ToolGroup {
@@ -88,6 +93,9 @@ interface ToolGroup {
  * action calling `close()`. This also means the search input is the very
  * first focusable element in the panel with no special-casing needed, so
  * it's what receives focus on open (see `updated()`).
+ *
+ * At most the first 200 matching tools are mounted at once. Filtering narrows that bounded
+ * projection; `tools`, selection counts, and emitted ids retain the caller's complete catalog.
  *
  * @customElement lr-tool-select-dialog
  * @slot footer - Optional action buttons (e.g. a "Done" button), rendered in a bottom row.
@@ -273,6 +281,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   private onToolToggle(tool: ToolSelectDialogTool, e: CustomEvent<{ checked: boolean }>): void {
     e.stopPropagation();
+    if (tool.disabled || this.useDefaults) return;
     const set = new Set(this.selected);
     e.detail.checked ? set.add(tool.id) : set.delete(tool.id);
     this.selected = [...set];
@@ -307,10 +316,20 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     }
     if (byCategory.has(OTHER_CATEGORY)) order.push(OTHER_CATEGORY);
 
-    const q = this.query.trim().toLowerCase();
-    const matches = q ? (tool: ToolSelectDialogTool) => (this.filter ?? defaultFilter)(tool, q) : () => true;
+    const q = this.query.trim().toLocaleLowerCase(this.effectiveLocale);
+    const matches = q
+      ? (tool: ToolSelectDialogTool) =>
+          this.filter ? this.filter(tool, q) : defaultFilter(tool, q, this.effectiveLocale)
+      : () => true;
+    let remaining = MAX_RENDERED_TOOLS;
     return order
       .map((category) => ({ category, tools: byCategory.get(category)!.filter(matches) }))
+      .filter((group) => group.tools.length > 0)
+      .map((group) => {
+        const tools = group.tools.slice(0, remaining);
+        remaining -= tools.length;
+        return { category: group.category, tools };
+      })
       .filter((group) => group.tools.length > 0);
   }
 
@@ -367,6 +386,9 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
       'searchToolsPlaceholder',
       this.searchPlaceholder === 'Search tools…' ? undefined : this.searchPlaceholder,
     );
+    const knownIds = new Set(this.tools.map((tool) => tool.id));
+    const selectedCount = new Set(this.selected.filter((id) => knownIds.has(id))).size;
+    const number = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -383,8 +405,8 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
             part="subtitle"
             ?hidden=${!hasTools}
             >${this.localize('toolSelectSummary', undefined, {
-              selected: this.selected.length,
-              total: this.tools.length,
+              selected: number.format(selectedCount),
+              total: number.format(knownIds.size),
             })}</p
           >
         </div>

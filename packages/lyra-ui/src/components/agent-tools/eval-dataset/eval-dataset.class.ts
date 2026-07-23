@@ -12,6 +12,8 @@ import type { ExportFormatOption, LyraExportButtonEventMap } from '../../utility
 import '../../utility/export-button/export-button.js';
 import { styles } from './eval-dataset.styles.js';
 
+const MAX_RENDERED_EXAMPLES = 100;
+
 /**
  * One row of an evaluation dataset -- a single labeled test case an eval run scores a
  * model/prompt against. Deliberately its own small shape rather than reusing anything from
@@ -132,6 +134,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   @state() private selectedId: string | null = null;
 
   protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('searchable') && !this.searchable) {
+      this.searchText = '';
+    }
     if (!changed.has('examples')) return;
     // A host fulfilling `lr-example-remove-request` (or an import that replaces the whole array)
     // can hand back an `examples` array that no longer contains the previously-selected id, or no
@@ -141,6 +146,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     // rows forever with no visible way back to "no filter".
     if (this.selectedId !== null && !this.examples.some((example) => example.id === this.selectedId)) {
       this.selectedId = null;
+      this.emit('lr-example-select', { id: null });
     }
     const available = this.allTags();
     if ([...this.activeTags].some((tag) => !available.includes(tag))) {
@@ -159,13 +165,13 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   /** `examples` narrowed by the active tag filter (OR across `activeTags`) and the search text
    *  (AND with the tag filter -- both narrow the same list further). */
   private get visibleExamples(): EvalExample[] {
-    const query = this.searchText.trim().toLowerCase();
+    const query = this.searchText.trim().toLocaleLowerCase(this.effectiveLocale);
     return this.examples.filter((example) => {
       if (this.activeTags.size > 0 && !(example.tags ?? []).some((tag) => this.activeTags.has(tag))) return false;
       if (query === '') return true;
       const haystack = [example.input, example.expectedOutput ?? '', ...(example.tags ?? [])]
         .join(' ')
-        .toLowerCase();
+        .toLocaleLowerCase(this.effectiveLocale);
       return haystack.includes(query);
     });
   }
@@ -193,12 +199,15 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   };
 
   private onGridRowClick = (e: CustomEvent<{ row: EvalExample }>): void => {
+    e.stopPropagation();
+    if (this.disabled) return;
     const id = e.detail.row.id;
     this.selectedId = id;
     this.emit('lr-example-select', { id });
   };
 
   private onFiles = (e: LyraFileInputEventMap['lr-files']): void => {
+    e.stopPropagation();
     if (this.disabled || e.detail.files.length === 0) return;
     this.emit('lr-import-request', { files: e.detail.files });
   };
@@ -209,10 +218,14 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     // instead, rather than letting csv/json download locally while other formats silently do
     // nothing.
     e.preventDefault();
+    e.stopPropagation();
+    if (this.disabled) return;
     this.emit('lr-export-request', { format: e.detail.format });
   };
 
   private onTagChipSelect(tag: string, e: CustomEvent<ChipSelectDetail>): void {
+    e.stopPropagation();
+    if (this.disabled) return;
     const next = new Set(this.activeTags);
     if (e.detail.selected) next.add(tag);
     else next.delete(tag);
@@ -220,6 +233,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
   }
 
   private onSearchInput = (e: Event): void => {
+    if (this.disabled) return;
     this.searchText = (e.target as HTMLInputElement).value;
   };
 
@@ -275,6 +289,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           .value=${this.searchText}
           aria-label=${label}
           placeholder=${label}
+          ?disabled=${this.disabled}
           @input=${this.onSearchInput}
           @focus=${this.onSearchFocus}
           @blur=${this.onSearchBlur}
@@ -292,6 +307,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
               toggleable
               .value=${tag}
               .selected=${this.activeTags.has(tag)}
+              .disabled=${this.disabled}
               @lr-chip-select=${(e: CustomEvent<ChipSelectDetail>) => this.onTagChipSelect(tag, e)}
               >${tag}</lr-chip
             >`,
@@ -321,9 +337,10 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
         <lr-table
           part="grid"
           aria-label=${label}
-          selection-mode="single"
+          .selectionMode=${this.disabled ? 'none' : 'single'}
           .columns=${this.buildColumns()}
           .rows=${visible}
+          .pageSize=${visible.length > MAX_RENDERED_EXAMPLES ? MAX_RENDERED_EXAMPLES : 0}
           .rowKey=${(row: EvalExample) => row.id}
           .selectedKey=${this.selectedId}
           .emptyHeading=${emptyText}

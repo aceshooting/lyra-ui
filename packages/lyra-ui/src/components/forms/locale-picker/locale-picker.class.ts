@@ -151,6 +151,12 @@ export interface LyraLocalePickerEventMap {
  *   pixel-match a sibling field in the same toolbar row.
  * @cssprop --lr-locale-picker-font-size - Trigger font size, scaled by `size`.
  * @cssprop --lr-locale-picker-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop [--lr-locale-picker-gap=var(--lr-space-xs)] - Trigger and option child gap.
+ * @cssprop [--lr-locale-picker-radius=var(--lr-radius)] - Trigger/listbox/option corner radius.
+ * @cssprop [--lr-locale-picker-trigger-hover-bg=var(--lr-color-brand-quiet)] - Trigger hover background.
+ * @cssprop [--lr-locale-picker-open-border-color=var(--lr-color-brand)] - Open trigger border color.
+ * @cssprop [--lr-locale-picker-option-selected-border-color=var(--lr-color-brand)] - Selected option border.
+ * @cssprop [--lr-locale-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
  * @cssprop [--lr-locale-picker-option-active-bg=var(--lr-color-brand-quiet)] - Background of a
  *   hovered or keyboard-active option row.
  */

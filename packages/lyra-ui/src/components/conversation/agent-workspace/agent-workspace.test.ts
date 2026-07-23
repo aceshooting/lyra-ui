@@ -41,8 +41,8 @@ it('clears follow/showDetails/showComposer from plain HTML `="false"` attributes
   await el.updateComplete;
   const viewport = el.shadowRoot!.querySelector('lr-chat-viewport') as unknown as { follow: boolean };
   expect(viewport.follow).to.be.false;
-  // showDetails=false hides the built-in details pane even though `run` alone would otherwise show it.
-  expect(el.shadowRoot!.querySelectorAll('[part="details"]').length).to.equal(0);
+  // showDetails=false hides the stable details pane even though `run` alone would otherwise show it.
+  expect((el.shadowRoot!.querySelector('[part="details"]') as HTMLElement).hidden).to.be.true;
   expect(el.shadowRoot!.querySelectorAll('lr-chat-composer').length).to.equal(0);
 });
 
@@ -142,6 +142,71 @@ it('lets named slots replace the data-driven transcript and details', async () =
   `);
   expect(el.querySelector('#custom-composer')).to.exist;
   expect(el.querySelector('#custom-details')).to.exist;
+});
+
+it('observes details content added and removed after mount', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace></lr-agent-workspace>`);
+  const body = el.shadowRoot!.querySelector('[part="body"]')!;
+  expect(body.getAttribute('data-details')).to.equal('false');
+
+  const details = document.createElement('div');
+  details.slot = 'details';
+  details.textContent = 'Dynamic details';
+  el.append(details);
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(body.getAttribute('data-details')).to.equal('true');
+  expect((el.shadowRoot!.querySelector('[part="details"]') as HTMLElement).hidden).to.be.false;
+
+  details.remove();
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(body.getAttribute('data-details')).to.equal('false');
+  expect((el.shadowRoot!.querySelector('[part="details"]') as HTMLElement).hidden).to.be.true;
+});
+
+it('showComposer=false suppresses only the built-in fallback and keeps a custom composer visible', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace show-composer="false">
+      <div slot="composer" id="custom-composer">Custom composer</div>
+    </lr-agent-workspace>
+  `);
+  expect(el.shadowRoot!.querySelector('lr-chat-composer')).to.not.exist;
+  expect((el.shadowRoot!.querySelector('[part="composer"]') as HTMLElement).hidden).to.be.false;
+  expect(el.querySelector('#custom-composer')).to.exist;
+});
+
+it('renders a bounded latest-message window for very large fallback transcripts', async () => {
+  const manyMessages: ChatMessage[] = Array.from({ length: 510 }, (_, index) => ({
+    id: `message-${index}`,
+    role: 'assistant',
+    text: `Message ${index}`,
+  }));
+  const el = await fixture<LyraAgentWorkspace>(
+    html`<lr-agent-workspace .messages=${manyMessages} unread-start-index="505"></lr-agent-workspace>`,
+  );
+  const rendered = el.shadowRoot!.querySelectorAll('lr-chat-message');
+  expect(rendered).to.have.lengthOf(500);
+  expect((rendered[0] as HTMLElement).getAttribute('message-id')).to.equal('message-10');
+  const viewport = el.shadowRoot!.querySelector('lr-chat-viewport') as unknown as {
+    unreadStartIndex: number | null;
+  };
+  expect(viewport.unreadStartIndex).to.equal(495);
+});
+
+it('uses both narrow body tracks without leaving dead space above the composer', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`
+    <lr-agent-workspace style="inline-size:360px; block-size:640px" .messages=${messages}>
+      <div slot="details" style="block-size:500px">Tall details</div>
+    </lr-agent-workspace>
+  `);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  const details = el.shadowRoot!.querySelector('[part="details"]') as HTMLElement;
+  expect(Math.abs(body.getBoundingClientRect().bottom - details.getBoundingClientRect().bottom)).to.be.at.most(1);
+  expect(
+    (el.shadowRoot!.querySelector('[part="conversation"]') as HTMLElement).getBoundingClientRect().height,
+  ).to.be.greaterThan(100);
 });
 
 it('is accessible in a populated state', async () => {

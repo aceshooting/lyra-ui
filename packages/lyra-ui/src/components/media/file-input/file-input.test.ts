@@ -258,6 +258,39 @@ it('keeps the "accept"/"reject" preview state while a drag moves across nested c
   expect(base.getAttribute('data-drag-state')).to.equal('default');
 });
 
+it('clears an active drag session when disabled mid-drag', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+
+  el.disabled = true;
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('default');
+
+  el.disabled = false;
+  await el.updateComplete;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  base.dispatchEvent(new DragEvent('dragleave', { bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('default');
+});
+
+it('clears an active drag session across disconnect and reconnect', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  dragEnterWith(base, [makeFile('a.csv', 'text/csv')]);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('accept');
+
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+  await el.updateComplete;
+  expect(base.getAttribute('data-drag-state')).to.equal('default');
+});
+
 it('openPicker() clicks the hidden native input', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
@@ -364,6 +397,26 @@ it('focus() delegates to the semantic dropzone', async () => {
   const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+});
+
+it('blur() and click() delegate to the semantic dropzone contract', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  let pickerClicks = 0;
+  input.addEventListener('click', () => pickerClicks++);
+
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(base);
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+
+  el.click();
+  expect(pickerClicks).to.equal(1);
+  el.disabled = true;
+  await el.updateComplete;
+  el.click();
+  expect(pickerClicks).to.equal(1);
 });
 
 it('bridges focus and blur from the dropzone a user actually tabs to, not the hidden native input', async () => {
@@ -539,6 +592,25 @@ it('announces accepted and rejected selection outcomes through the live region',
   await plural;
   await el.updateComplete;
   expect(status.textContent).to.equal('2 files added. 2 files rejected.');
+});
+
+it('formats accepted and rejected result counts with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-file-input lang="ar-EG" multiple .allowedMimeTypes=${['text/csv']}></lr-file-input>
+  `)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const status = el.shadowRoot!.querySelector('[part="status"]') as HTMLElement;
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base, [
+    makeFile('one.csv', 'text/csv'),
+    makeFile('two.csv', 'text/csv'),
+    makeFile('one.png', 'image/png'),
+    makeFile('two.png', 'image/png'),
+  ]);
+  await result;
+  await el.updateComplete;
+  expect(status.textContent).to.contain('٢');
+  expect(status.textContent).to.not.contain('2');
 });
 
 it('renders no visible rejection region before any rejection has occurred', async () => {

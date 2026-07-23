@@ -6,7 +6,7 @@ export const styles = [
   css`
     :host {
       display: block;
-      --lr-task-list-spin: 1s linear;
+      --lr-task-list-spin: var(--lr-transition-ambient);
     }
     [part='base'] {
       border: var(--lr-border-width-thin) solid var(--lr-color-border);

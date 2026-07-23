@@ -301,6 +301,44 @@ describe('the file property', () => {
       URL.revokeObjectURL = original;
     }
   });
+
+  it('creates a fresh object URL after disconnect and reconnect', async () => {
+    const file = makeFile('a.png', 'image/png');
+    const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
+    const parent = el.parentElement!;
+    const firstSrc = (el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement).src;
+
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    const secondSrc = (el.shadowRoot!.querySelector('[part="thumbnail"] img') as HTMLImageElement).src;
+    expect(secondSrc).to.match(/^blob:/);
+    expect(secondSrc).to.not.equal(firstSrc);
+  });
+
+  it('closes transient preview state when the attachment identity changes or reconnects', async () => {
+    const file = makeFile('a.png', 'image/png');
+    const el = (await fixture(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`)) as LyraAttachmentChip;
+    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    let viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
+    expect(viewer.open).to.be.true;
+
+    el.file = makeFile('b.png', 'image/png');
+    await el.updateComplete;
+    viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
+    expect(viewer.open).to.be.false;
+
+    (el.shadowRoot!.querySelector('[part="preview-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    viewer = el.shadowRoot!.querySelector('lr-document-viewer') as HTMLElement & { open: boolean };
+    expect(viewer.open).to.be.false;
+  });
 });
 
 describe('status accents and progress', () => {
@@ -776,6 +814,20 @@ describe('file-size unit localization', () => {
     )) as LyraAttachmentChip;
     const size = el.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(size.textContent).to.equal('2.3 MB');
+  });
+
+  it('formats numeric sizes and progress with the effective locale', async () => {
+    const el = (await fixture(html`
+      <lr-attachment-chip
+        lang="ar-EG"
+        name="report.pdf"
+        size="2415919"
+        status="uploading"
+        progress="42"
+      ></lr-attachment-chip>
+    `)) as LyraAttachmentChip;
+    expect(el.shadowRoot!.querySelector('[part="size"]')!.textContent).to.contain('٢٫٣');
+    expect(el.shadowRoot!.querySelector('[part="status-text"]')!.textContent).to.contain('٤٢');
   });
 });
 

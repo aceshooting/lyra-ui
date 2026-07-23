@@ -1134,7 +1134,7 @@ it('caps visible tags at maxOptionsVisible and shows a "+N" overflow tag', async
 
   const tags = el.shadowRoot!.querySelectorAll('[part="tag"]');
   expect(tags.length).to.equal(3);
-  expect(tags[2].textContent?.trim()).to.equal('+2');
+  expect(tags[2].textContent?.trim()).to.equal('+2 more');
 });
 
 it('shows the empty-state message with a custom emptyText when no rows match', async () => {
@@ -1561,6 +1561,88 @@ it('resolves a programmatically-set value to its label from asyncRows, warming t
   const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
   expect(el.open).to.be.false;
   expect(input.value).to.equal('Banana');
+});
+
+it('associates grouped options through role=group and aria-labelledby', async () => {
+  const el = (await fixture(html`
+    <lr-combobox open>
+      <lr-option value="a" group="Fruit">Apple</lr-option>
+      <lr-option value="b" group="Fruit">Banana</lr-option>
+      <lr-option value="c" group="Vegetables">Carrot</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await aTimeout(0);
+  await el.updateComplete;
+  const groups = [...el.shadowRoot!.querySelectorAll('[role="group"]')] as HTMLElement[];
+  expect(groups.length).to.equal(2);
+  for (const group of groups) {
+    const labelId = group.getAttribute('aria-labelledby')!;
+    expect(labelId).to.not.equal('');
+    expect(el.shadowRoot!.getElementById(labelId)?.textContent?.trim()).to.not.equal('');
+    expect(group.querySelectorAll('[role="option"]').length).to.be.greaterThan(0);
+  }
+});
+
+it('omits aria-activedescendant when no option is active', async () => {
+  const el = (await fixture(html`<lr-combobox open></lr-combobox>`)) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(input.hasAttribute('aria-activedescendant')).to.be.false;
+});
+
+it('localizes and locale-formats the selected-tag overflow count', async () => {
+  const el = (await fixture(html`
+    <lr-combobox multiple max-options-visible="1" locale="ar-EG"
+      .strings=${{ comboboxSelectedOverflow: '{n} إضافية' }}>
+      <lr-option value="a">A</lr-option>
+      <lr-option value="b">B</lr-option>
+      <lr-option value="c">C</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  el.value = ['a', 'b', 'c'];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="tag"]')[1]!.textContent?.trim()).to.equal('٢ إضافية');
+});
+
+it('renders a localized alert and clears stale rows when an async source fails', async () => {
+  const el = (await fixture(html`
+    <lr-combobox source-delay="0" open
+      .strings=${{ comboboxLoadError: 'Options unavailable' }}></lr-combobox>
+  `)) as LyraCombobox;
+  el.source = async () => {
+    throw new Error('private server detail');
+  };
+  await el.updateComplete;
+  await aTimeout(20);
+  await el.updateComplete;
+  const alert = el.shadowRoot!.querySelector('[role="alert"]') as HTMLElement;
+  expect(alert.textContent?.trim()).to.equal('Options unavailable');
+  expect(alert.textContent).to.not.contain('private server detail');
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(0);
+});
+
+it('invalidates an in-flight request when source is replaced and clamps active state after shrink', async () => {
+  let resolveOld!: (rows: import('./combobox.js').ComboboxSourceRow[]) => void;
+  const oldRows = new Promise<import('./combobox.js').ComboboxSourceRow[]>((resolve) => {
+    resolveOld = resolve;
+  });
+  const el = (await fixture(html`<lr-combobox source-delay="0" open></lr-combobox>`)) as LyraCombobox;
+  el.source = () => oldRows;
+  await el.updateComplete;
+  await aTimeout(10);
+
+  el.source = async () => [{ value: 'new', label: 'New' }];
+  await el.updateComplete;
+  await aTimeout(10);
+  await el.updateComplete;
+  resolveOld([{ value: 'old', label: 'Old' }]);
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const labels = [...el.shadowRoot!.querySelectorAll('[part="option"]')]
+    .map((row) => row.textContent?.trim());
+  expect(labels).to.deep.equal(['New']);
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(input.hasAttribute('aria-activedescendant')).to.be.false;
 });
 
 it('resolves a programmatically-set value to its label from asyncRows in multi-select tag chips', async () => {

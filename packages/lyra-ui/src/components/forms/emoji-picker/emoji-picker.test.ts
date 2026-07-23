@@ -71,11 +71,11 @@ async function connectEmojiPicker(
   return el;
 }
 
-it('scales the emoji item box across every tier, floored at the shared 40px hit area', async () => {
+it('scales the emoji item box across every tier, floored at the 24px primary-control hit area', async () => {
   const expected: Record<string, string> = {
-    '2xs': '40px',
-    xs: '40px',
-    s: '40px',
+    '2xs': '24px',
+    xs: '28px',
+    s: '32px',
     m: '40px',
     l: '48px',
     xl: '56px',
@@ -295,6 +295,25 @@ describe('search filtering', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('[part="emoji"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.exist;
+  });
+
+  it('case-folds names and queries with the effective locale', async () => {
+    const el = await connectEmojiPicker();
+    el.locale = 'tr';
+    el.groups = [
+      {
+        key: 'places',
+        label: 'Places',
+        emojis: [{ emoji: '📍', name: 'İzmir' }],
+      },
+    ];
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="search"]') as HTMLInputElement;
+    input.value = 'iz';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="emoji"]').length).to.equal(1);
   });
 });
 

@@ -8,7 +8,7 @@ import { styles as itemStyles } from './timeline-item.styles.js';
 it('renders with default orientation="vertical" and role="list" on [part="base"]', async () => {
   const el = (await fixture(html`<lr-timeline></lr-timeline>`)) as LyraTimeline;
   expect(el.orientation).to.equal('vertical');
-  expect(el.hasAttribute('orientation')).to.be.false;
+  expect(el.getAttribute('orientation')).to.equal('vertical');
   const base = el.shadowRoot!.querySelector('[part="base"]')!;
   expect(base.getAttribute('role')).to.equal('list');
 });
@@ -16,6 +16,38 @@ it('renders with default orientation="vertical" and role="list" on [part="base"]
 it('orientation="horizontal" reflects the attribute', async () => {
   const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
   expect(el.getAttribute('orientation')).to.equal('horizontal');
+});
+
+it('reflects orientation and item variant when assigned as properties so CSS state follows', async () => {
+  const el = (await fixture(
+    html`<lr-timeline><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
+  )) as LyraTimeline;
+  const item = el.querySelector('lr-timeline-item')!;
+
+  el.orientation = 'horizontal';
+  item.variant = 'danger';
+  await Promise.all([el.updateComplete, item.updateComplete]);
+
+  expect(el.getAttribute('orientation')).to.equal('horizontal');
+  expect(item.getAttribute('variant')).to.equal('danger');
+  expect(getComputedStyle(item.shadowRoot!.querySelector('[part="base"]') as HTMLElement).flexDirection).to.equal(
+    'column',
+  );
+});
+
+it('contains an unbroken title inside a 320px vertical allocation', async () => {
+  const wrapper = await fixture(html`
+    <div style="inline-size: 320px">
+      <lr-timeline>
+        <lr-timeline-item>${'unbroken'.repeat(200)}</lr-timeline-item>
+      </lr-timeline>
+    </div>
+  `);
+  const timeline = wrapper.querySelector('lr-timeline') as HTMLElement;
+  const item = wrapper.querySelector('lr-timeline-item') as HTMLElement;
+  const title = item.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  expect(timeline.scrollWidth).to.be.at.most(320);
+  expect(title.scrollWidth).to.be.at.most(title.clientWidth);
 });
 
 it('orientation="horizontal" actually reorients a slotted item -- marker above content, not beside it', async () => {

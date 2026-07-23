@@ -321,6 +321,32 @@ describe('lr-query-builder', () => {
     expect(fired).to.be.false;
   });
 
+  it('consumes raw composed child input/change events before emitting its wrapper event', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }],
+    };
+    const parent = await fixture(html`<div><lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder></div>`);
+    const el = parent.querySelector('lr-query-builder') as LyraQueryBuilder;
+    await el.updateComplete;
+    let rawInputs = 0;
+    let rawChanges = 0;
+    let wrapperInputs = 0;
+    parent.addEventListener('input', () => rawInputs++);
+    parent.addEventListener('change', () => rawChanges++);
+    parent.addEventListener('lr-input', () => wrapperInputs++);
+
+    const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    setAndDispatch(input, 'value', 'beta', 'input');
+    await el.updateComplete;
+    const field = conditionRow(el, 0).querySelector('[part="field-select"]') as LyraSelect;
+    setAndDispatch(field, 'value', 'age', 'change');
+
+    expect(rawInputs).to.equal(0);
+    expect(rawChanges).to.equal(0);
+    expect(wrapperInputs).to.equal(2);
+  });
+
   it('disabled propagates to field/operator selects, value controls, and the add/remove buttons', async () => {
     const value: QueryBuilderValue = { combinator: 'and', conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: 'a' }] };
     const el = (await fixture(html`<lr-query-builder disabled .fields=${FIELDS} .value=${value}></lr-query-builder>`)) as LyraQueryBuilder;

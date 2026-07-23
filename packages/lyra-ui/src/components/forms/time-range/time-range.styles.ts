@@ -4,6 +4,28 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
+    --lr-time-range-handle-size: calc(
+      var(--lr-size-14px) * var(--lr-time-range-size-scale)
+    );
+    --lr-time-range-hit-size: max(
+      var(--lr-size-24px),
+      calc(var(--lr-size-28px) * var(--lr-time-range-size-scale))
+    );
+    --lr-time-range-track-size: calc(
+      var(--lr-size-4px) * var(--lr-time-range-size-scale)
+    );
+    --lr-time-range-base-size: calc(
+      var(--lr-size-1-5rem) * var(--lr-time-range-size-scale)
+    );
+    --lr-time-range-preset-gap: var(--lr-space-xs);
+    --lr-time-range-preset-radius: var(--lr-radius);
+    --lr-time-range-preset-padding: calc(
+        var(--lr-space-xs) * var(--lr-time-range-size-scale)
+      )
+      calc(var(--lr-space-s) * var(--lr-time-range-size-scale));
+    --lr-time-range-preset-font-size: calc(
+      var(--lr-font-size-sm) * var(--lr-time-range-size-scale)
+    );
     /* No fixed block-size here (unlike before presets existed): [part="base"]
        now carries its own 1.5rem below and the host's block box is just the
        natural stack height of its children. With presets empty this still
@@ -29,7 +51,7 @@ export const styles = css`
   [part='presets'] {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-time-range-preset-gap);
     margin-block-end: var(--lr-space-s);
   }
   [part='preset-button'] {
@@ -43,13 +65,13 @@ export const styles = css`
        label (e.g. "1h") measures under 24px wide at 2xs/xs once the padding shrinks with it. */
     min-block-size: var(--lr-size-24px);
     min-inline-size: var(--lr-size-24px);
-    padding: calc(var(--lr-space-xs) * var(--lr-time-range-size-scale)) calc(var(--lr-space-s) * var(--lr-time-range-size-scale));
+    padding: var(--lr-time-range-preset-padding);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-time-range-preset-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
-    font-size: calc(var(--lr-font-size-sm) * var(--lr-time-range-size-scale));
+    font-size: var(--lr-time-range-preset-font-size);
     cursor: pointer;
     transition: var(--lr-transition-fast);
   }
@@ -85,27 +107,27 @@ export const styles = css`
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: calc(var(--lr-size-1-5rem) * var(--lr-time-range-size-scale));
+    block-size: var(--lr-time-range-base-size);
     display: flex;
     align-items: center;
   }
   [part='track'] {
     position: absolute;
     inset-inline: 0;
-    block-size: calc(var(--lr-size-4px) * var(--lr-time-range-size-scale));
+    block-size: var(--lr-time-range-track-size);
     border-radius: var(--lr-size-2px);
     background: var(--lr-color-border);
   }
   [part='range'] {
     position: absolute;
-    block-size: calc(var(--lr-size-4px) * var(--lr-time-range-size-scale));
+    block-size: var(--lr-time-range-track-size);
     border-radius: var(--lr-size-2px);
     background: var(--lr-color-brand);
   }
   [part^='handle'] {
     position: absolute;
-    inline-size: calc(var(--lr-size-14px) * var(--lr-time-range-size-scale));
-    block-size: calc(var(--lr-size-14px) * var(--lr-time-range-size-scale));
+    inline-size: var(--lr-time-range-handle-size);
+    block-size: var(--lr-time-range-handle-size);
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
@@ -113,6 +135,12 @@ export const styles = css`
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;
+  }
+  [part^='handle'][data-at-domain-start] {
+    transform: translateX(0);
+  }
+  [part^='handle'][data-at-domain-end] {
+    transform: translateX(-100%);
   }
   /* [part^='handle'] is positioned with a logical inset-inline-start:<pct>%
      (set inline in render()), which the browser anchors to the box's own
@@ -122,6 +150,12 @@ export const styles = css`
      from its true track position. */
   :host(:dir(rtl)) [part^='handle'] {
     transform: translateX(50%);
+  }
+  :host(:dir(rtl)) [part^='handle'][data-at-domain-start] {
+    transform: translateX(0);
+  }
+  :host(:dir(rtl)) [part^='handle'][data-at-domain-end] {
+    transform: translateX(100%);
   }
   /*
    * The visible dot's base size is var(--lr-size-14px) by design, but only renders at that literal
@@ -145,17 +179,31 @@ export const styles = css`
     position: absolute;
     inset-block-start: 50%;
     inset-inline-start: 50%;
-    inline-size: max(var(--lr-size-24px), calc(var(--lr-size-28px) * var(--lr-time-range-size-scale)));
-    block-size: max(var(--lr-size-24px), calc(var(--lr-size-28px) * var(--lr-time-range-size-scale)));
+    inline-size: var(--lr-time-range-hit-size);
+    block-size: var(--lr-time-range-hit-size);
     transform: translate(-50%, -50%);
     border-radius: 50%;
+  }
+  [part^='handle'][data-at-domain-start]::before {
+    inset-inline-start: 0;
+    transform: translate(0, -50%);
+  }
+  [part^='handle'][data-at-domain-end]::before {
+    inset-inline-start: 100%;
+    transform: translate(-100%, -50%);
   }
   /* Same logical-inset-vs-physical-transform mismatch as the handle itself:
      this enlarged hit-area is centered on inset-inline-start: 50%, so its
      horizontal translate must flip sign under RTL too or the actual drag
      hit zone detaches from the visible handle. */
-  :host(:dir(rtl)) [part^='handle']::before {
+  :host(:dir(rtl)) [part^='handle']:not([data-at-domain-start]):not([data-at-domain-end])::before {
     transform: translate(50%, -50%);
+  }
+  :host(:dir(rtl)) [part^='handle'][data-at-domain-start]::before {
+    transform: translate(0, -50%);
+  }
+  :host(:dir(rtl)) [part^='handle'][data-at-domain-end]::before {
+    transform: translate(100%, -50%);
   }
   [part^='handle']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

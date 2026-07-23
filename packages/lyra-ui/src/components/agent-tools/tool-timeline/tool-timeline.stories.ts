@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { createRef, ref } from 'lit/directives/ref.js';
 import './tool-timeline.js';
 import type { ToolTimelineEntry, ToolTimelineApprovalDetail } from './tool-timeline.js';
 
@@ -151,4 +152,36 @@ export const AlreadyDecided: Story = {
 export const EmptyState: Story = {
   name: 'No entries',
   render: () => html`<lr-tool-timeline style="max-width:36rem;"></lr-tool-timeline>`,
+};
+
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long expanded error)',
+  render: () => {
+    const timelineRef = createRef<HTMLElement>();
+    setTimeout(() => {
+      const details = timelineRef.value?.shadowRoot?.querySelector('lr-details') as
+        | (HTMLElement & { open: boolean })
+        | null;
+      if (!details?.open) details?.shadowRoot?.querySelector<HTMLElement>('summary')?.click();
+    });
+    return html`
+      <div style="inline-size:320px;max-inline-size:100%">
+        <lr-tool-timeline
+          ${ref(timelineRef)}
+          .entries=${[
+            {
+              id: 'long-error',
+              name: 'query_customer_database_readonly_with_a_long_identifier',
+              args: { customer: 'enterprise-customer-with-a-long-correlation-identifier' },
+              status: 'error',
+              error:
+                'The production customer database request exceeded the configured deadline while querying every regional source.',
+              startedAt: Date.now() - 30_000,
+              endedAt: Date.now(),
+            },
+          ] satisfies ToolTimelineEntry[]}
+        ></lr-tool-timeline>
+      </div>
+    `;
+  },
 };

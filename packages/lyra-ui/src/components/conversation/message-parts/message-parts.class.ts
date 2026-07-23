@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type {
@@ -6,9 +6,17 @@ import type {
   CitationSelectEventDetail,
   MessagePart,
 } from '../../../ai/types.js';
+import type { LyraThinkingPanelEventMap } from '../../agent-tools/thinking-panel/thinking-panel.class.js';
+import type { LyraToolCallChipEventMap } from '../../agent-tools/tool-call-chip/tool-call-chip.class.js';
+import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-view/tool-result-view.class.js';
+import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/attachment-chip.class.js';
+import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
+import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
+import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
+import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
 import '../../agent-tools/thinking-panel/thinking-panel.js';
 import '../../agent-tools/tool-call-chip/tool-call-chip.js';
 import '../../agent-tools/tool-result-view/tool-result-view.js';
@@ -22,9 +30,18 @@ import { styles } from './message-parts.styles.js';
 
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;
 
-export interface LyraMessagePartsEventMap {
+export interface LyraMessagePartsEventMap
+  extends Omit<LyraMarkdownEventMap, 'lr-render-error'>,
+    LyraThinkingPanelEventMap,
+    LyraToolCallChipEventMap,
+    Omit<LyraToolResultViewEventMap, 'lr-render-error'>,
+    LyraAttachmentChipEventMap,
+    Omit<LyraCitationBadgeEventMap, 'lr-citation-activate'>,
+    LyraJsonViewerEventMap,
+    Omit<LyraWidgetRendererEventMap, 'lr-render-error'> {
   'lr-citation-select': CustomEvent<CitationSelectEventDetail>;
   'lr-part-retry': CustomEvent<{ part: MessagePart }>;
+  'lr-render-error': CustomEvent<{ error: unknown } | { toolName: string; error: unknown }>;
 }
 
 /**
@@ -35,6 +52,22 @@ export interface LyraMessagePartsEventMap {
  * @customElement lr-message-parts
  * @event lr-citation-select - A citation part was activated. `detail: { citation }`.
  * @event lr-part-retry - Retry was requested for a retryable error part. `detail: { part }`.
+ * @event lr-toggle - Passthrough from a rendered reasoning panel.
+ * @event lr-tool-call-chip-select - Passthrough from a rendered tool-call chip.
+ * @event lr-tool-chip-select - Deprecated tool-call selection alias passthrough.
+ * @event lr-render-error - Passthrough from rendered Markdown, tool-result, or widget content.
+ * @event lr-link-click - Passthrough from rendered Markdown.
+ * @event lr-highlight-activate - Passthrough from rendered Markdown.
+ * @event lr-text-select - Passthrough from rendered Markdown.
+ * @event lr-anchor-result - Passthrough from rendered Markdown.
+ * @event lr-preview - Passthrough from a rendered attachment.
+ * @event lr-retry - Passthrough from a rendered attachment.
+ * @event lr-remove - Passthrough from a rendered attachment.
+ * @event lr-citation-open - Passthrough from a rendered citation's full-preview action.
+ * @event lr-copy - Passthrough from rendered JSON content.
+ * @event lr-search-change - Passthrough from rendered JSON content.
+ * @event lr-widget-action - Passthrough from a rendered declarative widget.
+ * @event lr-widget-state-change - Passthrough from a rendered controlled widget.
  * @csspart base - The ordered message-part list.
  * @csspart part - Every rendered part wrapper.
  * @csspart part-streaming - Additional part name on a streaming part.
@@ -79,6 +112,17 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
 
   @property() label = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  private knownErrorIds = new Set<string>();
+  private newErrorIds = new Set<string>();
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (!changed.has('parts')) return;
+    const current = this.parts.filter((part) => part.type === 'error').map((part) => part.id);
+    this.newErrorIds = this.hasUpdated
+      ? new Set(current.filter((id) => !this.knownErrorIds.has(id)))
+      : new Set();
+    this.knownErrorIds = new Set(current);
+  }
 
   private citationIndex(index: number): number {
     return this.parts.slice(0, index + 1).filter((part) => part.type === 'citation').length;
@@ -197,7 +241,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
       part=${this.partNames(part)}
       data-type=${part.type}
       data-state=${part.state ?? 'complete'}
-      role=${part.type === 'error' ? 'alert' : nothing}
+      role=${part.type === 'error' && this.newErrorIds.has(part.id) ? 'alert' : nothing}
     >${custom === undefined ? this.renderBuiltin(part, index) : custom}</div>`;
   }
 

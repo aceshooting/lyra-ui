@@ -43,10 +43,19 @@ export const Streaming: Story = {
 
 export const Narrow320: Story = {
   render: () => html`
-    <div style="max-width:320px">
-      <lr-artifact-panel label="report.md" kind="document" .versions=${versions}>
-        <div>Preview</div>
-        <pre slot="code">code</pre>
+    <div style="inline-size:320px;max-inline-size:100%">
+      <lr-artifact-panel
+        label="quarterly-customer-support-evaluation-report-with-a-long-name.md"
+        kind="generated multilingual document"
+        active-version-id="v1"
+        .versions=${versions}
+        .copyText=${REPORT_MARKDOWN}
+        download-src="data:text/plain,report"
+        download-name="quarterly-customer-support-evaluation-report.md"
+      >
+        <div style="overflow-wrap:anywhere">Rendered preview with long content that must stay inside the panel allocation.</div>
+        <pre slot="code">${REPORT_MARKDOWN}</pre>
+        <button slot="actions">Open in another workspace view</button>
       </lr-artifact-panel>
     </div>
   `,

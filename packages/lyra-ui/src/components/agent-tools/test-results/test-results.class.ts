@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './test-results.styles.js';
 // The registering barrels (not the bare *.class.js modules) -- this side effect is what
@@ -119,6 +120,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   /** Whether any test across all suites was `running` as of the last `suites` update -- diffed to
    *  detect the running -> not-running transition that triggers the completion announcement. */
   private previouslyRunning = false;
+  private readonly idPrefix = nextId('test-results');
 
   /** Text queued by `willUpdate` for the completion announcement, flushed once the live region
    *  has rendered (it may not exist yet on the very first update). */
@@ -164,8 +166,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return this.suites.reduce((n, suite) => n + suite.tests.filter((t) => t.status === status).length, 0);
   }
 
-  private isExpanded(test: TestCaseResult): boolean {
-    const manual = this.manualExpanded.get(test.id);
+  private isExpanded(testKey: string, test: TestCaseResult): boolean {
+    const manual = this.manualExpanded.get(testKey);
     if (manual !== undefined) return manual;
     return this.autoExpandFailures && test.status === 'failed';
   }
@@ -178,10 +180,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.emit('lr-filter-change', { statuses: next });
   }
 
-  private toggleExpanded(test: TestCaseResult): void {
-    const expanded = !this.isExpanded(test);
+  private toggleExpanded(testKey: string, test: TestCaseResult): void {
+    const expanded = !this.isExpanded(testKey, test);
     const next = new Map(this.manualExpanded);
-    next.set(test.id, expanded);
+    next.set(testKey, expanded);
     this.manualExpanded = next;
     this.emit('lr-toggle', { id: test.id, expanded });
   }
@@ -224,11 +226,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     `;
   }
 
-  private renderTest(suiteId: string, test: TestCaseResult): TemplateResult {
-    const expanded = this.isExpanded(test);
+  private renderTest(suiteId: string, test: TestCaseResult, suiteIndex: number, testIndex: number): TemplateResult {
+    const testKey = `${suiteIndex}-${testIndex}`;
+    const expanded = this.isExpanded(testKey, test);
     const canExpand = test.status === 'failed' || this.hasDetailSlot.has(test.id);
-    const failureId = `${test.id}-failure`;
-    const statusId = `${test.id}-status`;
+    const failureId = `${this.idPrefix}-${testKey}-failure`;
+    const statusId = `${this.idPrefix}-${testKey}-status`;
     return html`
       <div part="test" role="listitem" data-status=${test.status}>
         <span part="test-status" id=${statusId} data-status=${test.status}>
@@ -256,7 +259,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
               type="button"
               aria-expanded=${expanded ? 'true' : 'false'}
               aria-controls=${failureId}
-              @click=${() => this.toggleExpanded(test)}
+              @click=${() => this.toggleExpanded(testKey, test)}
             >
               ${expanded ? this.localize('collapse') : this.localize('expand')}
             </button>`
@@ -274,15 +277,17 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     `;
   }
 
-  private renderSuite(suite: TestSuiteResult): TemplateResult | typeof nothing {
-    const visibleTests = suite.tests.filter(
-      (t) => this.statusFilter.length === 0 || this.statusFilter.includes(t.status),
-    );
+  private renderSuite(suite: TestSuiteResult, suiteIndex: number): TemplateResult | typeof nothing {
+    const visibleTests = suite.tests
+      .map((test, testIndex) => ({ test, testIndex }))
+      .filter(({ test }) => this.statusFilter.length === 0 || this.statusFilter.includes(test.status));
     if (visibleTests.length === 0) return nothing;
     return html`
       <div part="suite">
         <div part="suite-header">${suite.name}</div>
-        <div role="list" aria-label=${suite.name}>${visibleTests.map((t) => this.renderTest(suite.id, t))}</div>
+        <div role="list" aria-label=${suite.name}
+          >${visibleTests.map(({ test, testIndex }) => this.renderTest(suite.id, test, suiteIndex, testIndex))}</div
+        >
       </div>
     `;
   }
@@ -294,7 +299,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
         ? html`<lr-empty heading=${this.localize('noData')}></lr-empty>`
         : html`
             <div part="base" role="group" aria-label=${ariaLabel}>
-              ${this.renderSummary()} ${this.suites.map((suite) => this.renderSuite(suite))}
+              ${this.renderSummary()} ${this.suites.map((suite, index) => this.renderSuite(suite, index))}
             </div>
           `}
       <lr-live-region mode="polite"></lr-live-region>

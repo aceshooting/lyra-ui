@@ -112,10 +112,14 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * @csspart hint - The hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-emoji-picker-item-size=var(--lr-icon-button-size)] - Each emoji button's box.
- *   Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button.
+ *   Floored at 24px; the small size tiers can stay denser than the shared 40px icon-button size.
  * @cssprop [--lr-emoji-picker-glyph-size=var(--lr-font-size-lg)] - Font size of the emoji glyph,
  *   scaled by the `size` property to keep the glyph proportional to the item box.
  * @cssprop [--lr-emoji-picker-gap=var(--lr-space-2xs)] - Gap between emoji within a windowed row.
+ * @cssprop [--lr-emoji-picker-control-gap=var(--lr-space-xs)] - Gap between field sections.
+ * @cssprop [--lr-emoji-picker-radius=var(--lr-radius)] - Outer picker corner radius.
+ * @cssprop [--lr-emoji-picker-item-radius=var(--lr-radius-xs)] - Search and emoji corner radius.
+ * @cssprop [--lr-emoji-picker-search-hover-border-color=var(--lr-color-brand)] - Search hover border.
  * @cssprop [--lr-emoji-picker-row-height=calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))] -
  *   One windowed row's height. Must stay at or above the item size plus the group-label band, or
  *   consecutive absolutely-positioned rows overlap.
@@ -209,19 +213,26 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   // re-lowercasing every item on every keystroke dominates filter cost for large sets. Keyed by
   // item identity in a WeakMap, so replacing `groups` invalidates naturally (stale entries are
   // simply collected).
-  private readonly haystacks = new WeakMap<EmojiPickerItem, string>();
+  private readonly haystacks = new WeakMap<
+    EmojiPickerItem,
+    { locale: string; value: string }
+  >();
 
   private haystackFor(item: EmojiPickerItem): string {
-    let haystack = this.haystacks.get(item);
-    if (haystack === undefined) {
-      haystack = [item.name, ...(item.shortcodes ?? [])].join(' ').toLowerCase();
-      this.haystacks.set(item, haystack);
+    const locale = this.effectiveLocale;
+    let cached = this.haystacks.get(item);
+    if (cached === undefined || cached.locale !== locale) {
+      cached = {
+        locale,
+        value: [item.name, ...(item.shortcodes ?? [])].join(' ').toLocaleLowerCase(locale),
+      };
+      this.haystacks.set(item, cached);
     }
-    return haystack;
+    return cached.value;
   }
 
   private get filteredGroups(): EmojiPickerGroup[] {
-    const q = this.queryText.trim().toLowerCase();
+    const q = this.queryText.trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return this.groups;
     return this.groups
       .map((group) => ({

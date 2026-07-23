@@ -8,6 +8,8 @@ import '../knowledge-base/knowledge-base.js';
 import '../ingestion-queue/ingestion-queue.js';
 import { styles } from './knowledge-base-admin.styles.js';
 
+let knowledgeBaseAdminInstance = 0;
+
 export type KnowledgeBaseAdminTab = 'sources' | 'ingestion';
 
 export interface LyraKnowledgeBaseAdminEventMap {
@@ -56,10 +58,44 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   /** Hides the ingestion tab and queue. */
   @property({ type: Boolean, attribute: 'hide-ingestion' }) hideIngestion = false;
 
+  private readonly idPrefix = `lr-knowledge-base-admin-${++knowledgeBaseAdminInstance}`;
+
+  private tabId(tab: KnowledgeBaseAdminTab): string {
+    return `${this.idPrefix}-${tab}-tab`;
+  }
+
+  private panelId(tab: KnowledgeBaseAdminTab): string {
+    return `${this.idPrefix}-${tab}-panel`;
+  }
+
   private setTab(tab: KnowledgeBaseAdminTab): void {
     if (tab === 'ingestion' && this.hideIngestion) return;
     this.activeTab = tab;
     this.emit('lr-tab-change', { tab });
+  }
+
+  private handleTabKeydown(event: KeyboardEvent, current: KnowledgeBaseAdminTab): void {
+    const tabs: KnowledgeBaseAdminTab[] = this.hideIngestion
+      ? ['sources']
+      : ['sources', 'ingestion'];
+    const currentIndex = tabs.indexOf(current);
+    const previousKey = this.effectiveDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+    const nextKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+    let nextIndex = currentIndex;
+    if (event.key === previousKey) nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === nextKey) nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    const next = tabs[nextIndex]!;
+    this.setTab(next);
+    void this.updateComplete.then(() => {
+      this.shadowRoot
+        ?.querySelector<HTMLButtonElement>(`#${this.tabId(next)}`)
+        ?.focus();
+    });
   }
 
   private forward<T>(event: Event, name: keyof LyraKnowledgeBaseAdminEventMap, detail: T): void {
@@ -73,16 +109,40 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     return html`<section part="base" aria-label=${label}>
       <h2 part="heading">${label}</h2>
       <div part="tabs" role="tablist" aria-label=${label}>
-        <button part="tab" type="button" role="tab" aria-selected=${tab === 'sources' ? 'true' : 'false'} @click=${() => this.setTab('sources')}
+        <button
+          part="tab"
+          id=${this.tabId('sources')}
+          type="button"
+          role="tab"
+          aria-controls=${this.panelId('sources')}
+          aria-selected=${tab === 'sources' ? 'true' : 'false'}
+          tabindex=${tab === 'sources' ? '0' : '-1'}
+          @click=${() => this.setTab('sources')}
+          @keydown=${(event: KeyboardEvent) => this.handleTabKeydown(event, 'sources')}
           >${this.localize('knowledgeBaseAdminSourcesTab')}</button
         >
         ${this.hideIngestion
           ? nothing
-          : html`<button part="tab" type="button" role="tab" aria-selected=${tab === 'ingestion' ? 'true' : 'false'} @click=${() => this.setTab('ingestion')}
+          : html`<button
+              part="tab"
+              id=${this.tabId('ingestion')}
+              type="button"
+              role="tab"
+              aria-controls=${this.panelId('ingestion')}
+              aria-selected=${tab === 'ingestion' ? 'true' : 'false'}
+              tabindex=${tab === 'ingestion' ? '0' : '-1'}
+              @click=${() => this.setTab('ingestion')}
+              @keydown=${(event: KeyboardEvent) => this.handleTabKeydown(event, 'ingestion')}
               >${this.localize('knowledgeBaseAdminIngestionTab')}</button
             >`}
       </div>
-      <div part="panel" role="tabpanel">
+      <div
+        part="panel"
+        id=${this.panelId('sources')}
+        role="tabpanel"
+        aria-labelledby=${this.tabId('sources')}
+        ?hidden=${tab !== 'sources'}
+      >
         ${tab === 'sources'
           ? html`<lr-knowledge-base
               .sources=${this.sources}
@@ -91,12 +151,25 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
               @lr-kb-pause=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-pause', event.detail)}
               @lr-kb-delete=${(event: CustomEvent<{ sourceId: string }>) => this.forward(event, 'lr-source-delete', event.detail)}
             ></lr-knowledge-base>`
-          : html`<lr-ingestion-queue
+          : nothing}
+      </div>
+      ${this.hideIngestion
+        ? nothing
+        : html`<div
+            part="panel"
+            id=${this.panelId('ingestion')}
+            role="tabpanel"
+            aria-labelledby=${this.tabId('ingestion')}
+            ?hidden=${tab !== 'ingestion'}
+          >
+            ${tab === 'ingestion'
+              ? html`<lr-ingestion-queue
               .items=${this.ingestionItems}
               @lr-retry=${(event: CustomEvent<RetryEventDetail & { itemId: string }>) => this.forward(event, 'lr-ingestion-retry', event.detail)}
               @lr-cancel=${(event: CustomEvent<CancelEventDetail & { itemId: string }>) => this.forward(event, 'lr-ingestion-cancel', event.detail)}
-            ></lr-ingestion-queue>`}
-      </div>
+            ></lr-ingestion-queue>`
+              : nothing}
+          </div>`}
       <div part="settings"><slot name="settings"></slot></div>
     </section>`;
   }

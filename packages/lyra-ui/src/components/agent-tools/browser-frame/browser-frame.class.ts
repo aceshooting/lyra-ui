@@ -151,6 +151,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
 
   private onSlotChange = (e: Event): void => {
     this.hasDefaultSlotContent = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.contentRect = null;
     this.requestUpdate();
   };
 

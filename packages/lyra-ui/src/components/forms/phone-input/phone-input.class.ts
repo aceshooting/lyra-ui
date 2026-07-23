@@ -230,6 +230,13 @@ function fallbackParse(input: string): PhoneNumberParseResult {
  * @csspart error - The error or validation message.
  * @cssprop --lr-phone-input-padding-block - Input block-padding, scaled by `size`.
  * @cssprop --lr-phone-input-font-size - Input/flag/country-code/calling-code font size, scaled by `size`.
+ * @cssprop --lr-phone-input-flag-size - Selected flag size, scaled by `size`.
+ * @cssprop --lr-phone-input-glyph-size - Country selector glyph size, scaled by `size`.
+ * @cssprop [--lr-phone-input-gap=var(--lr-space-xs)] - Country-trigger child gap.
+ * @cssprop [--lr-phone-input-radius=var(--lr-radius)] - Input-wrapper corner radius.
+ * @cssprop [--lr-phone-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
+ * @cssprop [--lr-phone-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.
+ * @cssprop [--lr-phone-input-country-hover-bg=var(--lr-color-brand-quiet)] - Country trigger hover background.
  * @cssprop --lr-phone-input-control-min-height - Input-wrapper block-size floor, scaled by `size`.
  * @cssprop --lr-phone-input-control-height - Exact input-wrapper height. Unset by default, which
  *   leaves `--lr-phone-input-control-min-height` as a floor only; set it to a length to both floor
@@ -315,15 +322,18 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
   private hintId = nextId('phone-hint');
   private errorId = nextId('phone-error');
   private explicitCountry = '';
+  private catalogCountryResolved = false;
 
   /** Currently selected ISO 3166-1 alpha-2 country code. */
   get country(): string {
+    if (this.catalogCountryResolved) return normalizeCountry(this.explicitCountry);
     const firstCountry = this.countries[0]?.code ?? this.adapter?.countries?.[0]?.code ?? '';
     return normalizeCountry(this.explicitCountry || this.defaultCountry || firstCountry);
   }
 
   set country(next: string) {
     const old = this.country;
+    this.catalogCountryResolved = false;
     this.explicitCountry = normalizeCountry(next ?? '');
     this.requestUpdate('country', old);
   }
@@ -409,6 +419,19 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     } catch {
       return fallbackParse(input);
     }
+  }
+
+  private reconcileCountryCatalog(): void {
+    const source = this.countries.length ? this.countries : (this.adapter?.countries ?? []);
+    const codes = source
+      .map((item) => normalizeCountry(item.code))
+      .filter((code, index, values) => /^[A-Z]{2}$/.test(code) && values.indexOf(code) === index);
+    const old = this.country;
+    const preferred = normalizeCountry(this.defaultCountry);
+    const next = codes.includes(old) ? old : codes.includes(preferred) ? preferred : (codes[0] ?? '');
+    this.explicitCountry = next;
+    this.catalogCountryResolved = true;
+    if (old !== next) this.requestUpdate('country', old);
   }
 
   private applyParsed(raw: string, parsed: PhoneNumberParseResult): void {
@@ -511,8 +534,14 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
         (child) => child.getAttribute('slot') === 'country-prefix',
       );
     }
+    if (this.hasUpdated && (changed.has('countries') || changed.has('adapter'))) {
+      this.reconcileCountryCatalog();
+    }
     if (
-      (changed.has('adapter') || changed.has('country') || changed.has('defaultCountry')) &&
+      (changed.has('adapter') ||
+        changed.has('countries') ||
+        changed.has('country') ||
+        changed.has('defaultCountry')) &&
       this.editableValue
     ) {
       this.applyParsed(this.editableValue, this.parse(this.editableValue));
@@ -585,6 +614,11 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
     this.hasCountryPrefixSlot =
       (event.currentTarget as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
   };
+
+  /** Activate the internal telephone input unless the form control is effectively disabled. */
+  override click(): void {
+    if (!this.effectiveDisabled) this.inputElement?.click();
+  }
 
   /** Focus the internal telephone input. */
   override focus(options?: FocusOptions): void {

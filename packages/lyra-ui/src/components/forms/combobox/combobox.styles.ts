@@ -126,6 +126,8 @@ export const styles = css`
   }
   [part='tag'] {
     display: inline-flex;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     align-items: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-combobox-tag-padding);
@@ -133,6 +135,12 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-text);
     border-radius: var(--lr-radius);
+  }
+  [part='tag-label'] {
+    min-inline-size: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-overflow: ellipsis;
   }
   /* Same compact-chip-remove pattern as lr-chip's [part='remove-button']: the interactive hit
      target meets the shared --lr-icon-button-size floor, while the visible glyph stays a
@@ -230,6 +238,7 @@ export const styles = css`
     box-sizing: border-box;
     max-block-size: min(var(--lr-size-18rem), var(--lr-positioner-available-block-size, var(--lr-size-18rem)));
     overflow-y: auto;
+    overflow-x: hidden;
     inline-size: max-content;
     min-inline-size: min(var(--lr-size-12rem), var(--lr-positioner-available-inline-size, var(--lr-size-12rem)));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-28rem), var(--lr-positioner-available-inline-size, 100vw));
@@ -248,6 +257,14 @@ export const styles = css`
       opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast),
       visibility var(--lr-transition-fast);
+  }
+  [part='option'],
+  .group-label,
+  .loading,
+  .empty,
+  .source-error {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   :host([open]) [part='listbox'] {
     visibility: visible;

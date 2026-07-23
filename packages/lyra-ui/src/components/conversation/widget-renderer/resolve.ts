@@ -40,6 +40,9 @@ export interface ResolvedElement {
   key: string;
   kind: 'builtin-row' | 'builtin-col' | 'builtin-text' | 'mapped';
   tag?: string;
+  /** Whether the mapped type exposes an action contract and therefore must not contain another
+   * actionable mapped type. */
+  interactive: boolean;
   props: Record<string, unknown>;
   actionEvent?: string;
   actionId?: string;
@@ -169,6 +172,11 @@ function resolveChild(
   return resolveNode(value, ctx, path, depth, budget);
 }
 
+function containsInteractive(node: ResolvedNode): boolean {
+  if (node.kind === 'text') return false;
+  return node.interactive || node.children.some(containsInteractive);
+}
+
 function resolveNode(
   node: WidgetNode,
   ctx: ResolveContext,
@@ -186,6 +194,7 @@ function resolveNode(
 
   let kind: ResolvedElement['kind'];
   let tag: string | undefined;
+  let interactive = false;
   let props: Record<string, unknown>;
   let actionEvent: string | undefined;
   let bindings: Array<{ prop: string; path: string; event?: string }> = [];
@@ -209,6 +218,7 @@ function resolveNode(
     }
     kind = 'mapped';
     tag = def.tag;
+    interactive = def.action !== undefined;
     const filtered = filterMappedProps(node.props, def, ctx, node.type);
     props = filtered.props;
     bindings = filtered.bindings;
@@ -222,6 +232,14 @@ function resolveNode(
   for (const [i, child] of (node.children ?? []).entries()) {
     const resolvedChild = resolveChild(child, ctx, `${path}.${i}`, depth + 1, budget);
     if (!resolvedChild) continue;
+    if (interactive && containsInteractive(resolvedChild)) {
+      warnOnce(
+        ctx,
+        `__nested-interactive__:${node.type}`,
+        `skipped an interactive descendant inside actionable type "${node.type}"`,
+      );
+      continue;
+    }
     if (resolvedChild.slot !== undefined && !slots.includes(resolvedChild.slot)) {
       resolvedChild.slot = undefined;
     }
@@ -232,6 +250,7 @@ function resolveNode(
     key,
     kind,
     tag,
+    interactive,
     props,
     actionEvent,
     actionId: actionEvent ? node.actionId : undefined,

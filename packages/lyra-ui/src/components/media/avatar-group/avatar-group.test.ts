@@ -121,6 +121,38 @@ describe('overflow behavior', () => {
     // carrying the normal overlap value.
     expect(getComputedStyle(badge).marginInlineStart).to.equal('0px');
   });
+
+  it('restores each child’s author-owned hidden state when overflow ownership ends or the group disconnects', async () => {
+    const el = (await fixture(html`
+      <lr-avatar-group max="1">
+        <lr-avatar initials="AB"></lr-avatar>
+        <lr-avatar initials="CD" hidden></lr-avatar>
+        <lr-avatar initials="EF"></lr-avatar>
+      </lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    const avatars = [...el.querySelectorAll('lr-avatar')] as HTMLElement[];
+    expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, true, true]);
+
+    el.max = undefined;
+    await el.updateComplete;
+    expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, true, false]);
+
+    el.max = 1;
+    await el.updateComplete;
+    el.remove();
+    expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, true, false]);
+  });
+
+  it('formats the visible and accessible overflow count with the effective locale', async () => {
+    const el = (await fixture(html`
+      <lr-avatar-group lang="ar-EG" max="1">
+        <lr-avatar></lr-avatar><lr-avatar></lr-avatar><lr-avatar></lr-avatar>
+      </lr-avatar-group>
+    `)) as LyraAvatarGroup;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]')!;
+    expect(badge.textContent).to.contain('٢');
+    expect(badge.getAttribute('aria-label')).to.contain('٢');
+  });
 });
 
 describe('dynamic children', () => {

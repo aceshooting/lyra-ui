@@ -231,7 +231,7 @@ export const styles = css`
     inset: 0;
     align-items: center;
     justify-content: center;
-    animation: lr-button-spin var(--lr-button-spinner-duration, 1s) linear infinite;
+    animation: lr-button-spin var(--lr-button-spinner-duration, var(--lr-transition-ambient)) infinite;
   }
   :host([loading]) [part='start'],
   :host([loading]) [part='label'],

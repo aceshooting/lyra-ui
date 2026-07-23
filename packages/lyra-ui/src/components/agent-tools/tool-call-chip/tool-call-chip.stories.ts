@@ -65,6 +65,21 @@ export const LongContentTruncates: Story = {
   `,
 };
 
+export const Narrow320: Story = {
+  name: 'Narrow (320px, long localized status)',
+  render: () => html`
+    <div style="inline-size:320px;max-inline-size:100%">
+      <lr-tool-call-chip
+        name="query_customer_database_readonly_with_a_long_identifier"
+        category="customer-support-production-tools"
+        status="running"
+        summary="Searching customer records across every configured regional data source"
+        .strings=${{ statusRunning: 'Execution actuellement en cours dans l’environnement sécurisé' }}
+      ></lr-tool-call-chip>
+    </div>
+  `,
+};
+
 export const CustomIconViaProp: Story = {
   name: 'Custom icon hint (icon prop, no slot override)',
   render: () => html`<lr-tool-call-chip name="web_search" icon="🔍" status="running" summary="Searching web…"></lr-tool-call-chip>`,

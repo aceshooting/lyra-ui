@@ -26,20 +26,14 @@ export const styles = css`
        both [part='base'] and [part='remove-button'] below so a consumer retuning the chip's
        corner shape gets a consistent remove-button corner too, not a mismatched one. */
     --lr-chip-radius: var(--lr-radius-pill);
-    /* Interactive (removable/toggleable) chips floor their tap target here. The compact tiers
-       share the 24px WCAG 2.2 SC 2.5.8 minimum -- an interactive chip must never shrink below it,
-       so 2xs/xs/s/m keep 1.5rem. The larger tiers reassign a taller floor (below their own
-       content-driven height, so it stays byte-identical until raised) so xl and 2xs no longer
-       share a single 1.5rem value. Non-interactive display chips get no floor from this at all
-       -- see [part='base'] below. */
+    /* Component density floor. Interactive controls also enforce the shared
+       --lr-icon-button-size hit target; non-interactive display chips get no floor. */
     --lr-chip-min-height: var(--lr-size-1-5rem);
     /* --lr-chip-height is intentionally NOT declared here. It is a consumer-facing exact-height
        escape hatch consumed only through the var() fallbacks on [part='base'] below; declaring
        any value for it (even 'auto') would make those fallback arms unreachable and turn
-       --lr-chip-min-height into dead code (the lr-select trap). Left undeclared, both arms stay
-       live: the per-tier floor falls out of the fallback, and setting the property pins an exact
-       height. A value small enough to break the interactive 24x24 target is for
-       non-interactive chips only. */
+       --lr-chip-min-height into dead code. Left undeclared, both arms stay live: the per-tier
+       floor falls out of the fallback, and setting the property pins an exact height. */
   }
 
   :host([size='3xs']) {
@@ -112,6 +106,7 @@ export const styles = css`
   }
 
   [part='base'] {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: var(--lr-chip-gap);
@@ -127,25 +122,24 @@ export const styles = css`
     font-weight: var(--lr-font-weight-medium);
     line-height: var(--lr-line-height-snug);
     /* Pinned only when --lr-chip-height is set; 'auto' otherwise, so a display chip keeps growing
-       to fit its own content exactly as before. Applies to interactive and non-interactive chips
-       alike -- the interactive floor lives on the [role='button'] rule below. */
+       to fit its own content. Applies to interactive and non-interactive chips alike -- the
+       interactive floor lives on the toggleable-host rule below. */
     block-size: var(--lr-chip-height, auto);
   }
 
-  [part='base'][role='button'] {
-    cursor: pointer;
-    min-block-size: var(--lr-chip-height, var(--lr-chip-min-height));
+  :host([toggleable]:not([removable])) [part='base'] {
+    min-block-size: var(--lr-chip-height, max(var(--lr-chip-min-height), var(--lr-icon-button-size)));
     -webkit-tap-highlight-color: transparent;
     transition: background-color var(--lr-transition-fast);
   }
-  [part='base'][role='button']:hover {
+  :host([toggleable]:not([removable])) [part='base']:hover {
     background: color-mix(in srgb, var(--lr-chip-accent) 8%, var(--lr-chip-bg));
   }
-  [part='base'][role='button']:focus-visible {
+  [part='toggle-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='base'][aria-pressed='true'] {
+  :host([selected]:not([removable])) [part='base'] {
     /* Falls back to --lr-chip-bg (today's exact value) so every existing consumer renders
        byte-identical when unset. A consumer wanting a distinct "active" tint independent of the
        resting background sets --lr-chip-pressed-bg directly. */
@@ -181,6 +175,20 @@ export const styles = css`
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  [part='toggle-button'] {
+    position: absolute;
+    inset: 0;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    border: none;
+    border-radius: var(--lr-chip-radius);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* The interactive hit target meets the shared minimum tappable size (same --lr-icon-button-size
@@ -223,7 +231,8 @@ export const styles = css`
 
   @media (prefers-reduced-motion: reduce) {
     [part='remove-button'],
-    [part='base'][role='button'] {
+    [part='toggle-button'],
+    :host([toggleable]:not([removable])) [part='base'] {
       transition: none !important;
     }
   }

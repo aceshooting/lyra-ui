@@ -155,9 +155,6 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
   }
-  [part='tool-row'][data-disabled] [part='tool-checkbox'] {
-    opacity: var(--lr-opacity-disabled);
-  }
   [part='tool-checkbox'] {
     align-items: flex-start;
   }
@@ -173,11 +170,14 @@ export const styles = css`
     font-size: var(--lr-font-size-md-sm);
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='tool-icon'] {
     line-height: var(--lr-line-height-none);
   }
   [part='tool-description'] {
+    overflow-wrap: anywhere;
     display: block;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);

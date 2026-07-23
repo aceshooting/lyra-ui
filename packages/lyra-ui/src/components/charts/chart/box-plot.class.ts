@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
@@ -7,9 +7,10 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import { loadChartJs } from './chart-loader.js';
 import { styles } from './box-plot.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-import { seriesPalette } from './chart-colors.js';
+import { resolveCanvasColor, seriesPalette } from './chart-colors.js';
+import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 
 export interface BoxPlotPoint {
   min: number;
@@ -88,6 +89,13 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
  */
 export class LyraBoxPlot extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];
+
+  constructor() {
+    super();
+    new ThemeWatcher(this, () => {
+      if (this.chart) this.refreshTheme();
+    });
+  }
 
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) boxes: BoxPlotSeries[] = [];
@@ -174,6 +182,7 @@ export class LyraBoxPlot extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    if (!this.isConnected) return;
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
 
@@ -221,12 +230,16 @@ export class LyraBoxPlot extends LyraElement {
       type: 'boxplot' as never,
       data: {
         labels: this.labels,
-        datasets: this.boxes.map((s, index) => ({
-          label: s.label,
-          data: s.data,
-          backgroundColor: s.color ?? palette[index % palette.length],
-          borderColor: s.color ?? palette[index % palette.length],
-        })),
+        datasets: this.boxes.map((s, index) => {
+          const fallback = palette[index % palette.length] ?? 'transparent';
+          const color = s.color ? resolveCanvasColor(this, s.color, fallback) : fallback;
+          return {
+            label: s.label,
+            data: s.data.map((point) => (this.validPoint(point) ? point : null)),
+            backgroundColor: color,
+            borderColor: color,
+          };
+        }),
       },
       options: {
         locale: this.effectiveLocale,
@@ -282,12 +295,13 @@ export class LyraBoxPlot extends LyraElement {
   private boxPlotDescription(): string {
     if (this.accessibleDescription) return this.accessibleDescription;
     const summaries = this.boxes.map((series) => {
-      if (!series.data.length) return this.localize('chartSeriesNoData', undefined, { label: series.label });
-      const first = series.data[0]!.median;
-      const last = series.data[series.data.length - 1]!.median;
+      const points = series.data.filter((point) => this.validPoint(point));
+      if (!points.length) return this.localize('chartSeriesNoData', undefined, { label: series.label });
+      const first = points[0]!.median;
+      const last = points[points.length - 1]!.median;
       let min = first;
       let max = first;
-      for (const point of series.data) {
+      for (const point of points) {
         min = Math.min(min, point.median);
         max = Math.max(max, point.median);
       }
@@ -299,15 +313,22 @@ export class LyraBoxPlot extends LyraElement {
             : this.localize('chartTrendFlat');
       return this.localize('boxPlotSeriesSummary', undefined, {
         label: series.label,
-        count: series.data.length,
+        count: getNumberFormat(this.effectiveLocale).format(points.length),
         min: getNumberFormat(this.effectiveLocale).format(min),
         max: getNumberFormat(this.effectiveLocale).format(max),
         trend,
       });
     });
     return summaries.length
-      ? this.localize('boxPlotSummaryWithData', undefined, { summaries: summaries.join('. ') })
+      ? this.localize('boxPlotSummaryWithData', undefined, {
+          summaries: summaries.join(this.localize('chartSummarySeparator')),
+        })
       : this.localize('boxPlotSummaryEmpty');
+  }
+
+  private validPoint(point: BoxPlotPoint | null | undefined): point is BoxPlotPoint {
+    return !!point &&
+      [point.min, point.q1, point.median, point.q3, point.max].every(Number.isFinite);
   }
 
   private accessibleName(fallback: string): string {
@@ -315,6 +336,7 @@ export class LyraBoxPlot extends LyraElement {
   }
 
   private renderDataTable(): TemplateResult {
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     return html`
       <table class=${this.showDataTable ? '' : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('boxPlotData'))}</caption>
@@ -332,22 +354,28 @@ export class LyraBoxPlot extends LyraElement {
         <tbody>
           ${this.boxes.flatMap((series) =>
             series.data.map(
-              (point, index) => html`
+              (point, index) => this.validPoint(point) ? html`
                 <tr>
-                  <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, { n: index + 1 })}</th>
+                  <th scope="row">${this.labels[index] ?? this.localize('chartPointLabel', undefined, {
+                    n: numberFormat.format(index + 1),
+                  })}</th>
                   <td>${series.label}</td>
-                  <td>${point.min}</td>
-                  <td>${point.q1}</td>
-                  <td>${point.median}</td>
-                  <td>${point.q3}</td>
-                  <td>${point.max}</td>
+                  <td>${numberFormat.format(point.min)}</td>
+                  <td>${numberFormat.format(point.q1)}</td>
+                  <td>${numberFormat.format(point.median)}</td>
+                  <td>${numberFormat.format(point.q3)}</td>
+                  <td>${numberFormat.format(point.max)}</td>
                 </tr>
-              `,
+              ` : nothing,
             ),
           )}
         </tbody>
       </table>
     `;
+  }
+
+  private hasCustomDataTable(): boolean {
+    return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
   }
 
   override render(): TemplateResult {
@@ -365,15 +393,20 @@ export class LyraBoxPlot extends LyraElement {
         </div>
       `;
     }
-    const label = this.accessibleName(this.boxes.map((b) => b.label).join(', ') || this.localize('boxPlot'));
+    const boxLabels = this.boxes.map((box) => box.label);
+    const label = this.accessibleName(
+      (boxLabels.length
+        ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(boxLabels)
+        : '') || this.localize('boxPlot'),
+    );
     const description = this.boxPlotDescription();
     return html`
       <div part="base">
         <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
         <div part="data-table">
-          <slot name="data-table"></slot>
-          ${this.renderDataTable()}
+          <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>
+          ${this.hasCustomDataTable() ? nothing : this.renderDataTable()}
         </div>
       </div>
     `;
