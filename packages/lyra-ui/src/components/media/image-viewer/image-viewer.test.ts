@@ -342,6 +342,36 @@ describe('annotation', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
   });
+
+  it('clears a keyboard-created draft on source change, annotation disable, and reconnect', async () => {
+    const el = (await fixture(
+      html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`,
+    )) as LyraImageViewer;
+    const startKeyboardDraft = async (): Promise<void> => {
+      const wrapper = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+      wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.exist;
+    };
+
+    await startKeyboardDraft();
+    el.src = `${PNG_SRC}?replacement`;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+
+    await startKeyboardDraft();
+    el.annotatable = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+
+    el.annotatable = true;
+    await el.updateComplete;
+    await startKeyboardDraft();
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="annotation-box"]')).to.not.exist;
+  });
 });
 
 // Positions the wrapper's bounding box deterministically -- a real image never actually loads in

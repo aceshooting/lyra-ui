@@ -878,6 +878,79 @@ it('keeps choropleth and data-layer sources distinct when their public sourceId 
   expect(el.map!.getSource('lr-choropleth-shared')).to.exist;
 });
 
+it('keeps the choropleth namespace distinct from both a colliding data source and its first fallback id', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
+  el.dataLayers = [
+    { sourceId: 'shared', geojson: { type: 'FeatureCollection', features: [] } },
+    { sourceId: 'lr-choropleth-shared', geojson: { type: 'FeatureCollection', features: [] } },
+  ];
+  await el.updateComplete;
+  await waitUntilMapLoaded(el);
+  await waitUntil(
+    () => Boolean(el.map!.getSource('lr-choropleth-lr-choropleth-shared')),
+    'choropleth did not move past both occupied data-layer ids',
+    { timeout: 2000 },
+  );
+
+  expect(el.map!.getSource('shared')).to.exist;
+  expect(el.map!.getSource('lr-choropleth-shared')).to.exist;
+  expect(el.map!.getSource('lr-choropleth-lr-choropleth-shared')).to.exist;
+});
+
+it('can replace a choropleth with a same-id data layer in one reactive update', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
+  await el.updateComplete;
+  await waitUntilMapLoaded(el);
+  await waitUntil(() => Boolean(el.map!.getLayer('shared-fill')), 'choropleth never applied', {
+    timeout: 2000,
+  });
+
+  el.choropleth = undefined;
+  el.dataLayers = [{
+    sourceId: 'shared',
+    geojson: { type: 'FeatureCollection', features: [] },
+  }];
+  await el.updateComplete;
+
+  expect(el.map!.getSource('shared')).to.exist;
+  expect(el.map!.getLayer('shared-fill')).to.exist;
+  expect(el.map!.getLayer('shared-line')).to.exist;
+  expect(el.map!.getLayer('shared-circle')).to.exist;
+});
+
+it('preserves colliding choropleth and data-layer namespaces across clear and style reload', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
+  el.dataLayers = [{
+    sourceId: 'shared',
+    geojson: { type: 'FeatureCollection', features: [] },
+  }];
+  await el.updateComplete;
+  await waitUntilMapLoaded(el);
+
+  el.mapStyle = {
+    ...RASTER_STYLE,
+    layers: [{ id: 'demo', type: 'raster', source: 'demo', paint: { 'raster-opacity': 0.8 } }],
+  } as typeof RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(
+    () => Boolean(el.map!.getSource('shared') && el.map!.getSource('lr-choropleth-shared')),
+    'colliding sources were not restored after style reload',
+    { timeout: 2000 },
+  );
+
+  el.choropleth = undefined;
+  await el.updateComplete;
+  expect(el.map!.getSource('lr-choropleth-shared')).to.not.exist;
+  expect(el.map!.getSource('shared')).to.exist;
+  expect(el.map!.getLayer('shared-line')).to.exist;
+});
+
 it('removes markers no longer present and reuses markers that persist', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
