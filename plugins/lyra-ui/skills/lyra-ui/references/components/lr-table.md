@@ -6,7 +6,7 @@
 - **Class** `LyraTable`, also available unregistered from `@aceshooting/lyra-ui/components/data/table/table.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 34 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -241,6 +241,9 @@ element *or on any ancestor* and still reach the rule that reads it. It exists b
 forbids an attribute selector after `::part()` — `::part(row)[aria-selected='true']` is invalid CSS —
 so the only prior lever for restyling the selected row was overriding the library-wide
 `--lr-color-brand-quiet` token, which repaints everything else reading it.
+`--lr-table-row-stripe-bg` (default `transparent`) — the background of alternating body rows. The
+component marks the alternating rows itself, so this works without an invalid `::part(row)` attribute
+or structural-pseudo-class selector and does not affect group, expanded, hover, or selected rows.
 `--lr-table-header-sorted-bg` (default `transparent`) and `--lr-table-header-sorted-color` (default
 `inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`).
 Same shape and rationale as `--lr-table-row-selected-bg`: inline `var()` fallbacks, not on `:host`,

@@ -20,6 +20,14 @@ it('shows the computed percent, not the raw value, in the show-value label when 
   expect(label?.textContent).to.equal('50%');
 });
 
+it('applies --lr-progress-height to the track', async () => {
+  const el = (await fixture(
+    html`<lr-progress-bar style="--lr-progress-height: 10px"></lr-progress-bar>`,
+  )) as LyraProgressBar;
+  const track = el.shadowRoot!.querySelector('[part="track"]') as HTMLElement;
+  expect(getComputedStyle(track).blockSize).to.equal('10px');
+});
+
 it('omits aria-valuenow for indeterminate progress', async () => {
   const el = (await fixture(html`<lr-progress-bar indeterminate></lr-progress-bar>`)) as LyraProgressBar;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

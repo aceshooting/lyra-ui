@@ -2698,7 +2698,7 @@ describe('--lr-table-row-stripe-bg', () => {
       <lr-table style="--lr-table-row-stripe-bg: rgb(10, 20, 30);"></lr-table>
     `)) as LyraTable<Row>;
     el.columns = columns;
-    el.rows = rows;
+    el.rows = [...rows, { id: 'c', name: 'Gamma', score: 2 }];
     el.rowKey = (r) => r.id;
     await el.updateComplete;
     const rowEls = [...el.shadowRoot!.querySelectorAll('[part="row"]')] as HTMLElement[];

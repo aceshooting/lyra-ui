@@ -17,6 +17,7 @@ const DEFAULT_MAX = 100;
  * @csspart track - The track.
  * @csspart indicator - The filled progress indicator.
  * @csspart label - The label row.
+ * @cssprop [--lr-progress-height=var(--lr-size-0-5rem)] - Block size of the progress track.
  */
 export class LyraProgressBar extends LyraElement {
   static override styles = [LyraElement.styles, styles];

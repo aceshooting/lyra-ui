@@ -739,6 +739,8 @@ The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-val
 determinate.
 
 **Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
+**Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
+block size of the progress track.
 
 ## `lr-progress-ring`
 

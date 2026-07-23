@@ -2501,6 +2501,13 @@
       }
     },
     {
+      "name": "--lr-progress-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-size-0-5rem)`) — Block size of the progress track."
+      }
+    },
+    {
       "name": "--lr-progress-ring-size",
       "description": {
         "kind": "markdown",
@@ -3219,6 +3226,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-table>`** (default: `var(--lr-color-brand-quiet)`) — Background of a row whose `aria-selected` is `true`. Shadow Parts forbids an attribute selector after `::part()`, so `::part(row)[aria-selected]` is invalid CSS and the selected row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
+      "name": "--lr-table-row-stripe-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-table>`** (default: `transparent`) — Background of alternating body rows. The token is read only on rows carrying the internal stripe marker, so it can be set on the table or an ancestor without affecting group, expanded, hover, or selected rows."
       }
     },
     {

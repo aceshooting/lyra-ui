@@ -6,7 +6,7 @@
 - **Class** `LyraProgressBar`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/progress/progress-bar.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,3 +21,5 @@ The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-val
 determinate.
 
 **Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
+**Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
+block size of the progress track.
