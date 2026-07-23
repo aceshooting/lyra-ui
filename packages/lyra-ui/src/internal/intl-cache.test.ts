@@ -1,5 +1,10 @@
 import { expect } from '@open-wc/testing';
-import { getNumberFormat, getDateTimeFormat, getDisplayNames } from './intl-cache.js';
+import {
+  getCollator,
+  getDateTimeFormat,
+  getDisplayNames,
+  getNumberFormat,
+} from './intl-cache.js';
 
 it('memoizes Intl.NumberFormat per locale + options, insensitive to option key order', () => {
   const a = getNumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 });
@@ -28,6 +33,14 @@ it('memoizes Intl.DisplayNames and resolves display names', () => {
   expect(a === b).to.be.true;
   expect(a.of('FR')).to.equal('France');
   expect(a === getDisplayNames('en', { type: 'language' })).to.be.false;
+});
+
+it('memoizes Intl.Collator and applies locale-aware numeric ordering', () => {
+  const a = getCollator('en-US', { numeric: true });
+  const b = getCollator('en-US', { numeric: true });
+  expect(a === b).to.be.true;
+  expect(['item10', 'item2'].sort(a.compare)).to.deep.equal(['item2', 'item10']);
+  expect(a === getCollator('en-US', { numeric: false })).to.be.false;
 });
 
 it('evicts the least recently used entry once a kind exceeds its bound', () => {

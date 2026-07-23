@@ -12,6 +12,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { getCollator } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -1216,7 +1217,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     ) {
       return this.cachedSortedEntries;
     }
-    const collator = new Intl.Collator(locale, { numeric: true });
+    const collator = getCollator(locale, { numeric: true });
     const dir = this.sortDir === 'desc' ? -1 : 1;
     // Decorate/sort/undecorate: `sortValue()`/`cell()` runs once per row rather than once per
     // comparison, so a costly consumer accessor stays O(n) instead of O(n log n). A non-finite
