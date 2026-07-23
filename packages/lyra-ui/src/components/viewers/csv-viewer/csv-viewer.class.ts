@@ -12,10 +12,14 @@ import '../../layout/virtual-list/virtual-list.js';
 import { loadPapaParseCached, type PapaParseApi } from '../../../internal/papaparse-loader.js';
 import { styles } from './csv-viewer.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import {
+  delimitedCellText as cell,
+  delimitedColumnCount as columns,
+  parseDelimitedGrid,
+} from '../../../internal/delimited-data.js';
+import { LatestTask } from '../../../internal/latest-task.js';
 
 type CsvState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; rows: unknown[][] } | { kind: 'error'; message: string };
-function columns(rows: unknown[][]): number { return rows.reduce((max, row) => Math.max(max, row.length), 0); }
-function cell(value: unknown): string { return value === undefined || value === null ? '' : String(value); }
 
 /** `hasHeaderRow` shifts every raw-grid (1-based, header row included) row number down by one to
  *  reach the matching index into the virtualized body array. */
@@ -97,7 +101,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   @state() private searchMatches: { row: number; col: number }[] = [];
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
-  private generation = 0;
+  private loadTask = new LatestTask();
   private loadLibrary: () => Promise<PapaParseApi | null> = loadPapaParseCached;
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -118,7 +122,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   }
 
   private async load(): Promise<void> {
-    const generation = ++this.generation;
+    const generation = this.loadTask.next();
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
@@ -128,15 +132,15 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const library = await this.loadLibrary();
-      if (!this.isConnected || generation !== this.generation) return;
+      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
       if (!library) { this.fetchState = { kind: 'error', message: this.localize('csvViewerUnavailable') }; return; }
-      const result = library.parse(await readResponseText(response), { skipEmptyLines: true }) as { data: unknown[][]; errors: unknown[] };
+      const result = parseDelimitedGrid(library, await readResponseText(response));
       assertTableSize(result.data);
-      if (!this.isConnected || generation !== this.generation) return;
+      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
       this.fetchState = { kind: 'loaded', rows: result.data };
       if (result.errors.length) this.emit('lr-render-error', { error: result.errors });
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || !this.loadTask.isCurrent(generation)) return;
       this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }

@@ -96,10 +96,11 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
 
   private renderSlices(): TemplateResult | typeof nothing {
     if (!this.slices.length) return nothing;
+    const allSlicesPart = this.slice ? 'slice' : 'slice slice-selected';
     return html`
       <nav part="slices" aria-label=${this.localize('ragEvalDashboardSlices')}>
         <button
-          part=${this.slice ? 'slice' : 'slice slice-selected'}
+          part=${allSlicesPart}
           type="button"
           data-slice=""
           aria-pressed=${this.slice ? 'false' : 'true'}
@@ -108,17 +109,20 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
           ${this.localize('ragEvalDashboardAllSlices')}
         </button>
         ${this.slices.map(
-          (slice) => html`
-            <button
-              part=${this.slice === slice ? 'slice slice-selected' : 'slice'}
-              type="button"
-              data-slice=${slice}
-              aria-pressed=${this.slice === slice ? 'true' : 'false'}
-              @click=${() => this.emit('lr-slice-change', { slice })}
-            >
-              ${slice}
-            </button>
-          `,
+          (slice) => {
+            const slicePart = this.slice === slice ? 'slice slice-selected' : 'slice';
+            return html`
+              <button
+                part=${slicePart}
+                type="button"
+                data-slice=${slice}
+                aria-pressed=${this.slice === slice ? 'true' : 'false'}
+                @click=${() => this.emit('lr-slice-change', { slice })}
+              >
+                ${slice}
+              </button>
+            `;
+          },
         )}
       </nav>
     `;
@@ -144,9 +148,10 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
         <div part="metrics">
           ${this.metrics.map((metric) => {
             const selected = metric.id === active?.id;
+            const metricPart = selected ? 'metric metric-selected' : 'metric';
             return html`
               <button
-                part=${selected ? 'metric metric-selected' : 'metric'}
+                part=${metricPart}
                 type="button"
                 data-metric-id=${metric.id}
                 aria-pressed=${selected ? 'true' : 'false'}
@@ -193,4 +198,3 @@ declare global {
     'lr-rag-eval-dashboard': LyraRagEvalDashboard;
   }
 }
-

@@ -140,7 +140,10 @@ export default {
   // fixtures. Keep the suite-level watchdog above the normal two-minute
   // budget so a slow CI worker reports the actual test result instead of
   // turning a completed browser run into an infrastructure timeout.
-  testsFinishTimeout: 180000,
+  // Coverage instrumentation can add more than a minute to the 30k-element graph fixture while
+  // preserving the same measured-update performance assertion. Give that CI job a wider
+  // suite-level watchdog without slowing or relaxing the ordinary browser-test run.
+  testsFinishTimeout: collectCoverage ? 300000 : 180000,
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,

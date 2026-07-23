@@ -39,9 +39,9 @@ family and entry point.
 - **Media, files & maps** — 18 tags in `components/media/`
 - **Charts** — 12 tags in `components/charts/`
 - **Document & file viewers** — 22 tags in `components/viewers/`
-- **Conversation & chat UI** — 28 tags in `components/conversation/`
-- **Agent tooling, tool calls & evaluation** — 31 tags in `components/agent-tools/`
-- **Retrieval, knowledge graph & grounding** — 27 tags in `components/retrieval/`
+- **Conversation & chat UI** — 33 tags in `components/conversation/`
+- **Agent tooling, tool calls & evaluation** — 35 tags in `components/agent-tools/`
+- **Retrieval, knowledge graph & grounding** — 30 tags in `components/retrieval/`
 - **Reference tables** — design tokens (`llms/tokens.md`), optional peers (`llms/peers.md`), `wa-*`/`sl-*` migration (`llms/migration.md`)
 
 ---
@@ -393,13 +393,29 @@ instead of hand-rolling state shapes — they bind field-for-field onto the comp
 adapter layer:
 
 ```ts
-import type { AgentRun, ChatMessage, ToolInvocation, RetrievalChunk } from '@aceshooting/lyra-ui/ai';
+import {
+  createAgentStreamState,
+  reduceAgentStream,
+  adaptAiSdkStream,
+  adaptAgUiEvents,
+  adaptA2UiSurface,
+  type AgentRun,
+  type ChatMessage,
+  type MessagePart,
+  type RetrievalChunk,
+} from '@aceshooting/lyra-ui/ai';
 ```
 
 - **Run/step state** — `AgentStatusKind`, `AgentStatus`, `AgentStep`, `AgentRun`
-- **Conversation** — `ChatMessage`, `ToolInvocation`
+- **Conversation** — `ChatMessage`, ordered `MessagePart` variants, `ToolInvocation`
 - **Documents & grounding** — `DocumentRef`, `Citation`, `RetrievalQuery`, `RetrievalChunk`,
-  `GroundingAssessment`
+  `RetrievalScoreBreakdown`, `GroundedClaim`, `GroundingAssessment`, `DocumentLocator`
+- **Streaming runtime** — `AgentStreamEvent`, `AgentStreamState`, `createAgentStreamState()`,
+  `reduceAgentStream()`, `reduceAgentStreamEvents()`; event ids make replay/duplicate delivery
+  deterministic, and JSON Patch application rejects prototype-mutating paths
+- **Protocol adapters** — `adaptAiSdkStream()`, `adaptAgUiEvents()`, and `adaptA2UiSurface()` map
+  structural provider events/documents onto the neutral runtime without pulling vendor SDKs into
+  the package
 - **Event payloads** — `RunLifecycleEventDetail`, `RetrievalProgressEventDetail`,
   `CitationSelectEventDetail`, `ToolApprovalEventDetail`, `CancelEventDetail`, `RetryEventDetail`,
   `ExportEventDetail`
@@ -409,6 +425,25 @@ feeds on `lr-chat-message`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-sour
 `lr-attachment-chip`, and `lr-document-preview` — the binding is enforced by `tsc`, not by
 convention. The types are structural and provider-agnostic: map any vendor's payload onto them once,
 at the edge.
+
+### Task-first AI composition guide
+
+- **Render one model response:** `lr-message-parts`; use `lr-chat-message` only when the message
+  shell (avatar, author, actions) is also needed.
+- **Build the main prompt affordance:** `lr-prompt-input`; it already composes attachments,
+  model/voice/source controls, mentions/commands, and `lr-prompt-queue`.
+- **Run an agent workspace:** `lr-agent-workspace` + `reduceAgentStream()`; add
+  `lr-subagent-panel` for nested runs and `lr-mcp-app` only for executable MCP App resources.
+- **Show grounded output:** `lr-rag-answer`; pass claim records for `lr-claim-evidence`, use
+  `lr-retrieval-compare` for retrieval tuning and `lr-rag-eval-dashboard` for run metrics.
+- **Develop prompts/tools:** `lr-prompt-studio` and `lr-schema-viewer`.
+- **Build voice sessions:** `lr-realtime-session`; it composes the existing audio visualizer,
+  push-to-talk control, and transcript feed while leaving transport ownership with the host.
+
+Family registration entry points are additive: importing
+`@aceshooting/lyra-ui/components/conversation`, `/agent-tools`, or `/retrieval` registers and
+exports that complete family. Granular component entry points remain the smallest bundles and are
+preferred in production.
 
 ## Optional peer dependencies
 
@@ -1391,6 +1426,9 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
 - `disabled: boolean = false` (reflected)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
+  reactively to the internal native button or anchor; changing or removing the attribute after
+  mount updates the actual focused control
 
 The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
 `100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
@@ -1469,9 +1507,14 @@ box no matter what tier or override is in play.
 ```
 
 **Known gotchas:**
-- A host `aria-label` is forwarded to the internal button as a literal string (for an icon-only
-  button); an external `aria-labelledby`/`aria-describedby` idref is not copied across the shadow
-  boundary.
+- `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
+  a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
+  idref is not copied across the shadow boundary.
+- Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
+  For host `aria-controls`, targets in the host's own root are resolved through the reflected
+  element-reference API so a popup relationship survives the component's shadow boundary; browsers
+  without that API retain the forwarded string attribute as a best-effort fallback. This is what
+  lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
@@ -1495,6 +1538,12 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 `iconButtonLabel` string rather than being empty — override it per instance with `.strings` or
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
+
+Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
+native button. Host `aria-controls` targets in the host's own root are resolved through the
+reflected element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
+exposes the menu relationship and expanded state on the element that actually receives focus;
+browsers without that API retain the forwarded string attribute as a best-effort fallback.
 
 **Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
@@ -1966,6 +2015,11 @@ consumer-facing `disabled` property/attribute itself.
 - `disabled: boolean = false` (reflected)
 - `startLabel: string = 'Range start'` (attribute `start-label`) — `aria-label` for the start handle
 - `endLabel: string = 'Range end'` (attribute `end-label`) — `aria-label` for the end handle
+- `valueFormatter?: TimeRangeValueFormatter` (attribute: false) — maps each finite, clamped
+  `aria-valuenow` to optional human-readable `aria-valuetext`; called as
+  `(value, handle: TimeRangeHandle)`, where `TimeRangeHandle = 'start' | 'end'`. The formatter may
+  return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
+  Leaving the property unset preserves the numeric-only contract
 - `presets: TimeRangePreset[] = []` (attribute: false) — `TimeRangePreset { label: string; start:
   number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
@@ -2009,10 +2063,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 **Optional peer deps:** none.
 
 ```html
-<lr-time-range min="0" max="1440" start="480" end="1020" step="15"></lr-time-range>
+<lr-time-range id="months" min="0" max="2" start="0" end="2"></lr-time-range>
 <script>
-  document.querySelector('lr-time-range')
-    .addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
+  const months = ['April 2023', 'May 2023', 'June 2023'];
+  const range = document.getElementById('months');
+  range.valueFormatter = (value, handle) =>
+    `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
+  range.addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
 </script>
 ```
 
@@ -2029,9 +2086,9 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   slider.
 - `aria-valuemin`/`aria-valuemax` on each handle report that handle's reachable sub-range (bounded by
   its sibling), not the full domain — matching what Home/End actually jump to.
-- No `aria-valuetext`: only raw numeric `aria-valuenow` is exposed (omitted entirely, rather than a
-  literal `"NaN"`, if `start`/`end` is non-finite), no hook for a human-readable (e.g. formatted
-  date/time) equivalent of the mapped domain.
+- `valueFormatter` is presentation-only: `aria-valuenow`, geometry, emitted values, and preset
+  matching stay numeric. Non-finite handles omit both `aria-valuenow` and `aria-valuetext` and are
+  never passed to the formatter.
 - Handles a `min > max` domain, a non-positive/non-finite `step`, and disabled-mid-drag/
   disconnect-mid-drag correctly (tested) — safe to rely on those edge cases. Concurrent drags are
   tracked per `pointerId` (not a single scalar), so a two-finger touch — one finger per handle —
@@ -2041,7 +2098,7 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 - Non-finite domain/handle values use finite fallback geometry, and non-finite or negative steps are
   treated as unstepped; invalid values never become `NaN`/`Infinity` CSS or ARIA strings.
 - `startLabel`/`endLabel` only override each handle's `aria-label`; they don't affect
-  `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (still raw numbers) or any visible text.
+  `aria-valuenow`/`aria-valuemin`/`aria-valuemax`, `valueFormatter`, or any visible text.
 - An ancestor `<fieldset disabled>` toggling is reflected via `formDisabledCallback` into
   `effectiveDisabled` (tracked separately from the consumer's own `disabled`), so re-enabling the
   fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice
@@ -4596,8 +4653,10 @@ auto-inserted between each adjacent pair.
   omitted/mismatched)
 - `defaultSizes: (number | string)[] = []` (attribute: false) — initialization-only fallback: a
   valid restored `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal
-  distribution. Later reassignment never overwrites live drag/persisted state — set it once, at
-  mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
+  distribution. Initialization occurs on the first update so framework property bindings committed
+  after connection in the same turn — including `defaultSizes` and `storageKey` — are honored
+  before the layout becomes live. Later reassignment never overwrites live drag/persisted state —
+  set it once, at mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
   pure-number array that does not sum to ~100, e.g. `[30, 60]`, is still rejected and falls through
   to the equal split) or a CSS **length string** (`'200px'`, `'20%'`, `'3rem'`). When at least one
   entry is a length string, every entry is resolved against the measured container (numbers as
@@ -6083,8 +6142,12 @@ returning to the trigger)
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
 since those attributes belong on the actual interactive trigger, which lives outside this
-component's shadow root), default (`<lr-menu-item>` elements, plus optionally plain `<hr>`
-dividers between groups — native `<hr>` already carries an implicit `separator` role),
+component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
+generated id only when the consumer did not provide one, rather than the shadow-private list id.
+`lr-button`/`lr-icon-button` forward the popup/expanded values to their focused shadow-internal
+native control and resolve the controls element-reference across their shadow boundary), default
+(`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
+an implicit `separator` role),
 `header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
 section title, an "Apply"/"Done" button, a count — rendered above/below the items inside
 `[part="popup"]` but **outside** the `role="menu"` list. Both collapse to no box at all while
@@ -13525,7 +13588,8 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
 channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
-(non-object, or the depth/size caps made it empty).
+(non-object, or the depth/size caps made it empty). `lr-widget-state-change` — `detail: { path,
+value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
@@ -13720,6 +13784,106 @@ composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-
 
 **Optional peer deps:** none of its own; the composed `lr-markdown` keeps its `marked`/`dompurify`
 optional-peer fallback.
+
+## `lr-message-parts`
+
+Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
+attachment, data/widget, audio, and error parts can interleave without flattening stream order.
+
+**Properties:** `parts: MessagePart[]`; `renderMarkdown: boolean = true`; `showReasoning: boolean =
+true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attribute
+`aria-label`).
+
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
+
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+`citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
+```
+
+## `lr-prompt-input`
+
+The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
+retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
+upload, retrieval, or model call.
+
+**Properties:** `value`, `status`, `placeholder`, `disabled`, `submitOnEnter`, `attachments`,
+`attachmentCapabilities`, `mentionItems`, `commandItems`, `modelCatalog`, `model`, `voiceCatalog`,
+`voice`, `sources`, `selectedSourceIds`, `queue`, `label`, `accessibleLabel` (attribute
+`aria-label`).
+
+**Methods:** `focus(options)`, `blur()`, and `click()` forward to the composed chat input;
+`select()` and its selection APIs forward to the same native text surface.
+
+**Events:** `lr-input`, `lr-submit`, `lr-stop`, `lr-mention-select`, `lr-attachments-add`,
+`lr-attachment-remove`, `lr-model-change`, `lr-voice-change`.
+
+**Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
+
+**CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
+`composer`, `leading`, `chips`, `footer`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';
+```
+
+## `lr-prompt-queue`
+
+Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
+proposed queue; send-now emits the complete selected item.
+
+**Properties:** `items: PromptQueueItem[]`; `editable: boolean = true`; `disabled`; `label`;
+`accessibleLabel` (attribute `aria-label`).
+
+**Events:** `lr-queue-change` (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`).
+
+**CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `actions`, `action`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';
+```
+
+## `lr-selection-toolbar`
+
+Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
+`DocumentLocator` into ask, quote, cite, and copy actions.
+
+**Properties:** `open`, `text`, `anchor`, `rect`, `actions`, `label`, `accessibleLabel` (attribute
+`aria-label`).
+
+**Events:** `lr-selection-action` (`{ action, text, anchor }`), `lr-dismiss`, `lr-copy-error`.
+
+**CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
+
+**Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
+`--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
+provide their own fixed-position anchor.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
+```
+
+## `lr-realtime-session`
+
+Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
+`lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.
+
+**Properties:** `state`, `voiceState`, `level`, `stream`, `entries`, `muted`, `showCapture`,
+`errorCode`, `label`.
+
+**Events:** `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), `lr-interrupt`; the
+composed push-to-talk events continue bubbling.
+
+**Slots:** `controls` adds provider-specific actions beside the built-in session controls.
+
+**CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
+`interrupt`, `capture`, `transcript`, `error`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js';
+```
 
 # Agent tooling, tool calls & evaluation (`components/agent-tools/`)
 
@@ -15624,6 +15788,79 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`.
 
+## `lr-mcp-app`
+
+Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
+with injected CSP; remote documents are URL-validated. The frame can only request tool calls,
+messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
+unless explicitly enabled in `resource.permissions`.
+
+**Properties:** `resource: McpAppResource | null`; `height`; `maxHeight`; `label`;
+`accessibleLabel` (attribute `aria-label`). **Methods:** `postHostContext(context)`,
+`postToolResult(requestId, result?, error?)`.
+
+**Events:** `lr-mcp-ready`, `lr-mcp-tool-call`, `lr-mcp-send-message`, `lr-mcp-open-link`,
+`lr-mcp-log`, `lr-mcp-resize`.
+
+**CSS parts:** `base`, `frame`, `loading`, `error`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
+```
+
+## `lr-prompt-studio`
+
+Controlled prompt-development workbench for ordered role messages, `{{variable}}` substitution,
+saved versions, resolved preview, and save/run intents.
+
+**Properties:** `messages`, `variables`, `versions`, `selectedVersionId`, `label`, `running`,
+`disabled`.
+
+**Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
+`lr-version-select` (`{ version }`).
+
+**CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
+`message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
+`preview`, `save`, `run`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
+```
+
+## `lr-schema-viewer`
+
+Recursive JSON Schema inspector with property/branch selection, required and constraint display,
+validation issues, `$ref` visibility, composition branches, cycle protection, and a depth ceiling.
+It intentionally does not fetch remote references or validate values.
+
+**Properties:** `schema`, `issues`, `selectedPath`, `maxDepth`, `label`.
+
+**Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
+
+**CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
+`description`, `constraints`, `issue`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
+```
+
+## `lr-subagent-panel`
+
+Controlled nested-agent hierarchy with lifecycle badges, task/model context, guarded progress,
+selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cycles and orphan
+parents remain renderable instead of recursing forever.
+
+**Properties:** `runs: SubagentRun[]`, `selectedRunId`, `label`.
+
+**Events:** `lr-run-select` (`{ run }`), `lr-cancel`/`lr-retry` (`{ runId }`).
+
+**CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
+`task`, `model`, `progress`, `actions`, `cancel`, `retry`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
+```
+
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
 
 ## `lr-graph`
@@ -16752,8 +16989,9 @@ and `lr-citation-badge` for each evidence entry.
 **Properties:**
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
   imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
-  unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[] }`, where
-  `coverage` and `confidence` are 0–1 fractions. `null` renders the empty state
+  unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[];
+  claims?: GroundedClaim[] }`, where `coverage` and `confidence` are 0–1 fractions. `null` renders
+  the empty state
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
   label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
@@ -16765,6 +17003,8 @@ and `lr-citation-badge` for each evidence entry.
   below → `danger`
 - `label: string = ''` — accessible group label; falls back to a host `aria-label`, then the
   localized `groundingSummaryLabel`
+- `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
+  `lr-claim-evidence`; set false to keep the aggregate scorecard only
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
@@ -16779,7 +17019,8 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 `warnings-list` (a `<ul>`), `warning` (one `<li>`), `evidence` (omitted when `citations` is empty),
 `evidence-heading`, `evidence-count`, `evidence-item` (badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `empty` (shown when `assessment` is `null`).
+`Citation.span` range, omitted when unset), `claims` (the composed claim-evidence audit), `empty`
+(shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.
 
@@ -17262,9 +17503,10 @@ or source fetching.
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
 (attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`showClaims: boolean = true` (attribute `show-claims`); `label: string = ''`; `accessibleLabel:
+string | null = null` (attribute `aria-label`).
 
-**Events:** `lr-citation-select` (`{ citation }`) and `lr-retry`.
+**Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list.
@@ -17303,3 +17545,56 @@ correlated ids/details from their composed primitives).
 **Slots:** `settings` — host-owned KB configuration controls.
 
 **CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.
+
+## `lr-claim-evidence`
+
+Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete `Citation[]`
+records. Dangling citation ids are ignored rather than rendered as invented evidence.
+
+**Properties:** `claims`, `citations`, `selectedClaimId`, `label`.
+
+**Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`).
+
+**CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
+`confidence`, `explanation`, `evidence`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';
+```
+
+## `lr-retrieval-compare`
+
+Side-by-side retrieval/reranking workbench showing effective rank, top-k Jaccard overlap, and
+dense/sparse/rerank/final score breakdowns.
+
+**Properties:** `sets: RetrievalComparisonSet[]`, `topK`, `selectedChunkId`, `label`.
+
+**Events:** `lr-chunk-select` (`{ setId, chunk }`).
+
+**CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
+`chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';
+```
+
+## `lr-rag-eval-dashboard`
+
+Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
+and run history. The host computes metrics and owns evaluation execution.
+
+**Properties:** `metrics: RagEvaluationMetric[]`, `runs: RagEvaluationRun[]`, `metricId`, `slice`,
+`label`, `showChart`, `chartHeight`.
+
+**Events:** `lr-metric-change`, `lr-slice-change`, `lr-run-select`.
+
+**CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
+`metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
+```
+
+`lr-grounding-summary` and `lr-rag-answer` now accept `GroundingAssessment.claims` and expose
+`showClaims: boolean = true`; `lr-retrieval-results` forwards `RetrievalChunk.locator` as the
+document-viewer-compatible `anchor` in `lr-chunk-open`.

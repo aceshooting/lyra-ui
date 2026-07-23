@@ -51,3 +51,9 @@ it('has a localized empty state and a named populated region', async () => {
   await expect(populated).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-rag-eval-dashboard
+    .strings=${{ ragEvalDashboardLabel: 'Localized RAG evaluation' }}
+  ></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized RAG evaluation');
+});

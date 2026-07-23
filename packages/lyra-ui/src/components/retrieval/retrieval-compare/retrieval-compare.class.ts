@@ -95,10 +95,11 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
         ${this.orderedChunks(set).map((chunk, index) => {
           const selected = chunk.id === this.selectedChunkId;
           const rank = this.rank(chunk, index);
+          const chunkPart = selected ? 'chunk chunk-selected' : 'chunk';
           return html`
             <li>
               <button
-                part=${selected ? 'chunk chunk-selected' : 'chunk'}
+                part=${chunkPart}
                 type="button"
                 aria-pressed=${selected ? 'true' : 'false'}
                 @click=${() => this.emit('lr-chunk-select', { setId: set.id, chunk })}

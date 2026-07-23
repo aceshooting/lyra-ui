@@ -14,10 +14,10 @@ async function img(el: LyraFlag): Promise<HTMLImageElement> {
   // Resolving a flag now involves two sequential dynamic imports on a cold start (the
   // `@aceshooting/lyra-flags` peer package, then that specific code's own lazy loader module —
   // see flag.ts's bundle-size note) instead of one, so give this more headroom than the
-  // library default (1000ms) to avoid flaking under load. 8000ms itself still flaked under
-  // 8-way default @web/test-runner concurrency on a 16-core machine — same class of issue as
-  // lr-graph's NODE_COUNT_TIMEOUT and code-block.test.ts's shiki wait.
-  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 15000 });
+  // library default (1000ms) to avoid flaking under load. Even 15000ms can be exhausted by the
+  // coverage-instrumented 300+ file run before the two cold dynamic imports receive CPU time —
+  // same class of issue as lr-graph's setup and code-block.test.ts's Shiki wait.
+  await waitUntil(() => el.shadowRoot!.querySelector('img'), 'flag image should render', { timeout: 45_000 });
   return el.shadowRoot!.querySelector('img')!;
 }
 
@@ -49,10 +49,10 @@ it('renders an img for a country code', async function () {
   // The first test in this file to await img()'s wait to completion uninterrupted (the very
   // first test above deliberately interrupts mid-resolution instead) -- genuinely exposed to
   // @aceshooting/lyra-flags' cold-start dynamic import latency under full-suite concurrency, the
-  // same class of flake img()'s own comment already raised its internal wait to 15000ms for.
+  // same class of flake img()'s own comment gives its internal wait a coverage-safe margin for.
   // That inner ceiling is moot without also raising this test's own mocha-level timeout past the
   // 6000ms default, which mocha would otherwise still enforce first.
-  this.timeout(20_000);
+  this.timeout(60_000);
   const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
   const el2 = await img(el);
   expect(el2.getAttribute('src')).to.contain('fr.svg');

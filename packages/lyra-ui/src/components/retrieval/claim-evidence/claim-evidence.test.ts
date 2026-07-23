@@ -53,3 +53,9 @@ it('uses the host aria-label and exposes selected state without changing the con
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-claim-evidence
+    .strings=${{ claimEvidenceLabel: 'Localized evidence review' }}
+  ></lr-claim-evidence>`)) as LyraClaimEvidence;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized evidence review');
+});

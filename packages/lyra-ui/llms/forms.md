@@ -878,10 +878,11 @@ box no matter what tier or override is in play.
 - `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
   a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
   idref is not copied across the shadow boundary.
-- Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded to the
-  internal semantic control. For `aria-controls`, targets in the host's own root are resolved
-  through the element-reference API so a popup relationship survives the component's shadow
-  boundary; this is what lets either button serve as an `lr-menu` trigger.
+- Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
+  For host `aria-controls`, targets in the host's own root are resolved through the reflected
+  element-reference API so a popup relationship survives the component's shadow boundary; browsers
+  without that API retain the forwarded string attribute as a best-effort fallback. This is what
+  lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
@@ -906,10 +907,11 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
 
-Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded reactively to
-the shadow-internal native button. `aria-controls` targets in the host's own root are resolved
-through the element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
-exposes the menu relationship and expanded state on the element that actually receives focus.
+Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
+native button. Host `aria-controls` targets in the host's own root are resolved through the
+reflected element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
+exposes the menu relationship and expanded state on the element that actually receives focus;
+browsers without that API retain the forwarded string attribute as a best-effort fallback.
 
 **Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`

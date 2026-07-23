@@ -2094,7 +2094,7 @@
         },
         {
           "name": "lr-button",
-          "description": "`<lr-button>` — a generic action-button primitive. Renders an internal native\n`<button part=\"base\">`. `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nWhen `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see\n`safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set) the root\nrenders as a real `<a part=\"base\" href=…>` instead — for a link styled\nas a button (e.g. a CTA). Native navigation is then the anchor's own activation, so the\nsubmit/reset click handler and `type` (submit/reset) have no effect in that mode. When the\nbutton is disabled (its own `disabled` or an ancestor `<fieldset disabled>`) the anchor renders\nwith `aria-disabled=\"true\"` and **no `href`** — an href-less anchor is not focusable or\nnavigable, so a disabled link button genuinely cannot be activated (unlike a bare\n`aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the\nnative `<button>`.\n\n`accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor\nas a literal string (for an icon-only button with no visible label); external\n`aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\nHost `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are likewise forwarded to\nthe internal semantic control. When `aria-controls` names elements in the host's own root, the\nelement-reference relationship is resolved onto the internal control so it remains valid across\nthis component's shadow boundary.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Default slot: the button's label content. |\n| `end` | Trailing icon/content, rendered after the label. |\n| `start` | Leading icon/content, rendered before the label. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The internal native `<button>` (or an `<a>` when `href` resolves to a safe link). |\n| `end` | The `end` slot wrapper. |\n| `label` | The default-slot label wrapper. |\n| `spinner` | The loading spinner, present only while `loading` is `true`. |\n| `start` | The `start` slot wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-button-width` (default: `100%`) — Inline size of the internal button. The host defaults it to `100%` so the native button follows the host's own width; override to `auto` (or any other value) for a compact inline composition.\n- `--lr-button-hover-brightness` (default: `1.08`) — `filter: brightness()` multiplier applied while hovering a non-disabled button.\n- `--lr-button-active-scale` (default: `0.9875`) — `transform: scale()` factor applied while a non-disabled button is pressed.\n- `--lr-button-spinner-duration` (default: `1s`) — Rotation period of the `loading` spinner.\n- `--lr-button-accent` (default: `var(--lr-color-text)`) — Text/glyph color for the chrome-less appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color.\n- `--lr-button-fill` (default: `var(--lr-color-surface)`) — Background of `appearance=\"filled\"`. Swapped per `variant` to that variant's semantic color.\n- `--lr-button-on-fill` (default: `var(--lr-color-text)`) — Text color on top of `--lr-button-fill`. Swapped per `variant` to that variant's `on-*` color.\n- `--lr-button-accent-fill` (default: `var(--lr-color-neutral)`) — Background of `appearance=\"accent\"` (and its border color). Swapped per `variant` to that variant's semantic color.\n- `--lr-button-accent-on-fill` (default: `var(--lr-color-on-neutral)`) — Text color on top of `--lr-button-accent-fill`. Swapped per `variant` to that variant's `on-*` color.\n- `--lr-button-border` (default: `var(--lr-color-border)`) — Border color of the internal button. Swapped per `variant` to that variant's semantic color.\n- `--lr-button-outlined-border` (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"`, which overrides `--lr-button-border`.\n- `--lr-button-outlined-fill` (default: `transparent`) — Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a tinted outlined button now visibly brightens on hover where a transparent one did not.\n- `--lr-button-quiet-border` (default: `var(--lr-color-border)`) — Border color of `appearance=\"quiet\"`.\n- `--lr-button-quiet-text` (default: `var(--lr-color-text-quiet)`) — Text color of `appearance=\"quiet\"`.\n- `--lr-button-size-2xs` (default: `var(--lr-size-1-25rem)`) — `min-block-size` at `size=\"2xs\"`.\n- `--lr-button-size-xs` (default: `var(--lr-size-1-5rem)`) — `min-block-size` at `size=\"xs\"`.\n- `--lr-button-size-s` (default: `var(--lr-size-1-875rem)`) — `min-block-size` at `size=\"s\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"s\"` control height.\n- `--lr-button-size-m` (default: `var(--lr-size-2-5rem)`) — `min-block-size` at `size=\"m\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own default control height, so a default-size button sitting next to a default-size input/select/combobox in the same row lines up.\n- `--lr-button-size-l` (default: `var(--lr-size-3rem)`) — `min-block-size` at `size=\"l\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"l\"` control height.\n- `--lr-button-size-xl` (default: `var(--lr-size-3-5rem)`) — `min-block-size` at `size=\"xl\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"xl\"` control height.\n- `--lr-button-padding-block` (default: `var(--lr-space-xs)`) — Block padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier without a `::part(base)` rule; `appearance=\"link\"` ignores it (it renders with zero padding).\n- `--lr-button-padding-inline` (default: `var(--lr-space-m)`) — Inline padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it.\n- `--lr-button-font-size` (default: `var(--lr-font-size-m)`) — Font size of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it and inherits the ambient font instead.\n- `--lr-button-min-height` (default: `var(--lr-button-size-m)`) — The active tier's `min-block-size` floor. Re-assigned per `size` tier to that tier's own `--lr-button-size-*` token, and used as the fallback when `--lr-button-height` is unset.\n- `--lr-button-height` — Exact height of the internal button. **Undeclared by default** — so the button keeps the active tier's `min-block-size` floor and an `auto` height, exactly as before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would make every tier's floor dead code. `appearance=\"link\"` ignores it.\n- `--lr-button-gap` (default: `var(--lr-space-2xs)`) — Gap between the icon/label and any slotted content in the internal button. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(base)` rule.\n- `--lr-button-radius` (default: `var(--lr-radius)`) — Corner radius of the internal button. Does not vary by `size` tier. `appearance=\"link\"` ignores it (it renders with zero radius).\n- `--lr-button-shadow` — Box shadow of the internal button. **Undeclared by default**, so `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g. an elevated/floating action button) without a `::part(base)` rule.",
+          "description": "`<lr-button>` — a generic action-button primitive. Renders an internal native\n`<button part=\"base\">`. `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nWhen `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see\n`safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set) the root\nrenders as a real `<a part=\"base\" href=…>` instead — for a link styled\nas a button (e.g. a CTA). Native navigation is then the anchor's own activation, so the\nsubmit/reset click handler and `type` (submit/reset) have no effect in that mode. When the\nbutton is disabled (its own `disabled` or an ancestor `<fieldset disabled>`) the anchor renders\nwith `aria-disabled=\"true\"` and **no `href`** — an href-less anchor is not focusable or\nnavigable, so a disabled link button genuinely cannot be activated (unlike a bare\n`aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the\nnative `<button>`.\n\n`accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor\nas a literal string (for an icon-only button with no visible label); external\n`aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\nHost `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic\ncontrol. When host `aria-controls` names elements in the host's own root, the controls\nrelationship is resolved onto the internal control through the reflected element-reference API\nso it remains valid across this component's shadow boundary; browsers without that API retain\nthe forwarded string attribute as a best-effort fallback.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Default slot: the button's label content. |\n| `end` | Trailing icon/content, rendered after the label. |\n| `start` | Leading icon/content, rendered before the label. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The internal native `<button>` (or an `<a>` when `href` resolves to a safe link). |\n| `end` | The `end` slot wrapper. |\n| `label` | The default-slot label wrapper. |\n| `spinner` | The loading spinner, present only while `loading` is `true`. |\n| `start` | The `start` slot wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-button-width` (default: `100%`) — Inline size of the internal button. The host defaults it to `100%` so the native button follows the host's own width; override to `auto` (or any other value) for a compact inline composition.\n- `--lr-button-hover-brightness` (default: `1.08`) — `filter: brightness()` multiplier applied while hovering a non-disabled button.\n- `--lr-button-active-scale` (default: `0.9875`) — `transform: scale()` factor applied while a non-disabled button is pressed.\n- `--lr-button-spinner-duration` (default: `1s`) — Rotation period of the `loading` spinner.\n- `--lr-button-accent` (default: `var(--lr-color-text)`) — Text/glyph color for the chrome-less appearances (`outlined`, `plain`, `link`). Swapped per `variant` to that variant's semantic color.\n- `--lr-button-fill` (default: `var(--lr-color-surface)`) — Background of `appearance=\"filled\"`. Swapped per `variant` to that variant's semantic color.\n- `--lr-button-on-fill` (default: `var(--lr-color-text)`) — Text color on top of `--lr-button-fill`. Swapped per `variant` to that variant's `on-*` color.\n- `--lr-button-accent-fill` (default: `var(--lr-color-neutral)`) — Background of `appearance=\"accent\"` (and its border color). Swapped per `variant` to that variant's semantic color.\n- `--lr-button-accent-on-fill` (default: `var(--lr-color-on-neutral)`) — Text color on top of `--lr-button-accent-fill`. Swapped per `variant` to that variant's `on-*` color.\n- `--lr-button-border` (default: `var(--lr-color-border)`) — Border color of the internal button. Swapped per `variant` to that variant's semantic color.\n- `--lr-button-outlined-border` (default: `var(--lr-color-border-strong)`) — Border color of `appearance=\"outlined\"`, which overrides `--lr-button-border`.\n- `--lr-button-outlined-fill` (default: `transparent`) — Background of `appearance=\"outlined\"`. Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline) without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per `variant`. Note that the `:hover` `filter: brightness()` applies to whatever fill is set, so a tinted outlined button now visibly brightens on hover where a transparent one did not.\n- `--lr-button-quiet-border` (default: `var(--lr-color-border)`) — Border color of `appearance=\"quiet\"`.\n- `--lr-button-quiet-text` (default: `var(--lr-color-text-quiet)`) — Text color of `appearance=\"quiet\"`.\n- `--lr-button-size-2xs` (default: `var(--lr-size-1-25rem)`) — `min-block-size` at `size=\"2xs\"`.\n- `--lr-button-size-xs` (default: `var(--lr-size-1-5rem)`) — `min-block-size` at `size=\"xs\"`.\n- `--lr-button-size-s` (default: `var(--lr-size-1-875rem)`) — `min-block-size` at `size=\"s\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"s\"` control height.\n- `--lr-button-size-m` (default: `var(--lr-size-2-5rem)`) — `min-block-size` at `size=\"m\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own default control height, so a default-size button sitting next to a default-size input/select/combobox in the same row lines up.\n- `--lr-button-size-l` (default: `var(--lr-size-3rem)`) — `min-block-size` at `size=\"l\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"l\"` control height.\n- `--lr-button-size-xl` (default: `var(--lr-size-3-5rem)`) — `min-block-size` at `size=\"xl\"`. Matches `lr-input`/`lr-select`/`lr-combobox`'s own `size=\"xl\"` control height.\n- `--lr-button-padding-block` (default: `var(--lr-space-xs)`) — Block padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). Override it to retune a tier without a `::part(base)` rule; `appearance=\"link\"` ignores it (it renders with zero padding).\n- `--lr-button-padding-inline` (default: `var(--lr-space-m)`) — Inline padding of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it.\n- `--lr-button-font-size` (default: `var(--lr-font-size-m)`) — Font size of the internal button, re-assigned per `size` tier (the default is the `m` tier's value). `appearance=\"link\"` ignores it and inherits the ambient font instead.\n- `--lr-button-min-height` (default: `var(--lr-button-size-m)`) — The active tier's `min-block-size` floor. Re-assigned per `size` tier to that tier's own `--lr-button-size-*` token, and used as the fallback when `--lr-button-height` is unset.\n- `--lr-button-height` — Exact height of the internal button. **Undeclared by default** — so the button keeps the active tier's `min-block-size` floor and an `auto` height, exactly as before. Set it (e.g. to pin the button to a fixed toolbar row) to both floor *and* cap the height. Never declare it as `auto`: a declared value wins over the `var()` fallback arm and would make every tier's floor dead code. `appearance=\"link\"` ignores it.\n- `--lr-button-gap` (default: `var(--lr-space-2xs)`) — Gap between the icon/label and any slotted content in the internal button. Unlike the size knobs above it does not vary by `size` tier. Override it to retune without a `::part(base)` rule.\n- `--lr-button-radius` (default: `var(--lr-radius)`) — Corner radius of the internal button. Does not vary by `size` tier. `appearance=\"link\"` ignores it (it renders with zero radius).\n- `--lr-button-shadow` — Box shadow of the internal button. **Undeclared by default**, so `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g. an elevated/floating action button) without a `::part(base)` rule.",
           "attributes": [
             {
               "name": "appearance",
@@ -8509,7 +8509,7 @@
         },
         {
           "name": "lr-icon-button",
-          "description": "`<lr-icon-button>` — an accessible icon-only action button.\n\nSet `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted\ncontent is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so\nany complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — renders at its own natural\naspect ratio instead of being forced into a 1:1 box. Bare SVG geometry (`<path>`, `<circle>`,\nand a handful of other raw primitives) with no enclosing `<svg>` of its own is detected and\ncloned into a real, internal SVG-namespaced element so it still paints — the same fallback\n`<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a\nslotted `<lr-flag>`) is never run through it.\n\nHost `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded reactively\nto the shadow-internal native button. When `aria-controls` names elements in the host's own root,\nthe element-reference relationship is resolved onto that focused control so it remains valid\nacross this component's shadow boundary.\n\nForm-associated (mirroring `<lr-button>`'s identical shape): discoverable through\n`form.elements`, and `type=\"submit\"`/`type=\"reset\"` are handled by this component itself via\nthe host's own `closest('form')` — a shadow-internal native `<button type=\"submit\">` does not\nparticipate in an ancestor light-DOM form's submission on its own, since form-submitter\nsemantics don't cross the shadow boundary.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Optional custom icon content, rendered beside (not inside) the `icon` glyph. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `button` | Native button. |\n| `fallback` | The internal SVG-namespaced clone target for slotted bare geometry. Carries the same `fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"` defaults `<lr-icon>`'s own wrapper svg does, so bare stroke-style geometry (no fill/stroke of its own) renders outlined instead of as a solid shape; an explicit `fill`/`stroke`/etc. already present on the slotted node still wins for that node. Only present in the DOM while at least one top-level slotted element needs it; a complete `<svg>`, `<img>`, or custom element never mounts it. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-icon-button-size` (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together.\n- `--lr-icon-button-radius` (default: `var(--lr-radius)`) — Corner radius of the native button.\n- `--lr-icon-button-background` (default: `transparent`) — Background fill of the native button.\n- `--lr-icon-button-background-hover` (default: `var(--lr-color-surface)`) — Background fill on hover.\n- `--lr-icon-button-color` (default: `inherit`) — Icon/text color of the native button.\n- `--lr-icon-button-color-hover` (default: `var(--lr-icon-button-color, inherit)`) — Icon/text color on hover.\n- `--lr-icon-button-border` (default: `0`) — Complete border shorthand of the native button.",
+          "description": "`<lr-icon-button>` — an accessible icon-only action button.\n\nSet `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted\ncontent is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so\nany complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — renders at its own natural\naspect ratio instead of being forced into a 1:1 box. Bare SVG geometry (`<path>`, `<circle>`,\nand a handful of other raw primitives) with no enclosing `<svg>` of its own is detected and\ncloned into a real, internal SVG-namespaced element so it still paints — the same fallback\n`<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a\nslotted `<lr-flag>`) is never run through it.\n\nHost `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal\nnative button. When host `aria-controls` names elements in the host's own root, the controls\nrelationship is resolved onto that focused control through the reflected element-reference API\nso it remains valid across this component's shadow boundary; browsers without that API retain\nthe forwarded string attribute as a best-effort fallback.\n\nForm-associated (mirroring `<lr-button>`'s identical shape): discoverable through\n`form.elements`, and `type=\"submit\"`/`type=\"reset\"` are handled by this component itself via\nthe host's own `closest('form')` — a shadow-internal native `<button type=\"submit\">` does not\nparticipate in an ancestor light-DOM form's submission on its own, since form-submitter\nsemantics don't cross the shadow boundary.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Optional custom icon content, rendered beside (not inside) the `icon` glyph. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `button` | Native button. |\n| `fallback` | The internal SVG-namespaced clone target for slotted bare geometry. Carries the same `fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"` defaults `<lr-icon>`'s own wrapper svg does, so bare stroke-style geometry (no fill/stroke of its own) renders outlined instead of as a solid shape; an explicit `fill`/`stroke`/etc. already present on the slotted node still wins for that node. Only present in the DOM while at least one top-level slotted element needs it; a complete `<svg>`, `<img>`, or custom element never mounts it. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-icon-button-size` (default: `2.5rem`) — Minimum tappable inline and block size of the native button — a **floor**, not a fixed size: content larger than it grows the button and keeps its own aspect ratio, while a small glyph pads out to it. A library-wide token (declared on `:root` by `tokens.styles.ts`, and the shared minimum tappable size several other components size their icon controls against), so overriding it globally resizes all of them together.\n- `--lr-icon-button-radius` (default: `var(--lr-radius)`) — Corner radius of the native button.\n- `--lr-icon-button-background` (default: `transparent`) — Background fill of the native button.\n- `--lr-icon-button-background-hover` (default: `var(--lr-color-surface)`) — Background fill on hover.\n- `--lr-icon-button-color` (default: `inherit`) — Icon/text color of the native button.\n- `--lr-icon-button-color-hover` (default: `var(--lr-icon-button-color, inherit)`) — Icon/text color on hover.\n- `--lr-icon-button-border` (default: `0`) — Complete border shorthand of the native button.",
           "attributes": [
             {
               "name": "aria-controls",
@@ -10427,7 +10427,7 @@
         },
         {
           "name": "lr-menu",
-          "description": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes and forward them to their shadow-internal native controls, including the\nresolved element-reference relationship.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers between groups (native `<hr>` already carries an implicit `separator` role, matching what `role=\"menu\"` expects between item groups). Arbitrary non-item content still renders here for backward compatibility, but the `header`/`footer` slots below are the supported place for it. |\n| `footer` | Same as `header`, rendered below the items — an \"Apply\"/\"Done\" button, a link to a fuller settings page, a count. |\n| `header` | Composed content rendered above the items and *outside* the `role=\"menu\"` list — a filter/search field, a section title, a summary row. Keeps its own full default keyboard behavior, is reachable with Tab from the items, and is ARIA-valid (arbitrary content inside `role=\"menu\"` is not). Collapses to no box at all while unfilled. |\n| `trigger` | The consumer's own trigger element (typically an icon button). Clicking it toggles the menu; it's positioned against via `internal/positioner.js`'s `place()`. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `footer` | The wrapper around the `footer` slot, below the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `header` | The wrapper around the `header` slot, above the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `list` | The `role=\"menu\"` container wrapping the default slot. |\n| `popup` | The positioned floating panel. |\n| `trigger` | The wrapper around the `trigger` slot (the positioning anchor). |",
+          "description": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers between groups (native `<hr>` already carries an implicit `separator` role, matching what `role=\"menu\"` expects between item groups). Arbitrary non-item content still renders here for backward compatibility, but the `header`/`footer` slots below are the supported place for it. |\n| `footer` | Same as `header`, rendered below the items — an \"Apply\"/\"Done\" button, a link to a fuller settings page, a count. |\n| `header` | Composed content rendered above the items and *outside* the `role=\"menu\"` list — a filter/search field, a section title, a summary row. Keeps its own full default keyboard behavior, is reachable with Tab from the items, and is ARIA-valid (arbitrary content inside `role=\"menu\"` is not). Collapses to no box at all while unfilled. |\n| `trigger` | The consumer's own trigger element (typically an icon button). Clicking it toggles the menu; it's positioned against via `internal/positioner.js`'s `place()`. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `footer` | The wrapper around the `footer` slot, below the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `header` | The wrapper around the `header` slot, above the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `list` | The `role=\"menu\"` container wrapping the default slot. |\n| `popup` | The positioned floating panel. |\n| `trigger` | The wrapper around the `trigger` slot (the positioning anchor). |",
           "attributes": [
             {
               "name": "close-on-escape-anywhere",
@@ -12691,6 +12691,57 @@
           ]
         },
         {
+          "name": "lr-prompt-studio",
+          "description": "`<lr-prompt-studio>` — a provider-neutral prompt-development workbench for ordered role\nmessages, `{{variable}}` substitution, version selection, preview, save, and run intents.\nThe host owns persistence and model execution.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `add-message` | The add-message action. |\n| `base` | The named studio region. |\n| `editor` | Messages and variables workspace. |\n| `message` | One prompt message. |\n| `message-content` | A message textarea. |\n| `message-role` | A message role selector. |\n| `messages` | Ordered prompt-message editor. |\n| `preview` | Resolved read-only preview. |\n| `remove-message` | A message removal action. |\n| `run` | The run action. |\n| `save` | The save action. |\n| `toolbar` | Save/run controls. |\n| `variable` | One variable row. |\n| `variables` | Variable editor. |\n| `version` | One saved version. |\n| `versions` | Saved-version controls. |",
+          "attributes": [
+            {
+              "name": "disabled",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "running",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "selected-version-id",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lr-provenance-panel",
           "description": "`<lr-provenance-panel>` — the grounding breakdown for one answer: a sectioned disclosure\npanel (Entities / Relationships / Communities / Text chunks) composing this family's own pieces.\nThe chat <-> graph <-> document glue component. Pure projection + event conduit: no fetching, no\ngraph/viewer imports, no persistence.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The root wrapper. |\n| `body` | A section's content wrapper, `hidden` while collapsed. |\n| `count` | A section's item-count badge. |\n| `empty` | The empty state, shown when every section is empty. |\n| `header` | A section's disclosure `<button>`. |\n| `section` | One section's wrapper. |",
           "attributes": [
@@ -13448,6 +13499,79 @@
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lr-realtime-session",
+          "description": "`<lr-realtime-session>` — a provider-neutral voice-session shell composing connection status,\nlive activity, transcript, native capture, mute, interruption, and connect/disconnect intents.\nTransport, authentication, audio playback, and SDK ownership remain with the host.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `controls` | Additional provider-specific controls. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `activity` | Voice activity visualization. |\n| `base` | The named session region. |\n| `capture` | Native push-to-talk capture. |\n| `connect` | Connect action. |\n| `controls` | Built-in and slotted controls. |\n| `disconnect` | Disconnect action. |\n| `error` | Localized connection error. |\n| `header` | Status and session controls. |\n| `interrupt` | Response interruption action. |\n| `mute` | Controlled mute action. |\n| `status` | Connection status badge. |\n| `transcript` | Live transcript. |",
+          "attributes": [
+            {
+              "name": "error-code",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "level",
+              "description": "Type: `number | null`  \nDefault: `null`"
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "muted",
+              "description": "Type: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "show-capture",
+              "description": "Type: `boolean`  \nDefault: `true`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
+              "name": "state",
+              "description": "Type: `RealtimeConnectionState`  \nDefault: `'disconnected'`",
+              "value": {
+                "type": [
+                  "RealtimeConnectionState"
+                ]
+              }
+            },
+            {
+              "name": "voice-state",
+              "description": "Type: `AudioVisualizerState`  \nDefault: `'idle'`",
+              "value": {
+                "type": [
+                  "AudioVisualizerState"
                 ]
               }
             }
@@ -14221,6 +14345,48 @@
           ]
         },
         {
+          "name": "lr-schema-viewer",
+          "description": "`<lr-schema-viewer>` — a recursive, selectable JSON Schema inspector with required-state,\nconstraints, composition branches, `$ref` display, validation issues, cycle protection, and a\nconfigurable depth ceiling. It does not resolve remote references or validate values.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The named schema region. |\n| `constraints` | Recognized schema constraints. |\n| `description` | Caller-supplied schema description. |\n| `empty` | The empty state. |\n| `issue` | One caller-supplied validation issue. |\n| `name` | Property/branch name. |\n| `node` | One schema node. |\n| `node-selected` | The selected schema node. |\n| `node-trigger` | A schema-node activation button. |\n| `required` | Required badge. |\n| `tree` | The recursive schema tree. |\n| `type` | Schema type badge. |",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "max-depth",
+              "description": "Type: `number`  \nDefault: `20`",
+              "value": {
+                "type": [
+                  "number"
+                ]
+              }
+            },
+            {
+              "name": "selected-path",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "lr-scroller",
           "description": "`<lr-scroller>` — a responsive overflow surface with optional previous\nand next controls. Content remains in the default slot, so cards, tabs, and\nany consumer-owned interactive elements retain their own semantics.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Scrollable content. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The overall scroller layout. |\n| `content` | The slotted content wrapper. |\n| `control` | Shared part on both `previous` and `next`. |\n| `next` | The next/end control. |\n| `next-glyph` | The chevron glyph inside `next`, mirrored under RTL. |\n| `previous` | The previous/start control. |\n| `previous-glyph` | The chevron glyph inside `previous`, mirrored under RTL. |\n| `viewport` | The native scroll container. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-scroller-control-size` (default: `var(--lr-size-2rem)`) — Control size.\n- `--lr-scroller-min-block-size` (default: `var(--lr-size-10rem)`) — Minimum vertical scroller size.",
           "attributes": [
@@ -14438,7 +14604,7 @@
         },
         {
           "name": "lr-selection-toolbar",
-          "description": "`<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries\nthe selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `action` | Every action button. |\n| `action-ask` | The ask action. |\n| `action-cite` | The cite action. |\n| `action-copy` | The copy action. |\n| `action-quote` | The quote action. |\n| `toolbar` | The floating `role=\"toolbar\"` surface. |",
+          "description": "`<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries\nthe selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `action` | Every action button. |\n| `action-ask` | The ask action. |\n| `action-cite` | The cite action. |\n| `action-copy` | The copy action. |\n| `action-quote` | The quote action. |\n| `toolbar` | The floating `role=\"toolbar\"` surface. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-selection-toolbar-inline-start` — Computed logical inline position of the toolbar.\n- `--lr-selection-toolbar-block-start` — Computed logical block position of the toolbar.",
           "attributes": [
             {
               "name": "aria-label",
@@ -15392,6 +15558,39 @@
               "value": {
                 "type": [
                   "boolean"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "lr-subagent-panel",
+          "description": "`<lr-subagent-panel>` — a controlled hierarchy of nested agent runs with lifecycle status,\ntask/model context, progress, selection, cancellation, and retry intents.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `actions` | Run actions. |\n| `base` | The named subagent region. |\n| `cancel` | Cancellation action. |\n| `empty` | The empty state. |\n| `label` | Run label. |\n| `list` | Hierarchical run list. |\n| `model` | Caller-supplied model id. |\n| `progress` | Progress indicator. |\n| `retry` | Retry action. |\n| `run` | One run. |\n| `run-row` | Run content and actions. |\n| `run-selected` | The selected run. |\n| `run-trigger` | Run selection action. |\n| `status` | Lifecycle status badge. |\n| `task` | Caller-supplied task text. |",
+          "attributes": [
+            {
+              "name": "label",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "locale",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
+                ]
+              }
+            },
+            {
+              "name": "selected-run-id",
+              "description": "Type: `string`  \nDefault: `''`",
+              "value": {
+                "type": [
+                  "string"
                 ]
               }
             }
@@ -20006,6 +20205,14 @@
         {
           "name": "--lr-select-trigger-padding",
           "description": "**`<lr-select>`** — Trigger padding shorthand, scaled by `size`."
+        },
+        {
+          "name": "--lr-selection-toolbar-block-start",
+          "description": "**`<lr-selection-toolbar>`** — Computed logical block position of the toolbar."
+        },
+        {
+          "name": "--lr-selection-toolbar-inline-start",
+          "description": "**`<lr-selection-toolbar>`** — Computed logical inline position of the toolbar."
         },
         {
           "name": "--lr-sequence-strip-height",

@@ -40,3 +40,9 @@ it('fails closed for malformed/circular input and is accessible', async () => {
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-schema-viewer
+    .strings=${{ schemaViewerLabel: 'Localized schema browser' }}
+  ></lr-schema-viewer>`)) as LyraSchemaViewer;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized schema browser');
+});

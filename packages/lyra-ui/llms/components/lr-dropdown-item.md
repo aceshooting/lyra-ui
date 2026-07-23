@@ -66,8 +66,12 @@ returning to the trigger)
 **Slots:** `trigger` (the consumer's own trigger element — first assigned element wins if several
 are assigned; enhanced imperatively with `aria-haspopup="menu"`/`aria-expanded`/`aria-controls`
 since those attributes belong on the actual interactive trigger, which lives outside this
-component's shadow root), default (`<lr-menu-item>` elements, plus optionally plain `<hr>`
-dividers between groups — native `<hr>` already carries an implicit `separator` role),
+component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
+generated id only when the consumer did not provide one, rather than the shadow-private list id.
+`lr-button`/`lr-icon-button` forward the popup/expanded values to their focused shadow-internal
+native control and resolve the controls element-reference across their shadow boundary), default
+(`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
+an implicit `separator` role),
 `header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
 section title, an "Apply"/"Done" button, a count — rendered above/below the items inside
 `[part="popup"]` but **outside** the `role="menu"` list. Both collapse to no box at all while

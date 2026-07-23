@@ -43,3 +43,9 @@ it('renders a localized empty state and remains accessible at populated state', 
   await expect(populated).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-retrieval-compare
+    .strings=${{ retrievalCompareLabel: 'Localized retrieval comparison' }}
+  ></lr-retrieval-compare>`)) as LyraRetrievalCompare;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized retrieval comparison');
+});

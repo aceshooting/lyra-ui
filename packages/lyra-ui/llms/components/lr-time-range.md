@@ -32,6 +32,11 @@ consumer-facing `disabled` property/attribute itself.
 - `disabled: boolean = false` (reflected)
 - `startLabel: string = 'Range start'` (attribute `start-label`) — `aria-label` for the start handle
 - `endLabel: string = 'Range end'` (attribute `end-label`) — `aria-label` for the end handle
+- `valueFormatter?: TimeRangeValueFormatter` (attribute: false) — maps each finite, clamped
+  `aria-valuenow` to optional human-readable `aria-valuetext`; called as
+  `(value, handle: TimeRangeHandle)`, where `TimeRangeHandle = 'start' | 'end'`. The formatter may
+  return `string | null | undefined`; a nullish result omits `aria-valuetext` for that handle.
+  Leaving the property unset preserves the numeric-only contract
 - `presets: TimeRangePreset[] = []` (attribute: false) — `TimeRangePreset { label: string; start:
   number; end: number }`; optional discrete presets (e.g. "Last 7 days") rendered as a
   `[part="presets"]` button row above the track — purely additive, the continuous brush is
@@ -75,10 +80,13 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 **Optional peer deps:** none.
 
 ```html
-<lr-time-range min="0" max="1440" start="480" end="1020" step="15"></lr-time-range>
+<lr-time-range id="months" min="0" max="2" start="0" end="2"></lr-time-range>
 <script>
-  document.querySelector('lr-time-range')
-    .addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
+  const months = ['April 2023', 'May 2023', 'June 2023'];
+  const range = document.getElementById('months');
+  range.valueFormatter = (value, handle) =>
+    `${handle === 'start' ? 'From' : 'Through'} ${months[value]}`;
+  range.addEventListener('lr-change', (e) => console.log(e.detail.start, e.detail.end));
 </script>
 ```
 
@@ -95,9 +103,9 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   slider.
 - `aria-valuemin`/`aria-valuemax` on each handle report that handle's reachable sub-range (bounded by
   its sibling), not the full domain — matching what Home/End actually jump to.
-- No `aria-valuetext`: only raw numeric `aria-valuenow` is exposed (omitted entirely, rather than a
-  literal `"NaN"`, if `start`/`end` is non-finite), no hook for a human-readable (e.g. formatted
-  date/time) equivalent of the mapped domain.
+- `valueFormatter` is presentation-only: `aria-valuenow`, geometry, emitted values, and preset
+  matching stay numeric. Non-finite handles omit both `aria-valuenow` and `aria-valuetext` and are
+  never passed to the formatter.
 - Handles a `min > max` domain, a non-positive/non-finite `step`, and disabled-mid-drag/
   disconnect-mid-drag correctly (tested) — safe to rely on those edge cases. Concurrent drags are
   tracked per `pointerId` (not a single scalar), so a two-finger touch — one finger per handle —
@@ -107,7 +115,7 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
 - Non-finite domain/handle values use finite fallback geometry, and non-finite or negative steps are
   treated as unstepped; invalid values never become `NaN`/`Infinity` CSS or ARIA strings.
 - `startLabel`/`endLabel` only override each handle's `aria-label`; they don't affect
-  `aria-valuenow`/`aria-valuemin`/`aria-valuemax` (still raw numbers) or any visible text.
+  `aria-valuenow`/`aria-valuemin`/`aria-valuemax`, `valueFormatter`, or any visible text.
 - An ancestor `<fieldset disabled>` toggling is reflected via `formDisabledCallback` into
   `effectiveDisabled` (tracked separately from the consumer's own `disabled`), so re-enabling the
   fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice

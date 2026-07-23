@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './resize-observer.styles.js';
+import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 
 export type ResizeObserverBox = 'content-box' | 'border-box' | 'device-pixel-content-box';
 
@@ -62,15 +63,13 @@ export class LyraResizeObserver extends LyraElement<LyraResizeObserverEventMap> 
   private onSlotChange = (): void => this.observeTargets();
 
   private disconnect(): void {
-    this.observer?.disconnect();
-    this.observer = undefined;
+    this.observer = disconnectObserver(this.observer);
   }
 
   private observeTargets = (): void => {
     this.disconnect();
     if (this.disabled) return;
-    const slot = this.renderRoot.querySelector('slot');
-    const targets = slot?.assignedElements({ flatten: true }) ?? [];
+    const targets = slottedElementTargets(this.renderRoot);
     if (targets.length === 0 || typeof ResizeObserver === 'undefined') return;
     this.observer = new ResizeObserver((entries) => this.emit('lr-resize', { entries: [...entries] }));
     for (const target of targets) {

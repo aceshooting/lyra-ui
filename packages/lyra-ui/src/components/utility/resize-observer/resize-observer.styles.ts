@@ -1,11 +1,1 @@
-import { css } from 'lit';
-
-export const styles = css`
-  :host {
-    display: contents;
-  }
-
-  [part='base'] {
-    display: contents;
-  }
-`;
+export { observerWrapperStyles as styles } from '../../../internal/observer-wrapper.styles.js';

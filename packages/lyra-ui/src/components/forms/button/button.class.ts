@@ -32,10 +32,11 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * `accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor
  * as a literal string (for an icon-only button with no visible label); external
  * `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.
- * Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are likewise forwarded to
- * the internal semantic control. When `aria-controls` names elements in the host's own root, the
- * element-reference relationship is resolved onto the internal control so it remains valid across
- * this component's shadow boundary.
+ * Host `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic
+ * control. When host `aria-controls` names elements in the host's own root, the controls
+ * relationship is resolved onto the internal control through the reflected element-reference API
+ * so it remains valid across this component's shadow boundary; browsers without that API retain
+ * the forwarded string attribute as a best-effort fallback.
  *
  * @customElement lr-button
  * @slot - Default slot: the button's label content.

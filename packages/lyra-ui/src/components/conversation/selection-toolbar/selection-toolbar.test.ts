@@ -49,3 +49,12 @@ it('is accessible in its open populated state', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part~="action"]')).to.have.lengthOf(4);
   await expect(el).to.be.accessible();
 });
+
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-selection-toolbar
+    open
+    text="selected"
+    .strings=${{ selectionToolbarLabel: 'Localized selection actions' }}
+  ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  expect(el.shadowRoot!.querySelector('[part="toolbar"]')!.getAttribute('aria-label')).to.equal('Localized selection actions');
+});

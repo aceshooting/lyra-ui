@@ -58,6 +58,9 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
 - `disabled: boolean = false` (reflected)
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
+  reactively to the internal native button or anchor; changing or removing the attribute after
+  mount updates the actual focused control
 
 The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
 `100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
@@ -136,9 +139,14 @@ box no matter what tier or override is in play.
 ```
 
 **Known gotchas:**
-- A host `aria-label` is forwarded to the internal button as a literal string (for an icon-only
-  button); an external `aria-labelledby`/`aria-describedby` idref is not copied across the shadow
-  boundary.
+- `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
+  a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
+  idref is not copied across the shadow boundary.
+- Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
+  For host `aria-controls`, targets in the host's own root are resolved through the reflected
+  element-reference API so a popup relationship survives the component's shadow boundary; browsers
+  without that API retain the forwarded string attribute as a best-effort fallback. This is what
+  lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.

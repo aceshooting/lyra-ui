@@ -227,10 +227,11 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   // settle plus the very first 30k-element DOM/canvas paint for 5,000 nodes/10,000 links still
   // needs more headroom than mocha's 6s default, especially on a loaded CI worker. 30s is enough
   // in isolation (~15s) but has been observed to time out under the full ~290-file suite's
-  // concurrent Chromium load; doubled for headroom rather than tightened, since this test's job
-  // is to catch a real regression in the benchmarked median, not to police wall-clock scheduling
-  // noise from unrelated files running at the same time.
-  this.timeout(60000);
+  // concurrent Chromium load. Coverage instrumentation magnifies the one-time 30k-element setup
+  // further, so the wall-clock guard leaves two minutes while the actual warmed-update assertion
+  // remains the same 400ms median budget. This test polices update complexity, not Istanbul's
+  // instrumentation overhead during fixture construction.
+  this.timeout(120000);
   const GRAPH_NODE_COUNT = 5_000;
   const GRAPH_LINK_COUNT = 10_000;
   const host = (await fixture(
@@ -256,7 +257,7 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   // A seeded layout settles synchronously inside the pending Lit update. Under full-suite CPU
   // contention that update can occupy the main thread for just over waitUntil()'s deadline; its
   // first timer callback then rejects on elapsed wall time even though the canvas has rendered.
-  // Follow Lit's actual update boundary instead, with this test's 60s timeout as the outer guard.
+  // Follow Lit's actual update boundary instead, with this test's timeout as the outer guard.
   while (!host.shadowRoot!.querySelector('canvas')) {
     await host.updateComplete;
     await new Promise<void>((resolve) => setTimeout(resolve, 0));

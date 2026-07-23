@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './intersection-observer.styles.js';
+import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 
 export interface LyraIntersectionObserverEventMap {
   'lr-intersection': CustomEvent<{ entries: IntersectionObserverEntry[] }>;
@@ -43,8 +44,7 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   }
 
   override disconnectedCallback(): void {
-    this.observer?.disconnect();
-    this.observer = undefined;
+    this.observer = disconnectObserver(this.observer);
     super.disconnectedCallback();
   }
 
@@ -62,11 +62,9 @@ export class LyraIntersectionObserver extends LyraElement<LyraIntersectionObserv
   private onSlotChange = (): void => this.observeTargets();
 
   private observeTargets = (): void => {
-    this.observer?.disconnect();
-    this.observer = undefined;
+    this.observer = disconnectObserver(this.observer);
     if (this.disabled || typeof IntersectionObserver === 'undefined') return;
-    const slot = this.renderRoot.querySelector('slot');
-    const targets = slot?.assignedElements({ flatten: true }).filter((element): element is Element => element instanceof Element) ?? [];
+    const targets = slottedElementTargets(this.renderRoot);
     if (targets.length === 0) return;
     this.observer = new IntersectionObserver((entries) => this.emit('lr-intersection', { entries: [...entries] }), {
       root: this.root instanceof Element ? this.root : null,

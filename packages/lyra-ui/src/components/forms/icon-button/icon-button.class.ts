@@ -50,10 +50,11 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * `<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a
  * slotted `<lr-flag>`) is never run through it.
  *
- * Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded reactively
- * to the shadow-internal native button. When `aria-controls` names elements in the host's own root,
- * the element-reference relationship is resolved onto that focused control so it remains valid
- * across this component's shadow boundary.
+ * Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
+ * native button. When host `aria-controls` names elements in the host's own root, the controls
+ * relationship is resolved onto that focused control through the reflected element-reference API
+ * so it remains valid across this component's shadow boundary; browsers without that API retain
+ * the forwarded string attribute as a best-effort fallback.
  *
  * Form-associated (mirroring `<lr-button>`'s identical shape): discoverable through
  * `form.elements`, and `type="submit"`/`type="reset"` are handled by this component itself via

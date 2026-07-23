@@ -55,7 +55,8 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
 channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
-(non-object, or the depth/size caps made it empty).
+(non-object, or the depth/size caps made it empty). `lr-widget-state-change` — `detail: { path,
+value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).

@@ -60,3 +60,10 @@ it('honors editable="false" and is accessible while populated', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part="value"]')).to.have.lengthOf(2);
   await expect(el).to.be.accessible();
 });
+
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-prompt-queue
+    .strings=${{ promptQueueLabel: 'Localized prompt backlog' }}
+  ></lr-prompt-queue>`)) as LyraPromptQueue;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized prompt backlog');
+});

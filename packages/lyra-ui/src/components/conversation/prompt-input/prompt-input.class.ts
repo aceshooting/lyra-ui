@@ -117,6 +117,11 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     this.composer?.blur();
   }
 
+  override click(): void {
+    if (this.disabled) return;
+    this.composer?.click();
+  }
+
   select(): void {
     this.composer?.select();
   }
@@ -227,7 +232,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       .size=${attachment.size ?? 0}
       .mimeType=${attachment.mimeType ?? ''}
       .previewSrc=${attachment.uri ?? ''}
-      .removable=${true}
+      .removable=${!this.disabled}
       compact
       @lr-remove=${(event: Event) => {
         event.stopPropagation();
@@ -262,7 +267,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
           ></lr-voice-picker>`
         : nothing}
       ${this.sources.length
-        ? html`<details part="sources">
+        ? html`<details part="sources" .inert=${this.disabled} aria-disabled=${String(this.disabled)}>
             <summary part="sources-summary">${this.localize('promptInputSources')}</summary>
             <lr-source-picker
               part="source-picker"
@@ -312,7 +317,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
         .anchor=${this.suggestionAnchor}
         .items=${this.suggestions()}
         .query=${this.activeSuggestion?.query ?? ''}
-        .open=${this.activeSuggestion !== null}
+        .open=${!this.disabled && this.activeSuggestion !== null}
         @lr-mention-select=${this.onSuggestionSelect}
         @lr-mention-close=${() => {
           this.activeSuggestion = null;

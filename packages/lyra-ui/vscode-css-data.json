@@ -2816,6 +2816,20 @@
       }
     },
     {
+      "name": "--lr-selection-toolbar-block-start",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** — Computed logical block position of the toolbar."
+      }
+    },
+    {
+      "name": "--lr-selection-toolbar-inline-start",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** — Computed logical inline position of the toolbar."
+      }
+    },
+    {
       "name": "--lr-sequence-strip-height",
       "description": {
         "kind": "markdown",

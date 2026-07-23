@@ -43,13 +43,12 @@ it('detects mention triggers, anchors the popover to the real textarea, and inse
   expect(composer.input?.getAttribute('aria-activedescendant')).to.equal(popover.activeDescendantId);
 
   const selected = oneEvent(el, 'lr-mention-select');
-  popover.dispatchEvent(
-    new CustomEvent('lr-mention-select', {
-      bubbles: true,
-      composed: true,
-      detail: { id: 'ada', label: 'Ada' },
-    }),
-  );
+  composer.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Enter',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  }));
   const event = await selected as CustomEvent<{ id: string; label: string; trigger: '@' }>;
   expect(event.detail).to.deep.equal({ id: 'ada', label: 'Ada', trigger: '@' });
   expect(el.value).to.equal('Hello @Ada ');
@@ -92,6 +91,34 @@ it('emits attachment additions and removals as controlled requests', async () =>
   expect((await removed as CustomEvent<{ id: string }>).detail.id).to.equal('doc-1');
 });
 
+it('gates every composed interaction while disabled and forwards host click to the composer', async () => {
+  const el = (await fixture(html`<lr-prompt-input
+    disabled
+    .attachments=${[{ id: 'doc-1', name: 'report.pdf' }]}
+    .sources=${[{ id: 'doc-1', label: 'Report' }]}
+    .mentionItems=${[{ id: 'ada', label: 'Ada' }]}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  const attachment = el.shadowRoot!.querySelector('lr-attachment-chip')!;
+  const sources = el.shadowRoot!.querySelector('details')!;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+
+  expect(attachment.removable).to.be.false;
+  expect(sources.inert).to.be.true;
+  expect(popover.open).to.be.false;
+
+  let clicks = 0;
+  composer.addEventListener('click', () => {
+    clicks += 1;
+  });
+  el.click();
+  expect(clicks).to.equal(0);
+  el.disabled = false;
+  await el.updateComplete;
+  el.click();
+  expect(clicks).to.equal(1);
+});
+
 it('is accessible with its composed controls populated', async () => {
   const el = await fixture(html`<lr-prompt-input
     .modelCatalog=${['fast']}
@@ -100,4 +127,11 @@ it('is accessible with its composed controls populated', async () => {
   ></lr-prompt-input>`);
   expect(el.shadowRoot!.querySelectorAll('lr-chat-composer')).to.have.lengthOf(1);
   await expect(el).to.be.accessible();
+});
+
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-prompt-input
+    .strings=${{ promptInputLabel: 'Localized prompt editor' }}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized prompt editor');
 });

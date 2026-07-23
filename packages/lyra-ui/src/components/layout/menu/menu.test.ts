@@ -84,6 +84,8 @@ it('forwards menu trigger semantics to lr-button\'s focused native control', asy
   if ('ariaControlsElements' in focusedControl) {
     expect(focusedControl.ariaControlsElements.length).to.equal(1);
     expect(focusedControl.ariaControlsElements[0]?.id).to.equal(el.id);
+  } else {
+    expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
   }
 
   triggerButton.click();
@@ -111,6 +113,8 @@ it('forwards menu trigger semantics to lr-icon-button\'s focused native control'
   if ('ariaControlsElements' in focusedControl) {
     expect(focusedControl.ariaControlsElements.length).to.equal(1);
     expect(focusedControl.ariaControlsElements[0]?.id).to.equal(el.id);
+  } else {
+    expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
   }
 
   triggerButton.click();

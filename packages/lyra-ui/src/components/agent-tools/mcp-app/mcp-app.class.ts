@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -100,7 +101,7 @@ function permissionPolicy(permissions: McpAppPermissions | undefined): string {
     permissions?.clipboardRead ? 'clipboard-read' : '',
     permissions?.clipboardWrite ? 'clipboard-write' : '',
   ].filter(Boolean);
-  return enabled.map((permission) => `${permission} 'none'`).join('; ');
+  return enabled.map((permission) => `${permission} *`).join('; ');
 }
 
 /**
@@ -251,7 +252,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         allow=${permissionPolicy(resource?.permissions)}
         src=${resource?.html ? nothing : src ?? nothing}
         .srcdoc=${resource?.html ? withCsp(resource.html, resource.csp) : ''}
-        style=${`height: ${this.frameHeight}px`}
+        style=${styleMap({ height: `${this.frameHeight}px` })}
         @load=${this.onLoad}
       ></iframe>
     </div>`;

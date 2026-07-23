@@ -1,13 +1,19 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { place } from '../../../internal/positioner.js';
+import { AnchoredPopoverController } from '../../../internal/anchored-popover-controller.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import {
+  filterCatalogEntries,
+  normalizeCatalog,
+  withSyntheticCatalogValue,
+  type DisplayCatalogEntry,
+} from '../../../internal/catalog-picker.js';
 
 /**
  * `true`-defaulting boolean attribute converter for `preview`. Lit's built-in `type: Boolean`
@@ -35,9 +41,7 @@ export interface LyraVoiceCatalogEntry {
 export type LyraVoiceCatalog = string[] | LyraVoiceCatalogEntry[];
 
 /** A catalog row plus whether it's the synthetic "stale value" row — see `effectiveEntries`. */
-interface DisplayEntry extends LyraVoiceCatalogEntry {
-  synthetic: boolean;
-}
+type DisplayEntry = DisplayCatalogEntry<LyraVoiceCatalogEntry>;
 
 export interface LyraVoicePickerEventMap {
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
@@ -138,7 +142,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   private validityController: AnchoredValidityController;
   private listId = nextId('voice-picker-list');
   private controlId = nextId('voice-picker-control');
-  private cleanup?: () => void;
+  private popupPosition = new AnchoredPopoverController();
   private audioEl?: HTMLAudioElement;
   private _value = '';
   private _fieldsetDisabled = false;
@@ -209,8 +213,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.cleanup?.();
-    this.cleanup = undefined;
+    this.popupPosition.disconnect();
     this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
     this.stopInternalPreview();
     this.open = false;
@@ -300,9 +303,7 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   /** `catalog`, normalized to `{ id, label, ... }[]` regardless of the plain-string-array shorthand. */
   private get normalizedCatalog(): LyraVoiceCatalogEntry[] {
-    const raw = this.catalog;
-    if (!raw || raw.length === 0) return [];
-    return raw.map((item): LyraVoiceCatalogEntry => (typeof item === 'string' ? { id: item, label: item } : item));
+    return normalizeCatalog<LyraVoiceCatalogEntry>(this.catalog);
   }
 
   /** Closed-dropdown-with-listbox mode vs. free-text filterable mode — see class doc. */
@@ -316,26 +317,18 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
    * never a snapshot from whenever `value` happened to be assigned.
    */
   private get effectiveEntries(): DisplayEntry[] {
-    const catalog = this.normalizedCatalog;
-    const entries: DisplayEntry[] = catalog.map((e) => ({ ...e, synthetic: false }));
-    if (catalog.length > 0 && this._value && !catalog.some((e) => e.id === this._value)) {
-      entries.push({ id: this._value, label: this._value, synthetic: true });
-    }
-    return entries;
+    return withSyntheticCatalogValue(this.normalizedCatalog, this._value);
   }
 
   /** `effectiveEntries` filtered by the typed `query` (free-text mode only; id, label, language, or
    *  description substring, case-insensitive). */
   private get filteredEntries(): DisplayEntry[] {
-    const q = this.query.trim().toLocaleLowerCase(this.effectiveLocale);
-    if (!q) return this.effectiveEntries;
-    return this.effectiveEntries.filter(
-      (e) =>
-        e.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
-        e.label.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
-        (e.language ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q) ||
-        (e.description ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q),
-    );
+    return filterCatalogEntries(this.effectiveEntries, this.query, this.effectiveLocale, (entry) => [
+      entry.id,
+      entry.label,
+      entry.language ?? '',
+      entry.description ?? '',
+    ]);
   }
 
   private labelFor(id: string): string {
@@ -359,15 +352,14 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
   protected override updated(changed: PropertyValues): void {
     const reposition = changed.has('open') || (this.open && (changed.has('catalog') || changed.has('allowCustom')));
     if (reposition) {
-      this.cleanup?.();
-      this.cleanup = undefined;
+      this.popupPosition.disconnect();
       if (this.open) {
         this.ownerDocument.addEventListener('pointerdown', this.onDocPointer);
         const anchor = this.renderRoot.querySelector(
           this.closedMode ? '[part="trigger"]' : '[part="combobox"]',
         ) as HTMLElement | null;
         const listbox = this.renderRoot.querySelector('[part="listbox"]') as HTMLElement | null;
-        if (anchor && listbox) this.cleanup = place(anchor, listbox);
+        if (anchor && listbox) this.popupPosition.reposition(anchor, listbox);
       } else {
         this.ownerDocument.removeEventListener('pointerdown', this.onDocPointer);
       }

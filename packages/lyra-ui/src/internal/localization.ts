@@ -933,6 +933,40 @@ export type LyraMessageKey =
   | 'ragEvalDashboardRuns'
   | 'ragEvalDashboardSlices'
   | 'ragEvalDashboardAllSlices'
+  | 'promptStudioLabel'
+  | 'promptStudioMessages'
+  | 'promptStudioVariables'
+  | 'promptStudioVersions'
+  | 'promptStudioPreview'
+  | 'promptStudioRun'
+  | 'promptStudioSave'
+  | 'promptStudioAddMessage'
+  | 'promptStudioRemoveMessage'
+  | 'promptStudioRoleSystem'
+  | 'promptStudioRoleUser'
+  | 'promptStudioRoleAssistant'
+  | 'promptStudioRoleTool'
+  | 'schemaViewerLabel'
+  | 'schemaViewerEmpty'
+  | 'schemaViewerRequired'
+  | 'schemaViewerCircular'
+  | 'schemaViewerType'
+  | 'subagentPanelLabel'
+  | 'subagentPanelEmpty'
+  | 'subagentPanelCancel'
+  | 'subagentPanelRetry'
+  | 'realtimeSessionLabel'
+  | 'realtimeSessionDisconnected'
+  | 'realtimeSessionConnecting'
+  | 'realtimeSessionConnected'
+  | 'realtimeSessionReconnecting'
+  | 'realtimeSessionError'
+  | 'realtimeSessionConnect'
+  | 'realtimeSessionDisconnect'
+  | 'realtimeSessionMute'
+  | 'realtimeSessionUnmute'
+  | 'realtimeSessionInterrupt'
+  | 'realtimeSessionConnectionFailed'
   | 'contextInspectorRedacted'
   | 'contextInspectorTruncated'
   | 'contextInspectorLabel'
@@ -2009,6 +2043,40 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   ragEvalDashboardRuns: 'Evaluation runs',
   ragEvalDashboardSlices: 'Evaluation slices',
   ragEvalDashboardAllSlices: 'All',
+  promptStudioLabel: 'Prompt studio',
+  promptStudioMessages: 'Prompt messages',
+  promptStudioVariables: 'Variables',
+  promptStudioVersions: 'Versions',
+  promptStudioPreview: 'Resolved preview',
+  promptStudioRun: 'Run prompt',
+  promptStudioSave: 'Save version',
+  promptStudioAddMessage: 'Add message',
+  promptStudioRemoveMessage: 'Remove message',
+  promptStudioRoleSystem: 'System',
+  promptStudioRoleUser: 'User',
+  promptStudioRoleAssistant: 'Assistant',
+  promptStudioRoleTool: 'Tool',
+  schemaViewerLabel: 'Schema viewer',
+  schemaViewerEmpty: 'No schema available',
+  schemaViewerRequired: 'Required',
+  schemaViewerCircular: 'Circular schema reference',
+  schemaViewerType: 'Type: {type}',
+  subagentPanelLabel: 'Subagents',
+  subagentPanelEmpty: 'No subagent runs',
+  subagentPanelCancel: 'Cancel subagent',
+  subagentPanelRetry: 'Retry subagent',
+  realtimeSessionLabel: 'Realtime session',
+  realtimeSessionDisconnected: 'Disconnected',
+  realtimeSessionConnecting: 'Connecting',
+  realtimeSessionConnected: 'Connected',
+  realtimeSessionReconnecting: 'Reconnecting',
+  realtimeSessionError: 'Connection error',
+  realtimeSessionConnect: 'Connect',
+  realtimeSessionDisconnect: 'Disconnect',
+  realtimeSessionMute: 'Mute microphone',
+  realtimeSessionUnmute: 'Unmute microphone',
+  realtimeSessionInterrupt: 'Interrupt response',
+  realtimeSessionConnectionFailed: 'The realtime connection failed.',
   contextInspectorRedacted: 'Redacted',
   contextInspectorTruncated: 'Truncated',
   contextInspectorLabel: 'Context inspector',

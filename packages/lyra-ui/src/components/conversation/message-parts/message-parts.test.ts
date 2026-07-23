@@ -84,3 +84,10 @@ it('is accessible with populated mixed content', async () => {
   expect(el.shadowRoot!.querySelectorAll('[part~="part"]')).to.have.lengthOf(parts.length);
   await expect(el).to.be.accessible();
 });
+
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-message-parts
+    .strings=${{ messagePartsLabel: 'Localized message content' }}
+  ></lr-message-parts>`)) as LyraMessageParts;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized message content');
+});

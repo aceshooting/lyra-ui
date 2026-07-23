@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './mutation-observer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { disconnectObserver, slottedElementTargets } from '../../../internal/slotted-observer.js';
 
 export interface LyraMutationObserverEventMap {
   'lr-mutation': CustomEvent<{ records: MutationRecord[] }>;
@@ -52,22 +53,20 @@ export class LyraMutationObserver extends LyraElement<LyraMutationObserverEventM
 
   protected override updated(changed: PropertyValues): void {
     if (['disabled', 'childList', 'observeAttributes', 'characterData', 'subtree', 'attributeFilter'].some((key) => changed.has(key))) {
-      queueMicrotask(this.observeTargets);
+      this.scheduleAfterUpdate(this.observeTargets);
     }
   }
 
   private onSlotChange = (): void => this.observeTargets();
 
   private disconnect(): void {
-    this.observer?.disconnect();
-    this.observer = undefined;
+    this.observer = disconnectObserver(this.observer);
   }
 
   private observeTargets = (): void => {
     this.disconnect();
     if (this.disabled || typeof MutationObserver === 'undefined') return;
-    const slot = this.renderRoot.querySelector('slot');
-    const targets = slot?.assignedElements({ flatten: true }).filter((element): element is Element => element instanceof Element) ?? [];
+    const targets = slottedElementTargets(this.renderRoot);
     if (targets.length === 0 || (!this.childList && !this.observeAttributes && !this.characterData)) return;
     const options: MutationObserverInit = {
       childList: this.childList,

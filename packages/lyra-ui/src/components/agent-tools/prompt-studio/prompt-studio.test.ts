@@ -50,3 +50,9 @@ it('is accessible when populated and gates all editing controls while disabled',
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-prompt-studio
+    .strings=${{ promptStudioLabel: 'Localized prompt workshop' }}
+  ></lr-prompt-studio>`)) as LyraPromptStudio;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized prompt workshop');
+});

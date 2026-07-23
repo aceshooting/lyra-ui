@@ -27,7 +27,11 @@ for (const module of manifest.modules) {
   // itself sits below that -- a component's own fixtures/ subfolder can hold its own analyzed
   // .ts modules, but its stories/tests still live directly in the component's own directory.
   const relPath = module.path.slice('src/components/'.length);
-  const family = relPath.split('/').slice(0, 2).join('/');
+  const pathSegments = relPath.split('/');
+  // Family barrels live directly at `src/components/<family>/index.ts`; they expose no component
+  // fixture directory of their own and are covered through the component modules they re-export.
+  if (pathSegments.length < 3) continue;
+  const family = pathSegments.slice(0, 2).join('/');
   const stories = readFamilyFiles(family, '.stories.ts').join('\n');
   const tests = readFamilyFiles(family, '.test.ts').join('\n');
   for (const declaration of module.declarations ?? []) {

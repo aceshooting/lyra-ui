@@ -38,3 +38,9 @@ it('renders an empty state and has an accessible populated state', async () => {
   await expect(populated).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-subagent-panel
+    .strings=${{ subagentPanelLabel: 'Localized agent hierarchy' }}
+  ></lr-subagent-panel>`)) as LyraSubagentPanel;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized agent hierarchy');
+});

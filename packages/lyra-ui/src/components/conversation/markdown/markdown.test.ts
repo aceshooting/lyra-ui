@@ -777,10 +777,10 @@ describe('shiki highlighting (real peer)', () => {
     // This is the first real (unmocked) shiki cold load in this file -- the full `shiki` package
     // import plus its typescript grammar. Mirrors code-block.test.ts's own first real-peer test,
     // which documents the same 8-way default @web/test-runner concurrency + WASM+grammar load
-    // occasionally exceeding mocha's global 6000ms default under load; bumping this one test's own
-    // budget (rather than the shared config) keeps every later test in this describe fast, since
+    // occasionally taking tens of seconds under the complete 300+ file run; bumping this one test's
+    // own budget (rather than the shared config) keeps every later test in this describe fast, since
     // `loadShikiHighlighter()`'s module-level singleton is warm for the rest of the suite afterward.
-    this.timeout(20_000);
+    this.timeout(60_000);
     const el = (await fixture(html`<lr-markdown></lr-markdown>`)) as LyraMarkdown;
     el.content = '```ts\nconst x = 1;\n```';
     await el.updateComplete;
@@ -790,7 +790,7 @@ describe('shiki highlighting (real peer)', () => {
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="code-block"] span') !== null,
       'never highlighted',
-      { timeout: 8000 },
+      { timeout: 45_000 },
     );
     const pre = el.shadowRoot!.querySelector('[part="code-block"]') as HTMLElement;
     expect(pre.getAttribute('part')).to.equal('code-block');

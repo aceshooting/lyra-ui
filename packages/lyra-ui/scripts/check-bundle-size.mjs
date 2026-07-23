@@ -144,11 +144,14 @@ if (missingEntries.length) {
   // ~200 esbuild passes and runs in a few seconds, so it stays in the normal check.
   const componentsDir = join(packageDir, 'dist', 'components');
   const componentEntries = existsSync(componentsDir)
-    ? readdirSync(componentsDir)
+    ? readdirSync(componentsDir, { withFileTypes: true })
+        .filter((family) => family.isDirectory())
         .flatMap((family) =>
-          readdirSync(join(componentsDir, family)).map(
-            (component) => `dist/components/${family}/${component}/${component}.js`,
-          ),
+          readdirSync(join(componentsDir, family.name), { withFileTypes: true })
+            .filter((component) => component.isDirectory())
+            .map(
+              (component) => `dist/components/${family.name}/${component.name}/${component.name}.js`,
+            ),
         )
         .filter((entry) => existsSync(join(packageDir, entry)))
         .sort()

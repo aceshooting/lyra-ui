@@ -2176,7 +2176,8 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
 channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
-(non-object, or the depth/size caps made it empty).
+(non-object, or the depth/size caps made it empty). `lr-widget-state-change` — `detail: { path,
+value, nodeId, prop }`, emitted when a state-bound mapped control requests a controlled update.
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
@@ -2371,3 +2372,103 @@ composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-
 
 **Optional peer deps:** none of its own; the composed `lr-markdown` keeps its `marked`/`dompurify`
 optional-peer fallback.
+
+## `lr-message-parts`
+
+Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
+attachment, data/widget, audio, and error parts can interleave without flattening stream order.
+
+**Properties:** `parts: MessagePart[]`; `renderMarkdown: boolean = true`; `showReasoning: boolean =
+true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attribute
+`aria-label`).
+
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
+
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+`citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
+```
+
+## `lr-prompt-input`
+
+The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
+retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
+upload, retrieval, or model call.
+
+**Properties:** `value`, `status`, `placeholder`, `disabled`, `submitOnEnter`, `attachments`,
+`attachmentCapabilities`, `mentionItems`, `commandItems`, `modelCatalog`, `model`, `voiceCatalog`,
+`voice`, `sources`, `selectedSourceIds`, `queue`, `label`, `accessibleLabel` (attribute
+`aria-label`).
+
+**Methods:** `focus(options)`, `blur()`, and `click()` forward to the composed chat input;
+`select()` and its selection APIs forward to the same native text surface.
+
+**Events:** `lr-input`, `lr-submit`, `lr-stop`, `lr-mention-select`, `lr-attachments-add`,
+`lr-attachment-remove`, `lr-model-change`, `lr-voice-change`.
+
+**Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
+
+**CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
+`composer`, `leading`, `chips`, `footer`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';
+```
+
+## `lr-prompt-queue`
+
+Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
+proposed queue; send-now emits the complete selected item.
+
+**Properties:** `items: PromptQueueItem[]`; `editable: boolean = true`; `disabled`; `label`;
+`accessibleLabel` (attribute `aria-label`).
+
+**Events:** `lr-queue-change` (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`).
+
+**CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `actions`, `action`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';
+```
+
+## `lr-selection-toolbar`
+
+Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
+`DocumentLocator` into ask, quote, cite, and copy actions.
+
+**Properties:** `open`, `text`, `anchor`, `rect`, `actions`, `label`, `accessibleLabel` (attribute
+`aria-label`).
+
+**Events:** `lr-selection-action` (`{ action, text, anchor }`), `lr-dismiss`, `lr-copy-error`.
+
+**CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
+
+**Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
+`--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
+provide their own fixed-position anchor.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
+```
+
+## `lr-realtime-session`
+
+Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
+`lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.
+
+**Properties:** `state`, `voiceState`, `level`, `stream`, `entries`, `muted`, `showCapture`,
+`errorCode`, `label`.
+
+**Events:** `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), `lr-interrupt`; the
+composed push-to-talk events continue bubbling.
+
+**Slots:** `controls` adds provider-specific actions beside the built-in session controls.
+
+**CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
+`interrupt`, `capture`, `transcript`, `error`.
+
+```ts
+import '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js';
+```

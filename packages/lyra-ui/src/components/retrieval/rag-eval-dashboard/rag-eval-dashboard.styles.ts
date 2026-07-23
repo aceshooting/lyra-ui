@@ -33,6 +33,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part~='slice'] {
+    min-inline-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
   }
   [part~='metric'] {
@@ -43,6 +44,10 @@ export const styles = css`
   [part~='slice-selected'],
   [part~='metric-selected'] {
     border-color: var(--lr-color-brand);
+  }
+  [part~='slice-selected'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part~='slice']:hover,
   [part~='metric']:hover,

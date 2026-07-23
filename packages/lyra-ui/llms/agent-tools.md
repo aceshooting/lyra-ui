@@ -1897,3 +1897,76 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`.
+
+## `lr-mcp-app`
+
+Sandbox host for executable MCP App-style resources. Inline documents run in a unique-origin iframe
+with injected CSP; remote documents are URL-validated. The frame can only request tool calls,
+messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
+unless explicitly enabled in `resource.permissions`.
+
+**Properties:** `resource: McpAppResource | null`; `height`; `maxHeight`; `label`;
+`accessibleLabel` (attribute `aria-label`). **Methods:** `postHostContext(context)`,
+`postToolResult(requestId, result?, error?)`.
+
+**Events:** `lr-mcp-ready`, `lr-mcp-tool-call`, `lr-mcp-send-message`, `lr-mcp-open-link`,
+`lr-mcp-log`, `lr-mcp-resize`.
+
+**CSS parts:** `base`, `frame`, `loading`, `error`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
+```
+
+## `lr-prompt-studio`
+
+Controlled prompt-development workbench for ordered role messages, `{{variable}}` substitution,
+saved versions, resolved preview, and save/run intents.
+
+**Properties:** `messages`, `variables`, `versions`, `selectedVersionId`, `label`, `running`,
+`disabled`.
+
+**Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
+`lr-version-select` (`{ version }`).
+
+**CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
+`message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
+`preview`, `save`, `run`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
+```
+
+## `lr-schema-viewer`
+
+Recursive JSON Schema inspector with property/branch selection, required and constraint display,
+validation issues, `$ref` visibility, composition branches, cycle protection, and a depth ceiling.
+It intentionally does not fetch remote references or validate values.
+
+**Properties:** `schema`, `issues`, `selectedPath`, `maxDepth`, `label`.
+
+**Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
+
+**CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
+`description`, `constraints`, `issue`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
+```
+
+## `lr-subagent-panel`
+
+Controlled nested-agent hierarchy with lifecycle badges, task/model context, guarded progress,
+selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cycles and orphan
+parents remain renderable instead of recursing forever.
+
+**Properties:** `runs: SubagentRun[]`, `selectedRunId`, `label`.
+
+**Events:** `lr-run-select` (`{ run }`), `lr-cancel`/`lr-retry` (`{ runId }`).
+
+**CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
+`task`, `model`, `progress`, `actions`, `cancel`, `retry`, `empty`.
+
+```ts
+import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
+```

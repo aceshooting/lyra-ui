@@ -15,7 +15,8 @@ it('renders executable app HTML only inside a uniquely-origin sandbox with CSP m
   const iframe = el.shadowRoot!.querySelector('iframe')!;
   expect(iframe.getAttribute('sandbox')).to.equal('allow-forms allow-scripts');
   expect(iframe.getAttribute('sandbox')).to.not.contain('allow-same-origin');
-  expect(iframe.getAttribute('allow')).to.contain('clipboard-write');
+  expect(iframe.getAttribute('allow')).to.contain('clipboard-write *');
+  expect(iframe.getAttribute('allow')).to.not.contain("'none'");
   expect(iframe.srcdoc).to.contain('Content-Security-Policy');
   expect(iframe.srcdoc).to.contain('https://api.example.com');
 });
@@ -75,4 +76,12 @@ it('is accessible with an app loaded', async () => {
   ></lr-mcp-app>`);
   expect(el.shadowRoot!.querySelectorAll('iframe')).to.have.lengthOf(1);
   await expect(el).to.be.accessible();
+});
+
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-mcp-app
+    .strings=${{ mcpAppLabel: 'Localized MCP application' }}
+    .resource=${{ uri: 'ui://example/app', html: '<p>Example</p>' }}
+  ></lr-mcp-app>`)) as LyraMcpApp;
+  expect(el.shadowRoot!.querySelector('iframe')!.title).to.equal('Localized MCP application');
 });

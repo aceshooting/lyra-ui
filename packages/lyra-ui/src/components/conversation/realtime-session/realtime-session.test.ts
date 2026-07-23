@@ -45,3 +45,9 @@ it('localizes errors instead of exposing a caught error object and remains acces
   await expect(el).shadowDom.to.be.accessible();
 });
 
+it('applies per-instance localized strings', async () => {
+  const el = (await fixture(html`<lr-realtime-session
+    .strings=${{ realtimeSessionLabel: 'Localized voice session' }}
+  ></lr-realtime-session>`)) as LyraRealtimeSession;
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized voice session');
+});

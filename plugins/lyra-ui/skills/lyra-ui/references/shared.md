@@ -343,13 +343,29 @@ instead of hand-rolling state shapes — they bind field-for-field onto the comp
 adapter layer:
 
 ```ts
-import type { AgentRun, ChatMessage, ToolInvocation, RetrievalChunk } from '@aceshooting/lyra-ui/ai';
+import {
+  createAgentStreamState,
+  reduceAgentStream,
+  adaptAiSdkStream,
+  adaptAgUiEvents,
+  adaptA2UiSurface,
+  type AgentRun,
+  type ChatMessage,
+  type MessagePart,
+  type RetrievalChunk,
+} from '@aceshooting/lyra-ui/ai';
 ```
 
 - **Run/step state** — `AgentStatusKind`, `AgentStatus`, `AgentStep`, `AgentRun`
-- **Conversation** — `ChatMessage`, `ToolInvocation`
+- **Conversation** — `ChatMessage`, ordered `MessagePart` variants, `ToolInvocation`
 - **Documents & grounding** — `DocumentRef`, `Citation`, `RetrievalQuery`, `RetrievalChunk`,
-  `GroundingAssessment`
+  `RetrievalScoreBreakdown`, `GroundedClaim`, `GroundingAssessment`, `DocumentLocator`
+- **Streaming runtime** — `AgentStreamEvent`, `AgentStreamState`, `createAgentStreamState()`,
+  `reduceAgentStream()`, `reduceAgentStreamEvents()`; event ids make replay/duplicate delivery
+  deterministic, and JSON Patch application rejects prototype-mutating paths
+- **Protocol adapters** — `adaptAiSdkStream()`, `adaptAgUiEvents()`, and `adaptA2UiSurface()` map
+  structural provider events/documents onto the neutral runtime without pulling vendor SDKs into
+  the package
 - **Event payloads** — `RunLifecycleEventDetail`, `RetrievalProgressEventDetail`,
   `CitationSelectEventDetail`, `ToolApprovalEventDetail`, `CancelEventDetail`, `RetryEventDetail`,
   `ExportEventDetail`
@@ -359,6 +375,25 @@ feeds on `lr-chat-message`, `lr-tool-call-chip`, `lr-tool-result-view`, `lr-sour
 `lr-attachment-chip`, and `lr-document-preview` — the binding is enforced by `tsc`, not by
 convention. The types are structural and provider-agnostic: map any vendor's payload onto them once,
 at the edge.
+
+### Task-first AI composition guide
+
+- **Render one model response:** `lr-message-parts`; use `lr-chat-message` only when the message
+  shell (avatar, author, actions) is also needed.
+- **Build the main prompt affordance:** `lr-prompt-input`; it already composes attachments,
+  model/voice/source controls, mentions/commands, and `lr-prompt-queue`.
+- **Run an agent workspace:** `lr-agent-workspace` + `reduceAgentStream()`; add
+  `lr-subagent-panel` for nested runs and `lr-mcp-app` only for executable MCP App resources.
+- **Show grounded output:** `lr-rag-answer`; pass claim records for `lr-claim-evidence`, use
+  `lr-retrieval-compare` for retrieval tuning and `lr-rag-eval-dashboard` for run metrics.
+- **Develop prompts/tools:** `lr-prompt-studio` and `lr-schema-viewer`.
+- **Build voice sessions:** `lr-realtime-session`; it composes the existing audio visualizer,
+  push-to-talk control, and transcript feed while leaving transport ownership with the host.
+
+Family registration entry points are additive: importing
+`@aceshooting/lyra-ui/components/conversation`, `/agent-tools`, or `/retrieval` registers and
+exports that complete family. Granular component entry points remain the smallest bundles and are
+preferred in production.
 
 ## Optional peer dependencies
 

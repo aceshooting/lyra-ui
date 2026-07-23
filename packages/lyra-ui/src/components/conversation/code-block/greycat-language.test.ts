@@ -35,7 +35,10 @@ describe('GREYCAT_LANGUAGE (gcl) TextMate grammar', () => {
   let hl: ShikiHighlighter;
 
   before(async function () {
-    this.timeout(20_000);
+    // This is a real optional-peer + Oniguruma WASM load. In the full WTR run it competes with
+    // hundreds of files and can exceed 20 seconds even though the isolated fixture resolves in a
+    // few seconds; keep the hook's margin aligned with the other real-Shiki integration tests.
+    this.timeout(60_000);
     hl = (await loadShikiHighlighter())!;
     await loadShikiLanguage(hl, 'greycat');
   });

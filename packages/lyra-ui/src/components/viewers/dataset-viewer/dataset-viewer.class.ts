@@ -10,6 +10,8 @@ import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../in
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './dataset-viewer.styles.js';
+import { parseDelimitedRecords } from '../../../internal/delimited-data.js';
+import { LatestTask } from '../../../internal/latest-task.js';
 
 export interface DatasetTable { fields: string[]; rows: Record<string, string>[]; }
 type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'empty' } | { kind: 'error'; message: string };
@@ -94,7 +96,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   @state() private searchMatches: { row: number; col: number }[] = [];
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
-  private generation = 0;
+  private loadTask = new LatestTask();
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
@@ -114,7 +116,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   }
 
   private async load(): Promise<void> {
-    const generation = ++this.generation;
+    const generation = this.loadTask.next();
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
@@ -124,9 +126,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const table = await this.parse(await readResponseText(response));
-      if (this.isConnected && generation === this.generation) this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
+      if (this.isConnected && this.loadTask.isCurrent(generation)) this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
     } catch (error) {
-      if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
+      if (isAbortError(error) || !this.isConnected || !this.loadTask.isCurrent(generation)) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
       this.emit('lr-render-error', { error });
     }
@@ -139,11 +141,10 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   private async parse(text: string): Promise<DatasetTable | null> {
     const papa = await loadPapaParseCached();
     if (!papa) throw new LyraUserFacingError(this.localize('datasetViewerMissingParser'));
-    const result = papa.parse(text, { delimiter: '', header: true, skipEmptyLines: true }) as { data: Record<string, string>[]; meta: { fields?: string[] } };
-    const fields = result.meta.fields ?? [];
-    if (!fields.length || !result.data.length) return null;
-    assertTableDimensions(result.data.length, fields.length);
-    return { fields, rows: result.data };
+    const result = parseDelimitedRecords(papa, text);
+    if (!result.fields.length || !result.rows.length) return null;
+    assertTableDimensions(result.rows.length, result.fields.length);
+    return { fields: result.fields, rows: result.rows };
   }
 
   // -- cell highlights -----------------------------------------------------------------------------
