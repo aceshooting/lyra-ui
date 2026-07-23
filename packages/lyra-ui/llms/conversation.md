@@ -168,6 +168,16 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
   HTML `marked` produces from `content` completely unsanitized, so untrusted `content` must never be
   paired with `sanitize="false"`.
 
+**Additional API surface:**
+
+- `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
+- `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
+
 ---
 
 ## `lr-markdown-core`
@@ -235,6 +245,16 @@ differently on a wrapped line.
   import python from 'shiki/langs/python.mjs';
 </script>
 ```
+
+**Additional API surface:**
+
+- `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
+- `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---
 
@@ -390,6 +410,20 @@ between several values across a single element's lifetime.
   won't refresh the corresponding wrapper's visibility.
 - `role` intentionally reflects to `data-role`; CSS or selectors that key off role must target
   `[data-role="user"]` etc., not `[role="user"]`.
+
+**Additional API surface:**
+
+- `--lr-chat-message-system-color` — System-message text color. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-streaming-border-color` — Streaming bubble border. Default: `var(--lr-color-brand)`.
+- `--lr-chat-message-failed-border-color` — Failed bubble border. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-failed-bg` — Failed bubble fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-chat-message-footer-color` — Default footer text. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-user-footer-color` — User-message footer text. Default: `var(--lr-color-text)`.
+- `--lr-chat-message-failed-footer-color` — Failed-message footer text. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-indicator-color` — Default status indicator. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-streaming-indicator-color` — Streaming indicator. Default: `var(--lr-color-brand)`.
+- `--lr-chat-message-failed-indicator-color` — Failed indicator. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-failed-status-color` — Failed status text. Default: `var(--lr-color-danger)`.
 
 ---
 
@@ -1628,6 +1662,10 @@ branch content.
 `previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
 arrow without restyling the button), and `position` (the visible "2 / 5" text).
 
+**Additional API surface:**
+
+- `click()` — Activates the currently enabled chevron, matching a click on the shadow control.
+
 ## `lr-message-actions`
 
 The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in built-ins (copy /
@@ -1751,6 +1789,11 @@ point of use rather than a `:host` declaration, so it can be set on the element 
 `::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
 and it repainted every other danger surface with it.
+
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal push-to-talk control.
+- `focus()` — Forwards host focus to the internal push-to-talk control.
 
 ## `lr-transcript-feed`
 
@@ -2275,6 +2318,18 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `catalog` must be homogeneous — the same constraint `lr-model-select`'s `LyraModelCatalog` union
   documents.
 
+**Additional API surface:**
+
+- `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-bg` — Selected option fill. Default: `transparent`.
+- `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
+- `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
+
 ## `lr-agent-workspace`
 
 Responsive, fully controlled shell for an AI conversation and its supporting run, tool, retrieval,
@@ -2391,6 +2446,25 @@ true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attr
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
 ```
 
+**Additional API surface:**
+
+- `lr-anchor-result` event — Passthrough from rendered Markdown.
+- `lr-citation-open` event — Passthrough from a rendered citation's full-preview action.
+- `lr-copy` event — Passthrough from rendered JSON content.
+- `lr-highlight-activate` event — Passthrough from rendered Markdown.
+- `lr-link-click` event — Passthrough from rendered Markdown.
+- `lr-preview` event — Passthrough from a rendered attachment.
+- `lr-remove` event — Passthrough from a rendered attachment.
+- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
+- `lr-retry` event — Passthrough from a rendered attachment.
+- `lr-search-change` event — Passthrough from rendered JSON content.
+- `lr-text-select` event — Passthrough from rendered Markdown.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
+- `lr-tool-chip-select` event — Deprecated tool-call selection alias passthrough.
+- `lr-widget-action` event — Passthrough from a rendered declarative widget.
+- `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
+
 ## `lr-prompt-input`
 
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
@@ -2452,6 +2526,11 @@ provide their own fixed-position anchor.
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
 ```
+
+**Additional API surface:**
+
+- `--lr-selection-toolbar-inline-shift` — Computed inline collision-avoidance offset.
+- `--lr-selection-toolbar-block-shift` — Computed block collision-avoidance offset.
 
 ## `lr-realtime-session`
 

@@ -206,6 +206,44 @@ it('announces the current position in part="live-region" and keeps it in sync ac
   el.open = false;
 });
 
+it('formats counter and live-region numbers with the effective locale', async () => {
+  const images = [image, { ...image, caption: 'Second' }, { ...image, caption: 'Third' }];
+  const el = (await fixture(html`<lr-lightbox lang="ar-EG" .images=${images} open></lr-lightbox>`)) as LyraLightbox;
+  expect(el.shadowRoot!.querySelector('[part="counter"]')!.textContent).to.contain('١');
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.contain('٣');
+  el.open = false;
+});
+
+it('resets view state when the current image source is replaced at the same index', async () => {
+  const images = [image, { ...image, caption: 'Second' }];
+  const el = (await fixture(html`<lr-lightbox .images=${images} open></lr-lightbox>`)) as LyraLightbox;
+  const frame = el.shadowRoot!.querySelector('lr-zoomable-frame') as HTMLElement & {
+    resetView(): void;
+  };
+  let resets = 0;
+  frame.resetView = () => resets++;
+  el.images = [{ ...image, src: `${image.src}#replacement` }, images[1]!];
+  await el.updateComplete;
+  expect(resets).to.equal(1);
+  el.open = false;
+});
+
+it('does not hijack navigation keys from slotted editable actions', async () => {
+  const images = [image, { ...image, caption: 'Second' }];
+  const el = (await fixture(html`
+    <lr-lightbox .images=${images} open>
+      <input slot="actions" value="edit me" />
+    </lr-lightbox>
+  `)) as LyraLightbox;
+  const input = el.querySelector('input')!;
+  const key = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true });
+  input.dispatchEvent(key);
+  await el.updateComplete;
+  expect(el.index).to.equal(0);
+  expect(key.defaultPrevented).to.be.false;
+  el.open = false;
+});
+
 it('renders a .strings override for the close/previous/next labels and the counter/live-region position text', async () => {
   const images = [image, { ...image, caption: 'Second' }];
   const el = (await fixture(html`

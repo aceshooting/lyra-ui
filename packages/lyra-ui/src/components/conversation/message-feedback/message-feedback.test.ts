@@ -239,6 +239,52 @@ it('disables the comment textarea and submit button (not just the thumbs) once d
   expect(submit.disabled).to.be.true;
 });
 
+it('keeps the collapsed detail panel out of focus and the accessibility tree with no visible chrome', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(panel.inert).to.be.true;
+  expect(panel.getAttribute('aria-hidden')).to.equal('true');
+  expect(panel.getBoundingClientRect().height).to.equal(0);
+  expect(getComputedStyle(panel).borderTopWidth).to.equal('0px');
+});
+
+it('host click activates the current thumb and is inert while disabled', async () => {
+  const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
+  el.click();
+  await el.updateComplete;
+  expect(el.value).to.equal('up');
+
+  el.value = 'down';
+  await el.updateComplete;
+  el.click();
+  await el.updateComplete;
+  expect(el.value).to.equal(null);
+
+  el.disabled = true;
+  await el.updateComplete;
+  el.click();
+  expect(el.value).to.equal(null);
+});
+
+it('disables reason chips and ignores their events while the whole control is disabled', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback value="down" .reasons=${reasons} disabled></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const chip = el.shadowRoot!.querySelector('lr-chip')!;
+  expect(chip.disabled).to.be.true;
+  chip.dispatchEvent(new CustomEvent('lr-chip-select', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(chip.selected).to.be.false;
+});
+
+it('keeps the comment hover rule low-specificity for consumer part overrides', () => {
+  expect(styles.cssText.replace(/\s+/g, ' ')).to.match(
+    /:where\(\[part='comment'\]\):hover:where\(:not\(:disabled\)\)/,
+  );
+});
+
 describe('comment textarea blur/focus bubbling', () => {
   it('re-dispatches a bubbling, composed focus event when the comment textarea focuses', async () => {
     const el = (await fixture(html`<lr-message-feedback commentable></lr-message-feedback>`)) as LyraMessageFeedback;

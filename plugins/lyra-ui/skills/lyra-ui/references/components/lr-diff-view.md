@@ -6,7 +6,7 @@
 - **Class** `LyraDiffView`, also available unregistered from `@aceshooting/lyra-ui/components/utility/diff-view/diff-view.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -83,5 +83,14 @@ consumer can compute or unit-test the same alignment without instantiating the e
 - `oldText`/`newText` are recomputed into the diff on every render — this component keeps no separate
   cached diff state, so binding either property to something that changes on every keystroke
   recomputes the whole alignment each time.
+
+**Additional API surface:**
+
+- `--lr-diff-view-add-background` — Added-line background.
+- `--lr-diff-view-add-color` — Added-line text color.
+- `--lr-diff-view-remove-background` — Removed-line background.
+- `--lr-diff-view-remove-color` — Removed-line text color.
+- `--lr-diff-view-fold-color` — Fold-marker text color.
+- `--lr-diff-view-fold-background` — Fold-marker background.
 
 ---

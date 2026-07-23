@@ -6,6 +6,15 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 
 export type TimelineItemVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
 
+const timelineItemVariantConverter = {
+  fromAttribute(value: string | null): TimelineItemVariant {
+    return (value ?? 'neutral') as TimelineItemVariant;
+  },
+  toAttribute(value: TimelineItemVariant): string | null {
+    return value === 'neutral' ? null : value;
+  },
+};
+
 /**
  * `<lr-timeline-item>` — one marker + title + optional timestamp + optional description row inside
  * `<lr-timeline>`'s default slot. See that component's class doc for the overall shape; this class
@@ -120,7 +129,7 @@ export class LyraTimelineItem extends LyraElement {
    *  informational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs
    *  attention; `'danger'` is a failed/error event. Same five-value set as `BadgeVariant`/
    *  `CalloutVariant`. */
-  @property({ reflect: true }) variant: TimelineItemVariant = 'neutral';
+  @property({ reflect: true, converter: timelineItemVariantConverter }) variant: TimelineItemVariant = 'neutral';
 
   /** Marks this as the current/in-progress item (e.g. "the agent is executing this step right now"),
    *  as opposed to a resolved past entry. Drives a pulsing marker (disabled under

@@ -6,7 +6,7 @@
 - **Class** `LyraEmbeddingExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,3 +24,6 @@ omitted.
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
 **CSS parts:** `base`, `plot`, `point`, `empty`.
+
+**Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
+`var(--lr-color-brand)`) — stroke color of the selected point. Plus shared tokens.

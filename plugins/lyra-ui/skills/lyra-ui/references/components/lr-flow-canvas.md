@@ -6,7 +6,7 @@
 - **Class** `LyraFlowCanvas`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-canvas/flow-canvas.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -128,5 +128,11 @@ treatment entirely.
 - Pan/drag/zoom track the pointer's physical direction; under an RTL ancestor the pan and node-drag
   deltas are mirrored so content still visually follows the cursor, matching every other
   RTL-mirrored surface in this library.
+
+**Additional API surface:**
+
+- `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
+- `part="node-control"` — The visually hidden, roving selection button for a node.
+- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`.
 
 ---

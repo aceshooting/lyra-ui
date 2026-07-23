@@ -6,7 +6,7 @@
 - **Class** `LyraSwatchPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -119,5 +119,9 @@ picker.value = 'ruby';
   selectors, so that combinator can silently fail to match depending on the engine.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+
+**Additional API surface:**
+
+- `--lr-swatch-picker-gap` — Gap between swatches. Default: `var(--lr-space-xs)`.
 
 ---

@@ -93,6 +93,7 @@ function checkmarkGlyph() {
  * @event lr-stepper-orientation-change - `detail: { orientation }`, fired when an enabled
  *   `orientationBreakpoint` changes the effective layout/navigation axis.
  * @csspart base - The root wrapper.
+ * @csspart step-item - The `role="listitem"` wrapper for one step.
  * @csspart step - A single step button.
  * @csspart step-icon - Optional leading topic glyph supplied by the item's `icon` field; content
  *   may have a natural aspect ratio and is not restricted to a square icon. Rendered additionally

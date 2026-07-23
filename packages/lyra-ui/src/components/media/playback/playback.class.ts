@@ -101,7 +101,7 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
         return;
       }
       this.emit('lr-play');
-      this.scheduleTick();
+      if (this._playing) this.scheduleTick();
     } else {
       window.clearTimeout(this.timer);
       this.timer = undefined;
@@ -233,6 +233,11 @@ export class LyraPlayback extends LyraElement<LyraPlaybackEventMap> {
   /** Blur the primary play/pause control. */
   override blur(): void {
     this.playButton?.blur();
+  }
+
+  /** Activate the primary play/pause control. */
+  override click(): void {
+    this.playButton?.click();
   }
 
   private onControlFocus = (event: FocusEvent): void => {

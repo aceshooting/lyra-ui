@@ -39,12 +39,14 @@ immediately) or multi-format (click opens a small menu).
   name and feeds the localized format-menu name without changing the visible label
 - `open: boolean = false` (reflected)
 
-**Methods:** `focus(options?)` and `blur()` forward to the native trigger button.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
 **Events:** `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
-built-in download completes), `lr-show`, `lr-hide` (format-menu visibility transitions)
+built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
+unknown }`, fires when a built-in export cannot be serialized or downloaded; activation does not
+throw into consumer code), `lr-show`, `lr-hide` (format-menu visibility transitions)
 
 **Slots:** none.
 

@@ -6,7 +6,7 @@
 - **Class** `LyraVoicePicker`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/voice-picker/voice-picker.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -85,3 +85,15 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   duplicate (`tabindex="-1"`, `aria-hidden="true"`).
 - `catalog` must be homogeneous — the same constraint `lr-model-select`'s `LyraModelCatalog` union
   documents.
+
+**Additional API surface:**
+
+- `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-bg` — Selected option fill. Default: `transparent`.
+- `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
+- `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.

@@ -9,6 +9,20 @@
       }
     },
     {
+      "name": "--lr-agent-eval-dashboard-active-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-eval-dashboard>`** (default: `var(--lr-color-brand-quiet)`) — Active metric background."
+      }
+    },
+    {
+      "name": "--lr-agent-eval-dashboard-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-eval-dashboard>`** (default: `var(--lr-color-brand)`) — Active metric border."
+      }
+    },
+    {
       "name": "--lr-agent-run-compact-gap",
       "description": {
         "kind": "markdown",
@@ -23,10 +37,31 @@
       }
     },
     {
+      "name": "--lr-agent-run-metric-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-color-danger)`) — Danger metric value."
+      }
+    },
+    {
+      "name": "--lr-agent-run-metric-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-color-success)`) — Success metric value."
+      }
+    },
+    {
+      "name": "--lr-agent-run-metric-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-color-warning)`) — Warning metric value."
+      }
+    },
+    {
       "name": "--lr-agent-run-spin",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-agent-run>`** (default: `1s linear`) — Current-step icon spin animation duration and timing."
+        "value": "**`<lr-agent-run>`** (default: `var(--lr-transition-ambient)`) — Current-step icon spin animation."
       }
     },
     {
@@ -125,6 +160,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-app-rail>`** (default: `var(--lr-size-15rem)`) — The inline rail's width in `'full'` mode. Overridden by an inline width while a `resizable` rail has an explicit `railWidthPx`."
+      }
+    },
+    {
+      "name": "--lr-approval-queue-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-approval-queue>`** (default: `var(--lr-color-brand)`) — Selected request border."
       }
     },
     {
@@ -415,6 +457,48 @@
       }
     },
     {
+      "name": "--lr-browser-frame-controller-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-browser-frame>`** (default: `var(--lr-color-brand-quiet)`) — Controller badge background."
+      }
+    },
+    {
+      "name": "--lr-browser-frame-controller-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-browser-frame>`** (default: `var(--lr-color-brand)`) — Controller badge text color."
+      }
+    },
+    {
+      "name": "--lr-browser-frame-ping-click-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-browser-frame>`** (default: `var(--lr-color-brand)`) — Click-ping border color."
+      }
+    },
+    {
+      "name": "--lr-browser-frame-ping-move-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-browser-frame>`** (default: `var(--lr-color-text-quiet)`) — Move-ping border color."
+      }
+    },
+    {
+      "name": "--lr-browser-frame-ping-scroll-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-browser-frame>`** (default: `var(--lr-color-warning)`) — Scroll-ping border color."
+      }
+    },
+    {
+      "name": "--lr-browser-frame-ping-type-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-browser-frame>`** (default: `var(--lr-color-success)`) — Type-ping border color."
+      }
+    },
+    {
       "name": "--lr-button-accent",
       "description": {
         "kind": "markdown",
@@ -607,7 +691,7 @@
       "name": "--lr-button-spinner-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-button>`** (default: `1s`) — Rotation period of the `loading` spinner."
+        "value": "**`<lr-button>`** (default: `var(--lr-transition-ambient)`) — Timing of the `loading` spinner."
       }
     },
     {
@@ -765,10 +849,80 @@
       }
     },
     {
+      "name": "--lr-chat-message-failed-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-danger-quiet)`) — Failed bubble fill."
+      }
+    },
+    {
+      "name": "--lr-chat-message-failed-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-danger)`) — Failed bubble border."
+      }
+    },
+    {
+      "name": "--lr-chat-message-failed-footer-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-danger)`) — Failed-message footer text."
+      }
+    },
+    {
+      "name": "--lr-chat-message-failed-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-danger)`) — Failed indicator."
+      }
+    },
+    {
+      "name": "--lr-chat-message-failed-status-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-danger)`) — Failed status text."
+      }
+    },
+    {
+      "name": "--lr-chat-message-footer-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text-quiet)`) — Default footer text."
+      }
+    },
+    {
+      "name": "--lr-chat-message-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text-quiet)`) — Default status indicator."
+      }
+    },
+    {
       "name": "--lr-chat-message-max-width",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chat-message>`** (default: `80%`) — Maximum inline size of the message bubble."
+      }
+    },
+    {
+      "name": "--lr-chat-message-streaming-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-brand)`) — Streaming bubble border."
+      }
+    },
+    {
+      "name": "--lr-chat-message-streaming-indicator-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-brand)`) — Streaming indicator."
+      }
+    },
+    {
+      "name": "--lr-chat-message-system-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text-quiet)`) — System-message text color."
       }
     },
     {
@@ -783,6 +937,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — Bubble text color for `data-role=\"user\"`."
+      }
+    },
+    {
+      "name": "--lr-chat-message-user-footer-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chat-message>`** (default: `var(--lr-color-text)`) — User-message footer text."
       }
     },
     {
@@ -810,7 +971,7 @@
       "name": "--lr-checkpoint-spin-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-checkpoint>`** (default: `1s`) — Duration of one restoring-spinner rotation (stopped under reduced motion)."
+        "value": "**`<lr-checkpoint>`** (default: `var(--lr-transition-ambient)`) — Restoring-spinner timing, inheriting the shared ambient-motion token by default (stopped under reduced motion)."
       }
     },
     {
@@ -852,7 +1013,7 @@
       "name": "--lr-chip-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** — Exact block size of the chip. Undeclared by default, so the chip grows to fit its content (floored by `--lr-chip-min-height` when interactive). Set it to pin a fixed height. A value below the 24px interactive target is for non-interactive chips only."
+        "value": "**`<lr-chip>`** — Exact block size of the chip. Undeclared by default, so the chip grows to fit its content (floored by `--lr-chip-min-height` when interactive). Set it to pin a fixed height. A value below the shared interactive target is for non-interactive chips only."
       }
     },
     {
@@ -866,7 +1027,7 @@
       "name": "--lr-chip-min-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-chip>`** (default: `var(--lr-size-1-5rem)`) — Minimum block size of an interactive (`removable`/`toggleable`) chip's tap target. `size` keeps `3xs`/`2xs`/`xs`/`s`/`m` at the `1.5rem` (24px) WCAG 2.2 SC 2.5.8 minimum and raises `l` to `var(--lr-size-1-75rem)` and `xl` to `var(--lr-size-2rem)`. Non-interactive display chips are unaffected by this floor."
+        "value": "**`<lr-chip>`** (default: `var(--lr-size-1-5rem)`) — Component density floor for an interactive chip. The real toggle/remove controls also enforce the shared `--lr-icon-button-size` target floor."
       }
     },
     {
@@ -989,6 +1150,27 @@
       }
     },
     {
+      "name": "--lr-color-picker-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-space-xs)`) — Gap between field chrome."
+      }
+    },
+    {
+      "name": "--lr-color-picker-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-color-brand)`) — Hover border color."
+      }
+    },
+    {
+      "name": "--lr-color-picker-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-color-picker>`** (default: `var(--lr-radius)`) — Swatch corner radius."
+      }
+    },
+    {
       "name": "--lr-color-picker-swatch-size",
       "description": {
         "kind": "markdown",
@@ -1101,6 +1283,13 @@
       }
     },
     {
+      "name": "--lr-command-palette-group-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-2rem)`) — Virtual group-heading height."
+      }
+    },
+    {
       "name": "--lr-command-palette-list-max-block-size",
       "description": {
         "kind": "markdown",
@@ -1126,6 +1315,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-command-palette>`** (default: `12vh`) — Gap between the viewport top and the dialog."
+      }
+    },
+    {
+      "name": "--lr-command-palette-row-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-command-palette>`** (default: `var(--lr-size-3rem)`) — Virtual command-row height."
       }
     },
     {
@@ -1276,6 +1472,13 @@
       }
     },
     {
+      "name": "--lr-dashboard-grid-collision-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-color-danger)`) — Outline color of a cell whose current drag/resize preview collides with another cell."
+      }
+    },
+    {
       "name": "--lr-dashboard-grid-columns",
       "description": {
         "kind": "markdown",
@@ -1325,10 +1528,24 @@
       }
     },
     {
+      "name": "--lr-date-input-focus-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-color-brand)`) — Focused row border color."
+      }
+    },
+    {
       "name": "--lr-date-input-font-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-date-input>`** (default: `inherit`) — Font size of the text input, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-date-input-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-space-xs)`) — Gap between input-row children."
       }
     },
     {
@@ -1343,6 +1560,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-date-input>`** (default: `var(--lr-space-s)`) — Inline padding of the input row, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-date-input-placeholder-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-color-text-quiet)`) — Placeholder text color."
+      }
+    },
+    {
+      "name": "--lr-date-input-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-input>`** (default: `var(--lr-radius)`) — Input-row corner radius."
+      }
+    },
+    {
+      "name": "--lr-date-picker-header-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-space-s)`) — Month-header child gap."
+      }
+    },
+    {
+      "name": "--lr-date-picker-month-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-space-l)`) — Gap between visible months."
+      }
+    },
+    {
+      "name": "--lr-date-picker-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-radius)`) — Calendar and control corner radius."
       }
     },
     {
@@ -1367,10 +1619,52 @@
       }
     },
     {
+      "name": "--lr-diff-view-add-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-color-success-quiet)`) — Added-line background."
+      }
+    },
+    {
+      "name": "--lr-diff-view-add-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-color-success)`) — Added-line text color."
+      }
+    },
+    {
+      "name": "--lr-diff-view-fold-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-color-surface-raised)`) — Fold-marker background."
+      }
+    },
+    {
+      "name": "--lr-diff-view-fold-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-color-text-quiet)`) — Fold-marker text color."
+      }
+    },
+    {
       "name": "--lr-diff-view-font",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-diff-view>`** (default: `var(--lr-font-mono)`) — Font family used for the diff lines."
+      }
+    },
+    {
+      "name": "--lr-diff-view-remove-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-color-danger-quiet)`) — Removed-line background."
+      }
+    },
+    {
+      "name": "--lr-diff-view-remove-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-diff-view>`** (default: `var(--lr-color-danger)`) — Removed-line text color."
       }
     },
     {
@@ -1472,10 +1766,24 @@
       }
     },
     {
+      "name": "--lr-embedding-explorer-selected-stroke",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-embedding-explorer>`** (default: `var(--lr-color-brand)`) — Stroke color of the selected point."
+      }
+    },
+    {
       "name": "--lr-emoji-picker-active-bg",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand-quiet)`) — Background of the keyboard-active (`data-active`) **and** hovered emoji button — the two share a single rule, so this one hook retints both consistently. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the emoji highlight without hijacking the library-wide `--lr-color-brand-quiet` token."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-control-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-space-xs)`) — Gap between field sections."
       }
     },
     {
@@ -1493,10 +1801,24 @@
       }
     },
     {
+      "name": "--lr-emoji-picker-item-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-radius-xs)`) — Search and emoji corner radius."
+      }
+    },
+    {
       "name": "--lr-emoji-picker-item-size",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Clamped up to `--lr-icon-button-size`: a smaller value does not shrink the button."
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-icon-button-size)`) — Each emoji button's box. Floored at 24px; the small size tiers can stay denser than the shared 40px icon-button size."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-radius)`) — Outer picker corner radius."
       }
     },
     {
@@ -1504,6 +1826,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-emoji-picker>`** (default: `calc(var(--lr-emoji-picker-item-size) + var(--lr-space-l))`) — One windowed row's height. Must stay at or above the item size plus the group-label band, or consecutive absolutely-positioned rows overlap."
+      }
+    },
+    {
+      "name": "--lr-emoji-picker-search-hover-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-emoji-picker>`** (default: `var(--lr-color-brand)`) — Search hover border."
       }
     },
     {
@@ -1699,7 +2028,7 @@
       "name": "--lr-flow-canvas-node-current-outline-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Outline color of the current (`aria-current`) node. Shadow Parts forbids an attribute selector after `::part()`, so the current node could otherwise only be restyled by hijacking the library-wide `--lr-color-brand` token."
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-brand)`) — Deprecated fallback token for the selected-node outline; retained for compatibility."
       }
     },
     {
@@ -1707,6 +2036,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-canvas>`** (default: `var(--lr-color-border-strong)`) — Outline color of a node's mouse-hover preview of its own `:focus-visible` ring. Unlike the four state-scoped colors above this one is `:hover`-gated rather than attribute-gated, so a `::part(node):hover` override would lose to this rule's own higher internal specificity rather than to the `::part()[attr]` restriction those four work around. Set to `transparent` to opt out."
+      }
+    },
+    {
+      "name": "--lr-flow-canvas-node-selected-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-canvas>`** (default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`) — Outline color of a selected node."
       }
     },
     {
@@ -1983,6 +2319,76 @@
       }
     },
     {
+      "name": "--lr-image-viewer-highlight-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `color-mix(in srgb, var(--lr-color-brand) 20%, transparent)`) — Default highlight fill."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** (default: `var(--lr-color-brand)`) — Default highlight border."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-danger-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Danger-tone highlight fill."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-danger-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Danger-tone highlight border."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-neutral-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Neutral-tone highlight fill."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-neutral-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Neutral-tone highlight border."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-success-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Success-tone highlight fill."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-success-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Success-tone highlight border."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-warning-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Warning-tone highlight fill."
+      }
+    },
+    {
+      "name": "--lr-image-viewer-highlight-warning-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-image-viewer>`** — Warning-tone highlight border."
+      }
+    },
+    {
       "name": "--lr-ingestion-queue-max-height",
       "description": {
         "kind": "markdown",
@@ -2039,6 +2445,20 @@
       }
     },
     {
+      "name": "--lr-json-viewer-active-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-focus-ring-color)`) — Outline color for the current imperative search match."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-boolean-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-warning)`) — Boolean value color."
+      }
+    },
+    {
       "name": "--lr-json-viewer-font",
       "description": {
         "kind": "markdown",
@@ -2057,6 +2477,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-json-viewer>`** (default: `none`) — Cap on `[part=\"base\"]`'s block size, past which the viewer scrolls internally. The `maxHeight` property sets this token inline on `[part=\"base\"]`."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-null-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-text-quiet)`) — Null, undefined, and circular-reference marker color."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-number-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-brand)`) — Number value color."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-string-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-success)`) — String value color."
       }
     },
     {
@@ -2179,6 +2620,20 @@
       }
     },
     {
+      "name": "--lr-locale-picker-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-space-xs)`) — Trigger and option child gap."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-open-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand)`) — Open trigger border color."
+      }
+    },
+    {
       "name": "--lr-locale-picker-option-active-bg",
       "description": {
         "kind": "markdown",
@@ -2186,10 +2641,38 @@
       }
     },
     {
+      "name": "--lr-locale-picker-option-selected-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand)`) — Selected option border."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-option-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand)`) — Selected option text."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-radius)`) — Trigger/listbox/option corner radius."
+      }
+    },
+    {
       "name": "--lr-locale-picker-trigger-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-locale-picker>`** — Exact trigger height. Unset by default (a floor only via `-trigger-min-height`); set a length to both floor and cap the trigger, e.g. to pixel-match a sibling field in the same toolbar row."
+      }
+    },
+    {
+      "name": "--lr-locale-picker-trigger-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-locale-picker>`** (default: `var(--lr-color-brand-quiet)`) — Trigger hover background."
       }
     },
     {
@@ -2211,6 +2694,55 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-markdown>`** (default: `var(--lr-font-mono)`) — Monospace family for rendered `<code>` inside `content`."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-accent-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-brand-quiet)`) — Accent highlight fill."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-brand-quiet)`) — Active highlight fill."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-active-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-brand)`) — Active highlight outline."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-danger-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-danger-quiet)`) — Danger highlight fill."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-neutral-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-surface)`) — Neutral highlight fill."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-success-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-success-quiet)`) — Success highlight fill."
+      }
+    },
+    {
+      "name": "--lr-markdown-highlight-warning-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-markdown>`, `<lr-markdown-core>`** (default: `var(--lr-color-warning-quiet)`) — Warning highlight fill."
       }
     },
     {
@@ -2417,6 +2949,13 @@
       }
     },
     {
+      "name": "--lr-pagination-control-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-radius)`) — Border radius of navigation buttons and the page input."
+      }
+    },
+    {
       "name": "--lr-pagination-control-size",
       "description": {
         "kind": "markdown",
@@ -2452,6 +2991,27 @@
       }
     },
     {
+      "name": "--lr-phone-input-country-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-color-brand-quiet)`) — Country trigger hover background."
+      }
+    },
+    {
+      "name": "--lr-phone-input-flag-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** — Selected flag size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-phone-input-focus-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-color-brand)`) — Focused row border color."
+      }
+    },
+    {
       "name": "--lr-phone-input-font-size",
       "description": {
         "kind": "markdown",
@@ -2459,10 +3019,38 @@
       }
     },
     {
+      "name": "--lr-phone-input-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-space-xs)`) — Country-trigger child gap."
+      }
+    },
+    {
+      "name": "--lr-phone-input-glyph-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** — Country selector glyph size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-phone-input-invalid-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-color-danger)`) — Invalid row border color."
+      }
+    },
+    {
       "name": "--lr-phone-input-padding-block",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-phone-input>`** — Input block-padding, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-phone-input-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-phone-input>`** (default: `var(--lr-radius)`) — Input-wrapper corner radius."
       }
     },
     {
@@ -2501,6 +3089,13 @@
       }
     },
     {
+      "name": "--lr-progress-duration",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-progress-bar>`** (default: `var(--lr-transition-ambient)`) — Indeterminate sweep timing.\n\n**`<lr-progress-ring>`** (default: `var(--lr-transition-ambient)`) — Indeterminate rotation timing."
+      }
+    },
+    {
       "name": "--lr-progress-height",
       "description": {
         "kind": "markdown",
@@ -2512,6 +3107,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-progress-ring>`** (default: `var(--lr-size-2-5rem)`) — Outer diameter of the ring."
+      }
+    },
+    {
+      "name": "--lr-prompt-studio-field-hover-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-prompt-studio>`** (default: `var(--lr-color-brand)`) — Enabled field hover border."
+      }
+    },
+    {
+      "name": "--lr-prompt-studio-version-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-prompt-studio>`** (default: `var(--lr-color-brand-quiet)`) — Selected version background."
+      }
+    },
+    {
+      "name": "--lr-prompt-studio-version-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-prompt-studio>`** (default: `var(--lr-color-brand)`) — Selected version border."
+      }
+    },
+    {
+      "name": "--lr-prompt-studio-version-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-prompt-studio>`** (default: `var(--lr-color-text)`) — Selected version foreground."
+      }
+    },
+    {
+      "name": "--lr-prompt-studio-version-selected-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-prompt-studio>`** (default: `var(--lr-color-brand-quiet)`) — Selected version hover background."
       }
     },
     {
@@ -2648,6 +3278,41 @@
       }
     },
     {
+      "name": "--lr-schema-viewer-error-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-danger-quiet)`) — Error issue background."
+      }
+    },
+    {
+      "name": "--lr-schema-viewer-error-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-danger)`) — Error issue border."
+      }
+    },
+    {
+      "name": "--lr-schema-viewer-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-brand)`) — Selected node branch."
+      }
+    },
+    {
+      "name": "--lr-schema-viewer-warning-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-warning-quiet)`) — Warning issue background."
+      }
+    },
+    {
+      "name": "--lr-schema-viewer-warning-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-warning)`) — Warning issue border."
+      }
+    },
+    {
       "name": "--lr-scroll-fade-size",
       "description": {
         "kind": "markdown",
@@ -2718,6 +3383,13 @@
       }
     },
     {
+      "name": "--lr-segmented-track-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-size-0-125rem)`) — Gap between segments."
+      }
+    },
+    {
       "name": "--lr-segmented-track-height",
       "description": {
         "kind": "markdown",
@@ -2729,6 +3401,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-segmented>`** (default: `var(--lr-size-2-5rem)`) — Minimum height of the `base` track. Re-set per `size` (`2xs` through `xl`); the `2.5rem` (40px) default applies at the unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier floor. Because it is declared on `:host` per tier, override it on the element itself, not on an ancestor."
+      }
+    },
+    {
+      "name": "--lr-segmented-track-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-size-0-125rem)`) — Track inset padding."
+      }
+    },
+    {
+      "name": "--lr-segmented-track-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-segmented>`** (default: `var(--lr-radius)`) — Track corner radius."
       }
     },
     {
@@ -2816,10 +3502,24 @@
       }
     },
     {
+      "name": "--lr-selection-toolbar-block-shift",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** — Computed block collision-avoidance offset."
+      }
+    },
+    {
       "name": "--lr-selection-toolbar-block-start",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-selection-toolbar>`** — Computed logical block anchor position."
+      }
+    },
+    {
+      "name": "--lr-selection-toolbar-inline-shift",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** — Computed inline collision-avoidance offset."
       }
     },
     {
@@ -2945,7 +3645,7 @@
       "name": "--lr-spinner-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-spinner>`** (default: `800ms`) — Duration of one rotation. Not read under `prefers-reduced-motion: reduce`, where the animation is disabled entirely."
+        "value": "**`<lr-spinner>`** (default: `var(--lr-transition-ambient)`) — Duration/easing of one rotation. Not read under `prefers-reduced-motion: reduce`, where the animation is disabled entirely."
       }
     },
     {
@@ -3043,7 +3743,7 @@
       "name": "--lr-stepper-current-index-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-stepper>`** (default: `var(--lr-color-surface)`) — Text color of the `current` step's numbered index chip."
+        "value": "**`<lr-stepper>`** (default: `var(--lr-color-on-brand)`) — Text color of the `current` step's numbered index chip."
       }
     },
     {
@@ -3082,6 +3782,27 @@
       }
     },
     {
+      "name": "--lr-subagent-panel-progress-fill",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-subagent-panel>`** (default: `var(--lr-color-brand)`) — Progress fill."
+      }
+    },
+    {
+      "name": "--lr-subagent-panel-progress-track",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-subagent-panel>`** (default: `var(--lr-color-border)`) — Progress track."
+      }
+    },
+    {
+      "name": "--lr-subagent-panel-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-subagent-panel>`** (default: `var(--lr-color-brand)`) — Selected run border."
+      }
+    },
+    {
       "name": "--lr-suggestion-chips-hover-bg",
       "description": {
         "kind": "markdown",
@@ -3117,6 +3838,13 @@
       }
     },
     {
+      "name": "--lr-swatch-picker-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-space-xs)`) — Gap between swatches."
+      }
+    },
+    {
       "name": "--lr-swatch-picker-gemstone-selected-blur",
       "description": {
         "kind": "markdown",
@@ -3127,7 +3855,7 @@
       "name": "--lr-swatch-picker-gemstone-shine-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-swatch-picker>`** (default: `1.8s`) — Selected shine duration used by `mode=\"gemstone\"` when `--lr-swatch-picker-shine-duration` is not overridden."
+        "value": "**`<lr-swatch-picker>`** (default: `var(--lr-transition-ambient)`) — Selected shine timing used by `mode=\"gemstone\"` when `--lr-swatch-picker-shine-duration` is not overridden."
       }
     },
     {
@@ -3302,7 +4030,7 @@
       "name": "--lr-task-list-spin",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-task-list>`** (default: `1s linear`) — Running-status icon spin animation duration/timing."
+        "value": "**`<lr-task-list>`** (default: `var(--lr-transition-ambient)`) — Running-status icon spin animation duration/timing."
       }
     },
     {
@@ -3348,6 +4076,20 @@
       }
     },
     {
+      "name": "--lr-terminal-search-active-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-brand)`) — Outline color for the active search match's line."
+      }
+    },
+    {
+      "name": "--lr-terminal-search-outline-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-terminal>`** (default: `var(--lr-color-warning)`) — Outline color for a line containing a non-active search match."
+      }
+    },
+    {
       "name": "--lr-test-results-filter-active-bg",
       "description": {
         "kind": "markdown",
@@ -3383,6 +4125,27 @@
       }
     },
     {
+      "name": "--lr-time-range-base-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `1.5rem*scale`) — Brush baseline block size."
+      }
+    },
+    {
+      "name": "--lr-time-range-handle-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `14px*scale`) — Visible handle diameter."
+      }
+    },
+    {
+      "name": "--lr-time-range-hit-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `max(24px,28px*scale)`) — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host."
+      }
+    },
+    {
       "name": "--lr-time-range-preset-active-bg",
       "description": {
         "kind": "markdown",
@@ -3404,10 +4167,45 @@
       }
     },
     {
+      "name": "--lr-time-range-preset-font-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** — Preset button font size, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-space-xs)`) — Gap between preset buttons."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** — Preset button padding, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-time-range-preset-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `var(--lr-radius)`) — Preset button corner radius."
+      }
+    },
+    {
       "name": "--lr-time-range-size-scale",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-time-range>`** (default: `1`) — Unitless multiplier applied proportionally to the handle, track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored at 24px (WCAG 2.5.8)."
+      }
+    },
+    {
+      "name": "--lr-time-range-track-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-time-range>`** (default: `4px*scale`) — Track and selected-range thickness."
       }
     },
     {
@@ -3537,6 +4335,13 @@
       }
     },
     {
+      "name": "--lr-token-input-action-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-color-brand-quiet)`) — Edit/remove hover background."
+      }
+    },
+    {
       "name": "--lr-token-input-control-height",
       "description": {
         "kind": "markdown",
@@ -3558,6 +4363,13 @@
       }
     },
     {
+      "name": "--lr-token-input-focus-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-color-brand)`) — Focused row border color."
+      }
+    },
+    {
       "name": "--lr-token-input-font-size",
       "description": {
         "kind": "markdown",
@@ -3565,10 +4377,24 @@
       }
     },
     {
+      "name": "--lr-token-input-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-space-xs)`) — Gap between form/row children."
+      }
+    },
+    {
       "name": "--lr-token-input-input-inline-size",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-token-input>`** (default: `var(--lr-size-8rem)`) — `flex-basis` of the native text input within the token row."
+      }
+    },
+    {
+      "name": "--lr-token-input-invalid-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-color-danger)`) — Invalid row border color."
       }
     },
     {
@@ -3583,6 +4409,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-token-input>`** — Input-wrapper padding, scaled by `size`."
+      }
+    },
+    {
+      "name": "--lr-token-input-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-radius)`) — Row/token corner radius."
+      }
+    },
+    {
+      "name": "--lr-token-input-token-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-color-brand-quiet)`) — Token chip background."
+      }
+    },
+    {
+      "name": "--lr-token-input-token-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** (default: `var(--lr-space-2xs)`) — Gap inside token chips."
+      }
+    },
+    {
+      "name": "--lr-token-input-token-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-token-input>`** — Per-token chip padding, scaled by `size`."
       }
     },
     {
@@ -3624,7 +4478,35 @@
       "name": "--lr-tool-call-chip-spin",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tool-call-chip>`** (default: `1s linear`) — Running-icon animation duration and timing."
+        "value": "**`<lr-tool-call-chip>`** (default: `var(--lr-transition-ambient)`) — Running-icon animation duration and timing."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-denied-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-warning-quiet)`) — Denied status background."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-warning)`) — Denied status foreground."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-error-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-danger-quiet)`) — Error status background."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-danger)`) — Error status foreground."
       }
     },
     {
@@ -3642,10 +4524,38 @@
       }
     },
     {
+      "name": "--lr-tool-result-dialog-running-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-brand-quiet)`) — Running status background."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-brand)`) — Running status foreground."
+      }
+    },
+    {
       "name": "--lr-tool-result-dialog-spin",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tool-result-dialog>`** (default: `1s linear`) — Running-status animation duration and timing."
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-transition-ambient)`) — Running-status animation duration and timing."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-success-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-success-quiet)`) — Success status background."
+      }
+    },
+    {
+      "name": "--lr-tool-result-dialog-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-result-dialog>`** (default: `var(--lr-color-success)`) — Success status foreground."
       }
     },
     {
@@ -3663,10 +4573,52 @@
       }
     },
     {
+      "name": "--lr-tool-timeline-approved-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-success-quiet)`) — Approved badge background."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-approved-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-success)`) — Approved badge foreground."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-denied-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-danger-quiet)`) — Denied badge background."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-danger)`) — Denied badge foreground."
+      }
+    },
+    {
       "name": "--lr-tool-timeline-denied-marker-color",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-warning)`) — Rail-dot color for a `status=\"denied\"` entry, decoupled from the pending-approval border below so a consumer can retint either independently."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-danger)`) — Expanded error text."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-error-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-danger)`) — Error rail dot."
       }
     },
     {
@@ -3688,6 +4640,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-warning)`) — Color of the entry body's leading border while `data-pending-approval=\"true\"`."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-running-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-brand)`) — Running rail dot."
+      }
+    },
+    {
+      "name": "--lr-tool-timeline-success-marker-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tool-timeline>`** (default: `var(--lr-color-success)`) — Success rail dot."
       }
     },
     {
@@ -3754,6 +4720,34 @@
       }
     },
     {
+      "name": "--lr-trace-tree-bar-track-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-surface-raised)`) — Duration bar track."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-warning)`) — Denied status text and bar."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-danger)`) — Error status text and bar."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-text-quiet)`) — Pending status text and bar."
+      }
+    },
+    {
       "name": "--lr-trace-tree-row-active-bg",
       "description": {
         "kind": "markdown",
@@ -3765,6 +4759,34 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-text)`) — Foreground reference for the active (`activeSpanId`) row. It sets the color of that row's secondary text (`detail`, `duration`, `tokens-in`, `tokens-out`, `cost`, and the `pending` status label), which is raised from the quiet token to full-strength text so it clears WCAG AA against the active row's tint. The semantic status labels keep their own hue but are mixed 25% toward this same value, so overriding it re-aims every foreground on the row at once rather than leaving the status colors stranded. See the pairing caveat on `--lr-trace-tree-row-active-bg`."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-brand)`) — Running status text and stripe."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-running-stripe-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-brand-quiet)`) — Running stripe contrast."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-success)`) — Success status text and bar."
+      }
+    },
+    {
+      "name": "--lr-trace-tree-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-trace-tree>`** (default: `var(--lr-color-brand-quiet)`) — Toggle hover background."
       }
     },
     {
@@ -3814,6 +4836,69 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-virtual-list>`** (default: `var(--lr-color-border-strong)`) — Outline color of the mouse-hover preview on `[part=\"base\"]` (a subtler, always-focusable-target preview of its own `:focus-visible` ring). Set to `transparent` to opt out of the hover treatment entirely."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-active-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand-quiet)`) — Active option fill."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `transparent`) — Selected option fill."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand)`) — Selected option border."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand)`) — Selected option text."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-option-selected-font-weight",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-font-weight-semibold)`) — Selected option label weight."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-preview-active-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand)`) — Active preview border."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-preview-active-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand)`) — Active preview icon."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-preview-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand-quiet)`) — Preview hover fill."
+      }
+    },
+    {
+      "name": "--lr-voice-picker-preview-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-voice-picker>`** (default: `var(--lr-color-brand)`) — Preview hover icon."
       }
     },
     {

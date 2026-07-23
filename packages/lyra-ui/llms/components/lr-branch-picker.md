@@ -31,3 +31,7 @@ branch content.
 **CSS parts:** `base` (the group wrapper, `role="group"`), `previous-button`, `next-button`,
 `previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
 arrow without restyling the button), and `position` (the visible "2 / 5" text).
+
+**Additional API surface:**
+
+- `click()` — Activates the currently enabled chevron, matching a click on the shadow control.

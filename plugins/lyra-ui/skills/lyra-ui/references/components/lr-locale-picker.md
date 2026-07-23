@@ -6,7 +6,7 @@
 - **Class** `LyraLocalePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/locale-picker/locale-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,3 +89,12 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
+
+**Additional API surface:**
+
+- `--lr-locale-picker-gap` — Trigger and option child gap. Default: `var(--lr-space-xs)`.
+- `--lr-locale-picker-radius` — Trigger/listbox/option corner radius. Default: `var(--lr-radius)`.
+- `--lr-locale-picker-trigger-hover-bg` — Trigger hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.

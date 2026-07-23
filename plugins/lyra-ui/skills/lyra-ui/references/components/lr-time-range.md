@@ -6,7 +6,7 @@
 - **Class** `LyraTimeRange`, also available unregistered from `@aceshooting/lyra-ui/components/forms/time-range/time-range.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -120,5 +120,16 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   `effectiveDisabled` (tracked separately from the consumer's own `disabled`), so re-enabling the
   fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice
   versa — mirrors `lr-combobox`'s identical pattern.
+
+**Additional API surface:**
+
+- `--lr-time-range-handle-size` — Visible handle diameter. Default: `14px*scale`.
+- `--lr-time-range-hit-size` — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host. Default: `max(24px,28px*scale)`.
+- `--lr-time-range-track-size` — Track and selected-range thickness. Default: `4px*scale`.
+- `--lr-time-range-base-size` — Brush baseline block size. Default: `1.5rem*scale`.
+- `--lr-time-range-preset-gap` — Gap between preset buttons. Default: `var(--lr-space-xs)`.
+- `--lr-time-range-preset-radius` — Preset button corner radius. Default: `var(--lr-radius)`.
+- `--lr-time-range-preset-padding` — Preset button padding, scaled by `size`.
+- `--lr-time-range-preset-font-size` — Preset button font size, scaled by `size`.
 
 ---

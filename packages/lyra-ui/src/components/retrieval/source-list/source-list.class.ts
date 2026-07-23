@@ -65,6 +65,26 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   @state() private slottedCount = 0;
 
   private readonly listId = nextId('source-list-region');
+  private readonly previousRoles = new Map<Element, string | null>();
+
+  private syncItemRoles(elements: Element[]): void {
+    const assigned = new Set(elements);
+    for (const [element, role] of this.previousRoles) {
+      if (assigned.has(element)) continue;
+      if (role === null) element.removeAttribute('role');
+      else element.setAttribute('role', role);
+      this.previousRoles.delete(element);
+    }
+    for (const element of elements) {
+      if (!this.previousRoles.has(element)) this.previousRoles.set(element, element.getAttribute('role'));
+      element.setAttribute('role', 'listitem');
+    }
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.syncItemRoles([]);
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -86,7 +106,9 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     // `slotchange` for content present at parse time -- same idiom as
     // `<lr-empty>`'s `firstUpdated`.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.slottedCount = slot.assignedElements({ flatten: true }).length;
+    const elements = slot.assignedElements({ flatten: true });
+    this.slottedCount = elements.length;
+    this.syncItemRoles(elements);
   }
 
   /** Read-only, live-updated count of the currently-slotted children —
@@ -98,7 +120,9 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
   }
 
   private onSlotChange = (e: Event): void => {
-    this.slottedCount = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
+    const elements = (e.target as HTMLSlotElement).assignedElements({ flatten: true });
+    this.slottedCount = elements.length;
+    this.syncItemRoles(elements);
   };
 
   private toggle = (): void => {
@@ -115,6 +139,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
         <button
           part="header"
           type="button"
+          aria-label=${this.getAttribute('aria-label') || headerText}
           aria-expanded=${this.expanded ? 'true' : 'false'}
           aria-controls=${this.listId}
           @click=${this.toggle}
@@ -122,7 +147,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
           <span part="toggle" aria-hidden="true">${chevronIcon()}</span>
           <span>${headerText}</span>
         </button>
-        <div part="list" id=${this.listId} ?hidden=${!this.expanded}>
+        <div part="list" id=${this.listId} role="list" ?hidden=${!this.expanded}>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>
       </div>
@@ -136,4 +161,3 @@ declare global {
     'lr-source-list': LyraSourceList;
   }
 }
-

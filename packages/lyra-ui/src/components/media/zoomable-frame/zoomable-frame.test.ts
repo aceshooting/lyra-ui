@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './zoomable-frame.js';
 import type { LyraZoomableFrame } from './zoomable-frame.js';
+import { styles } from './zoomable-frame.styles.js';
 
 it('renders a zoomable frame with bounded controls', async () => {
   const el = (await fixture(html`
@@ -82,6 +83,28 @@ it('names the focusable viewport with role="group", forwarding a host aria-label
   el.setAttribute('aria-label', 'Map preview');
   await el.updateComplete;
   expect(viewport.getAttribute('aria-label')).to.equal('Map preview');
+});
+
+it('gives the zoom controls an explicit toolbar role', async () => {
+  const el = (await fixture(html`<lr-zoomable-frame></lr-zoomable-frame>`)) as LyraZoomableFrame;
+  expect(el.shadowRoot!.querySelector('[part="controls"]')!.getAttribute('role')).to.equal('toolbar');
+});
+
+it('does not hijack zoom shortcuts from slotted editable controls', async () => {
+  const el = (await fixture(html`
+    <lr-zoomable-frame><input value="10" /></lr-zoomable-frame>
+  `)) as LyraZoomableFrame;
+  const input = el.querySelector('input')!;
+  const key = new KeyboardEvent('keydown', { key: '+', bubbles: true, composed: true, cancelable: true });
+  input.dispatchEvent(key);
+  await el.updateComplete;
+  expect(el.zoom).to.equal(1);
+  expect(key.defaultPrevented).to.be.false;
+});
+
+it('pairs the focus-visible viewport affordance with a hover rule', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='viewport'\]:hover/);
 });
 
 // Regression coverage for the shared finite-number normalization layer (`src/internal/numbers.ts`)

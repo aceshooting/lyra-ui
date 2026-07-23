@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { expandIcon } from '../../../internal/icons.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../layout/virtual-list/virtual-list.class.js';
@@ -72,16 +73,19 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     if (!this.groupByRelation) return this.rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
     // their original relative order.
-    return [...this.rows].sort((a, b) => a.relation.localeCompare(b.relation));
+    return [...this.rows].sort((a, b) => getCollator(this.effectiveLocale).compare(a.relation, b.relation));
   }
 
   private groups(sorted: LyraNeighborRow[]): VirtualListGroup[] | undefined {
     if (!this.groupByRelation) return undefined;
     const groups: VirtualListGroup[] = [];
+    const counts = new Map<string, number>();
+    for (const row of sorted) counts.set(row.relation, (counts.get(row.relation) ?? 0) + 1);
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     let lastRelation: string | undefined;
     sorted.forEach((row, i) => {
       if (row.relation !== lastRelation) {
-        const count = sorted.filter((r) => r.relation === row.relation).length;
+        const count = numberFormat.format(counts.get(row.relation) ?? 0);
         groups.push({
           key: row.relation,
           label: this.localize('neighborGroupHeader', undefined, { relation: row.relation, count }),
@@ -122,11 +126,20 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       relation: row.relation,
       direction: directionText,
     });
-    const meta = [row.node.type, row.node.degree != null ? String(row.node.degree) : undefined]
+    const meta = [
+      row.node.type,
+      row.node.degree != null ? getNumberFormat(this.effectiveLocale).format(row.node.degree) : undefined,
+    ]
       .filter((v): v is string => !!v)
       .join(' · ');
     return html`
-      <button part="node-label" type="button" aria-label=${accessibleName} @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}>
+      <button
+        part="node-label"
+        type="button"
+        aria-label=${accessibleName}
+        aria-description=${meta || nothing}
+        @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}
+      >
         <span part="direction" aria-hidden="true">${this.directionGlyph(row.direction)}</span>
         <span part="relation">${row.relation}</span>
         <span>${nodeLabel}</span>

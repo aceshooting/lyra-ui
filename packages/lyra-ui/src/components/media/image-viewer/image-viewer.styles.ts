@@ -113,15 +113,29 @@ export const styles = css`
   }
   [part='highlight'] {
     position: absolute;
-    border: var(--lr-border-width-medium) solid var(--lr-color-brand);
-    background: color-mix(in srgb, var(--lr-color-brand) 20%, transparent);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: var(--lr-border-width-medium) solid var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
+    background: var(--lr-image-viewer-highlight-bg, color-mix(in srgb, var(--lr-color-brand) 20%, transparent));
     cursor: pointer;
     padding: 0;
   }
-  [part='highlight'][data-tone='success'] { border-color: var(--lr-color-success); background: color-mix(in srgb, var(--lr-color-success) 20%, transparent); }
-  [part='highlight'][data-tone='warning'] { border-color: var(--lr-color-warning); background: color-mix(in srgb, var(--lr-color-warning) 20%, transparent); }
-  [part='highlight'][data-tone='danger'] { border-color: var(--lr-color-danger); background: color-mix(in srgb, var(--lr-color-danger) 20%, transparent); }
-  [part='highlight'][data-tone='neutral'] { border-color: var(--lr-color-border); background: color-mix(in srgb, var(--lr-color-text) 12%, transparent); }
+  [part='highlight'][data-tone='success'] {
+    border-color: var(--lr-image-viewer-highlight-success-border, var(--lr-color-success));
+    background: var(--lr-image-viewer-highlight-success-bg, color-mix(in srgb, var(--lr-color-success) 20%, transparent));
+  }
+  [part='highlight'][data-tone='warning'] {
+    border-color: var(--lr-image-viewer-highlight-warning-border, var(--lr-color-warning));
+    background: var(--lr-image-viewer-highlight-warning-bg, color-mix(in srgb, var(--lr-color-warning) 20%, transparent));
+  }
+  [part='highlight'][data-tone='danger'] {
+    border-color: var(--lr-image-viewer-highlight-danger-border, var(--lr-color-danger));
+    background: var(--lr-image-viewer-highlight-danger-bg, color-mix(in srgb, var(--lr-color-danger) 20%, transparent));
+  }
+  [part='highlight'][data-tone='neutral'] {
+    border-color: var(--lr-image-viewer-highlight-neutral-border, var(--lr-color-border));
+    background: var(--lr-image-viewer-highlight-neutral-bg, color-mix(in srgb, var(--lr-color-text) 12%, transparent));
+  }
   [part='highlight'][data-active] {
     border-width: var(--lr-border-width-thick);
     outline: var(--lr-focus-ring-width) solid var(--lr-image-viewer-highlight-active-color, var(--lr-color-brand));

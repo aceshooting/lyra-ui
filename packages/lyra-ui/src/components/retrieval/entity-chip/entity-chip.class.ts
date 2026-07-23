@@ -90,6 +90,8 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
     // changed.has('popoverOpen') never fires again, leaving the popover rendered open
     // with a torn-down positioner and no live position/dismissal.
     this.popoverOpen = false;
+    this.hovering = false;
+    this.focused = false;
   }
 
   private get accessibleLabel(): string {
@@ -192,7 +194,7 @@ export class LyraEntityChip extends LyraElement<LyraEntityChipEventMap> {
         >
           <span part="label">${this.label}</span>
         </button>
-        <div part="popover" id=${this.popoverId} role="tooltip" ?hidden=${!this.popoverOpen}>
+        <div part="popover" id=${this.popoverId} role="tooltip" inert ?hidden=${!this.popoverOpen}>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>
       </span>

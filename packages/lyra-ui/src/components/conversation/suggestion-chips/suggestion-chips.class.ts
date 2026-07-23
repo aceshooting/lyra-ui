@@ -59,9 +59,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
       this.activeIndex =
         remapped >= 0 ? remapped : Math.min(this.activeIndex, Math.max(0, this.suggestions.length - 1));
       this.refocusAfterUpdate =
-        focusedId !== undefined &&
-        !this.suggestions.some((suggestion) => suggestion.id === focusedId) &&
-        this.suggestions.length > 0;
+        focusedId !== undefined && this.suggestions.length > 0;
     }
   }
 

@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './json-viewer.styles.js';
@@ -108,6 +109,13 @@ export interface LyraJsonViewerEventMap {
  * @cssprop [--lr-json-viewer-font=var(--lr-font-mono)] - Font family used for the rendered tree.
  * @cssprop [--lr-json-viewer-match-bg=var(--lr-color-warning-quiet)] - Background (and
  *   surrounding box-shadow) of a key/value that currently matches `search`.
+ * @cssprop [--lr-json-viewer-active-outline=var(--lr-focus-ring-color)] - Outline color for the
+ *   current imperative search match.
+ * @cssprop [--lr-json-viewer-string-color=var(--lr-color-success)] - String value color.
+ * @cssprop [--lr-json-viewer-number-color=var(--lr-color-brand)] - Number value color.
+ * @cssprop [--lr-json-viewer-boolean-color=var(--lr-color-warning)] - Boolean value color.
+ * @cssprop [--lr-json-viewer-null-color=var(--lr-color-text-quiet)] - Null, undefined, and
+ *   circular-reference marker color.
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -138,6 +146,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   /** Memoized result of the last `computeSearch()` walk -- see `willUpdate()`. */
   private searchState: SearchState = EMPTY_SEARCH;
+  private searchLocale = '';
 
   /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
    *  (nothing auto-collapses) is left as-is, since it's a meaningful, intentional value, not an
@@ -153,10 +162,15 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     // same "{count} tool"/"{count} tools" template pattern as toolCount/
     // toolCountPlural, so the count's position relative to the noun stays
     // translatable rather than fixed to English's "number space noun" order.
+    const localizedCount = getNumberFormat(this.effectiveLocale).format(count);
     if (type === 'array') {
-      return this.localize(count === 1 ? 'jsonItemCount' : 'jsonItemCountPlural', undefined, { count });
+      return this.localize(count === 1 ? 'jsonItemCount' : 'jsonItemCountPlural', undefined, {
+        count: localizedCount,
+      });
     }
-    return this.localize(count === 1 ? 'jsonKeyCount' : 'jsonKeyCountPlural', undefined, { count });
+    return this.localize(count === 1 ? 'jsonKeyCount' : 'jsonKeyCountPlural', undefined, {
+      count: localizedCount,
+    });
   }
 
   private isExpanded(pathKey: string, depth: number, forceExpand: Set<string>): boolean {
@@ -231,7 +245,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
    * treated as a leaf instead of being walked again.
    */
   private computeSearch(): SearchState {
-    const query = this.search.trim().toLowerCase();
+    const locale = this.effectiveLocale;
+    const query = this.search.trim().toLocaleLowerCase(locale);
     const keyMatches = new Set<string>();
     const valueMatches = new Set<string>();
     const forceExpand = new Set<string>();
@@ -249,12 +264,16 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       const type = valueType(value);
       if (query) {
         let hit = false;
-        if (keyLabel !== undefined && keyLabel.toLowerCase().includes(query)) {
+        if (keyLabel !== undefined && keyLabel.toLocaleLowerCase(locale).includes(query)) {
           keyMatches.add(pathKey);
           orderedMatches.push({ pathKey, kind: 'key' });
           hit = true;
         }
-        if (type !== 'object' && type !== 'array' && formatPrimitive(value, type).toLowerCase().includes(query)) {
+        if (
+          type !== 'object' &&
+          type !== 'array' &&
+          formatPrimitive(value, type).toLocaleLowerCase(locale).includes(query)
+        ) {
           valueMatches.add(pathKey);
           orderedMatches.push({ pathKey, kind: 'value' });
           hit = true;
@@ -365,6 +384,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               part="key"
               ?data-match=${search.keyMatches.has(pathKey)}
               ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key'}
+              aria-current=${
+                activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'key' ? 'true' : 'false'
+              }
               >${keyLabel}</span
               ><span class="colon">:</span>`
           : nothing}
@@ -387,6 +409,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                 data-type=${type}
                 ?data-match=${search.valueMatches.has(pathKey)}
                 ?data-active=${!!activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value'}
+                aria-current=${
+                  activeMatch && activeMatch.pathKey === pathKey && activeMatch.kind === 'value' ? 'true' : 'false'
+                }
                 >${formatPrimitive(value, type)}</span
               >`}
         ${this.renderCopyButton(value, toggleLabel)}
@@ -401,28 +426,32 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     // patching in place, destroying the toggle button's DOM identity (and
     // with it, real DOM focus) on every click.
     return html`
-      ${headRow}
-      ${isContainer && expanded
-        ? html`
-            <div class="children">
-              ${repeat(
-                entries,
-                ([k]) => JSON.stringify([...path, k]),
-                (_entry, i) => childRows[i],
-              )}
-            </div>
-            <div class="row" style=${indentStyle}>
-              <span class="toggle-space" aria-hidden="true"></span>
-              <span part="bracket">${closeBracket}</span>
-            </div>
-          `
-        : nothing}
+      <div role="listitem">
+        ${headRow}
+        ${isContainer && expanded
+          ? html`
+              <div class="children" role="list">
+                ${repeat(
+                  entries,
+                  ([k]) => JSON.stringify([...path, k]),
+                  (_entry, i) => childRows[i],
+                )}
+              </div>
+              <div class="row" style=${indentStyle}>
+                <span class="toggle-space" aria-hidden="true"></span>
+                <span part="bracket">${closeBracket}</span>
+              </div>
+            `
+          : nothing}
+      </div>
     `;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated || changed.has('data') || changed.has('search')) {
+    const locale = this.effectiveLocale;
+    if (!this.hasUpdated || changed.has('data') || changed.has('search') || locale !== this.searchLocale) {
+      this.searchLocale = locale;
       const next = this.computeSearch();
       if (!this.hasUpdated || changed.has('data')) {
         // A path with no entry in `next.paths` no longer exists anywhere in
@@ -519,7 +548,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               </button>
             </div>`
           : nothing}
-        <div part="tree">${this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet())}</div>
+        <div part="tree" role="list">
+          ${this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet())}
+        </div>
       </div>
     `;
   }

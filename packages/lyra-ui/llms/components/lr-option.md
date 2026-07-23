@@ -278,4 +278,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   `form.reset()` default itself is captured exclusively from that very first pass; a later pick, or
   a later batch of newly-`selected` options, never redefines what a reset restores to.
 
+**Additional API surface:**
+
+- `part="tag-label"` — The wrapping/ellipsis-safe selected-tag label.
+
 ---

@@ -1,4 +1,4 @@
-import { html, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -877,7 +877,14 @@ export class LyraMarkdown extends DocumentAnchorTarget(LyraMarkdownBase) {
   override render(): TemplateResult {
     const isFallback = this.renderedHtml === null;
     return html`
-      <div part="content" tabindex="0" ?data-fallback=${isFallback} @click=${this.onContentClick}>
+      <div
+        part="content"
+        role="document"
+        tabindex=${this.content.trim() ? '0' : nothing}
+        aria-label=${this.getAttribute('aria-label') || nothing}
+        ?data-fallback=${isFallback}
+        @click=${this.onContentClick}
+      >
         ${isFallback ? this.content : unsafeHTML(this.renderedHtml)}
       </div>
       ${this.renderAnchorLiveRegion()}

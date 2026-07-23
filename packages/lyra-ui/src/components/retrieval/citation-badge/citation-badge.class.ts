@@ -353,7 +353,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
           <span part="bracket" aria-hidden="true">[</span><span part="index">${this.index}</span
           ><span part="bracket" aria-hidden="true">]</span>
         </button>
-        <div part="popover" id=${this.popoverId} role="tooltip" ?hidden=${!this.popoverOpen}>
+        <div part="popover" id=${this.popoverId} role="tooltip" inert ?hidden=${!this.popoverOpen}>
           <slot @slotchange=${this.onSlotChange}></slot>
         </div>
       </span>

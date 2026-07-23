@@ -202,17 +202,17 @@ it('renders one toggleable tag chip per distinct tag and filters the grid to an 
   expect(tagValues).to.deep.equal(['easy', 'math', 'summarization', 'translation']);
 
   const mathChip = chips.find((c) => c.value === 'math')!;
-  mathChip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.click();
+  mathChip.click();
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(2); // ex-1 and ex-3 both carry 'math'
 
   const translationChip = chips.find((c) => c.value === 'translation')!;
-  translationChip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.click();
+  translationChip.click();
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(2); // still just ex-1/ex-3 -- OR, not AND
 
-  mathChip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.click();
-  translationChip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.click();
+  mathChip.click();
+  translationChip.click();
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(3);
 });
@@ -223,7 +223,7 @@ it('drops an active tag filter that no longer matches any example once `examples
   const summarizationChip = [...el.shadowRoot!.querySelectorAll('lr-chip')].find(
     (c: LyraChip) => c.value === 'summarization',
   )!;
-  summarizationChip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.click();
+  summarizationChip.click();
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(1);
 
@@ -295,7 +295,7 @@ it('renders correctly under dir="rtl" with tag chips still activatable', async (
   )) as LyraEvalDataset;
   await el.updateComplete;
   const mathChip = ([...el.shadowRoot!.querySelectorAll('lr-chip')] as LyraChip[]).find((c) => c.value === 'math')!;
-  mathChip.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.click();
+  mathChip.click();
   await el.updateComplete;
   expect(gridRowCount(el)).to.equal(2);
 });

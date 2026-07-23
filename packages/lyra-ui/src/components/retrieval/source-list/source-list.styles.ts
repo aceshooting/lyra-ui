@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
   }
   [part='base'] {
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -58,6 +59,8 @@ export const styles = css`
     padding: 0 var(--lr-space-m) var(--lr-space-m);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
     padding-block-start: var(--lr-space-m);
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='list'][hidden] {
     display: none;

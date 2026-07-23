@@ -5,6 +5,7 @@ import { lockScroll } from '../../../internal/scroll-lock.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { closeIcon, chevronIcon } from '../../../internal/icons.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './lightbox.styles.js';
 import '../zoomable-frame/zoomable-frame.class.js';
@@ -66,6 +67,19 @@ export interface LyraLightboxEventMap {
    *  element's own shadow boundary with no re-dispatch needed. Listed here purely for
    *  discoverability. */
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
+}
+
+function ownsNavigationKey(event: KeyboardEvent): boolean {
+  for (const target of event.composedPath()) {
+    if (!(target instanceof Element)) continue;
+    if (target.matches(
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
+      '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
+      '[role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], ' +
+      '[role="radiogroup"], [role="grid"], [role="tree"], [role="tablist"]',
+    )) return true;
+  }
+  return false;
 }
 
 /**
@@ -247,10 +261,17 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   private updateLiveRegion(): void {
     const count = this.images.length;
+    const formatter = getNumberFormat(this.effectiveLocale, {
+      maximumFractionDigits: 0,
+      useGrouping: false,
+    });
     this.liveText =
       count === 0
         ? ''
-        : this.localize('lightboxImagePosition', undefined, { index: this.currentIndex() + 1, total: count });
+        : this.localize('lightboxImagePosition', undefined, {
+          index: formatter.format(this.currentIndex() + 1),
+          total: formatter.format(count),
+        });
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -288,7 +309,20 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     }
     // Imperative, not a binding -- see the class doc for why this is required for the reset to
     // keep working past the first navigation.
-    if (changed.has('index') && this.open) {
+    let currentSourceChanged = false;
+    if (changed.has('images')) {
+      const previousImages = changed.get('images') as LyraLightboxImage[] | undefined;
+      const previousIndex = changed.has('index')
+        ? (changed.get('index') as number | undefined) ?? 0
+        : this.index;
+      const oldCurrent = previousImages?.[
+        previousImages.length > 0
+          ? finiteCount(previousIndex, 0, previousImages.length - 1)
+          : 0
+      ];
+      currentSourceChanged = oldCurrent?.src !== this.images[this.currentIndex()]?.src;
+    }
+    if (this.open && (changed.has('index') || currentSourceChanged)) {
       this.frameEl?.resetView();
     }
   }
@@ -368,6 +402,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   // <lr-zoomable-frame>'s own shadow tree. Never conflicts with the frame's own +/-/0/=/_ zoom
   // shortcuts, which don't intercept Arrow/Home/End.
   private onPanelKeyDown = (event: KeyboardEvent): void => {
+    if (ownsNavigationKey(event)) return;
     const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
     const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
@@ -392,8 +427,17 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const image = count > 0 ? this.images[current] : undefined;
     const label = this.accessibleLabel ?? this.localize('lightboxLabel');
     const hasCaption = Boolean(image?.caption);
+    const formatter = getNumberFormat(this.effectiveLocale, {
+      maximumFractionDigits: 0,
+      useGrouping: false,
+    });
     const positionText =
-      count > 0 ? this.localize('lightboxImagePosition', undefined, { index: current + 1, total: count }) : '';
+      count > 0
+        ? this.localize('lightboxImagePosition', undefined, {
+          index: formatter.format(current + 1),
+          total: formatter.format(count),
+        })
+        : '';
 
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>

@@ -26,12 +26,14 @@ immediately) or multi-format (click opens a small menu).
   name and feeds the localized format-menu name without changing the visible label
 - `open: boolean = false` (reflected)
 
-**Methods:** `focus(options?)` and `blur()` forward to the native trigger button.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
 **Events:** `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
-built-in download completes), `lr-show`, `lr-hide` (format-menu visibility transitions)
+built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
+unknown }`, fires when a built-in export cannot be serialized or downloaded; activation does not
+throw into consumer code), `lr-show`, `lr-hide` (format-menu visibility transitions)
 
 **Slots:** none.
 
@@ -132,6 +134,10 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 - best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
   and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
   with the intended text so a consumer can always show its own confirmation/fallback UI.
+
+**Additional API surface:**
+
+- `click()` — Activates the native button, matching the host focus/blur forwarding contract.
 
 ---
 
@@ -235,7 +241,13 @@ until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono
 `--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
 box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
-without repainting every other warning-toned surface that reads the same shared token. Plus shared
+without repainting every other warning-toned surface that reads the same shared token;
+`--lr-json-viewer-active-outline` (default `var(--lr-focus-ring-color)`) — outline color for the
+current imperative search match; `--lr-json-viewer-string-color` (default
+`var(--lr-color-success)`), `--lr-json-viewer-number-color` (default `var(--lr-color-brand)`),
+`--lr-json-viewer-boolean-color` (default `var(--lr-color-warning)`), and
+`--lr-json-viewer-null-color` (default `var(--lr-color-text-quiet)`) — per-value-type color hooks.
+Plus shared
 tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
@@ -635,6 +647,15 @@ consumer can compute or unit-test the same alignment without instantiating the e
   cached diff state, so binding either property to something that changes on every keystroke
   recomputes the whole alignment each time.
 
+**Additional API surface:**
+
+- `--lr-diff-view-add-background` — Added-line background.
+- `--lr-diff-view-add-color` — Added-line text color.
+- `--lr-diff-view-remove-background` — Removed-line background.
+- `--lr-diff-view-remove-color` — Removed-line text color.
+- `--lr-diff-view-fold-color` — Fold-marker text color.
+- `--lr-diff-view-fold-background` — Fold-marker background.
+
 ---
 
 ## `lr-icon`
@@ -862,6 +883,10 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   required date reports `badInput` instead.
 - The host carries a `:state(blank)` custom state whenever `value === ''`, and `data-invalid` only
   once touched (first blur out of the whole control) and actually invalid.
+
+**Additional API surface:**
+
+- `click()` — Activates the first native field in locale order.
 
 ## `lr-random-content`
 

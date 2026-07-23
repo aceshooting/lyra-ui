@@ -25,6 +25,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 **Events:** `lr-position-change` (`detail: { position }`), plus composed `focus` and `blur` events
 from the internal range handle.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
+
 **Slots:** `before`, `after`.
 
 **CSS parts:** `base`, `before`, `after`, `divider`, and `handle`.

@@ -343,6 +343,11 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
   itself is unaffected.
 
+**Additional API surface:**
+
+- `part="view-icon"` — Decorative icon content inside a view toggle.
+- `part="view-label"` — Visible label text inside a view toggle.
+
 ---
 
 ## `lr-carousel`
@@ -661,6 +666,10 @@ each falls back to the token its rule used before. Otherwise shared tokens —
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
 
+**Additional API surface:**
+
+- `part="step-item"` — The `role="listitem"` wrapper for one step.
+
 ---
 
 ## `lr-control-group`
@@ -875,6 +884,12 @@ Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
   `lr-select`'s popup has.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+
+**Additional API surface:**
+
+- `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
+- `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
+- `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
 
 ---
 
@@ -1837,6 +1852,11 @@ the `footer` slot, hidden entirely when empty).
   `<lr-button>` retargets to the host, but its composed path still contains the internal native
   `<button>`.
 
+**Additional API surface:**
+
+- `accessibleLabel` — Host `aria-label` forwarded to the native no-href activation button. Type: `string | null`.
+- `part="activation-button"` — The native whole-card action, rendered while `interactive` without `href`. It is a sibling of slotted controls, so actionable descendants are never nested inside another actionable role.
+
 ---
 
 ## `lr-command-palette`
@@ -1889,6 +1909,13 @@ after `::part()`), so highlighting the active row previously required hijacking 
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token, so rendering is unchanged.
 
+**Additional API surface:**
+
+- `part="command-group"` — A labeled ARIA group containing visible command options.
+- `part="list-spacer"` — Virtual result extent inside the scrolling list.
+- `--lr-command-palette-row-height` — Virtual command-row height. Default: `var(--lr-size-3rem)`.
+- `--lr-command-palette-group-height` — Virtual group-heading height. Default: `var(--lr-size-2rem)`.
+
 ## `lr-details`, `lr-accordion`, and `lr-accordion-item`
 
 `lr-details` is a native-semantics disclosure panel. `lr-accordion` coordinates slotted
@@ -1927,6 +1954,10 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
 
+**Additional API surface:**
+
+- `part="separator"` — Decorative separator shown before non-first items.
+
 ## `lr-dashboard-grid`
 
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
@@ -1952,6 +1983,10 @@ overriding them from a stylesheet has no effect — set the properties instead. 
 (default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
 preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
 draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
+
+**Additional API surface:**
+
+- `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 
 ## `lr-drilldown-panel`
 

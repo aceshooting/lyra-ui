@@ -340,19 +340,38 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     return this.threads.length > 0 || !this.hasDefaultSlotContent;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      const defaultSlotted = this.defaultSlottedElements();
+      this.hasDefaultSlotContent = defaultSlotted.length > 0;
+      if (this.threads.length === 0) this.markAsListItems(defaultSlotted);
+    }
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
       this.hasEmptySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'empty');
-      const defaultSlotted = Array.from(this.children).filter((el) => !el.hasAttribute('slot'));
+      const defaultSlotted = this.defaultSlottedElements();
       this.hasDefaultSlotContent = defaultSlotted.length > 0;
       this.markAsListItems(defaultSlotted);
     }
-    if (changed.has('threads') && this.threads.length > 0 && this.hasDefaultSlotContent) {
-      this.restoreInjectedListItemRoles();
-      console.warn(
-        '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
-      );
+    if (changed.has('threads')) {
+      const defaultSlotted = this.defaultSlottedElements();
+      this.hasDefaultSlotContent = defaultSlotted.length > 0;
+      if (this.threads.length > 0 && defaultSlotted.length > 0) {
+        this.restoreInjectedListItemRoles();
+        console.warn(
+          '[lr-thread-list] both `threads` and slotted content were supplied -- `threads` (data mode) wins and the default slot is ignored.',
+        );
+      } else if (this.threads.length === 0) {
+        this.markAsListItems(defaultSlotted);
+      }
     }
+  }
+
+  private defaultSlottedElements(): Element[] {
+    return Array.from(this.children).filter((el) => !el.hasAttribute('slot'));
   }
 
   // Slotted mode's `[part="list"]` carries `role="list"`, which ARIA requires to directly own only

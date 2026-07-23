@@ -84,6 +84,21 @@ Some **bold** text with a [link](https://example.com/docs).
     await waitUntil(() => el.shadowRoot!.querySelector('[part="heading"]') !== null);
     await expect(el).to.be.accessible();
   });
+
+  it('only makes non-empty document content focusable and forwards a host aria-label', async () => {
+    const el = (await fixture(
+      html`<lr-markdown-core aria-label="Assistant response"></lr-markdown-core>`,
+    )) as LyraMarkdownCore;
+    let content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    expect(content.getAttribute('role')).to.equal('document');
+    expect(content.hasAttribute('tabindex')).to.be.false;
+    expect(content.getAttribute('aria-label')).to.equal('Assistant response');
+
+    el.content = 'Response body';
+    await el.updateComplete;
+    content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    expect(content.getAttribute('tabindex')).to.equal('0');
+  });
 });
 
 describe('languages (build-lean shiki, no full-bundle fallback)', () => {

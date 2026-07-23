@@ -65,3 +65,7 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
   swap.
+
+**Additional API surface:**
+
+- `click()` — Activate the play/pause control.

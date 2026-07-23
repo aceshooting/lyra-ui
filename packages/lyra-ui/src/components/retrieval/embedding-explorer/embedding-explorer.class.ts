@@ -1,7 +1,8 @@
-import { html, svg, type TemplateResult } from 'lit';
+import { html, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './embedding-explorer.styles.js';
 
 const WIDTH = 640;
@@ -43,6 +44,7 @@ export interface LyraEmbeddingExplorerEventMap {
  * @csspart plot - The SVG projection plot.
  * @csspart point - One focusable embedding point.
  * @csspart empty - The empty state.
+ * @cssprop [--lr-embedding-explorer-selected-stroke=var(--lr-color-brand)] - Stroke color of the selected point.
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -56,30 +58,46 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   /** Accessible name for the plot. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private activeIndex = 0;
+  private refocusAfterUpdate = false;
 
   private get validPoints(): EmbeddingPoint[] {
     return this.points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
   }
 
-  private position(point: EmbeddingPoint, points: EmbeddingPoint[]): { x: number; y: number } {
-    const xs = points.map((item) => item.x);
-    const ys = points.map((item) => item.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!changed.has('points')) return;
+    const active = this.shadowRoot?.activeElement ?? null;
+    const focusedId = active?.getAttribute('data-id');
+    const points = this.validPoints;
+    const matchingIndex = focusedId ? points.findIndex((point) => point.id === focusedId) : -1;
+    this.activeIndex =
+      matchingIndex >= 0 ? matchingIndex : Math.min(this.activeIndex, Math.max(0, points.length - 1));
+    this.refocusAfterUpdate = active?.getAttribute('part') === 'point';
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (!this.refocusAfterUpdate) return;
+    this.refocusAfterUpdate = false;
+    this.renderRoot.querySelector<SVGGElement>(`[data-index="${this.activeIndex}"]`)?.focus();
+  }
+
+  private position(
+    point: EmbeddingPoint,
+    bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  ): { x: number; y: number } {
+    const { minX, maxX, minY, maxY } = bounds;
     const x = PAD + finiteRange((point.x - minX) / (maxX - minX || 1), 0.5, 0, 1) * (WIDTH - PAD * 2);
     const y = HEIGHT - PAD - finiteRange((point.y - minY) / (maxY - minY || 1), 0.5, 0, 1) * (HEIGHT - PAD * 2);
     return { x, y };
   }
 
-  private clusterIndex(point: EmbeddingPoint, points: EmbeddingPoint[]): number {
-    const clusters = [...new Set(points.map((item) => String(item.cluster ?? '')))].sort();
-    return Math.max(0, clusters.indexOf(String(point.cluster ?? '')));
-  }
-
   private announceLabel(point: EmbeddingPoint, index: number): string {
-    return this.localize('embeddingExplorerPoint', undefined, { label: point.label || point.id, index: index + 1 });
+    return this.localize('embeddingExplorerPoint', undefined, {
+      label: point.label || point.id,
+      index: getNumberFormat(this.effectiveLocale).format(index + 1),
+    });
   }
 
   private select(point: EmbeddingPoint): void {
@@ -109,32 +127,52 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     });
   }
 
-  private renderPoint(point: EmbeddingPoint, index: number, points: EmbeddingPoint[]): TemplateResult {
-    const { x, y } = this.position(point, points);
+  private renderPoint(
+    point: EmbeddingPoint,
+    index: number,
+    bounds: { minX: number; maxX: number; minY: number; maxY: number },
+    clusterIndices: Map<string, number>,
+  ): TemplateResult {
+    const { x, y } = this.position(point, bounds);
     const label = this.announceLabel(point, index);
-    return svg`<circle
+    const selected = point.id === this.selectedId;
+    return svg`<g
       part="point"
       data-index=${index}
-      data-selected=${point.id === this.selectedId ? 'true' : 'false'}
-      cx=${x}
-      cy=${y}
-      r="6"
-      fill=${PALETTE[this.clusterIndex(point, points) % PALETTE.length]}
+      data-id=${point.id}
+      data-selected=${selected ? 'true' : 'false'}
+      transform="translate(${x} ${y})"
       tabindex=${index === this.activeIndex ? '0' : '-1'}
-      role="img"
+      role="option"
+      aria-selected=${selected ? 'true' : 'false'}
       aria-label=${label}
       @click=${() => this.select(point)}
       @keydown=${(event: KeyboardEvent) => this.onPointKeyDown(event, point, index)}
-    ><title>${label}</title></circle>`;
+    >
+      <circle class="point-hit" r="20" fill="transparent"></circle>
+      <circle class="point-marker" r="6" fill=${PALETTE[(clusterIndices.get(String(point.cluster ?? '')) ?? 0) % PALETTE.length]}></circle>
+      <title>${label}</title>
+    </g>`;
   }
 
   override render(): TemplateResult {
     const points = this.validPoints;
     const label = this.accessibleLabel || this.localize('embeddingExplorerLabel');
     if (points.length === 0) return html`<div part="base" role="region" aria-label=${label}><p part="empty">${this.localize('embeddingExplorerEmpty')}</p></div>`;
+    const bounds = points.reduce(
+      (result, point) => ({
+        minX: Math.min(result.minX, point.x),
+        maxX: Math.max(result.maxX, point.x),
+        minY: Math.min(result.minY, point.y),
+        maxY: Math.max(result.maxY, point.y),
+      }),
+      { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity },
+    );
+    const clusters = [...new Set(points.map((point) => String(point.cluster ?? '')))].sort();
+    const clusterIndices = new Map(clusters.map((cluster, index) => [cluster, index]));
     return html`<div part="base" role="region" aria-label=${label}>
-      <svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" height=${this.height} role="group" aria-label=${label}>
-        ${points.map((point, index) => this.renderPoint(point, index, points))}
+      <svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" height=${this.height} role="listbox" aria-label=${label}>
+        ${points.map((point, index) => this.renderPoint(point, index, bounds, clusterIndices))}
       </svg>
     </div>`;
   }

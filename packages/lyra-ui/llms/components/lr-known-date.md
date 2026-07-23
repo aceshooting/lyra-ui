@@ -102,3 +102,7 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   required date reports `badInput` instead.
 - The host carries a `:state(blank)` custom state whenever `value === ''`, and `data-invalid` only
   once touched (first blur out of the whole control) and actually invalid.
+
+**Additional API surface:**
+
+- `click()` — Activates the first native field in locale order.

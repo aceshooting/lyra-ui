@@ -6,7 +6,7 @@
 - **Class** `LyraPagination`, also available unregistered from `@aceshooting/lyra-ui/components/data/pagination/pagination.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,5 +88,10 @@ spacing, border, radius, disabled-opacity, and focus-ring tokens.
   (`'{total} {itemLabel}'`, producing `0 items` in the default locale) unless `hide-summary` is set
 - below a 20rem container allocation the summary and controls stack; the breakpoint responds to
   the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
+
+**Additional API surface:**
+
+- `click()` — Forward host activation to the primary editable page control.
+- `--lr-pagination-control-radius` — Border radius of navigation buttons and the page input. Default: `var(--lr-radius)`.
 
 ---

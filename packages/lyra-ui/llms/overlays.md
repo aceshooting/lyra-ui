@@ -571,6 +571,11 @@ than a stylesheet-only solution.
   `<lr-chip>` in its shadow DOM — don't expect `<lr-chip>`'s CSS parts or custom properties to
   reach it.
 
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal control.
+- `part="toggle-button"` — The real toggle control, rendered over the non-interactive label when toggle mode is active.
+
 ---
 
 ## `lr-kbd`
@@ -742,6 +747,10 @@ determinate.
 **Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
 block size of the progress track.
 
+**Additional API surface:**
+
+- `--lr-progress-duration` — Indeterminate sweep timing. Default: `var(--lr-transition-ambient)`.
+
 ## `lr-progress-ring`
 
 A circular progress indicator with the same value contract as `lr-progress-bar`.
@@ -820,3 +829,9 @@ inside each star, clipped to the fractional `precision` value). **Themeable cust
 `--lr-rating-fill` (default `--lr-color-warning` — filled-star color), `--lr-rating-empty-color`
 (default `--lr-color-border` — unfilled-star color), and `--lr-rating-size` (default
 `--lr-font-size-xl` — star size).
+
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal rating control.
+- `click()` — Forwards host activation to the internal rating control.
+- `focus()` — Forwards host focus to the internal rating control.

@@ -6,7 +6,7 @@
 - **Class** `LyraAgentRun`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-run/agent-run.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 25 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -80,3 +80,9 @@ padding, and the gap between its header and body, while `compact`; both are igno
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
 their point of use rather than `:host` declarations, so either can be set on the element *or on any
 ancestor* — one rule on a run list retunes every compact run inside it.
+
+**Additional API surface:**
+
+- `--lr-agent-run-metric-danger-color` — Danger metric value. Default: `var(--lr-color-danger)`.
+- `--lr-agent-run-metric-success-color` — Success metric value. Default: `var(--lr-color-success)`.
+- `--lr-agent-run-metric-warning-color` — Warning metric value. Default: `var(--lr-color-warning)`.

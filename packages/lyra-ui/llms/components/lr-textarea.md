@@ -128,4 +128,8 @@ original declarative `value`, matching native `defaultValue` behavior.
   bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
 
+**Additional API surface:**
+
+- `click()` — Activates the internal textarea.
+
 ---

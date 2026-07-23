@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
@@ -14,6 +15,7 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './av-player.styles.js';
 
@@ -50,14 +52,20 @@ const TIME_CHANGE_THROTTLE_MS = 250;
 const MIN_PLAYBACK_RATE = 0.0625;
 const MAX_PLAYBACK_RATE = 16;
 
-function formatTime(seconds: number): string {
+function formatTime(seconds: number, locale: string): string {
   const total = Math.max(0, Math.round(seconds));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  const mm = String(m).padStart(h > 0 ? 2 : 1, '0');
-  const ss = String(s).padStart(2, '0');
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${mm}:${ss}`;
+  const regular = getNumberFormat(locale, { maximumFractionDigits: 0, useGrouping: false });
+  const padded = getNumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  });
+  const mm = (h > 0 ? padded : regular).format(m);
+  const ss = padded.format(s);
+  return h > 0 ? `${regular.format(h)}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 export interface LyraAvPlayerEventMap {
@@ -202,6 +210,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   @state() private duration = 0;
   @state() private currentTimeState = 0;
   @state() private activeCueId: string | null = null;
+  @state() private activeCueIndex = -1;
   @state() private searchQuery = '';
   @state() private searchMatches: number[] = [];
   @state() private activeSearchIndex = -1;
@@ -213,6 +222,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private lastTimeChangeAt = 0;
   private pendingSeek: number | null = null;
+  private searchLocale = '';
 
   /** Live playback position: the media element's own `currentTime` once mounted, else the last
    *  locally-tracked value (e.g. a `seek()` issued before metadata loaded). */
@@ -234,6 +244,29 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private detectedKind(): AvKind {
     if (this.kind) return this.kind;
     return this.mimeType.startsWith('audio/') ? 'audio' : 'video';
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (
+      this.hasUpdated &&
+      (changed.has('src') || changed.has('kind') || changed.has('mimeType'))
+    ) {
+      this.duration = 0;
+      this.currentTimeState = 0;
+      this.activeCueId = null;
+      this.activeCueIndex = -1;
+      this.metadataLoaded = false;
+      this.renderError = false;
+      this.pendingSeek = null;
+      this.lastTimeChangeAt = 0;
+    }
+    if (
+      this.searchQuery &&
+      (changed.has('cues') || this.searchLocale !== this.effectiveLocale)
+    ) {
+      this.reconcileSearchMatches(changed.get('cues') as LyraAvCue[] | undefined);
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -303,9 +336,15 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     return true;
   }
 
-  private onLoadedMetadata = (): void => {
+  private isCurrentMediaEvent(event: Event): boolean {
+    return event.currentTarget === this.mediaEl;
+  }
+
+  private onLoadedMetadata = (event: Event): void => {
+    if (!this.isCurrentMediaEvent(event)) return;
     this.metadataLoaded = true;
     this.duration = this.mediaEl?.duration || 0;
+    this.renderError = false;
     if (this.pendingSeek !== null && this.mediaEl) {
       this.mediaEl.currentTime = this.pendingSeek;
       this.pendingSeek = null;
@@ -313,15 +352,18 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.emit('lr-load', { duration: this.duration, kind: this.detectedKind() });
   };
 
-  private onPlay = (): void => {
+  private onPlay = (event: Event): void => {
+    if (!this.isCurrentMediaEvent(event)) return;
     this.emit('lr-play');
   };
-  private onPause = (): void => {
+  private onPause = (event: Event): void => {
+    if (!this.isCurrentMediaEvent(event)) return;
     this.emit('lr-pause');
   };
-  private onMediaError = (error: unknown): void => {
+  private onMediaError = (event: Event): void => {
+    if (!this.isCurrentMediaEvent(event)) return;
     this.renderError = true;
-    this.emit('lr-render-error', { error });
+    this.emit('lr-render-error', { error: new Error('The media failed to load.') });
   };
 
   private emitTimeChange(force: boolean): void {
@@ -332,37 +374,72 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.emit('lr-time-change', { currentTime: this.currentTimeState });
   }
 
-  private onTimeUpdate = (): void => {
+  private onTimeUpdate = (event: Event): void => {
+    if (!this.isCurrentMediaEvent(event)) return;
     this.emitTimeChange(false);
     const time = this.currentTime;
     let active: LyraAvCue | undefined;
-    for (const cue of this.cues) {
+    let activeIndex = -1;
+    this.cues.forEach((cue, index) => {
       if (time >= cue.start && time < (cue.end ?? Infinity)) {
-        if (!active || cue.start >= active.start) active = cue;
+        if (!active || cue.start >= active.start) {
+          active = cue;
+          activeIndex = index;
+        }
       }
-    }
+    });
     const nextId = active?.id ?? null;
-    if (nextId !== this.activeCueId) {
+    if (nextId !== this.activeCueId || activeIndex !== this.activeCueIndex) {
       this.activeCueId = nextId;
+      this.activeCueIndex = activeIndex;
       this.emit('lr-cue-change', { id: nextId });
     }
   };
 
-  private onSeeked = (): void => this.emitTimeChange(true);
+  private onSeeked = (event: Event): void => {
+    if (this.isCurrentMediaEvent(event)) this.emitTimeChange(true);
+  };
 
   /** Case-insensitive substring match over cue text and speaker. Resolves the match count. */
   async search(query: string): Promise<number> {
-    const q = query.trim().toLowerCase();
     this.searchQuery = query;
-    this.searchMatches = q
-      ? this.cues.reduce<number[]>((acc, cue, i) => {
-          if (cue.text.toLowerCase().includes(q) || (cue.speaker ?? '').toLowerCase().includes(q)) acc.push(i);
-          return acc;
-        }, [])
-      : [];
+    this.reconcileSearchMatches();
     this.activeSearchIndex = this.searchMatches.length ? 0 : -1;
     this.emitSearchChange();
     return this.searchMatches.length;
+  }
+
+  private reconcileSearchMatches(previousCues?: LyraAvCue[]): void {
+    const locale = this.effectiveLocale;
+    const q = this.searchQuery.trim().toLocaleLowerCase(locale);
+    const previousMatchIndex = this.searchMatches[this.activeSearchIndex];
+    const previousActiveId =
+      previousCues && previousMatchIndex !== undefined
+        ? previousCues[previousMatchIndex]?.id
+        : undefined;
+    this.searchMatches = q
+      ? this.cues.reduce<number[]>((acc, cue, index) => {
+          if (
+            cue.text.toLocaleLowerCase(locale).includes(q) ||
+            (cue.speaker ?? '').toLocaleLowerCase(locale).includes(q)
+          ) {
+            acc.push(index);
+          }
+          return acc;
+        }, [])
+      : [];
+    this.searchLocale = locale;
+    if (!this.searchMatches.length) {
+      this.activeSearchIndex = -1;
+      return;
+    }
+    const retainedPosition = previousActiveId
+      ? this.searchMatches.findIndex((index) => this.cues[index]?.id === previousActiveId)
+      : -1;
+    this.activeSearchIndex =
+      retainedPosition >= 0
+        ? retainedPosition
+        : Math.min(Math.max(0, this.activeSearchIndex), this.searchMatches.length - 1);
   }
 
   /** Advances to the next match, wrapping to the first after the last. No-op with no matches. */
@@ -407,7 +484,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
-    const color = getComputedStyle(this).getPropertyValue('--lr-color-brand').trim() || '#0969da';
+    const computed = getComputedStyle(this);
+    const tokenColor = computed.getPropertyValue('--lr-color-brand').trim();
+    const color = CSS.supports('color', tokenColor) ? tokenColor : computed.color;
     ctx.fillStyle = color;
     const barWidth = width / this.peaks.length;
     this.peaks.forEach((peak, i) => {
@@ -497,7 +576,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   private renderCue = (cue: unknown, index: number): TemplateResult => {
     const c = cue as LyraAvCue;
-    const isActive = this.activeCueId === c.id;
+    const isActive = this.activeCueIndex === index;
     const matchPosition = this.searchMatches.indexOf(index);
     const isMatch = matchPosition !== -1;
     const isActiveMatch = isMatch && matchPosition === this.activeSearchIndex;
@@ -512,7 +591,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       ?data-active-match=${isActiveMatch}
       @click=${() => this.seek(c.start)}
     >
-      <span part="cue-time">${formatTime(c.start)}</span>
+      <span part="cue-time">${formatTime(c.start, this.effectiveLocale)}</span>
       ${c.speaker ? html`<span part="cue-speaker">${c.speaker}</span>` : nothing}
       <span part="cue-text">${c.text}</span>
     </button>`;
@@ -537,9 +616,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         ${this.renderAnchorLiveRegion()}
       </div>`;
     }
-    return html`<div part="base" aria-label=${label}>
+    return html`<div part="base" role="region" aria-label=${label}>
       ${kind === 'audio'
-        ? html`<audio
+        ? keyed(`${kind}:${safeSrc ?? ''}`, html`<audio
             part="media"
             controls
             aria-label=${label}
@@ -552,10 +631,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             @pause=${this.onPause}
             @timeupdate=${this.onTimeUpdate}
             @seeked=${this.onSeeked}
-            @error=${() => this.onMediaError(new Error('The media failed to load.'))}
+            @error=${this.onMediaError}
             >${this.renderTracks()}</audio
-          >`
-        : html`<video
+          >`)
+        : keyed(`${kind}:${safeSrc ?? ''}`, html`<video
             part="media"
             controls
             aria-label=${label}
@@ -569,9 +648,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             @pause=${this.onPause}
             @timeupdate=${this.onTimeUpdate}
             @seeked=${this.onSeeked}
-            @error=${() => this.onMediaError(new Error('The media failed to load.'))}
+            @error=${this.onMediaError}
             >${this.renderTracks()}</video
-          >`}
+          >`)}
       ${this.renderError ? html`<div part="error" role="alert">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
       <div part="toolbar">
         <span class="rate-select-wrapper">
@@ -580,7 +659,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             aria-label=${this.localize('avPlayerPlaybackRate')}
             @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
           >
-            ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${rate}x</option>`)}
+            ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(rate)}x</option>`)}
           </select>
           <span class="rate-select-chevron" aria-hidden="true">${chevronIcon()}</span>
         </span>
@@ -591,8 +670,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         tabindex="0"
         aria-valuemin="0"
         aria-valuemax=${String(this.duration)}
-        aria-valuenow=${String(this.currentTime)}
-        aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatTime(this.currentTime), duration: formatTime(this.duration) })}
+        aria-valuenow=${String(this.currentTimeState)}
+        aria-valuetext=${this.localize('avPlayerPosition', undefined, { current: formatTime(this.currentTimeState, this.effectiveLocale), duration: formatTime(this.duration, this.effectiveLocale) })}
         aria-label=${this.localize('avPlayerTimeline')}
         @click=${this.onTimelineClick}
         @keydown=${this.onTimelineKeyDown}
@@ -607,8 +686,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             aria-label=${this.localize('avPlayerTranscript')}
             .items=${this.cues}
             .renderItem=${this.renderCue}
-            .keyFunction=${(item: unknown) => (item as LyraAvCue).id}
-            .activeId=${this.activeCueId ?? ''}
+            .keyFunction=${(item: unknown, index: number) => `${(item as LyraAvCue).id}\u0000${index}`}
+            .activeId=${this.activeCueIndex >= 0 && this.cues[this.activeCueIndex]
+              ? `${this.cues[this.activeCueIndex]!.id}\u0000${this.activeCueIndex}`
+              : ''}
           ></lr-virtual-list>`
         : nothing}
       ${this.renderAnchorLiveRegion()}

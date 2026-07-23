@@ -6,7 +6,7 @@
 - **Class** `LyraEmojiPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/emoji-picker/emoji-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -99,3 +99,10 @@ windowed row are additionally capped at 20 regardless of available width.
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
 `console.warn` and simply leaves `groups` empty.
+
+**Additional API surface:**
+
+- `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
+- `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
+- `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
+- `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.

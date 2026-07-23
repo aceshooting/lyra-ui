@@ -15,6 +15,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
   }
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover itself
@@ -90,6 +92,8 @@ export const styles = css`
     box-sizing: border-box;
     min-inline-size: 0;
     inline-size: 100%;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     text-align: start;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;

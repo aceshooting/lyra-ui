@@ -15,6 +15,7 @@ import { finiteNumber } from '../../../internal/numbers.js';
 import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { chevronIcon } from '../../../internal/icons.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import '../zoomable-frame/zoomable-frame.js';
 import '../../utility/live-region/live-region.js';
 import { styles } from './image-viewer.styles.js';
@@ -111,6 +112,16 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   `[part="annotate-toggle"]` while annotation mode is on.
  * @cssprop [--lr-image-viewer-highlight-active-color=var(--lr-color-brand)] - Outline color of the
  *   `[part="highlight"]` matching `activeHighlightId`, independent of the per-tone border colors.
+ * @cssprop [--lr-image-viewer-highlight-border=var(--lr-color-brand)] - Default highlight border.
+ * @cssprop [--lr-image-viewer-highlight-bg=color-mix(in srgb, var(--lr-color-brand) 20%, transparent)] - Default highlight fill.
+ * @cssprop --lr-image-viewer-highlight-success-border - Success-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-success-bg - Success-tone highlight fill.
+ * @cssprop --lr-image-viewer-highlight-warning-border - Warning-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-warning-bg - Warning-tone highlight fill.
+ * @cssprop --lr-image-viewer-highlight-danger-border - Danger-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-danger-bg - Danger-tone highlight fill.
+ * @cssprop --lr-image-viewer-highlight-neutral-border - Neutral-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-neutral-bg - Neutral-tone highlight fill.
  */
 export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -175,9 +186,10 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
     if (changed.has('src')) {
+      this.cancelPointerDraft();
       this.loadState = this.src && safeMediaSrc(this.src) ? { kind: 'loading' } : this.src ? { kind: 'error' } : { kind: 'idle' };
-      this.draft = null;
     }
+    if (changed.has('annotatable') && !this.annotatable) this.cancelPointerDraft();
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -235,12 +247,16 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private announceDraftPosition(): void {
     if (!this.draft) return;
+    const formatter = getNumberFormat(this.effectiveLocale, {
+      maximumFractionDigits: 0,
+      useGrouping: false,
+    });
     this.liveRegion?.announce(
       this.localize('imageViewerAnnotationBoxPosition', undefined, {
-        x: Math.round(this.draft.x),
-        y: Math.round(this.draft.y),
-        width: Math.round(this.draft.width),
-        height: Math.round(this.draft.height),
+        x: formatter.format(Math.round(this.draft.x)),
+        y: formatter.format(Math.round(this.draft.y)),
+        width: formatter.format(Math.round(this.draft.width)),
+        height: formatter.format(Math.round(this.draft.height)),
       }),
     );
   }
@@ -306,6 +322,21 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   private pointerDraftId: number | null = null;
   private pointerOrigin: { x: number; y: number } | null = null;
 
+  private cancelPointerDraft(pointerId = this.pointerDraftId, releaseCapture = true): void {
+    if (pointerId == null || this.pointerDraftId !== pointerId) return;
+    const wrapper = this.wrapperEl;
+    this.pointerDraftId = null;
+    this.pointerOrigin = null;
+    this.draft = null;
+    if (releaseCapture && wrapper) {
+      try {
+        wrapper.releasePointerCapture(pointerId);
+      } catch {
+        // Synthetic pointers and already-lost captures can throw; state is still safely cleared.
+      }
+    }
+  }
+
   private onWrapperPointerDown = (event: PointerEvent): void => {
     if (!this.annotatable || !this.wrapperEl) return;
     const rect = this.wrapperEl.getBoundingClientRect();
@@ -334,12 +365,11 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   private onWrapperPointerUp = (event: PointerEvent): void => {
     if (this.pointerDraftId !== event.pointerId) return;
-    this.pointerDraftId = null;
-    this.pointerOrigin = null;
-    if (this.draft && this.draft.width >= MIN_REGION_PERCENT && this.draft.height >= MIN_REGION_PERCENT) {
+    const draft = this.draft;
+    this.cancelPointerDraft(event.pointerId);
+    if (draft && draft.width >= MIN_REGION_PERCENT && draft.height >= MIN_REGION_PERCENT) {
+      this.draft = draft;
       this.commitDraft();
-    } else {
-      this.draft = null;
     }
   };
 
@@ -348,6 +378,10 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       (h): h is LyraHighlight & { anchor: { kind: 'region'; rect: ImageRegionRect } } => h.anchor.kind === 'region',
     );
     if (!regionHighlights.length) return nothing;
+    const formatter = getNumberFormat(this.effectiveLocale, {
+      maximumFractionDigits: 0,
+      useGrouping: false,
+    });
     // Region rects are physical percent-of-image coordinates and the raster underneath never
     // mirrors, so position with physical left/top -- logical inset-inline-start would flip the
     // overlay under RTL while the image stays put. This also keeps the boxes consistent with the
@@ -361,7 +395,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
           data-tone=${h.tone ?? 'accent'}
           ?data-active=${this.activeHighlightId === h.id}
           style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
-          aria-label=${h.label || this.localize('imageViewerUnlabeledHighlight', undefined, { index: index + 1 })}
+          aria-label=${h.label || this.localize('imageViewerUnlabeledHighlight', undefined, {
+            index: formatter.format(index + 1),
+          })}
           @click=${() => this.onHighlightActivate(h.id)}
         >${h.label ? html`<span part="highlight-label">${h.label}</span>` : nothing}</button>
       `,
@@ -401,6 +437,8 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
         @pointerdown=${this.onWrapperPointerDown}
         @pointermove=${this.onWrapperPointerMove}
         @pointerup=${this.onWrapperPointerUp}
+        @pointercancel=${(event: PointerEvent) => this.cancelPointerDraft(event.pointerId)}
+        @lostpointercapture=${(event: PointerEvent) => this.cancelPointerDraft(event.pointerId, false)}
       >
         ${safeSrc
           ? html`<img part="image" data-fit=${this.fit} src=${safeSrc} alt=${this.alt ?? this.name} @load=${this.onImgLoad} @error=${this.onImgError} />`
@@ -413,7 +451,7 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
 
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('imageViewerLabel');
-    return html`<div part="base" aria-label=${label}>
+    return html`<div part="base" role="region" aria-label=${label}>
       <div part="toolbar">
         <span class="fit-control-wrapper">
           <select part="fit-control" aria-label=${this.localize('imageViewerFitLabel')} @change=${this.onFitChange}>
@@ -430,6 +468,11 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       <lr-live-region></lr-live-region>
       ${this.renderAnchorLiveRegion()}
     </div>`;
+  }
+
+  override disconnectedCallback(): void {
+    this.cancelPointerDraft();
+    super.disconnectedCallback();
   }
 }
 

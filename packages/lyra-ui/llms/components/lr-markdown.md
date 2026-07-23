@@ -6,7 +6,7 @@
 - **Class** `LyraMarkdown`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -180,5 +180,15 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
 - rendered output goes through `unsafeHTML`; with `sanitize="false"` the component renders whatever
   HTML `marked` produces from `content` completely unsanitized, so untrusted `content` must never be
   paired with `sanitize="false"`.
+
+**Additional API surface:**
+
+- `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
+- `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---

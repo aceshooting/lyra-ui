@@ -183,6 +183,28 @@ it('exports JSON and applies the same columns allow-list CSV uses', async () => 
   expect(JSON.parse(text)).to.deep.equal([{ id: 'a', name: 'Alpha' }]);
 });
 
+it('reports non-serializable built-in JSON data through lr-export-error without throwing or completing', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = [{ id: 'a', count: 10n }];
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+
+  let completed = false;
+  el.addEventListener('lr-export-complete', () => (completed = true));
+  const errorEvent = oneEvent(el, 'lr-export-error');
+  const jsonButton = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')].find(
+    (button) => button.textContent?.trim() === 'JSON',
+  )!;
+
+  expect(() => jsonButton.click()).to.not.throw();
+  const event = await errorEvent;
+  expect(event.detail.format).to.equal('json');
+  expect(event.detail.error).to.be.instanceOf(Error);
+  expect(completed).to.be.false;
+});
+
 it('derives CSV columns from the rows own keys when `columns` is left at its default empty array', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.rows = [
@@ -450,6 +472,41 @@ it('moves focus between open menu items with ArrowDown/ArrowUp, and jumps with H
   expect(el.shadowRoot!.activeElement).to.equal(items[0]);
 });
 
+it('transfers focus to a surviving menu item when the focused format is removed', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  el.open = true;
+  await el.updateComplete;
+  const items = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
+  items[1]!.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(items[1]);
+
+  el.formats = ['csv', { id: 'xml', label: 'XML' }];
+  await el.updateComplete;
+
+  const survivingItems = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="menu-item"]')];
+  expect(el.shadowRoot!.activeElement).to.equal(survivingItems[1]);
+  expect(survivingItems[1]!.textContent!.trim()).to.equal('XML');
+});
+
+it('returns focus to the trigger when an open menu collapses to a single format', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  el.open = true;
+  await el.updateComplete;
+  const item = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  item.focus();
+
+  el.formats = ['csv'];
+  await el.updateComplete;
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(el.shadowRoot!.activeElement).to.equal(
+    el.shadowRoot!.querySelector('[part="trigger"]'),
+  );
+});
+
 it('resets to closed on disconnect and re-binds the outside-click listener when reopened after reconnect', async () => {
   const el = (await fixture(
     html`<lr-export-button open .formats=${['csv', 'json']}></lr-export-button>`,
@@ -508,6 +565,35 @@ it('focus() delegates to the native trigger button', async () => {
   const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
   el.focus();
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+});
+
+it('click() delegates to the native trigger and respects its disabled state', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  let exports = 0;
+  el.addEventListener('lr-export', (event) => {
+    event.preventDefault();
+    exports++;
+  });
+  el.click();
+  expect(exports).to.equal(1);
+
+  el.disabled = true;
+  await el.updateComplete;
+  el.click();
+  expect(exports).to.equal(1);
+});
+
+it('gives the trigger and menu items the shared minimum hit area', async () => {
+  const el = (await fixture(
+    html`<lr-export-button open .formats=${['csv', 'json']}></lr-export-button>`,
+  )) as LyraExportButton;
+  for (const control of el.shadowRoot!.querySelectorAll<HTMLElement>(
+    '[part="trigger"], [part="menu-item"]',
+  )) {
+    const computed = getComputedStyle(control);
+    expect(computed.minInlineSize).to.equal('40px');
+    expect(computed.minBlockSize).to.equal('40px');
+  }
 });
 
 it('bounds and wraps a long format menu within the positioner available inline size', () => {

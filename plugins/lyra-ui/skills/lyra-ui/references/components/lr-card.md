@@ -6,7 +6,7 @@
 - **Class** `LyraCard`, also available unregistered from `@aceshooting/lyra-ui/components/layout/card/card.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -90,5 +90,10 @@ the `footer` slot, hidden entirely when empty).
   path is what makes this work through a slotted component's own shadow root — a click on
   `<lr-button>` retargets to the host, but its composed path still contains the internal native
   `<button>`.
+
+**Additional API surface:**
+
+- `accessibleLabel` — Host `aria-label` forwarded to the native no-href activation button. Type: `string | null`.
+- `part="activation-button"` — The native whole-card action, rendered while `interactive` without `href`. It is a sibling of slotted controls, so actionable descendants are never nested inside another actionable role.
 
 ---

@@ -214,6 +214,24 @@ it('clamps a non-finite/out-of-range zoom passed to setZoom on the live map afte
   expect(zoomArg).to.equal(0);
 });
 
+it('normalizes malformed and out-of-range center values before live map updates', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  let centerArg: unknown;
+  el.map!.setCenter = ((center: unknown) => {
+    centerArg = center;
+    return el.map;
+  }) as typeof el.map.setCenter;
+  el.center = [Number.POSITIVE_INFINITY, -999];
+  await el.updateComplete;
+  expect(centerArg).to.deep.equal([0, -90]);
+  el.center = ['bad', 25] as unknown as [number, number];
+  await el.updateComplete;
+  expect(centerArg).to.deep.equal([0, 25]);
+});
+
 it('does not leak a second maplibregl.Map when disconnected and reconnected before the loader promise resolves', async () => {
   const el = document.createElement('lr-map') as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -835,6 +853,29 @@ it('adds a maplibregl.Marker per entry in markers', async () => {
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelectorAll('.maplibregl-marker').length).to.equal(2);
+  const labels = [...el.shadowRoot!.querySelectorAll('.maplibregl-marker')].map(
+    (marker) => marker.getAttribute('aria-label'),
+  );
+  expect(labels).to.deep.equal(['Station A', 'Station B']);
+});
+
+it('keeps choropleth and data-layer sources distinct when their public sourceId collides', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  el.choropleth = choropleth('shared', [[0, '#000000'], [1, '#ffffff']]);
+  el.dataLayers = [{
+    sourceId: 'shared',
+    geojson: { type: 'FeatureCollection', features: [] },
+  }];
+  await el.updateComplete;
+  await waitUntilMapLoaded(el);
+  await waitUntil(
+    () => Boolean(el.map!.getLayer('shared-fill') && el.map!.getLayer('shared-line')),
+    'colliding layers never became distinct',
+    { timeout: 2000 },
+  );
+  expect(el.map!.getSource('shared')).to.exist;
+  expect(el.map!.getSource('lr-choropleth-shared')).to.exist;
 });
 
 it('removes markers no longer present and reuses markers that persist', async () => {

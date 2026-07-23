@@ -23,6 +23,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='viewport']:hover {
+    border-color: var(--lr-color-brand);
+  }
   [part='content'] {
     display: grid;
     place-items: center;

@@ -385,6 +385,17 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
 - the `maximize`/`close` buttons are always the first elements in the Tab order while open,
   regardless of visual position, followed by `body` then `footer` content
 
+**Additional API surface:**
+
+- `--lr-tool-result-dialog-running-color` — Running status foreground. Default: `var(--lr-color-brand)`.
+- `--lr-tool-result-dialog-running-bg` — Running status background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-tool-result-dialog-success-color` — Success status foreground. Default: `var(--lr-color-success)`.
+- `--lr-tool-result-dialog-success-bg` — Success status background. Default: `var(--lr-color-success-quiet)`.
+- `--lr-tool-result-dialog-error-color` — Error status foreground. Default: `var(--lr-color-danger)`.
+- `--lr-tool-result-dialog-error-bg` — Error status background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-tool-result-dialog-denied-color` — Denied status foreground. Default: `var(--lr-color-warning)`.
+- `--lr-tool-result-dialog-denied-bg` — Denied status background. Default: `var(--lr-color-warning-quiet)`.
+
 ---
 
 ## `lr-tool-select-dialog`
@@ -1177,6 +1188,11 @@ so retinting one tone doesn't repaint the other surface reading that token, and 
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
 beat it without `!important`.
 
+**Additional API surface:**
+
+- `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
+- `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.
+
 ## `lr-trace-tree`
 
 A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style): kind icon,
@@ -1223,6 +1239,17 @@ side of the lightness midpoint as the ambient surface, so a consumer who sets
 `--lr-trace-tree-row-active-bg` to a dark tint in light mode (or a light one in dark mode) must
 set `--lr-trace-tree-row-active-color` to match, and should re-check the status-label tones
 against the new tint as well.
+
+**Additional API surface:**
+
+- `--lr-trace-tree-toggle-hover-bg` — Toggle hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-trace-tree-success-color` — Success status text and bar. Default: `var(--lr-color-success)`.
+- `--lr-trace-tree-error-color` — Error status text and bar. Default: `var(--lr-color-danger)`.
+- `--lr-trace-tree-denied-color` — Denied status text and bar. Default: `var(--lr-color-warning)`.
+- `--lr-trace-tree-running-color` — Running status text and stripe. Default: `var(--lr-color-brand)`.
+- `--lr-trace-tree-pending-color` — Pending status text and bar. Default: `var(--lr-color-text-quiet)`.
+- `--lr-trace-tree-bar-track-bg` — Duration bar track. Default: `var(--lr-color-surface-raised)`.
+- `--lr-trace-tree-running-stripe-bg` — Running stripe contrast. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-activity-feed`
 
@@ -1466,6 +1493,15 @@ viewport's aspect ratio.
 ></lr-browser-frame>
 ```
 
+**Additional API surface:**
+
+- `--lr-browser-frame-controller-background` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-browser-frame-controller-color` — Controller badge text color. Default: `var(--lr-color-brand)`.
+- `--lr-browser-frame-ping-click-color` — Click-ping border color. Default: `var(--lr-color-brand)`.
+- `--lr-browser-frame-ping-type-color` — Type-ping border color. Default: `var(--lr-color-success)`.
+- `--lr-browser-frame-ping-scroll-color` — Scroll-ping border color. Default: `var(--lr-color-warning)`.
+- `--lr-browser-frame-ping-move-color` — Move-ping border color. Default: `var(--lr-color-text-quiet)`.
+
 ## `lr-artifact-panel`
 
 Shell around one agent-generated artifact: a title/kind header, a preview↔code toggle, version
@@ -1594,6 +1630,12 @@ padding, and the gap between its header and body, while `compact`; both are igno
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
 their point of use rather than `:host` declarations, so either can be set on the element *or on any
 ancestor* — one rule on a run list retunes every compact run inside it.
+
+**Additional API surface:**
+
+- `--lr-agent-run-metric-danger-color` — Danger metric value. Default: `var(--lr-color-danger)`.
+- `--lr-agent-run-metric-success-color` — Success metric value. Default: `var(--lr-color-success)`.
+- `--lr-agent-run-metric-warning-color` — Warning metric value. Default: `var(--lr-color-warning)`.
 
 ## `lr-agent-trace`
 
@@ -1866,6 +1908,18 @@ per-entry timeline marker dot's size, which also sets the entry grid's leading c
 retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
+
+**Additional API surface:**
+
+- `--lr-tool-timeline-running-marker-color` — Running rail dot. Default: `var(--lr-color-brand)`.
+- `--lr-tool-timeline-success-marker-color` — Success rail dot. Default: `var(--lr-color-success)`.
+- `--lr-tool-timeline-error-marker-color` — Error rail dot. Default: `var(--lr-color-danger)`.
+- `--lr-tool-timeline-approved-bg` — Approved badge background. Default: `var(--lr-color-success-quiet)`.
+- `--lr-tool-timeline-approved-color` — Approved badge foreground. Default: `var(--lr-color-success)`.
+- `--lr-tool-timeline-denied-bg` — Denied badge background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-tool-timeline-denied-color` — Denied badge foreground. Default: `var(--lr-color-danger)`.
+- `--lr-tool-timeline-error-color` — Expanded error text. Default: `var(--lr-color-danger)`.
+
 ## `lr-agent-eval-dashboard`
 
 Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
@@ -1883,6 +1937,11 @@ boolean = true`; `chartHeight: string = '220px'`.
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `empty`.
 
+**Additional API surface:**
+
+- `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
+- `--lr-agent-eval-dashboard-active-background` — Active metric background. Default: `var(--lr-color-brand-quiet)`.
+
 ## `lr-approval-queue`
 
 Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
@@ -1897,6 +1956,10 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`.
+
+**Additional API surface:**
+
+- `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
 
 ## `lr-mcp-app`
 
@@ -1937,6 +2000,14 @@ saved versions, resolved preview, and save/run intents.
 import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
 ```
 
+**Additional API surface:**
+
+- `--lr-prompt-studio-field-hover-border` — Enabled field hover border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `var(--lr-color-brand-quiet)`.
+
 ## `lr-schema-viewer`
 
 Recursive JSON Schema inspector with property/branch selection, required and constraint display,
@@ -1954,6 +2025,15 @@ It intentionally does not fetch remote references or validate values.
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
 ```
 
+**Additional API surface:**
+
+- `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
+- `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
+
 ## `lr-subagent-panel`
 
 Controlled nested-agent hierarchy with lifecycle badges, task/model context, guarded progress,
@@ -1970,3 +2050,10 @@ parents remain renderable instead of recursing forever.
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
 ```
+
+**Additional API surface:**
+
+- `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
+- `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
+- `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.

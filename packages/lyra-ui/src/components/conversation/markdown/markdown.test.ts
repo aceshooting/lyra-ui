@@ -59,6 +59,21 @@ it('is accessible once populated, richly-formatted content has rendered', async 
   await expect(el).to.be.accessible();
 });
 
+it('only makes non-empty document content focusable and forwards a host aria-label', async () => {
+  const el = (await fixture(
+    html`<lr-markdown aria-label="Assistant response"></lr-markdown>`,
+  )) as LyraMarkdown;
+  let content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  expect(content.getAttribute('role')).to.equal('document');
+  expect(content.hasAttribute('tabindex')).to.be.false;
+  expect(content.getAttribute('aria-label')).to.equal('Assistant response');
+
+  el.content = 'Response body';
+  await el.updateComplete;
+  content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+  expect(content.getAttribute('tabindex')).to.equal('0');
+});
+
 it('uses logical size containment and an internal overflow surface at a narrow allocation', async () => {
   const el = (await fixture(html`
     <lr-markdown

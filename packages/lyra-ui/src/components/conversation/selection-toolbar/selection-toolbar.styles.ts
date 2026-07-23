@@ -28,15 +28,15 @@ export const styles = css`
 
   [part='toolbar'][data-positioned] {
     transform: translate(
-      calc(-50% + var(--lr-selection-toolbar-inline-shift, 0px)),
-      calc(-100% + var(--lr-selection-toolbar-block-shift, 0px))
+      calc(-50% + var(--lr-selection-toolbar-inline-shift)),
+      calc(-100% + var(--lr-selection-toolbar-block-shift))
     );
   }
 
   :host(:dir(rtl)) [part='toolbar'][data-positioned] {
     transform: translate(
-      calc(50% + var(--lr-selection-toolbar-inline-shift, 0px)),
-      calc(-100% + var(--lr-selection-toolbar-block-shift, 0px))
+      calc(50% + var(--lr-selection-toolbar-inline-shift)),
+      calc(-100% + var(--lr-selection-toolbar-block-shift))
     );
   }
 

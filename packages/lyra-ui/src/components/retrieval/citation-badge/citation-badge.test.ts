@@ -449,3 +449,10 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='popover']")).to.equal('10px');
 });
+
+it('keeps rich tooltip content non-interactive', async () => {
+  const el = (await fixture(
+    html`<lr-citation-badge index="1"><button>Unexpected action</button></lr-citation-badge>`,
+  )) as LyraCitationBadge;
+  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).inert).to.be.true;
+});

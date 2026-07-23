@@ -45,6 +45,9 @@ it('renders final entries inside a role="log" container labeled Transcript, grou
   await el.updateComplete;
 
   const log = el.shadowRoot!.querySelector('[part="log"]')!;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('role')).to.equal('region');
+  expect(base.getAttribute('aria-label')).to.equal('Transcript');
   expect(log.getAttribute('role')).to.equal('log');
   expect(log.getAttribute('aria-label')).to.equal('Transcript');
 
@@ -127,6 +130,21 @@ describe('timestamps', () => {
     el.formatTimestamp = (ms) => `t=${ms}`;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="timestamp"]')!.textContent).to.equal('t=1700000000000');
+  });
+
+  it('omits non-finite timestamps without dropping their transcript entries', async () => {
+    const el = (await fixture(
+      html`<lr-transcript-feed show-timestamps></lr-transcript-feed>`,
+    )) as LyraTranscriptFeed;
+    el.entries = [
+      { id: 'valid', text: 'valid timestamp', timestamp: Date.UTC(2026, 0, 1, 12, 34) },
+      { id: 'nan', text: 'not a number', timestamp: Number.NaN },
+      { id: 'infinity', text: 'infinite', timestamp: Number.POSITIVE_INFINITY },
+    ];
+    await el.updateComplete;
+
+    expect(entryEls(el)).to.have.length(3);
+    expect(el.shadowRoot!.querySelectorAll('[part="timestamp"]')).to.have.length(1);
   });
 });
 
@@ -228,6 +246,19 @@ describe('follow / stick-to-bottom contract', () => {
     // jump-to-latest button only renders while follow is false.
     expect(el.shadowRoot!.querySelectorAll('[part="jump-button"]').length).to.equal(1);
   });
+
+  it('keeps the jump control at the shared minimum hit area while follow is false', async () => {
+    const el = (await fixture(
+      html`<lr-transcript-feed
+        follow="false"
+        .entries=${[{ id: '1', text: 'hi' }]}
+      ></lr-transcript-feed>`,
+    )) as LyraTranscriptFeed;
+    const button = el.shadowRoot!.querySelector('[part="jump-button"]') as HTMLButtonElement;
+    const style = getComputedStyle(button);
+    expect(style.minInlineSize).to.equal('40px');
+    expect(style.minBlockSize).to.equal('40px');
+  });
 });
 
 it('gives [part="text"] dir="auto" for mixed-language captions', async () => {
@@ -235,6 +266,34 @@ it('gives [part="text"] dir="auto" for mixed-language captions', async () => {
   el.entries = [{ id: '1', text: 'hello' }];
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="text"]')!.getAttribute('dir')).to.equal('auto');
+});
+
+it('exposes its scroll surface as the keyboard focus target', async () => {
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.tabIndex).to.equal(0);
+  base.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(base);
+});
+
+it('contains long speaker and transcript text in a 320px allocation', async () => {
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lr-transcript-feed
+      style="inline-size:100%; block-size:120px"
+      .entries=${[
+        {
+          id: '1',
+          speaker: 'AnExtremelyLongSpeakerNameWithoutNaturalBreaks',
+          text: 'AnExtremelyLongTranscriptEntryWithoutNaturalBreaks',
+        },
+      ]}
+    ></lr-transcript-feed>`,
+    { parentNode: container },
+  )) as LyraTranscriptFeed;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
 });
 
 it('is accessible with a mix of final and interim entries', async () => {

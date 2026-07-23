@@ -228,6 +228,24 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
     if (this.emitOpen().defaultPrevented) e.preventDefault();
   };
 
+  private get primaryAction(): HTMLElement | null {
+    return this.shadowRoot?.querySelector<HTMLElement>(
+      'button[part="base"], button[part="open-button"], a[part="base"]',
+    ) ?? null;
+  }
+
+  override focus(options?: FocusOptions): void {
+    this.primaryAction?.focus(options);
+  }
+
+  override blur(): void {
+    this.primaryAction?.blur();
+  }
+
+  override click(): void {
+    this.primaryAction?.click();
+  }
+
   private renderImage(src: string): TemplateResult {
     return html`
       <button part="base" type="button" style=${this.baseStyle} aria-label=${this.actionLabel} @click=${this.onActivate}>

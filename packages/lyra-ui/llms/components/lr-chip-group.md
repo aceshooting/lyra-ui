@@ -171,4 +171,9 @@ than a stylesheet-only solution.
   `<lr-chip>` in its shadow DOM — don't expect `<lr-chip>`'s CSS parts or custom properties to
   reach it.
 
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal control.
+- `part="toggle-button"` — The real toggle control, rendered over the non-interactive label when toggle mode is active.
+
 ---

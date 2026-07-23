@@ -6,7 +6,7 @@
 - **Class** `LyraCodeEditor`, also available unregistered from `@aceshooting/lyra-ui/components/forms/code-editor/code-editor.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 7 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -71,3 +71,8 @@ spaces — the Tab key keeps inserting `tabSize` spaces in that case.
   editor) re-arms Tab indentation.
 - The host gets a `data-invalid` attribute once the field has been blurred at least once and
   validity fails; the styles hang the danger border off it.
+
+**Additional API surface:**
+
+- `selectionDirection` — The current selection direction of the internal editing surface. Type: `'forward' | 'backward' | 'none'`.
+- `click()` — Activates the internal editing surface.

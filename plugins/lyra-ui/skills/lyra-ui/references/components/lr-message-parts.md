@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';` (registers the tag; side-effect import)
 - **Class** `LyraMessageParts`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
-- **Optional peers** none
+- **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -28,3 +28,22 @@ true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attr
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
 ```
+
+**Additional API surface:**
+
+- `lr-anchor-result` event — Passthrough from rendered Markdown.
+- `lr-citation-open` event — Passthrough from a rendered citation's full-preview action.
+- `lr-copy` event — Passthrough from rendered JSON content.
+- `lr-highlight-activate` event — Passthrough from rendered Markdown.
+- `lr-link-click` event — Passthrough from rendered Markdown.
+- `lr-preview` event — Passthrough from a rendered attachment.
+- `lr-remove` event — Passthrough from a rendered attachment.
+- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
+- `lr-retry` event — Passthrough from a rendered attachment.
+- `lr-search-change` event — Passthrough from rendered JSON content.
+- `lr-text-select` event — Passthrough from rendered Markdown.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
+- `lr-tool-chip-select` event — Deprecated tool-call selection alias passthrough.
+- `lr-widget-action` event — Passthrough from a rendered declarative widget.
+- `lr-widget-state-change` event — Passthrough from a rendered controlled widget.

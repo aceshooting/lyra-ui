@@ -86,6 +86,19 @@ describe('mount-time announcement', () => {
     // the later property change.
     expect(await getLiveRegionText(el)).to.equal('Transferred to Research Agent');
   });
+
+  it('announces the host aria-label that names the separator instead of a different computed label', async () => {
+    const el = (await fixture(html`
+      <lr-handoff-divider
+        aria-label="Control passed to the escalation team"
+        agent="Research Agent"
+      ></lr-handoff-divider>
+    `)) as LyraHandoffDivider;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Control passed to the escalation team',
+    );
+    expect(await getLiveRegionText(el)).to.equal('Control passed to the escalation team');
+  });
 });
 
 describe('localization', () => {

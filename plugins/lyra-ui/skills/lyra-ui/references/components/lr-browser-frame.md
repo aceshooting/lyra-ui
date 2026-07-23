@@ -6,7 +6,7 @@
 - **Class** `LyraBrowserFrame`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/browser-frame/browser-frame.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -50,3 +50,12 @@ viewport's aspect ratio.
   @lr-take-over=${(e) => setController(e.detail.controller)} @lr-stop=${() => stopSession()}
 ></lr-browser-frame>
 ```
+
+**Additional API surface:**
+
+- `--lr-browser-frame-controller-background` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-browser-frame-controller-color` — Controller badge text color. Default: `var(--lr-color-brand)`.
+- `--lr-browser-frame-ping-click-color` — Click-ping border color. Default: `var(--lr-color-brand)`.
+- `--lr-browser-frame-ping-type-color` — Type-ping border color. Default: `var(--lr-color-success)`.
+- `--lr-browser-frame-ping-scroll-color` — Scroll-ping border color. Default: `var(--lr-color-warning)`.
+- `--lr-browser-frame-ping-move-color` — Move-ping border color. Default: `var(--lr-color-text-quiet)`.

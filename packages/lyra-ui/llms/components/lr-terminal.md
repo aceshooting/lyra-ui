@@ -6,7 +6,7 @@
 - **Class** `LyraTerminal`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 8 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,3 +55,8 @@ falls back to (e.g. `accent`'s `--lr-color-brand-quiet` is also the copy/downloa
 so retinting one tone doesn't repaint the other surface reading that token, and from any
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
 beat it without `!important`.
+
+**Additional API surface:**
+
+- `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
+- `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.

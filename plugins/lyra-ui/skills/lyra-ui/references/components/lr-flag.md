@@ -6,7 +6,7 @@
 - **Class** `LyraFlag`, also available unregistered from `@aceshooting/lyra-ui/components/media/flag/flag.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** `@aceshooting/lyra-flags` — see `llms/peers.md`
-- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -161,5 +161,9 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   older boolean `detailed` attribute predates `variant` and is now **deprecated**
   (`variant="detailed"` is the replacement); left unset, `variant` falls back to honoring `detailed`
   for one more minor version before removal.
+
+**Additional API surface:**
+
+- `part="error"` — Localized alert rendered when the optional peer resolver is unavailable or fails.
 
 ---

@@ -48,7 +48,9 @@ export const styles = css`
   [part="activation-button"] {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: var(--lr-layer-content);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: 0;
     border-radius: inherit;

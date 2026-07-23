@@ -38,3 +38,7 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `::part()`), so tinting the current item previously meant overriding the library-wide
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
+
+**Additional API surface:**
+
+- `part="separator"` — Decorative separator shown before non-first items.

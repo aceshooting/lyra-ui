@@ -25,6 +25,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='search']:hover {
+    border-color: var(--lr-color-border-strong);
+  }
   [part='search']::-webkit-search-cancel-button,
   [part='search']::-webkit-search-decoration {
     appearance: none;
@@ -37,6 +40,7 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-size-2px);
     overflow-y: auto;
+    overflow-x: clip;
     min-inline-size: 0;
   }
   [part='group-header'] {

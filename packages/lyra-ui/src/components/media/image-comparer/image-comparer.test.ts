@@ -88,6 +88,21 @@ it('switches the native range handle to a vertical writing-mode so drag input ma
   // Pinned to ltr regardless of an ambient dir="rtl" so the handle's top-to-bottom value
   // progression always matches the divider's own always-top-anchored inset-block-start.
   expect(getComputedStyle(verticalHandle).direction).to.equal('ltr');
+  expect(verticalHandle.getAttribute('aria-orientation')).to.equal('vertical');
+  expect(horizontalHandle.getAttribute('aria-orientation')).to.equal('horizontal');
+});
+
+it('forwards host focus(), blur(), and click() to the range handle', async () => {
+  const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLInputElement;
+  let clicks = 0;
+  handle.addEventListener('click', () => clicks++);
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('handle');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+  el.click();
+  expect(clicks).to.equal(1);
 });
 
 it('gives the drag handle a hover state matching its focus-visible affordance', () => {

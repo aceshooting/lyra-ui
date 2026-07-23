@@ -6,7 +6,7 @@
 - **Class** `LyraSegmented`, also available unregistered from `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -100,5 +100,11 @@ Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
   `lr-select`'s popup has.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+
+**Additional API surface:**
+
+- `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
+- `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
+- `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
 
 ---

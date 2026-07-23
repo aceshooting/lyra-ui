@@ -169,3 +169,10 @@ it('resets the open preview popover on disconnect so a reparent reconnect never 
   const popoverAfterReconnect = el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
   expect(popoverAfterReconnect.hasAttribute('hidden')).to.be.true;
 });
+
+it('keeps rich tooltip content non-interactive', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip label="Marie"><button>Unexpected action</button></lr-entity-chip>`,
+  )) as LyraEntityChip;
+  expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).inert).to.be.true;
+});

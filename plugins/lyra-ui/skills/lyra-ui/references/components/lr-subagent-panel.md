@@ -6,7 +6,7 @@
 - **Class** `LyraSubagentPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,3 +27,10 @@ parents remain renderable instead of recursing forever.
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
 ```
+
+**Additional API surface:**
+
+- `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
+- `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
+- `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.

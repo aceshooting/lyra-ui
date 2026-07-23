@@ -5,6 +5,19 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './zoomable-frame.styles.js';
 
+function ownsKeyboardInput(event: KeyboardEvent): boolean {
+  for (const target of event.composedPath()) {
+    if (!(target instanceof Element)) continue;
+    if (target.matches(
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
+      '[role="textbox"], [role="searchbox"], [role="combobox"], [role="spinbutton"], ' +
+      '[role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], ' +
+      '[role="radiogroup"], [role="grid"], [role="tree"], [role="tablist"]',
+    )) return true;
+  }
+  return false;
+}
+
 export interface LyraZoomableFrameEventMap {
   'lr-zoom-change': CustomEvent<{ zoom: number }>;
 }
@@ -99,6 +112,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   };
 
   private onViewportKeyDown = (event: KeyboardEvent): void => {
+    if (ownsKeyboardInput(event)) return;
     if (event.key === '+' || event.key === '=') {
       event.preventDefault();
       this.zoomIn();
@@ -122,7 +136,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
           ${this.src ? html`<img src=${safeMediaSrc(this.src) ?? ''} alt=${this.alt} />` : html`<slot></slot>`}
         </div>
       </div>
-      <div part="controls" aria-label=${this.localize('zoomControls')}>
+      <div part="controls" role="toolbar" aria-label=${this.localize('zoomControls')}>
         <button part="zoom-out" type="button" aria-label=${this.localize('zoomOut')} ?disabled=${zoom <= min} @click=${this.zoomOut}>−</button>
         <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${this.resetZoom}>${this.localize('pdfViewerCurrentZoom', undefined, { percent: 100 })}</button>
         <button part="zoom-in" type="button" aria-label=${this.localize('zoomIn')} ?disabled=${zoom >= max} @click=${this.zoomIn}>+</button>

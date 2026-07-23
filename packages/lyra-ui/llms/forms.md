@@ -264,6 +264,10 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   `form.reset()` default itself is captured exclusively from that very first pass; a later pick, or
   a later batch of newly-`selected` options, never redefines what a reset restores to.
 
+**Additional API surface:**
+
+- `part="tag-label"` — The wrapping/ellipsis-safe selected-tag label.
+
 ---
 
 ## `lr-select`
@@ -626,6 +630,16 @@ and `dateTimeFormat(locale, options)`.
   (`--lr-color-on-brand`, not a hardcoded literal — safe to override `--lr-color-brand` without
   losing contrast on selected-day text).
 
+**Additional API surface:**
+
+- `--lr-date-picker-month-gap` — Gap between visible months. Default: `var(--lr-space-l)`.
+- `--lr-date-picker-header-gap` — Month-header child gap. Default: `var(--lr-space-s)`.
+- `--lr-date-picker-radius` — Calendar and control corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-input-placeholder-color` — Placeholder text color. Default: `var(--lr-color-text-quiet)`.
+- `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
+- `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+
 ---
 
 ## lr-textarea
@@ -744,6 +758,10 @@ original declarative `value`, matching native `defaultValue` behavior.
 - `--lr-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
   bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
+
+**Additional API surface:**
+
+- `click()` — Activates the internal textarea.
 
 ---
 
@@ -1087,6 +1105,10 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
   the empty string, and `required` is what rejects it.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
 
+**Additional API surface:**
+
+- `click()` — Activates the internal input.
+
 ## `lr-number-input`
 
 A migration-friendly numeric alias of `lr-input` — a subclass whose constructor and
@@ -1360,6 +1382,17 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   via `::part` styling tricks, and don't expect the flag inside the open popup list — a native
   `<option>` is text-only.
 
+**Additional API surface:**
+
+- `click()` — Activate the internal telephone input unless the form control is effectively disabled.
+- `--lr-phone-input-flag-size` — Selected flag size, scaled by `size`.
+- `--lr-phone-input-glyph-size` — Country selector glyph size, scaled by `size`.
+- `--lr-phone-input-gap` — Country-trigger child gap. Default: `var(--lr-space-xs)`.
+- `--lr-phone-input-radius` — Input-wrapper corner radius. Default: `var(--lr-radius)`.
+- `--lr-phone-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
+
 ---
 
 ## `lr-time-range`
@@ -1472,6 +1505,17 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice
   versa — mirrors `lr-combobox`'s identical pattern.
 
+**Additional API surface:**
+
+- `--lr-time-range-handle-size` — Visible handle diameter. Default: `14px*scale`.
+- `--lr-time-range-hit-size` — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host. Default: `max(24px,28px*scale)`.
+- `--lr-time-range-track-size` — Track and selected-range thickness. Default: `4px*scale`.
+- `--lr-time-range-base-size` — Brush baseline block size. Default: `1.5rem*scale`.
+- `--lr-time-range-preset-gap` — Gap between preset buttons. Default: `var(--lr-space-xs)`.
+- `--lr-time-range-preset-radius` — Preset button corner radius. Default: `var(--lr-radius)`.
+- `--lr-time-range-preset-padding` — Preset button padding, scaled by `size`.
+- `--lr-time-range-preset-font-size` — Preset button font size, scaled by `size`.
+
 ---
 
 ## `lr-swatch-picker`
@@ -1582,6 +1626,10 @@ picker.value = 'ruby';
   selectors, so that combinator can silently fail to match depending on the engine.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+
+**Additional API surface:**
+
+- `--lr-swatch-picker-gap` — Gap between swatches. Default: `var(--lr-space-xs)`.
 
 ---
 
@@ -1968,6 +2016,17 @@ inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
 (default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).
 
+**Additional API surface:**
+
+- `--lr-token-input-token-padding` — Per-token chip padding, scaled by `size`.
+- `--lr-token-input-gap` — Gap between form/row children. Default: `var(--lr-space-xs)`.
+- `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
+- `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
+- `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-action-hover-bg` — Edit/remove hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+
 ## `lr-code-editor`
 
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
@@ -2029,6 +2088,11 @@ spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 - The host gets a `data-invalid` attribute once the field has been blurred at least once and
   validity fails; the styles hang the danger border off it.
 
+**Additional API surface:**
+
+- `selectionDirection` — The current selection direction of the internal editing surface. Type: `'forward' | 'backward' | 'none'`.
+- `click()` — Activates the internal editing surface.
+
 ## `lr-color-picker`
 
 A form-associated native color picker with label, hint, and error chrome. **Properties:** the shared
@@ -2044,6 +2108,13 @@ parts:** `form-control`, `form-control-label` (the label; `label` is an alias ke
 **Themeable custom properties:** `--lr-color-picker-swatch-size` — the swatch's inline and block size,
 auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
 the size ladder `lr-input` uses.
+
+**Additional API surface:**
+
+- `click()` — Activates the internal color input.
+- `--lr-color-picker-gap` — Gap between field chrome. Default: `var(--lr-space-xs)`.
+- `--lr-color-picker-radius` — Swatch corner radius. Default: `var(--lr-radius)`.
+- `--lr-color-picker-hover-border-color` — Hover border color. Default: `var(--lr-color-brand)`.
 
 ## `lr-emoji-picker`
 
@@ -2133,6 +2204,13 @@ windowed row are additionally capped at 20 regardless of available width.
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
 `console.warn` and simply leaves `groups` empty.
+
+**Additional API surface:**
+
+- `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
+- `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
+- `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
+- `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.
 
 ## `lr-rubric-form`
 
@@ -2243,3 +2321,12 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
+
+**Additional API surface:**
+
+- `--lr-locale-picker-gap` — Trigger and option child gap. Default: `var(--lr-space-xs)`.
+- `--lr-locale-picker-radius` — Trigger/listbox/option corner radius. Default: `var(--lr-radius)`.
+- `--lr-locale-picker-trigger-hover-bg` — Trigger hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.

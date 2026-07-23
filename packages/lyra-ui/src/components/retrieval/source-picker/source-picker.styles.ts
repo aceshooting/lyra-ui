@@ -25,6 +25,8 @@ export const styles = css`
     font: inherit;
     padding: var(--lr-size-2px) var(--lr-space-xs);
     cursor: pointer;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='select-all'] [role='checkbox']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, var(--lr-color-surface));
@@ -50,6 +52,26 @@ export const styles = css`
     padding: var(--lr-size-4px) var(--lr-space-xs);
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
+  }
+  [part='disclosure'] {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    inline-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: none;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    color: var(--lr-color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+  [part='disclosure']:hover {
+    background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
+  }
+  [part='disclosure']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
   }
   [part='item']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);

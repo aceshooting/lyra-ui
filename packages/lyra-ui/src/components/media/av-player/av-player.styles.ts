@@ -88,6 +88,8 @@ export const styles = css`
     inset-block: 0;
     border: none;
     padding: 0;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
     background: var(--lr-av-player-marker-bg, color-mix(in srgb, var(--lr-color-brand) 35%, transparent));
   }

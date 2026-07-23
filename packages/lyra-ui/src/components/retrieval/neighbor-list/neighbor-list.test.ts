@@ -17,6 +17,25 @@ it('defaults to empty rows, groupByRelation=false, expandable=false, virtualizeA
   expect(el.virtualizeAt).to.equal(100);
 });
 
+it('includes visible type and localized degree metadata in the row description', async () => {
+  const el = (await fixture(
+    html`<lr-neighbor-list lang="ar-u-nu-arab" .rows=${rows}></lr-neighbor-list>`,
+  )) as LyraNeighborList;
+  const button = el.shadowRoot!.querySelector('[part="node-label"]')!;
+  expect(button.getAttribute('aria-description')).to.contain('org');
+  expect(button.getAttribute('aria-description')).to.contain('٣');
+});
+
+it('formats relation-group counts with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-neighbor-list lang="ar-u-nu-arab" group-by-relation .rows=${[
+      rows[0]!,
+      { ...rows[0]!, node: { ...rows[0]!.node, id: 'org2' } },
+    ]}></lr-neighbor-list>`,
+  )) as LyraNeighborList;
+  expect(el.shadowRoot!.querySelector('[part="group-header"]')!.textContent).to.contain('٢');
+});
+
 it('renders one row per entry, each with the node label and relation text', async () => {
   const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;

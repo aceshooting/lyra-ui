@@ -6,7 +6,7 @@
 - **Class** `LyraBreadcrumbItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/breadcrumb/breadcrumb-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-breadcrumb` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -38,3 +38,7 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `::part()`), so tinting the current item previously meant overriding the library-wide
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
+
+**Additional API surface:**
+
+- `part="separator"` — Decorative separator shown before non-first items.

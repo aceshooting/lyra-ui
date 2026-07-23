@@ -31,19 +31,19 @@ changes the component library version without installing a supported SheetJS rel
 | `d3-force` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-zoom` | `^3.0.0` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `dompurify` | `^3.4.12` | `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-notebook-viewer`, `lr-svg-viewer` |
+| `dompurify` | `^3.4.12` | `lr-docx-viewer`, `lr-email-viewer`, `lr-html-viewer`, `lr-include`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-svg-viewer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |
 | `jszip` | `^3.10.1` | `lr-archive-viewer` |
-| `katex` | `^0.18.1` | `lr-markdown`, `lr-markdown-core` |
+| `katex` | `^0.18.1` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
 | `libphonenumber-js` | `>=1.11.0 <2` | `lr-phone-input` |
 | `mammoth` | `^1.12.0` | `lr-docx-viewer` |
 | `maplibre-gl` | `^5.24.0` | `lr-geojson-view`, `lr-map` |
-| `marked` | `^18.0.7` | `lr-markdown`, `lr-markdown-core` |
+| `marked` | `^18.0.7` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
 | `papaparse` | `^5.5.3` | `lr-csv-viewer`, `lr-dataset-viewer` |
 | `pdfjs-dist` | `^6.1.200` | `lr-pdf-viewer` |
 | `postal-mime` | `^2.7.5` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
-| `shiki` | `^4.3.1` | `lr-code-block`, `lr-code-block-core`, `lr-diff-view`, `lr-document-compare`, `lr-markdown`, `lr-markdown-core` |
+| `shiki` | `^4.3.1` | `lr-code-block`, `lr-code-block-core`, `lr-diff-view`, `lr-document-compare`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
 | `xlsx` | `>=0.20.3 <0.21.0` | `lr-spreadsheet-viewer` |

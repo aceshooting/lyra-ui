@@ -6,7 +6,7 @@
 - **Class** `LyraPromptStudio`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 16 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,3 +29,11 @@ saved versions, resolved preview, and save/run intents.
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
 ```
+
+**Additional API surface:**
+
+- `--lr-prompt-studio-field-hover-border` — Enabled field hover border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `var(--lr-color-brand-quiet)`.

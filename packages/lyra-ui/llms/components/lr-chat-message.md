@@ -6,7 +6,7 @@
 - **Class** `LyraChatMessage`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/chat-message/chat-message.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -163,5 +163,19 @@ between several values across a single element's lifetime.
   won't refresh the corresponding wrapper's visibility.
 - `role` intentionally reflects to `data-role`; CSS or selectors that key off role must target
   `[data-role="user"]` etc., not `[role="user"]`.
+
+**Additional API surface:**
+
+- `--lr-chat-message-system-color` — System-message text color. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-streaming-border-color` — Streaming bubble border. Default: `var(--lr-color-brand)`.
+- `--lr-chat-message-failed-border-color` — Failed bubble border. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-failed-bg` — Failed bubble fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-chat-message-footer-color` — Default footer text. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-user-footer-color` — User-message footer text. Default: `var(--lr-color-text)`.
+- `--lr-chat-message-failed-footer-color` — Failed-message footer text. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-indicator-color` — Default status indicator. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-streaming-indicator-color` — Streaming indicator. Default: `var(--lr-color-brand)`.
+- `--lr-chat-message-failed-indicator-color` — Failed indicator. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-failed-status-color` — Failed status text. Default: `var(--lr-color-danger)`.
 
 ---

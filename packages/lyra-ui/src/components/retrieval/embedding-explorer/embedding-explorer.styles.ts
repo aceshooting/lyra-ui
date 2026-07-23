@@ -29,12 +29,17 @@ export const styles = css`
 
   [part='point']:hover,
   [part='point']:focus-visible {
+    outline: none;
+  }
+
+  [part='point']:hover .point-marker,
+  [part='point']:focus-visible .point-marker {
     stroke: var(--lr-color-text);
     stroke-width: var(--lr-border-width-medium);
   }
 
-  [part='point'][data-selected='true'] {
-    stroke: var(--lr-color-brand);
+  [part='point'][data-selected='true'] .point-marker {
+    stroke: var(--lr-embedding-explorer-selected-stroke, var(--lr-color-brand));
     stroke-width: var(--lr-border-width-medium);
   }
 

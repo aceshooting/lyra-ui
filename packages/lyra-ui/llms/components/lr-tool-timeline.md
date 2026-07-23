@@ -6,7 +6,7 @@
 - **Class** `LyraToolTimeline`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-timeline/tool-timeline.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 15 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,3 +60,14 @@ per-entry timeline marker dot's size, which also sets the entry grid's leading c
 retinted independently; `--lr-tool-timeline-pending-approval-border-color` (default
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
+
+**Additional API surface:**
+
+- `--lr-tool-timeline-running-marker-color` — Running rail dot. Default: `var(--lr-color-brand)`.
+- `--lr-tool-timeline-success-marker-color` — Success rail dot. Default: `var(--lr-color-success)`.
+- `--lr-tool-timeline-error-marker-color` — Error rail dot. Default: `var(--lr-color-danger)`.
+- `--lr-tool-timeline-approved-bg` — Approved badge background. Default: `var(--lr-color-success-quiet)`.
+- `--lr-tool-timeline-approved-color` — Approved badge foreground. Default: `var(--lr-color-success)`.
+- `--lr-tool-timeline-denied-bg` — Denied badge background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-tool-timeline-denied-color` — Denied badge foreground. Default: `var(--lr-color-danger)`.
+- `--lr-tool-timeline-error-color` — Expanded error text. Default: `var(--lr-color-danger)`.

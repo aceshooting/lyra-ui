@@ -6,7 +6,7 @@
 - **Class** `LyraFlowMinimap`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-minimap/flow-minimap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -49,5 +49,10 @@ draggable, focusable view rectangle).
   currently renders.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
   event to wire up.
+
+**Additional API surface:**
+
+- `part="instructions"` — Visually hidden keyboard instructions for the viewport.
+- `part="live-region"` — Visually hidden viewport-change announcements.
 
 ---

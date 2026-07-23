@@ -28,6 +28,8 @@ export const styles = [
     [part='interim-area'] {
       display: flex;
       flex-direction: column;
+      min-inline-size: 0;
+      max-inline-size: 100%;
       gap: var(--lr-space-xs);
     }
     [part='interim-area'] {
@@ -36,6 +38,8 @@ export const styles = [
     [part='entry'] {
       display: flex;
       flex-wrap: wrap;
+      min-inline-size: 0;
+      max-inline-size: 100%;
       align-items: baseline;
       gap: var(--lr-space-2xs);
       animation: lr-transcript-fade-in var(--lr-transition-fast) ease-out;
@@ -70,6 +74,8 @@ export const styles = [
     [part='text'] {
       flex: 1 1 auto;
       min-inline-size: 0;
+      max-inline-size: 100%;
+      overflow-wrap: anywhere;
     }
     [part='timestamp'] {
       flex: 0 0 auto;

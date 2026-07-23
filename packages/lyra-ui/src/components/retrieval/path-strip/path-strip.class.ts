@@ -1,9 +1,10 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../../layout/scroller/scroller.class.js';
 import { styles } from './path-strip.styles.js';
@@ -43,6 +44,24 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   @state() private activeIndex = 0;
   @state() private liveText = '';
+  private restoreFocusAfterPathChange = false;
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!changed.has('path')) return;
+    this.restoreFocusAfterPathChange = this.shadowRoot?.activeElement?.matches(
+      '[part="node"], [part="relation"]',
+    ) ?? false;
+    this.activeIndex = Math.min(this.activeIndex, Math.max(0, this.path.length - 1));
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (!changed.has('path') || !this.restoreFocusAfterPathChange || this.path.length === 0) return;
+    this.restoreFocusAfterPathChange = false;
+    const controls = this.shadowRoot?.querySelectorAll<HTMLElement>('[part="node"], [part="relation"]');
+    controls?.[this.activeIndex]?.focus();
+  }
 
   private activate(index: number): void {
     const el = this.path[index];
@@ -64,9 +83,14 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     this.activeIndex = index;
     const el = this.path[index];
     const total = this.path.length;
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     this.liveText =
       el?.kind === 'node'
-        ? this.localize('pathNodeStatus', undefined, { label: el.node.label || el.node.id, position: index + 1, total })
+        ? this.localize('pathNodeStatus', undefined, {
+            label: el.node.label || el.node.id,
+            position: numberFormat.format(index + 1),
+            total: numberFormat.format(total),
+          })
         : el
           ? this.localize('pathRelationStatus', undefined, { relation: el.relation })
           : '';

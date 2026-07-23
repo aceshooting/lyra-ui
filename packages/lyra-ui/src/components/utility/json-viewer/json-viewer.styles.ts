@@ -13,6 +13,11 @@ export const styles = css`
        in widget.styles.ts -- no shared --lr-* monospace token exists
        to resolve through. */
     --lr-json-viewer-font: var(--lr-font-mono);
+    --lr-json-viewer-active-outline: var(--lr-focus-ring-color);
+    --lr-json-viewer-string-color: var(--lr-color-success);
+    --lr-json-viewer-number-color: var(--lr-color-brand);
+    --lr-json-viewer-boolean-color: var(--lr-color-warning);
+    --lr-json-viewer-null-color: var(--lr-color-text-quiet);
     font-family: var(--lr-json-viewer-font);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-loose);
@@ -153,19 +158,24 @@ export const styles = css`
     white-space: pre-wrap;
   }
   [part='value'][data-type='string'] {
-    color: var(--lr-color-success);
+    color: var(--lr-json-viewer-string-color);
   }
   [part='value'][data-type='number'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-json-viewer-number-color);
   }
   [part='value'][data-type='boolean'] {
-    color: var(--lr-color-warning);
+    color: var(--lr-json-viewer-boolean-color);
   }
   [part='value'][data-type='null'],
   [part='value'][data-type='undefined'],
   [part='value'][data-type='circular'] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-json-viewer-null-color);
     font-style: italic;
+  }
+  [part='key'][data-active],
+  [part='value'][data-active] {
+    outline: var(--lr-focus-ring-width) solid var(--lr-json-viewer-active-outline);
+    outline-offset: var(--lr-focus-ring-offset);
   }
   .preview {
     flex: 0 0 auto;

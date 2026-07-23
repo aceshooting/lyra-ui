@@ -6,7 +6,7 @@
 - **Class** `LyraGraphQueryBuilder`, also available unregistered from `@aceshooting/lyra-ui/components/data/graph-query-builder/graph-query-builder.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 24 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 27 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,3 +26,12 @@ parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker
 `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`, `save-row`, `save-name-input`,
 `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`, `saved-load-button`,
 `saved-delete-button`, `saved-empty`.
+
+**Additional API surface:**
+
+- `errorText` — Caller-supplied outer error text. Field-level validation remains on the affected controls. Type: `string`.
+- `hint` — Supporting text rendered below the outer label. Type: `string`.
+- `error-text` attribute — Caller-supplied outer error text. Field-level validation remains on the affected controls.
+- `hint` attribute — Supporting text rendered below the outer label.
+- `hint` slot — Supporting text for the complete form control.
+- `part="hint"` — Supporting text for the complete form control.

@@ -30,6 +30,40 @@ describe('lr-embedding-explorer', () => {
     expect(point).to.exist;
   });
 
+  it('exposes selectable points as listbox options with explicit selected state', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer selected-id="b" .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    expect(el.shadowRoot!.querySelector('[part="plot"]')!.getAttribute('role')).to.equal('listbox');
+    expect(
+      [...el.shadowRoot!.querySelectorAll('[part="point"]')].map((point) => [
+        point.getAttribute('role'),
+        point.getAttribute('aria-selected'),
+      ]),
+    ).to.deep.equal([
+      ['option', 'false'],
+      ['option', 'true'],
+    ]);
+  });
+
+  it('keeps a real focus stop when the focused point is removed', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    const second = el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')[1]!;
+    second.focus();
+    el.points = [points[0]!];
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('0');
+  });
+
+  it('formats the point position with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer lang="ar-u-nu-arab" .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('aria-label')).to.contain('١');
+  });
+
   it('is accessible in empty and populated states', async () => {
     const empty = (await fixture(html`<lr-embedding-explorer></lr-embedding-explorer>`)) as LyraEmbeddingExplorer;
     await expect(empty).to.be.accessible();

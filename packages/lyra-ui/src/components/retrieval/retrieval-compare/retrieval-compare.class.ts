@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import type { RetrievalChunk, RetrievalScoreBreakdown } from '../../../ai/types.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';

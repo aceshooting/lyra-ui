@@ -6,7 +6,7 @@
 - **Class** `LyraDateInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-picker` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -227,5 +227,15 @@ and `dateTimeFormat(locale, options)`.
   sequencing) is implemented correctly and safe to rely on, as is the selected/range-day text color
   (`--lr-color-on-brand`, not a hardcoded literal — safe to override `--lr-color-brand` without
   losing contrast on selected-day text).
+
+**Additional API surface:**
+
+- `--lr-date-picker-month-gap` — Gap between visible months. Default: `var(--lr-space-l)`.
+- `--lr-date-picker-header-gap` — Month-header child gap. Default: `var(--lr-space-s)`.
+- `--lr-date-picker-radius` — Calendar and control corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-input-placeholder-color` — Placeholder text color. Default: `var(--lr-color-text-quiet)`.
+- `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
+- `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
 
 ---

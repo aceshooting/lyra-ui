@@ -710,7 +710,7 @@ describe('source identity', () => {
     await el.updateComplete;
     const replacement = mediaEl(el);
     expect(replacement).to.not.equal(oldMedia);
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
     const timeline = el.shadowRoot!.querySelector('[part="timeline"]')!;
     expect(timeline.getAttribute('aria-valuemax')).to.equal('0');
     expect(timeline.getAttribute('aria-valuenow')).to.equal('0');
@@ -721,7 +721,7 @@ describe('source identity', () => {
     oldMedia.dispatchEvent(new Event('error'));
     await el.updateComplete;
     expect(timeline.getAttribute('aria-valuemax')).to.equal('0');
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
   });
 
   it('clears an earlier native error after the current source loads successfully', async () => {
@@ -733,7 +733,7 @@ describe('source identity', () => {
     Object.defineProperty(media, 'duration', { value: 60, configurable: true });
     media.dispatchEvent(new Event('loadedmetadata'));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
   });
 });
 

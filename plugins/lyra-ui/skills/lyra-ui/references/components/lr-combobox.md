@@ -6,7 +6,7 @@
 - **Class** `LyraCombobox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 21 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -277,5 +277,9 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   later batch slotted in afterward (e.g. a lazily-populated list appended post-connect) — only the
   `form.reset()` default itself is captured exclusively from that very first pass; a later pick, or
   a later batch of newly-`selected` options, never redefines what a reset restores to.
+
+**Additional API surface:**
+
+- `part="tag-label"` — The wrapping/ellipsis-safe selected-tag label.
 
 ---

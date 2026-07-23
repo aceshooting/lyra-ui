@@ -367,6 +367,40 @@ function stubWrapperRect(el: LyraImageViewer, width = 200, height = 100): HTMLEl
 }
 
 describe('pointer-driven annotation', () => {
+  it('cancels and releases an interrupted pointer draft on pointercancel', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    const released: number[] = [];
+    wrapper.releasePointerCapture = (pointerId) => released.push(pointerId);
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 12, clientX: 20, clientY: 10, bubbles: true }));
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { pointerId: 12, clientX: 100, clientY: 50, bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(1);
+
+    wrapper.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 12, bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(0);
+    expect(released).to.deep.equal([12]);
+  });
+
+  it('cancels an active pointer draft when annotation is disabled or the source changes', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
+    const wrapper = stubWrapperRect(el);
+    wrapper.releasePointerCapture = () => {};
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 13, clientX: 20, clientY: 10, bubbles: true }));
+    await el.updateComplete;
+    el.annotatable = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(0);
+
+    el.annotatable = true;
+    await el.updateComplete;
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 14, clientX: 20, clientY: 10, bubbles: true }));
+    el.src = `${PNG_SRC}?replacement`;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="annotation-box"]').length).to.equal(0);
+  });
+
   it('draws a region by dragging the pointer and commits it once large enough', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} annotatable></lr-image-viewer>`)) as LyraImageViewer;
     const wrapper = stubWrapperRect(el);
@@ -458,6 +492,23 @@ describe('pointer-driven annotation', () => {
 });
 
 describe('accessibility', () => {
+  it('puts the advertised accessible name on a region role owner', async () => {
+    const el = (await fixture(html`<lr-image-viewer aria-label="Annotated chart"></lr-image-viewer>`)) as LyraImageViewer;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Annotated chart');
+  });
+
+  it('gives tiny percentage highlights a hit-area floor independent of their data geometry', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} .highlights=${[
+      { id: 'tiny', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 0.1, height: 0.1 } } },
+    ]}></lr-image-viewer>`)) as LyraImageViewer;
+    const box = el.shadowRoot!.querySelector('[part="highlight"]') as HTMLElement;
+    const style = getComputedStyle(box);
+    expect(parseFloat(style.minInlineSize)).to.be.at.least(40);
+    expect(parseFloat(style.minBlockSize)).to.be.at.least(40);
+  });
+
   it('is accessible with highlights and annotation on', async () => {
     const el = await fixture(html`<lr-image-viewer src=${PNG_SRC} name="Chart" annotatable .highlights=${[
       { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } }, label: 'Zone A' },
@@ -477,6 +528,14 @@ describe('localization', () => {
       html`<lr-image-viewer src=${PNG_SRC} .strings=${{ imageViewerRotate: 'Pivoter' }}></lr-image-viewer>`,
     )) as LyraImageViewer;
     expect(el.shadowRoot!.querySelector('[part="rotate-button"]')!.getAttribute('aria-label')).to.equal('Pivoter');
+  });
+
+  it('formats generated highlight indices and annotation coordinates with the effective locale', async () => {
+    const el = (await fixture(html`<lr-image-viewer lang="ar-EG" src=${PNG_SRC} .highlights=${[
+      { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 20 } } },
+    ]}></lr-image-viewer>`)) as LyraImageViewer;
+    const highlight = el.shadowRoot!.querySelector('[part="highlight"]')!;
+    expect(highlight.getAttribute('aria-label')).to.contain('١');
   });
 });
 
@@ -531,6 +590,20 @@ describe('active-state cssprop escape hatches', () => {
   it('--lr-image-viewer-highlight-active-color recolors the active highlight outline', async () => {
     const { box } = await withActiveHighlight('--lr-image-viewer-highlight-active-color: rgb(0, 51, 102)');
     expect(getComputedStyle(box).outlineColor).to.equal('rgb(0, 51, 102)');
+  });
+
+  it('--lr-image-viewer-highlight-success-border retints one highlight tone without changing global tokens', async () => {
+    const regions: LyraHighlight[] = [{
+      id: 'success',
+      tone: 'success',
+      anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } },
+    }];
+    const wrapper = (await fixture(html`<div style="--lr-image-viewer-highlight-success-border: rgb(0, 51, 102)">
+      <lr-image-viewer src=${LOADABLE_PNG} .highlights=${regions}></lr-image-viewer>
+    </div>`)) as HTMLElement;
+    const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
+    const box = el.shadowRoot!.querySelector('[part="highlight"]') as HTMLElement;
+    expect(getComputedStyle(box).borderTopColor).to.equal('rgb(0, 51, 102)');
   });
 
   it('renders byte-identical to the pre-hatch tokens when unset', async () => {

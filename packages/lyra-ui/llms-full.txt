@@ -896,6 +896,10 @@ synchronous and fires no `input`/`change`/`lr-change` event.
   `form.reset()` default itself is captured exclusively from that very first pass; a later pick, or
   a later batch of newly-`selected` options, never redefines what a reset restores to.
 
+**Additional API surface:**
+
+- `part="tag-label"` — The wrapping/ellipsis-safe selected-tag label.
+
 ---
 
 ## `lr-select`
@@ -1258,6 +1262,16 @@ and `dateTimeFormat(locale, options)`.
   (`--lr-color-on-brand`, not a hardcoded literal — safe to override `--lr-color-brand` without
   losing contrast on selected-day text).
 
+**Additional API surface:**
+
+- `--lr-date-picker-month-gap` — Gap between visible months. Default: `var(--lr-space-l)`.
+- `--lr-date-picker-header-gap` — Month-header child gap. Default: `var(--lr-space-s)`.
+- `--lr-date-picker-radius` — Calendar and control corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-input-placeholder-color` — Placeholder text color. Default: `var(--lr-color-text-quiet)`.
+- `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
+- `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+
 ---
 
 ## lr-textarea
@@ -1376,6 +1390,10 @@ original declarative `value`, matching native `defaultValue` behavior.
 - `--lr-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
   bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
+
+**Additional API surface:**
+
+- `click()` — Activates the internal textarea.
 
 ---
 
@@ -1719,6 +1737,10 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
   the empty string, and `required` is what rejects it.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
 
+**Additional API surface:**
+
+- `click()` — Activates the internal input.
+
 ## `lr-number-input`
 
 A migration-friendly numeric alias of `lr-input` — a subclass whose constructor and
@@ -1992,6 +2014,17 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   via `::part` styling tricks, and don't expect the flag inside the open popup list — a native
   `<option>` is text-only.
 
+**Additional API surface:**
+
+- `click()` — Activate the internal telephone input unless the form control is effectively disabled.
+- `--lr-phone-input-flag-size` — Selected flag size, scaled by `size`.
+- `--lr-phone-input-glyph-size` — Country selector glyph size, scaled by `size`.
+- `--lr-phone-input-gap` — Country-trigger child gap. Default: `var(--lr-space-xs)`.
+- `--lr-phone-input-radius` — Input-wrapper corner radius. Default: `var(--lr-radius)`.
+- `--lr-phone-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
+
 ---
 
 ## `lr-time-range`
@@ -2104,6 +2137,17 @@ any ancestor of the `<lr-time-range>` therefore reaches it. (The same technique 
   fieldset correctly restores a handle that had `disabled` set explicitly by the consumer, and vice
   versa — mirrors `lr-combobox`'s identical pattern.
 
+**Additional API surface:**
+
+- `--lr-time-range-handle-size` — Visible handle diameter. Default: `14px*scale`.
+- `--lr-time-range-hit-size` — Actual drag hit-area diameter; endpoint handles are inset by half this distance so the hit geometry stays inside the host. Default: `max(24px,28px*scale)`.
+- `--lr-time-range-track-size` — Track and selected-range thickness. Default: `4px*scale`.
+- `--lr-time-range-base-size` — Brush baseline block size. Default: `1.5rem*scale`.
+- `--lr-time-range-preset-gap` — Gap between preset buttons. Default: `var(--lr-space-xs)`.
+- `--lr-time-range-preset-radius` — Preset button corner radius. Default: `var(--lr-radius)`.
+- `--lr-time-range-preset-padding` — Preset button padding, scaled by `size`.
+- `--lr-time-range-preset-font-size` — Preset button font size, scaled by `size`.
+
 ---
 
 ## `lr-swatch-picker`
@@ -2214,6 +2258,10 @@ picker.value = 'ruby';
   selectors, so that combinator can silently fail to match depending on the engine.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+
+**Additional API surface:**
+
+- `--lr-swatch-picker-gap` — Gap between swatches. Default: `var(--lr-space-xs)`.
 
 ---
 
@@ -2600,6 +2648,17 @@ inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
 (default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).
 
+**Additional API surface:**
+
+- `--lr-token-input-token-padding` — Per-token chip padding, scaled by `size`.
+- `--lr-token-input-gap` — Gap between form/row children. Default: `var(--lr-space-xs)`.
+- `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
+- `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
+- `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-action-hover-bg` — Edit/remove hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+
 ## `lr-code-editor`
 
 Dependency-free, form-associated multiline code editor built around a native textarea, with an
@@ -2661,6 +2720,11 @@ spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 - The host gets a `data-invalid` attribute once the field has been blurred at least once and
   validity fails; the styles hang the danger border off it.
 
+**Additional API surface:**
+
+- `selectionDirection` — The current selection direction of the internal editing surface. Type: `'forward' | 'backward' | 'none'`.
+- `click()` — Activates the internal editing surface.
+
 ## `lr-color-picker`
 
 A form-associated native color picker with label, hint, and error chrome. **Properties:** the shared
@@ -2676,6 +2740,13 @@ parts:** `form-control`, `form-control-label` (the label; `label` is an alias ke
 **Themeable custom properties:** `--lr-color-picker-swatch-size` — the swatch's inline and block size,
 auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
 the size ladder `lr-input` uses.
+
+**Additional API surface:**
+
+- `click()` — Activates the internal color input.
+- `--lr-color-picker-gap` — Gap between field chrome. Default: `var(--lr-space-xs)`.
+- `--lr-color-picker-radius` — Swatch corner radius. Default: `var(--lr-radius)`.
+- `--lr-color-picker-hover-border-color` — Hover border color. Default: `var(--lr-color-brand)`.
 
 ## `lr-emoji-picker`
 
@@ -2765,6 +2836,13 @@ windowed row are additionally capped at 20 regardless of available width.
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
 `console.warn` and simply leaves `groups` empty.
+
+**Additional API surface:**
+
+- `--lr-emoji-picker-control-gap` — Gap between field sections. Default: `var(--lr-space-xs)`.
+- `--lr-emoji-picker-radius` — Outer picker corner radius. Default: `var(--lr-radius)`.
+- `--lr-emoji-picker-item-radius` — Search and emoji corner radius. Default: `var(--lr-radius-xs)`.
+- `--lr-emoji-picker-search-hover-border-color` — Search hover border. Default: `var(--lr-color-brand)`.
 
 ## `lr-rubric-form`
 
@@ -2875,6 +2953,15 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
   or `lr-combobox` instead.
 - arrow-key navigation is vertical-only (Home/End/ArrowUp/ArrowDown); there is no
   ArrowLeft/ArrowRight remap under RTL, since there is no horizontal axis to remap.
+
+**Additional API surface:**
+
+- `--lr-locale-picker-gap` — Trigger and option child gap. Default: `var(--lr-space-xs)`.
+- `--lr-locale-picker-radius` — Trigger/listbox/option corner radius. Default: `var(--lr-radius)`.
+- `--lr-locale-picker-trigger-hover-bg` — Trigger hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-locale-picker-open-border-color` — Open trigger border color. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 
 # Data display, dashboards & flow canvas (`components/data/`)
 
@@ -3470,6 +3557,11 @@ spacing, border, radius, disabled-opacity, and focus-ring tokens.
   (`'{total} {itemLabel}'`, producing `0 items` in the default locale) unless `hide-summary` is set
 - below a 20rem container allocation the summary and controls stack; the breakpoint responds to
   the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
+
+**Additional API surface:**
+
+- `click()` — Forward host activation to the primary editable page control.
+- `--lr-pagination-control-radius` — Border radius of navigation buttons and the page input. Default: `var(--lr-radius)`.
 
 ---
 
@@ -4114,6 +4206,12 @@ indentation), plus the shared tokens listed above.
 - `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
   from `nodes` on every render and keyed by filesystem path, an order it does not own.
 
+**Additional API surface:**
+
+- `--lr-tree-selected-color` — Selected-node text color.
+- `--lr-tree-selected-bg` — Selected-node background.
+- `ancestry` — Ancestor object identities used to stop cyclic caller graphs before recursive rendering. Type: `TreeItem[]`.
+
 ---
 
 ## `lr-flow-canvas`
@@ -4234,6 +4332,12 @@ treatment entirely.
   deltas are mirrored so content still visually follows the cursor, matching every other
   RTL-mirrored surface in this library.
 
+**Additional API surface:**
+
+- `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
+- `part="node-control"` — The visually hidden, roving selection button for a node.
+- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`.
+
 ---
 
 ## `lr-flow-node`
@@ -4340,6 +4444,11 @@ draggable, focusable view rectangle).
   currently renders.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
   event to wire up.
+
+**Additional API surface:**
+
+- `part="instructions"` — Visually hidden keyboard instructions for the viewport.
+- `part="live-region"` — Visually hidden viewport-change announcements.
 
 ---
 
@@ -4518,6 +4627,12 @@ numbers, so the two circular-meter components in the library share one visual sc
   `segments` render further around the circle (starting at 12 o'clock, going clockwise); there's no
   independent sort/z-order control.
 
+**Additional API surface:**
+
+- `part="segment-item"` — One visually-hidden segment label/count pair.
+- `part="segment-list"` — The visually-hidden list exposing the segment breakdown.
+- `part="semantic"` — The visually-hidden meter/group carrying aggregate range semantics.
+
 ---
 
 ## `lr-calendar`
@@ -4686,6 +4801,15 @@ parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker
 `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`, `save-row`, `save-name-input`,
 `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`, `saved-load-button`,
 `saved-delete-button`, `saved-empty`.
+
+**Additional API surface:**
+
+- `errorText` — Caller-supplied outer error text. Field-level validation remains on the affected controls. Type: `string`.
+- `hint` — Supporting text rendered below the outer label. Type: `string`.
+- `error-text` attribute — Caller-supplied outer error text. Field-level validation remains on the affected controls.
+- `hint` attribute — Supporting text rendered below the outer label.
+- `hint` slot — Supporting text for the complete form control.
+- `part="hint"` — Supporting text for the complete form control.
 
 ## `lr-query-builder`
 
@@ -5044,6 +5168,11 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
   itself is unaffected.
 
+**Additional API surface:**
+
+- `part="view-icon"` — Decorative icon content inside a view toggle.
+- `part="view-label"` — Visible label text inside a view toggle.
+
 ---
 
 ## `lr-carousel`
@@ -5362,6 +5491,10 @@ each falls back to the token its rule used before. Otherwise shared tokens —
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
 
+**Additional API surface:**
+
+- `part="step-item"` — The `role="listitem"` wrapper for one step.
+
 ---
 
 ## `lr-control-group`
@@ -5576,6 +5709,12 @@ Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
   `lr-select`'s popup has.
 - the semantic `radiogroup` lives inside shadow DOM. Set `label` (preferred for reactive code) or a
   host `aria-label`; the component deliberately forwards the resulting name to that internal role.
+
+**Additional API surface:**
+
+- `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
+- `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
+- `--lr-segmented-track-padding` — Track inset padding. Default: `var(--lr-size-0-125rem)`.
 
 ---
 
@@ -6538,6 +6677,11 @@ the `footer` slot, hidden entirely when empty).
   `<lr-button>` retargets to the host, but its composed path still contains the internal native
   `<button>`.
 
+**Additional API surface:**
+
+- `accessibleLabel` — Host `aria-label` forwarded to the native no-href activation button. Type: `string | null`.
+- `part="activation-button"` — The native whole-card action, rendered while `interactive` without `href`. It is a sibling of slotted controls, so actionable descendants are never nested inside another actionable role.
+
 ---
 
 ## `lr-command-palette`
@@ -6590,6 +6734,13 @@ after `::part()`), so highlighting the active row previously required hijacking 
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token, so rendering is unchanged.
 
+**Additional API surface:**
+
+- `part="command-group"` — A labeled ARIA group containing visible command options.
+- `part="list-spacer"` — Virtual result extent inside the scrolling list.
+- `--lr-command-palette-row-height` — Virtual command-row height. Default: `var(--lr-size-3rem)`.
+- `--lr-command-palette-group-height` — Virtual group-heading height. Default: `var(--lr-size-2rem)`.
+
 ## `lr-details`, `lr-accordion`, and `lr-accordion-item`
 
 `lr-details` is a native-semantics disclosure panel. `lr-accordion` coordinates slotted
@@ -6628,6 +6779,10 @@ set on the item, on `<lr-breadcrumb>`, or on any ancestor above the trail:
 `--lr-color-text-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token.
 
+**Additional API surface:**
+
+- `part="separator"` — Decorative separator shown before non-first items.
+
 ## `lr-dashboard-grid`
 
 Responsive, keyboard-accessible controlled widget grid. It positions layout entries and emits
@@ -6653,6 +6808,10 @@ overriding them from a stylesheet has no effect — set the properties instead. 
 (default `var(--lr-color-border-strong)`) retints the mouse-hover outline on `[part='cell']` — a
 preview of its own `:focus-visible` ring, shown because every cell is a real focusable,
 draggable/resizable target; set it to `transparent` to opt out of the hover treatment entirely.
+
+**Additional API surface:**
+
+- `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
 
 ## `lr-drilldown-panel`
 
@@ -7275,6 +7434,11 @@ than a stylesheet-only solution.
   `<lr-chip>` in its shadow DOM — don't expect `<lr-chip>`'s CSS parts or custom properties to
   reach it.
 
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal control.
+- `part="toggle-button"` — The real toggle control, rendered over the non-interactive label when toggle mode is active.
+
 ---
 
 ## `lr-kbd`
@@ -7446,6 +7610,10 @@ determinate.
 **Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
 block size of the progress track.
 
+**Additional API surface:**
+
+- `--lr-progress-duration` — Indeterminate sweep timing. Default: `var(--lr-transition-ambient)`.
+
 ## `lr-progress-ring`
 
 A circular progress indicator with the same value contract as `lr-progress-bar`.
@@ -7525,6 +7693,12 @@ inside each star, clipped to the fractional `precision` value). **Themeable cust
 (default `--lr-color-border` — unfilled-star color), and `--lr-rating-size` (default
 `--lr-font-size-xl` — star size).
 
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal rating control.
+- `click()` — Forwards host activation to the internal rating control.
+- `focus()` — Forwards host focus to the internal rating control.
+
 # Utilities, formatting & observers (`components/utility/`)
 
 ## `lr-export-button`
@@ -7555,12 +7729,14 @@ immediately) or multi-format (click opens a small menu).
   name and feeds the localized format-menu name without changing the visible label
 - `open: boolean = false` (reflected)
 
-**Methods:** `focus(options?)` and `blur()` forward to the native trigger button.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the native trigger button.
 
 **Events:** `lr-export` (`detail: { format: string }`, **cancelable** — call `preventDefault()` to
 substitute your own server-generated download instead of the built-in client-side one),
 `lr-export-complete` (`detail: { format: 'csv' | 'json' }`, fires only after a non-cancelled
-built-in download completes), `lr-show`, `lr-hide` (format-menu visibility transitions)
+built-in download completes), `lr-export-error` (`detail: { format: 'csv' | 'json', error:
+unknown }`, fires when a built-in export cannot be serialized or downloaded; activation does not
+throw into consumer code), `lr-show`, `lr-hide` (format-menu visibility transitions)
 
 **Slots:** none.
 
@@ -7661,6 +7837,10 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 - best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
   and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
   with the intended text so a consumer can always show its own confirmation/fallback UI.
+
+**Additional API surface:**
+
+- `click()` — Activates the native button, matching the host focus/blur forwarding contract.
 
 ---
 
@@ -7764,7 +7944,13 @@ until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono
 `--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
 box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
-without repainting every other warning-toned surface that reads the same shared token. Plus shared
+without repainting every other warning-toned surface that reads the same shared token;
+`--lr-json-viewer-active-outline` (default `var(--lr-focus-ring-color)`) — outline color for the
+current imperative search match; `--lr-json-viewer-string-color` (default
+`var(--lr-color-success)`), `--lr-json-viewer-number-color` (default `var(--lr-color-brand)`),
+`--lr-json-viewer-boolean-color` (default `var(--lr-color-warning)`), and
+`--lr-json-viewer-null-color` (default `var(--lr-color-text-quiet)`) — per-value-type color hooks.
+Plus shared
 tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.
@@ -8164,6 +8350,15 @@ consumer can compute or unit-test the same alignment without instantiating the e
   cached diff state, so binding either property to something that changes on every keystroke
   recomputes the whole alignment each time.
 
+**Additional API surface:**
+
+- `--lr-diff-view-add-background` — Added-line background.
+- `--lr-diff-view-add-color` — Added-line text color.
+- `--lr-diff-view-remove-background` — Removed-line background.
+- `--lr-diff-view-remove-color` — Removed-line text color.
+- `--lr-diff-view-fold-color` — Fold-marker text color.
+- `--lr-diff-view-fold-background` — Fold-marker background.
+
 ---
 
 ## `lr-icon`
@@ -8391,6 +8586,10 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   required date reports `badInput` instead.
 - The host carries a `:state(blank)` custom state whenever `value === ''`, and `data-invalid` only
   once touched (first blur out of the whole control) and actually invalid.
+
+**Additional API surface:**
+
+- `click()` — Activates the first native field in locale order.
 
 ## `lr-random-content`
 
@@ -8695,6 +8894,10 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   (`variant="detailed"` is the replacement); left unset, `variant` falls back to honoring `detailed`
   for one more minor version before removal.
 
+**Additional API surface:**
+
+- `part="error"` — Localized alert rendered when the optional peer resolver is unavailable or fails.
+
 ---
 
 ## `lr-playback`
@@ -8711,8 +8914,8 @@ Steps an index through `[0, length)` on a fixed interval — play/pause for time
   change-tracking sees it and auto-pauses on `hidden = true`)
 
 **Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`, `goTo(index: number)` — all
-idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)` and `blur()` forward
-to the play button.
+idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)`, `blur()`, and
+`click()` forward to the play button.
 
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-step` (`detail: { index }`, fired on every
 tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed host events.
@@ -9014,6 +9217,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 **Events:** `lr-position-change` (`detail: { position }`), plus composed `focus` and `blur` events
 from the internal range handle.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
+
 **Slots:** `before`, `after`.
 
 **CSS parts:** `base`, `before`, `after`, `divider`, and `handle`.
@@ -9257,6 +9462,9 @@ drop-in still does something useful, but `lr-open` fires first — a host callin
 `preventDefault()` on it suppresses that default download/open so it can substitute its own
 handling.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
+current media kind.
+
 **Slots:** none.
 
 **CSS parts:** `base` (a `<button>` for `kind="image"`, a plain wrapper `<div>` for `kind="video"`,
@@ -9393,6 +9601,10 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
 
+**Additional API surface:**
+
+- `click()` — Activates the internal attachment trigger.
+
 ---
 
 ## `lr-avatar`
@@ -9511,6 +9723,10 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
   swap.
+
+**Additional API surface:**
+
+- `click()` — Activate the play/pause control.
 
 ## `lr-animation`
 
@@ -9750,12 +9966,18 @@ mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
 `var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
 independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
-carries. All three are declared as inline `var()` fallbacks at the point of use rather than on
-`:host`, so each can be set on the element *or on any ancestor*: `::part(highlight)[data-active]` is
-invalid CSS — Shadow Parts forbids an attribute selector after `::part()` — which previously left
-overriding the library-wide `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever,
-repainting every other element that read them. Unset, each falls back to the token its rule used
-before.
+carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-border`,
+`--lr-image-viewer-highlight-bg`, and the tone-specific
+`--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
+`--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
+`--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
+`--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
+properties. These properties are declared as inline `var()` fallbacks at the point of use rather
+than on `:host`, so each can be set on the element *or on any ancestor*:
+`::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — which previously left overriding the library-wide
+`--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
+element that read them. Unset, each falls back to the token its rule used before.
 
 ## `lr-av-player`
 
@@ -11636,6 +11858,16 @@ restart at the beginning of each visual line, so a wrapped line's tabs land diff
   HTML `marked` produces from `content` completely unsanitized, so untrusted `content` must never be
   paired with `sanitize="false"`.
 
+**Additional API surface:**
+
+- `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
+- `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
+
 ---
 
 ## `lr-markdown-core`
@@ -11703,6 +11935,16 @@ differently on a wrapped line.
   import python from 'shiki/langs/python.mjs';
 </script>
 ```
+
+**Additional API surface:**
+
+- `--lr-markdown-highlight-accent-bg` — Accent highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
+- `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
+- `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
+- `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
 ---
 
@@ -11858,6 +12100,20 @@ between several values across a single element's lifetime.
   won't refresh the corresponding wrapper's visibility.
 - `role` intentionally reflects to `data-role`; CSS or selectors that key off role must target
   `[data-role="user"]` etc., not `[role="user"]`.
+
+**Additional API surface:**
+
+- `--lr-chat-message-system-color` — System-message text color. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-streaming-border-color` — Streaming bubble border. Default: `var(--lr-color-brand)`.
+- `--lr-chat-message-failed-border-color` — Failed bubble border. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-failed-bg` — Failed bubble fill. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-chat-message-footer-color` — Default footer text. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-user-footer-color` — User-message footer text. Default: `var(--lr-color-text)`.
+- `--lr-chat-message-failed-footer-color` — Failed-message footer text. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-indicator-color` — Default status indicator. Default: `var(--lr-color-text-quiet)`.
+- `--lr-chat-message-streaming-indicator-color` — Streaming indicator. Default: `var(--lr-color-brand)`.
+- `--lr-chat-message-failed-indicator-color` — Failed indicator. Default: `var(--lr-color-danger)`.
+- `--lr-chat-message-failed-status-color` — Failed status text. Default: `var(--lr-color-danger)`.
 
 ---
 
@@ -13096,6 +13352,10 @@ branch content.
 `previous-glyph` and `next-glyph` (the chevron inside each button — target these to swap the
 arrow without restyling the button), and `position` (the visible "2 / 5" text).
 
+**Additional API surface:**
+
+- `click()` — Activates the currently enabled chevron, matching a click on the shadow control.
+
 ## `lr-message-actions`
 
 The per-message action toolbar for `lr-chat-message`'s `actions` slot: opt-in built-ins (copy /
@@ -13219,6 +13479,11 @@ point of use rather than a `:host` declaration, so it can be set on the element 
 `::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
 and it repainted every other danger surface with it.
+
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal push-to-talk control.
+- `focus()` — Forwards host focus to the internal push-to-talk control.
 
 ## `lr-transcript-feed`
 
@@ -13743,6 +14008,18 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - `catalog` must be homogeneous — the same constraint `lr-model-select`'s `LyraModelCatalog` union
   documents.
 
+**Additional API surface:**
+
+- `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-bg` — Selected option fill. Default: `transparent`.
+- `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
+- `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
+
 ## `lr-agent-workspace`
 
 Responsive, fully controlled shell for an AI conversation and its supporting run, tool, retrieval,
@@ -13859,6 +14136,25 @@ true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attr
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
 ```
 
+**Additional API surface:**
+
+- `lr-anchor-result` event — Passthrough from rendered Markdown.
+- `lr-citation-open` event — Passthrough from a rendered citation's full-preview action.
+- `lr-copy` event — Passthrough from rendered JSON content.
+- `lr-highlight-activate` event — Passthrough from rendered Markdown.
+- `lr-link-click` event — Passthrough from rendered Markdown.
+- `lr-preview` event — Passthrough from a rendered attachment.
+- `lr-remove` event — Passthrough from a rendered attachment.
+- `lr-render-error` event — Passthrough from rendered Markdown, tool-result, or widget content.
+- `lr-retry` event — Passthrough from a rendered attachment.
+- `lr-search-change` event — Passthrough from rendered JSON content.
+- `lr-text-select` event — Passthrough from rendered Markdown.
+- `lr-toggle` event — Passthrough from a rendered reasoning panel.
+- `lr-tool-call-chip-select` event — Passthrough from a rendered tool-call chip.
+- `lr-tool-chip-select` event — Deprecated tool-call selection alias passthrough.
+- `lr-widget-action` event — Passthrough from a rendered declarative widget.
+- `lr-widget-state-change` event — Passthrough from a rendered controlled widget.
+
 ## `lr-prompt-input`
 
 The composed prompt surface: chat composer, attachment controls/chips, model and voice pickers,
@@ -13920,6 +14216,11 @@ provide their own fixed-position anchor.
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
 ```
+
+**Additional API surface:**
+
+- `--lr-selection-toolbar-inline-shift` — Computed inline collision-avoidance offset.
+- `--lr-selection-toolbar-block-shift` — Computed block collision-avoidance offset.
 
 ## `lr-realtime-session`
 
@@ -14329,6 +14630,17 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
   `lr-close` once
 - the `maximize`/`close` buttons are always the first elements in the Tab order while open,
   regardless of visual position, followed by `body` then `footer` content
+
+**Additional API surface:**
+
+- `--lr-tool-result-dialog-running-color` — Running status foreground. Default: `var(--lr-color-brand)`.
+- `--lr-tool-result-dialog-running-bg` — Running status background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-tool-result-dialog-success-color` — Success status foreground. Default: `var(--lr-color-success)`.
+- `--lr-tool-result-dialog-success-bg` — Success status background. Default: `var(--lr-color-success-quiet)`.
+- `--lr-tool-result-dialog-error-color` — Error status foreground. Default: `var(--lr-color-danger)`.
+- `--lr-tool-result-dialog-error-bg` — Error status background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-tool-result-dialog-denied-color` — Denied status foreground. Default: `var(--lr-color-warning)`.
+- `--lr-tool-result-dialog-denied-bg` — Denied status background. Default: `var(--lr-color-warning-quiet)`.
 
 ---
 
@@ -15122,6 +15434,11 @@ so retinting one tone doesn't repaint the other surface reading that token, and 
 `::part('line')` stylesheet override — the background is applied inline, so a stylesheet rule can't
 beat it without `!important`.
 
+**Additional API surface:**
+
+- `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
+- `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.
+
 ## `lr-trace-tree`
 
 A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style): kind icon,
@@ -15168,6 +15485,17 @@ side of the lightness midpoint as the ambient surface, so a consumer who sets
 `--lr-trace-tree-row-active-bg` to a dark tint in light mode (or a light one in dark mode) must
 set `--lr-trace-tree-row-active-color` to match, and should re-check the status-label tones
 against the new tint as well.
+
+**Additional API surface:**
+
+- `--lr-trace-tree-toggle-hover-bg` — Toggle hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-trace-tree-success-color` — Success status text and bar. Default: `var(--lr-color-success)`.
+- `--lr-trace-tree-error-color` — Error status text and bar. Default: `var(--lr-color-danger)`.
+- `--lr-trace-tree-denied-color` — Denied status text and bar. Default: `var(--lr-color-warning)`.
+- `--lr-trace-tree-running-color` — Running status text and stripe. Default: `var(--lr-color-brand)`.
+- `--lr-trace-tree-pending-color` — Pending status text and bar. Default: `var(--lr-color-text-quiet)`.
+- `--lr-trace-tree-bar-track-bg` — Duration bar track. Default: `var(--lr-color-surface-raised)`.
+- `--lr-trace-tree-running-stripe-bg` — Running stripe contrast. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-activity-feed`
 
@@ -15411,6 +15739,15 @@ viewport's aspect ratio.
 ></lr-browser-frame>
 ```
 
+**Additional API surface:**
+
+- `--lr-browser-frame-controller-background` — Controller badge background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-browser-frame-controller-color` — Controller badge text color. Default: `var(--lr-color-brand)`.
+- `--lr-browser-frame-ping-click-color` — Click-ping border color. Default: `var(--lr-color-brand)`.
+- `--lr-browser-frame-ping-type-color` — Type-ping border color. Default: `var(--lr-color-success)`.
+- `--lr-browser-frame-ping-scroll-color` — Scroll-ping border color. Default: `var(--lr-color-warning)`.
+- `--lr-browser-frame-ping-move-color` — Move-ping border color. Default: `var(--lr-color-text-quiet)`.
+
 ## `lr-artifact-panel`
 
 Shell around one agent-generated artifact: a title/kind header, a preview↔code toggle, version
@@ -15539,6 +15876,12 @@ padding, and the gap between its header and body, while `compact`; both are igno
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
 their point of use rather than `:host` declarations, so either can be set on the element *or on any
 ancestor* — one rule on a run list retunes every compact run inside it.
+
+**Additional API surface:**
+
+- `--lr-agent-run-metric-danger-color` — Danger metric value. Default: `var(--lr-color-danger)`.
+- `--lr-agent-run-metric-success-color` — Success metric value. Default: `var(--lr-color-success)`.
+- `--lr-agent-run-metric-warning-color` — Warning metric value. Default: `var(--lr-color-warning)`.
 
 ## `lr-agent-trace`
 
@@ -15812,6 +16155,17 @@ retinted independently; `--lr-tool-timeline-pending-approval-border-color` (defa
 `var(--lr-color-warning)`) — color of the entry body's leading border while that entry's
 `data-pending-approval` is `"true"`.
 
+**Additional API surface:**
+
+- `--lr-tool-timeline-running-marker-color` — Running rail dot. Default: `var(--lr-color-brand)`.
+- `--lr-tool-timeline-success-marker-color` — Success rail dot. Default: `var(--lr-color-success)`.
+- `--lr-tool-timeline-error-marker-color` — Error rail dot. Default: `var(--lr-color-danger)`.
+- `--lr-tool-timeline-approved-bg` — Approved badge background. Default: `var(--lr-color-success-quiet)`.
+- `--lr-tool-timeline-approved-color` — Approved badge foreground. Default: `var(--lr-color-success)`.
+- `--lr-tool-timeline-denied-bg` — Denied badge background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-tool-timeline-denied-color` — Denied badge foreground. Default: `var(--lr-color-danger)`.
+- `--lr-tool-timeline-error-color` — Expanded error text. Default: `var(--lr-color-danger)`.
+
 ## `lr-agent-eval-dashboard`
 
 Controlled evaluation overview with metric cards, a dependency-free trend chart, and run-status
@@ -15829,6 +16183,11 @@ boolean = true`; `chartHeight: string = '220px'`.
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `empty`.
 
+**Additional API surface:**
+
+- `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
+- `--lr-agent-eval-dashboard-active-background` — Active metric background. Default: `var(--lr-color-brand-quiet)`.
+
 ## `lr-approval-queue`
 
 Keyboard-accessible queue of pending tool calls backed by one reusable `lr-tool-approval-dialog`.
@@ -15843,6 +16202,10 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`.
+
+**Additional API surface:**
+
+- `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
 
 ## `lr-mcp-app`
 
@@ -15883,6 +16246,14 @@ saved versions, resolved preview, and save/run intents.
 import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
 ```
 
+**Additional API surface:**
+
+- `--lr-prompt-studio-field-hover-border` — Enabled field hover border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
+- `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Default: `var(--lr-color-brand-quiet)`.
+
 ## `lr-schema-viewer`
 
 Recursive JSON Schema inspector with property/branch selection, required and constraint display,
@@ -15900,6 +16271,15 @@ It intentionally does not fetch remote references or validate values.
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
 ```
 
+**Additional API surface:**
+
+- `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
+- `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
+
 ## `lr-subagent-panel`
 
 Controlled nested-agent hierarchy with lifecycle badges, task/model context, guarded progress,
@@ -15916,6 +16296,13 @@ parents remain renderable instead of recursing forever.
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
 ```
+
+**Additional API surface:**
+
+- `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
+- `--lr-subagent-panel-selected-border` — Selected run border. Default: `var(--lr-color-brand)`.
+- `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
+- `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
 
 # Retrieval, knowledge graph & grounding (`components/retrieval/`)
 
@@ -16607,9 +16994,9 @@ fired after every toggle including select-all).
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
 `select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
-(`role="tree"`), `item` (`role="treeitem"`), `checkbox` (tri-state glyph), `icon` (the
-`lr-file-icon` type badge), `label`, `empty` (`noData` when `sources` is empty, `noMatches` when a
-filter empties the tree).
+(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's expand/collapse button),
+`checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
+when `sources` is empty, `noMatches` when a filter empties the tree).
 
 **Themeable custom properties:** `--lr-source-picker-checked-bg` — the background of a fully-checked
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
@@ -17583,6 +17970,9 @@ omitted.
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
 **CSS parts:** `base`, `plot`, `point`, `empty`.
+
+**Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
+`var(--lr-color-brand)`) — stroke color of the selected point. Plus shared tokens.
 
 ## `lr-knowledge-base-admin`
 

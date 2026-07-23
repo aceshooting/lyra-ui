@@ -6,7 +6,7 @@
 - **Class** `LyraSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,3 +27,12 @@ It intentionally does not fetch remote references or validate values.
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
 ```
+
+**Additional API surface:**
+
+- `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
+- `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.

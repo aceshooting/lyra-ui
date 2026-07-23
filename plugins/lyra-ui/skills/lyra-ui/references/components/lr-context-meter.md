@@ -6,7 +6,7 @@
 - **Class** `LyraContextMeter`, also available unregistered from `@aceshooting/lyra-ui/components/data/context-meter/context-meter.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,5 +89,11 @@ numbers, so the two circular-meter components in the library share one visual sc
 - Segment order is significant for the ring's cumulative `stroke-dashoffset` — later entries in
   `segments` render further around the circle (starting at 12 o'clock, going clockwise); there's no
   independent sort/z-order control.
+
+**Additional API surface:**
+
+- `part="segment-item"` — One visually-hidden segment label/count pair.
+- `part="segment-list"` — The visually-hidden list exposing the segment breakdown.
+- `part="semantic"` — The visually-hidden meter/group carrying aggregate range semantics.
 
 ---

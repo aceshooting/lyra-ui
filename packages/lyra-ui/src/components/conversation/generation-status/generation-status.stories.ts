@@ -31,6 +31,27 @@ export const Static: Story = {
   `,
 };
 
+export const Narrow320: Story = {
+  name: 'Narrow (320px), long localized metrics',
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%;">
+      <lr-generation-status
+        style="inline-size:100%"
+        active
+        started-at=${Date.now() - 83000}
+        token-count="999999999999"
+        tokens-per-second="999999.9"
+        .strings=${{
+          generationStatusTokensCount:
+            'AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}',
+          generationStatusThroughput:
+            'AnExtremelyLongLocalizedThroughputDescriptionWithoutNaturalBreaks {rate}',
+        }}
+      ></lr-generation-status>
+    </div>
+  `,
+};
+
 export const ElapsedOnly: Story = {
   name: 'Elapsed only (no token data available yet)',
   render: () => html`<lr-generation-status active started-at=${Date.now()}></lr-generation-status>`,

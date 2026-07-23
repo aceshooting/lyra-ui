@@ -149,6 +149,10 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   (`variant="detailed"` is the replacement); left unset, `variant` falls back to honoring `detailed`
   for one more minor version before removal.
 
+**Additional API surface:**
+
+- `part="error"` — Localized alert rendered when the optional peer resolver is unavailable or fails.
+
 ---
 
 ## `lr-playback`
@@ -165,8 +169,8 @@ Steps an index through `[0, length)` on a fixed interval — play/pause for time
   change-tracking sees it and auto-pauses on `hidden = true`)
 
 **Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`, `goTo(index: number)` — all
-idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)` and `blur()` forward
-to the play button.
+idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)`, `blur()`, and
+`click()` forward to the play button.
 
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-step` (`detail: { index }`, fired on every
 tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed host events.
@@ -468,6 +472,8 @@ Before/after comparison surface with two named slots and a keyboard-accessible n
 **Events:** `lr-position-change` (`detail: { position }`), plus composed `focus` and `blur` events
 from the internal range handle.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal range handle.
+
 **Slots:** `before`, `after`.
 
 **CSS parts:** `base`, `before`, `after`, `divider`, and `handle`.
@@ -711,6 +717,9 @@ drop-in still does something useful, but `lr-open` fires first — a host callin
 `preventDefault()` on it suppresses that default download/open so it can substitute its own
 handling.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
+current media kind.
+
 **Slots:** none.
 
 **CSS parts:** `base` (a `<button>` for `kind="image"`, a plain wrapper `<div>` for `kind="video"`,
@@ -847,6 +856,10 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
 
+**Additional API surface:**
+
+- `click()` — Activates the internal attachment trigger.
+
 ---
 
 ## `lr-avatar`
@@ -965,6 +978,10 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
   swap.
+
+**Additional API surface:**
+
+- `click()` — Activate the play/pause control.
 
 ## `lr-animation`
 
@@ -1204,12 +1221,18 @@ mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
 `var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
 independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
-carries. All three are declared as inline `var()` fallbacks at the point of use rather than on
-`:host`, so each can be set on the element *or on any ancestor*: `::part(highlight)[data-active]` is
-invalid CSS — Shadow Parts forbids an attribute selector after `::part()` — which previously left
-overriding the library-wide `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever,
-repainting every other element that read them. Unset, each falls back to the token its rule used
-before.
+carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-border`,
+`--lr-image-viewer-highlight-bg`, and the tone-specific
+`--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
+`--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
+`--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
+`--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
+properties. These properties are declared as inline `var()` fallbacks at the point of use rather
+than on `:host`, so each can be set on the element *or on any ancestor*:
+`::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — which previously left overriding the library-wide
+`--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
+element that read them. Unset, each falls back to the token its rule used before.
 
 ## `lr-av-player`
 

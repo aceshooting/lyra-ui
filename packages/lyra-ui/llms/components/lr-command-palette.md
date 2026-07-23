@@ -6,7 +6,7 @@
 - **Class** `LyraCommandPalette`, also available unregistered from `@aceshooting/lyra-ui/components/layout/command-palette/command-palette.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -60,3 +60,10 @@ of use rather than a `:host` declaration, so it can be set on the element *or on
 after `::part()`), so highlighting the active row previously required hijacking the library-wide
 `--lr-color-brand-quiet` token and repainting everything else that read it. Unset, it falls back to
 that token, so rendering is unchanged.
+
+**Additional API surface:**
+
+- `part="command-group"` — A labeled ARIA group containing visible command options.
+- `part="list-spacer"` — Virtual result extent inside the scrolling list.
+- `--lr-command-palette-row-height` — Virtual command-row height. Default: `var(--lr-size-3rem)`.
+- `--lr-command-palette-group-height` — Virtual group-heading height. Default: `var(--lr-size-2rem)`.

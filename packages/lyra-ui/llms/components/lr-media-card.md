@@ -52,6 +52,9 @@ drop-in still does something useful, but `lr-open` fires first — a host callin
 `preventDefault()` on it suppresses that default download/open so it can substitute its own
 handling.
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the primary action for the
+current media kind.
+
 **Slots:** none.
 
 **CSS parts:** `base` (a `<button>` for `kind="image"`, a plain wrapper `<div>` for `kind="video"`,

@@ -420,3 +420,43 @@ it('is accessible while active with tokens, throughput, and the stop button all 
   expect(throughputText(el)).to.equal('27 tok/s');
   await expect(el).to.be.accessible();
 });
+
+it('preserves elapsed time and keeps ticking when an active valid startedAt becomes invalid', async () => {
+  const el = (await fixture(
+    html`<lr-generation-status .active=${true} .startedAt=${Date.now() - 2000}></lr-generation-status>`,
+  )) as LyraGenerationStatus;
+  const before = parseElapsedSeconds(elapsedText(el));
+
+  el.startedAt = undefined;
+  await el.updateComplete;
+  const afterClear = parseElapsedSeconds(elapsedText(el));
+  expect(afterClear).to.be.closeTo(before, 0.3);
+
+  await aTimeout(1150);
+  expect(parseElapsedSeconds(elapsedText(el))).to.be.greaterThan(afterClear + 0.5);
+});
+
+it('wraps long localized metrics inside a 320px allocation while keeping Stop reachable', async () => {
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lr-generation-status
+      style="inline-size:100%"
+      .active=${true}
+      .startedAt=${Date.now() - 65000}
+      token-count="999999999999"
+      tokens-per-second="999999.9"
+      .strings=${{
+        generationStatusTokensCount:
+          'AnExtremelyLongLocalizedTokenDescriptionWithoutNaturalBreaks {count}',
+        generationStatusThroughput:
+          'AnExtremelyLongLocalizedThroughputDescriptionWithoutNaturalBreaks {rate}',
+      }}
+    ></lr-generation-status>`,
+    { parentNode: container },
+  )) as LyraGenerationStatus;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const stop = el.shadowRoot!.querySelector('[part="stop-button"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  expect(stop.getBoundingClientRect().right).to.be.at.most(container.getBoundingClientRect().right + 1);
+});

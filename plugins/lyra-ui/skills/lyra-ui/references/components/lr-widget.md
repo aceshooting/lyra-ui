@@ -6,7 +6,7 @@
 - **Class** `LyraWidget`, also available unregistered from `@aceshooting/lyra-ui/components/layout/widget/widget.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 14 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -124,5 +124,10 @@ panel'`) and `widgetExpand` (default `'Expand panel'`) keys.
   registered against those keys specifically to target `lr-widget`'s collapse button should move
   to `widgetCollapse`/`widgetExpand`; the default English strings are unchanged, and `lr-dock-panel`
   itself is unaffected.
+
+**Additional API surface:**
+
+- `part="view-icon"` — Decorative icon content inside a view toggle.
+- `part="view-label"` — Visible label text inside a view toggle.
 
 ---

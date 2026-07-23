@@ -5,13 +5,12 @@ export const styles = css`
     display: inline-flex;
     min-inline-size: 0;
     max-inline-size: 100%;
-    min-inline-size: 0;
     border-radius: var(--lr-radius);
   }
-  [part='base'][tabindex] {
+  [part='base']:where([tabindex]) {
     cursor: help;
   }
-  [part='base'][tabindex]:hover {
+  :where([part='base'][tabindex]):hover {
     background: var(--lr-color-surface-raised);
   }
   [part='base'] {
@@ -24,7 +23,7 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     font-variant-numeric: tabular-nums;
   }
-  [part='base'][tabindex]:focus-visible {
+  :where([part='base'][tabindex]):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }

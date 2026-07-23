@@ -127,7 +127,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   // Tracks the default slot's assigned-element count, the same connectedCallback/willUpdate +
   // slotchange convention `<lr-chip-group>`'s `childCount` already establishes.
   @state() private childCount = 0;
-  private readonly overflowHiddenChildren = new Map<HTMLElement, boolean>();
+  private readonly overflowHiddenChildren = new Map<HTMLElement, HTMLElement['hidden']>();
 
   protected override willUpdate(): void {
     if (!this.hasUpdated) {

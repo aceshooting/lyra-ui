@@ -161,7 +161,13 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
     const interims = this.interimEntries;
     const empty = this.entries.length === 0;
     return html`
-      <div part="base" tabindex="0" @scroll=${this.onScroll}>
+      <div
+        part="base"
+        role="region"
+        tabindex="0"
+        aria-label=${this.accessibleLabel || this.label || this.localize('transcriptFeedLabel')}
+        @scroll=${this.onScroll}
+      >
         ${empty
           ? html`<div part="empty"><slot name="empty">${this.localize('transcriptFeedEmpty')}</slot></div>`
           : html`

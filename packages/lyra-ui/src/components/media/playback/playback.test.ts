@@ -34,6 +34,15 @@ it('does not leak an untracked duplicate timer chain when play() is called synch
   expect(el.index).to.equal(indexAfterPause);
 });
 
+it('does not schedule a tick when an lr-play listener pauses reentrantly', async () => {
+  const el = (await fixture(html`<lr-playback length="10" interval-ms="20"></lr-playback>`)) as LyraPlayback;
+  el.addEventListener('lr-play', () => el.pause());
+  el.play();
+  await aTimeout(60);
+  expect(el.playing).to.be.false;
+  expect(el.index).to.equal(0);
+});
+
 it('advances the index on each tick and wraps when loop is true', async () => {
   const el = (await fixture(
     html`<lr-playback length="3" interval-ms="20"></lr-playback>`,
@@ -289,6 +298,14 @@ it('forwards public focus and blur to the play button', async () => {
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('play-button');
   el.blur();
   expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('forwards host click() to the play button', async () => {
+  const el = (await fixture(html`<lr-playback length="3"></lr-playback>`)) as LyraPlayback;
+  el.click();
+  expect(el.playing).to.be.true;
+  el.click();
+  expect(el.playing).to.be.false;
 });
 
 it('bridges internal control focus and blur as bubbling, composed host events', async () => {

@@ -56,3 +56,8 @@ point of use rather than a `:host` declaration, so it can be set on the element 
 `::part(trigger)[data-state='recording']` is invalid CSS (Shadow Parts forbids an attribute selector
 after `::part()`), so re-pointing the shared `--lr-color-danger` token was previously the only way,
 and it repainted every other danger surface with it.
+
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal push-to-talk control.
+- `focus()` — Forwards host focus to the internal push-to-talk control.

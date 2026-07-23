@@ -208,6 +208,8 @@ describe("lr-card", () => {
       expect(activation.tagName).to.equal("BUTTON");
       expect(activation.getAttribute("aria-label")).to.equal("body");
       expect(activation.getAttribute("tabindex")).to.equal("0");
+      expect(getComputedStyle(activation).minInlineSize).to.equal("40px");
+      expect(getComputedStyle(activation).minBlockSize).to.equal("40px");
       expect(base(el).hasAttribute("tabindex")).to.be.false;
       expect(base(el).hasAttribute("role")).to.be.false;
 

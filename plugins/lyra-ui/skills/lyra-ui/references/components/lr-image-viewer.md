@@ -6,7 +6,7 @@
 - **Class** `LyraImageViewer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,9 +47,15 @@ mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
 `var(--lr-color-brand)`) — the outline of the `[part='highlight']` matching `activeHighlightId`,
 independent of the per-tone border colors, so the active box stays distinguishable whatever tone it
-carries. All three are declared as inline `var()` fallbacks at the point of use rather than on
-`:host`, so each can be set on the element *or on any ancestor*: `::part(highlight)[data-active]` is
-invalid CSS — Shadow Parts forbids an attribute selector after `::part()` — which previously left
-overriding the library-wide `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever,
-repainting every other element that read them. Unset, each falls back to the token its rule used
-before.
+carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-border`,
+`--lr-image-viewer-highlight-bg`, and the tone-specific
+`--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
+`--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
+`--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
+`--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
+properties. These properties are declared as inline `var()` fallbacks at the point of use rather
+than on `:host`, so each can be set on the element *or on any ancestor*:
+`::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()` — which previously left overriding the library-wide
+`--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other
+element that read them. Unset, each falls back to the token its rule used before.

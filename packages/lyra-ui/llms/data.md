@@ -591,6 +591,11 @@ spacing, border, radius, disabled-opacity, and focus-ring tokens.
 - below a 20rem container allocation the summary and controls stack; the breakpoint responds to
   the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
 
+**Additional API surface:**
+
+- `click()` — Forward host activation to the primary editable page control.
+- `--lr-pagination-control-radius` — Border radius of navigation buttons and the page input. Default: `var(--lr-radius)`.
+
 ---
 
 ## `lr-gauge`
@@ -1234,6 +1239,12 @@ indentation), plus the shared tokens listed above.
 - `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
   from `nodes` on every render and keyed by filesystem path, an order it does not own.
 
+**Additional API surface:**
+
+- `--lr-tree-selected-color` — Selected-node text color.
+- `--lr-tree-selected-bg` — Selected-node background.
+- `ancestry` — Ancestor object identities used to stop cyclic caller graphs before recursive rendering. Type: `TreeItem[]`.
+
 ---
 
 ## `lr-flow-canvas`
@@ -1354,6 +1365,12 @@ treatment entirely.
   deltas are mirrored so content still visually follows the cursor, matching every other
   RTL-mirrored surface in this library.
 
+**Additional API surface:**
+
+- `part="edge-hit-area"` — The transparent wide pointer target behind an edge.
+- `part="node-control"` — The visually hidden, roving selection button for a node.
+- `--lr-flow-canvas-node-selected-outline-color` — Outline color of a selected node. Default: `var(--lr-flow-canvas-node-current-outline-color,var(--lr-color-brand))`.
+
 ---
 
 ## `lr-flow-node`
@@ -1460,6 +1477,11 @@ draggable, focusable view rectangle).
   currently renders.
 - Dragging the viewport rectangle calls the canvas's `setViewport()` directly; there's no separate
   event to wire up.
+
+**Additional API surface:**
+
+- `part="instructions"` — Visually hidden keyboard instructions for the viewport.
+- `part="live-region"` — Visually hidden viewport-change announcements.
 
 ---
 
@@ -1638,6 +1660,12 @@ numbers, so the two circular-meter components in the library share one visual sc
   `segments` render further around the circle (starting at 12 o'clock, going clockwise); there's no
   independent sort/z-order control.
 
+**Additional API surface:**
+
+- `part="segment-item"` — One visually-hidden segment label/count pair.
+- `part="segment-list"` — The visually-hidden list exposing the segment breakdown.
+- `part="semantic"` — The visually-hidden meter/group carrying aggregate range semantics.
+
 ---
 
 ## `lr-calendar`
@@ -1806,6 +1834,15 @@ parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker
 `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`, `save-row`, `save-name-input`,
 `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`, `saved-load-button`,
 `saved-delete-button`, `saved-empty`.
+
+**Additional API surface:**
+
+- `errorText` — Caller-supplied outer error text. Field-level validation remains on the affected controls. Type: `string`.
+- `hint` — Supporting text rendered below the outer label. Type: `string`.
+- `error-text` attribute — Caller-supplied outer error text. Field-level validation remains on the affected controls.
+- `hint` attribute — Supporting text rendered below the outer label.
+- `hint` slot — Supporting text for the complete form control.
+- `part="hint"` — Supporting text for the complete form control.
 
 ## `lr-query-builder`
 

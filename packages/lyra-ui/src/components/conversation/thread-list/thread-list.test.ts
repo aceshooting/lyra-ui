@@ -105,6 +105,51 @@ it('restores injected slotted roles outside slotted mode and reapplies them on r
   }
 });
 
+it('preserves an author-supplied slotted role across mode changes and reconnects', async () => {
+  const el = (await fixture(html`
+    <lr-thread-list>
+      <lr-conversation-item role="option" title="Manual row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  const row = el.querySelector('lr-conversation-item')!;
+  expect(row.getAttribute('role')).to.equal('option');
+
+  el.threads = [{ id: 'data', title: 'Data row' }];
+  await el.updateComplete;
+  expect(row.getAttribute('role')).to.equal('option');
+
+  el.threads = [];
+  await el.updateComplete;
+  expect(row.getAttribute('role')).to.equal('option');
+
+  el.remove();
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    expect(row.getAttribute('role')).to.equal('option');
+  } finally {
+    el.remove();
+  }
+});
+
+it('restores a removed slotted child and marks its replacement as a list item', async () => {
+  const el = (await fixture(html`
+    <lr-thread-list>
+      <lr-conversation-item title="First row"></lr-conversation-item>
+    </lr-thread-list>
+  `)) as LyraThreadList;
+  const first = el.querySelector('lr-conversation-item')!;
+  expect(first.getAttribute('role')).to.equal('listitem');
+
+  const replacement = document.createElement('lr-conversation-item');
+  replacement.setAttribute('title', 'Replacement row');
+  first.replaceWith(replacement);
+  await nextFrame();
+
+  expect(first.hasAttribute('role')).to.be.false;
+  expect(replacement.getAttribute('role')).to.equal('listitem');
+});
+
 describe('data mode', () => {
   it('renders one lr-conversation-item per non-archived thread by default, grouped by date', async () => {
     const el = (await fixture(
@@ -174,14 +219,18 @@ describe('data mode', () => {
     await nextFrame();
 
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    const groupLabels = [...list.shadowRoot!.querySelectorAll('[part~="group-label"]')].map((group) =>
+    const groupLabels = [...list.shadowRoot!.querySelectorAll('span[part~="group-label"]')].map((group) =>
       group.textContent?.trim(),
     );
     expect(groupLabels).to.deep.equal(['beta:1', 'alpha:2']);
     expect(dataRows(el).map((row) => row.id)).to.deep.equal(['b1', 'a1', 'a2']);
-    const toggles = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="group-toggle"]')];
+    const toggles = [...list.shadowRoot!.querySelectorAll<HTMLButtonElement>('button[part~="group-toggle"]')];
     expect(toggles.every((toggle) => !toggle.hasAttribute('aria-label'))).to.be.true;
-    expect(toggles.map((toggle) => toggle.textContent?.trim())).to.deep.equal(['beta:1', 'alpha:2']);
+    expect(
+      toggles.map((toggle) =>
+        toggle.querySelector('[part~="group-label"]')?.textContent?.trim(),
+      ),
+    ).to.deep.equal(['beta:1', 'alpha:2']);
   });
 
   it('keeps group collapse controlled and removes collapsed rows from virtual-list measurement', async () => {
@@ -589,14 +638,16 @@ describe('data mode', () => {
           .strings=${{ threadListMatchAnnouncePlural: 'MATCHES {count}' }}
         ></lr-thread-list>
       `)) as LyraThreadList;
+      const liveRegion = el.shadowRoot!.querySelector('lr-live-region')!;
+      liveRegion.throttleMs = 0;
+      await liveRegion.updateComplete;
       const input = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
       input.value = 'ı';
       input.dispatchEvent(new Event('input'));
       await el.updateComplete;
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       expect(renderedThreadIds(el)).to.deep.equal(['one', 'two']);
-      const region = el.shadowRoot!
-        .querySelector('lr-live-region')!
-        .shadowRoot!.querySelector('[part="region"]')!;
+      const region = liveRegion.shadowRoot!.querySelector('[part="region"]')!;
       expect(region.textContent).to.equal(
         `MATCHES ${new Intl.NumberFormat('tr-u-nu-arab').format(2)}`,
       );

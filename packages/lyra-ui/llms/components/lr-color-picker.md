@@ -6,7 +6,7 @@
 - **Class** `LyraColorPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,3 +26,10 @@ parts:** `form-control`, `form-control-label` (the label; `label` is an alias ke
 **Themeable custom properties:** `--lr-color-picker-swatch-size` — the swatch's inline and block size,
 auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
 the size ladder `lr-input` uses.
+
+**Additional API surface:**
+
+- `click()` — Activates the internal color input.
+- `--lr-color-picker-gap` — Gap between field chrome. Default: `var(--lr-space-xs)`.
+- `--lr-color-picker-radius` — Swatch corner radius. Default: `var(--lr-radius)`.
+- `--lr-color-picker-hover-border-color` — Hover border color. Default: `var(--lr-color-brand)`.

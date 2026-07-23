@@ -20,3 +20,9 @@ inside each star, clipped to the fractional `precision` value). **Themeable cust
 `--lr-rating-fill` (default `--lr-color-warning` — filled-star color), `--lr-rating-empty-color`
 (default `--lr-color-border` — unfilled-star color), and `--lr-rating-size` (default
 `--lr-font-size-xl` — star size).
+
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal rating control.
+- `click()` — Forwards host activation to the internal rating control.
+- `focus()` — Forwards host focus to the internal rating control.

@@ -8,6 +8,7 @@ import '../../forms/input/input.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './source-picker.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 export interface LyraSourceEntry {
   id: string;
@@ -45,6 +46,7 @@ interface SourceRow {
  * @csspart summary - The "{selected} of {total} selected" text.
  * @csspart tree - The `role="tree"` container.
  * @csspart item - One `role="treeitem"` row.
+ * @csspart disclosure - A folder row's expand/collapse button.
  * @csspart checkbox - The tri-state checkbox glyph.
  * @csspart icon - The `lr-file-icon` type badge.
  * @csspart label - The entry's label text.
@@ -87,7 +89,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
       }
     };
     walk(entries);
-    return acc;
+    return [...new Set(acc)];
   }
 
   private descendantLeafIds(entry: LyraSourceEntry): string[] {
@@ -104,7 +106,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   }
 
   private matchesQuery(entry: LyraSourceEntry): boolean {
-    return entry.label.toLowerCase().includes(this.query.trim().toLowerCase());
+    return entry.label
+      .toLocaleLowerCase(this.effectiveLocale)
+      .includes(this.query.trim().toLocaleLowerCase(this.effectiveLocale));
   }
 
   private entryMatchesOrHasMatch(entry: LyraSourceEntry): boolean {
@@ -232,6 +236,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         aria-checked=${state}
         aria-selected=${state !== 'false' ? 'true' : 'false'}
         aria-expanded=${row.hasChildren ? (expanded ? 'true' : 'false') : nothing}
+        aria-level=${row.depth + 1}
         style=${styleMap({ paddingInlineStart: `${row.depth * 1.25}rem` })}
         @click=${() => {
           this.activeId = row.entry.id;
@@ -241,6 +246,22 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
           this.activeId = row.entry.id;
         }}
       >
+        ${row.hasChildren
+          ? html`<button
+              part="disclosure"
+              type="button"
+              tabindex="-1"
+              aria-label=${this.localize(expanded ? 'showLess' : 'showMore')}
+              aria-expanded=${expanded ? 'true' : 'false'}
+              @click=${(event: MouseEvent) => {
+                event.stopPropagation();
+                const next = new Set(this.expandedIds);
+                if (expanded) next.delete(row.entry.id);
+                else next.add(row.entry.id);
+                this.expandedIds = next;
+              }}
+            >${expanded ? '−' : '+'}</button>`
+          : nothing}
         <span part="checkbox" aria-hidden="true" data-state=${state}></span>
         <lr-file-icon part="icon" decorative mime-type=${row.entry.mimeType ?? ''} name=${row.entry.name ?? row.entry.label}></lr-file-icon>
         <span part="label">${row.entry.label}</span>
@@ -256,6 +277,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     const rows = this.visibleRows();
     const activeId = this.activeId ?? rows[0]?.entry.id ?? null;
     const allLeaves = this.allLeafIds();
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     const selectAllState: 'true' | 'false' | 'mixed' =
       this.selectedIds.length === 0
         ? 'false'
@@ -271,6 +293,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               placeholder=${this.localize('search')}
               .value=${this.query}
               @lr-input=${(e: CustomEvent<{ value: string }>) => {
+                e.stopPropagation();
                 this.query = e.detail.value;
               }}
             ></lr-input>`
@@ -289,7 +312,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
                 }}
                 >${this.localize('selectAllSources')}</span
               >
-              <span part="summary">${this.localize('sourcePickerSelection', undefined, { selected: this.selectedIds.length, total: allLeaves.length })}</span>
+              <span part="summary">${this.localize('sourcePickerSelection', undefined, {
+                selected: numberFormat.format(this.selectedIds.length),
+                total: numberFormat.format(allLeaves.length),
+              })}</span>
             </div>`
           : nothing}
         ${rows.length === 0

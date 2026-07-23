@@ -84,6 +84,16 @@ export interface LyraBrowserFrameEventMap {
  * @csspart frame - The `frame-src` `<img>` (absent once the default slot is populated).
  * @csspart ping - One action-ping marker; carries `data-kind`.
  * @cssprop [--lr-browser-frame-aspect-ratio=16 / 9] - The viewport's aspect ratio.
+ * @cssprop [--lr-browser-frame-controller-background=var(--lr-color-brand-quiet)] - Controller
+ *   badge background.
+ * @cssprop [--lr-browser-frame-controller-color=var(--lr-color-brand)] - Controller badge text
+ *   color.
+ * @cssprop [--lr-browser-frame-ping-click-color=var(--lr-color-brand)] - Click-ping border color.
+ * @cssprop [--lr-browser-frame-ping-type-color=var(--lr-color-success)] - Type-ping border color.
+ * @cssprop [--lr-browser-frame-ping-scroll-color=var(--lr-color-warning)] - Scroll-ping border
+ *   color.
+ * @cssprop [--lr-browser-frame-ping-move-color=var(--lr-color-text-quiet)] - Move-ping border
+ *   color.
  */
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];

@@ -92,6 +92,22 @@ describe('defaults', () => {
   });
 });
 
+it('forwards host focus(), blur(), and click() to the resolved primary action', async () => {
+  const el = (await fixture(html`
+    <lr-media-card src="https://example.test/a.mp4" kind="video"></lr-media-card>
+  `)) as LyraMediaCard;
+  const button = el.shadowRoot!.querySelector('[part="open-button"]') as HTMLButtonElement;
+  let opens = 0;
+  el.addEventListener('lr-open', () => opens++);
+  el.focus();
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('open-button');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+  el.click();
+  expect(opens).to.equal(1);
+  expect(button.disabled).to.be.false;
+});
+
 describe('kind resolution', () => {
   it('reflects kind onto the host attribute when explicitly set', async () => {
     const el = (await fixture(html`<lr-media-card kind="video"></lr-media-card>`)) as LyraMediaCard;

@@ -138,3 +138,7 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 - An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
   the empty string, and `required` is what rejects it.
 - `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
+
+**Additional API surface:**
+
+- `click()` — Activates the internal input.

@@ -5,13 +5,13 @@ export const styles = css`
     display: block;
     container-type: inline-size;
     --_lr-trace-tree-bar-column: var(--lr-size-6rem);
-    --_lr-trace-tree-tokens-in-column: 0px;
-    --_lr-trace-tree-tokens-out-column: 0px;
-    --_lr-trace-tree-cost-column: 0px;
+    --_lr-trace-tree-tokens-in-column: 0;
+    --_lr-trace-tree-tokens-out-column: 0;
+    --_lr-trace-tree-cost-column: 0;
   }
 
   :host([hide-bars]) {
-    --_lr-trace-tree-bar-column: 0px;
+    --_lr-trace-tree-bar-column: 0;
   }
 
   :host([show-tokens]) {
@@ -37,9 +37,9 @@ export const styles = css`
     display: grid;
     grid-template-columns:
       var(--lr-icon-button-size)
-      1em
+      var(--lr-size-1em)
       minmax(var(--lr-size-4rem), 1fr)
-      minmax(0px, 0.75fr)
+      minmax(0, 0.75fr)
       max-content
       var(--_lr-trace-tree-bar-column)
       var(--lr-size-3-5rem)
@@ -285,9 +285,9 @@ export const styles = css`
     [part='row'] {
       grid-template-columns:
         var(--lr-icon-button-size)
-        1em
+        var(--lr-size-1em)
         minmax(var(--lr-size-4rem), 1fr)
-        minmax(0px, 0.75fr)
+        minmax(0, 0.75fr)
         max-content
         var(--_lr-trace-tree-bar-column)
         var(--lr-size-3-5rem);
@@ -301,9 +301,9 @@ export const styles = css`
     [part='row'] {
       grid-template-columns:
         var(--lr-icon-button-size)
-        1em
+        var(--lr-size-1em)
         minmax(var(--lr-size-4rem), 1fr)
-        minmax(0px, 0.75fr)
+        minmax(0, 0.75fr)
         max-content
         var(--lr-size-3-5rem);
     }

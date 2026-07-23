@@ -184,3 +184,25 @@ describe('lifecycle: super calls', () => {
     }
   });
 });
+
+it('forwards the host aria-label to the actual disclosure button', async () => {
+  const el = (await fixture(
+    html`<lr-source-list aria-label="Evidence sources"></lr-source-list>`,
+  )) as LyraSourceList;
+  expect(el.shadowRoot!.querySelector('[part="header"]')!.getAttribute('aria-label')).to.equal(
+    'Evidence sources',
+  );
+});
+
+it('exposes slotted cards as list items while preserving author roles on removal', async () => {
+  const card = document.createElement('lr-source-card');
+  const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
+  el.append(card);
+  await el.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve));
+  expect(el.shadowRoot!.querySelector('[part="list"]')!.getAttribute('role')).to.equal('list');
+  expect(card.getAttribute('role')).to.equal('listitem');
+  card.remove();
+  await new Promise((resolve) => setTimeout(resolve));
+  expect(card.hasAttribute('role')).to.be.false;
+});

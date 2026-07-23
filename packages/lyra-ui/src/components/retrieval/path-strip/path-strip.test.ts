@@ -114,3 +114,21 @@ it('gives node and relation a hover state', () => {
   expect(css).to.match(/\[part='node'\]:hover/);
   expect(css).to.match(/\[part='relation'\]:hover/);
 });
+
+it('formats announced positions with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-path-strip lang="ar-u-nu-arab" .path=${path}></lr-path-strip>`,
+  )) as LyraPathStrip;
+  (el.shadowRoot!.querySelector('[part="node"]') as HTMLButtonElement).focus();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.contain('١');
+  expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent).to.contain('٣');
+});
+
+it('moves focus to a surviving path control when the focused item is removed', async () => {
+  const el = (await fixture(html`<lr-path-strip .path=${path}></lr-path-strip>`)) as LyraPathStrip;
+  (el.shadowRoot!.querySelectorAll('[part="node"]')[1] as HTMLButtonElement).focus();
+  el.path = path.slice(0, 1);
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('node');
+});

@@ -6,7 +6,7 @@
 - **Class** `LyraTokenInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/token-input/token-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -66,3 +66,14 @@ e.g. to pixel-match a sibling field in the same toolbar row), `--lr-token-input-
 inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
 (default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).
+
+**Additional API surface:**
+
+- `--lr-token-input-token-padding` — Per-token chip padding, scaled by `size`.
+- `--lr-token-input-gap` — Gap between form/row children. Default: `var(--lr-space-xs)`.
+- `--lr-token-input-token-gap` — Gap inside token chips. Default: `var(--lr-space-2xs)`.
+- `--lr-token-input-radius` — Row/token corner radius. Default: `var(--lr-radius)`.
+- `--lr-token-input-token-bg` — Token chip background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-action-hover-bg` — Edit/remove hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-token-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.

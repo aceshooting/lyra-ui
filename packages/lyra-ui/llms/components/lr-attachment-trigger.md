@@ -88,4 +88,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
 
+**Additional API surface:**
+
+- `click()` — Activates the internal attachment trigger.
+
 ---

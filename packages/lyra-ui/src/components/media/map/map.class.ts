@@ -259,6 +259,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return finiteRange(this.zoom, 2, 0, 22);
   }
 
+  /** Longitude/latitude normalized before reaching MapLibre's constructor or live setter. */
+  private get safeCenter(): [number, number] {
+    const center = Array.isArray(this.center) ? this.center : [];
+    return [
+      finiteRange(Number(center[0]), 0, -180, 180),
+      finiteRange(Number(center[1]), 0, -90, 90),
+    ];
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     const generation = ++this._connectGeneration;
@@ -333,7 +342,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this._map = new mod.Map({
       container: this.containerEl,
       style: this.mapStyle,
-      center: this.center,
+      center: this.safeCenter,
       zoom: this.safeZoom,
     });
     // maplibre-gl's Evented base rethrows an 'error' emission that has no
@@ -397,12 +406,27 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         this.applyDataLayers();
       });
       this._map.setStyle(this.mapStyle);
-    } else if (changed.has('choropleth') && this._styleLoaded) {
-      this.applyChoropleth();
-    } else if (changed.has('dataLayers') && this._styleLoaded) {
-      this.applyDataLayers();
+    } else if (this._styleLoaded) {
+      if (changed.has('dataLayers')) {
+        const collides = Boolean(
+          this.choropleth &&
+          this.dataLayers.some((layer) => layer.sourceId === this.choropleth!.sourceId),
+        );
+        // When introducing a collision, move the choropleth out of the public namespace before
+        // applying the data source. When removing one, release the data source first so the
+        // choropleth can move back to its public id without MapLibre observing duplicate ids.
+        if (collides) {
+          this.applyChoropleth();
+          this.applyDataLayers();
+        } else {
+          this.applyDataLayers();
+          this.applyChoropleth();
+        }
+      } else if (changed.has('choropleth')) {
+        this.applyChoropleth();
+      }
     }
-    if (changed.has('center') && this._map) this._map.setCenter(this.center);
+    if (changed.has('center') && this._map) this._map.setCenter(this.safeCenter);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
     if (changed.has('markers') && this._map) this.applyMarkers();
   }
@@ -413,7 +437,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.removeChoropleth();
       return;
     }
-    const { sourceId, geojson, field, stops } = this.choropleth;
+    const { geojson, field, stops } = this.choropleth;
+    const sourceId = this.dataLayers.some((layer) => layer.sourceId === this.choropleth!.sourceId)
+      ? `lr-choropleth-${this.choropleth.sourceId}`
+      : this.choropleth.sourceId;
     const fillLayerId = `${sourceId}-fill`;
 
     if (this._appliedChoroplethSourceId && this._appliedChoroplethSourceId !== sourceId) {
@@ -616,6 +643,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         } else if (popup) {
           existing.setPopup(undefined);
         }
+      }
+      const markerElement = (this._markerInstances.get(key) as { getElement?: () => HTMLElement } | undefined)
+        ?.getElement?.();
+      if (markerElement) {
+        if (m.label) markerElement.setAttribute('aria-label', m.label);
+        else markerElement.removeAttribute('aria-label');
       }
     }
     for (const [key, marker] of this._markerInstances) {

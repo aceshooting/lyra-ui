@@ -1,6 +1,7 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './usage-badge.js';
 import type { LyraUsageBadge } from './usage-badge.js';
+import { styles } from './usage-badge.styles.js';
 
 it('defaults to no tokensIn/tokensOut/costText/latencyMs, compact=false', async () => {
   const el = (await fixture(html`<lr-usage-badge></lr-usage-badge>`)) as LyraUsageBadge;
@@ -35,6 +36,14 @@ it('formats latency-ms with the shared duration algorithm', async () => {
   expect(sub.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('820ms');
   const over = (await fixture(html`<lr-usage-badge latency-ms="1500"></lr-usage-badge>`)) as LyraUsageBadge;
   expect(over.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal('1.5s');
+});
+
+it('uses the effective locale when formatting the built-in duration', async () => {
+  const el = (await fixture(
+    html`<lr-usage-badge locale="ar" latency-ms="1500"></lr-usage-badge>`,
+  )) as LyraUsageBadge;
+  const formatted = new Intl.NumberFormat('ar', { maximumFractionDigits: 1 }).format(1.5);
+  expect(el.shadowRoot!.querySelector('[part="latency"]')!.textContent!.trim()).to.equal(`${formatted}s`);
 });
 
 it('omits the latency segment for a non-numeric latency-ms, and clamps a negative one to "0ms" instead of a negative reading', async () => {
@@ -213,6 +222,51 @@ describe('tooltip breakdown', () => {
     expect(assigned).to.have.length(1);
     expect(assigned[0].textContent).to.include('Cache-read: 500');
   });
+
+  it('keeps slotted tooltip rows inert even when a host supplies an interactive descendant', async () => {
+    const el = (await fixture(
+      html`<lr-usage-badge tokens-in="10"><button id="tooltip-action">Action</button></lr-usage-badge>`,
+    )) as LyraUsageBadge;
+    const wrapper = el.shadowRoot!.querySelector('.slot-content') as HTMLElement;
+    const action = el.querySelector('#tooltip-action') as HTMLButtonElement;
+    expect(wrapper.inert).to.be.true;
+
+    action.focus();
+    expect(document.activeElement).to.not.equal(action);
+  });
+
+  it('closes and removes the tooltip focus stop when the last prop-driven row is cleared', async () => {
+    const el = (await fixture(html`<lr-usage-badge latency-ms="100"></lr-usage-badge>`)) as LyraUsageBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.be.false;
+
+    el.latencyMs = undefined;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('tabindex')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.be.null;
+
+    el.latencyMs = 100;
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.be.true;
+  });
+
+  it('closes when removing the last slotted tooltip row', async () => {
+    const el = (await fixture(
+      html`<lr-usage-badge><span>Cache-read: 500</span></lr-usage-badge>`,
+    )) as LyraUsageBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new Event('focus'));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement).hidden).to.be.false;
+
+    el.firstElementChild!.remove();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).hasAttribute('tabindex')).to.be.false;
+    expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.be.null;
+  });
 });
 
 it('localizes built-in tooltip row labels via .strings', async () => {
@@ -238,6 +292,34 @@ it('is accessible with every segment set and the tooltip open', async () => {
   base.dispatchEvent(new Event('focus'));
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('contains long localized rows and cost text in a 320px allocation', async () => {
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lr-usage-badge
+      style="inline-size:100%"
+      tokens-in="1204"
+      cost-text="AnExtremelyLongCostValueWithoutNaturalBreaks"
+      .strings=${{
+        usageBadgeTokensInLabel: 'AnExtremelyLongLocalizedInputLabelWithoutNaturalBreaks',
+      }}
+    ></lr-usage-badge>`,
+    { parentNode: container },
+  )) as LyraUsageBadge;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.dispatchEvent(new Event('focus'));
+  await el.updateComplete;
+  const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+  expect(tooltip.scrollWidth).to.be.at.most(tooltip.clientWidth + 1);
+});
+
+it('keeps hover/focus rules low-specificity for consumer part overrides', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(":where([part='base'][tabindex]):hover");
+  expect(css).to.include(":where([part='base'][tabindex]):focus-visible");
 });
 
 /** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)

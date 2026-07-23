@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -168,6 +168,25 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   @state() private pending: PendingAction | null = null;
 
   private readonly idBase = nextId('memory-panel');
+  private readonly itemIds = new WeakMap<LyraMemoryItem, string>();
+  private nextItemId = 0;
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!this.pending || this.pending.kind === 'forget-all') return;
+    if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
+    const items = this.pending.scope === 'short-term' ? this.shortTerm : this.longTerm;
+    if (!items.includes(this.pending.item)) this.pending = null;
+  }
+
+  private itemKey(item: LyraMemoryItem, scope: MemoryScope): string {
+    let id = this.itemIds.get(item);
+    if (!id) {
+      id = String(++this.nextItemId);
+      this.itemIds.set(item, id);
+    }
+    return `${scope}-${id}`;
+  }
 
   private tier(score: number): Tier {
     if (score >= this.thresholds.high) return 'high';
@@ -175,11 +194,12 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     return 'low';
   }
 
-  private toggleExpand(item: LyraMemoryItem): void {
+  private toggleExpand(item: LyraMemoryItem, scope: MemoryScope): void {
+    const key = this.itemKey(item, scope);
     const next = new Set(this.expandedIds);
-    const expanded = !next.has(item.id);
-    if (expanded) next.add(item.id);
-    else next.delete(item.id);
+    const expanded = !next.has(key);
+    if (expanded) next.add(key);
+    else next.delete(key);
     this.expandedIds = next;
     this.emit<LyraMemoryExpandDetail>('lr-expand', { id: item.id, expanded });
   }
@@ -192,25 +212,39 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     this.pending = { kind: 'forget-all' };
   }
 
-  private refocus(selector: string): void {
+  private refocusItem(scope: MemoryScope, index: number): void {
     void this.updateComplete.then(() => {
-      (this.renderRoot.querySelector(selector) as HTMLElement | null)?.focus();
+      const rows = [
+        ...this.renderRoot.querySelectorAll<HTMLElement>(
+          `[part="section"][data-scope="${scope}"] [part="item"]`,
+        ),
+      ];
+      const target = rows[Math.min(index, rows.length - 1)] ??
+        this.renderRoot.querySelector<HTMLElement>('[part="item"]');
+      target?.focus();
     });
   }
 
   private resolveItemDecision(p: ItemPending, approved: boolean): void {
+    const items = p.scope === 'short-term' ? this.shortTerm : this.longTerm;
+    const index = Math.max(0, items.indexOf(p.item));
     this.pending = null;
     if (approved) {
       if (p.kind === 'add') this.emit<LyraMemoryAddDetail>('lr-add', { item: p.item });
       else this.emit<LyraMemoryRemoveDetail>('lr-remove', { id: p.item.id, scope: p.scope });
     }
-    this.refocus(`[part="item"][data-id="${p.item.id}"]`);
+    this.refocusItem(p.scope, index);
   }
 
   private resolveForgetAllDecision(approved: boolean): void {
     this.pending = null;
     if (approved) this.emit<undefined>('lr-forget');
-    this.refocus('[part="forget-all-button"]');
+    void this.updateComplete.then(() => {
+      (
+        (this.renderRoot.querySelector('[part="forget-all-button"]') ??
+          this.renderRoot.querySelector('[part="item"]')) as HTMLElement | null
+      )?.focus();
+    });
   }
 
   private renderConfidence(item: LyraMemoryItem): TemplateResult | typeof nothing {
@@ -238,9 +272,16 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private renderItem(item: LyraMemoryItem, scope: MemoryScope): TemplateResult {
-    const itemPending = this.pending && this.pending.kind !== 'forget-all' && this.pending.item.id === item.id ? this.pending : null;
-    const expanded = this.expandedIds.has(item.id);
-    const bodyId = `${this.idBase}-${item.id}`;
+    const itemPending =
+      this.pending &&
+      this.pending.kind !== 'forget-all' &&
+      this.pending.item === item &&
+      this.pending.scope === scope
+        ? this.pending
+        : null;
+    const itemKey = this.itemKey(item, scope);
+    const expanded = this.expandedIds.has(itemKey);
+    const bodyId = `${this.idBase}-${itemKey}`;
 
     return html`
       <div part="item" role="listitem" data-id=${item.id} data-scope=${scope} tabindex="-1">
@@ -255,7 +296,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
                 type="button"
                 aria-expanded=${expanded ? 'true' : 'false'}
                 aria-controls=${bodyId}
-                @click=${() => this.toggleExpand(item)}
+                @click=${() => this.toggleExpand(item, scope)}
               >
                 ${this.localize(expanded ? 'showLess' : 'showMore')}
               </button>

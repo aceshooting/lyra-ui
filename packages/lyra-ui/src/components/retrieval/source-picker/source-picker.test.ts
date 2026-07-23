@@ -498,3 +498,47 @@ describe('checked-state cssprop escape hatch', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('exposes tree levels and a separate pointer disclosure affordance for folders', async () => {
+  const el = (await fixture(html`<lr-source-picker .sources=${sources}></lr-source-picker>`)) as LyraSourcePicker;
+  const folder = el.shadowRoot!.querySelector('[role="treeitem"]')!;
+  expect(folder.getAttribute('aria-level')).to.equal('1');
+  const disclosure = folder.querySelector('[part="disclosure"]') as HTMLButtonElement;
+  expect(getComputedStyle(disclosure).minInlineSize).to.equal('40px');
+  expect(getComputedStyle(disclosure).minBlockSize).to.equal('40px');
+  disclosure.click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(4);
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]')[1]!.getAttribute('aria-level')).to.equal('2');
+});
+
+it('case-folds source search with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker lang="tr" .sources=${[{ id: 'i', label: 'İzmir' }]}></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  const input = el.shadowRoot!.querySelector('lr-input') as HTMLElement & {
+    value: string;
+  };
+  input.dispatchEvent(new CustomEvent('lr-input', { detail: { value: 'iz' }, bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"]').length).to.equal(1);
+});
+
+it('suppresses the raw child input event after consuming it', async () => {
+  const el = (await fixture(html`<lr-source-picker .sources=${sources}></lr-source-picker>`)) as LyraSourcePicker;
+  let leaked = 0;
+  el.addEventListener('lr-input', () => leaked++);
+  el.shadowRoot!.querySelector('lr-input')!.dispatchEvent(
+    new CustomEvent('lr-input', { detail: { value: 'paper' }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(leaked).to.equal(0);
+});
+
+it('formats the selection summary counts with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker lang="ar-u-nu-arab" .sources=${sources}></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.contain('٠');
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.contain('٣');
+});

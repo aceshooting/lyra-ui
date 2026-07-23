@@ -40,6 +40,9 @@ it('renders one item per entry, grouped by category in first-appearance order', 
   const headers = el.shadowRoot!.querySelectorAll('[part="group-header"]');
   expect(Array.from(headers).map((h) => h.textContent)).to.deep.equal(['Data', 'Actions']);
   expect(el.shadowRoot!.querySelectorAll('[part="item"]').length).to.equal(4);
+  const groups = [...el.shadowRoot!.querySelectorAll('[role="group"]')];
+  expect(groups.length).to.equal(2);
+  expect(groups[0]!.getAttribute('aria-labelledby')).to.equal(headers[0]!.id);
 });
 
 it('filters on label, keywords, and category, case-folded', async () => {
@@ -116,10 +119,27 @@ it('a disabled item is not draggable, not roving-focusable, and does not place o
   const disabledItem = el.shadowRoot!.querySelectorAll('[part="item"]')[2] as HTMLElement; // "Send Email"
   expect(disabledItem.getAttribute('draggable')).to.equal('false');
   expect(disabledItem.getAttribute('tabindex')).to.equal('-1');
+  expect(disabledItem.hasAttribute('aria-describedby')).to.be.false;
   let fired = false;
   el.addEventListener('lr-palette-place', () => (fired = true));
   disabledItem.click();
   expect(fired).to.be.false;
+});
+
+it('steps over disabled rows when moving focus through the enabled roving list', async () => {
+  const el = (await fixture(html`<lr-node-palette .items=${items}></lr-node-palette>`)) as LyraNodePalette;
+  const second = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')[1]!;
+  second.focus();
+  second.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.activeElement?.textContent).to.contain('Webhook');
+});
+
+it('hides arbitrary item icons from the accessible name', async () => {
+  const el = (await fixture(
+    html`<lr-node-palette .items=${[{ type: 'x', label: 'Node', icon: html`Icon text` }]}></lr-node-palette>`,
+  )) as LyraNodePalette;
+  expect(el.shadowRoot!.querySelector('[part="item-icon"]')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
 it('dragstart on an enabled item writes the FLOW_PALETTE_MIME_TYPE payload plus a text/plain fallback', async () => {

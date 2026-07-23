@@ -6,7 +6,7 @@
 - **Class** `LyraJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -67,7 +67,13 @@ until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono
 `--lr-json-viewer-match-bg` (default `var(--lr-color-warning-quiet)`) — background, and surrounding
 box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
-without repainting every other warning-toned surface that reads the same shared token. Plus shared
+without repainting every other warning-toned surface that reads the same shared token;
+`--lr-json-viewer-active-outline` (default `var(--lr-focus-ring-color)`) — outline color for the
+current imperative search match; `--lr-json-viewer-string-color` (default
+`var(--lr-color-success)`), `--lr-json-viewer-number-color` (default `var(--lr-color-brand)`),
+`--lr-json-viewer-boolean-color` (default `var(--lr-color-warning)`), and
+`--lr-json-viewer-null-color` (default `var(--lr-color-text-quiet)`) — per-value-type color hooks.
+Plus shared
 tokens `--lr-color-border/-surface/-text/-text-quiet/-brand/-brand-quiet/-success/-warning/-warning-quiet`,
 `--lr-radius`, `--lr-space-xs/-s/-l`, `--lr-focus-ring-width/-color/-offset`,
 `--lr-transition-fast`.

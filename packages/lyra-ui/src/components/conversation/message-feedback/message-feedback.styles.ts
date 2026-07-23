@@ -86,7 +86,7 @@ export const styles = css`
       grid-template-rows var(--lr-transition-base),
       border-width var(--lr-transition-base);
   }
-  [part='panel'][data-open] {
+  [part='panel']:where([data-open]) {
     grid-template-rows: 1fr;
     border-width: var(--lr-border-width-thin);
   }
@@ -96,10 +96,15 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
-    padding: var(--lr-space-m);
+    padding: 0 var(--lr-space-m);
+    transition: padding-block var(--lr-transition-base);
+  }
+  [part='panel']:where([data-open]) .panel-inner {
+    padding-block: var(--lr-space-m);
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='panel'] {
+    [part='panel'],
+    [part='panel'] .panel-inner {
       transition: none;
     }
   }
@@ -124,7 +129,7 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='comment']:hover:not(:disabled) {
+  :where([part='comment']):hover:where(:not(:disabled)) {
     border-color: var(--lr-color-brand);
   }
   [part='comment']::placeholder {

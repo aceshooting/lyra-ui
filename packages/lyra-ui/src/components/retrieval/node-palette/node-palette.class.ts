@@ -86,9 +86,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     );
   }
 
-  private categorized(): { category: string | null; items: PaletteItem[] }[] {
+  private categorized(filtered: PaletteItem[]): { category: string | null; items: PaletteItem[] }[] {
     const groups = new Map<string | null, PaletteItem[]>();
-    for (const item of this.filtered) {
+    for (const item of filtered) {
       const key = item.category ?? null;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(item);
@@ -96,8 +96,15 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     return Array.from(groups, ([category, groupItems]) => ({ category, items: groupItems }));
   }
 
-  private rovingList(): PaletteItem[] {
-    return this.filtered.filter((i) => !i.disabled);
+  private rovingList(filtered = this.filtered): PaletteItem[] {
+    return filtered.filter((i) => !i.disabled);
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.announcer.cancel();
+    this.liveText = '';
+    this.isMounting = true;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -137,7 +144,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private focusItem(index: number): void {
     void this.updateComplete.then(() => {
-      const els = Array.from(this.renderRoot.querySelectorAll('[part="item"]')) as HTMLElement[];
+      const els = Array.from(
+        this.renderRoot.querySelectorAll('[part="item"]:not([aria-disabled="true"])'),
+      ) as HTMLElement[];
       els[index]?.focus();
     });
   }
@@ -189,22 +198,24 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       role="option"
       aria-selected="false"
       aria-disabled=${item.disabled ? 'true' : 'false'}
-      aria-describedby=${this.hintId}
+      aria-describedby=${item.disabled ? nothing : this.hintId}
       tabindex=${rovingIndex === this.activeIndex && !item.disabled ? '0' : '-1'}
       draggable=${item.disabled ? 'false' : 'true'}
       @click=${() => this.place(item)}
       @keydown=${(e: KeyboardEvent) => this.onItemKeyDown(e, rovingIndex, item)}
       @dragstart=${(e: DragEvent) => this.onItemDragStart(e, item)}
     >
-      ${item.icon ? html`<span part="item-icon">${item.icon as TemplateResult}</span>` : nothing}
+      ${item.icon ? html`<span part="item-icon" aria-hidden="true">${item.icon as TemplateResult}</span>` : nothing}
       <span part="item-label">${item.label}</span>
       ${item.description ? html`<span part="item-description">${item.description}</span>` : nothing}
     </div>`;
   }
 
   override render(): TemplateResult {
-    const groups = this.categorized();
-    const rovingList = this.rovingList();
+    const filtered = this.filtered;
+    const groups = this.categorized(filtered);
+    const rovingList = this.rovingList(filtered);
+    const rovingIndices = new Map(rovingList.map((item, index) => [item, index]));
     return html`<div part="base">
       <slot name="header"></slot>
       <input
@@ -223,10 +234,18 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
         ${groups.length === 0
           ? html`<div part="empty">${this.localize('nodePaletteEmpty')}</div>`
           : groups.map(
-              (group) => html`
-                ${group.category ? html`<div part="group-header" role="presentation">${group.category}</div>` : nothing}
-                ${group.items.map((item) => this.itemTemplate(item, rovingList.indexOf(item)))}
-              `,
+            (group, groupIndex) => {
+              const headingId = `${this.listId}-group-${groupIndex}`;
+              const content = group.items.map((item) =>
+                this.itemTemplate(item, rovingIndices.get(item) ?? -1),
+              );
+              return group.category
+                ? html`<div role="group" aria-labelledby=${headingId}>
+                    <div id=${headingId} part="group-header" role="presentation">${group.category}</div>
+                    ${content}
+                  </div>`
+                : content;
+            },
             )}
       </div>
       <div part="live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true">${this.liveText}</div>

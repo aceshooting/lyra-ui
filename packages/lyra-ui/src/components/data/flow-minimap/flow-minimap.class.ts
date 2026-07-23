@@ -30,6 +30,8 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart map - The scaled SVG.
  * @csspart node - One rect per node.
  * @csspart viewport - The draggable, focusable view rectangle.
+ * @csspart instructions - Visually hidden keyboard instructions for the viewport.
+ * @csspart live-region - Visually hidden viewport-change announcements.
  * @cssprop [--lr-flow-minimap-inline-size=var(--lr-size-12rem)] - Map inline size.
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
  */

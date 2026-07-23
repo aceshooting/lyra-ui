@@ -47,6 +47,54 @@ describe('lr-diff-view', () => {
     expect(css).to.match(/\[part='copy-button'\]:hover\s*\{[^}]+\}/);
   });
 
+  it('still emits exactly one lr-copy and enters confirmation state when clipboard.writeText throws synchronously', async () => {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText(): Promise<void> {
+          throw new Error('synchronous clipboard failure');
+        },
+      },
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+      )) as LyraDiffView;
+      let events = 0;
+      let detail = '';
+      el.addEventListener('lr-copy', (event) => {
+        events++;
+        detail = (event as CustomEvent<{ text: string }>).detail.text;
+      });
+
+      (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+      await el.updateComplete;
+
+      expect(events).to.equal(1);
+      expect(detail).to.equal('- a\n+ b');
+      expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copied!');
+    } finally {
+      if (originalDescriptor) Object.defineProperty(navigator, 'clipboard', originalDescriptor);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
+  it('clears copy confirmation state across disconnect and reconnect', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'a'} .newText=${'b'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copied!');
+
+    el.remove();
+    document.body.append(el);
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
+  });
+
   it('does not recompute the diff when only the copy-confirmation state toggles, only when oldText/newText change', async () => {
     const el = (await fixture(html`
       <lr-diff-view copyable .oldText=${'a\nb'} .newText=${'a\nX'}></lr-diff-view>
@@ -82,6 +130,8 @@ describe('layout', () => {
     expect(sides).to.have.lengthOf(2);
     expect(sides[0]!.getAttribute('aria-label')).to.equal('Original');
     expect(sides[1]!.getAttribute('aria-label')).to.equal('Modified');
+    expect(sides[0]!.getAttribute('role')).to.equal('region');
+    expect(sides[1]!.getAttribute('role')).to.equal('region');
   });
 
   it('placeholder cells in split layout carry no +/- prefix', async () => {
@@ -243,6 +293,35 @@ describe('contextLines', () => {
     const el = (await fixture(html`<lr-diff-view .oldText=${old8} .newText=${new8}></lr-diff-view>`)) as LyraDiffView;
     expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
     expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
+  });
+
+  for (const contextLines of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+    it(`treats contextLines=${String(contextLines)} as unset instead of enabling zero-context folding`, async () => {
+      const el = (await fixture(
+        html`<lr-diff-view
+          .oldText=${old8}
+          .newText=${new8}
+          .contextLines=${contextLines}
+        ></lr-diff-view>`,
+      )) as LyraDiffView;
+      expect(el.shadowRoot!.querySelector('[data-type="fold"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(10);
+    });
+  }
+
+  it('locale-formats the hidden-line count before interpolating it into the localized message', async () => {
+    const oldText = ['a', ...Array.from({ length: 1236 }, (_, index) => `same-${index}`), 'z'].join('\n');
+    const newText = ['A', ...Array.from({ length: 1236 }, (_, index) => `same-${index}`), 'Z'].join('\n');
+    const el = (await fixture(
+      html`<lr-diff-view
+        lang="ar"
+        .oldText=${oldText}
+        .newText=${newText}
+        .contextLines=${1}
+      ></lr-diff-view>`,
+    )) as LyraDiffView;
+    const expected = new Intl.NumberFormat(el.effectiveLocale).format(1234);
+    expect(el.shadowRoot!.querySelector('[data-type="fold"]')!.textContent).to.contain(expected);
   });
 
   it('folds a middle run of unchanged lines beyond contextLines on each side, unified layout', async () => {

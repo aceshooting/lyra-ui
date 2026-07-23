@@ -6,7 +6,7 @@
 - **Class** `LyraChip`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/chip/chip.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -170,5 +170,10 @@ than a stylesheet-only solution.
 - `<lr-chip-group>`'s overflow indicator is its own locally-styled pill, not an instantiated
   `<lr-chip>` in its shadow DOM — don't expect `<lr-chip>`'s CSS parts or custom properties to
   reach it.
+
+**Additional API surface:**
+
+- `blur()` — Forwards host blur to the internal control.
+- `part="toggle-button"` — The real toggle control, rendered over the non-interactive label when toggle mode is active.
 
 ---

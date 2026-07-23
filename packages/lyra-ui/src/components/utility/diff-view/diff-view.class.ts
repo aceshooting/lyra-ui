@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { computeLineDiff, pairOpsForSplit, type DiffOp, type DiffSplitRow } from './diff-line-diff.js';
 import {
@@ -49,6 +50,12 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  * @csspart copy-button - The copy affordance, only rendered while `copyable`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
  * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
+ * @cssprop [--lr-diff-view-add-background=var(--lr-color-success-quiet)] - Added-line background.
+ * @cssprop [--lr-diff-view-add-color=var(--lr-color-success)] - Added-line text color.
+ * @cssprop [--lr-diff-view-remove-background=var(--lr-color-danger-quiet)] - Removed-line background.
+ * @cssprop [--lr-diff-view-remove-color=var(--lr-color-danger)] - Removed-line text color.
+ * @cssprop [--lr-diff-view-fold-background=var(--lr-color-surface-raised)] - Fold-marker background.
+ * @cssprop [--lr-diff-view-fold-color=var(--lr-color-text-quiet)] - Fold-marker text color.
  */
 export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -112,6 +119,8 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.copyTimeoutId = undefined;
+    this.justCopied = false;
   }
 
   private syncHighlight(): void {
@@ -171,7 +180,10 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     const visible = new Set<DiffOp>(ops);
     const foldBefore = new Map<DiffOp, number>();
     let trailingFold = 0;
-    const ctx = this.contextLines == null ? undefined : finiteCount(this.contextLines);
+    const ctx =
+      this.contextLines == null || !Number.isFinite(this.contextLines) || this.contextLines < 0
+        ? undefined
+        : finiteCount(this.contextLines);
     if (ctx === undefined) return { visible, foldBefore, trailingFold };
     let i = 0;
     while (i < ops.length) {
@@ -211,7 +223,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   }
 
   private foldMarker(count: number): TemplateResult {
-    const text = this.localize(count === 1 ? 'diffViewHiddenLines' : 'diffViewHiddenLinesPlural', undefined, { count });
+    const text = this.localize(count === 1 ? 'diffViewHiddenLines' : 'diffViewHiddenLinesPlural', undefined, {
+      count: getNumberFormat(this.effectiveLocale).format(count),
+    });
     return html`<div part="line" data-type="fold">${text}</div>`;
   }
 
@@ -223,9 +237,14 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   private onCopyClick = (): void => {
     const text = this.unifiedText;
-    navigator.clipboard?.writeText(text).catch(() => {
-      // best-effort -- lr-copy still fires with the intended text regardless
-    });
+    try {
+      navigator.clipboard?.writeText(text).catch(() => {
+        // best-effort -- lr-copy still fires with the intended text regardless
+      });
+    } catch {
+      // Some clipboard shims and restricted browser contexts throw before returning a promise.
+      // The event contract remains best-effort and still reports the intended snapshot below.
+    }
     this.emit<{ text: string }>('lr-copy', { text });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
@@ -294,8 +313,12 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
     }
     return html`
       <div class="split-grid">
-        <div part="side" data-side="old" aria-label=${this.localize('diffViewOldLabel')}>${leftCells}</div>
-        <div part="side" data-side="new" aria-label=${this.localize('diffViewNewLabel')}>${rightCells}</div>
+        <div part="side" data-side="old" role="region" aria-label=${this.localize('diffViewOldLabel')}>
+          ${leftCells}
+        </div>
+        <div part="side" data-side="new" role="region" aria-label=${this.localize('diffViewNewLabel')}>
+          ${rightCells}
+        </div>
       </div>
     `;
   }

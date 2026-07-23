@@ -6,7 +6,7 @@
 - **Class** `LyraPhoneInput`, also available unregistered from `@aceshooting/lyra-ui/components/forms/phone-input/phone-input.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** `@aceshooting/lyra-flags`, `libphonenumber-js` — see `llms/peers.md`
-- **Themeable via** 14 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -200,5 +200,16 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   layered native select is the accessible control. Don't move interactive content into those parts
   via `::part` styling tricks, and don't expect the flag inside the open popup list — a native
   `<option>` is text-only.
+
+**Additional API surface:**
+
+- `click()` — Activate the internal telephone input unless the form control is effectively disabled.
+- `--lr-phone-input-flag-size` — Selected flag size, scaled by `size`.
+- `--lr-phone-input-glyph-size` — Country selector glyph size, scaled by `size`.
+- `--lr-phone-input-gap` — Country-trigger child gap. Default: `var(--lr-space-xs)`.
+- `--lr-phone-input-radius` — Input-wrapper corner radius. Default: `var(--lr-radius)`.
+- `--lr-phone-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
+- `--lr-phone-input-invalid-border-color` — Invalid row border color. Default: `var(--lr-color-danger)`.
+- `--lr-phone-input-country-hover-bg` — Country trigger hover background. Default: `var(--lr-color-brand-quiet)`.
 
 ---

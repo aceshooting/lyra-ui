@@ -1,5 +1,5 @@
 import { html, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './image-comparer.styles.js';
@@ -35,6 +35,8 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   @property({ attribute: 'after-label' }) afterLabel = '';
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
+  @query('[part="handle"]') private handleEl?: HTMLInputElement;
+
   private get normalizedPosition(): number {
     return finiteRange(this.position, 50, 0, 100);
   }
@@ -52,6 +54,18 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
   private onBlur = (): void => {
     this.emit('blur');
   };
+
+  override focus(options?: FocusOptions): void {
+    this.handleEl?.focus(options);
+  }
+
+  override blur(): void {
+    this.handleEl?.blur();
+  }
+
+  override click(): void {
+    this.handleEl?.click();
+  }
 
   override render(): TemplateResult {
     const position = `${this.normalizedPosition}%`;
@@ -74,6 +88,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
         step="1"
         .value=${String(this.normalizedPosition)}
         aria-label=${label}
+        aria-orientation=${this.orientation}
         @input=${this.onInput}
         @focus=${this.onFocus}
         @blur=${this.onBlur}

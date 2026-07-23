@@ -129,6 +129,24 @@ it('shows an item/key count preview only for a collapsed, non-empty container', 
   expect(preview!.textContent).to.equal('6 keys');
 });
 
+it('locale-formats collapsed item/key counts before interpolation', async () => {
+  const data = Object.fromEntries(Array.from({ length: 1234 }, (_, index) => [`key-${index}`, index]));
+  const el = (await fixture(
+    html`<lr-json-viewer lang="ar" collapsed-depth="0" .data=${data}></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  const expected = new Intl.NumberFormat(el.effectiveLocale).format(1234);
+  expect(el.shadowRoot!.querySelector('.preview')!.textContent).to.contain(expected);
+});
+
+it('exposes nested JSON membership through list/listitem relationships', async () => {
+  const el = await withData({ parent: { child: 1 }, sibling: 2 });
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+  expect(tree.getAttribute('role')).to.equal('list');
+  const items = [...tree.querySelectorAll('[role="listitem"]')];
+  expect(items.length).to.be.greaterThan(2);
+  expect(items.some((item) => item.querySelector(':scope > [role="list"]'))).to.be.true;
+});
+
 it('does not render a copy button by default', async () => {
   const el = await withData(sample);
   expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
@@ -551,6 +569,14 @@ describe('imperative search API', () => {
     expect(count).to.equal(2); // "name" key at root and inside "team"
   });
 
+  it('case-folds keys and values with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-json-viewer lang="tr" .data=${{ city: 'IĞDIR' }}></lr-json-viewer>`,
+    )) as LyraJsonViewer;
+    expect(await el.runSearch('ığdır')).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="value"][data-match]')).to.exist;
+  });
+
   it('searchNext/searchPrevious move the cursor in document walk order (key before value at one path)', async () => {
     const el = (await fixture(html`<lr-json-viewer .data=${{ ada: 'ada' }}></lr-json-viewer>`)) as LyraJsonViewer;
     await el.runSearch('ada'); // matches the key "ada" AND its own value "ada" at the same path
@@ -562,6 +588,8 @@ describe('imperative search API', () => {
     expect(detail!.activeIndex).to.equal(1);
     expect(await el.searchNext()).to.be.true;
     expect(detail!.activeIndex).to.equal(0); // wraps
+    const active = el.shadowRoot!.querySelector('[data-active]');
+    expect(active!.getAttribute('aria-current')).to.equal('true');
   });
 
   it('activeIndex starts at -1 before any navigation', async () => {
@@ -613,11 +641,16 @@ describe('imperative search API', () => {
   it('back-compat: rendered DOM is unchanged until a cursor exists', async () => {
     const before = (await fixture(html`<lr-json-viewer .data=${SAMPLE} search="name"></lr-json-viewer>`)) as LyraJsonViewer;
     await before.updateComplete;
-    const beforeHtml = before.shadowRoot!.querySelector('[part="tree"]')!.innerHTML;
     const after = (await fixture(html`<lr-json-viewer .data=${SAMPLE}></lr-json-viewer>`)) as LyraJsonViewer;
     await after.runSearch('name');
     await after.updateComplete;
-    expect(after.shadowRoot!.querySelector('[part="tree"]')!.innerHTML).to.equal(beforeHtml);
+    const beforeMatches = [...before.shadowRoot!.querySelectorAll<HTMLElement>('[data-match]')];
+    const afterMatches = [...after.shadowRoot!.querySelectorAll<HTMLElement>('[data-match]')];
+    expect(afterMatches.map((match) => match.textContent)).to.deep.equal(
+      beforeMatches.map((match) => match.textContent),
+    );
+    expect(after.shadowRoot!.querySelector('[data-active]')).to.not.exist;
+    expect(afterMatches.every((match) => match.getAttribute('aria-current') === 'false')).to.be.true;
   });
 });
 

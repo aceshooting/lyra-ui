@@ -6,7 +6,7 @@
 - **Class** `LyraTraceTree`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/trace-tree/trace-tree.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 16 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -57,3 +57,14 @@ side of the lightness midpoint as the ambient surface, so a consumer who sets
 `--lr-trace-tree-row-active-bg` to a dark tint in light mode (or a light one in dark mode) must
 set `--lr-trace-tree-row-active-color` to match, and should re-check the status-label tones
 against the new tint as well.
+
+**Additional API surface:**
+
+- `--lr-trace-tree-toggle-hover-bg` — Toggle hover background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-trace-tree-success-color` — Success status text and bar. Default: `var(--lr-color-success)`.
+- `--lr-trace-tree-error-color` — Error status text and bar. Default: `var(--lr-color-danger)`.
+- `--lr-trace-tree-denied-color` — Denied status text and bar. Default: `var(--lr-color-warning)`.
+- `--lr-trace-tree-running-color` — Running status text and stripe. Default: `var(--lr-color-brand)`.
+- `--lr-trace-tree-pending-color` — Pending status text and bar. Default: `var(--lr-color-text-quiet)`.
+- `--lr-trace-tree-bar-track-bg` — Duration bar track. Default: `var(--lr-color-surface-raised)`.
+- `--lr-trace-tree-running-stripe-bg` — Running stripe contrast. Default: `var(--lr-color-brand-quiet)`.

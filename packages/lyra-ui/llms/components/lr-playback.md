@@ -25,8 +25,8 @@ Steps an index through `[0, length)` on a fixed interval — play/pause for time
   change-tracking sees it and auto-pauses on `hidden = true`)
 
 **Methods:** `play()`, `pause()`, `toggle()`, `next()`, `previous()`, `goTo(index: number)` — all
-idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)` and `blur()` forward
-to the play button.
+idempotent/clamped; `length <= 1` is a no-op degenerate case. `focus(options?)`, `blur()`, and
+`click()` forward to the play button.
 
 **Events:** `lr-play`, `lr-pause` (no detail), `lr-step` (`detail: { index }`, fired on every
 tick and manual step); internal `focus`/`blur` are bridged as bubbling, composed host events.

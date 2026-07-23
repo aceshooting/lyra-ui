@@ -6,7 +6,7 @@
 - **Class** `LyraStepper`, also available unregistered from `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -132,5 +132,9 @@ each falls back to the token its rule used before. Otherwise shared tokens —
   `role="tabpanel"`, since this component renders no panel content of its own.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
+
+**Additional API surface:**
+
+- `part="step-item"` — The `role="listitem"` wrapper for one step.
 
 ---

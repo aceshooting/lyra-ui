@@ -149,4 +149,10 @@ indentation), plus the shared tokens listed above.
 - `lr-file-tree` does **not** forward `reorderable`, and deliberately so: its `TreeItem[]` is derived
   from `nodes` on every render and keyed by filesystem path, an order it does not own.
 
+**Additional API surface:**
+
+- `--lr-tree-selected-color` — Selected-node text color.
+- `--lr-tree-selected-bg` — Selected-node background.
+- `ancestry` — Ancestor object identities used to stop cyclic caller graphs before recursive rendering. Type: `TreeItem[]`.
+
 ---

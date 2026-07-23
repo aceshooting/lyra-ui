@@ -6,7 +6,7 @@
 - **Class** `LyraToolResultDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-result-dialog/tool-result-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 12 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -103,5 +103,16 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
   `lr-close` once
 - the `maximize`/`close` buttons are always the first elements in the Tab order while open,
   regardless of visual position, followed by `body` then `footer` content
+
+**Additional API surface:**
+
+- `--lr-tool-result-dialog-running-color` — Running status foreground. Default: `var(--lr-color-brand)`.
+- `--lr-tool-result-dialog-running-bg` — Running status background. Default: `var(--lr-color-brand-quiet)`.
+- `--lr-tool-result-dialog-success-color` — Success status foreground. Default: `var(--lr-color-success)`.
+- `--lr-tool-result-dialog-success-bg` — Success status background. Default: `var(--lr-color-success-quiet)`.
+- `--lr-tool-result-dialog-error-color` — Error status foreground. Default: `var(--lr-color-danger)`.
+- `--lr-tool-result-dialog-error-bg` — Error status background. Default: `var(--lr-color-danger-quiet)`.
+- `--lr-tool-result-dialog-denied-color` — Denied status foreground. Default: `var(--lr-color-warning)`.
+- `--lr-tool-result-dialog-denied-bg` — Denied status background. Default: `var(--lr-color-warning-quiet)`.
 
 ---

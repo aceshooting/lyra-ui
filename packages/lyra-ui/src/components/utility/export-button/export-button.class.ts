@@ -24,6 +24,7 @@ export type ExportFormatOption = ExportFormat | ExportFormatDescriptor;
 export interface LyraExportButtonEventMap {
   'lr-export': CustomEvent<{ format: string }>;
   'lr-export-complete': CustomEvent<{ format: ExportFormat }>;
+  'lr-export-error': CustomEvent<{ format: ExportFormat; error: unknown }>;
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
 }
@@ -36,6 +37,8 @@ export interface LyraExportButtonEventMap {
  * @event lr-export - `detail: { format }`, cancelable — call `preventDefault()`
  *   to substitute the built-in client-side download with a server-generated one.
  * @event lr-export-complete - Fired after a non-cancelled download completes.
+ * @event lr-export-error - Fired when a built-in CSV/JSON export cannot be serialized or
+ *   downloaded. `detail: { format, error }`.
  * @event lr-show - The format menu opened. Not fired for markup that renders
  *   open from the start.
  * @event lr-hide - The format menu closed. Same first-render guard as `lr-show`.
@@ -80,6 +83,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   private _isFirstUpdate = true;
   /** Which menu item to focus the next time `open` flips true; reset after use. */
   private pendingMenuFocusIndex = 0;
+  private formatsFocusSnapshot?: { index: number; id: string };
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -179,6 +183,15 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
     this.toggleAttribute('aria-busy', this.loading);
+    if (changed.has('formats')) {
+      const active = this.shadowRoot?.activeElement;
+      const items = this.menuItemEls();
+      const index = items.indexOf(active as HTMLButtonElement);
+      const previousFormats = changed.get('formats') as ExportFormatOption[] | undefined;
+      const previous = previousFormats?.[index];
+      this.formatsFocusSnapshot =
+        index >= 0 && previous ? { index, id: this.formatId(previous) } : undefined;
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -204,6 +217,17 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         this.pendingMenuFocusIndex = 0;
       } else {
         if (!this._isFirstUpdate) this.emit('lr-hide');
+      }
+    }
+    if (changed.has('formats') && this.formatsFocusSnapshot) {
+      const { index, id } = this.formatsFocusSnapshot;
+      this.formatsFocusSnapshot = undefined;
+      if (this.formats.length <= 1) {
+        this.closeMenu();
+        this.triggerEl?.focus();
+      } else if (this.open) {
+        const nextIndex = this.formats.findIndex((format) => this.formatId(format) === id);
+        this.focusMenuItem(nextIndex >= 0 ? nextIndex : index);
       }
     }
   }
@@ -248,20 +272,25 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     const ev = this.emit('lr-export', { format }, { cancelable: true });
     if (ev.defaultPrevented) return;
 
-    if (format === 'csv') {
-      downloadBlob(
-        buildCsv(this.rows, this.effectiveColumns()),
-        `${this.filename}.csv`,
-        'text/csv;charset=utf-8;',
-      );
-    } else if (format === 'json') {
-      downloadBlob(JSON.stringify(this.rowsForExport(), null, 2), `${this.filename}.json`, 'application/json');
-    } else {
+    if (format !== 'csv' && format !== 'json') {
       // Custom formats are intentionally handler-only: Lyra owns the menu and
       // event contract but does not pull format-specific encoders into the base bundle.
       return;
     }
-    this.emit('lr-export-complete', { format });
+    try {
+      if (format === 'csv') {
+        downloadBlob(
+          buildCsv(this.rows, this.effectiveColumns()),
+          `${this.filename}.csv`,
+          'text/csv;charset=utf-8;',
+        );
+      } else {
+        downloadBlob(JSON.stringify(this.rowsForExport(), null, 2), `${this.filename}.json`, 'application/json');
+      }
+      this.emit('lr-export-complete', { format });
+    } catch (error) {
+      this.emit('lr-export-error', { format, error });
+    }
   }
 
   private onTriggerClick(): void {
@@ -278,6 +307,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** Removes focus from the native trigger button. */
   override blur(): void {
     this.triggerEl?.blur();
+  }
+
+  /** Activates the native trigger button. */
+  override click(): void {
+    this.triggerEl?.click();
   }
 
   /** Resolves `label`'s effective text: an explicit override wins verbatim; left at the

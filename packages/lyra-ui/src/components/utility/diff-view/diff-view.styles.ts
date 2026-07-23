@@ -4,6 +4,12 @@ export const styles = css`
   :host {
     display: block;
     --lr-diff-view-font: var(--lr-font-mono);
+    --lr-diff-view-add-background: var(--lr-color-success-quiet);
+    --lr-diff-view-add-color: var(--lr-color-success);
+    --lr-diff-view-remove-background: var(--lr-color-danger-quiet);
+    --lr-diff-view-remove-color: var(--lr-color-danger);
+    --lr-diff-view-fold-background: var(--lr-color-surface-raised);
+    --lr-diff-view-fold-color: var(--lr-color-text-quiet);
   }
   [part='base'] {
     position: relative;
@@ -40,16 +46,16 @@ export const styles = css`
     white-space: pre-wrap;
   }
   [part='line'][data-type='add'] {
-    background: var(--lr-color-success-quiet);
-    color: var(--lr-color-success);
+    background: var(--lr-diff-view-add-background);
+    color: var(--lr-diff-view-add-color);
   }
   [part='line'][data-type='remove'] {
-    background: var(--lr-color-danger-quiet);
-    color: var(--lr-color-danger);
+    background: var(--lr-diff-view-remove-background);
+    color: var(--lr-diff-view-remove-color);
   }
   [part='line'][data-type='fold'] {
-    color: var(--lr-color-text-quiet);
-    background: var(--lr-color-surface-raised);
+    color: var(--lr-diff-view-fold-color);
+    background: var(--lr-diff-view-fold-background);
     text-align: center;
   }
   [part='copy-button'] {
@@ -62,6 +68,8 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
     padding: var(--lr-size-0-125rem) var(--lr-space-s);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
   }
   [part='copy-button']:hover {

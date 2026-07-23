@@ -177,6 +177,40 @@ it('re-clamps temperature to a narrowed step grid when temperatureStep changes',
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal(String(el.temperature));
 });
 
+it('normalizes direct out-of-range and non-finite temperature assignments to the rendered slider value', async () => {
+  const el = (await fixture(
+    html`<lr-model-settings-panel temperature-min="0" temperature-max="2"></lr-model-settings-panel>`,
+  )) as LyraModelSettingsPanel;
+
+  el.temperature = 5;
+  await el.updateComplete;
+  expect(el.temperature).to.equal(2);
+  expect(slider(el).valueAsNumber).to.equal(2);
+
+  el.temperature = Number.POSITIVE_INFINITY;
+  await el.updateComplete;
+  expect(el.temperature).to.equal(0);
+  expect(slider(el).valueAsNumber).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('0');
+});
+
+it('contains a long localized temperature label in a 320px allocation', async () => {
+  const container = document.createElement('div');
+  container.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lr-model-settings-panel
+      style="inline-size:100%"
+      .strings=${{
+        temperature: 'AnExtremelyLongLocalizedTemperatureLabelWithoutNaturalBreaks',
+        selectModel: 'AnExtremelyLongLocalizedModelPlaceholderWithoutNaturalBreaks',
+      }}
+    ></lr-model-settings-panel>`,
+    { parentNode: container },
+  )) as LyraModelSettingsPanel;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
+});
+
 // -- Consolidated lr-change -------------------------------------------
 
 it('re-emits a consolidated lr-change with the full settings shape when the model changes', async () => {

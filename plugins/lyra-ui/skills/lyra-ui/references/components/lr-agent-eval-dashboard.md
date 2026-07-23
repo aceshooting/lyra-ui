@@ -6,7 +6,7 @@
 - **Class** `LyraAgentEvalDashboard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/agent-eval-dashboard/agent-eval-dashboard.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 12 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,3 +27,8 @@ boolean = true`; `chartHeight: string = '220px'`.
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,
 `run-label`, `run-meta`, `run-status`, `empty`.
+
+**Additional API surface:**
+
+- `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
+- `--lr-agent-eval-dashboard-active-background` — Active metric background. Default: `var(--lr-color-brand-quiet)`.

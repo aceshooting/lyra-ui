@@ -50,4 +50,8 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
   and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
   with the intended text so a consumer can always show its own confirmation/fallback UI.
 
+**Additional API surface:**
+
+- `click()` — Activates the native button, matching the host focus/blur forwarding contract.
+
 ---
