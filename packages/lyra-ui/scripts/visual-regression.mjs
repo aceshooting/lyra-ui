@@ -248,6 +248,37 @@ async function captureStory(page, baseUrl, id, theme, direction) {
   // loading must not be fatal to the run.
   await page.evaluate(() => document.fonts.ready).catch(() => {});
   await page.waitForTimeout(250);
+  if (id === 'threadlist--default') {
+    await page.waitForFunction(
+      () => {
+        const host = document.querySelector('lr-thread-list');
+        const list = host?.shadowRoot?.querySelector('lr-virtual-list');
+        const root = list?.shadowRoot;
+        const viewport = root?.querySelector('[part="base"]');
+        const rows = [...(root?.querySelectorAll('[part="row"]') ?? [])];
+        if (!(viewport instanceof HTMLElement) || rows.length < 5) return false;
+
+        const signature = [
+          rows.length,
+          viewport.clientHeight,
+          viewport.scrollHeight,
+          ...rows.flatMap((row) => {
+            const rect = row.getBoundingClientRect();
+            return [rect.top, rect.height];
+          }),
+        ].join('|');
+        const key = '__lyraThreadListVisualLayout';
+        const previous = globalThis[key];
+        globalThis[key] =
+          previous?.signature === signature
+            ? { signature, stableFrames: previous.stableFrames + 1 }
+            : { signature, stableFrames: 1 };
+        return globalThis[key].stableFrames >= 2;
+      },
+      undefined,
+      { polling: 'raf', timeout: 5_000 },
+    );
+  }
   // Full-viewport screenshot rather than a `#storybook-root`-clipped one: several of the sampled
   // families (dialog, drawer, overlay-dropdown, overlay-popover, overlay-tooltip,
   // toolapprovaldialog, menu) render their open surface via `root-registration-allowlist.ts`'s
