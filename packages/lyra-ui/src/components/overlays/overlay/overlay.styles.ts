@@ -35,7 +35,6 @@ export const styles = css`
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
   [part='popup'] { opacity: 1; transform: translateY(0); transition: opacity var(--lr-transition-fast), transform var(--lr-transition-fast), visibility var(--lr-transition-fast); }
   [part='content'] { padding: var(--lr-space-m); }
-  [part='trigger']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   @media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }
 `;
 

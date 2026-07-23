@@ -75,6 +75,33 @@ it('renders the visible value readout by default, and omits it when show-value i
   expect(hidden.shadowRoot!.querySelector('[part="value"]')).to.equal(null);
 });
 
+it('maps a numeric value to opt-in human-readable aria-valuetext without changing the visible readout', async () => {
+  const el = (await fixture(html`
+    <lr-slider
+      min="0"
+      max="2"
+      value="1"
+      .valueFormatter=${(value: number) => ['Cold', 'Warm', 'Hot'][value]}
+    ></lr-slider>
+  `)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  const readout = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+
+  expect(thumb.getAttribute('aria-valuenow')).to.equal('1');
+  expect(thumb.getAttribute('aria-valuetext')).to.equal('Warm');
+  expect(readout.textContent).to.equal('1');
+});
+
+it('preserves numeric aria-valuetext when valueFormatter is unset and omits it for a nullish result', async () => {
+  const el = (await fixture(html`<lr-slider value="42"></lr-slider>`)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(thumb.getAttribute('aria-valuetext')).to.equal('42');
+
+  el.valueFormatter = () => undefined;
+  await el.updateComplete;
+  expect(thumb.hasAttribute('aria-valuetext')).to.be.false;
+});
+
 it('omits the value readout from a plain HTML show-value="false" content attribute too, not just the .showValue property binding', async () => {
   // Regression guard for trueDefaultBooleanConverter: Lit's default presence-based `type:
   // Boolean` converter can never be turned back off from a plain-HTML attribute once the

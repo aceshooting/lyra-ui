@@ -11,6 +11,9 @@ export const styles = css`
   [part='list'] { max-block-size: var(--lr-command-palette-list-max-block-size); overflow: auto; padding: var(--lr-space-xs); }
   [part='group'] { padding: var(--lr-space-xs) var(--lr-space-s); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); font-weight: var(--lr-font-weight-semibold); }
   [part='command'] { display: flex; align-items: center; gap: var(--lr-space-s); inline-size: 100%; padding: var(--lr-space-s); border: 0; border-radius: var(--lr-radius); background: transparent; color: inherit; text-align: start; cursor: pointer; }
+  :where([part='command']):hover:where(:not(:disabled)) {
+    background: var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet));
+  }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
      ancestor without a :host declaration shadowing that. ::part(command)[data-active='true'] is
      invalid CSS (an attribute selector cannot follow ::part), so highlighting the active row used to

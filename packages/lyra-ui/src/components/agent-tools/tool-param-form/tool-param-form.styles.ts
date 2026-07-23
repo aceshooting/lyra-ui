@@ -57,6 +57,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  :where(input.control):hover:where(:not(:disabled)) {
+    border-color: var(--lr-color-brand);
+  }
   input.control[aria-invalid='true'] {
     border-color: var(--lr-color-danger);
   }

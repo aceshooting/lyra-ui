@@ -73,6 +73,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  :where([part='search-input']):hover {
+    border-color: var(--lr-color-brand);
+  }
   [part='search-input']::placeholder {
     color: var(--lr-color-text-quiet);
     opacity: 1;

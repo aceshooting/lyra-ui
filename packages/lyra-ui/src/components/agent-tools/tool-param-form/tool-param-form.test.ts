@@ -3,6 +3,13 @@ import './tool-param-form.js';
 import type { LyraToolParamForm, ToolParamFormSchema } from './tool-param-form.js';
 import { styles } from './tool-param-form.styles.js';
 
+it('provides hover feedback for native text and number controls', () => {
+  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
+  // activate browser :hover state under Web Test Runner.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:where\(input\.control\):hover:where\(:not\(:disabled\)\)/);
+});
+
 const basicSchema: ToolParamFormSchema = {
   type: 'object',
   properties: {

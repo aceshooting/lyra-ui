@@ -3,6 +3,13 @@ import './command-palette.js';
 import type { LyraCommandPalette } from './command-palette.js';
 import { styles } from './command-palette.styles.js';
 
+it('provides hover feedback for enabled command rows', () => {
+  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
+  // activate browser :hover state under Web Test Runner.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:where\(\[part='command'\]\):hover:where\(:not\(:disabled\)\)/);
+});
+
 it('opens, filters, and selects a command', async () => {
   const el = (await fixture(html`<lr-command-palette .commands=${[{ id: 'save', label: 'Save', group: 'File' }, { id: 'close', label: 'Close' }]}></lr-command-palette>`)) as LyraCommandPalette;
   el.openPalette(); await el.updateComplete;

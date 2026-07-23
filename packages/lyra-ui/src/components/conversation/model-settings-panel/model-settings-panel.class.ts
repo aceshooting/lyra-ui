@@ -125,11 +125,13 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   }
 
   private onModelChange = (e: CustomEvent<{ value: string; inCatalog: boolean }>): void => {
+    e.stopPropagation();
     this.modelValue = e.detail.value;
     this.emitChange();
   };
 
   private onTemperatureChange = (e: CustomEvent<{ value: number }>): void => {
+    e.stopPropagation();
     this.temperature = e.detail.value;
     this.emitChange();
   };
@@ -191,4 +193,3 @@ declare global {
     'lr-model-settings-panel': LyraModelSettingsPanel;
   }
 }
-

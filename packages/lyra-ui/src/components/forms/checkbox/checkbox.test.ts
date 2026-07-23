@@ -158,17 +158,14 @@ describe('aria-describedby forwarding', () => {
     expect(base.hasAttribute('aria-describedby')).to.be.false;
 
     checkbox.setAttribute('aria-describedby', 'first-description');
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await checkbox.updateComplete;
     expect(base.getAttribute('aria-describedby')).to.equal('first-description');
 
     checkbox.setAttribute('aria-describedby', 'second-description');
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await checkbox.updateComplete;
     expect(base.getAttribute('aria-describedby')).to.equal('second-description');
 
     checkbox.removeAttribute('aria-describedby');
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     await checkbox.updateComplete;
     expect(base.hasAttribute('aria-describedby')).to.be.false;
   });

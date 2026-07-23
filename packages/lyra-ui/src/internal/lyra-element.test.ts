@@ -1,4 +1,5 @@
 import { fixture, expect, html } from '@open-wc/testing';
+import { nothing } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import { tag } from './prefix.js';
 
@@ -21,6 +22,17 @@ class DemoLocale extends LyraElement {
   }
 }
 customElements.define(tag('demo-locale'), DemoLocale);
+
+class DemoHostAria extends LyraElement {
+  render() {
+    return html`<div
+      role="group"
+      aria-label=${this.getAttribute('aria-label') ?? nothing}
+      aria-describedby=${this.getAttribute('aria-describedby') ?? nothing}
+    ></div>`;
+  }
+}
+customElements.define(tag('demo-host-aria'), DemoHostAria);
 
 it('applies the token font-family from the base', async () => {
   const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
@@ -102,4 +114,21 @@ it('makes notifications non-cancelable unless a caller opts into veto semantics'
     { cancelable: true },
   );
   expect(events.map((event) => event.cancelable)).to.deep.equal([false, true]);
+});
+
+it('updates descendants that forward host aria-label and aria-describedby attributes', async () => {
+  const el = await fixture<DemoHostAria>(`<lr-demo-host-aria></lr-demo-host-aria>`);
+  const target = el.shadowRoot!.querySelector('[role="group"]') as HTMLElement;
+
+  el.setAttribute('aria-label', 'Current results');
+  el.setAttribute('aria-describedby', 'results-help');
+  await el.updateComplete;
+  expect(target.getAttribute('aria-label')).to.equal('Current results');
+  expect(target.getAttribute('aria-describedby')).to.equal('results-help');
+
+  el.removeAttribute('aria-label');
+  el.removeAttribute('aria-describedby');
+  await el.updateComplete;
+  expect(target.hasAttribute('aria-label')).to.be.false;
+  expect(target.hasAttribute('aria-describedby')).to.be.false;
 });

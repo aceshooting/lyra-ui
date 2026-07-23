@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './slider.js';
-import type { LyraSlider } from './slider.js';
+import type { LyraSlider, SliderValueFormatter } from './slider.js';
+
+const LEVELS = ['Cold', 'Warm', 'Hot'];
+const formatLevel: SliderValueFormatter = (value) => LEVELS[value];
 
 const meta: Meta = {
   title: 'Slider',
@@ -32,6 +35,28 @@ export const Temperature: Story = {
       max="1"
       step="0.1"
       value="0.7"
+      style="max-inline-size: 20rem;"
+    ></lr-slider>
+  `,
+};
+
+export const HumanReadableValueText: Story = {
+  name: 'Human-readable value text',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A property-only `valueFormatter(value)` maps the numeric domain to the thumb’s `aria-valuetext` without changing `aria-valuenow`, the visible numeric readout, geometry, or emitted values.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-slider
+      label="Temperature level"
+      min="0"
+      max="2"
+      value="1"
+      .valueFormatter=${formatLevel}
       style="max-inline-size: 20rem;"
     ></lr-slider>
   `,

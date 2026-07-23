@@ -68,6 +68,10 @@ export const styles = css`
   [part='bar'] {
     cursor: pointer;
   }
+  :where([part='bar']):hover,
+  :where([part='point']):hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='bar'][data-selected] {
     stroke: var(--lr-lite-chart-selected-outline-color, var(--lr-color-brand));
     stroke-width: var(--lr-size-2px);

@@ -965,7 +965,7 @@ export type { LyraResponsivePanelEventMap } from './components/layout/responsive
 export type { LyraSegmentedEventMap } from './components/layout/segmented/segmented.js';
 export type { LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.js';
 export type { LyraSelectEventMap } from './components/forms/select/select.js';
-export type { LyraSliderEventMap } from './components/forms/slider/slider.js';
+export type { LyraSliderEventMap, SliderValueFormatter } from './components/forms/slider/slider.js';
 export type { LyraSourceCardEventMap } from './components/retrieval/source-card/source-card.js';
 export type { LyraSourceListEventMap } from './components/retrieval/source-list/source-list.js';
 export type { LyraSplitEventMap } from './components/layout/split/split.js';

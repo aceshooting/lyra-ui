@@ -121,6 +121,26 @@ it('toggles sort direction on a repeated header activation and re-sorts rows (un
   expect(names).to.deep.equal(['Alpha Overview.docx', 'Mid Spec.md', 'Zeta Runbook.pdf']);
 });
 
+it('emits one host lr-sort event for one bubbling table lr-sort event', async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs}></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement;
+  let count = 0;
+  el.addEventListener('lr-sort', () => count++);
+
+  table.dispatchEvent(
+    new CustomEvent('lr-sort', {
+      detail: { key: 'name', direction: 'desc' },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(count).to.equal(1);
+});
+
 it('sorts numerically-aware by version (v2 before v10)', async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs} sort-key="version"></lr-document-library>`,

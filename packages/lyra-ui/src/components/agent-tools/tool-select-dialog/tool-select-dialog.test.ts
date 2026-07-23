@@ -4,6 +4,13 @@ import type { LyraToolSelectDialog, ToolSelectDialogTool } from './tool-select-d
 import type { LyraCheckbox } from '../../forms/checkbox/checkbox.js';
 import { styles } from './tool-select-dialog.styles.js';
 
+it('provides hover feedback for the native search input', () => {
+  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
+  // activate browser :hover state under Web Test Runner.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:where\(\[part='search-input'\]\):hover/);
+});
+
 // A stand-in for a slotted component whose real focusable target lives
 // inside its own shadow root rather than the host tag's light-DOM subtree.
 // Mirrors lr-dialog's/lr-tool-result-dialog's identical test fixture,
@@ -329,6 +336,19 @@ describe('selection', () => {
     expect(el.selected).to.deep.equal(['run_python']);
   });
 
+  it('emits one host lr-change for one bubbling tool-checkbox lr-change', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${[]}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    let count = 0;
+    el.addEventListener('lr-change', () => count++);
+
+    clickCheckbox(checkboxFor(el, 'web_search'));
+    await el.updateComplete;
+
+    expect(count).to.equal(1);
+  });
+
   it('ignores clicks on a data-disabled tool row', async () => {
     const el = (await fixture(
       html`<lr-tool-select-dialog .tools=${TOOLS} .selected=${[]}></lr-tool-select-dialog>`,
@@ -378,6 +398,21 @@ describe('useDefaults', () => {
     expect(detail.useDefaults).to.be.false;
     expect(detail.selected).to.deep.equal(['web_search']);
     expect(checkboxFor(el, 'web_search').disabled).to.be.false;
+  });
+
+  it('emits one host lr-change for one bubbling defaults-toggle lr-change', async () => {
+    const el = (await fixture(
+      html`<lr-tool-select-dialog use-defaults .tools=${TOOLS}></lr-tool-select-dialog>`,
+    )) as LyraToolSelectDialog;
+    const toggle = el.shadowRoot!.querySelector('[part="defaults-toggle"]') as HTMLElement;
+    const base = toggle.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    let count = 0;
+    el.addEventListener('lr-change', () => count++);
+
+    base.click();
+    await el.updateComplete;
+
+    expect(count).to.equal(1);
   });
 });
 

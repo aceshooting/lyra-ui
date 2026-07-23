@@ -52,6 +52,24 @@ describe('lr-graph-query-builder', () => {
     expect(el.value.startId).to.equal('node-1');
   });
 
+  it('emits one host lr-input event for one bubbling child lr-input event', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    const startInput = el.shadowRoot!.querySelector('[part="start-input"]') as HTMLElement;
+    let count = 0;
+    el.addEventListener('lr-input', () => count++);
+
+    startInput.dispatchEvent(
+      new CustomEvent('lr-input', {
+        detail: { value: 'node-1' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(count).to.equal(1);
+  });
+
   it('emits lr-input when the end-entity input changes', async () => {
     const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
     await el.updateComplete;

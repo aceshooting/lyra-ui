@@ -208,6 +208,44 @@ it('re-emits a consolidated lr-change with the full settings shape when the temp
   expect(el.temperature).to.equal(1.3);
 });
 
+it('emits one consolidated lr-change for one bubbling model-select lr-change', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel model-value="llama3.1" .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  let count = 0;
+  el.addEventListener('lr-change', () => count++);
+
+  modelSelect(el).dispatchEvent(
+    new CustomEvent('lr-change', {
+      detail: { value: 'mistral', inCatalog: true },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(count).to.equal(1);
+});
+
+it('emits one consolidated lr-change for one bubbling slider lr-change', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel model-value="mistral" .catalog=${CATALOG}></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+  let count = 0;
+  el.addEventListener('lr-change', () => count++);
+
+  slider(el).dispatchEvent(
+    new CustomEvent('lr-change', {
+      detail: { value: 1.3 },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(count).to.equal(1);
+});
+
 it('computes inCatalog fresh from the current catalog/modelValue rather than trusting a stale child event', async () => {
   const el = (await fixture(html`
     <lr-model-settings-panel model-value="ancient-model" .catalog=${CATALOG}></lr-model-settings-panel>

@@ -14,16 +14,15 @@ Treat a mismatch as a real signal worth looking at, but confirm what actually ch
 image-diff view) before assuming the baseline was right and the new capture is wrong, or vice
 versa.
 
-What the harness *does* now guarantee is reproducibility: three determinism gaps (in-flight CSS
-animations/transitions, webfont swap-in, wall-clock reads) plus a fourth found the hard way — the
-default `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing
-host happens to have installed, which cascaded into a 3.6% diff for word-cloud's spiral-search
-layout alone — are all pinned (see `../scripts/visual-regression.mjs`'s header comment). A full
-62-story x 3-axis run now reproduces 186/186 clean against these baselines, which is why the CI
-step (`.github/workflows/ci.yml`) is wired as a blocking merge gate rather than
-`continue-on-error`. If it starts flaking again (a mismatch with no corresponding source change),
-that's a signal a fifth determinism gap exists — chase it down rather than reverting to
-non-blocking.
+What the harness *does* now guarantee is reproducibility: in-flight CSS animations/transitions,
+webfont swap-in, wall-clock reads, the browser's default timezone, and the default
+`system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
+happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
+comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
+spiral-search layout. A full 62-story x 3-axis run now reproduces 186/186 clean against these
+baselines, which is why the CI step (`.github/workflows/ci.yml`) is wired as a blocking merge gate
+rather than `continue-on-error`. If it starts flaking again with no corresponding source change,
+chase down the new determinism gap rather than reverting to non-blocking.
 
 ## Reviewing and promoting baselines
 

@@ -17,6 +17,11 @@ export interface LyraSliderEventMap {
   'lr-input': CustomEvent<{ value: number }>;
   'lr-change': CustomEvent<{ value: number }>;
 }
+
+/** Formats a finite, clamped slider value for `aria-valuetext`; return a
+ *  nullish value to omit the attribute. */
+export type SliderValueFormatter = (value: number) => string | null | undefined;
+
 class LyraSliderBase extends LyraElement<LyraSliderEventMap> {}
 
 /**
@@ -120,7 +125,13 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
    *  focusable thumb is never nameless (the same pattern as
    *  `<lr-input>`/`<lr-textarea>`'s built-in generic labels). */
   @property() label = '';
-  
+
+  /** Optional human-readable formatter for the thumb's `aria-valuetext`.
+   *  It receives the same finite, clamped number exposed through
+   *  `aria-valuenow`; leaving it unset preserves the existing numeric
+   *  `aria-valuetext`. Return `null`/`undefined` to omit the attribute. */
+  @property({ attribute: false }) valueFormatter?: SliderValueFormatter;
+
   @property({ type: Boolean, attribute: 'show-value', converter: trueDefaultBooleanConverter }) showValue = true;
 
   // Keyed by pointerId (a Set, not a single scalar) purely for
@@ -271,10 +282,6 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
       stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
     }
     return Math.min(hi, Math.max(lo, stepped));
-  }
-
-  private formatValue(v: number): string {
-    return String(v);
   }
 
   private setValue(raw: number, commit: boolean): boolean {
@@ -437,7 +444,8 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   override render(): TemplateResult {
     const num = this.valueAsNumber;
     const pct = this.percentOf(num);
-    const text = this.formatValue(num);
+    const text = String(num);
+    const valueText = this.valueFormatter ? this.valueFormatter(num) : text;
     const { lo, hi } = this.domain();
     const ariaLabel = this.label || this.getAttribute('aria-label') || this.localize('sliderLabel');
     return html`
@@ -451,7 +459,7 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
           aria-valuemin=${lo}
           aria-valuemax=${hi}
           aria-valuenow=${num}
-          aria-valuetext=${text}
+          aria-valuetext=${valueText ?? nothing}
           aria-label=${ariaLabel}
           aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
           style=${`inset-inline-start:${pct}%`}

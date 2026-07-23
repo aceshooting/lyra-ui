@@ -29,10 +29,13 @@ seamlessly right after. First-party invention (no Web Awesome equivalent).
 - `label: string = ''` — accessible name set as `aria-label` on the `role="slider"` thumb; a plain
   `aria-label` attribute on the host itself is honored as a fallback when this is left unset (matching
   `<lr-checkbox>`/`<lr-switch>`).
+- `valueFormatter?: SliderValueFormatter` (attribute: false) — maps the finite, clamped
+  `aria-valuenow` number to optional human-readable `aria-valuetext`. The formatter may return
+  `string | null | undefined`; a nullish result omits `aria-valuetext`. Leaving the property unset
+  preserves the existing numeric `aria-valuetext`.
 - `showValue: boolean = true` (attribute `show-value`) — whether to render the current numeric value as
   visible text next to the track. Not reflected; toggle it off via the `.showValue=${false}` property
-  binding — a bare `show-value="false"` content attribute is still truthy, since presence is all Lit's
-  default boolean converter checks.
+  binding or a plain `show-value="false"` content attribute.
 - Inherited from `FormAssociated`: `name: string = ''`, `value: string` (form-submitted string form),
   `disabled: boolean = false` (reflected), `required: boolean = false` (reflected).
 
@@ -68,6 +71,7 @@ when `show-value` is true)
   step="0.1"
   label="Temperature"
   .valueAsNumber=${0.7}
+  .valueFormatter=${(value) => `${value * 100}%`}
   @lr-input=${(e) => setDraftTemperature(e.detail.value)}
   @lr-change=${(e) => commitTemperature(e.detail.value)}
 ></lr-slider>
@@ -86,6 +90,9 @@ native range input either.
   value); ArrowUp/ArrowDown are never swapped, since direction only affects the horizontal inline axis.
 - Changing `min`/`max`/`step` after mount automatically re-clamps/re-snaps the current `value` in the
   next update — narrowing the domain can silently move the slider's value.
+- `valueFormatter` is presentation-only: `aria-valuenow`, the visible numeric readout, geometry,
+  form value, and emitted values stay numeric. With no formatter, `aria-valuetext` remains the
+  numeric string rendered by earlier versions; a nullish formatter result omits it.
 - A pointer drag fires `lr-input` continuously and a single `lr-change` on release; a keyboard step
   fires exactly one of each per press, but OS key-repeat while a key is held re-fires `lr-input` on
   every repeat while still only committing `lr-change` once, on the eventual keyup.

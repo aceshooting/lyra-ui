@@ -18,6 +18,8 @@ export interface LyraEmitOptions {
 
 export type LyraEventMap = Record<string, Event>;
 
+const FORWARDED_HOST_ARIA_ATTRIBUTES = ['aria-label', 'aria-describedby'] as const;
+
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
  * (`--lr-theme-*` theme-input properties with hardcoded `--lr-*` fallbacks).
@@ -25,6 +27,15 @@ export type LyraEventMap = Record<string, Event>;
  */
 export class LyraElement<Events = LyraEventMap> extends LitElement {
   static override styles: CSSResultGroup = [tokens];
+
+  /**
+   * Components commonly forward these global host attributes to the element
+   * that owns the internal role. They are not reactive Lit properties, so
+   * observe them centrally to keep post-render attribute changes in sync.
+   */
+  static override get observedAttributes(): string[] {
+    return [...new Set([...super.observedAttributes, ...FORWARDED_HOST_ARIA_ATTRIBUTES])];
+  }
 
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
   @property({ reflect: true }) locale = '';
@@ -72,6 +83,16 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   override requestUpdate(name?: PropertyKey, oldValue?: unknown, options?: PropertyDeclaration): void {
     invalidateLyraLocaleCache(this);
     super.requestUpdate(name, oldValue, options);
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if (
+      oldValue !== value &&
+      FORWARDED_HOST_ARIA_ATTRIBUTES.includes(name as (typeof FORWARDED_HOST_ARIA_ATTRIBUTES)[number])
+    ) {
+      this.requestUpdate();
+    }
   }
 
   /** Starts a component-owned cancellable load and aborts the previous one. */

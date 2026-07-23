@@ -315,20 +315,11 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
       this._defaultChecked = this.hasAttribute('checked');
     }
     this.updateValidity();
-    this.labelObserver = new MutationObserver((mutations) => {
-      if (mutations.some((mutation) => mutation.type === 'attributes')) {
-        this.requestUpdate();
-      }
-      if (mutations.some((mutation) => mutation.type !== 'attributes')) {
-        this.recomputeHasLabelSlot();
-      }
-    });
+    this.labelObserver = new MutationObserver(() => this.recomputeHasLabelSlot());
     this.labelObserver.observe(this, {
       childList: true,
       subtree: true,
       characterData: true,
-      attributes: true,
-      attributeFilter: ['aria-describedby'],
     });
   }
 

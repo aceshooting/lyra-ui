@@ -438,7 +438,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           .sortDir=${this.sortDirection === 'ascending' ? 'asc' : 'desc'}
           ?loading=${this.loading}
           empty-heading=${emptyHeading}
-          @lr-sort=${(event: CustomEvent<{ key: string }>) => this.onSort(event.detail.key as LibraryDocumentSortKey)}
+          @lr-sort=${(event: CustomEvent<{ key: string }>) => {
+            event.stopPropagation();
+            this.onSort(event.detail.key as LibraryDocumentSortKey);
+          }}
           @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => this.openDocument(event.detail.row)}
         ></lr-table>
       </div>

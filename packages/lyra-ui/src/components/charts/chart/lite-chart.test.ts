@@ -3,6 +3,14 @@ import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
 import { styles } from './lite-chart.styles.js';
 
+it('provides hover feedback for keyboard-focusable bars and points', () => {
+  // Pseudo-class presence is the behavior under test; synthetic pointer events do not
+  // activate browser :hover state under Web Test Runner.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:where\(\[part='bar'\]\):hover/);
+  expect(css).to.match(/:where\(\[part='point'\]\):hover/);
+});
+
 async function mount(tpl: ReturnType<typeof html>): Promise<LyraLiteChart> {
   const el = (await fixture(tpl)) as LyraLiteChart;
   // Let the ResizeObserver callback (async, fires after connect) settle so

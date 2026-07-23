@@ -266,11 +266,13 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private onSearchBlur = (): void => { this.emit('blur'); };
 
   private onDefaultsToggle = (e: CustomEvent<{ checked: boolean }>): void => {
+    e.stopPropagation();
     this.useDefaults = e.detail.checked;
     this.emitChange();
   };
 
   private onToolToggle(tool: ToolSelectDialogTool, e: CustomEvent<{ checked: boolean }>): void {
+    e.stopPropagation();
     const set = new Set(this.selected);
     e.detail.checked ? set.add(tool.id) : set.delete(tool.id);
     this.selected = [...set];

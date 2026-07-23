@@ -513,7 +513,10 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       .value=${value}
       ?disabled=${this.effectiveDisabled}
       ?required=${Boolean(k.required)}
-      @lr-input=${(e: CustomEvent<{ value: string }>) => this.setFieldValue(k.key, e.detail.value)}
+      @lr-input=${(e: CustomEvent<{ value: string }>) => {
+        e.stopPropagation();
+        this.setFieldValue(k.key, e.detail.value);
+      }}
     ></lr-textarea>`;
   }
 

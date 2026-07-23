@@ -50,13 +50,16 @@ const FILTER = filterArgIndex !== -1 ? args[filterArgIndex + 1] : undefined;
 //      animations that consult the media query instead of running pure CSS;
 //   2. webfonts still swapping in -- handled by awaiting `document.fonts.ready`, which
 //      `networkidle` does *not* imply (the font file can be fetched but not yet applied);
-//   3. wall-clock reads -- any component rendering "2 minutes ago", a "today" highlight, or a
-//      formatted current date produces a different image every run. FIXED_CLOCK pins `Date.now`
-//      and `new Date()` without pausing timers (`setFixedTime`, not `pauseAt`), so streaming /
-//      polling / rAF-driven components still reach their steady state normally.
+//   3. wall-clock reads and the host's default timezone -- any component rendering "2 minutes
+//      ago", a "today" highlight, or a formatted current date produces a different image every
+//      run. FIXED_CLOCK pins `Date.now` and `new Date()` without pausing timers (`setFixedTime`,
+//      not `pauseAt`), while FIXED_TIME_ZONE makes local calendar fields and `Intl` formatting
+//      independent of the capturing host. Streaming / polling / rAF-driven components still
+//      reach their steady state normally.
 // A fixed, arbitrary instant. Any component that renders a relative or absolute current date
 // resolves against this, so its capture is reproducible. Deliberately not "now".
 const FIXED_CLOCK = new Date('2026-01-01T12:00:00.000Z');
+const FIXED_TIME_ZONE = 'UTC';
 
 // Fourth determinism source, found the hard way: `--lr-font`/`--lr-font-mono` (tokens.styles.ts)
 // default to the generic `system-ui`/`ui-monospace` stacks, which resolve to whatever font
@@ -369,10 +372,15 @@ async function main() {
   const server = createServer(serve);
   const baseUrl = await listen(server);
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  const page = await browser.newPage({
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+    timezoneId: FIXED_TIME_ZONE,
+  });
   // Pins Date.now()/new Date() for every story in the run while leaving setTimeout/setInterval/
-  // rAF running at real speed, so date-rendering components are reproducible but streaming and
-  // polling components still settle. Installed once -- it survives the per-story navigations.
+  // rAF running at real speed. Together with the browser context's fixed timezone, date-rendering
+  // components are reproducible while streaming and polling components still settle. Installed
+  // once -- it survives the per-story navigations.
   await page.clock.setFixedTime(FIXED_CLOCK);
   const browserErrors = [];
   page.on('pageerror', (error) => browserErrors.push(String(error)));

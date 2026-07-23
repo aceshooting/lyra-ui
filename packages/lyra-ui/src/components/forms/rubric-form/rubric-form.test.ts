@@ -69,6 +69,24 @@ describe('lr-rubric-form', () => {
     expect(ev.detail.value.tags).to.deep.equal(['a', 'b']);
   });
 
+  it('emits one host lr-input event for one bubbling comment-field lr-input event', async () => {
+    const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+    const textarea = el.shadowRoot!.querySelector('[data-key="comment"] lr-textarea') as HTMLElement;
+    let count = 0;
+    el.addEventListener('lr-input', () => count++);
+
+    textarea.dispatchEvent(
+      new CustomEvent('lr-input', {
+        detail: { value: 'Clear and accurate' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(count).to.equal(1);
+  });
+
   it('emits lr-validity-change on mount and again once a required field is filled', async () => {
     const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
     await el.updateComplete;

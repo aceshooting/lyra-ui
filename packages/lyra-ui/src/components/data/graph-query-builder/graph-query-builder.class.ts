@@ -514,7 +514,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             .value=${value.startId}
             error-text=${hasStartError ? this._errors['start-input'] : ''}
             ?disabled=${disabled}
-            @lr-input=${(e: CustomEvent<{ value: string }>) => this.setValue({ ...value, startId: e.detail.value })}
+            @lr-input=${(e: CustomEvent<{ value: string }>) => {
+              e.stopPropagation();
+              this.setValue({ ...value, startId: e.detail.value });
+            }}
             @blur=${() => this.markTouched('start-input')}
           ></lr-input>
           <lr-input
@@ -522,7 +525,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
             label=${this.localize('graphQueryEndLabel')}
             .value=${value.endId}
             ?disabled=${disabled}
-            @lr-input=${(e: CustomEvent<{ value: string }>) => this.setValue({ ...value, endId: e.detail.value })}
+            @lr-input=${(e: CustomEvent<{ value: string }>) => {
+              e.stopPropagation();
+              this.setValue({ ...value, endId: e.detail.value });
+            }}
           ></lr-input>
           <lr-select
             part="min-hops"
@@ -590,7 +596,10 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
               label=${this.localize('graphQuerySaveNameLabel')}
               .value=${this.saveName}
               ?disabled=${disabled}
-              @lr-input=${(e: CustomEvent<{ value: string }>) => (this.saveName = e.detail.value)}
+              @lr-input=${(e: CustomEvent<{ value: string }>) => {
+                e.stopPropagation();
+                this.saveName = e.detail.value;
+              }}
             ></lr-input>
             <button
               part="save-button"
