@@ -1,4 +1,4 @@
-import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import { fixture, expect, oneEvent, html, aTimeout, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './combobox.js';
 import './option.js';
@@ -318,7 +318,7 @@ it('forwards selection editing methods to the native input and handles an empty 
 it('keeps the native editing facade safe before the internal input exists', () => {
   const el = document.createElement('lr-combobox') as LyraCombobox;
 
-  expect(el.input).to.equal(null);
+  expect(el.input === null).to.be.true;
   expect(el.selectionStart).to.equal(null);
   expect(el.selectionEnd).to.equal(null);
   expect(el.selectionDirection).to.equal(undefined);
@@ -402,7 +402,7 @@ it('is accessible with the listbox open, a keyboard-active option, and selected 
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
   await el.updateComplete;
   expect(el.shadowRoot!.querySelectorAll('[part="tag"]').length).to.be.greaterThan(0);
-  expect(el.shadowRoot!.querySelector('[part="tag__remove-button"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="tag__remove-button"]') !== null).to.be.true;
   expect(input.getAttribute('aria-activedescendant')).to.not.be.empty;
   await expect(el).to.be.accessible();
 });
@@ -552,15 +552,15 @@ it('uses shared svg icons instead of literal glyphs for chevron, clear, and tag-
   await el.updateComplete;
 
   const expandIcon = el.shadowRoot!.querySelector('[part="expand-icon"]') as HTMLElement;
-  expect(expandIcon.querySelector('svg')).to.exist;
+  expect(expandIcon.querySelector('svg') !== null).to.be.true;
   expect(expandIcon.textContent?.trim()).to.equal('');
 
   const clearBtn = el.shadowRoot!.querySelector('[part="clear-button"]') as HTMLElement;
-  expect(clearBtn.querySelector('svg')).to.exist;
+  expect(clearBtn.querySelector('svg') !== null).to.be.true;
   expect(clearBtn.textContent?.trim()).to.equal('');
 
   const removeBtn = el.shadowRoot!.querySelector('[part="tag__remove-button"]') as HTMLElement;
-  expect(removeBtn.querySelector('svg')).to.exist;
+  expect(removeBtn.querySelector('svg') !== null).to.be.true;
   expect(removeBtn.textContent?.trim()).to.equal('');
 
   // The chevron is rotated to a "down" glyph via its wrapping part, not the svg itself.
@@ -699,7 +699,7 @@ it('renders errorText in var(--lr-color-danger), distinct from and alongside the
 
   const errorPart = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
   const hintPart = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
-  expect(errorPart).to.exist;
+  expect(errorPart !== null).to.be.true;
   expect(errorPart.textContent).to.contain('Selection required');
   expect(hintPart.textContent).to.contain('Pick a fruit');
   expect(getComputedStyle(errorPart).color).to.not.equal(getComputedStyle(hintPart).color);
@@ -888,15 +888,16 @@ it('calls source with the current query (debounced) and renders its rows', async
 });
 
 it('shows a loading row while an in-flight source call is pending', async () => {
-  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  const el = (await fixture(html`<lr-combobox source-delay="500"></lr-combobox>`)) as LyraCombobox;
   let resolve!: (rows: { value: string; label: string }[]) => void;
   el.source = () => new Promise((r) => (resolve = r));
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
-  await el.updateComplete;
-
-  expect(el.shadowRoot!.querySelector('.loading')).to.exist;
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('.loading') !== null,
+    'loading state was not rendered after the source debounce',
+    { timeout: 2000 },
+  );
 
   // Resolving the source promise only fires the `.then()` -> set asyncRows -> `.finally()` ->
   // set loading=false chain on later microtask ticks (`.finally()` is itself a `.then()` under
@@ -1145,7 +1146,7 @@ it('shows the empty-state message with a custom emptyText when no rows match', a
 
   await typeQuery(el, 'zzz');
   const empty = el.shadowRoot!.querySelector('.empty');
-  expect(empty).to.exist;
+  expect(empty !== null).to.be.true;
   expect(empty!.textContent).to.equal('Nothing here');
 });
 
@@ -1221,14 +1222,16 @@ it('disables the combobox when its containing fieldset is disabled', async () =>
 });
 
 it('is accessible while showing the loading state (async source pending)', async () => {
-  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  const el = (await fixture(html`<lr-combobox source-delay="0"></lr-combobox>`)) as LyraCombobox;
   el.source = () => new Promise(() => {});
   el.open = true;
   await el.updateComplete;
-  await aTimeout(250);
-  await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('.loading')).to.exist;
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('.loading') !== null,
+    'loading state was not rendered before the accessibility check',
+    { timeout: 2000 },
+  );
   await expect(el).to.be.accessible();
 });
 
@@ -1286,7 +1289,7 @@ it('is accessible while showing the empty state (no matching rows)', async () =>
   el.open = true;
   await el.updateComplete;
 
-  expect(el.shadowRoot!.querySelector('.empty')).to.exist;
+  expect(el.shadowRoot!.querySelector('.empty') !== null).to.be.true;
   await expect(el).to.be.accessible();
 });
 
@@ -1821,7 +1824,7 @@ it('scrolls the keyboard-active option into view in a scrolling listbox', async 
   }
 
   const activeRow = el.shadowRoot!.querySelector('[part="option"][data-active]') as HTMLElement;
-  expect(activeRow).to.exist;
+  expect(activeRow !== null).to.be.true;
   const rowRect = activeRow.getBoundingClientRect();
   const boxRect = box.getBoundingClientRect();
   expect(rowRect.top >= boxRect.top - 1, 'active row top must be within the scrolled listbox viewport').to.be.true;
@@ -2013,7 +2016,7 @@ describe('native input surface', () => {
       </lr-combobox>
     `)) as LyraCombobox;
     await clearable.updateComplete;
-    expect(clearable.shadowRoot!.querySelector('[part="clear-button"]')).to.exist;
+    expect(clearable.shadowRoot!.querySelector('[part="clear-button"]') !== null).to.be.true;
 
     const legacy = (await fixture(html`
       <lr-combobox with-clear>
@@ -2021,7 +2024,7 @@ describe('native input surface', () => {
       </lr-combobox>
     `)) as LyraCombobox;
     await legacy.updateComplete;
-    expect(legacy.shadowRoot!.querySelector('[part="clear-button"]')).to.exist;
+    expect(legacy.shadowRoot!.querySelector('[part="clear-button"]') !== null).to.be.true;
   });
 
   it('forwards focus, blur, selection, and range editing to the internal input', async () => {
@@ -2047,7 +2050,7 @@ describe('native input surface', () => {
     expect(el.selectionEnd).to.equal('hello there'.length);
 
     el.blur();
-    expect(el.shadowRoot!.activeElement).to.equal(null);
+    expect(el.shadowRoot!.activeElement === null).to.be.true;
   });
 
   it('bridges native focus and blur as bubbling, composed host events', async () => {
@@ -2403,7 +2406,7 @@ describe('clear affordance on the filter axis', () => {
     await typeQuery(el, 'foo');
     expect(el.value).to.equal('');
     const button = clearButton(el);
-    expect(button, 'clear button should render for a query with no selection').to.exist;
+    expect(button !== null, 'clear button should render for a query with no selection').to.be.true;
 
     const filtered = oneEvent(el, 'lr-filter');
     button!.click();
@@ -2411,7 +2414,7 @@ describe('clear affordance on the filter axis', () => {
     expect(event.detail.value).to.equal('');
     await el.updateComplete;
     expect(inputEl(el).value).to.equal('');
-    expect(clearButton(el)).to.not.exist;
+    expect(clearButton(el) === null).to.be.true;
   });
 
   it('does not emit change/input/lr-clear for a query-only clear', async () => {
@@ -2489,13 +2492,13 @@ describe('clear affordance on the filter axis', () => {
       <lr-combobox clearable label="Fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
     `)) as LyraCombobox;
     await typeQuery(el, 'foo');
-    expect(clearButton(el)).to.exist;
+    expect(clearButton(el) !== null).to.be.true;
     // A direct `open = false` write bypasses hide()'s own query reset, which is exactly the state
     // where `displayValue` shows the selected label (here: nothing) rather than `query`.
     el.open = false;
     await el.updateComplete;
     expect(inputEl(el).value).to.equal('');
-    expect(clearButton(el)).to.not.exist;
+    expect(clearButton(el) === null).to.be.true;
   });
 
   it('keeps the clear button for a multi-select query while closed, where the query is still visible', async () => {
@@ -2506,7 +2509,7 @@ describe('clear affordance on the filter axis', () => {
     el.open = false;
     await el.updateComplete;
     expect(inputEl(el).value).to.equal('foo');
-    expect(clearButton(el)).to.exist;
+    expect(clearButton(el) !== null).to.be.true;
   });
 
   it('leaves the clear button absent when neither a selection nor a query exists', async () => {
@@ -2514,7 +2517,7 @@ describe('clear affordance on the filter axis', () => {
       <lr-combobox clearable label="Fruit" open><lr-option value="a">Apple</lr-option></lr-combobox>
     `)) as LyraCombobox;
     await el.updateComplete;
-    expect(clearButton(el)).to.not.exist;
+    expect(clearButton(el) === null).to.be.true;
   });
 });
 
@@ -2696,7 +2699,7 @@ describe('ElementInternals availability', () => {
       // Confirm the fallback keeps the rest of the public surface usable rather than merely
       // swallowing the constructor error.
       expect(el!.checkValidity()).to.be.true;
-      expect(el!.form).to.equal(null);
+      expect(el!.form === null).to.be.true;
     } finally {
       HTMLElement.prototype.attachInternals = original;
     }
