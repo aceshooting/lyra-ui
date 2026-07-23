@@ -136,11 +136,12 @@ export default {
   files: 'src/**/*.test.ts',
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: browserProduct })],
-  // The full suite includes 291 files and several optional-peer integration
+  // The full suite includes 353 files and several optional-peer integration
   // fixtures. Keep the suite-level watchdog above the normal two-minute
-  // budget so a slow CI worker reports the actual test result instead of
-  // turning a completed browser run into an infrastructure timeout.
-  testsFinishTimeout: 180000,
+  // budget, including the coverage-instrumented large-graph benchmark, so a
+  // slow CI worker reports the actual test result instead of turning a
+  // completed browser run into an infrastructure timeout.
+  testsFinishTimeout: 300000,
   plugins: [
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     hammerEsmInteropPlugin,

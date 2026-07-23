@@ -20,9 +20,11 @@ or source fetching.
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
 (attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`showClaims: boolean = true` (attribute `show-claims`, reflected) forwards to the composed
+`lr-grounding-summary`; `label: string = ''`; `accessibleLabel: string | null = null` (attribute
+`aria-label`).
 
-**Events:** `lr-citation-select` (`{ citation }`) and `lr-retry`.
+**Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list.

@@ -12892,7 +12892,7 @@
       "name": "lr-selection-toolbar",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries\nthe selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `action` | Every action button. |\n| `action-ask` | The ask action. |\n| `action-cite` | The cite action. |\n| `action-copy` | The copy action. |\n| `action-quote` | The quote action. |\n| `toolbar` | The floating `role=\"toolbar\"` surface. |"
+        "value": "`<lr-selection-toolbar>` — a nonmodal action toolbar positioned above selected text. It carries\nthe selected text and a format-neutral document anchor into ask, quote, cite, or copy actions.\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `action` | Every action button. |\n| `action-ask` | The ask action. |\n| `action-cite` | The cite action. |\n| `action-copy` | The copy action. |\n| `action-quote` | The quote action. |\n| `toolbar` | The floating `role=\"toolbar\"` surface. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-selection-toolbar-inline-start` — Computed logical inline anchor position.\n- `--lr-selection-toolbar-block-start` — Computed logical block anchor position."
       },
       "attributes": [
         {

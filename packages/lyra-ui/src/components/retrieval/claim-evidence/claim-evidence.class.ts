@@ -83,8 +83,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   private renderClaim = (claim: GroundedClaim): TemplateResult => {
     const selected = claim.id === this.selectedClaimId;
     const citations = this.resolvedCitations(claim);
+    const claimPart = selected ? 'claim claim-selected' : 'claim';
     return html`
-      <li part=${selected ? 'claim claim-selected' : 'claim'} aria-current=${selected ? 'true' : nothing}>
+      <li part=${claimPart} aria-current=${selected ? 'true' : nothing}>
         <button
           part="claim-trigger"
           type="button"
@@ -139,4 +140,3 @@ declare global {
     'lr-claim-evidence': LyraClaimEvidence;
   }
 }
-

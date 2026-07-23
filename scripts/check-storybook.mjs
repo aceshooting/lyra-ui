@@ -233,6 +233,10 @@ async function main() {
     }
 
     await waitForStory(page, baseUrl, 'responsivepanel--forced-overlay-bottom-sheet', { width: 390, height: 800 });
+    if (await page.locator('lr-responsive-panel').evaluate((element) => element.hasAttribute('open'))) {
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(() => !document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
+    }
     await page.getByRole('button', { name: 'Open panel' }).click();
     await page.waitForFunction(() => document.querySelector('lr-responsive-panel')?.hasAttribute('open'));
     const panelBox = await page.locator('lr-responsive-panel').locator('[part="panel"]').boundingBox();

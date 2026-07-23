@@ -2,7 +2,7 @@
 
 # Component index
 
-256 custom elements, grouped by the source family they live in.
+264 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -212,7 +212,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-document-compare` · viewers/document-compare/document-compare.js — side-by-side or inline comparison of two document versions, composed entirely from two existing primitives rather than reimplementing eit...
 - `lr-geojson-view` · viewers/geojson-view/geojson-view.js — internal document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
 
-## Conversation & chat UI — `components/conversation/` (28)
+## Conversation & chat UI — `components/conversation/` (32)
 
 - `lr-markdown` · conversation/markdown/markdown.js — sanitized Markdown-to-HTML rendering (GFM tables, fenced code blocks, links, blockquotes) built on the optional peer dependencies `marked...
 - `lr-markdown-core` · conversation/markdown/markdown-core.js — a build-lean variant of `<lr-markdown>` for a consumer whose `languages` map already covers every language it will ever render.
@@ -242,8 +242,12 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-widget-renderer` · conversation/widget-renderer/widget-renderer.js — renders an agent-streamed declarative JSON widget tree through an allowlisted `type -> lyra tag` registry (see `registry.ts`/`resolve.ts`...
 - `lr-voice-picker` · conversation/voice-picker/voice-picker.js — a TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s closed-dropdown/free-text-combobox dual mode, stale-va...
 - `lr-agent-workspace` · conversation/agent-workspace/agent-workspace.js — a responsive, controlled shell for an AI conversation and its supporting agent state.
+- `lr-message-parts` · conversation/message-parts/message-parts.js — renders ordered, interleavable provider-neutral AI message parts.
+- `lr-prompt-input` · conversation/prompt-input/prompt-input.js — a composed AI prompt surface combining the chat composer with attachments, model and voice selection, retrieval sources, mentions, slash...
+- `lr-prompt-queue` · conversation/prompt-queue/prompt-queue.js — a controlled queue of follow-up prompts that can be edited, reordered, removed, or sent immediately while another agent turn is active.
+- `lr-selection-toolbar` · conversation/selection-toolbar/selection-toolbar.js — a nonmodal action toolbar positioned above selected text.
 
-## Agent tooling, tool calls & evaluation — `components/agent-tools/` (31)
+## Agent tooling, tool calls & evaluation — `components/agent-tools/` (32)
 
 - `lr-tool-call-chip` · agent-tools/tool-call-chip/tool-call-chip.js — a compact inline pill representing one tool/ function call an agent made mid-conversation, e.g.
 - `lr-tool-result-view` · agent-tools/tool-result-view/tool-result-view.js — renders a tool call's result via whichever custom renderer a host app has registered for it (see `registerToolRenderer()` in `registry.ts...
@@ -276,8 +280,9 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-tool-timeline` · agent-tools/tool-timeline/tool-timeline.js — a chronological list of an agent run's tool/function calls, each rendered through `<lr-tool-call-chip>` (name/status/duration) and `<lr-t...
 - `lr-agent-eval-dashboard` · agent-tools/agent-eval-dashboard/agent-eval-dashboard.js — a controlled evaluation overview with metric cards, a trend chart, and run-status history.
 - `lr-approval-queue` · agent-tools/approval-queue/approval-queue.js — a controlled queue of tool calls that need human approval, with a keyboard-accessible request list and a single reused `<lr-tool-approval...
+- `lr-mcp-app` · agent-tools/mcp-app/mcp-app.js — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
 
-## Retrieval, knowledge graph & grounding — `components/retrieval/` (27)
+## Retrieval, knowledge graph & grounding — `components/retrieval/` (30)
 
 - `lr-graph` · retrieval/graph/graph.js — a force-directed node-link diagram with pan/zoom/drag.
 - `lr-node-palette` · retrieval/node-palette/node-palette.js — the searchable, categorized node library for workflow editors: drag an item onto a canvas, or place it by keyboard.
@@ -306,3 +311,6 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-rag-answer` · retrieval/rag-answer/rag-answer.js — a controlled grounded-answer surface combining sanitized Markdown, citation badges, a grounding assessment, and source previews.
 - `lr-embedding-explorer` · retrieval/embedding-explorer/embedding-explorer.js — a dependency-free, accessible 2D embedding projection viewer.
 - `lr-knowledge-base-admin` · retrieval/knowledge-base-admin/knowledge-base-admin.js — a responsive operations shell composing the existing controlled source inventory and ingestion queue into one tabbed knowledge-base view.
+- `lr-claim-evidence` · retrieval/claim-evidence/claim-evidence.js — a controlled claim-by-claim grounding audit.
+- `lr-rag-eval-dashboard` · retrieval/rag-eval-dashboard/rag-eval-dashboard.js — a controlled RAG quality overview with current metric cards, per-metric trends, evaluation slices, and run history.
+- `lr-retrieval-compare` · retrieval/retrieval-compare/retrieval-compare.js — a side-by-side retrieval/reranking workbench that makes rank, overlap, and dense/sparse/rerank/final score changes inspectable.

@@ -45,6 +45,8 @@ const ACTION_KEYS: Record<SelectionAction, string> = {
  * @csspart action-quote - The quote action.
  * @csspart action-cite - The cite action.
  * @csspart action-copy - The copy action.
+ * @cssprop --lr-selection-toolbar-inline-start - Computed logical inline anchor position.
+ * @cssprop --lr-selection-toolbar-block-start - Computed logical block anchor position.
  */
 export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventMap> {
   static override styles = [LyraElement.styles, styles];

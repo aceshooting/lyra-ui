@@ -1897,3 +1897,48 @@ approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`.
+
+## `lr-mcp-app`
+
+Hosts an executable MCP App UI resource inside an iframe with a unique origin. Inline documents
+receive a restrictive CSP, the sandbox permits scripts and forms but never same-origin access, and
+the frame can request host actions only through typed events. The component never invokes tools,
+navigates, or sends conversation messages on the host's behalf.
+
+**Properties:** `resource: McpAppResource | null = null` (attribute: false), where
+`McpAppResource { uri: string; title?: string; html?: string; src?: string; csp?: McpAppCsp;
+permissions?: McpAppPermissions; metadata?: Record<string, unknown> }`.
+`McpAppCsp { connectDomains?: string[]; resourceDomains?: string[]; frameDomains?: string[] }`.
+`McpAppPermissions` has optional `camera`, `microphone`, `geolocation`, `clipboardRead`, and
+`clipboardWrite` booleans. `height: number = 320` is the initial frame height; `maxHeight: number =
+800` (attribute `max-height`) caps frame resize requests. Heights are clamped to 120–10,000 CSS
+pixels. `label: string = ''` names the iframe after `aria-label` and before the resource title or
+localized fallback; `accessibleLabel: string | null = null` maps to `aria-label`.
+
+**Methods:** `postHostContext(context)` sends a versioned host-context message to the current
+frame. `postToolResult(requestId, result?, error?)` correlates a tool result or error with an earlier
+`lr-mcp-tool-call`.
+
+**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call` (`McpAppToolCallDetail { requestId?;
+name; args }`), `lr-mcp-send-message` (`{ message }`), `lr-mcp-open-link` (`{ href }`),
+`lr-mcp-log` (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). Frame messages are accepted
+only from the rendered iframe, on the expected origin, with channel `lyra-mcp-app` and version `1`.
+
+**CSS parts:** `base`, `frame`, `loading`, `error`.
+
+**Optional peer deps:** none.
+
+```js
+import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
+
+const app = document.querySelector('lr-mcp-app');
+app.resource = {
+  uri: 'ui://weather/current',
+  html: '<!doctype html><html><body><button>Refresh</button></body></html>',
+  csp: { connectDomains: ['https://api.example.com'] },
+};
+app.addEventListener('lr-mcp-tool-call', async (event) => {
+  const result = await runTool(event.detail.name, event.detail.args);
+  app.postToolResult(event.detail.requestId, result);
+});
+```

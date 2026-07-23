@@ -2175,8 +2175,9 @@ forced `{ sanitize: true }`), `image` → `lr-media-card` (`src`, `alt`, `filena
 'image' }`).
 
 **Events:** `lr-widget-action` — `detail: { actionId, payload }`, the single bubbling action
-channel. `lr-render-error` — `detail: { error }`, the root value was structurally unusable
-(non-object, or the depth/size caps made it empty).
+channel. `lr-widget-state-change` — `detail: { path, value, nodeId, prop }`, a bound control
+requested a controlled state update. `lr-render-error` — `detail: { error }`, the root value was
+structurally unusable (non-object, or the depth/size caps made it empty).
 
 **CSS parts:** `base` (the root wrapper, `display: contents`), `row`, `col`, `text` (built-in
 structural nodes only — a mapped lyra component exposes its own parts instead).
@@ -2371,3 +2372,123 @@ composed `lr-chat-viewport`), `messages`, `messages-empty`, `details`, `details-
 
 **Optional peer deps:** none of its own; the composed `lr-markdown` keeps its `marked`/`dompurify`
 optional-peer fallback.
+
+## `lr-message-parts`
+
+Renders an ordered `MessagePart[]` stream through Lyra's Markdown, reasoning, tool, citation,
+attachment, widget, JSON, and audio primitives. Parts are keyed by id so interleaved streaming
+updates preserve stable order and component state.
+
+**Properties:** `parts: MessagePart[] = []` (attribute: false); `renderMarkdown: boolean = true`
+(attribute `render-markdown`, reflected) sanitizes text parts as Markdown, while `false` renders
+plain text; `showReasoning: boolean = true` (attribute `show-reasoning`, reflected) controls
+reasoning parts; `renderPart?: MessagePartRenderer` (attribute: false), where
+`MessagePartRenderer = (part, index) => unknown`, may return custom content or `undefined` to use
+the built-in renderer. `label: string = ''` names the root group after `aria-label` and before the
+localized fallback; `accessibleLabel: string | null = null` maps to `aria-label`.
+
+**Events:** `lr-citation-select` (`{ citation }`) and `lr-part-retry` (`{ part }`).
+
+**CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
+`citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+```js
+import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
+
+document.querySelector('lr-message-parts').parts = streamedParts;
+```
+
+## `lr-prompt-input`
+
+Composed AI prompt surface combining `lr-chat-composer` with attachments, model and voice
+selection, retrieval sources, mentions, slash commands, and a queued-turn list. It owns UI
+coordination only: uploads, retrieval, persistence, and model calls remain host-controlled.
+
+**Properties:** `value: string = ''`; `status: ChatComposerStatus = 'idle'`; `placeholder: string =
+''`; `disabled: boolean = false` (reflected); `submitOnEnter: boolean = true` (attribute
+`submit-on-enter`). Data-only properties are `attachments: PromptInputAttachment[] = []`,
+`attachmentCapabilities: AttachmentCapability[] = ['files', 'image', 'audio']`, `mentionItems:
+PromptSuggestion[] = []`, `commandItems: PromptSuggestion[] = []`, `modelCatalog?:
+LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`, `sources: LyraSourceEntry[] = []`,
+`selectedSourceIds: string[] = []`, and `queue: PromptQueueItem[] = []`. `PromptInputAttachment`
+extends `DocumentRef` with optional `file` and `size`; `PromptSuggestion` extends `MentionItem` with
+optional `insertText`. `model: string = ''` and `voice: string = ''` are the controlled selections.
+`label: string = ''` names the prompt surface after `aria-label`; `accessibleLabel: string | null =
+null` maps to `aria-label`.
+
+**Methods:** `focus(options?)`, `blur()`, and `select()` forward to the composed chat editor.
+
+**Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
+`lr-mention-select` (`{ id, label, trigger: '@' | '/' }`), `lr-attachments-add` (`{ files,
+capability }`), `lr-attachment-remove` (`{ id }`), `lr-model-change` (`{ value, inCatalog }`), and
+`lr-voice-change` (`{ value, inCatalog }`).
+
+**Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
+
+**CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
+`composer`, `leading`, `chips`, `footer`.
+
+```js
+import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';
+
+const prompt = document.querySelector('lr-prompt-input');
+prompt.modelCatalog = ['fast', 'accurate'];
+prompt.mentionItems = [{ id: 'finance', label: 'Finance team' }];
+prompt.addEventListener('lr-submit', (event) => sendPrompt(event.detail.value));
+```
+
+## `lr-prompt-queue`
+
+Controlled queue of follow-up prompts that can be edited, reordered, removed, or requested for
+immediate sending while another turn is active.
+
+**Properties:** `items: PromptQueueItem[] = []` (attribute: false), where `PromptQueueItem { id:
+string; value: string; attachments?: DocumentRef[]; createdAt?: number; metadata?: Record<string,
+unknown> }`; `editable: boolean = true` (reflected); `disabled: boolean = false` (reflected);
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+
+**Events:** `lr-queue-change` carries `PromptQueueChangeDetail { items; reason: 'edit' | 'remove' |
+'reorder'; itemId }` without mutating `items`; `lr-send-now` carries `{ item }`.
+
+**CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `actions`, `action`, `empty`.
+
+```js
+import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';
+
+const queue = document.querySelector('lr-prompt-queue');
+queue.items = [{ id: 'next', value: 'Compare the previous quarter.' }];
+queue.addEventListener('lr-queue-change', (event) => {
+  queue.items = event.detail.items;
+});
+```
+
+## `lr-selection-toolbar`
+
+Nonmodal action toolbar positioned from a document selection rectangle. It carries the selected
+text and format-neutral document locator into ask, quote, cite, or copy actions; Escape closes only
+the topmost active overlay.
+
+**Properties:** `open: boolean = false` (reflected); `text: string = ''`; `anchor: DocumentLocator |
+null = null` (attribute: false); `rect: DOMRectReadOnly | null = null` (attribute: false);
+`actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false), where
+`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`; `label: string = ''`; `accessibleLabel:
+string | null = null` (attribute `aria-label`).
+
+**Events:** `lr-selection-action` carries `SelectionActionDetail { action, text, anchor }`;
+`lr-dismiss` fires after Escape closes the toolbar; `lr-copy-error` carries `{ error }` when
+Clipboard API writing fails.
+
+**CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
+
+**Custom properties:** `--lr-selection-toolbar-inline-start` and
+`--lr-selection-toolbar-block-start` expose the component-computed logical anchor coordinates on
+the toolbar surface.
+
+```js
+import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
+
+const toolbar = document.querySelector('lr-selection-toolbar');
+toolbar.text = selection.toString();
+toolbar.rect = selection.getRangeAt(0).getBoundingClientRect();
+toolbar.open = Boolean(toolbar.text);
+```

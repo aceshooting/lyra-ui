@@ -21,8 +21,10 @@ auto-inserted between each adjacent pair.
   omitted/mismatched)
 - `defaultSizes: (number | string)[] = []` (attribute: false) — initialization-only fallback: a
   valid restored `storageKey` layout wins first; otherwise a valid `defaultSizes` wins over equal
-  distribution. Later reassignment never overwrites live drag/persisted state — set it once, at
-  mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
+  distribution. Initialization occurs on the first update so framework property bindings committed
+  after connection in the same turn — including `defaultSizes` and `storageKey` — are honored
+  before the layout becomes live. Later reassignment never overwrites live drag/persisted state —
+  set it once, at mount. Each entry is either a plain **number** (percent-of-container, validated unchanged: a
   pure-number array that does not sum to ~100, e.g. `[30, 60]`, is still rejected and falls through
   to the equal split) or a CSS **length string** (`'200px'`, `'20%'`, `'3rem'`). When at least one
   entry is a length string, every entry is resolved against the measured container (numbers as

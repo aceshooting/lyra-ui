@@ -34,7 +34,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 256 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 264 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -130,7 +130,7 @@ Contributors and AI coding agents working on this repo: see [AGENTS.md](./AGENTS
 
 ## Components
 
-256 custom elements across eleven component families. Every tag has a live, interactive example on the
+264 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -144,16 +144,16 @@ The family name is also the import path — `@aceshooting/lyra-ui/components/<fa
 | `overlays` | dialog, drawer, overlay, toast, callout, badge, chip, kbd, rating, progress, spinner, skeleton, empty |
 | `data` | table, data grid, tree, timeline, calendar, gauge, heatmap, sparkline, word cloud, stat, pagination, query builder, flow canvas and nodes, sequence strip, file tree, env list, context meter |
 | `charts` | Chart.js-backed `lr-chart` (optional peer) |
-| `conversation` | chat message, composer and viewport, streaming text, markdown, code block, model select, thinking panel, branch picker, checkpoint, message actions and feedback, push-to-talk, audio visualizer, thread list |
-| `agent-tools` | agent run and trace, tool call chip, tool approval dialog and approval queue, task list, terminal, span waterfall, stack trace, test results, activity feed, context inspector, artifact panel, commit card, eval dataset/run/result, evaluation dashboard, policy summary |
-| `retrieval` | retrieval search and results, grounded RAG answer, grounding summary, citation badge, chunk inspector, knowledge base and admin, ingestion queue, knowledge-graph explorer, graph, mind map, embedding explorer, entity card/chip/dossier, provenance panel, memory panel, neighbor list, path strip |
+| `conversation` | chat message, composer, prompt input and queue, viewport, message parts, streaming text, markdown, code block, model select, thinking panel, branch picker, checkpoint, message actions and feedback, selection toolbar, push-to-talk, audio visualizer, thread list |
+| `agent-tools` | agent run and trace, MCP App host, tool call chip, tool approval dialog and approval queue, task list, terminal, span waterfall, stack trace, test results, activity feed, context inspector, artifact panel, commit card, eval dataset/run/result, evaluation dashboard, policy summary |
+| `retrieval` | retrieval search, results, and comparison, grounded RAG answer, claim evidence, grounding summary, RAG evaluation dashboard, citation badge, chunk inspector, knowledge base and admin, ingestion queue, knowledge-graph explorer, graph, mind map, embedding explorer, entity card/chip/dossier, provenance panel, memory panel, neighbor list, path strip |
 | `viewers` | document, PDF, DOCX, PPTX, spreadsheet, CSV, notebook, ebook, email, calendar, contact, archive, XML, SVG, HTML and GeoJSON viewers, document compare and preview, dataset viewer, highlight layer, page rail |
 | `media` | image viewer and comparer, lightbox, zoomable frame, AV player, playback, animated image, avatar and avatar group, file icon, file input, attachment chip, map, QR code, flag |
 | `utility` | icon, format, copy and export buttons, diff view, JSON viewer, divider, live region, mention popover, tour, poll status, known date, resize/intersection/mutation observers |
 
 ## Theming, internationalization & RTL
 
-Every one of the 256 tags is built on the same three guarantees — not opt-in per component:
+Every one of the 264 tags is built on the same three guarantees — not opt-in per component:
 
 - **Theming** through `--lr-*` design tokens — retheme by overriding a custom property,
   no per-component theming API to learn.

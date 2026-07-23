@@ -6,7 +6,7 @@
 - **Class** `LyraGroundingSummary`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/grounding-summary/grounding-summary.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 14 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -23,7 +23,8 @@ and `lr-citation-badge` for each evidence entry.
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
   imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
   unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[] }`, where
-  `coverage` and `confidence` are 0–1 fractions. `null` renders the empty state
+  `coverage` and `confidence` are 0–1 fractions and `claims?: GroundedClaim[]` supplies optional
+  per-claim evidence. `null` renders the empty state
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
   label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
@@ -35,6 +36,9 @@ and `lr-citation-badge` for each evidence entry.
   below → `danger`
 - `label: string = ''` — accessible group label; falls back to a host `aria-label`, then the
   localized `groundingSummaryLabel`
+- `showClaims: boolean = true` (attribute `show-claims`, reflected) — renders
+  `assessment.claims` through `lr-claim-evidence` when claims are present; `false` keeps the
+  aggregate stats, warnings, and evidence list unchanged
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
@@ -49,7 +53,8 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 `warnings-list` (a `<ul>`), `warning` (one `<li>`), `evidence` (omitted when `citations` is empty),
 `evidence-heading`, `evidence-count`, `evidence-item` (badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `empty` (shown when `assessment` is `null`).
+`Citation.span` range, omitted when unset), `claims` (the composed claim-level evidence),
+`empty` (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.
 

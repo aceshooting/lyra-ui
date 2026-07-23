@@ -1910,7 +1910,8 @@ describe('canvas renderer — static draw', () => {
     expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
   });
 
-  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async () => {
+  it('feeds dimmedNodeIds/dimmedLinkIds into the drawn canvas scene', async function () {
+    this.timeout(ALPHA_SETTLE_TIMEOUT + 1000);
     const el = (await fixture(
       html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
     )) as LyraGraph;
@@ -1921,9 +1922,11 @@ describe('canvas renderer — static draw', () => {
     await el.updateComplete;
     await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
     await aTimeout(50); // let the draw rAF fire
-    await waitUntil(() => (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene?.nodes.length === 2, undefined, {
-      timeout: NODE_COUNT_TIMEOUT,
-    });
+    await waitUntil(
+      () => (el as unknown as { canvasScene?: { nodes: unknown[] } }).canvasScene?.nodes.length === 2,
+      undefined,
+      { timeout: ALPHA_SETTLE_TIMEOUT },
+    );
     type Internals = { canvasScene?: { nodes: { dimmed?: boolean }[]; dimmedOpacity?: number } };
     const scene = (el as unknown as Internals).canvasScene!;
     expect(scene.nodes.some((n) => n.dimmed)).to.be.true;

@@ -23,7 +23,10 @@ it('composes attachments, model, voice, sources, queue, and the chat composer', 
 
 it('detects mention triggers, anchors the popover to the real textarea, and inserts a selection', async () => {
   const el = (await fixture(html`<lr-prompt-input
-    .mentionItems=${[{ id: 'ada', label: 'Ada', description: 'Engineering' }]}
+    .mentionItems=${[
+      { id: 'ada', label: 'Ada', description: 'Engineering' },
+      { id: 'adam', label: 'Adam', description: 'Research' },
+    ]}
   ></lr-prompt-input>`)) as LyraPromptInput;
   const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
   composer.value = 'Hello @ad';
@@ -40,6 +43,19 @@ it('detects mention triggers, anchors the popover to the real textarea, and inse
   expect(popover.query).to.equal('ad');
   expect(popover.anchor?.tagName).to.equal('TEXTAREA');
   expect(composer.input?.getAttribute('aria-controls')).to.equal(popover.listboxId);
+  expect(composer.input?.getAttribute('aria-activedescendant')).to.equal(popover.activeDescendantId);
+
+  const initialActiveDescendant = popover.activeDescendantId;
+  const keydown = new KeyboardEvent('keydown', {
+    key: 'ArrowDown',
+    bubbles: true,
+    composed: true,
+    cancelable: true,
+  });
+  composer.dispatchEvent(keydown);
+  await el.updateComplete;
+  expect(keydown.defaultPrevented).to.be.true;
+  expect(popover.activeDescendantId).to.not.equal(initialActiveDescendant);
   expect(composer.input?.getAttribute('aria-activedescendant')).to.equal(popover.activeDescendantId);
 
   const selected = oneEvent(el, 'lr-mention-select');
@@ -90,6 +106,13 @@ it('emits attachment additions and removals as controlled requests', async () =>
     new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: { id: 'doc-1' } }),
   );
   expect((await removed as CustomEvent<{ id: string }>).detail.id).to.equal('doc-1');
+});
+
+it('applies per-instance strings to the prompt label', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input .strings=${{ promptInputLabel: 'Invite IA' }}></lr-prompt-input>`,
+  )) as LyraPromptInput;
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Invite IA');
 });
 
 it('is accessible with its composed controls populated', async () => {

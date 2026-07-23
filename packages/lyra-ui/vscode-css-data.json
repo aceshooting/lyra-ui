@@ -2816,6 +2816,20 @@
       }
     },
     {
+      "name": "--lr-selection-toolbar-block-start",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** — Computed logical block anchor position."
+      }
+    },
+    {
+      "name": "--lr-selection-toolbar-inline-start",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-selection-toolbar>`** — Computed logical inline anchor position."
+      }
+    },
+    {
       "name": "--lr-sequence-strip-height",
       "description": {
         "kind": "markdown",

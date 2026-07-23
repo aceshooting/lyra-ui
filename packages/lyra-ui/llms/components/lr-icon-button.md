@@ -29,6 +29,11 @@ With neither `accessibleLabel` nor `label` set, the name falls back to the local
 app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a
 button whose purpose isn't generic.
 
+Host `aria-haspopup`, `aria-expanded`, and `aria-controls` attributes are forwarded reactively to
+the shadow-internal native button. `aria-controls` targets in the host's own root are resolved
+through the element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
+exposes the menu relationship and expanded state on the element that actually receives focus.
+
 **Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
 handling, since the click goes through the same `<button>` the pointer/keyboard path does.

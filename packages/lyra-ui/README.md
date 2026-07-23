@@ -27,7 +27,7 @@
 **Lyra UI — the free, independent web-component alternative.** A MIT-licensed [Lit](https://lit.dev)
 library for accessible forms, dashboards, charts, data visualization, and Conversation & Agent UI.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 256 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 264 custom elements, native custom-element APIs,
 tree-shakeable imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -354,7 +354,7 @@ coverage automatically from the bundled `web-types.json` — JetBrains IDEs pick
 
 ## Components
 
-The catalog below lists all 256 tags in the current Custom Elements Manifest, grouped by
+The catalog below lists all 264 tags in the current Custom Elements Manifest, grouped by
 capability. The manifest and live docs are the authoritative sources for the complete generated
 API details.
 
@@ -470,9 +470,12 @@ API details.
 | `<lr-retrieval-search>` | — (extra) | Query bar for a retrieval/RAG surface — query text, an active-filter/scope chip row, a vector/keyword/hybrid mode selector, and loading/error/empty status feedback; fully controlled, emits `lr-search` only and never performs retrieval itself |
 | `<lr-retrieval-results>` | — (extra) | Orchestration-level ranked-chunk-list surface — deduplication, optional grouping by source, multi-selection, pagination/infinite loading, and a compact/expanded presentation switch; composes an `lr-chunk-inspector` per row and an internal `lr-virtual-list` for large result sets |
 | `<lr-retrieval-trace>` | — (extra) | Retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering) rendered through `lr-span-waterfall`, plus a disclosure list exposing each stage's evidence (chunks via `lr-chunk-inspector`, free-form text, and/or metadata); never fetches or computes retrieval results itself |
+| `<lr-retrieval-compare>` | — (extra) | Side-by-side retrieval and reranking workbench with effective ranks, top-k overlap, and score changes; displays host-provided result sets and never performs retrieval |
 | `<lr-grounding-summary>` | — (extra) | Claim-level scorecard for one generated answer — supported/unsupported claim counts, citation coverage, an optional confidence score, warnings, and (when supplied) a list of evidence citations; composes `lr-stat` and `lr-citation-badge`, pure projection and event conduit |
+| `<lr-claim-evidence>` | — (extra) | Controlled claim-by-claim grounding audit relating generated claims to their full citation records, with selectable claims and citation events |
 | `<lr-context-inspector>` | — (extra) | Inspection view of the exact context assembled for a model call — per-segment token estimates via `lr-context-meter`, source attribution via `lr-citation-badge`, copy/export affordances, and truncation-boundary/redaction-marker rendering; pure projection, never fetches, estimates, or redacts itself |
 | `<lr-rag-answer>` | — (extra) | Grounded answer surface composing sanitized Markdown, claim-level grounding summary, citation badges, and source cards; controlled, localized, and emits citation/retry events without fetching data |
+| `<lr-rag-eval-dashboard>` | — (extra) | Controlled RAG-quality overview with current metrics, trend charts, evaluation slices, and run history; displays host-computed values and never executes evaluations |
 
 **Knowledge base & document management**
 
@@ -495,6 +498,7 @@ API details.
 | `<lr-memory-panel>` | — (extra) | Agent working-memory surface — short-term context and long-term memories, each item's confidence and optional grounding provenance via `lr-provenance-panel`, with add/remove/forget actions gated behind an `lr-confirm-bar` confirmation step |
 | `<lr-policy-summary>` | — (extra) | Read-only list of guardrail, permission, privacy, and tool-policy decisions (`allow`/`deny`/`needs-review`), each with an always-visible, accessible explanation never conveyed by color alone; composes `lr-badge` and `lr-callout`, with `lr-details` for optional richer detail |
 | `<lr-approval-queue>` | — (extra) | Keyboard-accessible pending human-approval list composing `lr-tool-approval-dialog`; forwards namespaced selection, decision, and close events without owning persistence |
+| `<lr-mcp-app>` | — (extra) | Sandboxed iframe host for executable MCP App resources, with restrictive inline CSP and typed, origin-checked host-action events |
 
 **Dashboards & orchestration**
 
@@ -550,6 +554,7 @@ each one-liner below.
 | `<lr-chat-viewport>` | — (extra) | Transcript scroll container: stick-to-bottom while an answer streams, a "jump to latest" pill, and an unread divider; auto-detects slotted `<lr-chat-message>` children vs. a single nested `<lr-virtual-list>` (virtual mode) and defers scrolling to it |
 | `<lr-message-actions>` | — (extra) | Per-message action toolbar for `<lr-chat-message>`'s `actions` slot — opt-in copy/regenerate/edit/feedback built-ins plus a default slot for custom controls (e.g. a slotted `<lr-branch-picker>`); `role="toolbar"` with APG roving-tabindex across every stop |
 | `<lr-message-feedback>` | — (extra) | Thumbs up/down for one assistant message with an optional inline reason-chips + free-text comment disclosure; emits, never persists — the host reflects a prior rating back via `value` |
+| `<lr-message-parts>` | — (extra) | Ordered renderer for streamed text, reasoning, tool, citation, attachment, widget, JSON, and audio message parts, keyed to preserve component state across updates |
 | `<lr-branch-picker>` | — (extra) | The "‹ 2 / 5 ›" navigator across regenerated/edited message variants; pure controlled (`lr-branch-change`, never mutates its own `index`) — same contract `<lr-pagination>` establishes for `page`; renders nothing while `count < 2` |
 | `<lr-typing-indicator>` | — (extra) | Purely presentational "assistant is responding" cue; `dots`/`pulse`/`cursor` variants |
 | `<lr-streaming-text>` | — (extra) | Token-coalescing incremental text renderer for streamed output; auto-detects Markdown (or force via `markdown`), optional blinking cursor |
@@ -565,11 +570,14 @@ each one-liner below.
 | `<lr-artifact-panel>` | — (extra) | Shell around one agent-generated artifact — title/kind header, preview↔code toggle, version navigation with restore, a streaming indicator, and built-in copy/download actions; renders none of the artifact itself, content is slotted |
 | `<lr-live-region>` | — (extra) | Throttled/coalesced ARIA live-region announcer for streaming UIs, built on the reusable internal `Announcer` engine |
 | `<lr-chat-composer>` | — (extra) | Auto-resizing message `<textarea>` + built-in send/stop button; form-associated, Enter-to-send with Shift+Enter/IME handling |
+| `<lr-prompt-input>` | — (extra) | Composed AI prompt surface combining the chat composer with attachments, models, voices, retrieval sources, mentions, slash commands, and queued turns |
+| `<lr-prompt-queue>` | — (extra) | Controlled follow-up prompt queue with edit, reorder, remove, and send-now requests while another turn is active |
 | `<lr-suggestion-chips>` | — (extra) | Starter prompts (empty thread) or follow-up suggestions (after a response) as a horizontally scrollable chip row; activation hands the prompt to the host — never composes or sends anything itself |
 | `<lr-emoji-picker>` | — (extra) | Searchable, keyboard-navigable, form-associated emoji picker; ships no emoji data of its own (`groups` is consumer-suppliable) with an optional convenience auto-loader for a default set |
 | `<lr-attachment-chip>` | — (extra) | Pre-send or sent file chip with thumbnail/size/upload-progress/retry; derives metadata from a real `File` or from persisted server metadata |
 | `<lr-attachment-trigger>` | — (extra) | Attach-file affordance for a composer's leading slot; a single icon button, or a `<lr-menu>` when more than one capability (`files`/`image`/`camera`/`audio`) is configured |
 | `<lr-mention-popover>` | — (extra) | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself |
+| `<lr-selection-toolbar>` | — (extra) | Nonmodal ask/quote/cite/copy toolbar positioned from a document selection rectangle and carrying a format-neutral document locator in its action events |
 | `<lr-tool-call-chip>` | — (extra) | Compact inline pill for one tool/function call mid-conversation; status-aware glyph/color, optional hover/focus detail tooltip |
 | `<lr-tool-result-view>` + `registerToolRenderer()` | — (extra) | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lr-json-viewer>` |
 | `<lr-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tabs>` of Input/Preview/JSON/Raw) |

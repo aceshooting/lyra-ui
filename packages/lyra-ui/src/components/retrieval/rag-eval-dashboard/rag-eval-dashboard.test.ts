@@ -42,12 +42,17 @@ it('emits controlled metric, slice, and run selection events', async () => {
 });
 
 it('has a localized empty state and a named populated region', async () => {
-  const empty = (await fixture(html`<lr-rag-eval-dashboard></lr-rag-eval-dashboard>`)) as LyraRagEvalDashboard;
-  expect(empty.shadowRoot!.querySelector('lr-empty')).to.exist;
+  const empty = (await fixture(
+    html`<lr-rag-eval-dashboard
+      .strings=${{ ragEvalDashboardEmpty: 'Aucune évaluation disponible' }}
+    ></lr-rag-eval-dashboard>`,
+  )) as LyraRagEvalDashboard;
+  expect(empty.shadowRoot!.querySelector('lr-empty')?.getAttribute('heading')).to.equal(
+    'Aucune évaluation disponible',
+  );
   const populated = (await fixture(
     html`<lr-rag-eval-dashboard aria-label="RAG quality" .metrics=${metrics} .runs=${runs}></lr-rag-eval-dashboard>`,
   )) as LyraRagEvalDashboard;
   expect(populated.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('RAG quality');
   await expect(populated).shadowDom.to.be.accessible();
 });
-

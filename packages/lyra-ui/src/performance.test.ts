@@ -227,10 +227,10 @@ it('keeps canvas-mode graph selection churn within the large-graph budget', asyn
   // settle plus the very first 30k-element DOM/canvas paint for 5,000 nodes/10,000 links still
   // needs more headroom than mocha's 6s default, especially on a loaded CI worker. 30s is enough
   // in isolation (~15s) but has been observed to time out under the full ~290-file suite's
-  // concurrent Chromium load; doubled for headroom rather than tightened, since this test's job
-  // is to catch a real regression in the benchmarked median, not to police wall-clock scheduling
-  // noise from unrelated files running at the same time.
-  this.timeout(60000);
+  // concurrent Chromium load. Coverage instrumentation also makes the one-time construction of
+  // the 30,000-node accessibility layer substantially slower without changing the benchmarked
+  // update median below. Keep the wall-clock guard separate from the real performance assertions.
+  this.timeout(120000);
   const GRAPH_NODE_COUNT = 5_000;
   const GRAPH_LINK_COUNT = 10_000;
   const host = (await fixture(

@@ -1125,7 +1125,8 @@ and `lr-citation-badge` for each evidence entry.
 - `assessment: GroundingAssessment | null = null` (attribute: false) — **`GroundingAssessment`,
   imported from `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ supportedClaims: number;
   unsupportedClaims: number; coverage: number; confidence?: number; warnings?: string[] }`, where
-  `coverage` and `confidence` are 0–1 fractions. `null` renders the empty state
+  `coverage` and `confidence` are 0–1 fractions and `claims?: GroundedClaim[]` supplies optional
+  per-claim evidence. `null` renders the empty state
 - `citations: Citation[] = []` (attribute: false) — **`Citation` from `@aceshooting/lyra-ui/ai`**:
   `{ id: string; chunkId?: string; sourceId?: string; span?: { start: number; end: number };
   label?: string }`. Independent of `assessment`; empty omits the whole evidence section. Each entry
@@ -1137,6 +1138,9 @@ and `lr-citation-badge` for each evidence entry.
   below → `danger`
 - `label: string = ''` — accessible group label; falls back to a host `aria-label`, then the
   localized `groundingSummaryLabel`
+- `showClaims: boolean = true` (attribute `show-claims`, reflected) — renders
+  `assessment.claims` through `lr-claim-evidence` when claims are present; `false` keeps the
+  aggregate stats, warnings, and evidence list unchanged
 
 **Events:** `lr-citation-select` (`detail: CitationSelectEventDetail` from
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
@@ -1151,7 +1155,8 @@ row), `warnings` (omitted when there are none), `warnings-heading`, `warnings-co
 `warnings-list` (a `<ul>`), `warning` (one `<li>`), `evidence` (omitted when `citations` is empty),
 `evidence-heading`, `evidence-count`, `evidence-item` (badge + always-visible label/span text),
 `evidence-label` (omitted when `Citation.label` is unset), `evidence-span` (the formatted
-`Citation.span` range, omitted when unset), `empty` (shown when `assessment` is `null`).
+`Citation.span` range, omitted when unset), `claims` (the composed claim-level evidence),
+`empty` (shown when `assessment` is `null`).
 
 **Themeable custom properties:** shared tokens only.
 
@@ -1633,9 +1638,11 @@ or source fetching.
 **Properties:** `answer: string = ''`; `citations: Citation[] = []` (attribute: false);
 `sources: DocumentRef[] = []` (attribute: false); `assessment: GroundingAssessment | null = null`
 (attribute: false); `loading: boolean = false`; `error: string = ''`; `showSources: boolean = true`;
-`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`showClaims: boolean = true` (attribute `show-claims`, reflected) forwards to the composed
+`lr-grounding-summary`; `label: string = ''`; `accessibleLabel: string | null = null` (attribute
+`aria-label`).
 
-**Events:** `lr-citation-select` (`{ citation }`) and `lr-retry`.
+**Events:** `lr-citation-select` (`{ citation }`), `lr-claim-select` (`{ claim }`), and `lr-retry`.
 
 **Slots:** `answer` replaces the data-driven Markdown body; `sources` replaces the data-driven
 source list.
@@ -1674,3 +1681,78 @@ correlated ids/details from their composed primitives).
 **Slots:** `settings` — host-owned KB configuration controls.
 
 **CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.
+
+## `lr-claim-evidence`
+
+Controlled claim-by-claim grounding audit that relates `GroundedClaim` records to full `Citation`
+records. Missing citation ids are ignored rather than rendered as fabricated evidence.
+
+**Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (both attribute:
+false); `selectedClaimId: string = ''` (attribute `selected-claim-id`) controls the selected claim;
+`label: string = ''` names the region after a host `aria-label` and before the localized fallback.
+Status and confidence are locale-formatted from each claim; explanations remain caller-supplied.
+
+**Events:** `lr-claim-select` (`{ claim }`) and `lr-citation-select` (`{ citation }`).
+
+**CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
+`confidence`, `explanation`, `evidence`, `empty`.
+
+```js
+import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';
+
+const evidence = document.querySelector('lr-claim-evidence');
+evidence.claims = groundedClaims;
+evidence.citations = citations;
+```
+
+## `lr-rag-eval-dashboard`
+
+Controlled RAG quality overview with current metric cards, per-metric trends, evaluation slices,
+and run history. It displays host-computed values and never executes datasets, retrieval, judges,
+or model calls.
+
+**Properties:** `metrics: RagEvaluationMetric[] = []` (attribute: false), where
+`RagEvaluationMetric { id; label; category: 'retrieval' | 'generation' | 'system' | string;
+format?: 'number' | 'percent' }`; `runs: RagEvaluationRun[] = []` (attribute: false), where
+`RagEvaluationRun { id; label; metrics: Record<string, number>; slice?; timestamp?; metadata? }`;
+`metricId: string = ''` (attribute `metric-id`) controls the active metric and falls back to the
+first metric; `slice: string = ''` controls the run filter; `showChart: boolean = true` (attribute
+`show-chart`, reflected); `chartHeight: string = '220px'` (attribute `chart-height`); `label: string
+= ''`.
+
+**Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
+`lr-run-select` (`{ run }`). These are controlled requests and do not mutate the matching
+properties.
+
+**CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
+`metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.
+
+```js
+import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';
+
+const dashboard = document.querySelector('lr-rag-eval-dashboard');
+dashboard.metrics = metrics;
+dashboard.runs = evaluationRuns;
+```
+
+## `lr-retrieval-compare`
+
+Side-by-side retrieval/reranking workbench showing effective ranks, pairwise top-k overlap, and
+dense/sparse/rerank/final score changes. It never performs retrieval.
+
+**Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
+`RetrievalComparisonSet { id: string; label: string; chunks: RetrievalChunk[] }`; `topK: number =
+10` (attribute `top-k`) limits each set after stable rank sorting; `selectedChunkId: string = ''`
+(attribute `selected-chunk-id`) controls selected styling across sets; `label: string = ''` names
+the comparison region after a host `aria-label`.
+
+**Events:** `lr-chunk-select` (`{ setId, chunk }`) is a controlled selection request.
+
+**CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
+`chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
+
+```js
+import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';
+
+document.querySelector('lr-retrieval-compare').sets = comparisonSets;
+```
