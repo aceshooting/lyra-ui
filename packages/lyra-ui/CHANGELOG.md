@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.3.0
+
+### Minor Changes
+
+- 2cff771: Add the opt-in `wrap-labels` property to `<lr-stepper>` for wrapping long labels on the vertical axis.
+
 ## 7.2.0
 
 ### Minor Changes
