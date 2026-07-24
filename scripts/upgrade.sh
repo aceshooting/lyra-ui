@@ -2,8 +2,8 @@
 # Upgrade dependency ranges in the root package and every pnpm workspace package, install the
 # resulting dependency graph, then build every workspace package. Peer dependencies are upgraded
 # separately because npm-check-updates does not include them by default. The curated
-# libphonenumber-js peer range keeps its tested lower bound; its dev dependency is still upgraded
-# by the first pass.
+# libphonenumber-js and MapLibre peer ranges keep their tested compatibility bounds; their dev
+# dependencies are still upgraded by the first pass.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,7 +29,7 @@ pnpm dlx npm-check-updates@latest \
   --workspaces \
   --root \
   --dep peer \
-  --reject libphonenumber-js \
+  --reject libphonenumber-js,maplibre-gl \
   --target latest \
   --install never \
   --upgrade
