@@ -1316,6 +1316,11 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `graphExplorerLabel`
 
 **Events:**
+- `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
+  changes its own selection through search, graph, keyboard/neighborhood/path activation, or
+  closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
+  `selectedNodeId` remain silent, and one interaction emits at most once even when a composed
+  child also reports its primitive click event.
 - `lr-path-request` (`detail: { sourceId: string; targetId: string }`) — the "Find path" action was
   activated with exactly two nodes pinned. This component has no traversal algorithm; the host
   computes/fetches the path and assigns it back through `path`.

@@ -35,6 +35,14 @@ passthrough). Not a subclass of `LyraChart`.
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
   Falls back to the built-in "nice numbers" formatter when unset.
+- `tableCellFormatter?: LyraLiteChartTableCellFormatter` (attribute: false) — formats each finite
+  numeric cell in the built-in multi-series accessible table. The callback receives `(value,
+  context)`, where `context` is `{ kind: 'value' | 'total'; datasetIndex: number | null; index:
+  number; label: string; seriesLabel: string | null }`; total cells have `datasetIndex` and
+  `seriesLabel` set to `null`. Unset cells retain locale-aware `Intl.NumberFormat` output.
+- `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
+  multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
+  grouped bars, line charts, and the single-series `data-list`.
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -121,6 +129,10 @@ plotted point, matching the roving-tabindex mark order). More than one dataset i
 `<th scope="col">` per series (plus a leading `chartCategory` corner header), and one
 `<th scope="row">` per category label with its per-series values in the body — so a screen-reader
 user hears the values grouped by series rather than one flattened N×M sequence.
+Finite table cells use `tableCellFormatter` when supplied and otherwise use the component's
+effective locale. A stacked multi-series bar chart with `tableTotals` adds a localized total
+column; null/non-finite inputs are skipped, while an all-missing category leaves the total cell
+blank instead of reporting a misleading zero.
 
 **Themeable custom properties:** `--lr-chart-height` (same host-level property as `lr-chart`);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token

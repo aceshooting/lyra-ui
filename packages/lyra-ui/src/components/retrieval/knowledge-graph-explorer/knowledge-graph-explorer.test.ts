@@ -190,6 +190,30 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(card.entity?.id).to.equal('polonium');
   });
 
+  it('emits one value-carrying selection change when a search result changes selection', async () => {
+    const el = await settledFixture();
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    searchInput.dispatchEvent(
+      new CustomEvent('lr-input', {
+        detail: { value: 'polonium' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-selection-change', (event) => events.push(event as CustomEvent));
+    (el.shadowRoot!.querySelector('[part="search-result"] button') as HTMLButtonElement).click();
+    await waitUntil(() => events.length === 1, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(0);
+
+    expect(events.length).to.equal(1);
+    expect(events[0]!.detail).to.deep.equal({ selectedNodeId: 'polonium' });
+    expect(events[0]!.bubbles).to.be.true;
+    expect(events[0]!.composed).to.be.true;
+  });
+
   it('opens a valid initially-preset selected node after the graph mounts', async () => {
     const el = (await fixture(html`
       <lr-knowledge-graph-explorer
@@ -210,6 +234,19 @@ describe('lr-knowledge-graph-explorer', () => {
     const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
     await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
     expect(popover.accessibleLabel).to.equal('Polonium');
+  });
+
+  it('does not emit selection-change for host-driven selectedNodeId assignments', async () => {
+    const el = await settledFixture();
+    let eventCount = 0;
+    el.addEventListener('lr-selection-change', () => eventCount++);
+
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    el.selectedNodeId = null;
+    await el.updateComplete;
+
+    expect(eventCount).to.equal(0);
   });
 
   it('does not revive stale property-driven selection work after an away-and-back supersession', async () => {
@@ -324,6 +361,20 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popup.style.position).to.equal('fixed');
   });
 
+  it('emits selection-change only once for a direct graph click and its fallback activation', async () => {
+    const el = await settledFixture();
+    const details: unknown[] = [];
+    el.addEventListener('lr-selection-change', (event) => {
+      details.push((event as CustomEvent).detail);
+    });
+
+    graphNodeEls(el)[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+    await waitUntil(() => details.length === 1, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    await aTimeout(0);
+
+    expect(details).to.deep.equal([{ selectedNodeId: 'marie' }]);
+  });
+
   it('re-anchors the open popover from lr-graph\'s own lr-viewport-change, and stops once it closes', async () => {
     const el = await settledFixture();
     const circle = graphNodeEls(el)[0]!;
@@ -379,9 +430,11 @@ describe('lr-knowledge-graph-explorer', () => {
     const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
     popover.showAt({ x: 10, y: 10 });
     await el.updateComplete;
+    const selectionChange = oneEvent(el, 'lr-selection-change');
     popover.open = false;
     await el.updateComplete;
     expect(el.selectedNodeId).to.equal(null);
+    expect((await selectionChange).detail).to.deep.equal({ selectedNodeId: null });
   });
 
   it('localizes the pinned-heading text via this.localize() when .strings overrides graphExplorerPinnedHeading', async () => {
@@ -456,10 +509,12 @@ describe('lr-knowledge-graph-explorer', () => {
 
     // marie disappears from `nodes` -- the selection would otherwise dangle, pointing the open
     // popover at an entity that no longer exists.
+    const selectionChange = oneEvent(el, 'lr-selection-change');
     el.nodes = nodes.filter((n) => n.id !== 'marie');
     await el.updateComplete;
     expect(el.selectedNodeId).to.equal(null);
     expect(popover.open).to.be.false;
+    expect((await selectionChange).detail).to.deep.equal({ selectedNodeId: null });
   });
 
   it('clears a selected node and closes its details when hiddenTypes hides that node type', async () => {

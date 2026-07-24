@@ -455,6 +455,9 @@ export type {
   LyraLiteChartType,
   LyraLiteChartLayout,
   LyraLiteChartExportFormat,
+  LyraLiteChartTableCellKind,
+  LyraLiteChartTableCellContext,
+  LyraLiteChartTableCellFormatter,
 } from './components/charts/chart/lite-chart.js';
 export { binValues } from './components/charts/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/charts/chart/histogram-bin.js';

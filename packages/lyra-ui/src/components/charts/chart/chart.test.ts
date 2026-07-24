@@ -1956,6 +1956,116 @@ describe('review remediation regressions', () => {
     );
   });
 
+  it('formats generated data-table cells through valueFormatter with table context', async () => {
+    const contexts: string[] = [];
+    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    el.labels = ['Q1'];
+    el.datasets = [{ label: 'Revenue', data: [1234.5] }];
+    el.valueFormatter = (value, context) => {
+      contexts.push(context);
+      return `${context}:€${value.toFixed(2)}`;
+    };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    expect(
+      el.shadowRoot!.querySelector('[part="data-table"] tbody td')?.textContent?.trim(),
+    ).to.equal('table:€1234.50');
+    expect(contexts).to.include('table');
+  });
+
+  it('adds formatted totals to the accessible table when stacked and stackTotals are enabled', async () => {
+    const el = (await fixture(html`
+      <lr-chart
+        type="bar"
+        stacked
+        stack-totals
+        show-data-table
+        .strings=${{ chartTotal: 'Gesamt' }}
+      ></lr-chart>
+    `)) as LyraChart;
+    el.labels = ['Q1', 'Q2'];
+    el.datasets = [
+      { label: 'Product', data: [10, null] },
+      { label: 'Services', data: [20, null] },
+    ];
+    el.valueFormatter = (value, context) => `${context}:${value}`;
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
+    expect([...table.querySelectorAll('thead th')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+      'Category',
+      'Product',
+      'Services',
+      'Gesamt',
+    ]);
+    expect([...table.querySelectorAll('tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
+    )).to.deep.equal([
+      ['table:10', 'table:20', 'table:30'],
+      ['No data', 'No data', 'No data'],
+    ]);
+  });
+
+  it('renders distinct, labelled accessible totals for primary and secondary-axis stacks', async () => {
+    const el = (await fixture(html`
+      <lr-chart
+        type="line"
+        stacked
+        stack-totals
+        show-data-table
+        y-label="Revenue"
+        y2-label="Duration"
+        .strings=${{ chartAxisTotal: '{axis} sum' }}
+      ></lr-chart>
+    `)) as LyraChart;
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'Product', data: [10] },
+      { label: 'Services', data: [20] },
+      { label: 'Runtime', data: [5], axis: 'y2' },
+      { label: 'Queue', data: [7], axis: 'y2' },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
+    expect([...table.querySelectorAll('thead th')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+      'Category',
+      'Product',
+      'Services',
+      'Runtime',
+      'Queue',
+      'Revenue sum',
+      'Duration sum',
+    ]);
+    expect([...table.querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+      '10',
+      '20',
+      '5',
+      '7',
+      '30',
+      '12',
+    ]);
+  });
+
+  it('does not add a total column when stackTotals is unset or the chart is not stacked', async () => {
+    const el = (await fixture(html`<lr-chart type="bar" show-data-table></lr-chart>`)) as LyraChart;
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'Product', data: [10] },
+      { label: 'Services', data: [20] },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    expect(el.shadowRoot!.querySelectorAll('[part="data-table"] thead th')).to.have.length(3);
+
+    el.stackTotals = true;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="data-table"] thead th')).to.have.length(3);
+  });
+
   it('lets string overrides replace fixed legend and tooltip punctuation', async () => {
     const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
     el.strings = { chartValueLabel: '{label} equals {value}' };
@@ -2076,6 +2186,24 @@ describe('data labels and stack totals', () => {
   it('reflects the data-labels attribute to the dataLabels property', async () => {
     const el = (await fixture(html`<lr-chart data-labels></lr-chart>`)) as LyraChart;
     expect((el as unknown as { dataLabels: boolean }).dataLabels).to.equal(true);
+  });
+
+  it('keeps visual stack totals inactive until the chart is actually stacked', () => {
+    const el = document.createElement('lr-chart') as LyraChart;
+    el.type = 'bar';
+    el.labels = ['Q1'];
+    el.datasets = [
+      { label: 'Product', data: [10] },
+      { label: 'Services', data: [20] },
+    ];
+    el.stackTotals = true;
+
+    let datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels.display({ datasetIndex: 1, dataIndex: 0 })).to.equal(false);
+
+    el.stacked = true;
+    datalabels = (el as any).buildConfig().options.plugins.datalabels;
+    expect(datalabels.display({ datasetIndex: 1, dataIndex: 0 })).to.equal(true);
   });
 
   it('computes null-aware per-category stack totals', () => {

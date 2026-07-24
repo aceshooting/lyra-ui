@@ -10237,10 +10237,10 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
   that allocation width
 - `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric (value-axis)
-  tick, tooltip, and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or
-  `'legend'` context. Never runs against the categorical x-axis's own labels (line/bar's `labels`
-  strings) — Chart.js's category scale passes the tick index to `ticks.callback`, not the label
-  text
+  tick, tooltip, legend, and generated accessible-table values; the callback receives the value
+  and `'tick'`, `'tooltip'`, `'legend'`, or `'table'` context. Never runs against the categorical
+  x-axis's own labels (line/bar's `labels` strings) — Chart.js's category scale passes the tick
+  index to `ticks.callback`, not the label text
 - `area: boolean = false`
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
@@ -10263,7 +10263,10 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   purely visual, canvas-only addition and add no new a11y surface.
 - `stackTotals: boolean = false` (attribute `stack-totals`) — with `stacked` (bar/line only), draws
   the per-category stack total above each stack, via the same `chartjs-plugin-datalabels` peer.
-  Null/undefined points are skipped; a category whose every value is null shows no total (not `0`)
+  Null/undefined points are skipped; a category whose every value is null shows no total (not
+  `0`). The generated accessible table receives the same formatted total column; a dual-axis stack
+  receives separately labelled primary- and secondary-axis total columns. The table totals do not
+  depend on the optional visual-label peer being installed
 - `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
@@ -10417,6 +10420,14 @@ passthrough). Not a subclass of `LyraChart`.
 - `tickFormat?: (value: number) => string` (attribute: false) — formats a y-axis tick value for
   display (e.g. `(v) => \`$${v.toFixed(2)}\`` for currency, or a duration formatter for `"42s"`).
   Falls back to the built-in "nice numbers" formatter when unset.
+- `tableCellFormatter?: LyraLiteChartTableCellFormatter` (attribute: false) — formats each finite
+  numeric cell in the built-in multi-series accessible table. The callback receives `(value,
+  context)`, where `context` is `{ kind: 'value' | 'total'; datasetIndex: number | null; index:
+  number; label: string; seriesLabel: string | null }`; total cells have `datasetIndex` and
+  `seriesLabel` set to `null`. Unset cells retain locale-aware `Intl.NumberFormat` output.
+- `tableTotals: boolean = false` (attribute `table-totals`) — adds a localized total column to the
+  multi-series accessible table when `type="bar"` and `stacked` are both active. Ignored for
+  grouped bars, line charts, and the single-series `data-list`.
 - `layout: 'fit' | 'scroll' = 'fit'` (reflected) — `'fit'` (default) is the original squeeze-the-
   whole-plot-to-host-width behavior, unchanged. `'scroll'` gives bars a fixed `barWidth` instead: plot
   content width becomes `categoryCount * barWidth` (can exceed the host's measured width), and
@@ -10503,6 +10514,10 @@ plotted point, matching the roving-tabindex mark order). More than one dataset i
 `<th scope="col">` per series (plus a leading `chartCategory` corner header), and one
 `<th scope="row">` per category label with its per-series values in the body — so a screen-reader
 user hears the values grouped by series rather than one flattened N×M sequence.
+Finite table cells use `tableCellFormatter` when supplied and otherwise use the component's
+effective locale. A stacked multi-series bar chart with `tableTotals` adds a localized total
+column; null/non-finite inputs are skipped, while an all-missing category leaves the total cell
+blank instead of reporting a misleading zero.
 
 **Themeable custom properties:** `--lr-chart-height` (same host-level property as `lr-chart`);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
@@ -17967,6 +17982,11 @@ same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature wor
   `graphExplorerLabel`
 
 **Events:**
+- `lr-selection-change` (`detail: { selectedNodeId: string | null }`) — emitted after the explorer
+  changes its own selection through search, graph, keyboard/neighborhood/path activation, or
+  closing/invalidating the details selection. Clearing reports `null`. Direct host assignments to
+  `selectedNodeId` remain silent, and one interaction emits at most once even when a composed
+  child also reports its primitive click event.
 - `lr-path-request` (`detail: { sourceId: string; targetId: string }`) — the "Find path" action was
   activated with exactly two nodes pinned. This component has no traversal algorithm; the host
   computes/fetches the path and assigns it back through `path`.

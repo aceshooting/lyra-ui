@@ -46,6 +46,27 @@ export const Default: Story = {
   `,
 };
 
+/** Every user-driven selection and clear reports the explorer's new selected node id. */
+export const SelectionChanges: Story = {
+  render: () => {
+    const handleSelectionChange = (event: CustomEvent<{ selectedNodeId: string | null }>) => {
+      const explorer = event.currentTarget as HTMLElement;
+      const output = explorer.nextElementSibling?.querySelector('output');
+      if (output) output.textContent = event.detail.selectedNodeId ?? 'None';
+    };
+    return html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+        style="height: 32rem;"
+        @lr-selection-change=${handleSelectionChange}
+      ></lr-knowledge-graph-explorer>
+      <p>Selected node: <output>None</output></p>
+    `;
+  },
+};
+
 export const WithPinsAndPath: Story = {
   render: () => html`
     <lr-knowledge-graph-explorer

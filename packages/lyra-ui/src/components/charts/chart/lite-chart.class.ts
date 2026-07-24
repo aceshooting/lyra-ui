@@ -34,6 +34,24 @@ export type LyraLiteChartLayout = 'fit' | 'scroll';
 
 export type LyraLiteChartExportFormat = 'csv' | 'svg';
 
+export type LyraLiteChartTableCellKind = 'value' | 'total';
+
+/** Identifies the accessible-table cell being formatted. A total has no owning dataset/series,
+ *  so `datasetIndex` and `seriesLabel` are `null` for `kind: 'total'`. */
+export interface LyraLiteChartTableCellContext {
+  kind: LyraLiteChartTableCellKind;
+  datasetIndex: number | null;
+  index: number;
+  label: string;
+  seriesLabel: string | null;
+}
+
+/** Formats one finite numeric value in the built-in multi-series accessible table. */
+export type LyraLiteChartTableCellFormatter = (
+  value: number,
+  context: LyraLiteChartTableCellContext,
+) => string;
+
 // The semantic variables are resolved by SVG/CSS at paint time, so changing a
 // theme or color-scheme does not require a second JS-side draw pass.
 const DEFAULT_PALETTE = [
@@ -202,7 +220,10 @@ export interface LyraLiteChartEventMap {
  * (x-axis category labels, rendered separately, are unaffected). An eighth,
  * `legendText`, appends a formatter-supplied string after each series' label in the
  * built-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same
- * fallback-to-unchanged convention as every other hook here;
+ * fallback-to-unchanged convention as every other hook here. The built-in multi-series accessible
+ * table can independently format its finite numeric cells through `tableCellFormatter`; for a
+ * stacked bar chart, `tableTotals` adds an opt-in localized total column. Both are no-ops when
+ * unset.
  *
  * @customElement lr-lite-chart
  * @event lr-point-click - Fired when a bar/point is activated (click, or
@@ -243,6 +264,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Formats a y-axis tick value for display (e.g. `(v) => \`$${v.toFixed(2)}\``). Falls back to the
    *  built-in nice-number formatter when unset. */
   @property({ attribute: false }) tickFormat?: (value: number) => string;
+  /** Formats finite numeric cells in the built-in multi-series accessible table, including its
+   *  opt-in total cells. Unset preserves locale-aware number formatting. */
+  @property({ attribute: false }) tableCellFormatter?: LyraLiteChartTableCellFormatter;
+  /** Adds a localized total column to the built-in multi-series accessible table for a stacked
+   *  bar chart. Ignored for grouped bars and line charts. */
+  @property({ type: Boolean, attribute: 'table-totals' }) tableTotals = false;
   /** `'fit'` (default) squeezes the plot into the measured host width, unchanged from before this
    *  property existed. `'scroll'` gives every bar a fixed `barWidth` instead, letting the plot's
    *  content width exceed the host's — the host becomes horizontally scrollable
@@ -455,6 +482,26 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  caller falls back to its own built-in template) — mirrors `lr-heatmap`'s `resolveCellText()`. */
   private resolvePointText(label: string, value: number, datasetIndex: number): string | undefined {
     return this.pointText?.(label, value, datasetIndex);
+  }
+
+  private formatTableCell(
+    value: number,
+    context: LyraLiteChartTableCellContext,
+    numberFormat: Intl.NumberFormat,
+  ): string {
+    return this.tableCellFormatter?.(value, context) ?? numberFormat.format(value);
+  }
+
+  private tableTotalAt(index: number): number | null {
+    let total = 0;
+    let hasValue = false;
+    for (const series of this.datasets) {
+      const value = series.data[index];
+      if (value == null || !Number.isFinite(value)) continue;
+      total = saturatingAdd(total, value);
+      hasValue = true;
+    }
+    return hasValue ? total : null;
   }
 
   /** The ordered set of visible marks used by both keyboard navigation and
@@ -1070,6 +1117,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         : '') ||
       this.localize('chart');
     const marksForA11y = this.interactiveMarks();
+    const tableNumberFormat = getNumberFormat(this.effectiveLocale);
+    const showTableTotals = this.type === 'bar' && this.stacked && this.tableTotals;
 
     return html`
       <div part="base">
@@ -1104,18 +1153,47 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
                 <tr>
                   <th scope="col">${this.localize('chartCategory')}</th>
                   ${this.datasets.map((series) => html`<th scope="col">${series.label}</th>`)}
+                  ${showTableTotals ? html`<th scope="col">${this.localize('chartTotal')}</th>` : nothing}
                 </tr>
               </thead>
               <tbody>
                 ${this.labels.map(
                   (label, index) => html`<tr>
                     <th scope="row">${label}</th>
-                    ${this.datasets.map((series) => {
+                    ${this.datasets.map((series, datasetIndex) => {
                       const value = series.data[index];
                       return html`<td>${value == null || !Number.isFinite(value)
                         ? ''
-                        : getNumberFormat(this.effectiveLocale).format(value)}</td>`;
+                        : this.formatTableCell(
+                            value,
+                            {
+                              kind: 'value',
+                              datasetIndex,
+                              index,
+                              label,
+                              seriesLabel: series.label,
+                            },
+                            tableNumberFormat,
+                          )}</td>`;
                     })}
+                    ${showTableTotals
+                      ? (() => {
+                          const total = this.tableTotalAt(index);
+                          return html`<td>${total == null
+                            ? ''
+                            : this.formatTableCell(
+                                total,
+                                {
+                                  kind: 'total',
+                                  datasetIndex: null,
+                                  index,
+                                  label,
+                                  seriesLabel: null,
+                                },
+                                tableNumberFormat,
+                              )}</td>`;
+                        })()
+                      : nothing}
                   </tr>`,
                 )}
               </tbody>

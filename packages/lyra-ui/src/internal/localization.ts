@@ -113,6 +113,10 @@ export type LyraMessageKey =
   | 'fileSizeUnitGb'
   | 'fileSizeUnitTb'
   | 'chartCategory'
+  | 'chartTotal'
+  | 'chartAxisTotal'
+  | 'chartPrimaryAxis'
+  | 'chartSecondaryAxis'
   | 'chartPointLabel'
   | 'resetZoom'
   | 'chatSending'
@@ -1272,6 +1276,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   fileSizeUnitGb: 'GB',
   fileSizeUnitTb: 'TB',
   chartCategory: 'Category',
+  chartTotal: 'Total',
+  chartAxisTotal: '{axis} total',
+  chartPrimaryAxis: 'Primary axis',
+  chartSecondaryAxis: 'Secondary axis',
   chartPointLabel: 'Point {n}',
   resetZoom: 'Reset zoom',
   chatSending: 'Sending…',

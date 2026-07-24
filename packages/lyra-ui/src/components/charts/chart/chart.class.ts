@@ -55,7 +55,7 @@ export type LyraChartType =
   | 'bubble';
 
 export type LyraChartLegendPosition = 'top' | 'right' | 'bottom' | 'left' | 'auto';
-export type LyraChartValueFormatterContext = 'tick' | 'tooltip' | 'legend';
+export type LyraChartValueFormatterContext = 'tick' | 'tooltip' | 'legend' | 'table';
 export type LyraChartValueFormatter = (
   value: number,
   context: LyraChartValueFormatterContext,
@@ -267,7 +267,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   /** Legend placement. `auto` uses a right legend above 480px and a bottom legend below it. */
   @property({ attribute: 'legend-position' }) legendPosition: LyraChartLegendPosition = 'top';
   /**
-   * Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.
+   * Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible
+   * table cells from one callback.
    * Never runs against the categorical x-axis's own labels (line/bar's `labels` strings) —
    * Chart.js's category scale passes the tick index to `ticks.callback`, not the label text,
    * so formatting it would corrupt the axis.
@@ -304,7 +305,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * When the chart is `stacked` (bar/line only), draws the per-category stack
    * total above each stack, via the same optional `chartjs-plugin-datalabels`
    * peer as `data-labels`. Null/undefined points are skipped; a category whose
-   * every value is null shows no total. Unset (the default) draws nothing.
+   * every value is null shows no total. The generated accessible data table
+   * receives the same formatted total column (one per value axis). Unset (the
+   * default) draws and adds nothing.
    */
   @property({ type: Boolean, attribute: 'stack-totals' }) stackTotals = false;
 
@@ -720,7 +723,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private datalabelsOptions(theme: ThemeColors, effectiveType: EffectiveChartType): OptionalPeerApi {
     if (!this.needsDataLabels) return { display: false };
     const stackTotalsActive =
-      this.stackTotals && (effectiveType === 'bar' || effectiveType === 'line');
+      this.stackTotals && this.stacked && (effectiveType === 'bar' || effectiveType === 'line');
     // The topmost dataset per axis carries the stack total (drawn above the stack).
     const topDatasetIndexByAxis = new Map<'y' | 'y2', number>();
     if (stackTotalsActive) {
@@ -1340,6 +1343,25 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     return getNumberFormat(this.effectiveLocale).format(value);
   }
 
+  private formatTableValue(value: number): string {
+    return this.valueFormatter?.(value, 'table') ?? this.formatSummaryValue(value);
+  }
+
+  private tableStackAxes(): ('y' | 'y2')[] {
+    if (!this.stackTotals || !this.stacked || (this.type !== 'bar' && this.type !== 'line')) return [];
+    const present = new Set(this.datasets.map((series) => (series.axis === 'y2' ? 'y2' : 'y')));
+    return (['y', 'y2'] as const).filter((axis) => present.has(axis));
+  }
+
+  private tableStackTotalLabel(axis: 'y' | 'y2', axisCount: number): string {
+    if (axisCount === 1) return this.localize('chartTotal');
+    const axisLabel =
+      axis === 'y2'
+        ? this.y2Label || this.localize('chartSecondaryAxis')
+        : this.yLabel || this.localize('chartPrimaryAxis');
+    return this.localize('chartAxisTotal', undefined, { axis: axisLabel });
+  }
+
   private accessibleName(fallback: string): string {
     return this.getAttribute('aria-label') || this.accessibleLabel || fallback;
   }
@@ -1387,6 +1409,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       ...this.datasets.map((series) => (series.points ? series.points.length : series.data?.length ?? 0)),
       0,
     );
+    const stackAxes = this.tableStackAxes();
+    const stackTotals = new Map(stackAxes.map((axis) => [axis, this.computeStackTotals(axis)]));
     return html`
       <table class=${this.showDataTable ? nothing : 'sr-only'}>
         <caption>${this.accessibleName(this.localize('chartData'))}</caption>
@@ -1394,6 +1418,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           <tr>
             <th scope="col">${this.localize('chartCategory')}</th>
             ${this.datasets.map((series) => html`<th scope="col">${series.label}</th>`)}
+            ${stackAxes.map(
+              (axis) => html`<th scope="col">${this.tableStackTotalLabel(axis, stackAxes.length)}</th>`,
+            )}
           </tr>
         </thead>
         <tbody>
@@ -1417,7 +1444,13 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   type="button"
                   tabindex=${this.showDataTable ? '0' : '-1'}
                   @click=${() => this.activateDatum(detail)}
-                >${this.formatSummaryValue(value)}</button></td>`;
+                >${this.formatTableValue(value)}</button></td>`;
+              })}
+              ${stackAxes.map((axis) => {
+                const total = stackTotals.get(axis)?.[index];
+                return html`<td>${total == null
+                  ? this.localize('noData')
+                  : this.formatTableValue(total)}</td>`;
               })}
             </tr>
           `)}

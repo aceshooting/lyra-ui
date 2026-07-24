@@ -31,6 +31,10 @@ export type LyraKnowledgeGraphEntityDetails = Pick<LyraEntity, 'description' | '
 export type KnowledgeGraphHighlight = 'selection' | 'hover' | 'none';
 
 export interface LyraKnowledgeGraphExplorerEventMap {
+  /** The explorer changed its self-managed selection. Fires after `selectedNodeId` is updated for
+   *  search, graph, neighbor, path, entity-card, invalidation, and popover-close paths. Direct
+   *  host assignments remain silent. */
+  'lr-selection-change': CustomEvent<{ selectedNodeId: string | null }>;
   /** The user asked to find a path between the two currently pinned nodes (the "Find path" action,
    *  only rendered once exactly two nodes are pinned). `detail: { sourceId, targetId }` -- this
    *  component has no graph-traversal algorithm of its own (client-side, backend call, whatever the
@@ -81,8 +85,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * into `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`,
  * `dimmedLinkIds`) itself, toggling its own copy on interaction (the same self-toggle-then-emit
  * contract `lr-graph-legend` already uses) so every feature works with zero host wiring, while
- * still being presettable/observable properties and emitting events (`lr-pin-change`,
- * `lr-path-request`, plus every composed primitive's own event bubbling straight through
+ * still being presettable/observable properties and emitting events (`lr-selection-change`,
+ * `lr-pin-change`, `lr-path-request`, plus every composed primitive's own event bubbling straight through
  * unmodified) for a host that wants to persist or react to them.
  *
  * `highlight` controls what drives that dimming, on top of the always-active search-match
@@ -96,6 +100,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @slot details - Overrides the details popover's default content (an `lr-entity-card` with a
  *   nested `lr-neighbor-list` and a pin toggle). Receives no data -- a consumer overriding this
  *   slot reads the selected entity from `selectedNodeId`/`nodes` itself.
+ * @event lr-selection-change - The explorer changed its self-managed selection. `detail:
+ *   { selectedNodeId: string | null }`. Direct host assignments do not emit.
  * @event lr-path-request - `detail: { sourceId, targetId }`. See the class doc above.
  * @event lr-pin-change - `detail: { pinnedNodeIds }`. See the class doc above.
  * @event lr-node-click - Bubbles straight through from the composed `lr-graph`, unmodified.
@@ -244,8 +250,10 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private setInternalSelectedNodeId(value: string | null): void {
+    if (Object.is(this.selectedNodeId, value)) return;
     this.internalSelectionAssignment = { value };
     this.selectedNodeId = value;
+    this.emit('lr-selection-change', { selectedNodeId: value });
   }
 
   override disconnectedCallback(): void {

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
-import type { LiteSeries } from '../../../lyra.js';
+import type { LiteSeries, LyraLiteChartTableCellFormatter } from '../../../lyra.js';
 
 const meta: Meta = {
   title: 'Charts/LiteChart',
@@ -88,6 +88,43 @@ export const StackedBars: Story = {
         y-label="Commits"
         .labels=${['W1', 'W2', 'W3', 'W4']}
         .datasets=${series}
+      ></lr-lite-chart>
+    `;
+  },
+};
+
+/** The hidden data table can format independently of axis ticks and opt into stacked totals. */
+export const AccessibleTableFormattingAndTotals: Story = {
+  name: 'Accessible table formatting and totals',
+  render: () => {
+    const series: LiteSeries[] = [
+      { label: 'Product', data: [1204.37, 1890.5, 1420.1] },
+      { label: 'Services', data: [804.1, 920.25, 1010.75] },
+    ];
+    const tableCellFormatter: LyraLiteChartTableCellFormatter = (value, context) =>
+      `${context.kind === 'total' ? 'Σ ' : ''}$${value.toFixed(2)}`;
+    return html`
+      <style>
+        .table-demo::part(data-table) {
+          position: static;
+          inline-size: auto;
+          block-size: auto;
+          margin-block-start: var(--lr-spacing-medium);
+          overflow: visible;
+          clip: auto;
+          white-space: normal;
+        }
+      </style>
+      <lr-lite-chart
+        class="table-demo"
+        type="bar"
+        stacked
+        table-totals
+        height="16rem"
+        style="width: 28rem; max-width: 100%;"
+        .labels=${['Q1', 'Q2', 'Q3']}
+        .datasets=${series}
+        .tableCellFormatter=${tableCellFormatter}
       ></lr-lite-chart>
     `;
   },

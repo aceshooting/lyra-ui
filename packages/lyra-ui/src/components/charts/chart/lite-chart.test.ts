@@ -190,6 +190,124 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-table altern
   expect(el.shadowRoot!.querySelectorAll('[part="data-table"] tbody tr')).to.have.length(BAR_LABELS.length);
 });
 
+it('leaves the multi-series table unchanged when table formatting and totals are unset', async () => {
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    stacked
+    .labels=${['Q1']}
+    .datasets=${[
+      { label: 'Revenue', data: [12.5] },
+      { label: 'Services', data: [7.5] },
+    ]}
+  ></lr-lite-chart>`);
+  const table = el.shadowRoot!.querySelector('[part="data-table"]')!;
+  expect(el.tableCellFormatter).to.equal(undefined);
+  expect(el.tableTotals).to.be.false;
+  expect([...table.querySelectorAll('thead th')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+    'Category',
+    'Revenue',
+    'Services',
+  ]);
+  const formatter = new Intl.NumberFormat(el.effectiveLocale);
+  expect([...table.querySelectorAll('tbody td')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+    formatter.format(12.5),
+    formatter.format(7.5),
+  ]);
+});
+
+it('formats every finite multi-series table value with value-cell context', async () => {
+  const calls: unknown[] = [];
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    .labels=${['Q1', 'Q2']}
+    .datasets=${[
+      { label: 'Revenue', data: [12.5, null] },
+      { label: 'Services', data: [7.5, Number.NaN] },
+    ]}
+  ></lr-lite-chart>`);
+  el.tableCellFormatter = (value, context) => {
+    calls.push({ value, context });
+    return `${context.seriesLabel}:${value.toFixed(2)}`;
+  };
+  await el.updateComplete;
+
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="data-table"] tbody td')].map((cell) =>
+      cell.textContent?.trim(),
+    ),
+  ).to.deep.equal(['Revenue:12.50', 'Services:7.50', '', '']);
+  expect(calls).to.deep.equal([
+    {
+      value: 12.5,
+      context: {
+        kind: 'value',
+        datasetIndex: 0,
+        index: 0,
+        label: 'Q1',
+        seriesLabel: 'Revenue',
+      },
+    },
+    {
+      value: 7.5,
+      context: {
+        kind: 'value',
+        datasetIndex: 1,
+        index: 0,
+        label: 'Q1',
+        seriesLabel: 'Services',
+      },
+    },
+  ]);
+});
+
+it('adds localized, formatted row totals only for stacked bar tables when tableTotals is set', async () => {
+  const calls: unknown[] = [];
+  const el = await mount(html`<lr-lite-chart
+    type="bar"
+    stacked
+    .labels=${['Q1', 'Q2']}
+    .datasets=${[
+      { label: 'Revenue', data: [12.5, null] },
+      { label: 'Services', data: [7.5, null] },
+    ]}
+    .strings=${{ chartTotal: 'Gesamt' }}
+  ></lr-lite-chart>`);
+  el.tableTotals = true;
+  el.tableCellFormatter = (value, context) => {
+    calls.push({ value, context });
+    return `${context.kind}:${value.toFixed(2)}`;
+  };
+  await el.updateComplete;
+
+  const table = el.shadowRoot!.querySelector('[part="data-table"]')!;
+  expect([...table.querySelectorAll('thead th')].map((cell) => cell.textContent?.trim())).to.deep.equal([
+    'Category',
+    'Revenue',
+    'Services',
+    'Gesamt',
+  ]);
+  expect([...table.querySelectorAll('tbody tr')].map((row) =>
+    [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
+  )).to.deep.equal([
+    ['value:12.50', 'value:7.50', 'total:20.00'],
+    ['', '', ''],
+  ]);
+  expect(calls).to.deep.include({
+    value: 20,
+    context: {
+      kind: 'total',
+      datasetIndex: null,
+      index: 0,
+      label: 'Q1',
+      seriesLabel: null,
+    },
+  });
+
+  el.type = 'line';
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="data-table"] thead th')).to.have.length(3);
+});
+
 it('emits lr-point-click for a line point too, with the same detail shape', async () => {
   const el = await mount(html`<lr-lite-chart
     type="line"

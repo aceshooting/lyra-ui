@@ -25917,7 +25917,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -25995,7 +25995,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -26555,6 +26555,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -26962,6 +26984,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -27348,7 +27412,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -28772,7 +28836,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -28850,7 +28914,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -29410,6 +29474,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -29817,6 +29903,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -30203,7 +30331,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -31063,7 +31191,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals"
             },
             {
@@ -31125,7 +31253,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis."
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis."
             },
             {
               "kind": "field",
@@ -31585,6 +31713,24 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -31932,6 +32078,40 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -32130,7 +32310,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals"
             },
             {
@@ -32815,7 +32995,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -32893,7 +33073,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -33453,6 +33633,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -33860,6 +34062,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -34246,7 +34490,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -35028,7 +35272,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -35106,7 +35350,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -35674,6 +35918,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -36081,6 +36347,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -36346,7 +36654,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -37183,7 +37491,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -37261,7 +37569,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -37821,6 +38129,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -38228,6 +38558,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -38614,7 +38986,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -38755,7 +39127,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM\nrendering with zero peer dependencies (unlike `lr-chart`, which wraps\n`chart.js`). For a project whose architecture forbids a charting\ndependency outright, this covers the common bar/line case: grouped or\nstacked bars, multi-series lines, per-point click, and hover tooltips\n(native SVG `<title>`, no positioning JS needed) — not a full `lr-chart`\nreplacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no\nhorizontal/dual-y-axis, no raw-config passthrough).\n\nBecause this renders real DOM (not canvas), it reuses `lr-chart`'s\n`--lr-chart-*` theme tokens directly via CSS `var()` — no\n`getComputedStyle()`-based re-theming step is needed the way `chart.ts`\nneeds one for its canvas.\n\nBy default (`layout=\"fit\"`) the plot always squeezes to the measured host\nwidth. Three independent, opt-in escape hatches for dense/aligned data:\n`layout=\"scroll\"` (+ `barWidth`) gives every bar a fixed pixel width and\nlets the plot overflow the host horizontally (scrollable) instead of\nsqueezing; `maxLabels` decimates which x-axis text labels render (bars\nalways still render) once there are more categories than that; and\n`barX` lets a consumer hand in its own per-category x-coordinate function\n— e.g. to pixel-align this chart's bars with a sibling `lr-heatmap`'s\ncalendar columns — overriding the internal slot math for both bars and\ntheir labels. All three are additive and no-ops when left unset.\n\nSeven further additive, opt-in properties: `pointText` overrides the\nper-bar/per-point `<title>`/`aria-label` tooltip text (mirrors\n`lr-heatmap`'s `cellText` hook), falling back to the built-in raw-value\ntemplate when unset; `roundedBars` draws bars as a rounded-top path\ninstead of a square-cornered rect; `skipZero` omits a bar entirely (not\njust zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`\noverride the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`\n(`type=\"bar\"` only) switches the bar-height mapping from the default\nlinear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`\ncompression (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale) so a\nskewed dataset's smaller bars don't get washed out by one dominant value\n— gridlines/tick labels stay on the linear domain regardless, only the bar\nmarks' own height changes, and `type=\"line\"` ignores `scale` entirely; and\n`hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether\n(x-axis category labels, rendered separately, are unaffected). An eighth,\n`legendText`, appends a formatter-supplied string after each series' label in the\nbuilt-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same\nfallback-to-unchanged convention as every other hook here;",
+          "description": "`<lr-lite-chart>` — a dependency-free bar/line chart, plain SVG/DOM\nrendering with zero peer dependencies (unlike `lr-chart`, which wraps\n`chart.js`). For a project whose architecture forbids a charting\ndependency outright, this covers the common bar/line case: grouped or\nstacked bars, multi-series lines, per-point click, and hover tooltips\n(native SVG `<title>`, no positioning JS needed) — not a full `lr-chart`\nreplacement (no zoom/pan, no pie/doughnut/radar/scatter/bubble types, no\nhorizontal/dual-y-axis, no raw-config passthrough).\n\nBecause this renders real DOM (not canvas), it reuses `lr-chart`'s\n`--lr-chart-*` theme tokens directly via CSS `var()` — no\n`getComputedStyle()`-based re-theming step is needed the way `chart.ts`\nneeds one for its canvas.\n\nBy default (`layout=\"fit\"`) the plot always squeezes to the measured host\nwidth. Three independent, opt-in escape hatches for dense/aligned data:\n`layout=\"scroll\"` (+ `barWidth`) gives every bar a fixed pixel width and\nlets the plot overflow the host horizontally (scrollable) instead of\nsqueezing; `maxLabels` decimates which x-axis text labels render (bars\nalways still render) once there are more categories than that; and\n`barX` lets a consumer hand in its own per-category x-coordinate function\n— e.g. to pixel-align this chart's bars with a sibling `lr-heatmap`'s\ncalendar columns — overriding the internal slot math for both bars and\ntheir labels. All three are additive and no-ops when left unset.\n\nSeven further additive, opt-in properties: `pointText` overrides the\nper-bar/per-point `<title>`/`aria-label` tooltip text (mirrors\n`lr-heatmap`'s `cellText` hook), falling back to the built-in raw-value\ntemplate when unset; `roundedBars` draws bars as a rounded-top path\ninstead of a square-cornered rect; `skipZero` omits a bar entirely (not\njust zero-height) for an exactly-`0` value; `padLeft`/`barGapRatio`\noverride the internal `PAD_LEFT`/`BAR_GROUP_GAP` layout constants; `scale`\n(`type=\"bar\"` only) switches the bar-height mapping from the default\nlinear `niceDomain` fraction to a `Math.sqrt(value / domainMax)`\ncompression (mirroring `lr-heatmap`'s matrix-mode `sqrt` scale) so a\nskewed dataset's smaller bars don't get washed out by one dominant value\n— gridlines/tick labels stay on the linear domain regardless, only the bar\nmarks' own height changes, and `type=\"line\"` ignores `scale` entirely; and\n`hideAxis` suppresses `renderGrid()`'s gridlines/tick labels altogether\n(x-axis category labels, rendered separately, are unaffected). An eighth,\n`legendText`, appends a formatter-supplied string after each series' label in the\nbuilt-in legend row (e.g. a value or share) — no-op while `legend` is unset, matching the same\nfallback-to-unchanged convention as every other hook here. The built-in multi-series accessible\ntable can independently format its finite numeric cells through `tableCellFormatter`; for a\nstacked bar chart, `tableTotals` adds an opt-in localized total column. Both are no-ops when\nunset.",
           "name": "LyraLiteChart",
           "cssProperties": [
             {
@@ -39204,6 +39576,24 @@
             },
             {
               "kind": "field",
+              "name": "tableCellFormatter",
+              "type": {
+                "text": "LyraLiteChartTableCellFormatter | undefined"
+              },
+              "description": "Formats finite numeric cells in the built-in multi-series accessible table, including its\nopt-in total cells. Unset preserves locale-aware number formatting."
+            },
+            {
+              "kind": "field",
+              "name": "tableTotals",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Adds a localized total column to the built-in multi-series accessible table for a stacked\nbar chart. Ignored for grouped bars and line charts.",
+              "attribute": "table-totals"
+            },
+            {
+              "kind": "field",
               "name": "tickFormat",
               "type": {
                 "text": "(value: number) => string | undefined"
@@ -39490,6 +39880,36 @@
                   "name": "index",
                   "type": {
                     "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "formatTableCell",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "context",
+                  "type": {
+                    "text": "LyraLiteChartTableCellContext"
+                  }
+                },
+                {
+                  "name": "numberFormat",
+                  "type": {
+                    "text": "Intl.NumberFormat"
                   }
                 }
               ]
@@ -39931,6 +40351,24 @@
             },
             {
               "kind": "method",
+              "name": "tableTotalAt",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "number | null"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
               "name": "visibleLabelIndexes",
               "privacy": "private",
               "return": {
@@ -40095,6 +40533,15 @@
               "default": "false",
               "description": "Stacks each category's bars into one segmented bar. Ignored for `type=\"line\"`.",
               "fieldName": "stacked"
+            },
+            {
+              "name": "table-totals",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Adds a localized total column to the built-in multi-series accessible table for a stacked\nbar chart. Ignored for grouped bars and line charts.",
+              "fieldName": "tableTotals"
             },
             {
               "name": "type",
@@ -40702,7 +41149,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -40780,7 +41227,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -41340,6 +41787,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -41747,6 +42216,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -42133,7 +42644,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -42807,7 +43318,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -42885,7 +43396,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -43445,6 +43956,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -43852,6 +44385,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -44238,7 +44813,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -44912,7 +45487,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -44990,7 +45565,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -45550,6 +46125,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -45957,6 +46554,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -46343,7 +46982,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -47017,7 +47656,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "attribute": "stack-totals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -47095,7 +47734,7 @@
               "type": {
                 "text": "LyraChartValueFormatter | undefined"
               },
-              "description": "Formats numeric (value-axis) ticks, tooltip values, and legend values from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
+              "description": "Formats numeric (value-axis) ticks, tooltip values, legend values, and generated accessible\ntable cells from one callback.\nNever runs against the categorical x-axis's own labels (line/bar's `labels` strings) —\nChart.js's category scale passes the tick index to `ticks.callback`, not the label text,\nso formatting it would corrupt the axis.",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -47655,6 +48294,28 @@
             },
             {
               "kind": "method",
+              "name": "formatTableValue",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "formatValue",
               "privacy": "private",
               "return": {
@@ -48062,6 +48723,48 @@
             },
             {
               "kind": "method",
+              "name": "tableStackAxes",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "('y' | 'y2')[]"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "tableStackTotalLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "axis",
+                  "type": {
+                    "text": "'y' | 'y2'"
+                  }
+                },
+                {
+                  "name": "axisCount",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "method",
               "name": "themeColors",
               "privacy": "private",
               "return": {
@@ -48448,7 +49151,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. Unset (the default) draws nothing.",
+              "description": "When the chart is `stacked` (bar/line only), draws the per-category stack\ntotal above each stack, via the same optional `chartjs-plugin-datalabels`\npeer as `data-labels`. Null/undefined points are skipped; a category whose\nevery value is null shows no total. The generated accessible data table\nreceives the same formatted total column (one per value axis). Unset (the\ndefault) draws and adds nothing.",
               "fieldName": "stackTotals",
               "inheritedFrom": {
                 "name": "LyraChart",
@@ -188504,7 +189207,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-knowledge-graph-explorer>` — an orchestration-level surface for exploring a knowledge\ngraph: the `lr-graph` canvas plus entity search, type filters, neighborhood expansion, pinned\nnodes, path finding between pins, node selection, and a details overlay. Composes existing\nprimitives rather than re-implementing graph rendering: `lr-graph` (canvas/pan-zoom/selection),\n`lr-graph-legend` (type filters), `lr-entity-card` (the details popover's default content),\n`lr-neighbor-list` (the selected entity's relationships), `lr-path-strip` (a found path), and\n`lr-popover.showAt()` (the details overlay itself).\n\n**How the details popover finds its viewport position.** `lr-graph.getNodePosition()` and the\n`lr-node-click` event's `{ x, y }` are in the graph's own *local drawing space* (pre pan/zoom),\nnever viewport pixels -- passing them straight to `showAt()` would anchor the popover at the\nwrong place as soon as the graph has panned or zoomed even once. A direct node click resolves\nthe correct viewport rect the way this library's own documented `lr-graph` + `lr-popover.showAt()`\ncomposition does: for `renderer=\"svg\"` (the default), `event.composedPath()` (the native `click`\nthat bubbles out of `lr-graph`'s shadow root) locates the actual clicked `[part=\"node\"]` element,\nwhose `getBoundingClientRect()` is already viewport-relative; for `renderer=\"canvas\"` (no\nper-node DOM element to find), the click event's own `clientX`/`clientY` are used directly, since\ncanvas hit-testing already treats those as viewport coordinates internally. While the popover\nstays open after an `renderer=\"svg\"` click, this component re-reads that same resolved node\nelement's `getBoundingClientRect()` and re-calls `showAt()` every time the composed `lr-graph`\nemits its own `lr-viewport-change` (a frame-coalesced pan/zoom/simulation-tick signal) --\nschedules no `requestAnimationFrame` loop of its own, unlike an idle popover polling the DOM on\nevery frame regardless of whether anything actually moved. Selecting a node any other\nway -- a search result, a neighbor row, a path-strip element, keyboard Enter/Space on a graph\nnode (which never dispatches a native `click`) -- has no click event to read a rect from, so it\ninstead calls the public `lr-graph.focusNode(id)` (which centers that node in the viewport) and\nthen anchors the popover at the graph element's own `getBoundingClientRect()` center once that\nsettles; no continuous tracking applies to that path.\n\n**Controlled vs. self-managed state.** `nodes`/`links`/`nodeTypes`/`communities`/`entityDetails`/\n`path` are purely host-supplied data, rendered as given. `hiddenTypes`/`selectedNodeId`/\n`searchQuery`/`pinnedNodeIds` are this component's own genuinely new contribution: it wires them\ninto `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`,\n`dimmedLinkIds`) itself, toggling its own copy on interaction (the same self-toggle-then-emit\ncontract `lr-graph-legend` already uses) so every feature works with zero host wiring, while\nstill being presettable/observable properties and emitting events (`lr-pin-change`,\n`lr-path-request`, plus every composed primitive's own event bubbling straight through\nunmodified) for a host that wants to persist or react to them.\n\n`highlight` controls what drives that dimming, on top of the always-active search-match\ndimming: `'selection'` (the default) dims by the selected node's immediate neighborhood;\n`'hover'` also dims by whichever node is currently pointer-hovered (falling back to the selected\nnode's neighborhood while nothing is hovered); `'none'` turns this component's own dimming off\nentirely, forwarding empty `dimmedNodeIds`/`dimmedLinkIds` regardless of search/selection state\n-- for a host that wants to drive `lr-graph`'s dimming through a different composition instead.",
+          "description": "`<lr-knowledge-graph-explorer>` — an orchestration-level surface for exploring a knowledge\ngraph: the `lr-graph` canvas plus entity search, type filters, neighborhood expansion, pinned\nnodes, path finding between pins, node selection, and a details overlay. Composes existing\nprimitives rather than re-implementing graph rendering: `lr-graph` (canvas/pan-zoom/selection),\n`lr-graph-legend` (type filters), `lr-entity-card` (the details popover's default content),\n`lr-neighbor-list` (the selected entity's relationships), `lr-path-strip` (a found path), and\n`lr-popover.showAt()` (the details overlay itself).\n\n**How the details popover finds its viewport position.** `lr-graph.getNodePosition()` and the\n`lr-node-click` event's `{ x, y }` are in the graph's own *local drawing space* (pre pan/zoom),\nnever viewport pixels -- passing them straight to `showAt()` would anchor the popover at the\nwrong place as soon as the graph has panned or zoomed even once. A direct node click resolves\nthe correct viewport rect the way this library's own documented `lr-graph` + `lr-popover.showAt()`\ncomposition does: for `renderer=\"svg\"` (the default), `event.composedPath()` (the native `click`\nthat bubbles out of `lr-graph`'s shadow root) locates the actual clicked `[part=\"node\"]` element,\nwhose `getBoundingClientRect()` is already viewport-relative; for `renderer=\"canvas\"` (no\nper-node DOM element to find), the click event's own `clientX`/`clientY` are used directly, since\ncanvas hit-testing already treats those as viewport coordinates internally. While the popover\nstays open after an `renderer=\"svg\"` click, this component re-reads that same resolved node\nelement's `getBoundingClientRect()` and re-calls `showAt()` every time the composed `lr-graph`\nemits its own `lr-viewport-change` (a frame-coalesced pan/zoom/simulation-tick signal) --\nschedules no `requestAnimationFrame` loop of its own, unlike an idle popover polling the DOM on\nevery frame regardless of whether anything actually moved. Selecting a node any other\nway -- a search result, a neighbor row, a path-strip element, keyboard Enter/Space on a graph\nnode (which never dispatches a native `click`) -- has no click event to read a rect from, so it\ninstead calls the public `lr-graph.focusNode(id)` (which centers that node in the viewport) and\nthen anchors the popover at the graph element's own `getBoundingClientRect()` center once that\nsettles; no continuous tracking applies to that path.\n\n**Controlled vs. self-managed state.** `nodes`/`links`/`nodeTypes`/`communities`/`entityDetails`/\n`path` are purely host-supplied data, rendered as given. `hiddenTypes`/`selectedNodeId`/\n`searchQuery`/`pinnedNodeIds` are this component's own genuinely new contribution: it wires them\ninto `lr-graph`'s existing controlled props (`hiddenTypes`, `selectedNodeIds`, `dimmedNodeIds`,\n`dimmedLinkIds`) itself, toggling its own copy on interaction (the same self-toggle-then-emit\ncontract `lr-graph-legend` already uses) so every feature works with zero host wiring, while\nstill being presettable/observable properties and emitting events (`lr-selection-change`,\n`lr-pin-change`, `lr-path-request`, plus every composed primitive's own event bubbling straight through\nunmodified) for a host that wants to persist or react to them.\n\n`highlight` controls what drives that dimming, on top of the always-active search-match\ndimming: `'selection'` (the default) dims by the selected node's immediate neighborhood;\n`'hover'` also dims by whichever node is currently pointer-hovered (falling back to the selected\nnode's neighborhood while nothing is hovered); `'none'` turns this component's own dimming off\nentirely, forwarding empty `dimmedNodeIds`/`dimmedLinkIds` regardless of search/selection state\n-- for a host that wants to drive `lr-graph`'s dimming through a different composition instead.",
           "name": "LyraKnowledgeGraphExplorer",
           "cssParts": [
             {
@@ -189506,6 +190209,10 @@
             {
               "description": "Bubbles straight through from the composed `lr-path-strip`, unmodified.",
               "name": "lr-relation-activate"
+            },
+            {
+              "description": "The explorer changed its self-managed selection. `detail: { selectedNodeId: string | null }`. Direct host assignments do not emit.",
+              "name": "lr-selection-change"
             }
           ],
           "attributes": [

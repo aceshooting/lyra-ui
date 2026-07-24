@@ -42,10 +42,10 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
   that allocation width
 - `valueFormatter?: LyraChartValueFormatter` (attribute: false) — formats numeric (value-axis)
-  tick, tooltip, and legend values; the callback receives the value and `'tick'`, `'tooltip'`, or
-  `'legend'` context. Never runs against the categorical x-axis's own labels (line/bar's `labels`
-  strings) — Chart.js's category scale passes the tick index to `ticks.callback`, not the label
-  text
+  tick, tooltip, legend, and generated accessible-table values; the callback receives the value
+  and `'tick'`, `'tooltip'`, `'legend'`, or `'table'` context. Never runs against the categorical
+  x-axis's own labels (line/bar's `labels` strings) — Chart.js's category scale passes the tick
+  index to `ticks.callback`, not the label text
 - `area: boolean = false`
 - `zoom: boolean = false` — wheel/drag/pinch zoom on the `x` axis only (pan disabled, and the zoom
   range is limited to the original data extent); shows the `reset-zoom-button` while zoomed
@@ -68,7 +68,10 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   purely visual, canvas-only addition and add no new a11y surface.
 - `stackTotals: boolean = false` (attribute `stack-totals`) — with `stacked` (bar/line only), draws
   the per-category stack total above each stack, via the same `chartjs-plugin-datalabels` peer.
-  Null/undefined points are skipped; a category whose every value is null shows no total (not `0`)
+  Null/undefined points are skipped; a category whose every value is null shows no total (not
+  `0`). The generated accessible table receives the same formatted total column; a dual-axis stack
+  receives separately labelled primary- and secondary-axis total columns. The table totals do not
+  depend on the optional visual-label peer being installed
 - `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
