@@ -349,6 +349,78 @@ it('forwards click and the writable native selection surface to the textarea', a
   expect(textarea.selectionDirection).to.equal('backward');
 });
 
+it('forwards the complete native focus, selection, and range-editing surface', async () => {
+  const el = (await fixture(
+    html`<lr-code-editor value="abcdef"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  const forwarded: string[] = [];
+  el.addEventListener('focus', (event) => {
+    if (event instanceof CustomEvent) forwarded.push('focus');
+  });
+  el.addEventListener('blur', (event) => {
+    if (event instanceof CustomEvent) forwarded.push('blur');
+  });
+
+  el.focus({ preventScroll: true });
+  expect(el.shadowRoot!.activeElement?.localName).to.equal('textarea');
+  el.setSelectionRange(1, 4, 'forward');
+  expect(el.selectionStart).to.equal(1);
+  expect(el.selectionEnd).to.equal(4);
+  expect(el.selectionDirection).to.equal('forward');
+
+  el.setRangeText('XY');
+  expect(el.value).to.equal('aXYef');
+  expect(textarea.value).to.equal('aXYef');
+
+  el.setRangeText('!', 0, 1, 'select');
+  expect(el.value).to.equal('!XYef');
+  expect(el.selectionStart).to.equal(0);
+  expect(el.selectionEnd).to.equal(1);
+
+  el.select();
+  expect(el.selectionStart).to.equal(0);
+  expect(el.selectionEnd).to.equal(el.value.length);
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+  expect(forwarded).to.deep.equal(['focus', 'blur']);
+});
+
+it('synchronizes user edits and re-emits input/change with the current value', async () => {
+  const el = (await fixture(html`<lr-code-editor></lr-code-editor>`)) as LyraCodeEditor;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  const inputDetails: unknown[] = [];
+  const changeDetails: unknown[] = [];
+  el.addEventListener('input', (event) => {
+    if (event instanceof CustomEvent) inputDetails.push(event.detail);
+  });
+  el.addEventListener('change', (event) => {
+    if (event instanceof CustomEvent) changeDetails.push(event.detail);
+  });
+
+  textarea.value = 'const answer = 42;';
+  textarea.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+  textarea.dispatchEvent(new Event('change', { bubbles: true }));
+
+  expect(el.value).to.equal('const answer = 42;');
+  expect(inputDetails).to.deep.equal([{ value: 'const answer = 42;' }]);
+  expect(changeDetails).to.deep.equal([{ value: 'const answer = 42;' }]);
+});
+
+it('parses explicit spellcheck strings with native true/false semantics', async () => {
+  const enabled = (await fixture(
+    html`<lr-code-editor spellcheck="true"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+  const disabled = (await fixture(
+    html`<lr-code-editor spellcheck="false"></lr-code-editor>`,
+  )) as LyraCodeEditor;
+
+  expect(enabled.spellcheck).to.be.true;
+  expect(enabled.shadowRoot!.querySelector('textarea')!.spellcheck).to.be.true;
+  expect(disabled.spellcheck).to.be.false;
+  expect(disabled.shadowRoot!.querySelector('textarea')!.spellcheck).to.be.false;
+});
+
 it('does not create one gutter element per line for very large values', async () => {
   const value = Array.from({ length: 10_000 }, (_, index) => String(index)).join('\n');
   const el = (await fixture(html`<lr-code-editor .value=${value}></lr-code-editor>`)) as LyraCodeEditor;

@@ -84,6 +84,37 @@ it('is form-associated and validates required values', async () => {
   expect(el.checkValidity()).to.be.true;
 });
 
+it('exposes native form validity/focus APIs and resets transient token state with the form', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-token-input name="tags" required .value=${['alpha']}></lr-token-input>
+    </form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-token-input') as LyraTokenInput;
+  const input = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+
+  expect(el.form).to.equal(form);
+  expect(el.validity.valid).to.be.true;
+  expect(el.validationMessage).to.equal('');
+  expect(el.willValidate).to.be.true;
+  expect(el.reportValidity()).to.be.true;
+
+  el.focus({ preventScroll: true });
+  expect(el.shadowRoot!.activeElement?.id).to.equal('input');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+
+  typeInto(input, 'pending');
+  await el.updateComplete;
+  form.reset();
+  await el.updateComplete;
+  expect(el.value).to.deep.equal([]);
+  expect(input.value).to.equal('');
+  expect(el.validity.valueMissing).to.be.true;
+  expect(el.validationMessage.length).to.be.greaterThan(0);
+  expect(el.reportValidity()).to.be.false;
+});
+
 it('is accessible', async () => {
   const el = await fixture(html`<lr-token-input label="Recipients"></lr-token-input>`);
   await expect(el).to.be.accessible();

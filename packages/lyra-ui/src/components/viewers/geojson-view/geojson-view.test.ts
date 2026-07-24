@@ -324,6 +324,175 @@ describe('GeoJSON shape validation and coordinate extraction', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null, 'single-point MultiPoint was rejected', { timeout: 2000 });
   });
 
+  it('accepts every bounded GeoJSON geometry shape in a FeatureCollection', async () => {
+    stubFetch({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: null,
+          geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
+        },
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[0, 0], [2, 0], [2, 2], [0, 0]]],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'MultiPoint', coordinates: [[3, 3], [4, 4]] },
+        },
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'MultiLineString',
+            coordinates: [[[5, 5], [6, 6]], [[7, 7], [8, 8]]],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'MultiPolygon',
+            coordinates: [[[[9, 9], [10, 9], [10, 10], [9, 9]]]],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'GeometryCollection',
+            geometries: [{ type: 'Point', coordinates: [11, 11] }],
+          },
+        },
+      ],
+    });
+    const el = (await fixture(html`<lr-geojson-view></lr-geojson-view>`)) as LyraGeojsonView;
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    const missingPeer = oneEvent(el, 'lr-render-error');
+    el.src = GEOJSON_URL;
+    await missingPeer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-json-viewer') !== null);
+    expect((el as unknown as {
+      loadState: { kind: string; featureCount?: number };
+    }).loadState.featureCount).to.equal(6);
+  });
+
+  it('accepts a Feature with null geometry and uses the world fallback view', async () => {
+    stubFetch({ type: 'Feature', properties: null, geometry: null });
+    const el = (await fixture(html`<lr-geojson-view></lr-geojson-view>`)) as LyraGeojsonView;
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    const missingPeer = oneEvent(el, 'lr-render-error');
+    el.src = GEOJSON_URL;
+    await missingPeer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-json-viewer') !== null);
+    const state = (el as unknown as {
+      loadState: { kind: string; center?: [number, number]; zoom?: number };
+    }).loadState;
+    expect(state.center).to.deep.equal([0, 0]);
+    expect(state.zoom).to.equal(1);
+  });
+
+  it('rejects malformed members, coordinate types, bounds, and polygon rings', async () => {
+    const malformed: Array<[string, unknown]> = [
+      ['missing type', { coordinates: [0, 0] }],
+      ['non-string type', { type: 42, coordinates: [0, 0] }],
+      ['unknown type', { type: 'Circle', coordinates: [0, 0] }],
+      ['missing coordinates', { type: 'Point' }],
+      ['non-finite coordinate', { type: 'Point', coordinates: [Number.POSITIVE_INFINITY, 0] }],
+      ['non-number coordinate', { type: 'Point', coordinates: ['0', 0] }],
+      ['longitude out of bounds', { type: 'Point', coordinates: [181, 0] }],
+      ['latitude out of bounds', { type: 'Point', coordinates: [0, -91] }],
+      ['short line', { type: 'LineString', coordinates: [[0, 0]] }],
+      ['short polygon ring', {
+        type: 'Polygon',
+        coordinates: [[[0, 0], [1, 0], [0, 0]]],
+      }],
+      ['open polygon ring', {
+        type: 'Polygon',
+        coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1]]],
+      }],
+      ['invalid feature properties', {
+        type: 'Feature',
+        geometry: null,
+        properties: [],
+      }],
+      ['feature inside a geometry', {
+        type: 'GeometryCollection',
+        geometries: [{ type: 'Feature', geometry: null, properties: {} }],
+      }],
+      ['feature collection inside a geometry', {
+        type: 'GeometryCollection',
+        geometries: [{ type: 'FeatureCollection', features: [] }],
+      }],
+      ['non-feature collection member', {
+        type: 'FeatureCollection',
+        features: [{ type: 'Point', coordinates: [0, 0] }],
+      }],
+      ['non-array geometries', { type: 'GeometryCollection', geometries: {} }],
+      ['non-array multi-line', { type: 'MultiLineString', coordinates: {} }],
+      ['non-array multi-polygon', { type: 'MultiPolygon', coordinates: {} }],
+    ];
+
+    for (const [description, value] of malformed) {
+      stubFetch(value);
+      const el = (await fixture(
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`,
+      )) as LyraGeojsonView;
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[role="alert"]') !== null,
+        description,
+      );
+      expect(
+        el.shadowRoot!.querySelector('[role="alert"]')?.textContent,
+        description,
+      ).to.equal('This file is not valid GeoJSON.');
+    }
+  });
+
+  it('enforces nested-value and nesting-depth ceilings before map rendering', async () => {
+    const oversizedPositions = Array.from(
+      { length: 50_001 },
+      (_unused, index) => [index % 180, 0],
+    );
+    const values: Array<[string, unknown]> = [
+      ['coordinate task ceiling', { type: 'MultiPoint', coordinates: oversizedPositions }],
+      ['feature task ceiling', {
+        type: 'FeatureCollection',
+        features: Array.from({ length: 50_001 }, () => ({
+          type: 'Feature',
+          geometry: null,
+          properties: null,
+        })),
+      }],
+    ];
+    let nested: Record<string, unknown> = { type: 'Point', coordinates: [0, 0] };
+    for (let depth = 0; depth < 66; depth++) {
+      nested = { type: 'GeometryCollection', geometries: [nested] };
+    }
+    values.push(['nesting depth ceiling', nested]);
+
+    for (const [description, value] of values) {
+      stubFetch(value);
+      const el = (await fixture(
+        html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`,
+      )) as LyraGeojsonView;
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[role="alert"]') !== null,
+        description,
+      );
+      expect(
+        el.shadowRoot!.querySelector('[role="alert"]')?.textContent,
+        description,
+      ).to.equal('This document is too large to preview.');
+    }
+  });
+
   it('fits dateline-crossing coordinates across the short antimeridian span', async () => {
     stubFetch({ type: 'MultiPoint', coordinates: [[179, 10], [-179, 12]] });
     const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;

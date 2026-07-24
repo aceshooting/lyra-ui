@@ -35,6 +35,64 @@ it("opens, filters, and selects a command", async () => {
   expect(el.open).to.be.false;
 });
 
+it("registers and unregisters commands through the public API", async () => {
+  let selections = 0;
+  const el = (await fixture(
+    html`<lr-command-palette></lr-command-palette>`
+  )) as LyraCommandPalette;
+  const command = {
+    id: "registered",
+    label: "Registered command",
+    onSelect: () => selections++,
+  };
+  const unregister = el.registerCommand(command);
+  el.openPalette();
+  await el.updateComplete;
+  const selected = oneEvent(el, "lr-select");
+  (
+    el.shadowRoot!.querySelector('[part="command"]') as HTMLButtonElement
+  ).click();
+  expect((await selected).detail.command).to.equal(command);
+  expect(selections).to.equal(1);
+
+  unregister();
+  await el.updateComplete;
+  expect(el.commands).to.deep.equal([]);
+});
+
+it("selects the active command with Enter and ignores Enter when no enabled command exists", async () => {
+  const el = (await fixture(html`<lr-command-palette
+    .commands=${[
+      { id: "disabled", label: "Disabled", disabled: true },
+      { id: "open", label: "Open" },
+    ]}
+  ></lr-command-palette>`)) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector("input")!;
+  const selected = oneEvent(el, "lr-select");
+  input.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  expect((await selected).detail.command.id).to.equal("open");
+
+  el.commands = [{ id: "disabled", label: "Disabled", disabled: true }];
+  el.openPalette();
+  await el.updateComplete;
+  input.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  expect(el.open).to.be.true;
+});
+
 it("is accessible while open", async () => {
   const el = (await fixture(
     html`<lr-command-palette
@@ -359,6 +417,45 @@ it("locks document scroll while open and releases it on close", async () => {
   el.close();
   await el.updateComplete;
   expect(document.documentElement.style.overflow).to.not.equal("hidden");
+});
+
+it("restores overlay ownership when an open palette reconnects", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      .commands=${[{ id: "save", label: "Save" }]}
+    ></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  list.dispatchEvent(new Event("scroll"));
+  const parent = el.parentElement!;
+  el.remove();
+  expect(document.documentElement.style.overflow).to.not.equal("hidden");
+
+  parent.appendChild(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(el.open).to.be.true;
+  expect(document.documentElement.style.overflow).to.equal("hidden");
+  el.close();
+  await el.updateComplete;
+});
+
+it("supports an explicit ctrl shortcut without requiring the platform mod key", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette shortcut="ctrl+p"></lr-command-palette>`
+  )) as LyraCommandPalette;
+  window.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "p",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+  );
+  await el.updateComplete;
+  expect(el.open).to.be.true;
 });
 
 it("does not match the default mod+k shortcut when an extra Shift modifier is held", async () => {

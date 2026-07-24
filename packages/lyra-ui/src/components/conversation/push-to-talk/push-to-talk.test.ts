@@ -156,6 +156,18 @@ it('leaving show-timer unset keeps the documented true default', async () => {
   expect(el.showTimer).to.be.true;
 });
 
+it('forwards focus/blur to the trigger and keeps state read-only under assignment', async () => {
+  const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+  el.focus({ preventScroll: true });
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('trigger');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+
+  (el as unknown as { state: string }).state = 'recording';
+  expect(el.state).to.equal('idle');
+  expect(el.getAttribute('data-state')).to.equal('idle');
+});
+
 it('gives the trigger a hover state while enabled', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='trigger'\]\):hover:where\(:not\(:disabled\)\)[^{]*\{[^}]*background:/);
@@ -301,6 +313,51 @@ describe('hold mode', () => {
       expect(el.state).to.equal('idle');
     } finally {
       restore();
+    }
+  });
+
+  it('pointercancel stops an active hold-mode take', async () => {
+    const restore = stubSuccessfulCapture();
+    try {
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const btn = trigger(el);
+      const started = oneEvent(el, 'lr-record-start');
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      await started;
+
+      const stopped = oneEvent(el, 'lr-record-stop');
+      btn.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }));
+      await stopped;
+      expect(el.state).to.equal('idle');
+    } finally {
+      restore();
+    }
+  });
+
+  it('pointercancel suppresses a later rejected permission request as cancellation, not an error', async () => {
+    const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+    const originalMediaRecorder = window.MediaRecorder;
+    let rejectPermission!: (error: unknown) => void;
+    navigator.mediaDevices.getUserMedia = (() =>
+      new Promise<MediaStream>((_resolve, reject) => {
+        rejectPermission = reject;
+      })) as typeof navigator.mediaDevices.getUserMedia;
+    window.MediaRecorder = FakeMediaRecorder as unknown as typeof MediaRecorder;
+    try {
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      const btn = trigger(el);
+      btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+      await el.updateComplete;
+      expect(el.state).to.equal('requesting');
+
+      btn.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 1 }));
+      const canceled = oneEvent(el, 'lr-record-cancel');
+      rejectPermission(new Error('permission prompt dismissed'));
+      await canceled;
+      expect(el.state).to.equal('idle');
+    } finally {
+      navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+      window.MediaRecorder = originalMediaRecorder;
     }
   });
 
@@ -464,6 +521,24 @@ it('host click forwards to the configured recording control', async () => {
   const restore = stubSuccessfulCapture();
   try {
     const el = (await fixture(html`<lr-push-to-talk mode="toggle"></lr-push-to-talk>`)) as LyraPushToTalk;
+    const started = oneEvent(el, 'lr-record-start');
+    el.click();
+    await started;
+    expect(el.state).to.equal('recording');
+
+    const stopped = oneEvent(el, 'lr-record-stop');
+    el.click();
+    await stopped;
+    expect(el.state).to.equal('idle');
+  } finally {
+    restore();
+  }
+});
+
+it('host click starts and stops directly in hold mode', async () => {
+  const restore = stubSuccessfulCapture();
+  try {
+    const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
     const started = oneEvent(el, 'lr-record-start');
     el.click();
     await started;

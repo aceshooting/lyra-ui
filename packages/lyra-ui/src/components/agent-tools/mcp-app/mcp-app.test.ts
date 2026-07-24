@@ -70,6 +70,84 @@ it('accepts messages only from its own frame and clamps resize requests', async 
   expect(leaked).to.be.false;
 });
 
+it('forwards typed message, link, and log requests while rejecting malformed link requests', async () => {
+  const el = (await fixture(html`<lr-mcp-app
+    .resource=${{ uri: 'ui://assistant/actions', html: '<p>Actions</p>' }}
+  ></lr-mcp-app>`)) as LyraMcpApp;
+  const iframe = el.shadowRoot!.querySelector('iframe')!;
+  const dispatch = (data: Record<string, unknown>) => {
+    window.dispatchEvent(new MessageEvent('message', {
+      source: iframe.contentWindow,
+      origin: 'null',
+      data: { channel: 'lyra-mcp-app', version: 1, ...data },
+    }));
+  };
+
+  const sendMessage = oneEvent(el, 'lr-mcp-send-message');
+  dispatch({ type: 'send-message', message: { role: 'user', content: 'Continue' } });
+  expect((await sendMessage).detail.message).to.deep.equal({ role: 'user', content: 'Continue' });
+
+  const openLink = oneEvent(el, 'lr-mcp-open-link');
+  dispatch({ type: 'open-link', href: 'https://example.test/details' });
+  expect((await openLink).detail.href).to.equal('https://example.test/details');
+
+  let linkCount = 0;
+  el.addEventListener('lr-mcp-open-link', () => linkCount++);
+  dispatch({ type: 'open-link', href: 42 });
+  expect(linkCount).to.equal(0);
+
+  const defaultLog = oneEvent(el, 'lr-mcp-log');
+  dispatch({ type: 'log', value: { status: 'ready' } });
+  expect((await defaultLog).detail).to.deep.equal({
+    level: 'info',
+    value: { status: 'ready' },
+  });
+
+  const warningLog = oneEvent(el, 'lr-mcp-log');
+  dispatch({ type: 'log', level: 'warn', value: 'slow response' });
+  expect((await warningLog).detail.level).to.equal('warn');
+});
+
+it('builds host-context and optional tool-result message envelopes through the public API', () => {
+  const el = document.createElement('lr-mcp-app') as LyraMcpApp;
+  const messages: unknown[] = [];
+  (el as any).post = (message: unknown) => messages.push(message);
+
+  el.postHostContext({ theme: 'dark' });
+  el.postToolResult('request-1', { temperature: 18 });
+  el.postToolResult('request-2', undefined, 'Permission denied');
+  el.postToolResult('request-3');
+
+  expect(messages).to.deep.equal([
+    {
+      channel: 'lyra-mcp-app',
+      version: 1,
+      type: 'host-context',
+      context: { theme: 'dark' },
+    },
+    {
+      channel: 'lyra-mcp-app',
+      version: 1,
+      type: 'tool-result',
+      requestId: 'request-1',
+      result: { temperature: 18 },
+    },
+    {
+      channel: 'lyra-mcp-app',
+      version: 1,
+      type: 'tool-result',
+      requestId: 'request-2',
+      error: 'Permission denied',
+    },
+    {
+      channel: 'lyra-mcp-app',
+      version: 1,
+      type: 'tool-result',
+      requestId: 'request-3',
+    },
+  ]);
+});
+
 it('authenticates remote uniquely-origin sandbox messages by frame window and opaque origin', async () => {
   const el = (await fixture(html`<lr-mcp-app
     .resource=${{ uri: 'ui://remote/app', src: 'https://apps.example.test/weather' }}

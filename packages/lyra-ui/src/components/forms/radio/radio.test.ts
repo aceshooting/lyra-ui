@@ -108,6 +108,32 @@ it('restores the declarative default-checked state on form reset', async () => {
   expect(b.checked, 'b restores its (unchecked) declarative default').to.be.false;
 });
 
+it('exposes native form validity/focus APIs and restores serialized checked state', async () => {
+  const form = (await fixture(html`
+    <form><lr-radio name="choice" value="a" required>A</lr-radio></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-radio') as LyraRadio;
+
+  expect(el.form).to.equal(form);
+  expect(el.validity.valueMissing).to.be.true;
+  expect(el.validationMessage).to.equal('Please select an option.');
+  expect(el.willValidate).to.be.true;
+
+  el.formStateRestoreCallback('checked', 'restore');
+  await el.updateComplete;
+  expect(el.checked).to.be.true;
+  expect(el.validity.valid).to.be.true;
+  expect(new FormData(form).get('choice')).to.equal('a');
+
+  el.focus({ preventScroll: true });
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+
+  el.formStateRestoreCallback('unchecked', 'autocomplete');
+  expect(el.checked).to.be.false;
+});
+
 it('temporarily disables a bare radio through an ancestor fieldset without overwriting the author disabled state', async () => {
   const form = (await fixture(html`
     <form>

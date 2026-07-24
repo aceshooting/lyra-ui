@@ -43,6 +43,52 @@ it('falls back to line when an untyped runtime write assigns an invalid chart ty
   expect((el as any).buildConfig().type).to.equal('line');
 });
 
+it('appends streamed category data, caps numeric series, and preserves point series', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  const points = [{ x: 1, y: 10 }];
+  el.labels = ['A', 'B'];
+  el.datasets = [
+    { label: 'Revenue', data: [1, 2] },
+    { label: 'Pending' },
+    { label: 'Scatter', points },
+  ];
+
+  el.appendData('C', [3], 2.9);
+
+  expect(el.labels).to.deep.equal(['B', 'C']);
+  expect(el.datasets[0].data).to.deep.equal([2, 3]);
+  expect(el.datasets[1].data).to.deep.equal([null]);
+  expect(el.datasets[2].points).to.equal(points);
+
+  el.appendData('D', [4, 5], Number.POSITIVE_INFINITY);
+  expect(el.labels).to.deep.equal(['B', 'C', 'D']);
+  expect(el.datasets[0].data).to.deep.equal([2, 3, 4]);
+  expect(el.datasets[1].data).to.deep.equal([null, 5]);
+});
+
+it('exports mixed data and point series as spreadsheet-safe CSV', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  el.labels = ['Q1', '=FORMULA()', 'Q3'];
+  el.datasets = [
+    { label: 'Revenue, net', data: [12, null] },
+    { label: 'Forecast', points: [{ x: 0, y: 20 }, { x: 1, y: 30 }, { x: 2, y: 40 }] },
+  ];
+
+  expect(el.exportData('csv')).to.equal([
+    'label,"Revenue, net",Forecast',
+    'Q1,12,20',
+    "'=FORMULA(),,30",
+    'Q3,,40',
+  ].join('\r\n'));
+});
+
+it('exports PNG data when a chart exists and an empty string before initialization', () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  expect(el.exportData('png')).to.equal('');
+  (el as any).chart = { toBase64Image: () => 'data:image/png;base64,chart' };
+  expect(el.exportData('png')).to.equal('data:image/png;base64,chart');
+});
+
 it('updates in place (same Chart instance) when only data changes', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';

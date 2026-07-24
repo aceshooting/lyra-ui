@@ -301,6 +301,85 @@ it('cancels a delayed tooltip open when manual mode, explicit close, or trigger 
   expect(el.open).to.be.false;
 });
 
+it('reschedules a pending tooltip immediately when its delay changes to zero', async () => {
+  const el = (await fixture(html`
+    <lr-tooltip delay="1000">Info<button slot="trigger">Help</button></lr-tooltip>
+  `)) as LyraTooltip;
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  trigger.dispatchEvent(new FocusEvent('focus'));
+  expect(el.open).to.be.false;
+
+  el.delay = 0;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+});
+
+it('keeps interactive tooltip content open across pointer transitions and closes on true exit', async () => {
+  const outside = document.createElement('button');
+  document.body.appendChild(outside);
+  try {
+    const el = (await fixture(html`
+      <lr-tooltip delay="0">
+        <button slot="trigger">Help</button>
+        <button id="action">Action</button>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+    const action = el.querySelector('#action') as HTMLButtonElement;
+    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    await el.updateComplete;
+
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    trigger.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: action }));
+    popup.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    popup.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: trigger }));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    popup.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: outside }));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+
+    el.manual = true;
+    popup.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(el.open).to.be.false;
+  } finally {
+    outside.remove();
+  }
+});
+
+it('restores slotted-trigger and virtual-anchor tooltip ownership after reconnect', async () => {
+  const slotted = (await fixture(html`
+    <lr-tooltip open manual>Info<button slot="trigger">Help</button></lr-tooltip>
+  `)) as LyraTooltip;
+  const trigger = slotted.querySelector('button') as HTMLButtonElement;
+  const slottedParent = slotted.parentElement!;
+  slotted.remove();
+  slottedParent.appendChild(slotted);
+  await slotted.updateComplete;
+  expect(trigger.getAttribute('aria-describedby')).to.not.equal(null);
+  expect(slotted.open).to.be.true;
+
+  const virtual = (await fixture(html`<lr-tooltip>Virtual info</lr-tooltip>`)) as LyraTooltip;
+  virtual.showAt({ x: 20, y: 20 });
+  await virtual.updateComplete;
+  const virtualParent = virtual.parentElement!;
+  virtual.remove();
+  virtualParent.appendChild(virtual);
+  await virtual.updateComplete;
+  document.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+  );
+  await virtual.updateComplete;
+  expect(virtual.open).to.be.false;
+});
+
 it('activates Escape ownership when showAt converts an already-open trigger overlay to a virtual anchor', async () => {
   const popover = (await fixture(
     html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,

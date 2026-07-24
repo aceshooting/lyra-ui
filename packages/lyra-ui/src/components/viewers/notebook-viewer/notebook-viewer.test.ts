@@ -175,6 +175,83 @@ describe('parsing and rendering', () => {
     }
   });
 
+  it('rejects invalid notebook cell fields, output fields, and MIME payloads independently', async () => {
+    const codeCell = (overrides: Record<string, unknown> = {}) => ({
+      cell_type: 'code',
+      source: '',
+      ...overrides,
+    });
+    const output = (overrides: Record<string, unknown>) =>
+      codeCell({ outputs: [{ output_type: 'display_data', ...overrides }] });
+    const oversizedArray = new Array(100_001);
+    const malformed: Array<[string, unknown]> = [
+      ['null notebook', null],
+      ['unknown cell type', codeCell({ cell_type: 'heading' })],
+      ['non-string cell id', codeCell({ id: 42 })],
+      ['fractional execution count', codeCell({ execution_count: 1.5 })],
+      ['negative execution count', codeCell({ execution_count: -1 })],
+      ['non-array outputs', codeCell({ outputs: {} })],
+      ['null output', codeCell({ outputs: [null] })],
+      ['unknown output type', codeCell({ outputs: [{ output_type: 'unknown' }] })],
+      ['mixed text array', codeCell({ outputs: [{ output_type: 'stream', text: ['ok', 42] }] })],
+      ['mixed traceback array', codeCell({
+        outputs: [{ output_type: 'error', traceback: ['frame', false] }],
+      })],
+      ['non-string error name', output({ ename: 42 })],
+      ['non-string error value', output({ evalue: 42 })],
+      ['unknown stream name', codeCell({
+        outputs: [{ output_type: 'stream', name: 'console', text: 'message' }],
+      })],
+      ['null MIME bundle', output({ data: null })],
+      ['array MIME bundle', output({ data: [] })],
+      ['non-finite JSON number', output({ data: { 'application/json': Number.NaN } })],
+      ['unsupported MIME payload', output({ data: { 'application/octet-stream': Symbol('bytes') } })],
+      ['oversized JSON array', output({ data: { 'application/json': oversizedArray } })],
+    ];
+
+    for (const [description, cell] of malformed) {
+      const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      const errorPromise = oneEvent(el, 'lr-render-error');
+      el.notebook = (cell === null
+        ? cell
+        : { nbformat: 4, nbformat_minor: 5, cells: [cell] }) as never;
+      await errorPromise;
+      await el.updateComplete;
+      expect(
+        el.shadowRoot!.querySelector('[part="error"]')?.textContent,
+        description,
+      ).to.equal('This file is not a valid Jupyter notebook.');
+    }
+  });
+
+  it('accepts dense text arrays and bounded JSON values without inspecting inherited properties', async () => {
+    const inheritedPayload = Object.create({ ignored: Symbol('inherited') }) as Record<string, unknown>;
+    inheritedPayload['own'] = true;
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code',
+        source: ['print(', '"ok"', ')'],
+        outputs: [
+          { output_type: 'stream', name: 'stdout', text: ['first', ' second'] },
+          {
+            output_type: 'display_data',
+            data: {
+              'application/json': '{"count": 2, "ready": true, "empty": null}',
+              'application/x-custom+json': inheritedPayload,
+            },
+          },
+        ],
+      }],
+    };
+    const el = (await fixture(
+      html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`,
+    )) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part~="output"]').length === 2);
+    expect(rowRoot(el).textContent).to.include('first second');
+  });
+
   it('rejects sparse cell arrays supplied as public values or serialized with null holes', async () => {
     const validCell = { cell_type: 'raw', id: 'raw1', source: 'plain text', metadata: {} };
     const sparseCells = [validCell, validCell];

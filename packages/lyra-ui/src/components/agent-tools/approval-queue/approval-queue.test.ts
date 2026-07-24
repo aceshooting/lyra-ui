@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
 
@@ -53,6 +53,62 @@ describe('lr-approval-queue', () => {
     (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(dialog.open).to.be.true;
+  });
+
+  it('translates nested approve and deny requests into correlated queue decisions', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+
+    const approved = oneEvent(el, 'lr-approval-decision');
+    dialog.dispatchEvent(new CustomEvent('lr-approve', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { args: { query: 'confirmed' } },
+    }));
+    expect((await approved).detail).to.deep.equal({
+      invocationId: 'call-1',
+      approved: true,
+      args: { query: 'confirmed' },
+    });
+
+    const denied = oneEvent(el, 'lr-approval-decision');
+    dialog.dispatchEvent(new CustomEvent('lr-deny', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    }));
+    expect((await denied).detail).to.deep.equal({
+      invocationId: 'call-1',
+      approved: false,
+    });
+  });
+
+  it('propagates a canceled queue decision back to the nested dialog event', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue selected-id="call-1" open .requests=${requests}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog')!;
+    el.addEventListener('lr-approval-decision', (event) => event.preventDefault());
+
+    const approve = new CustomEvent('lr-approve', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+      detail: { args: requests[0]!.args },
+    });
+    dialog.dispatchEvent(approve);
+    expect(approve.defaultPrevented).to.be.true;
+
+    const deny = new CustomEvent('lr-deny', {
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    dialog.dispatchEvent(deny);
+    expect(deny.defaultPrevented).to.be.true;
   });
 
   it('forwards the host aria-label to the semantic section', async () => {
