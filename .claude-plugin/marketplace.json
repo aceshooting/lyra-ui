@@ -9,7 +9,7 @@
       "name": "lyra-ui",
       "source": "./plugins/lyra-ui",
       "description": "Teach Claude the @aceshooting/lyra-ui component API (one reference file per custom element), design-token theming, localization, framework/TypeScript integration, and migration paths from Web Awesome and Shoelace.",
-      "version": "6.2.0"
+      "version": "7.0.0"
     }
   ]
 }
