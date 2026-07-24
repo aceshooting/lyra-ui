@@ -2,9 +2,6 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './env-list.styles.js';
-// The registering barrel, not the bare .class.js module -- this side effect is what
-// registers <lr-empty> so it's actually defined when this component renders it.
-import '../../overlays/empty/empty.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 const MASK = '•'.repeat(8);

@@ -26,6 +26,9 @@ export const styles = css`
   }
 
   [part='tab'] {
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     border-block-end: var(--lr-border-width-medium) solid transparent;

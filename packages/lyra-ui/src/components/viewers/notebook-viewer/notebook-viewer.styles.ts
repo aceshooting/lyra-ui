@@ -43,6 +43,23 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     text-align: end;
   }
+  lr-virtual-list::part(cell-source) {
+    min-inline-size: 0;
+  }
+  lr-virtual-list::part(raw-source) {
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    overflow: auto;
+  }
+  lr-virtual-list::part(raw-source):hover {
+    background: var(--lr-color-surface-raised);
+  }
+  lr-virtual-list::part(raw-source):focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   lr-virtual-list::part(outputs) {
     display: flex;
     flex-direction: column;

@@ -102,6 +102,27 @@ describe('parsing and tree rendering', () => {
     }
   });
 
+  it('resumes the configured remote source when an inline xml override is cleared', async () => {
+    let fetchCount = 0;
+    const restore = stubFetch(async () => {
+      fetchCount++;
+      return textResponse('<remote><loaded/></remote>');
+    });
+    try {
+      const el = (await fixture(
+        html`<lr-xml-viewer src="https://example.test/remote.xml" .xml=${SIMPLE_XML}></lr-xml-viewer>`,
+      )) as LyraXmlViewer;
+      expect(fetchCount).to.equal(0);
+
+      el.xml = undefined;
+      await waitUntil(() => el.shadowRoot!.textContent!.includes('remote'));
+      expect(fetchCount).to.equal(1);
+      expect(el.shadowRoot!.textContent).to.include('loaded');
+    } finally {
+      restore();
+    }
+  });
+
   it('handles a synchronous DOMParser throw with the same error state as a parser-reported error', async () => {
     const original = DOMParser.prototype.parseFromString;
     DOMParser.prototype.parseFromString = function (): never {
@@ -178,7 +199,10 @@ describe('loading xml via src', () => {
       return textResponse('');
     });
     try {
-      const el = (await fixture(html`<lr-xml-viewer src="javascript:alert(1)"></lr-xml-viewer>`)) as LyraXmlViewer;
+      const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'javascript:alert(1)';
+      expect((await eventPromise).detail.error).to.exist;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       expect(called).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
@@ -251,6 +275,23 @@ describe('copy', () => {
 // be both a plain string field (readable bare) and a callable method, so this viewer, which
 // mirrors the anchor-target family's search surface, picks the imperative form.
 describe('search', () => {
+  it('re-renders when a new query keeps the same active match index', async () => {
+    const el = (await fixture(
+      html`<lr-xml-viewer .xml=${'<root><first>foo</first><second>bar</second></root>'}></lr-xml-viewer>`,
+    )) as LyraXmlViewer;
+    await el.search('foo');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="text"][data-match]')!.textContent).to.equal('foo');
+
+    await el.search('bar');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="text"][data-match]')!.textContent).to.equal('bar');
+
+    await el.search('missing');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
+  });
+
   it('search() auto-expands ancestors of a match and marks data-match, even under a collapsed-depth', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="1"></lr-xml-viewer>`)) as LyraXmlViewer;
     await el.search('Second');
@@ -342,6 +383,17 @@ describe('node cap', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
   });
+
+  it('fails closed with a resource error instead of overflowing render on a deeply nested document', async () => {
+    const depth = 1_500;
+    const deep = `${'<n>'.repeat(depth)}leaf${'</n>'.repeat(depth)}`;
+    const el = (await fixture(html`<lr-xml-viewer></lr-xml-viewer>`)) as LyraXmlViewer;
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.xml = deep;
+    await eventPromise;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+  });
 });
 
 describe('toggle geometry', () => {
@@ -371,6 +423,13 @@ describe('toggle geometry', () => {
 });
 
 describe('accessibility', () => {
+  it('puts its accessible name on a region rather than a roleless generic container', async () => {
+    const el = (await fixture(html`<lr-xml-viewer aria-label="XML source" .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('XML source');
+  });
+
   it('is accessible with an expanded tree and copyable on', async () => {
     const el = await fixture(html`<lr-xml-viewer name="feed.rss" .xml=${RSS_XML} copyable></lr-xml-viewer>`);
     await expect(el).to.be.accessible();

@@ -1,6 +1,7 @@
 export * from './pptx-viewer.class.js';
 import { html } from 'lit';
 import { defineElement } from '../../../internal/prefix.js';
+import '../../overlays/skeleton/skeleton.js';
 import { LyraPptxViewer } from './pptx-viewer.class.js';
 import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 

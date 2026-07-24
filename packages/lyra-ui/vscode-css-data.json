@@ -1696,6 +1696,41 @@
       }
     },
     {
+      "name": "--lr-document-preview-highlight-accent-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-color-brand)`) — Accent highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-document-preview-highlight-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-color-danger)`) — Danger highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-document-preview-highlight-neutral-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-color-neutral)`) — Neutral highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-document-preview-highlight-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-color-success)`) — Success highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-document-preview-highlight-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-color-warning)`) — Warning highlight border and hover tint."
+      }
+    },
+    {
       "name": "--lr-document-preview-max-height",
       "description": {
         "kind": "markdown",
@@ -1713,7 +1748,7 @@
       "name": "--lr-document-preview-spin-duration",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-document-preview>`** (default: `0.8s`) — Duration of one indeterminate loading-indicator rotation."
+        "value": "**`<lr-document-preview>`** (default: `var(--lr-transition-ambient)`) — Timing of one indeterminate loading-indicator rotation."
       }
     },
     {
@@ -3821,6 +3856,41 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-warning, var(--lr-color-brand))`) — Border color of the `[part=\"region-highlight\"]` matching `activeHighlightId`. Distinct from the resting highlight border, so the active region can be recolored without touching the rest."
+      }
+    },
+    {
+      "name": "--lr-svg-viewer-highlight-accent-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-brand)`) — Accent highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-svg-viewer-highlight-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-danger)`) — Danger highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-svg-viewer-highlight-neutral-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-neutral)`) — Neutral highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-svg-viewer-highlight-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-success)`) — Success highlight border and hover tint."
+      }
+    },
+    {
+      "name": "--lr-svg-viewer-highlight-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-svg-viewer>`** (default: `var(--lr-color-warning)`) — Warning highlight border and hover tint."
       }
     },
     {

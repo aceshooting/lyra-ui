@@ -2,6 +2,7 @@ import { fixture, expect, html, oneEvent, aTimeout } from '@open-wc/testing';
 import './document-preview.js';
 import type { LyraDocumentPreview } from './document-preview.js';
 import { styles } from './document-preview.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const IMAGE_DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -286,6 +287,42 @@ describe('text/* and application/json dispatch', () => {
       await el.updateComplete;
       expect(called).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.be.true;
+    } finally {
+      unstub();
+    }
+  });
+
+  it('emits exactly one render error when a text source URL is rejected', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview mime-type="text/plain"></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    let count = 0;
+    el.addEventListener('lr-render-error', () => { count++; });
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:alert(1)';
+    await eventPromise;
+    await el.updateComplete;
+    await aTimeout(0);
+    expect(count).to.equal(1);
+  });
+
+  it('refetches the same text source after a disconnect/reconnect', async () => {
+    let fetchCount = 0;
+    const unstub = stubFetch(() => {
+      fetchCount++;
+      return Promise.resolve(textResponse(`load ${fetchCount}`));
+    });
+    try {
+      const el = (await fixture(html`
+        <lr-document-preview src="https://example.test/a.txt" mime-type="text/plain"></lr-document-preview>
+      `)) as LyraDocumentPreview;
+      await aTimeout(20);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await aTimeout(20);
+      expect(fetchCount).to.equal(2);
+      expect(el.shadowRoot!.querySelector('pre')!.textContent).to.equal('load 2');
     } finally {
       unstub();
     }
@@ -617,9 +654,9 @@ describe('max-height', () => {
 describe('motion', () => {
   it('routes spinner timing through a documented custom property and stops it for reduced motion', async () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include('--lr-document-preview-spin-duration: 0.8s;');
+    expect(css).to.include('--lr-document-preview-spin-duration: var(--lr-transition-ambient);');
     expect(css).to.include(
-      'animation: lr-document-preview-spin var(--lr-document-preview-spin-duration) linear infinite;',
+      'animation: lr-document-preview-spin var(--lr-document-preview-spin-duration) infinite;',
     );
     expect(css).to.include('@media (prefers-reduced-motion: reduce)');
     expect(css).to.include('.ring { animation: none !important; }');
@@ -832,6 +869,37 @@ describe('zoomable (image format)', () => {
 });
 
 describe('region highlights (image format)', () => {
+  it('keeps a small visual border while exposing a separate minimum activation target', async () => {
+    const el = (await fixture(
+      html`<lr-document-preview
+        style="--lr-icon-button-size:44px"
+        mime-type="image/png"
+        src="https://example.test/photo.png"
+      ></lr-document-preview>`,
+    )) as LyraDocumentPreview;
+    el.highlights = [{ id: 'small', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 5, height: 5 } } }];
+    await el.updateComplete;
+    const content = el.shadowRoot!.querySelector('.zoom-content') as HTMLElement;
+    content.style.width = '200px';
+    content.style.height = '200px';
+    const visual = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+    const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
+    expect(target).to.exist;
+    const visualBox = visual.getBoundingClientRect();
+    const targetBox = target.getBoundingClientRect();
+    expect(visualBox.width).to.be.lessThan(20);
+    expect(visualBox.height).to.be.lessThan(20);
+    expect(targetBox.width).to.be.at.least(44);
+    expect(targetBox.height).to.be.at.least(44);
+    expect(visualBox.width).to.be.lessThan(targetBox.width);
+    expect(visualBox.height).to.be.lessThan(targetBox.height);
+    const hit = el.shadowRoot!.elementFromPoint(
+      targetBox.left + targetBox.width - 2,
+      targetBox.top + targetBox.height / 2,
+    ) as HTMLElement | null;
+    expect(hit?.dataset.highlightId).to.equal('small');
+  });
+
   it('renders a focusable region-highlight and emits lr-highlight-activate', async () => {
     const el = (await fixture(
       html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
@@ -839,9 +907,29 @@ describe('region highlights (image format)', () => {
     el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 20, height: 20 } } }];
     await el.updateComplete;
     const listener = oneEvent(el, 'lr-highlight-activate');
-    (el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement).click();
+    (el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement).click();
     const event = (await listener) as CustomEvent<{ id: string }>;
     expect(event.detail).to.deep.equal({ id: 'h1' });
+  });
+
+  it('uses a non-overlapping action list when multiple minimum hit areas would be dense', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    el.highlights = [
+      { id: 'a', label: 'First', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 1, height: 1 } } },
+      { id: 'b', label: 'Second', anchor: { kind: 'region', rect: { x: 51, y: 50, width: 1, height: 1 } } },
+    ];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="region-highlight-target"]').length).to.equal(0);
+    const actions = [...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]')] as HTMLElement[];
+    expect(actions.length).to.equal(2);
+    const first = actions[0]!.getBoundingClientRect();
+    const second = actions[1]!.getBoundingClientRect();
+    expect(first.bottom).to.be.at.most(second.top);
+    const eventPromise = oneEvent(el, 'lr-highlight-activate');
+    actions[1]!.click();
+    expect((await eventPromise).detail).to.deep.equal({ id: 'b' });
   });
 
   it('positions region highlights with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {
@@ -862,7 +950,7 @@ describe('region highlights (image format)', () => {
     )) as LyraDocumentPreview;
     el.highlights = [
       { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
-      { id: 'h2', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 10, height: 10 } } },
+      { id: 'h2', anchor: { kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } } },
     ];
     await el.updateComplete;
     const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
@@ -875,13 +963,81 @@ describe('region highlights (image format)', () => {
     expect(scrolled).to.deep.equal(['h2']);
   });
 
-  it('gives the clickable region-highlight overlay a :hover rule matching its cursor:pointer/:focus-visible affordance', () => {
-    // Browser test runners don't synthesize a real :hover pseudo-class from a dispatched event
-    // (same constraint documented at tabs.test.ts's identical stylesheet-source check), so this
-    // asserts against the parsed stylesheet rather than a forced pseudo-state.
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='region-highlight'\]:hover/);
-    expect(css).to.match(/\[part='region-highlight'\]:focus-visible/);
+  it('matches an equal region anchor structurally and returns false for an unmatched anchor', async () => {
+    const el = (await fixture(
+      html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
+    )) as LyraDocumentPreview;
+    el.highlights = [
+      { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
+      { id: 'h2', anchor: { kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } } },
+    ];
+    await el.updateComplete;
+    const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
+    const scrolled: string[] = [];
+    for (const region of regions) region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+
+    expect(
+      await el.scrollToAnchor({ kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } }),
+    ).to.be.true;
+    expect(scrolled).to.deep.equal(['h2']);
+    scrolled.length = 0;
+    expect(
+      await el.scrollToAnchor({ kind: 'region', rect: { x: 90, y: 90, width: 5, height: 5 } }),
+    ).to.be.false;
+    expect(scrolled).to.deep.equal([]);
+    expect(
+      await el.scrollToAnchor({ kind: 'region', page: 2, rect: { x: 50, y: 50, width: 10, height: 10 } }),
+    ).to.be.false;
+    expect(scrolled).to.deep.equal([]);
+  });
+
+  it('maps each public highlight tone to its semantic border color', async () => {
+    const el = (await fixture(
+      html`<lr-document-preview mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
+    )) as LyraDocumentPreview;
+    const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+    el.highlights = tones.map((tone, index) => ({
+      id: tone,
+      tone,
+      anchor: { kind: 'region', rect: { x: index * 10, y: 0, width: 5, height: 5 } },
+    }));
+    await el.updateComplete;
+    const tokenByTone = {
+      accent: '--lr-color-brand',
+      success: '--lr-color-success',
+      warning: '--lr-color-warning',
+      danger: '--lr-color-danger',
+      neutral: '--lr-color-neutral',
+    };
+    for (const tone of tones) {
+      const region = el.shadowRoot!.querySelector(`[data-id="${tone}"]`) as HTMLElement;
+      const probe = document.createElement('span');
+      probe.style.color = `var(${tokenByTone[tone]})`;
+      el.shadowRoot!.append(probe);
+      expect(getComputedStyle(region).borderTopColor).to.equal(getComputedStyle(probe).color);
+      probe.remove();
+    }
+  });
+
+  it('paints a rendered hover treatment on the clickable region target', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 100, height: 100 } } }];
+    await el.updateComplete;
+    const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
+    const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+    const before = getComputedStyle(region).backgroundColor;
+    const rect = target.getBoundingClientRect();
+    try {
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(region).backgroundColor).to.not.equal(before);
+    } finally {
+      await resetMouse();
+    }
   });
 });
 

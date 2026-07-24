@@ -118,6 +118,21 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre', 'marie->polonium']);
   });
 
+  it('case-folds graph search with the effective locale and localizes the match count', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        lang="tr"
+        .nodes=${[{ id: 'izmir', label: 'İzmir' }]}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    searchInput.dispatchEvent(
+      new CustomEvent('lr-input', { detail: { value: 'iz' }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(1);
+  });
+
   it('dims the selected node\'s neighborhood (nodes and links) once a node is selected', async () => {
     const el = await settledFixture();
     el.selectedNodeId = 'polonium';
@@ -173,6 +188,80 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.selectedNodeId).to.equal('polonium');
     const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
     expect(card.entity?.id).to.equal('polonium');
+  });
+
+  it('opens a valid initially-preset selected node after the graph mounts', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .selectedNodeId=${'marie'}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    expect(popover.accessibleLabel).to.equal('Marie Curie');
+  });
+
+  it('focuses and opens a valid selectedNodeId assigned after mount', async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    expect(popover.accessibleLabel).to.equal('Polonium');
+  });
+
+  it('does not revive stale property-driven selection work after an away-and-back supersession', async () => {
+    const el = await settledFixture();
+    const resolvers = new Map<string, (value: boolean) => void>();
+    graphEl(el).focusNode = (id: string) =>
+      new Promise<boolean>((resolve) => {
+        resolvers.set(id, resolve);
+      });
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    await waitUntil(() => resolvers.has('marie'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    el.selectedNodeId = null;
+    await el.updateComplete;
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    await waitUntil(() => resolvers.has('polonium'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    resolvers.get('marie')!(true);
+    await aTimeout(0);
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    expect(popover.open).to.be.false;
+    resolvers.get('polonium')!(true);
+    await waitUntil(() => popover.open, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    expect(popover.accessibleLabel).to.equal('Polonium');
+  });
+
+  it('does not let a stale async activation reopen details for an obsolete selection', async () => {
+    const el = await settledFixture();
+    const graph = graphEl(el);
+    const resolvers = new Map<string, (value: boolean) => void>();
+    graph.focusNode = (id: string) =>
+      new Promise<boolean>((resolve) => {
+        resolvers.set(id, resolve);
+      });
+    const activate = (el as unknown as { activateEntity(id: string): Promise<void> }).activateEntity.bind(el);
+    const first = activate('marie');
+    const second = activate('polonium');
+    resolvers.get('polonium')!(true);
+    await second;
+    const popover = el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover;
+    expect(popover.accessibleLabel).to.equal('Polonium');
+    resolvers.get('marie')!(true);
+    await first;
+    expect(el.selectedNodeId).to.equal('polonium');
+    expect(popover.accessibleLabel).to.equal('Polonium');
+  });
+
+  it('keeps details closed when graph focus rejects an invisible or unavailable node', async () => {
+    const el = await settledFixture();
+    graphEl(el).focusNode = async () => false;
+    await (el as unknown as { activateEntity(id: string): Promise<void> }).activateEntity('marie');
+    expect((el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open).to.be.false;
   });
 
   it('pins/unpins nodes, emits lr-pin-change, and reveals "Find path" only at exactly two pins', async () => {
@@ -505,11 +594,15 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(card.entity?.degree).to.equal(42);
   });
 
-  it('communityLabelFor resolves a known label, falls back to the raw id when unknown, and to empty when absent', async () => {
-    const testCommunities: GraphCommunity[] = [{ id: 'sci', label: 'Scientists', memberIds: ['marie'] }];
+  it('communityLabelFor resolves a known label, falls back for unknown or unlabeled communities, and to empty when absent', async () => {
+    const testCommunities: GraphCommunity[] = [
+      { id: 'sci', label: 'Scientists', memberIds: ['marie'] },
+      { id: 'unlabeled-community', memberIds: ['radium'] },
+    ];
     const testNodes: GraphNode[] = [
       { id: 'marie', label: 'Marie Curie', communityId: 'sci' },
       { id: 'pierre', label: 'Pierre Curie', communityId: 'ghost-community' },
+      { id: 'radium', label: 'Radium', communityId: 'unlabeled-community' },
       { id: 'polonium', label: 'Polonium' },
     ];
     const el = (await fixture(html`
@@ -523,6 +616,10 @@ describe('lr-knowledge-graph-explorer', () => {
     el.selectedNodeId = 'pierre';
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('ghost-community');
+
+    el.selectedNodeId = 'radium';
+    await el.updateComplete;
+    expect((el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard).communityLabel).to.equal('unlabeled-community');
 
     el.selectedNodeId = 'polonium';
     await el.updateComplete;
@@ -650,4 +747,22 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   const el = (await fixture(html`<lr-knowledge-graph-explorer></lr-knowledge-graph-explorer>`)) as HTMLElement;
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='detail-card']")).to.equal('10px');
+});
+
+it('contains long search results horizontally and suppresses the consumed child input event', async () => {
+  const longLabel = 'a'.repeat(500);
+  const el = (await fixture(
+    html`<lr-knowledge-graph-explorer .nodes=${[{ id: 'long', label: longLabel }]}></lr-knowledge-graph-explorer>`,
+  )) as LyraKnowledgeGraphExplorer;
+  let leaked = 0;
+  el.addEventListener('lr-input', () => leaked++);
+  el.shadowRoot!.querySelector('[part="search"]')!.dispatchEvent(
+    new CustomEvent('lr-input', { detail: { value: 'aaa' }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  const results = el.shadowRoot!.querySelector('[part="search-results"]') as HTMLElement;
+  const button = results.querySelector('button') as HTMLButtonElement;
+  expect(getComputedStyle(results).overflowX).to.be.oneOf(['clip', 'hidden']);
+  expect(getComputedStyle(button).overflowWrap).to.equal('anywhere');
+  expect(leaked).to.equal(0);
 });

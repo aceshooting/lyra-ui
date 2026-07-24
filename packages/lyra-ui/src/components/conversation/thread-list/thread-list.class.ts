@@ -9,11 +9,8 @@ import {
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
-import '../conversation-item/conversation-item.js';
 import type { LyraVirtualList, VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
-import '../../layout/virtual-list/virtual-list.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.js';
 import { styles } from './thread-list.styles.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';

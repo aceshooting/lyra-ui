@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { pauseIcon, playIcon } from '../../../internal/icons.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteDuration } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
@@ -18,8 +19,9 @@ const TICK_MS = 1000;
 /**
  * `<lr-poll-status>` — a "next scheduled refresh" countdown with a built-in pause control: a
  * ticking `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at
- * zero, a "Paused" state while `paused` (instead of freezing on a stale value), and a
- * pause/resume toggle. First-party invention (no Web Awesome equivalent); the
+ * zero, a localized inactive state while `active` is false, a "Paused" state
+ * while `paused` (instead of freezing on a stale value), and a pause/resume
+ * toggle. First-party invention (no Web Awesome equivalent); the
  * closest existing component, `lr-stream-status`, is scoped to transport/connection-health
  * phases, a different concern from a scheduled-interval countdown -- this mirrors its internal
  * `<lr-live-region>` composition for accessible phase-transition announcements.
@@ -29,7 +31,7 @@ const TICK_MS = 1000;
  * @event lr-pause-change - Fired when `paused` changes via the built-in button. `detail: boolean`.
  * @csspart base - The root wrapper.
  * @csspart indicator - The pulsing status dot.
- * @csspart countdown - The `M:SS` text (or "Refreshing…" once due, or "Paused" while `paused`).
+ * @csspart countdown - The localized `M:SS` text, or the refreshing, paused, or inactive state.
  * @csspart pause-button - The built-in pause/resume toggle.
  * @cssprop [--lr-poll-status-due-bg=var(--lr-color-success)] - Background of `indicator` while
  *   `data-due` is set, without repainting every other component that reuses the shared success
@@ -42,7 +44,8 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
    *  (re)starts the countdown from "now." Unset (the default) shows no countdown. */
   @property({ type: Number, attribute: 'next-in-ms' }) nextInMs?: number;
 
-  /** Whether the poll cycle is running at all. `true` (the default). */
+  /** Whether the poll cycle is running at all. While false, the component
+   *  clears due/countdown semantics and disables its pause action. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) active = true;
 
   /** User-toggled pause -- while `true`, the countdown display freezes and `lr-poll-due` never
@@ -98,6 +101,10 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         this.due = false;
         this.remainingMs = 0;
       }
+    }
+    if (changed.has('active') && !this.active) {
+      this.due = false;
+      this.remainingMs = 0;
     }
   }
 
@@ -162,29 +169,35 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   }
 
   private togglePause = (): void => {
+    if (!this.active) return;
     this.paused = !this.paused;
     this.emit<boolean>('lr-pause-change', this.paused);
   };
 
   private formatCountdown(): string {
+    if (!this.active) return this.localize('pollInactive');
     if (this.paused) return this.localize('pollPaused');
     if (this.due) return this.localize('pollRefreshing');
     const totalSeconds = Math.ceil(this.remainingMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+    const locale = this.effectiveLocale;
+    const minuteText = getNumberFormat(locale, { useGrouping: false }).format(minutes);
+    const secondText = getNumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }).format(seconds);
+    return `${minuteText}:${secondText}`;
   }
 
   override render(): TemplateResult {
     return html`
       <div part="base">
-        <span part="indicator" aria-hidden="true" ?data-due=${this.due}></span>
-        <span part="countdown">${this.nextInMs != null ? this.formatCountdown() : nothing}</span>
+        <span part="indicator" aria-hidden="true" ?data-due=${this.due} ?data-inactive=${!this.active}></span>
+        <span part="countdown">${!this.active || this.nextInMs != null ? this.formatCountdown() : nothing}</span>
         <button
           part="pause-button"
           type="button"
           aria-pressed=${this.paused ? 'true' : 'false'}
           aria-label=${this.localize(this.paused ? 'pollResume' : 'pollPause')}
+          ?disabled=${!this.active}
           @click=${this.togglePause}
         >${this.paused ? playIcon() : pauseIcon()}</button>
         <lr-live-region></lr-live-region>

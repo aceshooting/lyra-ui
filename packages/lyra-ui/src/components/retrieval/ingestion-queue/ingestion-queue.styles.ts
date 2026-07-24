@@ -8,6 +8,7 @@ export const styles = css`
   [part='base'] {
     display: block;
     box-sizing: border-box;
+    min-inline-size: 0;
   }
   [part='list'] {
     display: flex;
@@ -15,6 +16,7 @@ export const styles = css`
     box-sizing: border-box;
     max-block-size: var(--lr-ingestion-queue-max-height);
     overflow-y: auto;
+    overflow-x: clip;
   }
   /* Deliberately NOT derived from --lr-ingestion-queue-max-height (whose own default is the
      keyword 'none', valid for [part='list']'s max-block-size above but not for a length-only
@@ -82,6 +84,7 @@ export const styles = css`
     margin: 0;
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
+    overflow-wrap: anywhere;
   }
   [part='item-actions'],
   lr-virtual-list::part(item-actions) {
@@ -97,6 +100,8 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-size-0-35em);
     box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-0-25rem) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-pill);

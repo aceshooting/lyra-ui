@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
@@ -83,15 +84,18 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     }
     const community = this.community;
     const titleText = community.label || this.localize('untitledCommunity');
-    const memberCount = community.memberCount ?? this.members.length;
+    const memberCount = finiteCount(community.memberCount ?? this.members.length, this.members.length);
     const visibleMembers = this.members.slice(0, this.effectiveMaxMembers);
     const overflowCount = Math.max(0, memberCount - visibleMembers.length);
+    const numberFormat = getNumberFormat(this.effectiveLocale);
 
     return html`
       <div part="base">
         <div part="header">
           <span part="title" role="heading" aria-level="3"><button type="button" @click=${this.onDrill}>${titleText}</button></span>
-          <span part="member-count">${this.localize('communityMemberCount', undefined, { count: memberCount })}</span>
+          <span part="member-count">${this.localize('communityMemberCount', undefined, {
+            count: numberFormat.format(memberCount),
+          })}</span>
           <div part="actions">
             <slot name="actions"></slot>
             <lr-button part="drill-button" size="s" @click=${this.onDrill}>${this.localize('communityDrillIn')}</lr-button>
@@ -107,7 +111,9 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
               )}
               ${overflowCount > 0
                 ? html`<button part="overflow" type="button" @click=${this.onDrill}>
-                    <lr-chip>${this.localize('showMoreCount', undefined, { count: overflowCount })}</lr-chip>
+                    <lr-chip>${this.localize('showMoreCount', undefined, {
+                      count: numberFormat.format(overflowCount),
+                    })}</lr-chip>
                   </button>`
                 : nothing}
             </div>`

@@ -13,6 +13,23 @@ it('is accessible when given a label', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('forwards the host accessible name to the shadow SVG, including late changes', async () => {
+  const el = (await fixture(html`<lr-icon name="search" aria-label="Find"></lr-icon>`)) as LyraIcon;
+  const svg = el.shadowRoot!.querySelector('svg')!;
+
+  expect(svg.getAttribute('aria-label')).to.equal('Find');
+  expect(svg.getAttribute('aria-hidden')).to.equal('false');
+
+  el.setAttribute('aria-label', 'Search');
+  await el.updateComplete;
+  expect(svg.getAttribute('aria-label')).to.equal('Search');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(svg.hasAttribute('aria-label')).to.be.false;
+  expect(svg.getAttribute('aria-hidden')).to.equal('true');
+});
+
 it('renders custom SVG nodes inside the shadow SVG', async () => {
   const el = await fixture(html`
     <lr-icon>

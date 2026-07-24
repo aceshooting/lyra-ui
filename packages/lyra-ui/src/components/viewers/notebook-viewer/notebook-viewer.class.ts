@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -10,15 +10,14 @@ import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
-import '../../layout/virtual-list/virtual-list.js';
-import '../../conversation/markdown/markdown.js';
-import '../../conversation/code-block/code-block.js';
-import '../../utility/json-viewer/json-viewer.js';
 import { styles } from './notebook-viewer.styles.js';
 
 const MAX_CELLS = 2000;
+const MAX_OUTPUTS = 20_000;
+const MAX_JSON_NODES = 100_000;
 const SUPPORTED_MAJOR = 4;
 const SUPPORTED_MINORS = [0, 1, 2, 3, 4, 5];
 
@@ -29,7 +28,7 @@ interface NotebookOutput {
   ename?: string;
   evalue?: string;
   traceback?: string[];
-  data?: Record<string, string | string[]>;
+  data?: Record<string, unknown>;
 }
 interface NotebookCell {
   cell_type: 'markdown' | 'code' | 'raw';
@@ -49,14 +48,89 @@ interface NotebookDoc {
 function joinSource(source: string | string[] | undefined): string {
   return Array.isArray(source) ? source.join('') : (source ?? '');
 }
-function joinText(text: string | string[] | undefined): string {
-  return Array.isArray(text) ? text.join('') : (text ?? '');
+function joinText(text: unknown): string {
+  if (typeof text === 'string') return text;
+  return Array.isArray(text) && text.every((item) => typeof item === 'string') ? text.join('') : '';
+}
+
+function isTextValue(value: unknown): value is string | string[] {
+  return typeof value === 'string' ||
+    (Array.isArray(value) && value.every((item) => typeof item === 'string'));
+}
+
+function isJsonValue(value: unknown): boolean {
+  const pending: unknown[] = [value];
+  let nodes = 0;
+  while (pending.length) {
+    const current = pending.pop();
+    if (++nodes > MAX_JSON_NODES) return false;
+    if (current === null || typeof current === 'string' || typeof current === 'boolean') continue;
+    if (typeof current === 'number') {
+      if (!Number.isFinite(current)) return false;
+      continue;
+    }
+    if (Array.isArray(current)) {
+      if (current.length > MAX_JSON_NODES - nodes - pending.length) return false;
+      for (let index = current.length - 1; index >= 0; index--) pending.push(current[index]);
+      continue;
+    }
+    if (typeof current !== 'object') return false;
+    for (const key in current) {
+      if (!Object.prototype.hasOwnProperty.call(current, key)) continue;
+      if (pending.length >= MAX_JSON_NODES - nodes) return false;
+      pending.push((current as Record<string, unknown>)[key]);
+    }
+  }
+  return true;
+}
+
+function isNotebookOutput(value: unknown): value is NotebookOutput {
+  if (typeof value !== 'object' || value === null) return false;
+  const output = value as Record<string, unknown>;
+  if (!['stream', 'error', 'display_data', 'execute_result'].includes(String(output['output_type']))) return false;
+  if (output['text'] !== undefined && !isTextValue(output['text'])) return false;
+  if (output['traceback'] !== undefined && !isTextValue(output['traceback'])) return false;
+  if (output['ename'] !== undefined && typeof output['ename'] !== 'string') return false;
+  if (output['evalue'] !== undefined && typeof output['evalue'] !== 'string') return false;
+  if (output['name'] !== undefined && output['name'] !== 'stdout' && output['name'] !== 'stderr') return false;
+  const data = output['data'];
+  if (data === undefined) return true;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) return false;
+  const mimeData = data as Record<string, unknown>;
+  for (const [mime, payload] of Object.entries(mimeData)) {
+    if (mime === 'application/json') {
+      if (typeof payload === 'string') {
+        try {
+          if (!isJsonValue(JSON.parse(payload))) return false;
+        } catch {
+          return false;
+        }
+      } else if (!isJsonValue(payload)) return false;
+    } else if (!isTextValue(payload) && !isJsonValue(payload)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function isNotebookShape(value: unknown): value is NotebookDoc {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  return typeof v['nbformat'] === 'number' && typeof v['nbformat_minor'] === 'number' && Array.isArray(v['cells']);
+  if (!Number.isInteger(v['nbformat']) || !Number.isInteger(v['nbformat_minor']) || !Array.isArray(v['cells'])) return false;
+  let outputCount = 0;
+  return v['cells'].every((value) => {
+    if (typeof value !== 'object' || value === null) return false;
+    const cell = value as Record<string, unknown>;
+    if (!['markdown', 'code', 'raw'].includes(String(cell['cell_type']))) return false;
+    if (!isTextValue(cell['source'])) return false;
+    if (cell['id'] !== undefined && typeof cell['id'] !== 'string') return false;
+    if (cell['execution_count'] !== undefined && cell['execution_count'] !== null &&
+        (!Number.isInteger(cell['execution_count']) || (cell['execution_count'] as number) < 0)) return false;
+    if (cell['outputs'] === undefined) return true;
+    if (!Array.isArray(cell['outputs'])) return false;
+    outputCount += cell['outputs'].length;
+    return outputCount <= MAX_OUTPUTS && cell['outputs'].every(isNotebookOutput);
+  });
 }
 
 type NotebookState =
@@ -71,7 +145,6 @@ type SanitizeProfile = 'svg' | 'html';
 
 export interface LyraNotebookViewerEventMap {
   'lr-load': CustomEvent<{ cellCount: number; language: string }>;
-  'lr-highlight-activate': CustomEvent<{ id: string }>;
   'lr-search-change': CustomEvent<{ query: string; matchCount: number; activeIndex: number }>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
@@ -97,7 +170,6 @@ export interface LyraNotebookViewerEventMap {
  * @customElement lr-notebook-viewer
  * @event lr-load - Fired once a notebook has been parsed and validated. `detail: { cellCount,
  *   language }`.
- * @event lr-highlight-activate - `detail: { id }`.
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
@@ -110,6 +182,7 @@ export interface LyraNotebookViewerEventMap {
  *   after `::part()`.
  * @csspart cell-gutter - The `In [n]`/`Out [n]` label column.
  * @csspart cell-source - A cell's source content.
+ * @csspart raw-source - A horizontally scrollable raw-cell source surface.
  * @csspart outputs - The wrapper around a code cell's outputs.
  * @csspart output - One output (`data-output-type`, `data-stream`).
  * @csspart output-error - Added alongside `output` on a stderr stream or an error output.
@@ -163,8 +236,13 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   @state() private searchQuery = '';
   @state() private searchMatches: number[] = [];
   @state() private activeSearchIndex = -1;
+  @query('lr-virtual-list') private virtualListEl?: HTMLElement & {
+    scrollToIndex(index: number, options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }): void;
+  };
 
   private generation = 0;
+  private sanitizerGeneration = 0;
+  private sanitizerFailureReported = false;
 
   /** `outputCollapseLines`, normalized to a finite non-negative integer (falling back to the
    *  property's own default of `40`) -- a raw `NaN` (e.g. an invalid `output-collapse-lines`
@@ -177,6 +255,24 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src') && !this._notebook) this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src && this._notebook === undefined) {
+      this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    this.sanitizerGeneration++;
+    this.beginAbortableLoad();
+    this.sanitizedOutputCache.clear();
+    this.sanitizationTasks.clear();
+    this.sanitizerFailureReported = false;
+    if (this._notebook === undefined) this.loadState = { kind: 'idle' };
+    super.disconnectedCallback();
   }
 
   private parseInline(): void {
@@ -205,12 +301,15 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     }
     const url = safeFetchUrl(this.src);
     if (!url) {
-      this.loadState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') };
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.loadState = { kind: 'error', message: error.message };
+      this.emit('lr-render-error', { error });
       return;
     }
     this.loadState = { kind: 'loading' };
     try {
       const response = await fetch(url, signal ? { signal } : undefined);
+      if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
@@ -247,6 +346,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       this.emit('lr-render-error', { error: new Error('too many cells') });
       return;
     }
+    this.sanitizerGeneration++;
+    this.sanitizedOutputCache.clear();
+    this.sanitizationTasks.clear();
+    this.sanitizerFailureReported = false;
+    this.expandedOutputs = new Set();
+    this.clearSearchState();
     this.loadState = { kind: 'loaded', doc: raw };
     const language = raw.metadata?.language_info?.name ?? raw.metadata?.kernelspec?.language ?? '';
     this.emit('lr-load', { cellCount: raw.cells.length, language });
@@ -268,22 +373,23 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
    *  outputs -- at most one match per cell. Resolves the match count and fires
    *  `lr-search-change`. */
   async search(query: string): Promise<number> {
-    const q = query.trim().toLowerCase();
+    const q = query.trim().toLocaleLowerCase(this.effectiveLocale);
     this.searchQuery = query;
     if (this.loadState.kind !== 'loaded' || !q) {
       this.searchMatches = [];
     } else {
       this.searchMatches = this.loadState.doc.cells.reduce<number[]>((acc, cell, i) => {
-        const source = joinSource(cell.source).toLowerCase();
+        const source = joinSource(cell.source).toLocaleLowerCase(this.effectiveLocale);
         const outputText = (cell.outputs ?? [])
           .map((o) => joinText(o.text) + Object.values(o.data ?? {}).map(joinText).join(''))
           .join(' ')
-          .toLowerCase();
+          .toLocaleLowerCase(this.effectiveLocale);
         if (source.includes(q) || outputText.includes(q)) acc.push(i);
         return acc;
       }, []);
     }
     this.activeSearchIndex = this.searchMatches.length ? 0 : -1;
+    this.activateSearchMatch();
     this.emitSearchChange();
     return this.searchMatches.length;
   }
@@ -291,20 +397,38 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   searchNext(): void {
     if (!this.searchMatches.length) return;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchMatches.length;
+    this.activateSearchMatch();
     this.emitSearchChange();
   }
 
   searchPrevious(): void {
     if (!this.searchMatches.length) return;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
+    this.activateSearchMatch();
     this.emitSearchChange();
   }
 
   clearSearch(): void {
+    this.clearSearchState();
+    this.emitSearchChange();
+  }
+
+  private clearSearchState(): void {
     this.searchQuery = '';
     this.searchMatches = [];
     this.activeSearchIndex = -1;
-    this.emitSearchChange();
+  }
+
+  private activateSearchMatch(): void {
+    const index = this.searchMatches[this.activeSearchIndex];
+    if (index === undefined) return;
+    this.activeCellIndex = index;
+    this.scheduleAfterUpdate(() => {
+      this.virtualListEl?.scrollToIndex(index, {
+        align: 'auto',
+        behavior: 'auto',
+      });
+    });
   }
 
   private emitSearchChange(): void {
@@ -375,16 +499,16 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     }
     const data = output.data ?? {};
     if (data['image/png']) {
-      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/png;base64,${joinText(data['image/png'])}" alt="" /></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/png;base64,${joinText(data['image/png'])}" alt=${joinText(data['text/plain'])} /></div>`;
     }
     if (data['image/jpeg']) {
-      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt="" /></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${joinText(data['text/plain'])} /></div>`;
     }
     if (data['image/svg+xml']) {
-      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['image/svg+xml']), 'svg')}</div>`;
+      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['image/svg+xml']), 'svg', key, joinText(data['text/plain']))}</div>`;
     }
     if (data['text/html']) {
-      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['text/html']), 'html')}</div>`;
+      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['text/html']), 'html', key, joinText(data['text/plain']))}</div>`;
     }
     if (data['application/json']) {
       const parsed = typeof data['application/json'] === 'string' ? JSON.parse(joinText(data['application/json'])) : data['application/json'];
@@ -400,42 +524,76 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
    *  `dompurify` peer), which can't resolve inside a synchronous `render()` pass -- `renderSanitized()`
    *  kicks off the async work on first render and repaints via `requestUpdate()` once it resolves. */
   private sanitizedOutputCache = new Map<string, string | null>();
+  private sanitizationTasks = new Map<string, Promise<void>>();
 
   private async ensureSanitized(raw: string, profile: SanitizeProfile): Promise<void> {
     const cacheKey = `${profile}:${raw}`;
     if (this.sanitizedOutputCache.has(cacheKey)) return;
-    const sanitizer = await loadNotebookSanitizer();
-    if (!this.isConnected) return;
-    const clean = sanitizer
-      ? profile === 'svg'
-        ? (sanitizer.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } }) as string)
-        : (sanitizer.sanitize(raw) as string)
-      : null;
-    this.sanitizedOutputCache.set(cacheKey, clean);
-    this.requestUpdate();
+    const existing = this.sanitizationTasks.get(cacheKey);
+    if (existing) return existing;
+    const generation = this.sanitizerGeneration;
+    const task = (async () => {
+      try {
+        const sanitizer = await loadNotebookSanitizer();
+        if (!this.isConnected || generation !== this.sanitizerGeneration) return;
+        const clean = sanitizer
+          ? profile === 'svg'
+            ? (sanitizer.sanitize(raw, { USE_PROFILES: { svg: true, svgFilters: true } }) as string)
+            : (sanitizer.sanitize(raw) as string)
+          : null;
+        if (!this.isConnected || generation !== this.sanitizerGeneration) return;
+        if (!sanitizer && !this.sanitizerFailureReported) {
+          this.sanitizerFailureReported = true;
+          this.emit('lr-render-error', {
+            error: new LyraUserFacingError(this.localize('documentViewerMissingSanitizer')),
+          });
+        }
+        this.sanitizedOutputCache.set(cacheKey, clean);
+        this.requestUpdate();
+      } catch (error) {
+        if (!this.isConnected || generation !== this.sanitizerGeneration) return;
+        this.sanitizedOutputCache.set(cacheKey, null);
+        this.emit('lr-render-error', { error });
+        this.requestUpdate();
+      } finally {
+        if (generation === this.sanitizerGeneration) this.sanitizationTasks.delete(cacheKey);
+      }
+    })();
+    this.sanitizationTasks.set(cacheKey, task);
+    return task;
   }
 
-  private renderSanitized(raw: string, profile: SanitizeProfile): TemplateResult {
+  private renderSanitized(
+    raw: string,
+    profile: SanitizeProfile,
+    outputKey: number,
+    textFallback: string,
+  ): TemplateResult {
     const cacheKey = `${profile}:${raw}`;
     const cached = this.sanitizedOutputCache.get(cacheKey);
     if (cached === undefined) {
       void this.ensureSanitized(raw, profile);
       return html`<span class="sr-only">${this.localize('loadingDocument')}</span>`;
     }
-    if (cached === null) return html`<p>${this.localize('documentViewerMissingSanitizer')}</p>`;
+    if (cached === null) {
+      return textFallback
+        ? this.renderTextOutput(outputKey, textFallback)
+        : html`<p>${this.localize('documentViewerMissingSanitizer')}</p>`;
+    }
     return profile === 'svg' ? html`${unsafeSVG(cached)}` : html`${unsafeHTML(cached)}`;
   }
 
   private renderCell = (cell: unknown, index: number): TemplateResult => {
     const c = cell as NotebookCell;
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     const inCount = c.execution_count == null
       ? this.localize('notebookViewerInPromptEmpty')
-      : this.localize('notebookViewerInPrompt', undefined, { count: c.execution_count });
+      : this.localize('notebookViewerInPrompt', undefined, { count: numberFormat.format(c.execution_count) });
     const rowLabel = c.cell_type === 'code'
-      ? this.localize('notebookViewerCodeCell', undefined, { index: index + 1 })
+      ? this.localize('notebookViewerCodeCell', undefined, { index: numberFormat.format(index + 1) })
       : c.cell_type === 'markdown'
-        ? this.localize('notebookViewerMarkdownCell', undefined, { index: index + 1 })
-        : this.localize('notebookViewerRawCell', undefined, { index: index + 1 });
+        ? this.localize('notebookViewerMarkdownCell', undefined, { index: numberFormat.format(index + 1) })
+        : this.localize('notebookViewerRawCell', undefined, { index: numberFormat.format(index + 1) });
     const active = this.activeCellIndex === index;
     const part = active ? 'cell cell-active' : 'cell';
     return html`<div part=${part} role="group" aria-label=${rowLabel} data-cell-type=${c.cell_type} ?data-active=${active}>
@@ -445,7 +603,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
           ? html`<lr-markdown .content=${joinSource(c.source)} escape-html sanitize></lr-markdown>`
           : c.cell_type === 'code'
             ? html`<lr-code-block .code=${joinSource(c.source)} language=${this.notebookLanguage()} line-numbers></lr-code-block>`
-            : html`<pre>${joinSource(c.source)}</pre>`}
+            : html`<pre part="raw-source" tabindex="0">${joinSource(c.source)}</pre>`}
         ${c.cell_type === 'code' && c.outputs?.length
           ? html`<div part="outputs">${c.outputs.map((o, i) => this.renderOutput(index, o, i))}</div>`
           : nothing}
@@ -464,12 +622,13 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     return html`<div
       part="base"
       style=${this.maxHeight ? `--lr-notebook-viewer-max-height:${this.maxHeight}` : nothing}
+      role="region"
       aria-label=${label}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}
     >
       ${this.loadState.kind === 'loaded'
         ? html`<lr-virtual-list
-            exportparts="cell:cell, cell-active:cell-active, cell-gutter:cell-gutter, cell-source:cell-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
+            exportparts="cell:cell, cell-active:cell-active, cell-gutter:cell-gutter, cell-source:cell-source, raw-source:raw-source, outputs:outputs, output:output, output-error:output-error, error-output-label:error-output-label, output-toggle:output-toggle"
             .items=${this.loadState.doc.cells}
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}

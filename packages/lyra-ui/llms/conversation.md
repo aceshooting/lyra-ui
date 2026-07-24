@@ -400,7 +400,8 @@ between several values across a single element's lifetime.
 - mounting a message with `status="failed"` (or any other non-`"sent"` status) already set does
   **not** announce anything — only a genuine *later* transition (`changed.get('status') !==
   undefined`, i.e. not the very first update) triggers the live-region announcement.
-- `lr-retry` fires with no detail payload at all (`undefined`), not e.g. `{ status: 'failed' }`.
+- `lr-retry` carries `{ messageId?: string }`; the field is the component's `messageId` when set,
+  and is omitted otherwise.
 - the header/footer/avatar/badges/attachments/actions wrappers are shown/hidden via the `hidden`
   attribute, not conditional templating. Whether each slot currently has content is checked once via
   a light-DOM children scan on the very first update (`willUpdate`, gated on `!this.hasUpdated`) and
@@ -1324,8 +1325,7 @@ highlighted HTML, and always fires regardless of whether the actual OS clipboard
 `lr-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
 button is activated, same event name/shape convention as `<lr-thinking-panel>`'s own `lr-toggle`),
 `lr-line-click` (`detail: { line: number }` — a gutter line number was activated while
-`interactiveLines` is set), `lr-highlight-activate` (`detail: { id: string }` — declared for
-parity with this library's other anchor-target viewers; not currently emitted by this component),
+`interactiveLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
 `anchor` is a `line-range` anchor covering the selected lines)
 
@@ -1476,9 +1476,7 @@ Identical behavior to `<lr-code-block>`'s own method.
 highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
 `lr-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
 button is activated), `lr-line-click` (`detail: { line: number }` — a gutter line number was
-activated while `interactiveLines` is set), `lr-highlight-activate` (`detail: { id: string }` —
-declared for parity with this library's other anchor-target viewers; not currently emitted by this
-component), `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
+activated while `interactiveLines` is set), `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
 body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
 **Slots:** none.

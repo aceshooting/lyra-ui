@@ -5,6 +5,7 @@ import {
   getDisplayNames,
   getListFormat,
   getNumberFormat,
+  getSegmenter,
 } from './intl-cache.js';
 
 it('memoizes Intl.NumberFormat per locale + options, insensitive to option key order', () => {
@@ -49,6 +50,14 @@ it('memoizes Intl.ListFormat and formats locale-aware lists', () => {
   const b = getListFormat('en-US', { type: 'conjunction', style: 'long' });
   expect(a === b).to.be.true;
   expect(a.format(['Alpha', 'Beta', 'Gamma'])).to.equal('Alpha, Beta, and Gamma');
+});
+
+it('memoizes Intl.Segmenter and segments with the requested granularity', () => {
+  const a = getSegmenter('en-US', { granularity: 'grapheme' });
+  const b = getSegmenter('en-US', { granularity: 'grapheme' });
+  expect(a === b).to.be.true;
+  expect([...a.segment('A\u0301B')].map(({ segment }) => segment)).to.deep.equal(['A\u0301', 'B']);
+  expect(a === getSegmenter('en-US', { granularity: 'word' })).to.be.false;
 });
 
 it('evicts the least recently used entry once a kind exceeds its bound', () => {

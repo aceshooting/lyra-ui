@@ -4,7 +4,13 @@ import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
+import {
+  isAbortError,
+  isResourceLimitError,
+  LyraResourceLimitError,
+  LyraUserFacingError,
+  readResponseText,
+} from '../../../internal/resource-loader.js';
 import { loadIcal } from './calendar-loader.js';
 import { styles } from './calendar-viewer.styles.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
@@ -12,11 +18,12 @@ import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 export interface ParsedCalendarEvent { uid: string; summary: string; start: Date | null; end: Date | null; location: string; description: string; }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: string };
 export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
+const MAX_CALENDAR_EVENTS = 10_000;
 
 function formatEventTime(start: Date | null, end: Date | null, locale: string): string {
   if (!start) return '';
-  const formatter = getDateTimeFormat(locale || undefined, { dateStyle: 'medium', timeStyle: 'short' });
-  return end ? `${formatter.format(start)} – ${formatter.format(end)}` : formatter.format(start);
+  const formatter = getDateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
+  return end ? formatter.formatRange(start, end) : formatter.format(start);
 }
 
 class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
@@ -44,7 +51,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
-  /** Display name associated with the calendar. Used as the accessible name of `[part='base']`, falling back to a host `aria-label` and then the localized `calendarViewerLabel` default, matching the `csvViewerLabel`-style sibling document viewers. */
+  /** Display name associated with the calendar. Used as the accessible name of `[part='base']` after an explicit host `aria-label`, and before the localized `calendarViewerLabel` default. */
   @property() name = '';
   /** CSS length that caps the scrollable event body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -55,6 +62,20 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
   private generation = 0;
+  private lastLoadSrc = '';
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src) {
+      this.requestUpdate();
+      if (this.src === this.lastLoadSrc) this.scheduleAfterUpdate(() => { void this.load(); });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    super.disconnectedCallback();
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -62,16 +83,26 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   }
 
   private async load(): Promise<void> {
+    this.lastLoadSrc = this.src;
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
-    if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
+    if (!url) {
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.fetchState = { kind: 'error', message: error.message };
+      this.emit('lr-render-error', { error });
+      return;
+    }
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const events = await this.parse(await readResponseText(response));
+      const source = await readResponseText(response);
+      if (!this.isConnected || generation !== this.generation) return;
+      const events = await this.parse(source, generation);
+      if (!this.isConnected || generation !== this.generation) return;
+      if (!events) return;
       if (generation === this.generation) this.fetchState = { kind: 'loaded', events };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
@@ -80,16 +111,24 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     }
   }
 
-  private async parse(source: string): Promise<ParsedCalendarEvent[]> {
+  private async parse(source: string, generation: number): Promise<ParsedCalendarEvent[] | undefined> {
     const ical = await loadIcal();
+    if (!this.isConnected || generation !== this.generation) return undefined;
     if (!ical) throw new LyraUserFacingError(this.localize('calendarViewerMissingParser'));
     const component = new ical.Component(ical.parse(source));
-    const events = (component.getAllSubcomponents('vevent') as unknown[]).map((subcomponent) => {
+    const subcomponents = component.getAllSubcomponents('vevent') as unknown[];
+    if (subcomponents.length > MAX_CALENDAR_EVENTS) {
+      throw new LyraResourceLimitError('The calendar contains too many events.');
+    }
+    const events = subcomponents.map((subcomponent) => {
       const event = new ical.Event(subcomponent);
+      const start = event.startDate ? event.startDate.toJSDate() : null;
+      const parsedEnd = event.endDate ? event.endDate.toJSDate() : null;
+      const end = start && parsedEnd && parsedEnd.getTime() < start.getTime() ? null : parsedEnd;
       return {
         uid: event.uid ?? '', summary: event.summary ?? '',
-        start: event.startDate ? event.startDate.toJSDate() : null,
-        end: event.endDate ? event.endDate.toJSDate() : null,
+        start,
+        end,
         location: event.location ?? '', description: event.description ?? '',
       } as ParsedCalendarEvent;
     });
@@ -109,7 +148,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     }
   }
 
-  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`; }
+  override render(): TemplateResult { return html`<div part="base" role="region" style=${this.maxHeight ? `--lr-calendar-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('calendarViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-calendar-viewer': LyraCalendarViewer; } }

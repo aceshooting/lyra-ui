@@ -57,14 +57,27 @@ export const EmptyState: Story = {
 };
 
 export const Narrow: Story = {
-  name: 'Narrow (320px)',
+  name: 'Narrow long content + states (320px)',
   render: () =>
-    html`<div style="max-width: 320px;">
+    html`<div style="display:grid; gap:1rem; inline-size:320px; max-inline-size:100%;">
       <lr-retrieval-search
-        query="inverter fault codes"
-        .scope=${['engineering-docs', 'support-tickets', 'release-notes']}
-        .filters=${{ type: 'pdf', year: 2025 }}
+        query="an intentionally long retrieval query that must wrap within a narrow allocation"
+        .scope=${[
+          'engineering-documents-with-a-very-long-unbroken-scope-name',
+          'support-tickets',
+          'release-notes',
+        ]}
+        .filters=${{
+          'a-deliberately-long-filter-name': 'an-unbroken-filter-value-that-must-stay-contained',
+          year: 2025,
+        }}
       ></lr-retrieval-search>
+      <lr-retrieval-search query="Long loading query" loading></lr-retrieval-search>
+      <lr-retrieval-search
+        query="Long error query"
+        error-text="The retrieval service timed out while processing a deliberately long request."
+      ></lr-retrieval-search>
+      <lr-retrieval-search query="Long empty query" empty></lr-retrieval-search>
     </div>`,
 };
 

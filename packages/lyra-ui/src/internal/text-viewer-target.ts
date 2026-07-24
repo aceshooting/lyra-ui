@@ -42,11 +42,22 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
 
     private selectionRoot: Element | null = null;
     private lastSearchText = '';
+    private lastSearchLocale = '';
+    private searchRecomputePending = false;
     private searchHandle?: HighlightHandle;
 
     /** Viewer-specific hook for the rendered document region. */
     protected textContentRoot(): Element | null {
       return this.renderRoot.querySelector('[part="body"]');
+    }
+
+    override connectedCallback(): void {
+      super.connectedCallback();
+      // Lit does not schedule a new update merely because an already-rendered element reconnects.
+      // The disconnect path deliberately releases the selection listener and highlight handle, so
+      // a reconnect needs one update to bind and paint them again even when no public property
+      // changed while detached.
+      if (this.hasUpdated) this.requestUpdate();
     }
 
     protected override updated(changed: PropertyValues): void {
@@ -57,14 +68,18 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
         if (root) (this as unknown as { bindTextSelection(contentRoot: Element): void }).bindTextSelection(root);
       }
       const searchText = root ? scopeFromElement(root).text : '';
-      if (this.searchQuery && (searchText !== this.lastSearchText || changed.has('highlights'))) {
+      const localeChanged = this.effectiveLocale !== this.lastSearchLocale;
+      if (
+        this.searchQuery &&
+        !changed.has('searchQuery') &&
+        (searchText !== this.lastSearchText || localeChanged)
+      ) {
         // updateSearchRanges() assigns reactive searchRanges. Defer that assignment until this
         // update has completed; doing it directly from updated() schedules a second Lit update
-        // from inside the first one and emits Lit's change-in-update warning.
-        this.scheduleAfterUpdate(() => {
-          this.updateSearchRanges();
-          this.paintRanges();
-        });
+        // from inside the first one and emits Lit's change-in-update warning. This queue is
+        // deliberately separate from LyraElement's coalesced viewer-load queue: a locale and
+        // `src` change in one render must run both the search refresh and the viewer's load.
+        this.scheduleSearchRecompute();
       }
       this.paintRanges();
     }
@@ -86,7 +101,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
         return true;
       }
       if (anchor.kind !== 'text-quote') return false;
-      const range = resolveTextQuote(scopeFromElement(root), anchor);
+      const range = resolveTextQuote(scopeFromElement(root), anchor, this.effectiveLocale);
       if (!range) return false;
       const target = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
         ? range.commonAncestorContainer as Element
@@ -100,6 +115,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       this.searchQuery = query;
       this.searchActiveIndex = -1;
       this.lastSearchText = '';
+      this.lastSearchLocale = '';
       await this.updateComplete;
       this.updateSearchRanges();
       this.searchActiveIndex = this.searchRanges.length > 0 ? 0 : -1;
@@ -134,6 +150,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
     clearSearch(): void {
       this.searchQuery = '';
       this.lastSearchText = '';
+      this.lastSearchLocale = '';
       this.searchRanges = [];
       this.searchActiveIndex = -1;
       this.paintRanges();
@@ -144,7 +161,26 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       const root = this.textContentRoot();
       const scope = root ? scopeFromElement(root) : null;
       this.lastSearchText = scope?.text ?? '';
-      this.searchRanges = scope ? findTextQuoteRanges(scope, this.searchQuery) : [];
+      this.lastSearchLocale = this.effectiveLocale;
+      this.searchRanges = scope
+        ? findTextQuoteRanges(scope, this.searchQuery, this.effectiveLocale)
+        : [];
+    }
+
+    private scheduleSearchRecompute(): void {
+      if (this.searchRecomputePending) return;
+      this.searchRecomputePending = true;
+      queueMicrotask(() => {
+        this.searchRecomputePending = false;
+        if (!this.isConnected || !this.searchQuery) return;
+        const previousIndex = this.searchActiveIndex;
+        this.updateSearchRanges();
+        this.searchActiveIndex = this.searchRanges.length > 0
+          ? Math.min(Math.max(previousIndex, 0), this.searchRanges.length - 1)
+          : -1;
+        this.paintRanges();
+        this.emitSearchChange();
+      });
     }
 
     private emitSearchChange(): void {
@@ -179,13 +215,22 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
         rangesByTone.set(tone, ranges);
       };
       for (const highlight of this.highlights) {
-        if (highlight.anchor.kind === 'text-quote') add(highlight.tone ?? 'accent', resolveTextQuote(scopeFromElement(root), highlight.anchor));
+        if (highlight.anchor.kind === 'text-quote') {
+          add(
+            highlight.tone ?? 'accent',
+            resolveTextQuote(scopeFromElement(root), highlight.anchor, this.effectiveLocale),
+          );
+        }
       }
       for (const range of this.searchRanges) add('accent', range);
       const tones: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
       for (const tone of tones) this.searchHandle.setRanges(tone, rangesByTone.get(tone) ?? []);
       const active = this.highlights.find((highlight: LyraHighlight) => highlight.id === this.activeHighlightId);
-      this.searchHandle.setActive(active?.anchor.kind === 'text-quote' ? resolveTextQuote(scopeFromElement(root), active.anchor) : this.searchRanges[this.searchActiveIndex] ?? null);
+      this.searchHandle.setActive(
+        active?.anchor.kind === 'text-quote'
+          ? resolveTextQuote(scopeFromElement(root), active.anchor, this.effectiveLocale)
+          : this.searchRanges[this.searchActiveIndex] ?? null,
+      );
     }
   }
   return TextViewerTargetElement;

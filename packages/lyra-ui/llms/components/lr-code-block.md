@@ -75,8 +75,7 @@ highlighted HTML, and always fires regardless of whether the actual OS clipboard
 `lr-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
 button is activated, same event name/shape convention as `<lr-thinking-panel>`'s own `lr-toggle`),
 `lr-line-click` (`detail: { line: number }` — a gutter line number was activated while
-`interactiveLines` is set), `lr-highlight-activate` (`detail: { id: string }` — declared for
-parity with this library's other anchor-target viewers; not currently emitted by this component),
+`interactiveLines` is set),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
 `anchor` is a `line-range` anchor covering the selected lines)
 

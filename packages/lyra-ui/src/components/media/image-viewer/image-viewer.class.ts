@@ -16,8 +16,6 @@ import type { LyraZoomableFrame } from '../zoomable-frame/zoomable-frame.class.j
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import '../zoomable-frame/zoomable-frame.js';
-import '../../utility/live-region/live-region.js';
 import { styles } from './image-viewer.styles.js';
 
 export type ImageFit = 'contain' | 'width' | 'actual';

@@ -1,8 +1,5 @@
 {
-  "keyboard-test-coverage": [
-    "src/components/viewers/document-preview/document-preview.class.ts",
-    "src/components/viewers/svg-viewer/svg-viewer.class.ts"
-  ],
+  "keyboard-test-coverage": [],
   "strings-test-coverage": [
     "src/components/overlays/callout/callout.class.ts",
     "src/components/overlays/chip/chip.class.ts",

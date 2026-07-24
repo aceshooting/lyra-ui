@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { getListFormat } from '../../../internal/intl-cache.js';
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
@@ -179,7 +180,10 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         <button
           part="open-button"
           type="button"
-          aria-label=${`${titleWithPage}, ${this.tierLabel(tier)}`}
+          aria-label=${getListFormat(this.effectiveLocale, { style: 'short', type: 'conjunction' }).format([
+            titleWithPage,
+            this.tierLabel(tier),
+          ])}
           @click=${() => this.emit('lr-chunk-open', { id: chunk.id, sourceId: chunk.sourceId, ...(chunk.anchor ? { anchor: chunk.anchor } : {}) })}
         >
           <span part="title">${titleWithPage}</span>

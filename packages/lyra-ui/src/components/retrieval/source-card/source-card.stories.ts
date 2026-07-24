@@ -108,3 +108,24 @@ export const DensityAndChrome: Story = {
     </div>
   `,
 };
+
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content (320px)',
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%;">
+      <lr-source-card
+        source-id="long-source"
+        title="quarterly-report-with-an-unbroken-and-deliberately-very-long-filename-that-must-wrap.pdf"
+        page="appendix-with-a-long-page-label"
+      >
+        <span slot="excerpt"
+          >https://example.com/a/very/long/unbroken/source/path/that/must/remain/inside/the/card</span
+        >
+        <span slot="full"
+          >A fully expanded source can contain a long human-readable passage as well as
+          anUnbrokenEvidenceTokenThatMustWrapWithoutExpandingTheThreeHundredAndTwentyPixelAllocation.</span
+        >
+      </lr-source-card>
+    </div>
+  `,
+};

@@ -143,6 +143,7 @@ export type LyraMessageKey =
   | 'jsonItemCountPlural'
   | 'jsonKeyCount'
   | 'jsonKeyCountPlural'
+  | 'jsonViewerLimit'
   | 'untitledSource'
   | 'sourcePageSuffix'
   | 'toolCall'
@@ -161,11 +162,14 @@ export type LyraMessageKey =
   | 'subagentPanelLimit'
   | 'pollPause'
   | 'pollResume'
+  | 'pollInactive'
   | 'pollRefreshing'
   | 'pollPaused'
   | 'pollPausedAnnounce'
   | 'pollResumedAnnounce'
   | 'pollRefreshingAnnounce'
+  | 'randomContentPause'
+  | 'randomContentResume'
   | 'attachmentAdd'
   | 'attachmentTriggerFiles'
   | 'attachmentTriggerImage'
@@ -245,6 +249,16 @@ export type LyraMessageKey =
   | 'contactViewerEmailLabel'
   | 'contactViewerAddressLabel'
   | 'contactViewerOrganizationLabel'
+  | 'contactViewerOrganization'
+  | 'contactViewerTypedValue'
+  | 'contactViewerAddressFormat'
+  | 'contactViewerTypeHome'
+  | 'contactViewerTypeWork'
+  | 'contactViewerTypeCell'
+  | 'contactViewerTypeVoice'
+  | 'contactViewerTypeFax'
+  | 'contactViewerTypeInternet'
+  | 'contactViewerTypePreferred'
   | 'exportButtonLabel'
   | 'generationStatusElapsedSeconds'
   | 'generationStatusTokenCount'
@@ -587,6 +601,7 @@ export type LyraMessageKey =
   | 'emailViewerOpenAttachment'
   | 'emailViewerShowQuoted'
   | 'emailViewerHideQuoted'
+  | 'emailViewerGroupAddress'
   | 'calendarViewerLabel'
   | 'calendarViewerMissingParser'
   | 'calendarViewerEmpty'
@@ -832,6 +847,9 @@ export type LyraMessageKey =
   | 'nodePalettePlaceholder'
   | 'nodePaletteEmpty'
   | 'nodePaletteDragHint'
+  | 'nodePaletteResultCount'
+  | 'nodePaletteResultCountPlural'
+  | 'retrievalResultsSelectRow'
   | 'pathStripLabel'
   | 'pathNodeStatus'
   | 'pathRelationStatus'
@@ -1281,6 +1299,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   jsonItemCountPlural: '{count} items',
   jsonKeyCount: '{count} key',
   jsonKeyCountPlural: '{count} keys',
+  jsonViewerLimit: 'Only the first {count} JSON nodes and {depth} nesting levels are shown and searched.',
   untitledSource: 'Untitled source',
   sourcePageSuffix: '{base} — p. {page}',
   toolCall: 'Tool call',
@@ -1299,11 +1318,14 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   subagentPanelLimit: 'Only the first {count} subagent runs are shown.',
   pollPause: 'Pause',
   pollResume: 'Resume',
+  pollInactive: 'Inactive',
   pollRefreshing: 'Refreshing…',
   pollPaused: 'Paused',
   pollPausedAnnounce: 'Paused.',
   pollResumedAnnounce: 'Resumed.',
   pollRefreshingAnnounce: 'Refreshing now.',
+  randomContentPause: 'Pause rotation',
+  randomContentResume: 'Resume rotation',
   attachmentAdd: 'Add attachment',
   attachmentTriggerFiles: 'Attach files',
   attachmentTriggerImage: 'Attach an image',
@@ -1383,6 +1405,17 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   contactViewerEmailLabel: 'Email',
   contactViewerAddressLabel: 'Address',
   contactViewerOrganizationLabel: 'Organization:',
+  contactViewerOrganization: 'Organization: {value}',
+  contactViewerTypedValue: '{value} ({types})',
+  contactViewerAddressFormat:
+    '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
+  contactViewerTypeHome: 'Home',
+  contactViewerTypeWork: 'Work',
+  contactViewerTypeCell: 'Mobile',
+  contactViewerTypeVoice: 'Voice',
+  contactViewerTypeFax: 'Fax',
+  contactViewerTypeInternet: 'Internet',
+  contactViewerTypePreferred: 'Preferred',
   exportButtonLabel: 'Export',
   generationStatusElapsedSeconds: '{seconds}s',
   generationStatusTokenCount: '{count} token',
@@ -1732,6 +1765,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   emailViewerOpenAttachment: 'Open {filename}',
   emailViewerShowQuoted: 'Show quoted text',
   emailViewerHideQuoted: 'Hide quoted text',
+  emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Calendar viewer',
   calendarViewerMissingParser: 'This viewer needs the optional "ical.js" package installed to parse this calendar.',
   calendarViewerEmpty: 'This calendar has no events.',
@@ -1971,6 +2005,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   nodePalettePlaceholder: 'Search nodes…',
   nodePaletteEmpty: 'No matching nodes.',
   nodePaletteDragHint: 'Drag to the canvas, or press Enter to place',
+  nodePaletteResultCount: '{count} item',
+  nodePaletteResultCountPlural: '{count} items',
+  retrievalResultsSelectRow: 'Select {label}',
   pathStripLabel: 'Path',
   pathNodeStatus: '{label}, node {position} of {total}',
   pathRelationStatus: '{relation}, relation',
@@ -2351,11 +2388,16 @@ export function subscribeLyraLocale(listener: () => void): () => void {
 function inheritedLocale(host: Element): string {
   const explicit = host.getAttribute('locale') || host.getAttribute('lang');
   if (explicit) return explicit;
-  let parent = host.parentElement;
+  const composedParent = (element: Element): Element | null => {
+    if (element.parentElement) return element.parentElement;
+    const root = element.getRootNode();
+    return typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot ? root.host : null;
+  };
+  let parent = composedParent(host);
   while (parent) {
     const locale = parent.getAttribute('locale') || parent.getAttribute('lang');
     if (locale) return locale;
-    parent = parent.parentElement;
+    parent = composedParent(parent);
   }
   if (typeof document !== 'undefined') {
     return document.documentElement.getAttribute('lang') || activeLocale || 'en';
@@ -2448,6 +2490,21 @@ export function resolveLyraString(
   message ??= DEFAULT_STRINGS[key as LyraMessageKey] ?? key;
   if (!values) return message;
   return message.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name] ?? `{${name}}`));
+}
+
+/**
+ * Returns the text around one rich localized interpolation. `interpolate` must resolve the
+ * message through the normal localization values argument with its supplied marker as the rich
+ * value. The marker is selected outside the translated template so repeated and omitted
+ * placeholders remain well-defined without parsing a localization token by hand.
+ */
+export function resolveLocalizedParts(
+  template: string,
+  interpolate: (marker: string) => string,
+): string[] {
+  let marker = '\ue000';
+  while (template.includes(marker)) marker += '\ue001';
+  return interpolate(marker).split(marker);
 }
 
 export const LYRA_DEFAULT_STRINGS = DEFAULT_STRINGS;

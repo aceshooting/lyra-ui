@@ -278,3 +278,23 @@ describe('lr-knowledge-base', () => {
     expect(el.shadowRoot!.querySelector('[part="create-button"]')!.textContent!.trim()).to.equal('Ajouter une source');
   });
 });
+
+it('formats document and summary counts with the effective locale', async () => {
+  const el = (await fixture(html`<lr-knowledge-base lang="ar-u-nu-arab"></lr-knowledge-base>`)) as LyraKnowledgeBase;
+  el.sources = [{ ...sources[0]!, documentCount: 1234 }];
+  await el.updateComplete;
+  expect(rowCells(el, 'document-count')[0]!.textContent).to.include('١٬٢٣٤');
+  const summary = [...el.shadowRoot!.querySelectorAll('[part="summary-stat"]')] as LyraStat[];
+  expect(summary.map((stat) => stat.value)).to.deep.equal(['١', '١', '٠', '٠']);
+});
+
+it('suppresses the raw child menu-select event after translating it', async () => {
+  const el = (await fixture(html`<lr-knowledge-base .sources=${sources}></lr-knowledge-base>`)) as LyraKnowledgeBase;
+  let leaked = 0;
+  el.addEventListener('lr-menu-select', () => leaked++);
+  menuFor(el, 0).dispatchEvent(
+    new CustomEvent('lr-menu-select', { detail: { value: 'sync' }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(leaked).to.equal(0);
+});

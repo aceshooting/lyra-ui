@@ -24,6 +24,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='canvas']:hover {
+    filter: brightness(var(--lr-hover-brightness));
+  }
   [part='tooltip'] {
     position: absolute;
     /* Physical left/top on purpose: the inline position written on hover is a physical offset
@@ -44,7 +47,9 @@ export const styles = css`
     border: var(--lr-size-1px) solid var(--lr-color-border);
     z-index: var(--lr-layer-content);
     transform: translate(var(--lr-size-6px), calc(-100% - var(--lr-size-6px)));
-    white-space: nowrap;
+    max-inline-size: min(calc(100% - var(--lr-size-12px)), calc(100vw - var(--lr-size-12px)));
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
   [part='tooltip'][hidden] {
     display: none;

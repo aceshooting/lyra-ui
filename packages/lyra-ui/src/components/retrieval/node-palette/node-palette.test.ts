@@ -176,6 +176,21 @@ it('dims a disabled item through the shared disabled-opacity token', async () =>
   expect(getComputedStyle(disabledItem).opacity).to.equal('0.25');
 });
 
+it('keeps the search and compact item at the live hit-area token override', async () => {
+  const el = (await fixture(
+    html`<lr-node-palette
+      style="--lr-icon-button-size: 52px; inline-size: 80px"
+      .items=${[{ type: 'x', label: 'X' }]}
+    ></lr-node-palette>`,
+  )) as LyraNodePalette;
+  for (const part of ['search', 'item']) {
+    const target = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+    const bounds = target.getBoundingClientRect();
+    expect(bounds.width, part).to.be.at.least(52);
+    expect(bounds.height, part).to.be.at.least(52);
+  }
+});
+
 it('chains updated() to super.updated() so a mixin layered under LyraElement would still run', async () => {
   // No shared mixin actually overrides updated() today, so the only way to prove the chain is
   // live (rather than grepping source text for the call) is to patch the base-class hook itself
@@ -227,6 +242,25 @@ describe('localization', () => {
       'Faites glisser vers le canevas, ou appuyez sur Entrée',
     );
   });
+
+  it('recomputes locale-aware search matches when the effective locale changes', async () => {
+    const el = (await fixture(
+      html`<lr-node-palette
+        locale="en"
+        .items=${[{ type: 'city', label: 'İzmir' }]}
+      ></lr-node-palette>`,
+    )) as LyraNodePalette;
+    const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+    input.value = 'iz';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(0);
+
+    el.locale = 'tr';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="item"]')).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('[part="item-label"]')!.textContent).to.equal('İzmir');
+  });
 });
 
 it('is accessible with items, groups, and a disabled item', async () => {
@@ -252,6 +286,28 @@ it('never announces the initial item count on mount, but does announce a later f
   await el.updateComplete;
   await new Promise((r) => setTimeout(r, 600));
   expect(liveRegionText()).to.include('1');
+});
+
+it('localizes the whole filtered-result announcement and formats its count with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-node-palette
+      lang="ar-u-nu-arab"
+      .items=${items}
+      .strings=${{
+        nodePaletteResultCount: '{count} نتيجة',
+        nodePaletteResultCountPlural: '{count} نتائج',
+      }}
+    ></lr-node-palette>
+  `)) as LyraNodePalette;
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector('input') as HTMLInputElement;
+  input.value = 'Data';
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await el.updateComplete;
+  await new Promise((r) => setTimeout(r, 600));
+
+  expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('٢ نتائج');
 });
 
 it('gives the search field a focus-visible ring and resets the native search-cancel glyph', () => {

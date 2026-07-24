@@ -79,6 +79,42 @@ export const Default: Story = {
   `,
 };
 
+export const NarrowLongContent: Story = {
+  name: 'Narrow long content (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-graph
+        aria-label="Long legal and scientific relationship labels in a narrow graph allocation"
+        width="320"
+        height="320"
+        seed="42"
+        show-edge-labels
+        style="block-size: 20rem"
+        .nodes=${[
+          {
+            id: 'unbroken-source-identifier-that-must-not-expand-the-allocation',
+            label: 'unbroken-source-identifier-that-must-not-expand-the-allocation',
+            description: 'A deliberately long source description used to exercise tooltip wrapping.',
+          },
+          {
+            id: 'target',
+            label: 'A target node with a long human-readable label',
+            description: 'A second deliberately long description for narrow tooltip containment.',
+          },
+        ] satisfies GraphNode[]}
+        .links=${[
+          {
+            source: 'unbroken-source-identifier-that-must-not-expand-the-allocation',
+            target: 'target',
+            label: 'a-very-long-relationship-label-without-natural-breaks',
+            directed: true,
+          },
+        ] satisfies GraphLink[]}
+      ></lr-graph>
+    </div>
+  `,
+};
+
 export const DimmedNeighborhood: Story = {
   name: 'Dimmed non-neighbors (controlled)',
   parameters: {

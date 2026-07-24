@@ -13,6 +13,28 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
   }
+  [part='pause-button'] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    margin-block-start: var(--lr-space-xs);
+    padding: var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    cursor: pointer;
+  }
+  [part='pause-button']:hover {
+    border-color: var(--lr-color-brand);
+    color: var(--lr-color-brand);
+  }
+  [part='pause-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   ::slotted(*) {
     animation-duration: var(--lr-random-content-animation-duration, 300ms);
     animation-timing-function: var(--lr-random-content-animation-easing, ease);

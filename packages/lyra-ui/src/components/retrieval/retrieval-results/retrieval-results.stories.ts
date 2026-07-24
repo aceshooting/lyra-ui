@@ -80,7 +80,32 @@ export const Empty: Story = {
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lr-retrieval-results .chunks=${chunks}></lr-retrieval-results></div>`,
+  name: 'Narrow long content + states (320px)',
+  render: () => html`
+    <div style="display:grid; gap:1rem; inline-size:320px; max-inline-size:100%;">
+      <lr-retrieval-results
+        has-more
+        .selectedIds=${['long-result']}
+        .chunks=${[
+          {
+            id: 'long-result',
+            text: 'UnbrokenRetrievedEvidenceTokenThatMustWrapInsideTheNarrowResultWithoutHorizontalOverflow plus a long explanatory passage.',
+            score: 0.987,
+            source: {
+              id: 'long-source',
+              name: 'source-with-a-deliberately-long-unbroken-filename-that-must-not-overflow.pdf',
+            },
+            metadata: {
+              'a-deliberately-long-metadata-key': 'anUnbrokenMetadataValueThatMustRemainInsideTheRow',
+            },
+          },
+        ] satisfies RetrievalChunk[]}
+      ></lr-retrieval-results>
+      <lr-retrieval-results loading></lr-retrieval-results>
+      <lr-retrieval-results error="A long retrieval error remains contained in the narrow allocation."></lr-retrieval-results>
+      <lr-retrieval-results></lr-retrieval-results>
+    </div>
+  `,
 };
 
 export const ThemedSelectedRow: Story = {

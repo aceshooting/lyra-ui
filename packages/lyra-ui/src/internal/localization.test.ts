@@ -6,6 +6,7 @@ import {
   subscribeLyraLocaleRegistry,
   subscribeLyraLocale,
   LYRA_DEFAULT_STRINGS,
+  resolveLocalizedParts,
 } from './localization.js';
 import '../components/data/sparkline/sparkline.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
@@ -80,6 +81,53 @@ it('defines a complete localizable citation status summary', () => {
 
 it('defines the default heatmap value label', () => {
   expect(LYRA_DEFAULT_STRINGS.heatmapValueLabel).to.equal('value');
+});
+
+it('defines utility polling and rotation control labels', () => {
+  expect(LYRA_DEFAULT_STRINGS.pollInactive).to.equal('Inactive');
+  expect(LYRA_DEFAULT_STRINGS.randomContentPause).to.equal('Pause rotation');
+  expect(LYRA_DEFAULT_STRINGS.randomContentResume).to.equal('Resume rotation');
+});
+
+it('defines the JSON viewer resource-limit message', () => {
+  expect(LYRA_DEFAULT_STRINGS.jsonViewerLimit).to.equal(
+    'Only the first {count} JSON nodes and {depth} nesting levels are shown and searched.',
+  );
+});
+
+it('defines whole retrieval result-count and row-selection messages', () => {
+  expect(LYRA_DEFAULT_STRINGS.nodePaletteResultCount).to.equal('{count} item');
+  expect(LYRA_DEFAULT_STRINGS.nodePaletteResultCountPlural).to.equal('{count} items');
+  expect(LYRA_DEFAULT_STRINGS.retrievalResultsSelectRow).to.equal('Select {label}');
+});
+
+it('defines reorderable whole contact messages and known vCard type labels', () => {
+  expect(LYRA_DEFAULT_STRINGS.contactViewerOrganization).to.equal('Organization: {value}');
+  expect(LYRA_DEFAULT_STRINGS.contactViewerTypedValue).to.equal('{value} ({types})');
+  expect(LYRA_DEFAULT_STRINGS.contactViewerAddressFormat).to.equal(
+    '{poBox}\n{extendedAddress}\n{streetAddress}\n{locality} {region} {postalCode}\n{country}',
+  );
+  expect([
+    LYRA_DEFAULT_STRINGS.contactViewerTypeHome,
+    LYRA_DEFAULT_STRINGS.contactViewerTypeWork,
+    LYRA_DEFAULT_STRINGS.contactViewerTypeCell,
+    LYRA_DEFAULT_STRINGS.contactViewerTypeVoice,
+    LYRA_DEFAULT_STRINGS.contactViewerTypeFax,
+    LYRA_DEFAULT_STRINGS.contactViewerTypeInternet,
+    LYRA_DEFAULT_STRINGS.contactViewerTypePreferred,
+  ]).to.deep.equal(['Home', 'Work', 'Mobile', 'Voice', 'Fax', 'Internet', 'Preferred']);
+});
+
+it('defines a reorderable whole email group-address message', () => {
+  expect(LYRA_DEFAULT_STRINGS.emailViewerGroupAddress).to.equal('{name}: {members}');
+});
+
+it('splits rich localized placeholders after normal interpolation, including repeats and omission', () => {
+  const resolve = (template: string) =>
+    resolveLocalizedParts(template, (marker) => template.replaceAll('{tool}', marker));
+  expect(resolve('Approve {tool}, then {tool}?')).to.deep.equal(['Approve ', ', then ', '?']);
+  expect(resolve('Proceed?')).to.deep.equal(['Proceed?']);
+  expect(resolve('Private marker \ue000 before {tool}')).to.deep.equal(['Private marker \ue000 before ', '']);
 });
 
 it('defines complete media-card attachment action labels', () => {

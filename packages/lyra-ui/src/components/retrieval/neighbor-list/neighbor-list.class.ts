@@ -4,7 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { expandIcon } from '../../../internal/icons.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getCollator, getNumberFormat } from '../../../internal/intl-cache.js';
+import { getCollator, getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
 import '../../layout/virtual-list/virtual-list.class.js';
@@ -128,22 +128,24 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     });
     const meta = [
       row.node.type,
-      row.node.degree != null ? getNumberFormat(this.effectiveLocale).format(row.node.degree) : undefined,
+      row.node.degree != null
+        ? getNumberFormat(this.effectiveLocale).format(finiteCount(row.node.degree))
+        : undefined,
     ]
-      .filter((v): v is string => !!v)
-      .join(' · ');
+      .filter((v): v is string => !!v);
+    const metaText = getListFormat(this.effectiveLocale, { style: 'short', type: 'unit' }).format(meta);
     return html`
       <button
         part="node-label"
         type="button"
         aria-label=${accessibleName}
-        aria-description=${meta || nothing}
+        aria-description=${metaText || nothing}
         @click=${() => this.emit('lr-entity-activate', { id: row.node.id })}
       >
         <span part="direction" aria-hidden="true">${this.directionGlyph(row.direction)}</span>
         <span part="relation">${row.relation}</span>
         <span>${nodeLabel}</span>
-        ${meta ? html`<span part="node-meta">${meta}</span>` : nothing}
+        ${metaText ? html`<span part="node-meta">${metaText}</span>` : nothing}
       </button>
       ${this.expandable
         ? html`<button

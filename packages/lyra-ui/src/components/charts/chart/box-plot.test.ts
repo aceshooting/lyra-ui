@@ -464,9 +464,13 @@ describe('review remediation regressions', () => {
       refreshes++;
       refreshTheme();
     };
-    wrapper.setAttribute('data-theme', 'dark');
+    wrapper.style.setProperty('--lr-theme-color-surface-default', 'rgb(31, 41, 51)');
     await aTimeout(0);
+
     expect(refreshes).to.equal(1);
+    expect((el as any).chart.options.plugins.tooltip.backgroundColor).to.equal(
+      'rgb(31, 41, 51)',
+    );
   });
 
   it('materializes caller-supplied box colors before handing them to canvas', async () => {

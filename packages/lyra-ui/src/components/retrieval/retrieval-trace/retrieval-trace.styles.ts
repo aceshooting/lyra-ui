@@ -35,6 +35,9 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;

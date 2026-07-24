@@ -7,7 +7,6 @@ import {
   activateOverlay,
   type OverlayHandle,
 } from '../../../internal/overlay-manager.js';
-import '../../forms/button/button.js';
 import { styles } from './selection-toolbar.styles.js';
 
 export type SelectionAction = 'ask' | 'quote' | 'cite' | 'copy';

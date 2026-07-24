@@ -88,7 +88,7 @@ export const InteractiveTarget: Story = {
     docs: {
       description: {
         story:
-          'Every other step spotlights a non-interactive target by default (visually revealed, but clicks are absorbed by the backdrop). Setting `interactiveTarget: true` on a step restores real pointer reachability for that one target.',
+          'Every other step spotlights a non-interactive target by default. Setting `interactiveTarget: true` makes the panel nonmodal, restores real pointer reachability, and adds an explicit Tab route between the panel and that target.',
       },
     },
   },
@@ -104,6 +104,26 @@ export const NoProgressAndLightDismiss: Story = {
         <button id="tour-demo-create">Create</button>
       </div>
       <lr-tour .steps=${productTourSteps} .showProgress=${false} light-dismiss></lr-tour>
+    </div>
+  `,
+};
+
+export const NarrowLongContent: Story = {
+  render: () => html`
+    <div class="tour-demo" style="display:flex; flex-direction:column; gap:1rem; max-width:20rem;">
+      <button @click=${startDemoTour}>Start narrow tour</button>
+      <button id="tour-narrow-target">Narrow target</button>
+      <lr-tour
+        .steps=${[
+          {
+            id: 'long-content',
+            target: '#tour-narrow-target',
+            heading: 'AnExceptionallyLongUnbrokenTourHeadingThatMustWrap',
+            content:
+              'A-long-unbroken-body-value-that-demonstrates-the-popover-stays-within-a-narrow-allocation',
+          },
+        ]}
+      ></lr-tour>
     </div>
   `,
 };

@@ -44,7 +44,33 @@ export const Empty: Story = {
 };
 
 export const Narrow: Story = {
-  render: () => html`<div style="max-width: 320px;"><lr-source-picker .sources=${sources}></lr-source-picker></div>`,
+  name: 'Narrow long content (320px)',
+  render: () => html`
+    <div style="inline-size:320px; max-inline-size:100%;">
+      <lr-source-picker
+        .sources=${[
+          {
+            id: 'long-folder',
+            label: 'Research papers with an intentionally long folder label',
+            children: [
+              {
+                id: 'long-document',
+                label: 'unbroken-document-filename-that-must-remain-inside-the-source-picker.pdf',
+                mimeType: 'application/pdf',
+              },
+              { id: 'short-document', label: 'notes.txt', mimeType: 'text/plain' },
+            ],
+          },
+          {
+            id: 'long-leaf',
+            label: 'another-unbroken-top-level-source-name-that-must-not-expand-the-allocation.csv',
+            mimeType: 'text/csv',
+          },
+        ] satisfies LyraSourceEntry[]}
+        .selectedIds=${['long-document']}
+      ></lr-source-picker>
+    </div>
+  `,
 };
 
 export const ThemedCheckedState: Story = {

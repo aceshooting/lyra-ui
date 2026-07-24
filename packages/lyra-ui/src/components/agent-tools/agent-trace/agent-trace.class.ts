@@ -2,14 +2,6 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './agent-trace.styles.js';
-// The registering barrels (not the bare *.class.js modules) -- this is what actually defines
-// <lr-trace-tree>/<lr-graph-legend>/<lr-handoff-divider> as custom elements by the time this
-// component's render() references them, regardless of whether a consumer imports this bare
-// *.class.js module directly or the full agent-trace.js barrel. See this file's own regression
-// test ("registers ... as a side effect of importing agent-trace.js") for why this matters.
-import '../trace-tree/trace-tree.js';
-import '../../retrieval/graph-legend/graph-legend.js';
-import '../../conversation/handoff-divider/handoff-divider.js';
 import type { LyraSpan } from '../trace-tree/span.js';
 import type { LyraGraphLegendType, LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
 

@@ -7,10 +7,6 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { eyeOffIcon } from '../../../internal/icons.js';
 import type { ToolInvocation, ToolApprovalEventDetail } from '../../../ai/types.js';
 import { styles } from './tool-timeline.styles.js';
-import '../tool-call-chip/tool-call-chip.js';
-import '../tool-result-view/tool-result-view.js';
-import '../tool-approval-dialog/tool-approval-dialog.js';
-import '../../layout/details/details.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /**

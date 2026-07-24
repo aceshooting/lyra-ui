@@ -12,6 +12,15 @@ it('defaults to index=1, status="default", empty source-id/href/label', async ()
   expect(el.label).to.equal('');
 });
 
+it('keeps the compact citation target at the live hit-area token override', async () => {
+  const el = (await fixture(
+    html`<lr-citation-badge style="--lr-icon-button-size:52px"></lr-citation-badge>`,
+  )) as LyraCitationBadge;
+  const bounds = (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getBoundingClientRect();
+  expect(bounds.width).to.be.at.least(52);
+  expect(bounds.height).to.be.at.least(52);
+});
+
 it('sanitizes a NaN/non-integer/non-positive index to a finite, 1-indexed integer instead of rendering "[NaN]"', async () => {
   const el = (await fixture(html`<lr-citation-badge></lr-citation-badge>`)) as LyraCitationBadge;
 

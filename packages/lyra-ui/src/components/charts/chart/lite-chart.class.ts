@@ -855,45 +855,49 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         bars.push(
           this.roundedBars
             ? svg`
-          ${hitTarget}
-          <path
-            part="bar"
-            d=${this.roundedBarPath(rectX, y1, w, h)}
-            fill=${color}
-            tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
-            role="button"
-            aria-label=${ariaLabel}
-            aria-pressed=${selected ? 'true' : 'false'}
-            ?data-selected=${selected}
-            data-mark-index=${markIndex}
-            data-dataset-index=${di}
-            data-index=${i}
-            @click=${() => this.emitPoint(di, i)}
-            @focus=${() => this.onMarkFocus(markIndex)}
-            @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-          ><title>${titleText}</title></path>
+          <g class="mark-hit-group">
+            ${hitTarget}
+            <path
+              part="bar"
+              d=${this.roundedBarPath(rectX, y1, w, h)}
+              fill=${color}
+              tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
+              role="button"
+              aria-label=${ariaLabel}
+              aria-pressed=${selected ? 'true' : 'false'}
+              ?data-selected=${selected}
+              data-mark-index=${markIndex}
+              data-dataset-index=${di}
+              data-index=${i}
+              @click=${() => this.emitPoint(di, i)}
+              @focus=${() => this.onMarkFocus(markIndex)}
+              @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
+            ><title>${titleText}</title></path>
+          </g>
         `
             : svg`
-          ${hitTarget}
-          <rect
-            part="bar"
-            x=${rectX}
-            y=${y1}
-            width=${w}
-            height=${h}
-            fill=${color}
-            tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
-            role="button"
-            aria-label=${ariaLabel}
-            aria-pressed=${selected ? 'true' : 'false'}
-            ?data-selected=${selected}
-            data-mark-index=${markIndex}
-            data-dataset-index=${di}
-            data-index=${i}
-            @click=${() => this.emitPoint(di, i)}
-            @focus=${() => this.onMarkFocus(markIndex)}
-            @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-          ><title>${titleText}</title></rect>
+          <g class="mark-hit-group">
+            ${hitTarget}
+            <rect
+              part="bar"
+              x=${rectX}
+              y=${y1}
+              width=${w}
+              height=${h}
+              fill=${color}
+              tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
+              role="button"
+              aria-label=${ariaLabel}
+              aria-pressed=${selected ? 'true' : 'false'}
+              ?data-selected=${selected}
+              data-mark-index=${markIndex}
+              data-dataset-index=${di}
+              data-index=${i}
+              @click=${() => this.emitPoint(di, i)}
+              @focus=${() => this.onMarkFocus(markIndex)}
+              @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
+            ><title>${titleText}</title></rect>
+          </g>
         `,
         );
       });
@@ -940,33 +944,35 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = this.selectedIndex.includes(i);
         return svg`
-          <circle
-            data-mark-hit-target="point"
-            aria-hidden="true"
-            cx=${xFor(i)}
-            cy=${yFor(v)}
-            r="12"
-            style="fill: transparent; pointer-events: all"
-            @click=${() => this.emitPoint(di, i)}
-          ></circle>
-          <circle
-            part="point"
-            cx=${xFor(i)}
-            cy=${yFor(v)}
-            r="4"
-            fill=${color}
-            tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
-            role="button"
-            aria-label=${ariaLabel}
-            aria-pressed=${selected ? 'true' : 'false'}
-            ?data-selected=${selected}
-            data-mark-index=${markIndex}
-            data-dataset-index=${di}
-            data-index=${i}
-            @click=${() => this.emitPoint(di, i)}
-            @focus=${() => this.onMarkFocus(markIndex)}
-            @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
-          ><title>${titleText}</title></circle>
+          <g class="mark-hit-group">
+            <circle
+              data-mark-hit-target="point"
+              aria-hidden="true"
+              cx=${xFor(i)}
+              cy=${yFor(v)}
+              r="12"
+              style="fill: transparent; pointer-events: all"
+              @click=${() => this.emitPoint(di, i)}
+            ></circle>
+            <circle
+              part="point"
+              cx=${xFor(i)}
+              cy=${yFor(v)}
+              r="4"
+              fill=${color}
+              tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
+              role="button"
+              aria-label=${ariaLabel}
+              aria-pressed=${selected ? 'true' : 'false'}
+              ?data-selected=${selected}
+              data-mark-index=${markIndex}
+              data-dataset-index=${di}
+              data-index=${i}
+              @click=${() => this.emitPoint(di, i)}
+              @focus=${() => this.onMarkFocus(markIndex)}
+              @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
+            ><title>${titleText}</title></circle>
+          </g>
         `;
       });
       return svg`<path part="line" d=${d.trim()} stroke=${color}></path>${dots}`;

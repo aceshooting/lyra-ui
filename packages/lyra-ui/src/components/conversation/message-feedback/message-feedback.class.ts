@@ -2,8 +2,6 @@ import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
-import '../../overlays/chip/chip.js';
-import '../../utility/live-region/live-region.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './message-feedback.styles.js';
 

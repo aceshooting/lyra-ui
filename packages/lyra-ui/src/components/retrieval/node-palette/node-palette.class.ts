@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
 import { styles } from './node-palette.styles.js';
 
@@ -113,7 +114,14 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     this.isMounting = false;
     if (!wasMounting && (changed.has('queryText') || changed.has('items'))) {
       const count = this.filtered.length;
-      this.announcer.announce(`${count} ${count === 1 ? this.localize('item') : this.localize('items')}`);
+      const countText = getNumberFormat(this.effectiveLocale).format(count);
+      this.announcer.announce(
+        this.localize(
+          count === 1 ? 'nodePaletteResultCount' : 'nodePaletteResultCountPlural',
+          undefined,
+          { count: countText },
+        ),
+      );
     }
   }
 

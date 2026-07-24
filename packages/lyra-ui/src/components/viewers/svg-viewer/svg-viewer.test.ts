@@ -4,6 +4,7 @@ import './svg-viewer.js';
 import type { LyraSvgViewer } from './svg-viewer.js';
 import { styles } from './svg-viewer.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 function response(body: string, ok = true): Response {
   return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response;
@@ -94,6 +95,39 @@ describe('lr-svg-viewer', () => {
       const eventPromise = oneEvent(el, 'lr-render-error');
       const event = await eventPromise;
       expect(event.detail.error).to.exist;
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('emits exactly one render error for an unsafe URL', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    let count = 0;
+    el.addEventListener('lr-render-error', () => { count++; });
+    const eventPromise = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:alert(1)';
+    await eventPromise;
+    await el.updateComplete;
+    expect(count).to.equal(1);
+  });
+
+  it('reloads the same SVG source after a disconnect/reconnect', async () => {
+    const original = window.fetch;
+    let fetchCount = 0;
+    window.fetch = (() => {
+      fetchCount++;
+      return Promise.resolve(response('<svg xmlns="http://www.w3.org/2000/svg"></svg>'));
+    }) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`
+        <lr-svg-viewer src="https://example.test/a.svg"></lr-svg-viewer>
+      `)) as LyraSvgViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => fetchCount === 2);
+      expect(el.shadowRoot!.querySelector('[part="svg"]')).to.exist;
     } finally {
       window.fetch = original;
     }
@@ -197,16 +231,63 @@ describe('zoomable', () => {
 });
 
 describe('region highlights', () => {
-  it('gives the region-highlight part both a :hover and a :focus-visible rule', () => {
-    // Regression test: region-highlight is a real interactive control (role=button, tabindex=0,
-    // click + Enter/Space handlers) but previously had neither -- a mouse user saw only a static
-    // bordered box with a pointer cursor, and a keyboard user tabbing through several highlights got
-    // no visible indication of which was focused. getComputedStyle can't synthesize a real :hover
-    // state without dispatching pointer events the wtr harness can't simulate, so (matching
-    // commit-card.test.ts's identical convention) this asserts against the stylesheet source text.
-    const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='region-highlight'\]:hover/);
-    expect(css).to.match(/\[part='region-highlight'\]:focus-visible/);
+  it('keeps a small visual border while exposing a separate minimum activation target', async () => {
+    const el = (await fixture(html`
+      <lr-svg-viewer style="--lr-icon-button-size:44px"></lr-svg-viewer>
+    `)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'small', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 5, height: 5 } } },
+      ];
+      await el.updateComplete;
+      const content = el.shadowRoot!.querySelector('.zoom-content') as HTMLElement;
+      content.style.width = '200px';
+      content.style.height = '200px';
+      const visual = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+      const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
+      expect(target).to.exist;
+      const visualBox = visual.getBoundingClientRect();
+      const targetBox = target.getBoundingClientRect();
+      expect(visualBox.width).to.be.lessThan(20);
+      expect(visualBox.height).to.be.lessThan(20);
+      expect(targetBox.width).to.be.at.least(44);
+      expect(targetBox.height).to.be.at.least(44);
+      expect(visualBox.width).to.be.lessThan(targetBox.width);
+      expect(visualBox.height).to.be.lessThan(targetBox.height);
+      const hit = el.shadowRoot!.elementFromPoint(
+        targetBox.left + targetBox.width - 2,
+        targetBox.top + targetBox.height / 2,
+      ) as HTMLElement | null;
+      expect(hit?.dataset.highlightId).to.equal('small');
+    } finally {
+      restore();
+    }
+  });
+
+  it('paints a rendered hover treatment on the region-highlight target', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 20, y: 20, width: 20, height: 20 } } }];
+      await el.updateComplete;
+      const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
+      const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+      const before = getComputedStyle(region).backgroundColor;
+      const rect = target.getBoundingClientRect();
+      await sendMouse({
+        type: 'move',
+        position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+      });
+      expect(getComputedStyle(region).backgroundColor).to.not.equal(before);
+    } finally {
+      await resetMouse();
+      restore();
+    }
   });
 
   it('renders a focusable region-highlight positioned by percent-unit rect', async () => {
@@ -218,9 +299,32 @@ describe('region highlights', () => {
       el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } }];
       await el.updateComplete;
       const region = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
+      const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
       expect(region).to.exist;
-      expect(region.getAttribute('role')).to.equal('button');
+      expect(target.getAttribute('role')).to.equal('button');
       expect(region.style.left).to.equal('10%');
+    } finally {
+      restore();
+    }
+  });
+
+  it('uses a non-overlapping action list for multiple dense highlights', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'a', label: 'First', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 1, height: 1 } } },
+        { id: 'b', label: 'Second', anchor: { kind: 'region', rect: { x: 51, y: 50, width: 1, height: 1 } } },
+      ];
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="region-highlight-target"]').length).to.equal(0);
+      const actions = [...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]')] as HTMLElement[];
+      expect(actions.length).to.equal(2);
+      const first = actions[0]!.getBoundingClientRect();
+      const second = actions[1]!.getBoundingClientRect();
+      expect(first.bottom).to.be.at.most(second.top);
     } finally {
       restore();
     }
@@ -252,7 +356,7 @@ describe('region highlights', () => {
       el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } }];
       await el.updateComplete;
       const listener = oneEvent(el, 'lr-highlight-activate');
-      (el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement).click();
+      (el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement).click();
       const event = (await listener) as CustomEvent<{ id: string }>;
       expect(event.detail).to.deep.equal({ id: 'h1' });
     } finally {
@@ -282,7 +386,7 @@ describe('region highlights', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       el.highlights = [
         { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
-        { id: 'h2', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 10, height: 10 } } },
+        { id: 'h2', anchor: { kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } } },
       ];
       await el.updateComplete;
       const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
@@ -293,6 +397,72 @@ describe('region highlights', () => {
       const ok = await el.scrollToAnchor('h2');
       expect(ok).to.be.true;
       expect(scrolled).to.deep.equal(['h2']);
+    } finally {
+      restore();
+    }
+  });
+
+  it('matches equal region anchors structurally and does not claim an unmatched anchor', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'h1', anchor: { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } } },
+        { id: 'h2', anchor: { kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } } },
+      ];
+      await el.updateComplete;
+      const regions = Array.from(el.shadowRoot!.querySelectorAll('[part="region-highlight"]')) as HTMLElement[];
+      const scrolled: string[] = [];
+      for (const region of regions) region.scrollIntoView = () => scrolled.push(region.dataset.id!);
+
+      expect(
+        await el.scrollToAnchor({ kind: 'region', page: 1, rect: { x: 50, y: 50, width: 10, height: 10 } }),
+      ).to.be.true;
+      expect(scrolled).to.deep.equal(['h2']);
+      scrolled.length = 0;
+      expect(
+        await el.scrollToAnchor({ kind: 'region', rect: { x: 90, y: 90, width: 5, height: 5 } }),
+      ).to.be.false;
+      expect(scrolled).to.deep.equal([]);
+      expect(
+        await el.scrollToAnchor({ kind: 'region', page: 2, rect: { x: 50, y: 50, width: 10, height: 10 } }),
+      ).to.be.false;
+      expect(scrolled).to.deep.equal([]);
+    } finally {
+      restore();
+    }
+  });
+
+  it('maps each public highlight tone to its semantic border color', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      const tones = ['accent', 'success', 'warning', 'danger', 'neutral'] as const;
+      el.highlights = tones.map((tone, index) => ({
+        id: tone,
+        tone,
+        anchor: { kind: 'region', rect: { x: index * 10, y: 0, width: 5, height: 5 } },
+      }));
+      await el.updateComplete;
+      const tokenByTone = {
+        accent: '--lr-color-brand',
+        success: '--lr-color-success',
+        warning: '--lr-color-warning',
+        danger: '--lr-color-danger',
+        neutral: '--lr-color-neutral',
+      };
+      for (const tone of tones) {
+        const region = el.shadowRoot!.querySelector(`[data-id="${tone}"]`) as HTMLElement;
+        const probe = document.createElement('span');
+        probe.style.color = `var(${tokenByTone[tone]})`;
+        el.shadowRoot!.append(probe);
+        expect(getComputedStyle(region).borderTopColor).to.equal(getComputedStyle(probe).color);
+        probe.remove();
+      }
     } finally {
       restore();
     }

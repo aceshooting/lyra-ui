@@ -3,8 +3,6 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool-approval-dialog.class.js';
-import '../tool-approval-dialog/tool-approval-dialog.js';
-import '../../overlays/badge/badge.js';
 import { styles } from './approval-queue.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 

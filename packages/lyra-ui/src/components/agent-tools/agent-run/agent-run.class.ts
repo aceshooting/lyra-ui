@@ -11,16 +11,6 @@ import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './agent-run.styles.js';
 
-// Registers every custom element this component's own render() emits directly, so importing
-// this `.class.ts` module alone (with no separate wrapper import) is already fully functional --
-// mirrors `<lr-stream-status>`/`<lr-task-list>`'s own direct-registrar-import pattern (as opposed
-// to a bare `*.class.js` import, which registers nothing on its own).
-import '../../conversation/generation-status/generation-status.js';
-import '../../conversation/usage-badge/usage-badge.js';
-import '../task-list/task-list.js';
-import '../../overlays/badge/badge.js';
-import '../../overlays/empty/empty.js';
-import '../../utility/live-region/live-region.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
 /** Statuses for which the live elapsed-time ticker (and the built-in Cancel button) apply -- a

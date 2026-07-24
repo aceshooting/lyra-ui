@@ -1,7 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
+import { pauseIcon, playIcon } from '../../../internal/icons.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
+import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { styles } from './random-content.styles.js';
 
 export type LyraRandomContentAnimation = 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right';
@@ -17,9 +19,9 @@ export interface LyraRandomContentEventMap {
  * testimonial/quote rotation, or varying marketing copy on each render or
  * interval without any custom JS beyond slotting the candidates.
  *
- * Not a form-associated control and has no textual chrome of its own — a
- * pure content-rotation primitive over caller-supplied children, so the
- * label/hint/error frame doesn't apply.
+ * Not a form-associated control: it is a content-rotation primitive over
+ * caller-supplied children, so the label/hint/error frame doesn't apply.
+ * Its only built-in action is the autoplay pause/resume control.
  *
  * The host renders `display: block` by default, like the rest of this
  * family. A consumer needing an inline text-fragment swap inside a sentence
@@ -27,12 +29,11 @@ export interface LyraRandomContentEventMap {
  * that isn't baked in here, since `display: contents` on the host risks
  * accessibility-tree inconsistencies across engines.
  *
- * There is no built-in trigger UI (no next/previous/shuffle button):
- * selection is driven only by `autoplay`/`autoplayInterval` and the public
- * `randomize()` method. Consequently there is no keyboard interaction and no
- * RTL-aware arrow-key handling to implement here — that guarantee only
- * applies to components with roving/arrow-key navigation, which this one
- * structurally lacks.
+ * Selection is driven by `autoplay`/`autoplayInterval` and the public
+ * `randomize()` method. When autoplay is enabled, a built-in localized
+ * pause/resume action exposes the reflected `paused` state. Rotation also
+ * suspends while focus is anywhere inside the component and never hides a
+ * subtree that currently owns focus.
  *
  * `fade-left`/`fade-right` are physical-direction transforms (matching the
  * upstream naming this component mirrors), not "previous/next" navigational
@@ -45,6 +46,7 @@ export interface LyraRandomContentEventMap {
  * a slot-change-triggered reselection, or an autoplay tick). `detail: { items }` is the exact
  * array of elements now shown, in display order. Not emitted when the eligible pool is empty.
  * @csspart base - The wrapping element around the default slot.
+ * @csspart pause-button - The autoplay pause/resume action.
  * @cssprop [--lr-random-content-animation-duration=300ms] - Duration of the entrance animation.
  * @cssprop [--lr-random-content-animation-easing=ease] - Easing function for the entrance animation.
  * @cssprop [--lr-random-content-animation-translate=var(--lr-size-0-5em)] - Translation distance for directional animations.
@@ -57,6 +59,9 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   /** Whether the displayed selection automatically re-rolls on an interval. */
   @property({ type: Boolean, reflect: true }) autoplay = false;
+
+  /** Whether autoplay is user-paused. Reflected for external state styling. */
+  @property({ type: Boolean, reflect: true }) paused = false;
 
   /** Milliseconds between autoplay ticks. Clamped to a 1000ms floor. */
   @property({ type: Number, attribute: 'autoplay-interval' }) autoplayInterval = 3000;
@@ -77,6 +82,13 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   private sequenceCursor = 0;
   private previousSelection?: HTMLElement[];
   private lastPool: HTMLElement[] = [];
+  private managedPool = new Set<HTMLElement>();
+  private readonly authorState = new WeakMap<
+    HTMLElement,
+    { hiddenAttribute: string | null; ariaHidden: string | null }
+  >();
+  private focusWithin = false;
+  @state() private announcementsEnabled = false;
   // Distinguishes a genuine later `updated()` pass from the very first one.
   // Lit reports every declared reactive property as "changed" on the first
   // update (including `items`, which otherwise would make `updated()` run a
@@ -96,11 +108,16 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     // cycle (e.g. a virtualized list reordering this element) would leave
     // autoplay permanently stopped. Harmless no-op before the shadow tree's
     // slot exists yet (`eligible()` returns `[]`, gated off below).
+    if (this.hasUpdated) {
+      this.announcementsEnabled = false;
+      this.reselect({ announce: false });
+    }
     this.restartAutoplay();
   }
 
   override disconnectedCallback(): void {
     this.stopAutoplay();
+    this.restoreManagedPool();
     this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.mediaQuery = undefined;
     super.disconnectedCallback();
@@ -114,14 +131,16 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     // initial pool. `onSlotChange` below still exists for genuinely later
     // pool changes and as a fallback if `slotchange` is the only signal a
     // given engine ever fires for this content.
-    this.reselect();
+    this.reselect({ announce: false });
     this.restartAutoplay();
   }
 
   protected override updated(changed: PropertyValues): void {
     if (this.hasUpdatedOnce) {
       if (changed.has('items')) this.reselect();
-      if (changed.has('autoplay') || changed.has('autoplayInterval')) this.restartAutoplay();
+      if (changed.has('autoplay') || changed.has('autoplayInterval') || changed.has('paused')) {
+        this.restartAutoplay();
+      }
     }
     this.hasUpdatedOnce = true;
   }
@@ -203,7 +222,48 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
+  private preserveFocusedSubtree(pool: HTMLElement[], selected: HTMLElement[]): HTMLElement[] {
+    const active = deepActiveElement(this.ownerDocument);
+    const focusedItem = pool.find((item) => composedContains(item, active));
+    if (!focusedItem || selected.includes(focusedItem)) return selected;
+    return [...selected.slice(0, -1), focusedItem];
+  }
+
+  private captureAndRestorePool(pool: HTMLElement[]): void {
+    const nextPool = new Set(pool);
+    for (const item of this.managedPool) {
+      if (!nextPool.has(item)) this.restoreAuthorState(item);
+    }
+    for (const item of pool) {
+      if (!this.authorState.has(item)) {
+        this.authorState.set(item, {
+          hiddenAttribute: item.getAttribute('hidden'),
+          ariaHidden: item.getAttribute('aria-hidden'),
+        });
+      }
+    }
+    this.managedPool = nextPool;
+  }
+
+  private restoreAuthorState(item: HTMLElement): void {
+    const original = this.authorState.get(item);
+    if (!original) return;
+    if (original.hiddenAttribute === null) item.removeAttribute('hidden');
+    else item.setAttribute('hidden', original.hiddenAttribute);
+    if (original.ariaHidden === null) item.removeAttribute('aria-hidden');
+    else item.setAttribute('aria-hidden', original.ariaHidden);
+    this.authorState.delete(item);
+  }
+
+  private restoreManagedPool(): void {
+    for (const item of this.managedPool) this.restoreAuthorState(item);
+    this.managedPool.clear();
+    this.lastPool = [];
+    this.previousSelection = undefined;
+  }
+
   private applySelection(pool: HTMLElement[], selected: HTMLElement[]): void {
+    this.captureAndRestorePool(pool);
     const selectedSet = new Set(selected);
     for (const el of pool) {
       const shown = selectedSet.has(el);
@@ -212,18 +272,20 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
-  private reselect(options: { resetPrevious?: boolean } = {}): HTMLElement[] {
+  private reselect(options: { resetPrevious?: boolean; announce?: boolean } = {}): HTMLElement[] {
     const pool = this.eligible();
     this.lastPool = pool;
     if (pool.length === 0) {
+      this.captureAndRestorePool(pool);
       this.previousSelection = undefined;
       return [];
     }
     if (options.resetPrevious) this.previousSelection = undefined;
     const count = this.clampedCount(pool.length);
-    const selected = this.computeSelectionForMode(pool, count);
+    const selected = this.preserveFocusedSubtree(pool, this.computeSelectionForMode(pool, count));
     this.applySelection(pool, selected);
     this.previousSelection = selected;
+    if (options.announce !== false) this.announcementsEnabled = true;
     this.emit('lr-content-change', { items: selected });
     return selected;
   }
@@ -255,24 +317,57 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   private restartAutoplay(): void {
     this.stopAutoplay();
-    if (!this.autoplay || this.reduceMotion || this.eligible().length < 2) return;
+    if (!this.autoplay || this.paused || this.focusWithin || this.reduceMotion || this.eligible().length < 2) return;
     const interval = finiteDuration(this.autoplayInterval, 3000, 1000);
     this.timer = window.setInterval(() => {
       this.reselect();
     }, interval);
   }
 
+  private onFocusIn = (): void => {
+    this.focusWithin = true;
+    this.stopAutoplay();
+  };
+
+  private onFocusOut = (): void => {
+    queueMicrotask(() => {
+      this.focusWithin = composedContains(this, deepActiveElement(this.ownerDocument));
+      if (!this.focusWithin) this.restartAutoplay();
+    });
+  };
+
+  private togglePaused = (): void => {
+    this.paused = !this.paused;
+  };
+
   override render(): TemplateResult {
     const hostLabel = this.getAttribute('aria-label');
-    return html`<div
-      part="base"
-      role="status"
-      aria-live=${this.autoplay ? 'off' : 'polite'}
-      aria-atomic="true"
-      aria-label=${hostLabel === null ? nothing : hostLabel}
-    >
-      <slot @slotchange=${this.onSlotChange}></slot>
-    </div>`;
+    return html`
+      <div
+        part="base"
+        role="status"
+        aria-live=${this.autoplay || !this.announcementsEnabled ? 'off' : 'polite'}
+        aria-atomic="true"
+        aria-label=${hostLabel === null ? nothing : hostLabel}
+        @focusin=${this.onFocusIn}
+        @focusout=${this.onFocusOut}
+      >
+        <slot @slotchange=${this.onSlotChange}></slot>
+      </div>
+      ${this.autoplay
+        ? html`<button
+            part="pause-button"
+            type="button"
+            aria-pressed=${this.paused ? 'true' : 'false'}
+            aria-label=${this.localize(this.paused ? 'randomContentResume' : 'randomContentPause')}
+            @focusin=${this.onFocusIn}
+            @focusout=${this.onFocusOut}
+            @click=${this.togglePaused}
+          >
+            ${this.paused ? playIcon() : pauseIcon()}
+          </button>`
+        : nothing}
+    `;
   }
 }
 

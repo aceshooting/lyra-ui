@@ -2,6 +2,7 @@ export * from './dataset-viewer.class.js';
 import { html } from 'lit';
 import { LyraDatasetViewer } from './dataset-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
+import '../../layout/virtual-list/virtual-list.js';
 import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 
 defineElement('dataset-viewer', LyraDatasetViewer);

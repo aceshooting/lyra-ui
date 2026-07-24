@@ -6,7 +6,7 @@
 - **Class** `LyraDocumentPreview`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/document-preview/document-preview.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 15 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -102,7 +102,10 @@ used both for `status="converting"` and this component's own in-flight text fetc
 rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
-`data-tone`, `data-active`; image format only), `frame-viewport`/`frame-content`/`frame-controls`/
+`data-tone`, `data-active`; image format only), `region-highlight-target` (transparent activation
+geometry with a minimum hit area independent of the visual rectangle), `highlight-actions`
+(non-overlapping actions used when multiple minimum hit areas would overlap),
+`region-highlight-action` (one action in that list), `frame-viewport`/`frame-content`/`frame-controls`/
 `frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-zoomable-frame>`
 while `zoomable`; image format only)
 
@@ -110,7 +113,8 @@ while `zoomable`; image format only)
 consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` means the preview grows
 with its content until a caller opts in. `--lr-document-preview-font` (default `ui-monospace,
 SFMono-Regular, Menlo, Consolas, monospace`) and `--lr-document-preview-spin-duration` (default
-`0.8s`, stopped under reduced motion). `--lr-document-preview-progress` (default `0`) — a unitless
+`var(--lr-transition-ambient)`, stopped under reduced motion). `--lr-document-preview-progress`
+(default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
 repaint the fraction. `--lr-document-preview-active-border` (default
@@ -121,7 +125,11 @@ state hooks it is an inline `var()` fallback at the point of use rather than a `
 so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
 invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
 re-pointing the shared `--lr-color-warning`/`--lr-color-brand` tokens as the only lever, repainting
-every other element that read them. Plus shared tokens
+every other element that read them. The tone-specific resting border and hover tint use
+`--lr-document-preview-highlight-accent-color`, `--lr-document-preview-highlight-success-color`,
+`--lr-document-preview-highlight-warning-color`, `--lr-document-preview-highlight-danger-color`,
+and `--lr-document-preview-highlight-neutral-color` (defaulting respectively to the matching
+brand/success/warning/danger/neutral color tokens). Plus shared tokens
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.

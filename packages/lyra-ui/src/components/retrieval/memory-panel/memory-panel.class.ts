@@ -2,6 +2,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
 import type { ConfirmBarTone } from '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../provenance-panel/provenance-panel.class.js';
@@ -354,7 +355,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
             e.stopPropagation();
             this.resolveForgetAllDecision(false);
           }}
-          >${this.localize('memoryPanelConfirmForgetBody', undefined, { count: this.longTerm.length })}</lr-confirm-bar
+          >${this.localize('memoryPanelConfirmForgetBody', undefined, {
+            count: getNumberFormat(this.effectiveLocale).format(this.longTerm.length),
+          })}</lr-confirm-bar
         >
       `;
     }

@@ -26,6 +26,10 @@ export const styles = css`
   [part='indicator'][data-due] {
     background: var(--lr-poll-status-due-bg, var(--lr-color-success));
   }
+  [part='indicator'][data-inactive] {
+    animation: none;
+    opacity: var(--lr-opacity-disabled);
+  }
   @keyframes lr-poll-status-pulse {
     0%, 100% {
       opacity: 1;
@@ -52,9 +56,13 @@ export const styles = css`
     padding: var(--lr-size-0-125rem);
     border-radius: var(--lr-radius);
   }
-  [part='pause-button']:hover {
+  [part='pause-button']:hover:not(:disabled) {
     background: var(--lr-color-brand-quiet);
     color: var(--lr-color-brand);
+  }
+  [part='pause-button']:disabled {
+    cursor: default;
+    opacity: var(--lr-opacity-disabled);
   }
   [part='pause-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

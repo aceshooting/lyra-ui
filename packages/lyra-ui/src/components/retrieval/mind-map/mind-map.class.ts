@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { layoutMindMap, type LyraTopic, type MindMapLayoutResult, type PlacedTopic } from './mind-map-layout.js';
 import { styles } from './mind-map.styles.js';
 
@@ -47,6 +48,9 @@ const NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Ho
  */
 export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
+  static override get observedAttributes(): string[] {
+    return [...new Set([...super.observedAttributes, 'dir', 'lang'])];
+  }
 
   /** A single root sits at the center; multiple roots hang off an implicit center hub whose
    *  visible text is `label`. */
@@ -68,6 +72,50 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   @state() private liveText = '';
 
   private cachedLayout: MindMapLayoutResult = { placed: [], links: [], width: 0, height: 0, centerX: 0, centerY: 0 };
+  private resizeObserver?: ResizeObserver;
+  private resizeRafId?: number;
+  private observedSize = '';
+  private layoutInvalidated = true;
+  private layoutContext = '';
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.layoutInvalidated = true;
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        const rect = entries[0]?.contentRect;
+        const size = rect ? `${rect.width}:${rect.height}` : '';
+        if (size && size === this.observedSize) return;
+        this.observedSize = size;
+        if (this.resizeRafId != null) cancelAnimationFrame(this.resizeRafId);
+        this.resizeRafId = requestAnimationFrame(() => {
+          this.resizeRafId = undefined;
+          if (this.isConnected) {
+            this.layoutInvalidated = true;
+            this.requestUpdate();
+          }
+        });
+      });
+      this.resizeObserver.observe(this);
+    }
+  }
+
+  override disconnectedCallback(): void {
+    if (this.resizeRafId != null) cancelAnimationFrame(this.resizeRafId);
+    this.resizeRafId = undefined;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.observedSize = '';
+    super.disconnectedCallback();
+  }
+
+  override attributeChangedCallback(name: string, oldValue: string | null, value: string | null): void {
+    super.attributeChangedCallback(name, oldValue, value);
+    if ((name === 'dir' || name === 'lang') && oldValue !== value) {
+      this.layoutInvalidated = true;
+      this.requestUpdate();
+    }
+  }
 
   /** `expandDepth`, normalized to a finite non-negative integer (falling back to the property's own
    *  default of `1`) -- a raw `NaN` (e.g. an invalid `expand-depth` attribute) would otherwise make
@@ -110,8 +158,22 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('topics') || changed.has('expandDepth') || changed.has('expandedOverrides') || changed.has('label')) {
+    const hubLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
+    const context = `${hubLabel}\u0000${isRtl(this) ? 'rtl' : 'ltr'}\u0000${this.ringGapPx()}`;
+    const structuralChange =
+      changed.has('topics') ||
+      changed.has('expandDepth') ||
+      changed.has('expandedOverrides') ||
+      changed.has('label') ||
+      changed.has('strings') ||
+      changed.has('locale');
+    if (this.layoutInvalidated || structuralChange || context !== this.layoutContext) {
       this.relayout();
+      this.layoutContext = context;
+      this.layoutInvalidated = false;
+      if (this.focusedId && !this.cachedLayout.placed.some((topic) => topic.id === this.focusedId)) {
+        this.focusedId = this.cachedLayout.placed[0]?.id ?? null;
+      }
     }
   }
 
@@ -138,9 +200,17 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   }
 
   private announce(node: PlacedTopic): void {
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     this.liveText = node.hasChildren
-      ? this.localize('mindMapTopicStatus', undefined, { label: node.label, level: node.depth + 1, count: this.childrenOf(node.id).length })
-      : this.localize('mindMapLeafStatus', undefined, { label: node.label, level: node.depth + 1 });
+      ? this.localize('mindMapTopicStatus', undefined, {
+          label: node.label,
+          level: numberFormat.format(node.depth + 1),
+          count: numberFormat.format(this.childrenOf(node.id).length),
+        })
+      : this.localize('mindMapLeafStatus', undefined, {
+          label: node.label,
+          level: numberFormat.format(node.depth + 1),
+        });
   }
 
   private focusNodeById(id: string): void {
@@ -208,6 +278,25 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     };
   }
 
+  private renderSemanticNode(
+    node: PlacedTopic,
+    childrenByParent: Map<string | null, PlacedTopic[]>,
+  ): TemplateResult {
+    const children = childrenByParent.get(node.id) ?? [];
+    return html`
+      <div
+        role="treeitem"
+        aria-level=${node.depth + 1}
+        aria-expanded=${node.hasChildren ? (node.expanded ? 'true' : 'false') : nothing}
+      >
+        <span>${node.label}</span>
+        ${children.length
+          ? html`<div role="group">${children.map((child) => this.renderSemanticNode(child, childrenByParent))}</div>`
+          : nothing}
+      </div>
+    `;
+  }
+
   override render(): TemplateResult {
     const layout = this.cachedLayout;
     if (layout.placed.length === 0) {
@@ -215,6 +304,12 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
     }
     const ariaLabel = this.getAttribute('aria-label') || this.label || this.localize('mindMapLabel');
     const byId = new Map(layout.placed.map((p) => [p.id, p]));
+    const childrenByParent = new Map<string | null, PlacedTopic[]>();
+    for (const topic of layout.placed) {
+      const siblings = childrenByParent.get(topic.parentId);
+      if (siblings) siblings.push(topic);
+      else childrenByParent.set(topic.parentId, [topic]);
+    }
     const focused = this.focusedId ? byId.get(this.focusedId) : undefined;
     return html`
       <div part="base">
@@ -244,6 +339,9 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
           )}
           ${focused ? svg`<circle part="focus-ring" cx=${focused.x} cy=${focused.y} r="10"></circle>` : nothing}
         </svg>
+        <div class="sr-only" role="tree" aria-label=${ariaLabel}>
+          ${(childrenByParent.get(null) ?? []).map((topic) => this.renderSemanticNode(topic, childrenByParent))}
+        </div>
         <div id="mind-map-live" part="live-region" class="sr-only" role="status" aria-live="polite">${this.liveText}</div>
       </div>
     `;

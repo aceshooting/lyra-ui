@@ -47,12 +47,15 @@ describe('lr-dataset-viewer', () => {
     // block into `case 'error'` -- role="alert" and error-styled chrome for a state that isn't
     // actually a failure (matching <lr-calendar-viewer>'s identical zero-events handling).
     const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    let renderErrors = 0;
+    el.addEventListener('lr-render-error', () => { renderErrors++; });
     const restore = fetchText('name\tage\tcity');
     try {
       el.src = 'https://example.test/empty.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This dataset has no rows.');
       expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('This dataset has no rows.');
       expect(el.shadowRoot!.querySelector('[role="alert"]')).to.equal(null);
+      expect(renderErrors).to.equal(0);
     } finally { restore(); }
   });
   it('honors a host aria-label over the computed row-count caption when name is unset', async () => {
@@ -64,27 +67,55 @@ describe('lr-dataset-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Team roster');
     } finally { restore(); }
   });
-  it('still lets name take precedence over a host aria-label', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Ignored"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+  it('lets an explicit host aria-label take precedence over name', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer name="Data" aria-label="Team roster"></lr-dataset-viewer>`)) as LyraDatasetViewer;
     const restore = fetchText(TAB_DATA);
     try {
       el.src = 'https://example.test/a.tsv';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Data: 2 rows');
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.equal('Team roster');
+    } finally { restore(); }
+  });
+  it('localizes the interpolated row count', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer lang="ar"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(TAB_DATA);
+    try {
+      el.src = 'https://example.test/a.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="table"]')!.getAttribute('aria-label')).to.contain(new Intl.NumberFormat('ar').format(2));
     } finally { restore(); }
   });
   it('supports a .strings override for the empty-state message', async () => {
     const el = (await fixture(html`<lr-dataset-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.', documentPreviewTypeDataset: 'jeu de données' }}></lr-dataset-viewer>`)) as LyraDatasetViewer;
     expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun jeu de données à afficher.');
   });
-  it('rejects unsafe URLs', async () => {
-    const el = (await fixture(html`<lr-dataset-viewer src="javascript:alert(1)"></lr-dataset-viewer>`)) as LyraDatasetViewer;
-    await el.updateComplete;
+  it('rejects unsafe URLs and emits exactly one render error', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    let count = 0;
+    el.addEventListener('lr-render-error', () => { count++; });
+    const event = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:alert(1)';
+    await event;
+    await aTimeout(0);
     expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
+    expect(count).to.equal(1);
   });
   it('registers tsv/psv/dat but not csv or unrelated files', () => {
     expect(findDocumentRenderer({ name: 'a.tsv', mimeType: 'application/octet-stream', src: 'x' })).to.exist;
     expect(findDocumentRenderer({ name: 'a.csv', mimeType: 'text/csv', src: 'x' })).to.not.exist;
+  });
+  it('reloads an already-loaded source after reconnecting', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(response(TAB_DATA)); }) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-dataset-viewer src="https://example.test/a.tsv"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="table"]') !== null);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => calls === 2);
+    } finally { window.fetch = original; }
   });
   it('is accessible', async () => { const el = await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`); await expect(el).to.be.accessible(); });
 
@@ -221,6 +252,29 @@ describe('lr-dataset-viewer', () => {
       }
     });
 
+    it('resolves an anchor and highlight in the header row, deduplicating repeated public ids', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.be.true;
+        el.highlights = [
+          { id: 'duplicate', anchor: { kind: 'cell-range', range: 'A1' }, label: 'First' },
+          { id: 'duplicate', anchor: { kind: 'cell-range', range: 'B1' }, label: 'Ignored duplicate' },
+        ];
+        await el.updateComplete;
+        const header = el.shadowRoot!.querySelector('[part="header-row"]')!;
+        expect(header.querySelectorAll('[part~="cell-highlight"]')).to.have.lengthOf(1);
+        const highlighted = header.querySelector('[part~="cell-highlight"]')!;
+        expect(highlighted.getAttribute('role')).to.equal('columnheader');
+        const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLElement;
+        expect(action).to.exist;
+        expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
+        expect(getComputedStyle(action).minBlockSize).to.equal('40px');
+      } finally { restore(); }
+    });
+
     it('resolves false for an anchor with a sheet set', async () => {
       const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
       shrinkAnchorRetry(el);
@@ -229,6 +283,37 @@ describe('lr-dataset-viewer', () => {
         el.src = 'https://example.test/data.tsv';
         await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
         expect(await el.scrollToAnchor({ kind: 'cell-range', sheet: 'Sheet1', range: 'A1' })).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('truthfully rejects rows and columns outside the parsed grid', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      shrinkAnchorRetry(el);
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A999' })).to.be.false;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'K2' })).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('scrolls the addressed body column horizontally into view', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText(GRID_DATASET);
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part="data-row"]') != null);
+        const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+        const target = list.shadowRoot!.querySelector('[part="data-row"]')!.querySelectorAll('[part~="cell"]')[1] as HTMLElement;
+        let scrolled = false;
+        target.scrollIntoView = () => { scrolled = true; };
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B2' })).to.be.true;
+        expect(scrolled).to.be.true;
       } finally {
         restore();
       }
@@ -244,6 +329,44 @@ describe('lr-dataset-viewer', () => {
       } finally {
         restore();
       }
+    });
+
+    it('caps retained search matches before allocating an unbounded result list', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      (el as unknown as { fetchState: unknown }).fetchState = {
+        kind: 'loaded',
+        table: {
+          fields: ['value'],
+          rows: Array.from({ length: 1_001 }, () => ({ value: 'hit' })),
+        },
+      };
+      await el.updateComplete;
+      expect(await el.search('hit')).to.equal(1_000);
+      expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(1_000);
+    });
+
+    it('searches header fields and case-folds with the effective locale', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer lang="tr"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText('İSTANBUL,role\nAnkara,capital');
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.search('istanbul')).to.equal(1);
+      } finally { restore(); }
+    });
+
+    it('recomputes an active search when the host language changes', async () => {
+      const el = (await fixture(html`<lr-dataset-viewer lang="en"></lr-dataset-viewer>`)) as LyraDatasetViewer;
+      const restore = fetchText('City\nİSTANBUL\nistanbul');
+      try {
+        el.src = 'https://example.test/data.tsv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="table"]') !== null);
+        expect(await el.search('istanbul')).to.equal(1);
+        el.lang = 'tr';
+        await el.updateComplete;
+        await aTimeout(0);
+        expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(2);
+      } finally { restore(); }
     });
 
     it('searchNext/searchPrevious wrap, and clearSearch resets to 0/-1', async () => {
@@ -338,6 +461,21 @@ describe('lr-dataset-viewer', () => {
         restore();
       }
     });
+  });
+
+  it('does not leak internal virtual-list events through the viewer host', async () => {
+    const el = (await fixture(html`<lr-dataset-viewer></lr-dataset-viewer>`)) as LyraDatasetViewer;
+    const restore = fetchText(GRID_DATASET);
+    try {
+      el.src = 'https://example.test/data.tsv';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      let leaked = 0;
+      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-scroll']) {
+        el.addEventListener(name as never, () => { leaked++; });
+        el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+      }
+      expect(leaked).to.equal(0);
+    } finally { restore(); }
   });
 
   describe('back-compat', () => {

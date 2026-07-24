@@ -18,6 +18,7 @@ export const styles = css`
        treatment) so this popup can't overflow off-screen on a short/keyboard-shrunk viewport. */
     max-block-size: min(var(--lr-size-16rem), var(--lr-positioner-available-block-size, var(--lr-size-16rem)));
     overflow-y: auto;
+    overflow-x: clip;
     inline-size: max-content;
     min-inline-size: min(var(--lr-size-14rem), var(--lr-positioner-available-inline-size, var(--lr-size-14rem)));
     max-inline-size: min(var(--lr-popover-viewport-clamp), var(--lr-size-24rem), var(--lr-positioner-available-inline-size, 100vw));
@@ -32,12 +33,13 @@ export const styles = css`
     transition:
       opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast),
-      visibility var(--lr-transition-fast);
+      visibility 0s linear var(--lr-transition-fast);
   }
   :host([open]) [part='listbox'] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
+    transition-delay: 0s, 0s, 0s;
   }
   @media (prefers-reduced-motion: reduce) {
     [part='listbox'] {
@@ -50,6 +52,7 @@ export const styles = css`
     align-items: flex-start;
     gap: var(--lr-space-xs);
     inline-size: 100%;
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
     cursor: pointer;
@@ -108,5 +111,6 @@ export const styles = css`
     padding: var(--lr-space-s) var(--lr-space-m);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-md-sm);
+    overflow-wrap: anywhere;
   }
 `;

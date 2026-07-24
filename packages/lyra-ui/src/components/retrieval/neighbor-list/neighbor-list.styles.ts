@@ -30,7 +30,9 @@ export const styles = css`
     display: flex;
     align-items: baseline;
     gap: var(--lr-space-xs);
-    min-inline-size: 0;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-size-2px) 0;
     border: none;
     background: transparent;

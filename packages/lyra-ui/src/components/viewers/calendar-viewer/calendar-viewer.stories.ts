@@ -10,3 +10,8 @@ const source = `data:text/calendar;charset=utf-8,${encodeURIComponent(SAMPLE_ICS
 export const Default: Story = { render: () => html`<lr-calendar-viewer style="max-inline-size: 30rem;" src=${source} name="meeting.ics"></lr-calendar-viewer>` };
 export const NoSourceSet: Story = { render: () => html`<lr-calendar-viewer style="max-inline-size: 30rem;"></lr-calendar-viewer>` };
 export const MaxHeight: Story = { render: () => html`<lr-calendar-viewer style="max-inline-size: 30rem;" max-height="8rem" src=${source} name="meeting.ics"></lr-calendar-viewer>` };
+
+/** Baseline narrow-allocation coverage with deliberately long event content. */
+export const Narrow320: Story = {
+  render: () => html`<div style="max-width:320px"><lr-calendar-viewer src=${source} name="Long quarterly planning calendar.ics"></lr-calendar-viewer></div>`,
+};

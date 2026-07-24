@@ -20,37 +20,41 @@ export const styles = css`
     outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
-  :host([interactive]) [part='rect'] {
+  [part='rect-target'] {
+    position: absolute;
+    z-index: var(--lr-layer-content);
+    box-sizing: border-box;
     pointer-events: auto;
     cursor: pointer;
+    transform: translate(-50%, -50%);
   }
-  :host([interactive]) [part='rect']:hover {
+  [part='rect-target']:hover + [part='rect'] {
     outline-width: var(--lr-border-width-medium);
   }
-  [part='rect'][data-tone='success'] {
+  [part='rect']:where([data-tone='success']) {
     background: var(--lr-color-success-quiet);
     outline-color: var(--lr-color-success);
   }
-  [part='rect'][data-tone='warning'] {
+  [part='rect']:where([data-tone='warning']) {
     background: var(--lr-color-warning-quiet);
     outline-color: var(--lr-color-warning);
   }
-  [part='rect'][data-tone='danger'] {
+  [part='rect']:where([data-tone='danger']) {
     background: var(--lr-color-danger-quiet);
     outline-color: var(--lr-color-danger);
   }
-  [part='rect'][data-tone='neutral'] {
+  [part='rect']:where([data-tone='neutral']) {
     background: var(--lr-color-surface-raised);
     outline-color: var(--lr-color-text-quiet);
   }
-  [part='rect'][data-active] {
+  [part='rect']:where([data-active]) {
     outline-width: var(--lr-border-width-medium);
   }
-  [part='rect']:focus-visible {
+  [part='rect-target']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='rect'][data-flash] {
+  [part='rect']:where([data-flash]) {
     background: var(--lr-color-brand);
     animation: lr-highlight-layer-flash var(--lr-transition-ambient);
   }
@@ -63,7 +67,7 @@ export const styles = css`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    [part='rect'][data-flash] {
+    [part='rect']:where([data-flash]) {
       animation: none;
       outline-width: var(--lr-border-width-medium);
     }

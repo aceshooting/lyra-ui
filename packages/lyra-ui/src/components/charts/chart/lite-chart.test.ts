@@ -1996,6 +1996,35 @@ describe('review remediation regressions', () => {
     expect(Number(barHit.getAttribute('width'))).to.be.at.least(24);
   });
 
+  it('shows keyboard focus across the compliant hit geometry of tiny and zero-height marks', async () => {
+    const line = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [1] }]}
+      ></lr-lite-chart>
+    `);
+    const point = line.shadowRoot!.querySelector('[part="point"]') as SVGGraphicsElement;
+    const pointHit = line.shadowRoot!.querySelector(
+      '[data-mark-hit-target="point"]',
+    ) as SVGGraphicsElement;
+    point.focus();
+    expect(getComputedStyle(pointHit).stroke).to.not.equal('none');
+
+    const bars = await mount(html`
+      <lr-lite-chart
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [0] }]}
+      ></lr-lite-chart>
+    `);
+    const bar = bars.shadowRoot!.querySelector('[part="bar"]') as SVGGraphicsElement;
+    const barHit = bars.shadowRoot!.querySelector(
+      '[data-mark-hit-target="bar"]',
+    ) as SVGGraphicsElement;
+    bar.focus();
+    expect(getComputedStyle(barHit).stroke).to.not.equal('none');
+  });
+
   it('localizes custom mark announcement positions without appending fixed punctuation', async () => {
     const el = await mount(html`
       <lr-lite-chart

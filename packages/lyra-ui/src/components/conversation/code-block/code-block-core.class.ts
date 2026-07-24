@@ -34,7 +34,6 @@ export interface LyraCodeBlockCoreEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
   'lr-line-click': CustomEvent<{ line: number }>;
-  'lr-highlight-activate': CustomEvent<{ id: string }>;
   'lr-text-select': CustomEvent<{ text: string; anchor: LyraAnchor; rects: DOMRect[] }>;
 }
 /**
@@ -83,9 +82,6 @@ export interface LyraCodeBlockCoreEventMap {
  *   `<lr-thinking-panel>`'s own `lr-toggle`.
  * @event lr-line-click - A gutter line number was activated (click, or Enter/Space while
  *   focused) while `interactive-lines` is set. `detail: { line }`.
- * @event lr-highlight-activate - Declared for parity with this library's other anchor-target
- *   viewers so a consumer can attach a listener without a type error; not currently emitted by
- *   this component. `detail: { id }`.
  * @event lr-text-select - Fired when a text selection inside the code body ends. `detail: {
  *   text, anchor, rects }`; `anchor` is a `line-range` anchor covering the selected lines.
  * @csspart base - The outer container.

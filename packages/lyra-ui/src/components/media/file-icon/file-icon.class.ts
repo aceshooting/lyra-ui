@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
-import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/attachment-chip.js';
+import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../attachment-chip/file-size.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getFileTypeMetadata, type LyraFileTypeIcon } from './file-type-metadata.js';
 import { styles } from './file-icon.styles.js';

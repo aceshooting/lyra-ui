@@ -4,10 +4,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './file-tree.styles.js';
-// The registering barrels (not the bare *.class.js modules) -- these side effects are what make
-// <lr-tree> and <lr-file-icon> actually-defined tags by the time this component renders them.
-import '../tree/tree.js';
-import '../../media/file-icon/file-icon.js';
 import type { LyraTree, TreeItem, TreeBadge } from '../tree/tree.class.js';
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.

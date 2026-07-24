@@ -41,6 +41,8 @@ export const styles = css`
     display: inline-flex;
     align-items: baseline;
     box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0 var(--lr-size-0-3em);
     border: var(--lr-border-width-thin) solid var(--lr-citation-badge-border);
     border-radius: calc(var(--lr-radius) * 0.6);

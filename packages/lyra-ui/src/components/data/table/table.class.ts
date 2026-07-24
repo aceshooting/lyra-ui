@@ -18,9 +18,6 @@ import { styles } from './table.styles.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
-import '../pagination/pagination.js';
-import '../../overlays/spinner/spinner.js';
-import '../../overlays/skeleton/skeleton.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate

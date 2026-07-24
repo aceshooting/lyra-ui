@@ -114,3 +114,12 @@ it('gives the disclosure header hover/focus-visible', () => {
   expect(css).to.match(/\[part='header'\]:hover/);
   expect(css).to.match(/\[part='header'\]:focus-visible[^{]*\{[^}]*outline:/);
 });
+
+it('formats section counts with the effective locale', async () => {
+  const el = (await fixture(html`<lr-provenance-panel lang="ar-u-nu-arab"></lr-provenance-panel>`)) as LyraProvenancePanel;
+  el.provenance = {
+    entities: Array.from({ length: 12 }, (_, index) => ({ id: `entity-${index}`, label: `Entity ${index}` })),
+  };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent).to.equal('١٢');
+});

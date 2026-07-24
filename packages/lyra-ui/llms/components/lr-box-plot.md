@@ -45,8 +45,8 @@ instead of `canvas` when the optional box-plot peer fails to load)
 (also `getComputedStyle`-resolved on every draw), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here.
 
-**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` (plus `chart.js` transitively, loaded
-independently of the base `chart-loader.ts`).
+**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; Chart.js is obtained
+through the same cached `chart-loader.ts` used by `lr-chart`.
 
 ```html
 <lr-box-plot y-label="Latency (ms)"></lr-box-plot>

@@ -1,4 +1,10 @@
 export * from './agent-run.class.js';
+import '../../conversation/generation-status/generation-status.js';
+import '../../conversation/usage-badge/usage-badge.js';
+import '../task-list/task-list.js';
+import '../../overlays/badge/badge.js';
+import '../../overlays/empty/empty.js';
+import '../../utility/live-region/live-region.js';
 import { LyraAgentRun } from './agent-run.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 defineElement('agent-run', LyraAgentRun);

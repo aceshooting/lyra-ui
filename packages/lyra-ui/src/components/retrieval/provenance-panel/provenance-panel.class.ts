@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import type { LyraPathElement } from '../path-strip/path-strip.class.js';
 import type { LyraCommunity } from '../community-card/community-card.class.js';
@@ -77,7 +78,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
       <div part="section">
         <button part="header" type="button" aria-expanded=${expanded ? 'true' : 'false'} aria-controls=${bodyId} @click=${() => this.toggleSection(section)}>
           <span>${this.localize(titleKey)}</span>
-          <span part="count">${count}</span>
+          <span part="count">${getNumberFormat(this.effectiveLocale).format(count)}</span>
         </button>
         <div part="body" id=${bodyId} ?hidden=${!expanded}>${body}</div>
       </div>

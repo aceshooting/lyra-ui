@@ -215,3 +215,13 @@ it('is accessible in the populated compact and plain states', async () => {
   )) as LyraEntityCard;
   await expect(plainEl).to.be.accessible();
 });
+
+it('formats numeric properties and degree with the effective locale', async () => {
+  const el = (await fixture(html`<lr-entity-card lang="ar-u-nu-arab"></lr-entity-card>`)) as LyraEntityCard;
+  el.entity = { ...entity, properties: { year: 1867 }, degree: 1234 };
+  await el.updateComplete;
+  const property = el.shadowRoot!.querySelector('[part="property"]') as LyraResultField;
+  const degree = el.shadowRoot!.querySelector('[part="degree"]') as LyraResultField;
+  expect(property.value).to.equal('١٬٨٦٧');
+  expect(degree.value).to.equal('١٬٢٣٤');
+});

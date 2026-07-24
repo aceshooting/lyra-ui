@@ -1,5 +1,6 @@
 import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
 import { TEXT_QUOTE_CONTEXT_CHARS } from '../components/viewers/document-viewer/anchors.js';
+import { getSegmenter } from './intl-cache.js';
 
 const SOFT_HYPHEN = '­';
 // ECMAScript's `\s` already covers every Unicode Space_Separator code point plus NBSP and
@@ -133,18 +134,187 @@ export function scopeFromItems(items: { text: string; element: Element }[]): Tex
   return { text, segments };
 }
 
-function findAllOccurrences(haystack: string, needle: string, caseInsensitive: boolean): number[] {
-  const h = caseInsensitive ? haystack.toLowerCase() : haystack;
-  const n = caseInsensitive ? needle.toLowerCase() : needle;
-  const positions: number[] = [];
+interface TextOccurrence {
+  start: number;
+  end: number;
+  foldedStart?: number;
+  foldedEnd?: number;
+}
+
+interface FoldedText {
+  text: string;
+  expansions: CaseExpansion[];
+}
+
+interface CaseExpansion {
+  rawStart: number;
+  rawEnd: number;
+  foldedStart: number;
+  foldedEnd: number;
+}
+
+function caseFold(value: string, locale?: string): string {
+  let lowered: string;
+  if (!locale) {
+    lowered = value.toLowerCase();
+  } else {
+    try {
+      lowered = value.toLocaleLowerCase(locale);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      lowered = value.toLowerCase();
+    }
+  }
+  // Locale lower-casing preserves an already-lowercase final sigma (`ς`) while a standalone
+  // uppercase/medial sigma query becomes `σ`. Unicode caseless matching treats both as equivalent.
+  return lowered.replaceAll('ς', 'σ');
+}
+
+interface CaseMappingSegment {
+  text: string;
+  rawStart: number;
+  rawEnd: number;
+}
+
+function segmenterFor(locale?: string): Intl.Segmenter {
+  try {
+    return getSegmenter(locale, { granularity: 'grapheme' });
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return getSegmenter(undefined, { granularity: 'grapheme' });
+    }
+    throw error;
+  }
+}
+
+function* caseMappingSegments(value: string, locale?: string): Generator<CaseMappingSegment> {
+  if (typeof Intl.Segmenter === 'function') {
+    for (const { segment, index } of segmenterFor(locale).segment(value)) {
+      yield {
+        text: segment,
+        rawStart: index,
+        rawEnd: index + segment.length,
+      };
+    }
+    return;
+  }
+
+  let rawStart = 0;
+  for (const text of value) {
+    yield { text, rawStart, rawEnd: rawStart + text.length };
+    rawStart += text.length;
+  }
+}
+
+/** Locale-folds the complete string so contextual Unicode casing is preserved, while retaining a
+ * sparse map only for graphemes whose UTF-16 length expands or contracts. Same-length documents
+ * need no Segmenter and no per-character offset arrays; the sparse expansion map keeps values such
+ * as English `İ` and Lithuanian accent-sensitive `I` aligned with DOM offsets. */
+function foldText(value: string, locale?: string): FoldedText {
+  const text = caseFold(value, locale);
+  if (text.length === value.length) return { text, expansions: [] };
+
+  let isolatedTotal = 0;
+  for (const segment of caseMappingSegments(value, locale)) {
+    isolatedTotal += caseFold(segment.text, locale).length;
+  }
+
+  const expansions: CaseExpansion[] = [];
+  let foldedStart = 0;
+  for (const segment of caseMappingSegments(value, locale)) {
+    const foldedEnd = segment.rawEnd === value.length
+      ? text.length
+      : isolatedTotal === text.length
+        ? foldedStart + caseFold(segment.text, locale).length
+        : caseFold(value.slice(0, segment.rawEnd), locale).length;
+    if (foldedEnd - foldedStart !== segment.rawEnd - segment.rawStart) {
+      expansions.push({
+        rawStart: segment.rawStart,
+        rawEnd: segment.rawEnd,
+        foldedStart,
+        foldedEnd,
+      });
+    }
+    foldedStart = foldedEnd;
+  }
+  return { text, expansions };
+}
+
+function rawStartForFoldedOffset(folded: FoldedText, foldedOffset: number): number {
+  let adjustment = 0;
+  for (const expansion of folded.expansions) {
+    if (foldedOffset < expansion.foldedStart) break;
+    if (foldedOffset < expansion.foldedEnd) return expansion.rawStart;
+    adjustment +=
+      (expansion.foldedEnd - expansion.foldedStart) -
+      (expansion.rawEnd - expansion.rawStart);
+  }
+  return foldedOffset - adjustment;
+}
+
+function rawEndForFoldedOffset(folded: FoldedText, foldedOffset: number): number {
+  let adjustment = 0;
+  for (const expansion of folded.expansions) {
+    if (foldedOffset <= expansion.foldedStart) break;
+    if (foldedOffset <= expansion.foldedEnd) return expansion.rawEnd;
+    adjustment +=
+      (expansion.foldedEnd - expansion.foldedStart) -
+      (expansion.rawEnd - expansion.rawStart);
+  }
+  return foldedOffset - adjustment;
+}
+
+function findAllOccurrences(
+  haystack: string,
+  needle: string,
+  caseInsensitive: boolean,
+  locale?: string,
+): TextOccurrence[] {
+  const foldedHaystack = caseInsensitive ? foldText(haystack, locale) : undefined;
+  const foldedNeedle = caseInsensitive ? caseFold(needle, locale) : needle;
+  const searchableHaystack = foldedHaystack?.text ?? haystack;
+  const positions: TextOccurrence[] = [];
   let from = 0;
   for (;;) {
-    const index = h.indexOf(n, from);
+    const index = searchableHaystack.indexOf(foldedNeedle, from);
     if (index === -1) break;
-    positions.push(index);
+    if (foldedHaystack) {
+      positions.push({
+        start: rawStartForFoldedOffset(foldedHaystack, index),
+        end: rawEndForFoldedOffset(foldedHaystack, index + foldedNeedle.length),
+        foldedStart: index,
+        foldedEnd: index + foldedNeedle.length,
+      });
+    } else {
+      positions.push({ start: index, end: index + needle.length });
+    }
     from = index + 1;
   }
   return positions;
+}
+
+function foldedStartForRawOffset(folded: FoldedText, rawOffset: number): number {
+  let adjustment = 0;
+  for (const expansion of folded.expansions) {
+    if (rawOffset < expansion.rawStart) break;
+    if (rawOffset < expansion.rawEnd) return expansion.foldedStart;
+    adjustment +=
+      (expansion.foldedEnd - expansion.foldedStart) -
+      (expansion.rawEnd - expansion.rawStart);
+  }
+  return rawOffset + adjustment;
+}
+
+function foldedEndForRawOffset(folded: FoldedText, rawOffset: number): number {
+  let adjustment = 0;
+  for (const expansion of folded.expansions) {
+    if (rawOffset <= expansion.rawStart) break;
+    if (rawOffset <= expansion.rawEnd) return expansion.foldedEnd;
+    adjustment +=
+      (expansion.foldedEnd - expansion.foldedStart) -
+      (expansion.rawEnd - expansion.rawStart);
+  }
+  return rawOffset + adjustment;
 }
 
 /** Binary-searches `scope.segments` (sorted by `normalizedStart`) for the segment containing
@@ -195,53 +365,62 @@ function rangeFromOffsets(scope: TextQuoteScope, start: number, end: number): Ra
 export function resolveTextQuote(
   scope: TextQuoteScope,
   anchor: { quote: string; prefix?: string; suffix?: string },
+  locale?: string,
 ): Range | null {
   const quote = normalizeQuoteText(anchor.quote);
   if (!quote) return null;
   const prefix = anchor.prefix ? normalizeQuoteText(anchor.prefix) : undefined;
   const suffix = anchor.suffix ? normalizeQuoteText(anchor.suffix) : undefined;
 
-  let candidates = findAllOccurrences(scope.text, quote, false);
-  if (candidates.length === 0) candidates = findAllOccurrences(scope.text, quote, true);
+  let candidates = findAllOccurrences(scope.text, quote, false, locale);
+  if (candidates.length === 0) candidates = findAllOccurrences(scope.text, quote, true, locale);
   if (candidates.length === 0) return null;
+  if (!prefix && !suffix) {
+    const first = candidates[0]!;
+    return rangeFromOffsets(scope, first.start, first.end);
+  }
 
+  const foldedScope = foldText(scope.text, locale);
+  const foldedPrefix = prefix ? caseFold(prefix, locale) : undefined;
+  const foldedSuffix = suffix ? caseFold(suffix, locale) : undefined;
   let best = candidates[0]!; // safe: candidates.length > 0 checked above
   let bestScore = -1;
-  for (const start of candidates) {
+  for (const candidate of candidates) {
     let score = 0;
-    if (prefix) {
-      const before = scope.text.slice(Math.max(0, start - prefix.length), start);
-      if (before.toLowerCase() === prefix.toLowerCase()) score += 1;
+    const foldedStart = candidate.foldedStart
+      ?? foldedStartForRawOffset(foldedScope, candidate.start);
+    const foldedEnd = candidate.foldedEnd
+      ?? foldedEndForRawOffset(foldedScope, candidate.end);
+    if (foldedPrefix) {
+      const availableBefore = foldedScope.text.slice(0, foldedStart).trimEnd();
+      const before = availableBefore.slice(
+        Math.max(0, availableBefore.length - foldedPrefix.length),
+      );
+      if (before === foldedPrefix) score += 1;
     }
-    if (suffix) {
-      const end = start + quote.length;
-      const after = scope.text.slice(end, end + suffix.length);
-      if (after.toLowerCase() === suffix.toLowerCase()) score += 1;
+    if (foldedSuffix) {
+      const after = foldedScope.text.slice(foldedEnd).trimStart().slice(0, foldedSuffix.length);
+      if (after === foldedSuffix) score += 1;
     }
     if (score > bestScore) {
       bestScore = score;
-      best = start;
+      best = candidate;
     }
   }
 
-  return rangeFromOffsets(scope, best, best + quote.length);
+  return rangeFromOffsets(scope, best.start, best.end);
 }
 
 /** Returns every DOM range matching a normalized text query, in document order. Used by
  * text-oriented viewers to implement search navigation without losing the normalized-to-DOM
  * offset mapping that text-quote anchors already use. */
-export function findTextQuoteRanges(scope: TextQuoteScope, query: string): Range[] {
+export function findTextQuoteRanges(scope: TextQuoteScope, query: string, locale?: string): Range[] {
   const needle = normalizeQuoteText(query);
   if (!needle) return [];
-  const haystack = scope.text.toLocaleLowerCase();
-  const normalizedNeedle = needle.toLocaleLowerCase();
   const ranges: Range[] = [];
-  for (let from = 0; ; ) {
-    const index = haystack.indexOf(normalizedNeedle, from);
-    if (index < 0) break;
-    const range = rangeFromOffsets(scope, index, index + needle.length);
+  for (const occurrence of findAllOccurrences(scope.text, needle, true, locale)) {
+    const range = rangeFromOffsets(scope, occurrence.start, occurrence.end);
     if (range) ranges.push(range);
-    from = index + 1;
   }
   return ranges;
 }

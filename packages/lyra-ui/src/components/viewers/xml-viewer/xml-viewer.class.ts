@@ -4,13 +4,21 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, readResponseText, LyraResourceLimitError } from '../../../internal/resource-loader.js';
+import {
+  isAbortError,
+  isResourceLimitError,
+  readResponseText,
+  LyraResourceLimitError,
+  LyraUserFacingError,
+} from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './xml-viewer.styles.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 const MAX_NODES = 50_000;
+const MAX_DEPTH = 256;
 
 type PathSegment = number | string;
 
@@ -70,10 +78,17 @@ function findParserError(doc: Document): string | null {
   return errorEl ? (errorEl.textContent ?? 'XML parse error') : null;
 }
 
-function countNodes(node: Node): number {
-  let count = 1;
-  for (const child of Array.from(node.childNodes)) count += countNodes(child);
-  return count;
+function validateDocumentComplexity(node: Node): void {
+  const pending: Array<{ node: Node; depth: number }> = [{ node, depth: 0 }];
+  let count = 0;
+  while (pending.length) {
+    const current = pending.pop()!;
+    count++;
+    if (count > MAX_NODES || current.depth > MAX_DEPTH) throw new LyraResourceLimitError();
+    for (const child of Array.from(current.node.childNodes)) {
+      pending.push({ node: child, depth: current.depth + 1 });
+    }
+  }
 }
 
 /** Resolves a `node-path` (element child-indices, with an optional trailing `'@attrName'`
@@ -206,6 +221,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
 
   private searchQuery = '';
   private searchState: SearchState = EMPTY_SEARCH;
+  private lastSearchLocale = '';
   private generation = 0;
 
   /** `collapsedDepth`, normalized to a finite non-negative integer when set -- `undefined`
@@ -217,13 +233,41 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
     return this.collapsedDepth === undefined ? undefined : finiteCount(this.collapsedDepth);
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    const locale = this.effectiveLocale;
+    if (this.lastSearchLocale && locale !== this.lastSearchLocale && this.xmlState.kind === 'loaded') {
+      this.searchState = this.computeSearch(this.xmlState.doc);
+      this.activeSearchIndex = this.searchState.ordered.length
+        ? Math.min(Math.max(0, this.activeSearchIndex), this.searchState.ordered.length - 1)
+        : -1;
+    }
+    this.lastSearchLocale = locale;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('src') && this._xml === undefined) {
+    if ((changed.has('src') || changed.has('xml')) && this._xml === undefined) {
       this.scheduleAfterUpdate(() => {
         void this.loadFromSrc();
       });
     }
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src && this._xml === undefined) {
+      this.scheduleAfterUpdate(() => {
+        void this.loadFromSrc();
+      });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    this.beginAbortableLoad();
+    if (this._xml === undefined) this.xmlState = { kind: 'idle' };
+    super.disconnectedCallback();
   }
 
   private parseInline(raw: string): void {
@@ -251,12 +295,15 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
     }
     const url = safeFetchUrl(this.src);
     if (!url) {
-      this.xmlState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') };
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.xmlState = { kind: 'error', message: error.message };
+      this.emit('lr-render-error', { error });
       return;
     }
     this.xmlState = { kind: 'loading' };
     try {
       const response = await fetch(url, signal ? { signal } : undefined);
+      if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const text = await readResponseText(response);
       if (!this.isConnected || generation !== this.generation) return;
@@ -285,7 +332,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
       return;
     }
     try {
-      if (countNodes(doc) > MAX_NODES) throw new LyraResourceLimitError();
+      validateDocumentComplexity(doc);
     } catch (error) {
       this.xmlState = { kind: 'error', message: this.localize('xmlViewerTooManyNodes') };
       this.emit('lr-render-error', { error });
@@ -307,7 +354,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
   }
 
   private computeSearch(doc: Document): SearchState {
-    const query = this.searchQuery.trim().toLowerCase();
+    const locale = this.effectiveLocale;
+    const query = this.searchQuery.trim().toLocaleLowerCase(locale);
     const matches = new Set<string>();
     const tagMatches = new Set<string>();
     const attrMatches = new Set<string>();
@@ -325,12 +373,15 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
       paths.add(pathKey);
       if (query) {
         let hit = false;
-        if (el.tagName.toLowerCase().includes(query)) {
+        if (el.tagName.toLocaleLowerCase(locale).includes(query)) {
           tagMatches.add(pathKey);
           hit = true;
         }
         for (const attr of Array.from(el.attributes)) {
-          if (attr.name.toLowerCase().includes(query) || attr.value.toLowerCase().includes(query)) {
+          if (
+            attr.name.toLocaleLowerCase(locale).includes(query) ||
+            attr.value.toLocaleLowerCase(locale).includes(query)
+          ) {
             attrMatches.add(attrKey(pathKey, attr.name));
             hit = true;
           }
@@ -339,7 +390,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
           .filter((n) => n.nodeType === Node.TEXT_NODE)
           .map((n) => n.textContent ?? '')
           .join('')
-          .toLowerCase();
+          .toLocaleLowerCase(locale);
         if (ownText.includes(query)) {
           textMatches.add(pathKey);
           hit = true;
@@ -387,6 +438,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
     this.searchQuery = query;
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;
     this.activeSearchIndex = this.searchState.ordered.length ? 0 : -1;
+    this.requestUpdate();
     this.emitSearchChange();
     return this.searchState.ordered.length;
   }
@@ -407,6 +459,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
     this.searchQuery = '';
     this.searchState = this.xmlState.kind === 'loaded' ? this.computeSearch(this.xmlState.doc) : EMPTY_SEARCH;
     this.activeSearchIndex = -1;
+    this.requestUpdate();
     this.emitSearchChange();
   }
 
@@ -518,7 +571,11 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
           )}&gt;</span
         >
         ${!expanded && hasChildren
-          ? html`<span class="preview">${this.localize(children.length === 1 ? 'xmlViewerChildCount' : 'xmlViewerChildCountPlural', undefined, { count: children.length })}</span>`
+          ? html`<span class="preview">${this.localize(
+              children.length === 1 ? 'xmlViewerChildCount' : 'xmlViewerChildCountPlural',
+              undefined,
+              { count: getNumberFormat(this.effectiveLocale).format(children.length) },
+            )}</span>`
           : nothing}
         ${this.renderCopyButton(() => new XMLSerializer().serializeToString(el), toggleLabel)}
       </div>
@@ -544,6 +601,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
     return html`
       <div
         part="base"
+        role="region"
         style=${this.maxHeight ? `--lr-xml-viewer-max-height:${this.maxHeight}` : nothing}
         aria-label=${label}
         aria-busy=${state.kind === 'loading' ? 'true' : 'false'}

@@ -43,6 +43,10 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(-1 * var(--lr-focus-ring-width));
   }
+  [part='pane-old']:hover,
+  [part='pane-new']:hover {
+    border-color: var(--lr-color-border-strong);
+  }
 
   [part='pane-header'] {
     font-weight: var(--lr-font-weight-semibold);

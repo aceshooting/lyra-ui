@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import './random-content.js';
 
 const meta: Meta = {
   title: 'Random Content',
@@ -54,5 +55,15 @@ export const SequenceAutoplay: Story = {
     >
       Show next
     </button>
+  `,
+};
+
+export const PausedAutoplay: Story = {
+  render: () => html`
+    <lr-random-content autoplay paused mode="sequence" aria-label="Paused announcement rotator">
+      <p>Announcement one</p>
+      <p>Announcement two</p>
+      <p>Announcement three</p>
+    </lr-random-content>
   `,
 };

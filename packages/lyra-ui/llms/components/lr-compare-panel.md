@@ -22,7 +22,8 @@ recorded winner, host-writable to reflect a previously-recorded vote back. `item
 (attribute `item-id`) — an opaque id round-tripped through `lr-vote`. `hideTie: boolean = false`
 (attribute `hide-tie`) and `hideBothBad: boolean = false` (attribute `hide-both-bad`) hide the
 corresponding vote button. `syncScroll: boolean = false` (attribute `sync-scroll`) links both panes'
-scroll position.
+scroll position. `disabled: boolean = false` (reflected) disables every vote button and suppresses
+`lr-vote`.
 
 **Slots:** `a` (the first output — any content, a chat message, markdown, a viewer), `b` (the second
 output), and `prompt` (optional shared-input header above both panes).

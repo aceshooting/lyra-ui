@@ -14,6 +14,13 @@ registerDocumentRenderer('application/geo+json', {
     const el = document.createElement('lr-geojson-view') as LyraGeojsonView;
     el.src = file.src;
     el.name = file.name;
+    el.anchor = file.anchor ?? null;
+    el.highlights = file.highlights ?? [];
     return el;
+  },
+  capabilities: {
+    anchors: ['text-quote', 'fragment'],
+    search: true,
+    textSelect: true,
   },
 });

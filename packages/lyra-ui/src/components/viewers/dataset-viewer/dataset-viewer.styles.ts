@@ -30,13 +30,13 @@ export const styles = css`
      can't be expressed as a [data-active] attribute selector chained onto ::part() (unsupported),
      so renderCell() sets the --lr-dataset-viewer-highlight-color custom property inline instead
      -- custom properties inherit through the shadow boundary the same as anywhere else. */
-  lr-virtual-list::part(cell-highlight) { outline: var(--lr-border-width-medium) solid var(--lr-dataset-viewer-highlight-color, var(--lr-color-brand)); outline-offset: calc(-1 * var(--lr-border-width-medium)); cursor: pointer; padding: 0; }
+  [part~='cell-highlight'], lr-virtual-list::part(cell-highlight) { outline: var(--lr-border-width-medium) solid var(--lr-dataset-viewer-highlight-color, var(--lr-color-brand)); outline-offset: calc(-1 * var(--lr-border-width-medium)); cursor: pointer; padding: 0; }
   /* A real action button (not a plain grid cell -- see [part='header-cell']/::part(cell) above),
      so it gets the shared minimum tappable floor in the block dimension via a min-block-size on
      top of the "all: unset" reset above; its inline size already spans the full cell
      (inline-size: 100%) so no min-inline-size is strictly needed to reach the floor there, but it
      is set anyway so the part is self-describing independent of its container. */
-  lr-virtual-list::part(cell-highlight-action) {
+  [part='cell-highlight-action'], lr-virtual-list::part(cell-highlight-action) {
     all: unset;
     box-sizing: border-box;
     display: block;
@@ -49,10 +49,10 @@ export const styles = css`
     white-space: nowrap;
     cursor: pointer;
   }
-  lr-virtual-list::part(cell-highlight-action):hover {
+  [part='cell-highlight-action']:hover, lr-virtual-list::part(cell-highlight-action):hover {
     background: var(--lr-color-brand-quiet);
   }
-  lr-virtual-list::part(cell-highlight-action):focus-visible {
+  [part='cell-highlight-action']:focus-visible, lr-virtual-list::part(cell-highlight-action):focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: calc(var(--lr-focus-ring-offset) * -1);
   }

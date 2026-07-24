@@ -23,6 +23,9 @@ export const styles = css`
     line-height: var(--lr-line-height-snug);
   }
   button[part~='item'] {
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: opacity var(--lr-transition-fast);

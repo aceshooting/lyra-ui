@@ -4,14 +4,21 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
+import {
+  isAbortError,
+  isResourceLimitError,
+  LyraUserFacingError,
+  readResponseArrayBuffer,
+} from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { invalidateLyraLocaleCache } from '../../../internal/localization.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
 import type { LyraAnchor, LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
+import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
 
 type FetchState =
@@ -52,6 +59,7 @@ interface DocxTextIndexEntry {
  *  wholesale per call, so a tone this pass has nothing for still needs an explicit empty call to
  *  clear whatever it painted last pass. */
 const HIGHLIGHT_TONES: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
+const MAX_DOCX_SEARCH_MATCHES = 1_000;
 
 /** Walks `root`'s text nodes in document order and returns their concatenated raw text alongside
  *  an offset table (`entries`) mapping each contiguous span back to the `Text` node that produced
@@ -191,6 +199,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   @state() private searchActiveIndex = -1;
 
   private generation = 0;
+  private lastLoadSrc = '';
   private loadLibrary: () => Promise<DocxDeps> = loadDocxDeps;
 
   /** Document-ordered heading outline, cached on every successful load (see `getHeadingTree()`). */
@@ -208,7 +217,15 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private searchQuery = '';
   private paintedSearchMarks: HTMLElement[] = [];
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
+      this.scheduleAfterUpdate(() => { void this.load(); });
+    }
+  }
+
   override disconnectedCallback(): void {
+    this.generation++;
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
@@ -251,6 +268,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   private async load(): Promise<void> {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
+    this.lastLoadSrc = this.src;
     if (!this.src) {
       this.fetchState = { kind: 'idle' };
       this.headingTree = [];
@@ -259,23 +277,27 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
     const url = safeFetchUrl(this.src);
     if (!url) {
-      this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') };
+      this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
 
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetch(url, signal ? { signal } : undefined);
+      if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
       const arrayBuffer = await readResponseArrayBuffer(response);
+      if (!this.isConnected || generation !== this.generation) return;
+      await assertDocxArchiveWithinLimits(arrayBuffer, undefined, undefined, { signal });
+      if (!this.isConnected || generation !== this.generation) return;
       const { mammoth, DOMPurify } = await this.loadLibrary();
       if (!this.isConnected || generation !== this.generation) return;
       if (!mammoth) {
-        this.fetchState = { kind: 'error', message: this.localize('docxViewerMissingConverter') };
+        this.failWithLocalizedMessage(this.localize('docxViewerMissingConverter'));
         return;
       }
       if (!DOMPurify) {
-        this.fetchState = { kind: 'error', message: this.localize('documentViewerMissingSanitizer') };
+        this.failWithLocalizedMessage(this.localize('documentViewerMissingSanitizer'));
         return;
       }
 
@@ -291,6 +313,12 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       };
       this.emit('lr-render-error', { error });
     }
+  }
+
+  private failWithLocalizedMessage(message: string): void {
+    const error = new LyraUserFacingError(message);
+    this.fetchState = { kind: 'error', message };
+    this.emit('lr-render-error', { error });
   }
 
   /** Parses the already-sanitized markup once (`DOMParser`), stamps a `Slugger`-computed `id` on
@@ -444,6 +472,10 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  `0`. Every match is painted immediately (see `paintSearchMatches()`), with the first one scrolled
    *  into view. */
   async search(query: string): Promise<number> {
+    // `lang` is a platform property rather than a Lit property, so it can change between user
+    // searches without scheduling a render pass to invalidate LyraElement's per-update locale
+    // memo. A search is itself a fresh locale-sensitive operation.
+    invalidateLyraLocaleCache(this);
     this.searchQuery = query;
     const root = this.contentRoot();
     const trimmed = query.trim();
@@ -455,13 +487,14 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       return 0;
     }
     const { text } = buildTextIndex(root);
-    const haystack = text.toLowerCase();
-    const needle = trimmed.toLowerCase();
+    const haystack = text.toLocaleLowerCase(this.effectiveLocale);
+    const needle = trimmed.toLocaleLowerCase(this.effectiveLocale);
     const matches: DocxSearchMatch[] = [];
     let from = 0;
     let idx: number;
     while ((idx = haystack.indexOf(needle, from)) !== -1) {
       matches.push({ start: idx, end: idx + needle.length });
+      if (matches.length >= MAX_DOCX_SEARCH_MATCHES) break;
       from = idx + Math.max(1, needle.length);
     }
     this.searchMatches = matches;
@@ -556,7 +589,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
           <div
             part="content"
             role="document"
-            aria-label=${this.name || this.getAttribute('aria-label') || this.localize('docxViewerLabel')}
+            aria-label=${this.getAttribute('aria-label') || this.name || this.localize('docxViewerLabel')}
             @click=${this.onContentClick}
           >
             ${unsafeHTML(this.fetchState.markup)}

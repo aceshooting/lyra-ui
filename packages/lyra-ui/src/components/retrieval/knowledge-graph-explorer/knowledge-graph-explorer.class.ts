@@ -3,6 +3,7 @@ import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './knowledge-graph-explorer.styles.js';
 import type { GraphNode, GraphLink, GraphNodeType, GraphCommunity, GraphRenderer, LyraGraph } from '../graph/graph.class.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
@@ -170,13 +171,23 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  microtask fallback (a keyboard Enter/Space activation, which -- unlike a native `<button>` --
    *  never dispatches a synthetic `click` on a `role="button"` SVG/canvas element). */
   private pendingNodeId?: string;
+  /** Invalidates focus work when a newer activation, direct selection, close, or disconnect wins. */
+  private activationGeneration = 0;
+  private internalSelectionAssignment?: { value: string | null };
   /** The exact rendered `[part="node"]` element resolved for the currently-open popover
    *  (`renderer="svg"`, direct-click path only) -- re-read on every `lr-viewport-change` so the
    *  popover keeps tracking a pan/zoom gesture or simulation tick while it stays open. */
   private trackedNodeEl?: Element;
+  private nodeById = new Map<string, GraphNode>();
+  private linksByNodeId = new Map<string, GraphLink[]>();
+  private degreeByNodeId = new Map<string, number>();
+  private communityLabelById = new Map<string, string | undefined>();
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('nodes') || changed.has('links') || changed.has('communities')) {
+      this.rebuildDerivedCollections();
+    }
     // A node removed from `nodes` (or `hiddenTypes` hiding its whole type) shouldn't leave a
     // dangling selection/popover pointed at nothing. `entityFor()` intentionally still resolves
     // hidden nodes for neighbor/path data, so visibility must be checked separately here.
@@ -185,30 +196,97 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
       this.selectedNodeId &&
       !this.isVisibleNode(this.selectedNodeId)
     ) {
-      this.selectedNodeId = null;
+      this.activationGeneration++;
+      this.setInternalSelectedNodeId(null);
       if (this.popoverEl) this.popoverEl.open = false;
     }
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!changed.has('selectedNodeId')) return;
+    const internallyAssigned =
+      this.internalSelectionAssignment !== undefined &&
+      Object.is(this.internalSelectionAssignment.value, this.selectedNodeId);
+    this.internalSelectionAssignment = undefined;
+    if (internallyAssigned) return;
+    const generation = ++this.activationGeneration;
+    const id = this.selectedNodeId;
+    if (!id) {
+      if (this.popoverEl) this.popoverEl.open = false;
+      return;
+    }
+    const graph = this.graphEl;
+    if (graph && this.isVisibleNode(id)) {
+      void this.activatePresetWhenGraphReady(id, graph, generation);
+    }
+  }
+
+  private async activatePresetWhenGraphReady(id: string, graph: LyraGraph, generation: number): Promise<void> {
+    await graph.updateComplete;
+    while (
+      generation === this.activationGeneration &&
+      this.isConnected &&
+      graph.isConnected &&
+      this.selectedNodeId === id &&
+      graph.shadowRoot?.querySelector('lr-skeleton')
+    ) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    if (
+      generation === this.activationGeneration &&
+      this.isConnected &&
+      this.selectedNodeId === id &&
+      this.isVisibleNode(id)
+    ) {
+      await this.activateEntity(id);
+    }
+  }
+
+  private setInternalSelectedNodeId(value: string | null): void {
+    this.internalSelectionAssignment = { value };
+    this.selectedNodeId = value;
+  }
+
+  override disconnectedCallback(): void {
+    this.activationGeneration++;
+    this.pendingNodeId = undefined;
+    this.trackedNodeEl = undefined;
+    super.disconnectedCallback();
+  }
+
+  private rebuildDerivedCollections(): void {
+    this.nodeById = new Map(this.nodes.map((node) => [node.id, node]));
+    this.communityLabelById = new Map(this.communities.map((community) => [community.id, community.label]));
+    const linksByNodeId = new Map<string, GraphLink[]>();
+    const degrees = new Map<string, number>();
+    for (const link of this.links) {
+      for (const id of new Set([link.source, link.target])) {
+        const adjacent = linksByNodeId.get(id);
+        if (adjacent) adjacent.push(link);
+        else linksByNodeId.set(id, [link]);
+        degrees.set(id, (degrees.get(id) ?? 0) + 1);
+      }
+    }
+    this.linksByNodeId = linksByNodeId;
+    this.degreeByNodeId = degrees;
+  }
+
   private isVisibleNode(id: string): boolean {
-    const node = this.nodes.find((candidate) => candidate.id === id);
+    const node = this.nodeById.get(id);
     return !!node && (node.type == null || !this.hiddenTypes.includes(node.type));
   }
 
   private nodeLabel(id: string): string {
-    return this.nodes.find((n) => n.id === id)?.label || id;
+    return this.nodeById.get(id)?.label || id;
   }
 
   private degreeOf(id: string): number {
-    let count = 0;
-    for (const link of this.links) {
-      if (link.source === id || link.target === id) count++;
-    }
-    return count;
+    return this.degreeByNodeId.get(id) ?? 0;
   }
 
   private entityFor(id: string): LyraEntity | undefined {
-    const node = this.nodes.find((n) => n.id === id);
+    const node = this.nodeById.get(id);
     if (!node) return undefined;
     const details = this.entityDetails[id];
     return {
@@ -224,12 +302,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   private communityLabelFor(communityId: string | undefined): string {
     if (!communityId) return '';
-    return this.communities.find((c) => c.id === communityId)?.label ?? communityId;
+    return this.communityLabelById.get(communityId) ?? communityId;
   }
 
   private neighborRowsFor(id: string): LyraNeighborRow[] {
     const rows: LyraNeighborRow[] = [];
-    for (const link of this.links) {
+    for (const link of this.linksByNodeId.get(id) ?? []) {
       if (link.source === id) {
         const node = this.entityFor(link.target);
         if (node) rows.push({ relation: link.label ?? '', direction: 'out', node });
@@ -242,14 +320,18 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private matchingNodes(): GraphNode[] | undefined {
-    const q = this.searchQuery.trim().toLowerCase();
+    const q = this.searchQuery.trim().toLocaleLowerCase(this.effectiveLocale);
     if (!q) return undefined;
-    return this.nodes.filter((n) => n.id.toLowerCase().includes(q) || (n.label ?? '').toLowerCase().includes(q));
+    return this.nodes.filter(
+      (node) =>
+        node.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
+        (node.label ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q),
+    );
   }
 
   private neighborIdsOf(id: string): Set<string> {
     const ids = new Set<string>();
-    for (const link of this.links) {
+    for (const link of this.linksByNodeId.get(id) ?? []) {
       if (link.source === id) ids.add(link.target);
       else if (link.target === id) ids.add(link.source);
     }
@@ -314,6 +396,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   private onSearchInput = (event: CustomEvent<{ value: string }>): void => {
+    event.stopPropagation();
     this.searchQuery = event.detail.value;
   };
 
@@ -327,10 +410,20 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  path-strip elements, `lr-entity-card`'s own built-in focus button, and the keyboard-Enter/
    *  Space fallback for a direct graph node activation. */
   private async activateEntity(id: string): Promise<void> {
-    this.selectedNodeId = id;
+    const generation = ++this.activationGeneration;
+    this.setInternalSelectedNodeId(id);
     this.trackedNodeEl = undefined;
     const graph = this.graphEl;
-    if (graph) await graph.focusNode(id);
+    const focused = graph ? await graph.focusNode(id) : false;
+    if (
+      generation !== this.activationGeneration ||
+      !this.isConnected ||
+      this.selectedNodeId !== id ||
+      !this.isVisibleNode(id) ||
+      !focused
+    ) {
+      return;
+    }
     const rect = graph?.getBoundingClientRect();
     if (!rect) return;
     this.openDetailAt(id, { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, width: 0, height: 0 });
@@ -364,7 +457,8 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   private onGraphNodeClick = (event: CustomEvent<{ id: string; x: number; y: number }>): void => {
     const id = event.detail.id;
-    this.selectedNodeId = id;
+    this.activationGeneration++;
+    this.setInternalSelectedNodeId(id);
     this.pendingNodeId = id;
     queueMicrotask(() => {
       if (this.pendingNodeId === id) {
@@ -403,8 +497,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   private onPopoverHide = (): void => {
+    this.activationGeneration++;
     this.trackedNodeEl = undefined;
-    this.selectedNodeId = null;
+    this.setInternalSelectedNodeId(null);
   };
 
   override render(): TemplateResult {
@@ -446,7 +541,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
                 ${matches.length === 0
                   ? this.localize('viewerSearchNoMatches')
                   : this.localize(matches.length === 1 ? 'viewerSearchMatchCount' : 'viewerSearchMatchCountPlural', undefined, {
-                      count: matches.length,
+                      count: getNumberFormat(this.effectiveLocale).format(matches.length),
                     })}
               </div>
             `

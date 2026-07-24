@@ -8,15 +8,6 @@ import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import type { LyraDetailsEventMap } from '../../layout/details/details.class.js';
 import type { LyraGroundingSummaryEventMap } from '../../retrieval/grounding-summary/grounding-summary.class.js';
 import type { ToolTimelineEntry, ToolTimelineApprovalDetail, LyraToolTimelineEventMap } from '../tool-timeline/tool-timeline.class.js';
-import '../../utility/live-region/live-region.js';
-import '../../overlays/progress/progress-bar.js';
-import '../../overlays/empty/empty.js';
-import '../../layout/details/details.js';
-import '../../overlays/badge/badge.js';
-import '../../conversation/markdown/markdown.js';
-import '../../conversation/code-block/code-block.js';
-import '../../retrieval/grounding-summary/grounding-summary.js';
-import '../tool-timeline/tool-timeline.js';
 import { styles } from './evaluation-run.styles.js';
 
 /** How an example's `input`/`output` text is rendered -- `'markdown'` (the default) through

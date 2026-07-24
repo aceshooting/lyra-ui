@@ -47,6 +47,23 @@ it('updates query as the composed lr-input reports user edits', async () => {
   expect(el.query).to.equal('solar inverter faults');
 });
 
+it('suppresses raw child input and mode-change events after consuming them', async () => {
+  const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+  let inputLeaks = 0;
+  let changeLeaks = 0;
+  el.addEventListener('lr-input', () => inputLeaks++);
+  el.addEventListener('lr-change', () => changeLeaks++);
+  queryInputOf(el).dispatchEvent(
+    new CustomEvent('lr-input', { detail: { value: 'solar' }, bubbles: true, composed: true }),
+  );
+  modeOf(el).dispatchEvent(
+    new CustomEvent('lr-change', { detail: { value: 'vector' }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(inputLeaks).to.equal(0);
+  expect(changeLeaks).to.equal(0);
+});
+
 it('updates mode as the composed lr-segmented reports a change', async () => {
   const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
   modeOf(el).dispatchEvent(new CustomEvent('lr-change', { detail: { value: 'vector' }, bubbles: true }));
@@ -192,16 +209,68 @@ describe('active filters/scope chips', () => {
     const verifiedChip = el.shadowRoot!.querySelector('[part="filters"] lr-chip[value="verified"]')!;
     expect(verifiedChip.textContent!.trim()).to.equal('verified: true');
     const tagsChip = el.shadowRoot!.querySelector('[part="filters"] lr-chip[value="tags"]')!;
-    expect(tagsChip.textContent!.trim()).to.equal('tags: solar, inverter');
+    expect(tagsChip.textContent!.trim()).to.equal('tags: solar and inverter');
+  });
+
+  it('formats numeric and list filter values with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search lang="ar-u-nu-arab"></lr-retrieval-search>`,
+    )) as LyraRetrievalSearch;
+    el.filters = { year: 2025, pages: [1, 2] };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-chip[value="year"]')!.textContent).to.include('٢٬٠٢٥');
+    expect(el.shadowRoot!.querySelector('lr-chip[value="pages"]')!.textContent).to.include('١ و٢');
+  });
+
+  it('normalizes non-finite numeric filter values before Intl formatting', async () => {
+    const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+    el.filters = { score: Number.NaN, distance: Number.POSITIVE_INFINITY };
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('lr-chip[value="score"]')!.textContent).to.include('score: 0');
+    expect(el.shadowRoot!.querySelector('lr-chip[value="distance"]')!.textContent).to.include('distance: 0');
+  });
+
+  it('suppresses a raw child remove event after consuming it', async () => {
+    const el = (await fixture(html`<lr-retrieval-search></lr-retrieval-search>`)) as LyraRetrievalSearch;
+    el.scope = ['engineering-docs'];
+    await el.updateComplete;
+    let leaked = 0;
+    el.addEventListener('lr-remove', () => leaked++);
+    el.shadowRoot!.querySelector('lr-chip[value="engineering-docs"]')!.dispatchEvent(
+      new CustomEvent('lr-remove', { detail: { value: 'engineering-docs' }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(leaked).to.equal(0);
   });
 });
 
 describe('loading / error / empty status region', () => {
-  it('shows a spinner while loading', async () => {
-    const el = (await fixture(html`<lr-retrieval-search loading></lr-retrieval-search>`)) as LyraRetrievalSearch;
-    expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
+  it('keeps the spinner semantic owner named after late host aria-label changes', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-search loading label="Knowledge search"></lr-retrieval-search>`,
+    )) as LyraRetrievalSearch;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+      shadowRoot: ShadowRoot;
+    };
+    const spinnerLabel = () =>
+      spinner.shadowRoot.querySelector('[role="status"]')!.getAttribute('aria-label');
+
+    expect(spinner).to.exist;
+    expect(spinnerLabel()).to.equal('Knowledge search');
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+
+    el.setAttribute('aria-label', 'Loading support knowledge');
+    await el.updateComplete;
+    await spinner.updateComplete;
+    expect(spinnerLabel()).to.equal('Loading support knowledge');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    await spinner.updateComplete;
+    expect(spinnerLabel()).to.equal('Knowledge search');
   });
 
   it('shows the host-supplied error message verbatim in a role="alert" region', async () => {

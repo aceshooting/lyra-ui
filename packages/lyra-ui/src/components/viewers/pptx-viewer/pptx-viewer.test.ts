@@ -35,6 +35,24 @@ function stubFetch(ok = true): () => void {
 }
 
 describe('lr-pptx-viewer', () => {
+  it('uses host aria-label, label, name, then the localized default for its region name', async () => {
+    const el = (await fixture(
+      html`<lr-pptx-viewer aria-label="Host deck" label="API deck" name="Visible deck"></lr-pptx-viewer>`,
+    )) as LyraPptxViewer;
+    const base = () => el.shadowRoot!.querySelector('[part="base"]')!;
+
+    expect(base().getAttribute('aria-label')).to.equal('Host deck');
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(base().getAttribute('aria-label')).to.equal('API deck');
+    el.label = '';
+    await el.updateComplete;
+    expect(base().getAttribute('aria-label')).to.equal('Visible deck');
+    el.name = '';
+    await el.updateComplete;
+    expect(base().getAttribute('aria-label')).to.equal('Presentation viewer');
+  });
+
   it('shows its persistent fidelity notice and idle state', async () => {
     const el = await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`);
     expect(el.shadowRoot!.querySelector('[part="notice"]')).to.exist;
@@ -189,6 +207,36 @@ describe('lr-pptx-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Failed to render this presentation');
     } finally {
       restore();
+    }
+  });
+
+  it('emits one render error for unsafe URL, missing renderer, and non-ok HTTP routes', async () => {
+    const unsafe = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+    const unsafeEvent = oneEvent(unsafe, 'lr-render-error');
+    unsafe.src = 'javascript:alert(1)';
+    expect((await unsafeEvent).detail.error).to.exist;
+
+    const restoreOk = stubFetch();
+    try {
+      const missing = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      missing.loadRenderer = async () => null;
+      const missingEvent = oneEvent(missing, 'lr-render-error');
+      missing.src = 'https://example.test/deck.pptx';
+      expect((await missingEvent).detail.error).to.exist;
+    } finally {
+      restoreOk();
+    }
+
+    const fake = fakeModule();
+    const restoreMissing = stubFetch(false);
+    try {
+      const http = (await fixture(html`<lr-pptx-viewer></lr-pptx-viewer>`)) as LyraPptxViewer;
+      http.loadRenderer = async () => fake.module;
+      const httpEvent = oneEvent(http, 'lr-render-error');
+      http.src = 'https://example.test/missing.pptx';
+      expect((await httpEvent).detail.error).to.exist;
+    } finally {
+      restoreMissing();
     }
   });
 

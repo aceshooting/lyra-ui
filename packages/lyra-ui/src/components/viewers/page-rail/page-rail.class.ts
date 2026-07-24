@@ -3,13 +3,13 @@ import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
-import '../../layout/virtual-list/virtual-list.js';
-import '../../overlays/skeleton/skeleton.js';
-import '../../media/file-icon/file-icon.js';
 import { styles } from './page-rail.styles.js';
 
 const DIGIT_BUFFER_MS = 500;
+const MAX_PAGE_COUNT = 100_000;
+const DEFAULT_ALLOCATION_WIDTH = 320;
 
 /** What `<lr-page-rail>` needs from a wired viewer -- a page-addressed viewer satisfies this
  *  structurally: a live `page` property plus `renderPageThumbnail()`, and the
@@ -73,15 +73,23 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   @state() private resolvedPageCount = 0;
   @state() private thumbnailStates = new Map<number, ThumbnailState>();
+  @state() private allocationWidth = DEFAULT_ALLOCATION_WIDTH;
 
   private readonly canvasRefs = new Map<number, (el: Element | undefined) => void>();
   private readonly canvases = new Map<number, HTMLCanvasElement>();
   private boundViewer: PageThumbnailSource | null = null;
   private digitBuffer = '';
   private digitTimer?: ReturnType<typeof setTimeout>;
+  private thumbnailGeneration = 0;
+  private resizeObserver?: ResizeObserver;
+  private targetObserver?: MutationObserver;
 
   private readonly onViewerLoad = (e: Event): void => {
-    this.resolvedPageCount = (e as CustomEvent<{ pageCount: number }>).detail.pageCount;
+    this.resolvedPageCount = finiteCount(
+      (e as CustomEvent<{ pageCount: number }>).detail?.pageCount ?? 0,
+      0,
+      MAX_PAGE_COUNT,
+    );
   };
 
   private readonly onViewerPageChange = (e: Event): void => {
@@ -90,11 +98,28 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (!this.hasUpdated || changed.has('viewer') || changed.has('for')) this.resolveViewer();
+    if (!this.hasUpdated || changed.has('viewer') || changed.has('for')) {
+      this.resolveViewer();
+      this.observeForTarget();
+    }
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        const width = finiteRange(
+          entries.at(-1)?.contentRect.width ?? DEFAULT_ALLOCATION_WIDTH,
+          DEFAULT_ALLOCATION_WIDTH,
+          0,
+        );
+        if (width === this.allocationWidth) return;
+        this.allocationWidth = width;
+        this.invalidateThumbnails();
+      });
+      this.resizeObserver.observe(this);
+    }
+    this.observeForTarget();
     // disconnectedCallback unbinds the wired viewer on every disconnect, but willUpdate only
     // rebinds on the first update or when `viewer`/`for` themselves change -- a bare reconnect
     // (e.g. a reparent) schedules no update and changes neither property, so rebind here or the
@@ -103,20 +128,40 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    this.targetObserver?.disconnect();
+    this.targetObserver = undefined;
     this.unbindViewer();
+    this.thumbnailGeneration++;
     clearTimeout(this.digitTimer);
+    super.disconnectedCallback();
   }
 
   private resolveViewer(): void {
     const next = this.viewer ?? this.lookupFor();
     if (next === this.boundViewer) return;
     this.unbindViewer();
+    this.resolvedPageCount = 0;
+    this.invalidateThumbnails();
     this.boundViewer = next;
     if (!next) return;
     this.page = next.page || this.page;
     next.addEventListener('lr-load', this.onViewerLoad);
     next.addEventListener('lr-page-change', this.onViewerPageChange);
+  }
+
+  private observeForTarget(): void {
+    this.targetObserver?.disconnect();
+    this.targetObserver = undefined;
+    if (!this.isConnected || !this.for || typeof MutationObserver === 'undefined') return;
+    this.targetObserver = new MutationObserver(() => this.resolveViewer());
+    this.targetObserver.observe(this.getRootNode(), {
+      attributes: true,
+      attributeFilter: ['id'],
+      childList: true,
+      subtree: true,
+    });
   }
 
   private unbindViewer(): void {
@@ -136,7 +181,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
    *  `Array.from({ length: count }, ...)` (a negative/NaN length throws) and every page-bounds
    *  check derived from it. */
   private get safePageCount(): number {
-    return finiteCount(this.pageCount, 0);
+    return finiteCount(this.pageCount, 0, MAX_PAGE_COUNT);
   }
 
   /** `page` normalized to a finite integer clamped into `[1, effectivePageCount()]` (or held at the
@@ -152,7 +197,10 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
    *  `renderPageThumbnail()`'s `{ width }` option -- an invalid attribute value would otherwise ask
    *  a wired viewer to rasterize a `NaN`/negative-width thumbnail. */
   private get safeThumbWidth(): number {
-    return finiteRange(this.thumbWidth, 96, 0);
+    return Math.min(
+      finiteRange(this.thumbWidth, 96, 0),
+      finiteRange(this.allocationWidth, DEFAULT_ALLOCATION_WIDTH, 0),
+    );
   }
 
   private effectivePageCount(): number {
@@ -175,14 +223,32 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     return cb;
   }
 
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has('thumbWidth') && changed.get('thumbWidth') !== undefined) this.invalidateThumbnails();
+  }
+
+  private invalidateThumbnails(): void {
+    const generation = ++this.thumbnailGeneration;
+    this.thumbnailStates = new Map();
+    const canvases = [...this.canvases.entries()];
+    this.scheduleAfterUpdate(() => {
+      if (generation !== this.thumbnailGeneration) return;
+      for (const [page, canvas] of canvases) void this.loadThumbnail(page, canvas);
+    });
+  }
+
   private async loadThumbnail(pageNumber: number, canvas: HTMLCanvasElement): Promise<void> {
     const viewer = this.boundViewer;
     if (!viewer) return;
-    this.thumbnailStates.set(pageNumber, 'pending');
-    this.requestUpdate();
+    const generation = this.thumbnailGeneration;
+    const width = this.safeThumbWidth;
+    const pending = new Map(this.thumbnailStates);
+    pending.set(pageNumber, 'pending');
+    this.thumbnailStates = pending;
     let ok: boolean;
     try {
-      ok = await viewer.renderPageThumbnail(pageNumber, canvas, { width: this.safeThumbWidth });
+      ok = await viewer.renderPageThumbnail(pageNumber, canvas, { width });
     } catch {
       // A rejected renderPageThumbnail() (decode error, detached canvas, resource exhaustion, ...)
       // is otherwise an unhandled rejection that leaves this page's skeleton spinning forever --
@@ -190,9 +256,15 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
       // placeholder instead.
       ok = false;
     }
-    if (this.canvases.get(pageNumber) !== canvas) return;
-    this.thumbnailStates.set(pageNumber, ok ? 'ready' : 'unavailable');
-    this.requestUpdate();
+    if (
+      generation !== this.thumbnailGeneration ||
+      viewer !== this.boundViewer ||
+      width !== this.safeThumbWidth ||
+      this.canvases.get(pageNumber) !== canvas
+    ) return;
+    const settled = new Map(this.thumbnailStates);
+    settled.set(pageNumber, ok ? 'ready' : 'unavailable');
+    this.thumbnailStates = settled;
   }
 
   private pageHighlightSummary(pageNumber: number): { count: number; tones: LyraHighlightTone[] } {
@@ -220,19 +292,23 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     }, DIGIT_BUFFER_MS);
     const target = Number(this.digitBuffer);
     const count = this.effectivePageCount();
-    if (target >= 1 && target <= count) this.page = target;
+    if (target >= 1 && target <= count) {
+      if (this.boundViewer) this.onPageActivate(target);
+      else this.page = target;
+    }
   };
 
   private renderPageItem = (pageNumber: unknown): TemplateResult => {
     const number = pageNumber as number;
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     const { count, tones } = this.pageHighlightSummary(number);
     const thumbState = this.thumbnailStates.get(number);
     const name =
       count === 0
-        ? this.localize('pageRailPage', undefined, { page: number })
+        ? this.localize('pageRailPage', undefined, { page: numberFormat.format(number) })
         : this.localize(count === 1 ? 'pageRailPageHighlighted' : 'pageRailPageHighlightedPlural', undefined, {
-            page: number,
-            count,
+            page: numberFormat.format(number),
+            count: numberFormat.format(count),
           });
     const shownTones = tones.slice(0, 3);
     const overflow = tones.length - shownTones.length;
@@ -242,7 +318,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
         part=${isCurrent ? 'page page-current' : 'page'}
         type="button"
         aria-label=${name}
-        aria-current=${isCurrent ? 'true' : nothing}
+        aria-current=${isCurrent ? 'true' : 'false'}
         @click=${() => this.onPageActivate(number)}
       >
         <span part="thumbnail">
@@ -254,11 +330,11 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
                   : nothing}`
             : html`<lr-file-icon decorative></lr-file-icon>`}
         </span>
-        <span part="page-number" aria-hidden="true">${number}</span>
+        <span part="page-number" aria-hidden="true">${numberFormat.format(number)}</span>
         ${count > 0
           ? html`<span part="heat" aria-hidden="true">
               ${shownTones.map((tone) => html`<span part="heat-dot heat-dot-${tone}" data-tone=${tone}></span>`)}
-              ${overflow > 0 ? html`<span part="heat-dot heat-dot-overflow" data-overflow="true">+${overflow}</span>` : nothing}
+              ${overflow > 0 ? html`<span part="heat-dot heat-dot-overflow" data-overflow="true">+${numberFormat.format(overflow)}</span>` : nothing}
             </span>`
           : nothing}
       </button>
@@ -269,7 +345,12 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     const count = this.effectivePageCount();
     const items = Array.from({ length: count }, (_unused, i) => i + 1);
     return html`
-      <div part="base" @keydown=${this.onKeyDown} aria-label=${this.label || this.localize('pageRailLabel')}>
+      <div
+        part="base"
+        role="navigation"
+        @keydown=${this.onKeyDown}
+        aria-label=${this.getAttribute('aria-label') || this.label || this.localize('pageRailLabel')}
+      >
         <lr-virtual-list
           part="pages"
           exportparts="page:page, page-current:page-current, thumbnail:thumbnail, page-number:page-number, heat:heat, heat-dot:heat-dot, heat-dot-accent:heat-dot-accent, heat-dot-success:heat-dot-success, heat-dot-warning:heat-dot-warning, heat-dot-danger:heat-dot-danger, heat-dot-neutral:heat-dot-neutral, heat-dot-overflow:heat-dot-overflow"

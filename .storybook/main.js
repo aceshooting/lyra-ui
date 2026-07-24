@@ -3,11 +3,25 @@ import { join } from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import { codecovVitePlugin } from '@codecov/vite-plugin';
+import { createGroupedStoryIndexer } from './story-indexer.js';
+import { storyTitlePlugin } from './story-title-plugin.js';
 
 /** @type { import('@storybook/web-components-vite').StorybookConfig } */
 const config = {
   stories: ['../packages/lyra-ui/src/components/**/*.stories.ts', '../.storybook/*.mdx'],
   addons: ['@storybook/addon-docs', '@storybook/addon-a11y'],
+  experimental_indexers: async (existingIndexers) => {
+    const probe = '/component.stories.ts';
+    const csfIndexer = existingIndexers.find((indexer) => {
+      indexer.test.lastIndex = 0;
+      return indexer.test.test(probe);
+    });
+    if (!csfIndexer) throw new Error('Storybook did not provide its default CSF indexer');
+    return [
+      createGroupedStoryIndexer(csfIndexer),
+      ...existingIndexers.filter((indexer) => indexer !== csfIndexer),
+    ];
+  },
   framework: {
     name: '@storybook/web-components-vite',
     options: {},
@@ -41,6 +55,10 @@ const config = {
   // lr-* components themselves stay shadow-DOM + --lr-* tokens.
   async viteFinal(viteConfig) {
     viteConfig.plugins = viteConfig.plugins ?? [];
+    // Match the runtime CSF metadata to the grouped index while retaining each story's
+    // long-standing ID. Without the explicit legacy ID, changing only the index title makes
+    // autodocs unable to associate a component page with its stories.
+    viteConfig.plugins.push(storyTitlePlugin());
     viteConfig.plugins.push(tailwindcss());
     viteConfig.build = viteConfig.build ?? {};
     // Vite's default 500kB warning fires on chunks that are already correctly
@@ -143,17 +161,17 @@ const config = {
     storySort: {
       order: [
         'Introduction',
-        'Foundations',
-        'Actions',
+        'Agent tools',
+        'Charts',
+        'Conversation',
+        'Data',
         'Forms',
-        'Feedback',
-        'Disclosure',
-        'Overlays',
         'Layout',
-        'Display',
-        'Charts & Visualization',
-        'Conversation & Agent UI',
-        'Utilities',
+        'Media',
+        'Overlays',
+        'Retrieval',
+        'Utility',
+        'Viewers',
       ],
       method: 'alphabetical',
     },

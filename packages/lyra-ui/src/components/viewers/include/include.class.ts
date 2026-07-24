@@ -120,6 +120,18 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     }
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    this.beginAbortableLoad();
+    this.removeAttribute('aria-busy');
+    super.disconnectedCallback();
+  }
+
   private async load(): Promise<void> {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
@@ -142,16 +154,20 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     const mode = VALID_MODES.has(this.mode) ? this.mode : 'same-origin';
     try {
       const response = await fetch(url, signal ? { mode, signal } : { mode });
+      if (!this.isConnected || generation !== this.generation) return;
       if (!response.ok) {
         if (generation === this.generation) this.fail(response.status, 'http');
         return;
       }
       const sanitizer = await loadHtmlSanitizer();
+      if (!this.isConnected || generation !== this.generation) return;
       if (!sanitizer) {
         if (generation === this.generation) this.fail(0, 'missing-sanitizer');
         return;
       }
-      const markup = sanitizer.sanitize(await readResponseText(response));
+      const raw = await readResponseText(response);
+      if (!this.isConnected || generation !== this.generation) return;
+      const markup = sanitizer.sanitize(raw);
       if (generation !== this.generation || !this.isConnected) return; // superseded/detached — silent
       this.innerHTML = markup;
       this.removeAttribute('aria-busy');

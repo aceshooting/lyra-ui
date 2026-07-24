@@ -8,7 +8,7 @@ import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js'; // register
 import '@aceshooting/lyra-ui/components/data/table/table.js';        // registers <lr-table>
 ```
 
-`llms/index.md` lists the exact path for all 251 tags. A wrong or missing family segment is a hard
+`llms/index.md` lists the exact path for every tag. A wrong or missing family segment is a hard
 module-resolution failure, not a silent no-op — `exports` maps `./components/*` straight onto
 `./dist/components/*`.
 

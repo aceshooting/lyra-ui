@@ -4,9 +4,12 @@ import { __setEpubJsForTesting } from './ebook-loader.js';
 import type { LyraEbookViewer } from './ebook-viewer.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { styles } from './ebook-viewer.styles.js';
+import { MINIMAL_EPUB_BASE64 } from './fixtures/minimal-epub-fixture.js';
 
 function response(ok = true): Response {
-  return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)) } as unknown as Response;
+  const binary = atob(MINIMAL_EPUB_BASE64);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(bytes.buffer) } as unknown as Response;
 }
 
 /** A response whose `content-length` header exceeds `DEFAULT_MAX_RESOURCE_BYTES`, so
@@ -225,16 +228,27 @@ describe('lr-ebook-viewer', () => {
     }
   });
 
-  it('renders safe-url, fetch, and missing-peer errors', async () => {
+  it('renders safe-url and missing-peer errors with exactly one event per failure', async () => {
     const restore = stubFetch();
     try {
-      const unsafe = (await fixture(html`<lr-ebook-viewer .src=${'javascript:alert(1)'}></lr-ebook-viewer>`)) as LyraEbookViewer;
-      await aTimeout(10);
+      const unsafe = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+      let unsafeCount = 0;
+      unsafe.addEventListener('lr-render-error', () => { unsafeCount++; });
+      const unsafeEvent = oneEvent(unsafe, 'lr-render-error');
+      unsafe.src = 'javascript:alert(1)';
+      await unsafeEvent;
       expect(unsafe.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Document URL is not allowed');
+      expect(unsafeCount).to.equal(1);
+
       __setEpubJsForTesting(null);
-      const missing = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
-      await aTimeout(20);
+      const missing = (await fixture(html`<lr-ebook-viewer></lr-ebook-viewer>`)) as LyraEbookViewer;
+      let missingCount = 0;
+      missing.addEventListener('lr-render-error', () => { missingCount++; });
+      const missingEvent = oneEvent(missing, 'lr-render-error');
+      missing.src = 'https://example.test/book.epub';
+      await missingEvent;
       expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.contain('Failed to load the ebook');
+      expect(missingCount).to.equal(1);
     } finally {
       restore();
     }
@@ -320,8 +334,9 @@ describe('lr-ebook-viewer', () => {
         get: () => undefined,
         set: (v: HTMLDivElement | undefined) => { real = v; },
       });
+      const event = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/book.epub';
-      await aTimeout(20);
+      await event;
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load the ebook.');
       void real; // silence unused-write lint; kept only so the setter has somewhere to record Lit's own writes
     } finally {
@@ -479,6 +494,29 @@ describe('getToc', () => {
       restore();
     }
   });
+
+  it('bounds cyclic navigation trees instead of recursing forever', async () => {
+    const entry: { id: string; label: string; href: string; subitems?: unknown[] } = {
+      id: 'cycle', label: 'Cycle', href: 'cycle.xhtml',
+    };
+    entry.subitems = [entry];
+    const book = {
+      ready: Promise.resolve(),
+      navigation: { toc: [entry] },
+      renderTo: () => ({
+        display: () => Promise.resolve(), next: () => Promise.resolve(), prev: () => Promise.resolve(),
+        on: () => {}, annotations: { highlight: () => {}, remove: () => {} },
+      }),
+      destroy: () => {},
+    };
+    __setEpubJsForTesting((() => book) as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      expect(await el.getToc()).to.deep.equal([{ id: 'cycle', label: 'Cycle', href: 'cycle.xhtml', level: 1 }]);
+    } finally { restore(); }
+  });
 });
 
 describe('location', () => {
@@ -562,6 +600,49 @@ describe('lr-ebook-viewer search', () => {
     } finally {
       restore();
     }
+  });
+
+  it('always unloads a spine section when find rejects', async () => {
+    let unloads = 0;
+    const rendition = {
+      display: () => Promise.resolve(), next: () => Promise.resolve(), prev: () => Promise.resolve(),
+      on: () => {}, annotations: { highlight: () => {}, remove: () => {} },
+    };
+    const book = {
+      ready: Promise.resolve(),
+      spine: {
+        spineItems: [{
+          load: () => Promise.resolve(),
+          find: () => Promise.reject(new Error('broken chapter')),
+          unload: () => { unloads++; },
+        }],
+      },
+      renderTo: () => rendition,
+      destroy: () => {},
+    };
+    __setEpubJsForTesting((() => book) as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      expect(await el.search('anything')).to.equal(0);
+      expect(unloads).to.equal(1);
+    } finally { restore(); }
+  });
+
+  it('localizes numeric search announcements', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'match match' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.lang = 'ar';
+      (el as unknown as { announcer: { throttleMs: number } }).announcer.throttleMs = 0;
+      await el.search('match');
+      await aTimeout(10);
+      expect(el.shadowRoot!.querySelector('[part="announcer"]')!.textContent).to.include(new Intl.NumberFormat('ar').format(1));
+    } finally { restore(); }
   });
 
   it('aborts a stale scan when a newer search() call supersedes it', async () => {

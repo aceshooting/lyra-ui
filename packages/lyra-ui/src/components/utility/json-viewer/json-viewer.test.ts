@@ -312,6 +312,38 @@ it('renders a self-referencing value without a stack overflow, showing a circula
   expect((selfRow.querySelector('[part="toggle"]') as HTMLElement).hasAttribute('hidden')).to.be.true;
 });
 
+it('bounds valid acyclic deep rendering and reports the localized resource limit', async () => {
+  let data: Record<string, unknown> = { leaf: true };
+  for (let depth = 0; depth < 300; depth += 1) data = { child: data };
+
+  const el = (await fixture(
+    html`<lr-json-viewer
+      lang="ar-EG"
+      .data=${data}
+      .strings=${{ jsonViewerLimit: 'Limited to {count} JSON nodes and {depth} nesting levels.' }}
+    ></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  const rows = el.shadowRoot!.querySelectorAll('.row');
+  const formatter = new Intl.NumberFormat(el.effectiveLocale);
+  const limit = el.shadowRoot!.querySelector('[part="limit"]')!;
+  expect(rows.length).to.be.lessThan(300);
+  expect(limit.textContent).to.equal(
+    `Limited to ${formatter.format(5000)} JSON nodes and ${formatter.format(100)} nesting levels.`,
+  );
+  expect(limit.hasAttribute('role')).to.be.false;
+});
+
+it('bounds broad search traversal instead of matching beyond the node budget', async () => {
+  const data = Object.fromEntries(
+    Array.from({ length: 5100 }, (_, index) => [`key-${index}`, index === 5099 ? 'needle-at-tail' : index]),
+  );
+  const el = (await fixture(
+    html`<lr-json-viewer .data=${data} collapsed-depth="0" search="needle-at-tail"></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.exist;
+});
+
 it('renders a bigint value via String() instead of throwing from JSON.stringify', async () => {
   const el = await withData({ count: 10n });
   const values = Array.from(el.shadowRoot!.querySelectorAll('[part="value"]')).map((v) => v.textContent);

@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './page-rail.js';
 import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
@@ -94,6 +94,44 @@ describe('lr-page-rail', () => {
     }
   });
 
+  it('for= binds a late target and replaces a removed target that reuses the same id', async () => {
+    const wrapper = await fixture<HTMLElement>(
+      html`<div><lr-page-rail for="late-source"></lr-page-rail></div>`,
+    );
+    const el = wrapper.querySelector('lr-page-rail') as LyraPageRail;
+    const makeViewer = (): HTMLDivElement & PageThumbnailSource => {
+      const viewer = document.createElement('div') as HTMLDivElement & PageThumbnailSource;
+      viewer.id = 'late-source';
+      viewer.page = 1;
+      viewer.renderPageThumbnail = async () => true;
+      return viewer;
+    };
+
+    const first = makeViewer();
+    wrapper.append(first);
+    await aTimeout(0);
+    first.dispatchEvent(new CustomEvent('lr-load', { detail: { pageCount: 2 } }));
+    await waitUntil(() => {
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items?: unknown[] };
+      return list.items?.length === 2;
+    });
+
+    first.remove();
+    const second = makeViewer();
+    wrapper.append(second);
+    await aTimeout(0);
+    second.dispatchEvent(new CustomEvent('lr-load', { detail: { pageCount: 4 } }));
+    await waitUntil(() => {
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items?: unknown[] };
+      return list.items?.length === 4;
+    });
+
+    first.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 2 } }));
+    second.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 3 } }));
+    await el.updateComplete;
+    expect(el.page).to.equal(3);
+  });
+
   it('clicking a page row emits lr-page-select and (wired mode) sets viewer.page', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
@@ -133,6 +171,46 @@ describe('lr-page-rail', () => {
     expect(viewer.renderCalls[0].width).to.equal(64);
   });
 
+  it('gives each same-count viewer reload fresh canvas ownership', async () => {
+    const firstRender = deferred<void>();
+    type RenderCall = { document: string; canvas: HTMLCanvasElement };
+    class ReloadingViewer extends StubViewer {
+      document = 'first';
+      calls: RenderCall[] = [];
+
+      override renderPageThumbnail(_page: number, canvas: HTMLCanvasElement): Promise<boolean> {
+        const document = this.document;
+        this.calls.push({ document, canvas });
+        if (document === 'first') {
+          return firstRender.promise.then(() => {
+            canvas.dataset['document'] = document;
+            return true;
+          });
+        }
+        canvas.dataset['document'] = document;
+        return Promise.resolve(true);
+      }
+    }
+    const viewer = new ReloadingViewer();
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.calls.length === 1);
+    const staleCanvas = viewer.calls[0]!.canvas;
+
+    viewer.document = 'second';
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.calls.length === 2);
+    const currentCanvas = viewer.calls[1]!.canvas;
+    expect(currentCanvas).to.not.equal(staleCanvas);
+    expect(currentCanvas.dataset['document']).to.equal('second');
+
+    firstRender.resolve();
+    await aTimeout(0);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    expect(list.shadowRoot!.querySelector('canvas')).to.equal(currentCanvas);
+    expect(currentCanvas.dataset['document']).to.equal('second');
+  });
+
   it('falls back to lr-file-icon when renderPageThumbnail() rejects, same as resolving false (regression)', async () => {
     class RejectingViewer extends StubViewer {
       renderPageThumbnail(page: number, canvas: HTMLCanvasElement, options?: { width?: number }): Promise<boolean> {
@@ -163,6 +241,19 @@ describe('lr-page-rail', () => {
     expect(el.page).to.equal(7);
   });
 
+  it('typing a digit in wired mode updates the viewer and emits the normal selection event', async () => {
+    const viewer = new StubViewer();
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
+    viewer.emitLoad(12);
+    await el.updateComplete;
+    const eventPromise = oneEvent(el, 'lr-page-select');
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '7', bubbles: true, composed: true }),
+    );
+    expect((await eventPromise).detail).to.deep.equal({ page: 7 });
+    expect(viewer.page).to.equal(7);
+  });
+
   it('ignores a typed digit that is out of range', async () => {
     const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
     await el.updateComplete;
@@ -188,6 +279,19 @@ describe('lr-page-rail', () => {
     el.strings = { pageRailLabel: 'Vignettes de page' };
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Vignettes de page');
+  });
+
+  it('formats visible and accessible page numbers with the effective locale', async () => {
+    const el = await fixture<LyraPageRail>(
+      html`<lr-page-rail locale="ar-EG" page-count="12" page="12"></lr-page-rail>`,
+    );
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="page"]').length === 12,
+    );
+    const listRoot = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!;
+    const last = listRoot.querySelectorAll('[part~="page"]')[11] as HTMLElement;
+    expect(last.getAttribute('aria-label')).to.equal('Page ١٢');
+    expect(last.querySelector('[part~="page-number"]')!.textContent).to.equal('١٢');
   });
 
   it('chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run', async () => {
@@ -234,6 +338,24 @@ describe('lr-page-rail', () => {
       const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
       expect(list.items, raw).to.deep.equal([]);
     }
+  });
+
+  it('caps a pathological page count before materializing virtual-list items', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="1000000000"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: unknown[] };
+    expect(list.items.length).to.equal(100_000);
+  });
+
+  it('clamps thumbnail work to a narrow live allocation', async () => {
+    const viewer = new StubViewer();
+    const wrapper = await fixture<HTMLElement>(
+      html`<div style="width: 120px"><lr-page-rail .viewer=${viewer} thumb-width="1000"></lr-page-rail></div>`,
+    );
+    const el = wrapper.querySelector('lr-page-rail') as LyraPageRail;
+    viewer.emitLoad(1);
+    await waitUntil(() => viewer.renderCalls.some((call) => (call.width ?? Infinity) <= 120));
+    expect(viewer.renderCalls.at(-1)!.width).to.be.at.most(120);
+    expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
   });
 
   it('sanitizes a negative or NaN thumb-width before it reaches renderPageThumbnail', async () => {

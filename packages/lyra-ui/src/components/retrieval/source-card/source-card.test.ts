@@ -215,6 +215,35 @@ it('is accessible fully populated and expanded', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('keeps short title and disclosure controls at the live hit-area token override', async () => {
+  const el = (await fixture(html`
+    <lr-source-card source-id="s" title="A" style="--lr-icon-button-size: 52px">
+      <span slot="full">Full text</span>
+    </lr-source-card>
+  `)) as LyraSourceCard;
+  await el.updateComplete;
+  for (const part of ['title', 'toggle']) {
+    const target = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+    const bounds = target.getBoundingClientRect();
+    expect(bounds.width, part).to.be.at.least(52);
+    expect(bounds.height, part).to.be.at.least(52);
+  }
+});
+
+it('contains an unbroken title inside a 320px allocation', async () => {
+  const parent = document.createElement('div');
+  parent.style.inlineSize = '320px';
+  const el = (await fixture(
+    html`<lr-source-card
+      title="source-with-a-deliberately-long-unbroken-filename-that-must-not-overflow-the-card.pdf"
+    ></lr-source-card>`,
+    { parentNode: parent },
+  )) as LyraSourceCard;
+  const title = el.shadowRoot!.querySelector('[part="title"]') as HTMLElement;
+  expect(title.getBoundingClientRect().width).to.be.at.most(320);
+  expect(getComputedStyle(title).overflowWrap).to.equal('anywhere');
+});
+
 it('localizes the "Untitled source" fallback via this.localize()', async () => {
   const el = (await fixture(
     html`<lr-source-card .strings=${{ untitledSource: 'Source sans titre' }}></lr-source-card>`,
@@ -392,4 +421,13 @@ describe('lifecycle: super calls', () => {
       else delete proto.willUpdate;
     }
   });
+});
+
+it('wraps long unbroken excerpt content inside the card allocation', async () => {
+  const el = (await fixture(html`
+    <lr-source-card title="Source"><span slot="excerpt">${'x'.repeat(500)}</span></lr-source-card>
+  `)) as LyraSourceCard;
+  const excerpt = el.shadowRoot!.querySelector('[part="excerpt"]') as HTMLElement;
+  expect(getComputedStyle(excerpt).minInlineSize).to.equal('0px');
+  expect(getComputedStyle(excerpt).overflowWrap).to.equal('anywhere');
 });

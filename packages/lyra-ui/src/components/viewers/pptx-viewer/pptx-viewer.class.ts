@@ -8,7 +8,7 @@ import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../
 import { chevronIcon } from '../../../internal/icons.js';
 import { getPptxRenderer, type PptxRendererModule } from './pptx-loader.js';
 import { styles } from './pptx-viewer.styles.js';
-import '../../overlays/skeleton/skeleton.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 type PptxPhase = 'idle' | 'loading' | 'mounted' | 'error';
 
@@ -128,8 +128,10 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     if (!this.src) { this.phase = 'idle'; return; }
     const url = safeFetchUrl(this.src);
     if (!url) {
+      const error = new Error(this.localize('documentPreviewUrlNotAllowed'));
       this.phase = 'error';
-      this.errorMessage = this.localize('documentPreviewUrlNotAllowed');
+      this.errorMessage = error.message;
+      this.emit('lr-render-error', { error });
       return;
     }
     this.phase = 'loading';
@@ -146,8 +148,12 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     }
     if (!this.isConnected || generation !== this.generation) return;
     if (!module || !response.ok) {
+      const error = new Error(
+        this.localize(module ? 'documentPreviewFailedToLoad' : 'pptxViewerRenderError'),
+      );
       this.phase = 'error';
-      this.errorMessage = this.localize(module ? 'documentPreviewFailedToLoad' : 'pptxViewerRenderError');
+      this.errorMessage = error.message;
+      this.emit('lr-render-error', { error });
       return;
     }
     let buffer: ArrayBuffer;
@@ -162,13 +168,13 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     if (!this.isConnected || generation !== this.generation) return;
     this.phase = 'mounted';
     await this.updateComplete;
-    if (generation !== this.generation || !this.containerEl) return;
+    if (!this.isConnected || generation !== this.generation || !this.containerEl) return;
     try {
       const viewer = await module.PptxViewer.open(buffer, this.containerEl, {
         zipLimits: module.RECOMMENDED_ZIP_LIMITS,
         listOptions: { windowed: true },
       });
-      if (generation !== this.generation) { viewer.destroy(); return; }
+      if (!this.isConnected || generation !== this.generation) { viewer.destroy(); return; }
       this.viewer = viewer;
       viewer.addEventListener('slidechange', this.onSlideChange);
       this.slideCount = viewer.slideCount;
@@ -191,7 +197,10 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
         <button part="previous-button" type="button" aria-label=${this.localize('pptxViewerPreviousSlide')} ?disabled=${this.currentSlideIndex <= 0} @click=${() => this.goToSlide(this.currentSlideIndex - 1)}>
           <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
-        <span part="slide-count">${this.localize('pptxViewerSlideOf', undefined, { current: this.currentSlideIndex + 1, total: this.slideCount })}</span>
+        <span part="slide-count">${this.localize('pptxViewerSlideOf', undefined, {
+          current: getNumberFormat(this.effectiveLocale).format(this.currentSlideIndex + 1),
+          total: getNumberFormat(this.effectiveLocale).format(this.slideCount),
+        })}</span>
         <button part="next-button" type="button" aria-label=${this.localize('pptxViewerNextSlide')} ?disabled=${this.currentSlideIndex >= this.slideCount - 1} @click=${() => this.goToSlide(this.currentSlideIndex + 1)}>
           <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
         </button>
@@ -201,7 +210,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
   }
 
   override render(): TemplateResult {
-    const ariaLabel = this.getAttribute('aria-label') || this.label || this.localize('pptxViewerLabel');
+    const ariaLabel = this.getAttribute('aria-label') || this.label || this.name || this.localize('pptxViewerLabel');
     return html`
       <div part="base" role="region" aria-label=${ariaLabel}>
         <div part="header" ?hidden=${!this.name}><span part="name">${this.name}</span></div>

@@ -5,10 +5,6 @@ import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
-import '../../overlays/empty/empty.js';
-// The registering barrel, not the bare `*.class.js` module -- this side effect is what makes
-// `<lr-live-region>` an actually-defined tag by the time a reorderable tree renders one.
-import '../../utility/live-region/live-region.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import './tree-node.class.js';
 import type { LyraTreeNode } from './tree-node.class.js';

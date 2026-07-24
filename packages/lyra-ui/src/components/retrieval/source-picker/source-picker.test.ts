@@ -371,6 +371,55 @@ it('focusing a row directly (e.g. via Tab) moves the active/tabindex row to it',
   expect(updated[0]!.getAttribute('tabindex')).to.equal('-1');
 });
 
+it('moves real DOM focus to the closest survivor when the focused source is removed', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker
+      .sources=${[
+        { id: 'a', label: 'Alpha' },
+        { id: 'b', label: 'Beta' },
+        { id: 'c', label: 'Gamma' },
+      ]}
+    ></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  const rows = el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]');
+  rows[1]!.focus();
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('Beta');
+
+  el.sources = [
+    { id: 'a', label: 'Alpha' },
+    { id: 'c', label: 'Gamma' },
+  ];
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('role')).to.equal('treeitem');
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('Gamma');
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"][tabindex="0"]')).to.have.length(1);
+});
+
+it('moves real DOM focus to the visible survivor when filtering removes the focused source', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker
+      .sources=${[
+        { id: 'a', label: 'Alpha' },
+        { id: 'b', label: 'Beta' },
+        { id: 'c', label: 'Gamma' },
+      ]}
+    ></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  const rows = el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]');
+  rows[1]!.focus();
+  el.shadowRoot!.querySelector('lr-input')!.dispatchEvent(
+    new CustomEvent('lr-input', { detail: { value: 'gamma' }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('role')).to.equal('treeitem');
+  expect(el.shadowRoot!.activeElement?.textContent).to.include('Gamma');
+  expect(el.shadowRoot!.querySelectorAll('[role="treeitem"][tabindex="0"]')).to.have.length(1);
+});
+
 it('searchable=false omits the built-in filter input', async () => {
   const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
   el.searchable = false;
@@ -541,4 +590,19 @@ it('formats the selection summary counts with the effective locale', async () =>
   )) as LyraSourcePicker;
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.contain('٠');
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.contain('٣');
+});
+
+it('renders and selects only the first source occurrence for duplicate ids', async () => {
+  const el = (await fixture(html`<lr-source-picker></lr-source-picker>`)) as LyraSourcePicker;
+  el.sources = [
+    { id: 'duplicate', label: 'First occurrence' },
+    { id: 'duplicate', label: 'Second occurrence' },
+  ];
+  await el.updateComplete;
+  const rows = el.shadowRoot!.querySelectorAll('[role="treeitem"]');
+  expect(rows.length).to.equal(1);
+  expect(rows[0]!.textContent).to.include('First occurrence');
+  const pending = oneEvent(el, 'lr-sources-change');
+  (rows[0] as HTMLElement).click();
+  expect((await pending).detail.selectedIds).to.deep.equal(['duplicate']);
 });

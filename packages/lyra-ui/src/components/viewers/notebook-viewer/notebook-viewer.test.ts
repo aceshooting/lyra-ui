@@ -149,6 +149,60 @@ describe('parsing and rendering', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
   });
 
+  it('rejects malformed nested cell/output shapes without rejecting updateComplete', async () => {
+    const malformed = [
+      { nbformat: 4, nbformat_minor: 5, cells: [null] },
+      { nbformat: 4, nbformat_minor: 5, cells: [{ cell_type: 'raw', source: 42 }] },
+      {
+        nbformat: 4,
+        nbformat_minor: 5,
+        cells: [{
+          cell_type: 'code',
+          source: '',
+          outputs: [{ output_type: 'display_data', data: { 'application/json': '{bad json' } }],
+        }],
+      },
+    ];
+    for (const notebook of malformed) {
+      const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      const errorPromise = oneEvent(el, 'lr-render-error');
+      el.notebook = notebook as never;
+      await errorPromise;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+        'This file is not a valid Jupyter notebook.',
+      );
+    }
+  });
+
+  it('rejects pathologically deep JSON output without overflowing the JavaScript stack', async () => {
+    const payload: Record<string, unknown> = {};
+    let cursor = payload;
+    for (let depth = 0; depth < 120_000; depth++) {
+      const child: Record<string, unknown> = {};
+      cursor['child'] = child;
+      cursor = child;
+    }
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code',
+        source: '',
+        outputs: [{ output_type: 'display_data', data: { 'application/json': payload } }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    const errorPromise = oneEvent(el, 'lr-render-error');
+    expect(() => { el.notebook = notebook as never; }).to.not.throw();
+    const event = await errorPromise;
+    await el.updateComplete;
+    expect(event.detail.error).to.not.be.instanceOf(RangeError);
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+      'This file is not a valid Jupyter notebook.',
+    );
+  });
+
   it('parses a JSON string passed to notebook, winning over src', async () => {
     const el = (await fixture(html`<lr-notebook-viewer src="https://example.test/should-not-fetch.ipynb"></lr-notebook-viewer>`)) as LyraNotebookViewer;
     el.notebook = JSON.stringify(NOTEBOOK);
@@ -289,7 +343,7 @@ describe('rendering non-text outputs', () => {
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
       cells: [
-        { cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, outputs: [{ output_type: 'display_data', data: { 'image/png': 'AAAA' } }] },
+        { cell_type: 'code', id: 'c1', source: 'x', execution_count: 1, outputs: [{ output_type: 'display_data', data: { 'image/png': 'AAAA', 'text/plain': 'Chart showing revenue' } }] },
         { cell_type: 'code', id: 'c2', source: 'y', execution_count: 2, outputs: [{ output_type: 'display_data', data: { 'image/jpeg': 'BBBB' } }] },
       ],
     };
@@ -298,6 +352,8 @@ describe('rendering non-text outputs', () => {
     const imgs = [...rowRoot(el).querySelectorAll('[part~="output"] img')];
     expect(imgs[0].getAttribute('src')).to.equal('data:image/png;base64,AAAA');
     expect(imgs[1].getAttribute('src')).to.equal('data:image/jpeg;base64,BBBB');
+    expect(imgs[0].getAttribute('alt')).to.equal('Chart showing revenue');
+    expect(imgs[1].getAttribute('alt')).to.equal('');
   });
 
   it('lazily sanitizes and renders an image/svg+xml output, stripping unsafe markup', async () => {
@@ -353,6 +409,29 @@ describe('rendering non-text outputs', () => {
     // the textContent equality below also proves.
     expect(output.querySelectorAll('p').length).to.equal(1);
     expect(output.textContent).to.equal('This viewer needs the optional "dompurify" package installed to render safely.');
+  });
+
+  it('falls back to text/plain and emits one render error when the sanitizer peer is missing', async () => {
+    __setNotebookSanitizerForTesting(null);
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', source: '',
+        outputs: [
+          { output_type: 'display_data', data: { 'text/html': '<b>Chart</b>', 'text/plain': 'Chart fallback' } },
+          { output_type: 'display_data', data: { 'text/html': '<b>Chart</b>', 'text/plain': 'Chart fallback' } },
+        ],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    let errorCount = 0;
+    el.addEventListener('lr-render-error', () => { errorCount++; });
+    el.notebook = notebook as never;
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.textContent?.includes('Chart fallback') ?? false,
+    );
+    expect(errorCount).to.equal(1);
+    expect(rowRoot(el).textContent).to.include('Chart fallback');
   });
 
   it('renders an application/json output through lr-json-viewer for both string and pre-parsed object payloads', async () => {
@@ -442,6 +521,30 @@ describe('search', () => {
     const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
     const count = await el.search('hi');
     expect(count).to.equal(1);
+  });
+
+  it('scrolls the virtualized target cell for the initial and next search matches', async () => {
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [
+        { cell_type: 'raw', source: 'needle' },
+        { cell_type: 'raw', source: 'other' },
+        { cell_type: 'raw', source: 'needle' },
+      ],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    const calls: number[] = [];
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      scrollToIndex(index: number): void;
+    };
+    list.scrollToIndex = (index) => { calls.push(index); };
+    await el.search('needle');
+    await aTimeout(10);
+    el.searchNext();
+    await aTimeout(10);
+    expect(calls).to.deep.equal([0, 2]);
+    expect(rowRoot(el).querySelector('[part~="cell-active"]')?.getAttribute('data-cell-type')).to.equal('raw');
   });
 
   it('clearSearch() resets and emits lr-search-change', async () => {
@@ -562,6 +665,25 @@ describe('virtualized cell part styling', () => {
       ],
     }],
   };
+
+  it('makes an overflowing raw cell independently keyboard-scrollable at 320px', async () => {
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [{ cell_type: 'raw', source: 'x'.repeat(400) }],
+    };
+    const wrapper = await fixture<HTMLElement>(
+      html`<div style="width: 320px"><lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer></div>`,
+    );
+    const el = wrapper.querySelector('lr-notebook-viewer') as LyraNotebookViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector(
+      '[part="raw-source"]',
+    ) !== null);
+    const raw = rowRoot(el).querySelector('[part="raw-source"]') as HTMLElement;
+    expect(raw.getAttribute('tabindex')).to.equal('0');
+    expect(getComputedStyle(raw).overflowX).to.equal('auto');
+    expect(raw.scrollWidth).to.be.greaterThan(raw.clientWidth);
+  });
 
   /** A design token's own rendered value, resolved by a throwaway probe in the same shadow root and
    *  custom-property context -- `getComputedStyle().getPropertyValue()` hands back the token's raw

@@ -108,6 +108,46 @@ describe('lr-poll-status', () => {
     expect(fired, 'no tick should run while inactive, so due can never be reached').to.be.false;
   });
 
+  it('renders a localized inactive state and disables the pause action while active is false', async () => {
+    const el = (await fixture(
+      html`<lr-poll-status
+        next-in-ms="10000"
+        active="false"
+        .strings=${{ pollInactive: 'Inactive locale' }}
+      ></lr-poll-status>`,
+    )) as LyraPollStatus;
+    const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('Inactive locale');
+    expect(button.disabled).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="indicator"]')!.hasAttribute('data-due')).to.be.false;
+
+    let changed = false;
+    el.addEventListener('lr-pause-change', () => (changed = true));
+    button.click();
+    expect(el.paused).to.be.false;
+    expect(changed).to.be.false;
+  });
+
+  it('renders the localized inactive state even when no next countdown is scheduled', async () => {
+    const el = (await fixture(
+      html`<lr-poll-status
+        active="false"
+        .strings=${{ pollInactive: 'Inactive without deadline' }}
+      ></lr-poll-status>`,
+    )) as LyraPollStatus;
+    expect(el.nextInMs).to.equal(undefined);
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal(
+      'Inactive without deadline',
+    );
+  });
+
+  it('uses the effective locale for every digit in the countdown', async () => {
+    const el = (await fixture(
+      html`<lr-poll-status lang="ar-EG" next-in-ms="65000"></lr-poll-status>`,
+    )) as LyraPollStatus;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.equal('١:٠٥');
+  });
+
   it('accepts active="false" as a plain-HTML attribute string, not just a JS property binding', async () => {
     // Regression test: `active`'s default Boolean converter can never distinguish a plain
     // active="false" attribute from the attribute being absent altogether, so the countdown kept
@@ -238,7 +278,7 @@ describe('lr-poll-status', () => {
 
   it('gives the pause button a :hover treatment, matching lr-widget\'s collapse/fullscreen buttons', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.match(/\[part='pause-button'\]:hover\s*\{[^}]+\}/);
+    expect(css).to.match(/\[part='pause-button'\]:hover:not\(:disabled\)\s*\{[^}]+\}/);
   });
 
   it('recolors the due indicator dot from an ancestor --lr-poll-status-due-bg, not the bare shared --lr-color-success token', async () => {

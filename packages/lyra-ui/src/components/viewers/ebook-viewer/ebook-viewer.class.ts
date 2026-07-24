@@ -3,7 +3,13 @@ import { property, state } from 'lit/decorators.js';
 import { createRef, ref, type Ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
-import { isAbortError, isResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
+import {
+  isAbortError,
+  isResourceLimitError,
+  LyraUserFacingError,
+  readResponseArrayBuffer,
+} from '../../../internal/resource-loader.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
@@ -12,6 +18,7 @@ import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../in
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import type { LyraAnchor, HighlightActivateDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { getEpubJs, type EpubBook, type EpubRendition } from './ebook-loader.js';
+import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
 
 type EbookState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'ready' } | { kind: 'error'; message: string };
@@ -31,6 +38,9 @@ interface EbookSearchMatch {
   cfi: string;
   excerpt: string;
 }
+
+const MAX_TOC_ITEMS = 10_000;
+const MAX_TOC_DEPTH = 100;
 
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -188,7 +198,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     }
     const url = safeFetchUrl(this.src);
     if (!url) {
-      this.ebookState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') };
+      this.failWithLocalizedMessage(this.localize('documentPreviewUrlNotAllowed'));
       return;
     }
     this.ebookState = { kind: 'loading' };
@@ -202,27 +212,39 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         }),
         getEpubJs(),
       ]);
+      if (!this.isConnected || generation !== this.generation) return;
+      await assertEpubArchiveWithinLimits(data, undefined, undefined, { signal });
+      if (!this.isConnected || generation !== this.generation) return;
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.ebookState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'ebookViewerLoadError') };
       this.emit('lr-render-error', { error });
       return;
     }
-    if (!this.isConnected || generation !== this.generation) return;
     if (!factory) {
-      this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
+      this.failWithLocalizedMessage(this.localize('ebookViewerLoadError'));
       return;
     }
     const mount = this.mountRef.value;
     if (!mount) {
-      this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
+      this.failWithLocalizedMessage(this.localize('ebookViewerLoadError'));
       return;
     }
+    let candidateBook: EpubBook | undefined;
     try {
       const book = factory(data);
+      candidateBook = book;
       const rendition = book.renderTo(mount, { width: '100%', height: '100%' }) as EpubRendition;
       await book.ready;
+      if (!this.isConnected || generation !== this.generation) {
+        book.destroy();
+        return;
+      }
       await rendition.display(this.location || undefined);
+      if (!this.isConnected || generation !== this.generation) {
+        book.destroy();
+        return;
+      }
       rendition.on('relocated', (loc: OptionalPeerApi) => {
         const cfi = loc?.start?.cfi ?? '';
         const href = loc?.start?.href ?? '';
@@ -239,19 +261,23 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
           selection && selection.rangeCount > 0 ? (Array.from(selection.getRangeAt(0).getClientRects()) as DOMRect[]) : [];
         this.emit<TextSelectDetail>('lr-text-select', { text, anchor: { kind: 'cfi', cfi: cfiRange }, rects });
       });
-      if (generation !== this.generation) {
-        book.destroy();
-        return;
-      }
       this.book = book;
       this.rendition = rendition;
+      candidateBook = undefined;
       this.ebookState = { kind: 'ready' };
       this.repaintHighlights();
     } catch (error) {
+      candidateBook?.destroy();
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
       this.emit('lr-render-error', { error });
     }
+  }
+
+  private failWithLocalizedMessage(message: string): void {
+    const error = new LyraUserFacingError(message);
+    this.ebookState = { kind: 'error', message };
+    this.emit('lr-render-error', { error });
   }
 
   private previous = (): void => { void this.rendition?.prev(); };
@@ -264,21 +290,31 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  entry and increases with nesting depth; `id` falls back to `href` when a navigation entry
    *  has none. Resolves `[]` before a book has loaded. */
   async getToc(): Promise<EbookTocItem[]> {
-    if (!this.book) return [];
-    await this.book.ready;
+    const book = this.book;
+    if (!book) return [];
+    await book.ready;
+    if (this.book !== book) return [];
     const items: EbookTocItem[] = [];
-    const walk = (list: OptionalPeerApi[] | undefined, level: number): void => {
-      for (const entry of list ?? []) {
-        items.push({
-          id: entry.id || entry.href,
-          label: String(entry.label ?? '').trim(),
-          href: entry.href,
-          level,
-        });
-        if (entry.subitems?.length) walk(entry.subitems, level + 1);
+    const seen = new WeakSet<object>();
+    const stack = (book.navigation?.toc ?? [])
+      .map((entry: OptionalPeerApi) => ({ entry, level: 1 }))
+      .reverse();
+    while (stack.length > 0 && items.length < MAX_TOC_ITEMS) {
+      const current = stack.pop()!;
+      const { entry, level } = current;
+      if (!entry || typeof entry !== 'object' || seen.has(entry)) continue;
+      seen.add(entry);
+      items.push({
+        id: entry.id || entry.href,
+        label: String(entry.label ?? '').trim(),
+        href: entry.href,
+        level,
+      });
+      if (level >= MAX_TOC_DEPTH || !Array.isArray(entry.subitems)) continue;
+      for (let index = entry.subitems.length - 1; index >= 0; index--) {
+        stack.push({ entry: entry.subitems[index], level: level + 1 });
       }
-    };
-    walk(this.book.navigation?.toc, 1);
+    }
     return items;
   }
 
@@ -303,16 +339,23 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `quote` -- the same section-by-section load/find/unload cycle `search()` uses, but stops at
    *  the first hit instead of collecting every match. `null` when no section matches. */
   private async findTextQuoteCfi(quote: string): Promise<string | null> {
-    if (!this.book) return null;
-    const spineItems: OptionalPeerApi[] = this.book.spine?.spineItems ?? [];
+    const book = this.book;
+    const generation = this.generation;
+    if (!book) return null;
+    const spineItems: OptionalPeerApi[] = book.spine?.spineItems ?? [];
     for (const item of spineItems) {
+      let loaded = false;
       try {
-        await item.load(this.book.load?.bind(this.book));
+        await item.load(book.load?.bind(book));
+        loaded = true;
+        if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
         const results: OptionalPeerApi[] = (await item.find(quote)) ?? [];
-        item.unload();
+        if (!this.isConnected || generation !== this.generation || this.book !== book) return null;
         if (results.length) return results[0].cfi;
       } catch {
         continue;
+      } finally {
+        if (loaded) item.unload();
       }
     }
     return null;
@@ -360,16 +403,22 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       return 0;
     }
     const matches: EbookSearchMatch[] = [];
-    const spineItems: OptionalPeerApi[] = this.book.spine?.spineItems ?? [];
+    const book = this.book;
+    const spineItems: OptionalPeerApi[] = book.spine?.spineItems ?? [];
     for (const item of spineItems) {
       if (generation !== this.searchGeneration) return this.searchMatches.length;
+      let loaded = false;
       try {
-        await item.load(this.book.load?.bind(this.book));
+        await item.load(book.load?.bind(book));
+        loaded = true;
+        if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
         const results: OptionalPeerApi[] = (await item.find(query)) ?? [];
+        if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
         for (const r of results) matches.push({ cfi: r.cfi, excerpt: r.excerpt ?? '' });
-        item.unload();
       } catch {
         continue;
+      } finally {
+        if (loaded) item.unload();
       }
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
@@ -431,7 +480,22 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       matchCount: this.searchMatches.length,
       activeIndex: this.searchActiveIndex,
     });
-    announceSearchResult(this.localize.bind(this), this.announcer, this.searchMatches.length, this.searchActiveIndex);
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    announceSearchResult(
+      (key, fallback, values) => this.localize(
+        key,
+        fallback,
+        values
+          ? Object.fromEntries(Object.entries(values).map(([name, value]) => [
+              name,
+              typeof value === 'number' ? numberFormat.format(value) : value,
+            ]))
+          : undefined,
+      ),
+      this.announcer,
+      this.searchMatches.length,
+      this.searchActiveIndex,
+    );
   }
 
   private announceViaLiveRegion(text: string): void {

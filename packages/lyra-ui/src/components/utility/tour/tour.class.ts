@@ -3,8 +3,15 @@ import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import type { Placement } from '@floating-ui/dom';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { lockScroll } from '../../../internal/scroll-lock.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import {
+  activateOverlay,
+  collectFocusableElements,
+  composedContains,
+  deepActiveElement,
+  type OverlayHandle,
+} from '../../../internal/overlay-manager.js';
 import { nextId, hasRealContent } from '../../../internal/a11y.js';
 import { place, trackRect } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
@@ -126,31 +133,20 @@ function keyholeClipPath(x: number, y: number, width: number, height: number): s
  * `lr-carousel`'s `index`.
  *
  * **Target interactivity.** By default, the step's spotlighted target is non-interactive while
- * its step is active: it stays visually revealed and perceivable/announceable by assistive tech
- * (not `inert`, not `aria-hidden`) but cannot be clicked -- every pointer event over the full
+ * its step is active: it stays visually revealed but is outside the modal interaction model
+ * and cannot be clicked -- every pointer event over the full
  * viewport, including directly over the visually-revealed target, is captured by the backdrop
  * (CSS `mask` does not affect hit-testing, only `clip-path` does) -- and cannot be reached by Tab
  * (the shared overlay focus trap confines Tab to the popover panel). Set `step.interactiveTarget`
  * to opt a step's target out of this: the backdrop additionally clips itself (via `clip-path`,
  * which *does* affect hit-testing) around the same rect, so pointer/click events fall through to
- * the live target underneath. This only restores pointer/click reachability, not Tab
- * reachability -- the focus trap still confines keyboard focus to the step popover regardless of
- * `interactiveTarget`. If the interaction a step demonstrates must also be keyboard-reachable,
- * don't rely on Tab to reach the live target -- have the app's own listener on the target call
- * `tourEl.next()` to advance the tour programmatically.
+ * the live target underneath. The panel also becomes nonmodal and an explicit Tab route connects
+ * its controls with the live target.
  *
- * **Focus management.** Uses the shared overlay manager with `modal: false` -- a deliberate
- * choice, not an oversight. The default `modal: true` would mark the entire rest of the page
- * (including the spotlighted target itself, since it lives outside `<lr-tour>`'s own ancestor
- * chain) `inert`, stripping it from the accessibility tree entirely -- stronger than the
- * "non-interactive but still perceivable" default described above. `modal: false` skips that
- * DOM-wide `inert` marking; the shared Tab-trap still confines keyboard Tab to the popover panel
- * unconditionally regardless of `modal`, and the backdrop's own hit-testing handles
- * pointer/click reachability, so nothing is lost. `role="dialog"` and `aria-modal="true"` are
- * still rendered on the popover panel anyway: most screen readers restrict their own virtual-
- * cursor/browse-mode navigation to an `aria-modal="true"` element's subtree, giving assistive-
- * tech users the same "can perceive, can't wander into, the live target" experience that the
- * Tab-trap and backdrop hit-testing already give sighted/mouse users.
+ * **Focus management.** Default steps exclusively own interaction: the shared overlay manager
+ * marks outside content inert, traps Tab, and the panel reports `aria-modal="true"`.
+ * `interactiveTarget` steps instead use a nonmodal overlay, report `aria-modal="false"`, and
+ * explicitly route Tab between the panel and the external target.
  *
  * Each step transition mounts a genuinely new popover DOM node (keyed on the step's `id`) so
  * focus reliably re-enters the panel every time, even though the Previous/Next button that
@@ -261,6 +257,8 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private releaseScrollLock?: () => void;
   private placeCleanup?: () => void;
   private spotlightCleanup?: () => void;
+  private interactiveKeyboardTarget?: HTMLElement;
+  private overlayInteractive?: boolean;
 
   private readonly maskId = nextId('tour-mask');
   private readonly headingId = nextId('tour-heading');
@@ -273,7 +271,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     // non-numeric `active-index` attribute (NaN via the `type: Number` converter). Setting the
     // property here, before render, is safe and doesn't schedule a second update -- same pattern
     // as this method's `unanchored` derivation below.
-    if (changed.has('activeIndex')) {
+    if (changed.has('activeIndex') || changed.has('steps')) {
       const maxIndex = Math.max(0, this.steps.length - 1);
       const normalizedIndex = finiteInteger(this.activeIndex, 0, 0, maxIndex);
       if (normalizedIndex !== this.activeIndex) this.activeIndex = normalizedIndex;
@@ -281,7 +279,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (!this.hasUpdated) {
       this.hasSlotContent = hasRealContent(this.childNodes);
     }
-    if (changed.has('open')) {
+    const cannotOpen = this.open && this.steps.length === 0;
+    if (cannotOpen) {
+      this.open = false;
+      this.deactivateOverlayInternal();
+    } else if (changed.has('open')) {
       if (this.open) {
         this.activateOverlayInternal();
       } else {
@@ -301,7 +303,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     // ("scheduled an update ... after an update completed") -- mirrors lr-split's/
     // lr-virtual-list's identical willUpdate()-not-updated() fix for their own derived-property
     // writes.
-    if ((changed.has('open') && this.open) || changed.has('activeIndex')) {
+    if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
       const step = this.steps[this.activeIndex];
       this.unanchored = step ? !this.resolveTarget(step) : false;
     }
@@ -310,9 +312,19 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   // Runs after render so the manager can resolve the (possibly just-swapped, per keyed()) panel,
   // and so activateStep() can query the freshly-rendered popover/spotlight/mask elements.
   protected override updated(changed: PropertyValues): void {
-    if ((changed.has('open') && this.open) || changed.has('activeIndex')) {
-      this.overlay?.focusInitial();
-      if (this.open) this.activateStep();
+    if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
+      const preserveInteractiveTargetFocus =
+        changed.has('steps') && this.canPreserveInteractiveTargetFocus();
+      const overlayChanged = this.activateOverlayInternal();
+      if (
+        changed.has('open') ||
+        changed.has('activeIndex') ||
+        overlayChanged ||
+        (changed.has('steps') && !preserveInteractiveTargetFocus)
+      ) {
+        this.overlay?.focusInitial();
+      }
+      this.activateStep();
     }
   }
 
@@ -363,6 +375,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   /** Opens the tour at `index` (default `0`), clamped to `[0, steps.length - 1]`. Equivalent to
    *  `this.activeIndex = index; this.open = true;` plus the `lr-tour-start` event. */
   start(index = 0): void {
+    if (this.steps.length === 0) return;
     this.activeIndex = this.clampIndex(index);
     this.open = true;
     this.emit<{ index: number }>('lr-tour-start', { index: this.activeIndex });
@@ -440,6 +453,17 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     return target.isConnected ? target : null;
   }
 
+  private canPreserveInteractiveTargetFocus(): boolean {
+    const previousTarget = this.interactiveKeyboardTarget;
+    const step = this.steps[this.activeIndex];
+    if (!previousTarget?.isConnected || !step?.interactiveTarget) return false;
+    const currentTarget = this.resolveTarget(step);
+    return (
+      currentTarget === previousTarget &&
+      composedContains(previousTarget, deepActiveElement(this.ownerDocument))
+    );
+  }
+
   // Resolves the active step's target, scrolls it into view, and (re)wires the shared
   // positioner (`place()`) for the popover and `trackRect()` for the spotlight cutout/ring.
   // Re-run on every step activation -- targets are never cached, per TourTarget's doc comment.
@@ -471,6 +495,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     const padding = finiteRange(step.spotlightPadding ?? this.spotlightPadding, DEFAULT_SPOTLIGHT_PADDING, 0);
     const interactive = !!step.interactiveTarget;
+    if (interactive) {
+      this.interactiveKeyboardTarget = target;
+      target.addEventListener('keydown', this.onInteractiveTargetKeyDown);
+    }
     this.spotlightCleanup = trackRect(target, (rect) => this.paintSpotlight(rect, padding, interactive));
   }
 
@@ -506,10 +534,17 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.placeCleanup = undefined;
     this.spotlightCleanup?.();
     this.spotlightCleanup = undefined;
+    this.interactiveKeyboardTarget?.removeEventListener('keydown', this.onInteractiveTargetKeyDown);
+    this.interactiveKeyboardTarget = undefined;
   }
 
-  private activateOverlayInternal(): void {
-    if (this.overlay?.isActive()) return;
+  private activateOverlayInternal(): boolean {
+    const interactive = !!this.steps[this.activeIndex]?.interactiveTarget;
+    if (this.overlay?.isActive() && this.overlayInteractive === interactive) return false;
+    if (this.overlay?.isActive()) {
+      this.overlay.deactivate({ restoreFocus: false });
+      this.overlay = undefined;
+    }
     this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlay = activateOverlay({
       host: this,
@@ -517,8 +552,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       onEscape: () => this.end('escape'),
       onBackdrop: () => this.end('skip'),
       preferredInitialFocus: () => this.renderRoot.querySelector<HTMLElement>('[part="popover"]'),
-      modal: false,
+      modal: !interactive,
+      trapFocus: !interactive,
     });
+    this.overlayInteractive = interactive;
+    return true;
   }
 
   private deactivateOverlayInternal(): void {
@@ -527,6 +565,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.releaseScrollLock = undefined;
     this.overlay?.deactivate();
     this.overlay = undefined;
+    this.overlayInteractive = undefined;
   }
 
   private onBackdropClick = (): void => {
@@ -538,13 +577,54 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     this.hasSlotContent = hasRealContent((e.target as HTMLSlotElement).assignedNodes({ flatten: true }));
   };
 
-  // ArrowRight/ArrowLeft swap "forward"/"backward" meaning under RTL, mirroring lr-stepper's
-  // forwardKey/backwardKey. Skipped for a native text-editing control (a step's slotted rich
-  // content might legitimately contain one) or when the keydown was already handled.
+  private ownsDirectionalKeys(event: KeyboardEvent): boolean {
+    return event.composedPath().some(
+      (node) =>
+        node instanceof Element &&
+        node.matches(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="combobox"], [role="grid"], [role="gridcell"], [role="listbox"], [role="menu"], [role="menuitem"], [role="radio"], [role="radiogroup"], [role="scrollbar"], [role="slider"], [role="spinbutton"], [role="tab"], [role="tablist"], [role="tree"], [role="treeitem"]',
+        ),
+    );
+  }
+
+  private onInteractiveTargetKeyDown = (event: KeyboardEvent): void => {
+    if (event.key !== 'Tab' || event.defaultPrevented) return;
+    const popover = this.renderRoot.querySelector<HTMLElement>('[part="popover"]');
+    if (!popover) return;
+    const target = this.interactiveKeyboardTarget;
+    if (!target) return;
+    const targetFocusable = collectFocusableElements(target);
+    const current = event.composedPath()[0];
+    const boundary = event.shiftKey ? targetFocusable[0] : targetFocusable.at(-1);
+    if (current !== boundary) return;
+    const panelFocusable = collectFocusableElements(popover);
+    const destination = event.shiftKey ? panelFocusable.at(-1) : panelFocusable[0];
+    if (!destination) return;
+    event.preventDefault();
+    destination.focus();
+  };
+
   private onPopoverKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented) return;
-    const eventTarget = event.target as HTMLElement;
-    if (eventTarget.matches('input, textarea, [contenteditable]:not([contenteditable="false"])')) return;
+    const step = this.steps[this.activeIndex];
+    if (event.key === 'Tab' && step?.interactiveTarget) {
+      const target = this.resolveTarget(step);
+      const popover = this.renderRoot.querySelector<HTMLElement>('[part="popover"]');
+      if (target && popover) {
+        const panelFocusable = collectFocusableElements(popover);
+        const current = event.composedPath()[0];
+        const boundary = event.shiftKey ? panelFocusable[0] : panelFocusable.at(-1);
+        if (current === boundary || (event.shiftKey && current === popover)) {
+          const targetFocusable = collectFocusableElements(target);
+          const destination = event.shiftKey ? targetFocusable.at(-1) : targetFocusable[0];
+          if (!destination) return;
+          event.preventDefault();
+          destination.focus();
+          return;
+        }
+      }
+    }
+    if (this.ownsDirectionalKeys(event)) return;
 
     const rtl = this.effectiveDirection === 'rtl';
     const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
@@ -557,6 +637,14 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       this.back();
     }
   };
+
+  private formatProgressNumber(value: number): string {
+    try {
+      return getNumberFormat(this.effectiveLocale).format(value);
+    } catch {
+      return String(value);
+    }
+  }
 
   override render(): TemplateResult {
     const step = this.open ? this.steps[this.activeIndex] : undefined;
@@ -590,7 +678,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
           <div
             part="popover"
             role="dialog"
-            aria-modal="true"
+            aria-modal=${step.interactiveTarget ? 'false' : 'true'}
             tabindex="-1"
             aria-label=${this.accessibleLabel ?? nothing}
             aria-labelledby=${this.accessibleLabel ? nothing : this.headingId}
@@ -606,7 +694,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
               ? html`
                   <div part="progress">
                     <span part="progress-text" id=${this.progressTextId}>
-                      ${this.localize('tourStepOf', undefined, { current: this.activeIndex + 1, total })}
+                      ${this.localize('tourStepOf', undefined, {
+                        current: this.formatProgressNumber(this.activeIndex + 1),
+                        total: this.formatProgressNumber(total),
+                      })}
                     </span>
                     <span class="dots">
                       ${this.steps.map(

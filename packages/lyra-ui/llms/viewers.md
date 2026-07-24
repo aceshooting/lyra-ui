@@ -89,7 +89,10 @@ used both for `status="converting"` and this component's own in-flight text fetc
 rendered when `src` is set *and* passes the link-safe scheme allowlist — see the URL-safety note
 above; excludes `data:` even though the other two sinks allow it), `highlight-layer` (wrapper around
 every rendered region highlight, image format only), `region-highlight` (one region highlight,
-`data-tone`, `data-active`; image format only), `frame-viewport`/`frame-content`/`frame-controls`/
+`data-tone`, `data-active`; image format only), `region-highlight-target` (transparent activation
+geometry with a minimum hit area independent of the visual rectangle), `highlight-actions`
+(non-overlapping actions used when multiple minimum hit areas would overlap),
+`region-highlight-action` (one action in that list), `frame-viewport`/`frame-content`/`frame-controls`/
 `frame-zoom-in`/`frame-zoom-out`/`frame-reset` (forwarded from the internal `<lr-zoomable-frame>`
 while `zoomable`; image format only)
 
@@ -97,7 +100,8 @@ while `zoomable`; image format only)
 consumer-tunable scroll cap on `[part="body"]`, set from `max-height`; `none` means the preview grows
 with its content until a caller opts in. `--lr-document-preview-font` (default `ui-monospace,
 SFMono-Regular, Menlo, Consolas, monospace`) and `--lr-document-preview-spin-duration` (default
-`0.8s`, stopped under reduced motion). `--lr-document-preview-progress` (default `0`) — a unitless
+`var(--lr-transition-ambient)`, stopped under reduced motion). `--lr-document-preview-progress`
+(default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
 repaint the fraction. `--lr-document-preview-active-border` (default
@@ -108,7 +112,11 @@ state hooks it is an inline `var()` fallback at the point of use rather than a `
 so it can be set on the element or on any ancestor — `::part(region-highlight)[data-active]` is
 invalid CSS (Shadow Parts forbids an attribute selector after `::part()`), which previously left
 re-pointing the shared `--lr-color-warning`/`--lr-color-brand` tokens as the only lever, repainting
-every other element that read them. Plus shared tokens
+every other element that read them. The tone-specific resting border and hover tint use
+`--lr-document-preview-highlight-accent-color`, `--lr-document-preview-highlight-success-color`,
+`--lr-document-preview-highlight-warning-color`, `--lr-document-preview-highlight-danger-color`,
+and `--lr-document-preview-highlight-neutral-color` (defaulting respectively to the matching
+brand/success/warning/danger/neutral color tokens). Plus shared tokens
 `--lr-color-border`, `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
@@ -510,6 +518,9 @@ Enter/Space.
 
 **CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
+`region-highlight-target` (transparent activation geometry with an independent minimum hit area),
+`highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`
+(one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-zoomable-frame>` while `zoomable`).
 
@@ -522,7 +533,11 @@ inline `var()` fallback at the point of use rather than a `:host` declaration, s
 the element *or on any ancestor*: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
 and repainting everything else reading it, was previously the only way. Unset, it falls back to
-exactly the tokens the rule used before.
+exactly the tokens the rule used before. The tone-specific resting border and hover tint use
+`--lr-svg-viewer-highlight-accent-color`, `--lr-svg-viewer-highlight-success-color`,
+`--lr-svg-viewer-highlight-warning-color`, `--lr-svg-viewer-highlight-danger-color`, and
+`--lr-svg-viewer-highlight-neutral-color` (defaulting respectively to the matching
+brand/success/warning/danger/neutral color tokens).
 
 **Optional peer dependency:** `dompurify`.
 
@@ -742,9 +757,11 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell
-covered by a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and
-`cell-highlight` are rendered inside the internal `<lr-virtual-list>` and forwarded via
+**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
+structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
+filling a highlighted cell; focusable and emits `lr-highlight-activate`), `rows`, `spinner`, and
+`error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
+internal `<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
 
 **Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default
@@ -789,9 +806,11 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell covered by
-a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `cell-highlight` are
-rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
+**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
+cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
+highlighted cell; emits `lr-highlight-activate`), `rows`, `spinner`, and `error`. `data-row`,
+`cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
+`<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
 **Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size
@@ -876,8 +895,10 @@ re-click of the same source citation).
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
 `detail: { id }`.
 
-**CSS parts:** `base` (the absolutely-positioned overlay, inset 0) and `rect` (one highlight
-rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes).
+**CSS parts:** `base` (the absolutely-positioned overlay, inset 0), `rect` (one visual highlight
+rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
+(transparent activation geometry with a minimum pointer/focus area independent of the visual
+rectangle).
 
 ## `lr-page-rail`
 
@@ -953,7 +974,8 @@ notebook failed.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
 `data-active`), `cell-active` (added alongside `cell` on the cell an anchor currently targets),
-`cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`, `output`
+`cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
+scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
 `output-toggle`, `error`, `spinner`.

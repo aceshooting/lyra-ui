@@ -85,6 +85,9 @@ export const styles = css`
   }
   [part='expand-toggle'] {
     align-self: flex-start;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
     background: transparent;
@@ -119,6 +122,9 @@ export const styles = css`
   [part='add-button'],
   [part='remove-button'],
   [part='forget-all-button'] {
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding-inline: var(--lr-space-s);
     padding-block: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);

@@ -26,6 +26,7 @@ export const styles = css`
   [part='submit'] {
     flex: 0 0 auto;
     box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding-inline: var(--lr-space-m);
     border: var(--lr-border-width-thin) solid var(--lr-color-brand);

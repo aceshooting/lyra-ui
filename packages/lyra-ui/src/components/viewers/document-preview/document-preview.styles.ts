@@ -12,11 +12,7 @@ export const styles = css`
        (same gap lr-json-viewer's own --lr-json-viewer-font documents) --
        contained here so a host page can retheme it. */
     --lr-document-preview-font: var(--lr-font-mono);
-    /* Spinner rotation timing -- deliberately slower than the shared
-       --lr-transition-fast/--lr-transition-base tokens (those are tuned
-       for one-shot UI transitions, not a continuous loading indicator), but
-       still a retheme-able custom property rather than a bare literal. */
-    --lr-document-preview-spin-duration: 0.8s;
+    --lr-document-preview-spin-duration: var(--lr-transition-ambient);
   }
 
   [part='base'] {
@@ -93,19 +89,81 @@ export const styles = css`
     pointer-events: none;
   }
   [part='region-highlight'] {
+    --_lr-document-preview-highlight-color: var(
+      --lr-document-preview-highlight-accent-color,
+      var(--lr-color-brand)
+    );
     position: absolute;
-    pointer-events: auto;
-    border: var(--lr-border-width-thick) solid var(--lr-color-brand);
+    pointer-events: none;
+    border: var(--lr-border-width-thick) solid var(--_lr-document-preview-highlight-color);
     border-radius: var(--lr-radius-xs);
-    cursor: pointer;
   }
-  [part='region-highlight'][data-active] {
+  [part='region-highlight-target'] {
+    position: absolute;
+    z-index: var(--lr-layer-content);
+    box-sizing: border-box;
+    pointer-events: auto;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: 0;
+    background: transparent;
+  }
+  [part='region-highlight']:where([data-tone='success']) {
+    --_lr-document-preview-highlight-color: var(
+      --lr-document-preview-highlight-success-color,
+      var(--lr-color-success)
+    );
+  }
+  [part='region-highlight']:where([data-tone='warning']) {
+    --_lr-document-preview-highlight-color: var(
+      --lr-document-preview-highlight-warning-color,
+      var(--lr-color-warning)
+    );
+  }
+  [part='region-highlight']:where([data-tone='danger']) {
+    --_lr-document-preview-highlight-color: var(
+      --lr-document-preview-highlight-danger-color,
+      var(--lr-color-danger)
+    );
+  }
+  [part='region-highlight']:where([data-tone='neutral']) {
+    --_lr-document-preview-highlight-color: var(
+      --lr-document-preview-highlight-neutral-color,
+      var(--lr-color-neutral)
+    );
+  }
+  [part='region-highlight']:where([data-active]) {
     border-color: var(--lr-document-preview-active-border, var(--lr-color-warning, var(--lr-color-brand)));
   }
-  [part='region-highlight']:hover {
-    background: color-mix(in srgb, var(--lr-color-brand) 20%, transparent);
+  [part='region-highlight-target']:hover + [part='region-highlight'] {
+    background: color-mix(in srgb, var(--_lr-document-preview-highlight-color) 20%, transparent);
   }
-  [part='region-highlight']:focus-visible {
+  [part='region-highlight-target']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='highlight-actions'] {
+    display: grid;
+    gap: var(--lr-space-xs);
+    inline-size: 100%;
+    box-sizing: border-box;
+    padding: var(--lr-space-xs);
+  }
+  [part='region-highlight-action'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+    cursor: pointer;
+  }
+  [part='region-highlight-action']:hover {
+    background: var(--lr-color-surface-raised);
+  }
+  [part='region-highlight-action']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
@@ -180,7 +238,7 @@ export const styles = css`
     border-radius: 50%;
     border: var(--lr-border-width-thick) solid var(--lr-color-border);
     border-block-start-color: var(--lr-color-brand);
-    animation: lr-document-preview-spin var(--lr-document-preview-spin-duration) linear infinite;
+    animation: lr-document-preview-spin var(--lr-document-preview-spin-duration) infinite;
   }
   /* Determinate progress reuses the same ring shape but holds a fixed
      rotation instead of spinning -- conic-gradient renders the actual fill,

@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { lockScroll } from '../../../internal/scroll-lock.js';
 import { nextId } from '../../../internal/a11y.js';
+import { resolveLocalizedParts } from '../../../internal/localization.js';
 import { styles } from './tool-approval-dialog.styles.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
@@ -382,11 +383,13 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
 
   override render(): TemplateResult {
     const hasError = this.editing && this.draftError.length > 0;
-    // Split (rather than interpolate outright) so `toolName` can still land in
-    // its own `part="tool-name"` node -- the localized template supplies the
-    // surrounding text either side of the `{tool}` placeholder.
-    const headingParts = this.localize('toolApprovalHeading').split('{tool}');
     const toolName = this.toolName || this.localize('toolApprovalGenericTool');
+    const headingTemplate = this.localize('toolApprovalHeading');
+    // Resolve through the normal interpolation path while preserving a distinct, themeable node
+    // for every translated occurrence of the tool name.
+    const headingParts = resolveLocalizedParts(headingTemplate, (marker) =>
+      this.localize('toolApprovalHeading', undefined, { tool: marker }),
+    );
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div

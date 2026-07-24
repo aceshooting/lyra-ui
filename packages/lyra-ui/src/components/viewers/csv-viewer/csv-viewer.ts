@@ -1,6 +1,7 @@
 export * from './csv-viewer.class.js';
 import { html } from 'lit';
 import { defineElement } from '../../../internal/prefix.js';
+import '../../layout/virtual-list/virtual-list.js';
 import { registerDocumentRenderer, type DocumentFile } from '../document-viewer/registry.js';
 import { LyraCsvViewer } from './csv-viewer.class.js';
 

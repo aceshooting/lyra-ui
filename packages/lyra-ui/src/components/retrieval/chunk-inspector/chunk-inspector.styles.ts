@@ -82,6 +82,9 @@ export const styles = css`
   [part~='open-button'],
   lr-virtual-list::part(open-button) {
     display: block;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     padding: 0;
     border: none;
@@ -123,6 +126,9 @@ export const styles = css`
   [part~='toggle'],
   lr-virtual-list::part(toggle) {
     align-self: flex-start;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0;
     border: none;
     background: transparent;

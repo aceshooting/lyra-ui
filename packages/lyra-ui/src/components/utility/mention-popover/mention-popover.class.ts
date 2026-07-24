@@ -16,7 +16,7 @@ export interface MentionItem {
   icon?: string;
 }
 
-/** Predicate deciding whether `item` matches a (already-trimmed, already-lowercased) `query`.
+/** Predicate deciding whether `item` matches a (already-trimmed, locale-lowercased) `query`.
  *  Mirrors `<lr-combobox>`'s `OptionFilter` convention -- override `filter` to replace the
  *  built-in case-insensitive label/description substring match entirely. */
 export type MentionFilter = (item: MentionItem, query: string) => boolean;
@@ -24,10 +24,6 @@ export type MentionFilter = (item: MentionItem, query: string) => boolean;
 export interface MentionSelectDetail {
   id: string;
   label: string;
-}
-
-function defaultFilter(item: MentionItem, query: string): boolean {
-  return item.label.toLowerCase().includes(query) || (item.description ?? '').toLowerCase().includes(query);
 }
 
 type TextControl = HTMLTextAreaElement | HTMLInputElement;
@@ -134,11 +130,13 @@ export interface LyraMentionPopoverEventMap {
  * `@`-mention and `/`-slash-command autocomplete inside a plain-text
  * `<textarea>`/`<input>` the host owns (e.g. `<lr-chat-composer>`'s own
  * textarea, though this component has no dependency on that or any other
- * specific input). It never takes DOM focus itself — the same "focus stays
- * put, `aria-activedescendant` conveys the active row" pattern
- * `<lr-select>`/`<lr-combobox>` use for their own listbox — so a host
- * must apply `aria-activedescendant` to its *own* input element, pointing at
- * whatever `activeDescendantId` currently returns.
+ * specific input). On platforms that support cross-root ARIA element
+ * reflection, focus stays in the host input while
+ * `ariaActiveDescendantElement` conveys the active row. Where the platform
+ * rejects that reference, the explicit `focusActiveOption()` fallback moves
+ * real focus into this component's shadow listbox so focus ownership and
+ * options share one tree scope. A string `aria-activedescendant` cannot
+ * resolve from the host document into this component's shadow root.
  *
  * Integration contract (entirely the host's responsibility — this component
  * never inspects the text control's value or listens to it directly):
@@ -156,9 +154,14 @@ export interface LyraMentionPopoverEventMap {
  *    mention context (a space typed, the trigger character deleted, the
  *    input blurred, …) — `lr-mention-close` fires automatically from that
  *    (see below), there is no separate "tell it to close" call needed.
- * 5. Keep the host's own input's `aria-activedescendant` (and, optionally,
- *    `aria-controls`, via `listboxId`) in sync with `activeDescendantId` —
- *    this component has no DOM of the host's to attach that to itself.
+ * 5. Call `syncActiveDescendant()` after opening and after every consumed
+ *    navigation key. It uses cross-root ARIA element reflection where the
+ *    platform supports it and never installs a broken string IDREF. When it
+ *    returns `false`, call `focusActiveOption()` after the first consumed
+ *    navigation key. That fallback moves real focus into the shadow listbox,
+ *    where each option and its focus owner share one tree scope; subsequent
+ *    navigation is handled by the popover and focus returns to `anchor` when
+ *    it closes.
  *
  * Positioning: when `anchor` is a plain `<textarea>` or single-line text
  * `<input>`, this component measures exactly where the caret currently
@@ -214,18 +217,14 @@ export interface LyraMentionPopoverEventMap {
  *     // splice `${e.detail.label}` into the textarea at the trigger offset
  *   });
  *   popover.addEventListener('lr-mention-close', () => {
- *     textarea.removeAttribute('aria-activedescendant');
+ *     popover.syncActiveDescendant(textarea);
  *   });
  *
  *   // Whenever the popover re-renders its active row (e.g. after every
  *   // ArrowUp/ArrowDown handleKeyDown() call above), sync the host's own
  *   // input so assistive tech announces the current candidate:
  *   const syncActiveDescendant = () => {
- *     if (popover.open && popover.activeDescendantId) {
- *       textarea.setAttribute('aria-activedescendant', popover.activeDescendantId);
- *     } else {
- *       textarea.removeAttribute('aria-activedescendant');
- *     }
+ *     popover.syncActiveDescendant(textarea);
  *   };
  * </script>
  * ```
@@ -296,6 +295,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // identical lr-hide handling) can tell a successful-selection close
   // apart from every other close and skip the event for that one case.
   private _suppressCloseEvent = false;
+  // Cross-root ARIA element reflection is not implemented consistently by
+  // browsers. When a host explicitly chooses the documented fallback, real
+  // focus moves onto the active option so ownership and option share this
+  // shadow tree instead of publishing an unresolvable string IDREF.
+  private _ownsFocus = false;
 
   protected override willUpdate(changed: PropertyValues): void {
     this._isFirstUpdate = !this.hasUpdated;
@@ -314,6 +318,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         this.cleanup?.();
         this.cleanup = undefined;
         this.virtualAnchor?.remove();
+        if (this._ownsFocus) {
+          this._ownsFocus = false;
+          if (this.anchor?.isConnected) this.anchor.focus({ preventScroll: true });
+        }
         // Don't fire for markup that's simply rendering open="false" for the
         // first time, and don't fire for the commit() path (see
         // _suppressCloseEvent's own doc above) -- every other true->false
@@ -331,8 +339,21 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     // mention-popover.styles.ts) -- without this, arrowing past its visible
     // rows would silently move the highlight off-screen. `block: 'nearest'`
     // makes this a no-op whenever the active row is already fully visible.
-    if (changed.has('activeIndex')) {
-      this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]')?.scrollIntoView({ block: 'nearest' });
+    if (changed.has('activeIndex') || changed.has('query') || changed.has('items')) {
+      const active = this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]');
+      active?.scrollIntoView({ block: 'nearest' });
+      if (this._ownsFocus) {
+        if (active) {
+          active.focus({ preventScroll: true });
+        } else if (this.anchor?.isConnected) {
+          this._ownsFocus = false;
+          this.anchor.focus({ preventScroll: true });
+        } else {
+          this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.focus({
+            preventScroll: true,
+          });
+        }
+      }
     }
   }
 
@@ -341,6 +362,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.cleanup?.();
     this.cleanup = undefined;
     this.virtualAnchor?.remove();
+    this._ownsFocus = false;
     // Reset so a reconnect (e.g. a drag-drop reparent of the composer, or a
     // virtualized/reordering message list moving this element) re-triggers
     // updated()'s open-driven branch -- without this, `open` stays `true`
@@ -355,26 +377,77 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   /** The current candidate set: `items` filtered by `query` via `filter`
    *  (or the built-in default). Empty `query` returns `items` unfiltered. */
   get filteredItems(): MentionItem[] {
-    const q = this.query.trim().toLowerCase();
+    const locale = this.effectiveLocale;
+    const q = this.query.trim().toLocaleLowerCase(locale);
     if (!q) return this.items;
-    const fn = this.filter ?? defaultFilter;
-    return this.items.filter((item) => fn(item, q));
+    if (this.filter) return this.items.filter((item) => this.filter!(item, q));
+    return this.items.filter(
+      (item) =>
+        item.label.toLocaleLowerCase(locale).includes(q) ||
+        (item.description ?? '').toLocaleLowerCase(locale).includes(q),
+    );
   }
 
-  /** The `id` of the currently-highlighted row for the host to apply as its
-   *  own input's `aria-activedescendant` — `null` while closed or when
-   *  `filteredItems` is empty (nothing to point at). See the class doc's
-   *  `@example` for the full wiring. */
+  /** The internal `id` of the currently-highlighted row. This remains useful
+   *  for diagnostics and same-tree consumers, but must not be assigned as a
+   *  string `aria-activedescendant` from outside this shadow root. Use
+   *  `activeDescendantElement` or `syncActiveDescendant()` instead. */
   get activeDescendantId(): string | null {
     if (!this.open) return null;
     const idx = this.clampedIndex(this.filteredItems);
     return idx >= 0 ? this.rowId(idx) : null;
   }
 
-  /** The `id` of the `role="listbox"` popup, for a host that also wants to
-   *  wire `aria-controls` on its own input (screen-reader support for
-   *  `aria-controls` is inconsistent, so `activeDescendantId` remains the
-   *  load-bearing piece; this is a supplementary nicety). */
+  /** The currently-highlighted shadow option for ARIA element reflection. */
+  get activeDescendantElement(): HTMLElement | null {
+    const id = this.activeDescendantId;
+    return id ? this.renderRoot.querySelector<HTMLElement>(`#${CSS.escape(id)}`) : null;
+  }
+
+  /**
+   * Synchronizes a host-owned control with the active option through the
+   * platform's element-reference ARIA API. Returns `false` when that API is
+   * unavailable or rejects a cross-root reference; in that case the host
+   * must use a listbox/focus owner in the control's own tree scope.
+   */
+  syncActiveDescendant(control: HTMLElement): boolean {
+    control.removeAttribute('aria-activedescendant');
+    if (!('ariaActiveDescendantElement' in control)) return false;
+    const active = this.activeDescendantElement;
+    try {
+      const reflected = control as HTMLElement & { ariaActiveDescendantElement: Element | null };
+      reflected.ariaActiveDescendantElement = active;
+      const accepted = reflected.ariaActiveDescendantElement === active;
+      if (!accepted) {
+        reflected.ariaActiveDescendantElement = null;
+        control.removeAttribute('aria-activedescendant');
+      }
+      return accepted;
+    } catch {
+      control.removeAttribute('aria-activedescendant');
+      return false;
+    }
+  }
+
+  /**
+   * Same-tree fallback for platforms that reject cross-shadow ARIA element
+   * reflection. Moves real focus to the active option and returns whether it
+   * succeeded. Once active, the popover handles its own navigation keys and
+   * restores focus to `anchor` when it closes.
+   */
+  async focusActiveOption(): Promise<boolean> {
+    if (!this.open || !this.activeDescendantElement) return false;
+    this._ownsFocus = true;
+    this.requestUpdate();
+    await this.updateComplete;
+    const active = this.activeDescendantElement;
+    active?.focus({ preventScroll: true });
+    return this.shadowRoot?.activeElement === active;
+  }
+
+  /** The internal `id` of the `role="listbox"` popup. Like
+   *  `activeDescendantId`, it cannot form a cross-shadow string IDREF from a
+   *  host-owned input. */
   get listboxId(): string {
     return this._listboxId;
   }
@@ -488,6 +561,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     if (item) this.commit(item);
   };
 
+  private onListboxKeyDown = (e: KeyboardEvent): void => {
+    if (!this._ownsFocus) return;
+    if (this.handleKeyDown(e) && this.open) void this.focusActiveOption();
+  };
+
   /** Resolves `emptyText`'s effective text: an explicit override wins verbatim; left at the
    *  built-in default it instead routes through `this.localize()` so a locale/`.strings`
    *  override applies without requiring `emptyText` itself to be set. */
@@ -512,7 +590,15 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     const id = this.rowId(index);
     const active = id === activeId;
     return html`
-      <div part="option" id=${id} role="option" data-id=${item.id} aria-selected=${active ? 'true' : 'false'} ?data-active=${active}>
+      <div
+        part="option"
+        id=${id}
+        role="option"
+        data-id=${item.id}
+        aria-selected=${active ? 'true' : 'false'}
+        tabindex=${this._ownsFocus && active ? '0' : '-1'}
+        ?data-active=${active}
+      >
         ${item.icon ? html`<span part="option-icon" aria-hidden="true">${item.icon}</span>` : nothing}
         <span part="option-label">
           <span>${item.label}</span>
@@ -532,9 +618,11 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         part="listbox"
         id=${this._listboxId}
         role="listbox"
+        tabindex=${this._ownsFocus && rows.length === 0 ? '0' : '-1'}
         aria-label=${this.effectiveLabel}
         @mousedown=${this.onListboxMouseDown}
         @click=${this.onListboxClick}
+        @keydown=${this.onListboxKeyDown}
       >
         ${rows.length === 0
           ? html`<div part="empty" role="option" aria-selected="false" aria-disabled="true">${this.effectiveEmptyText}</div>`

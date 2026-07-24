@@ -129,6 +129,90 @@ it('is accessible with an expanded, multi-level tree', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('exposes the visible topic hierarchy as a nested ARIA tree', async () => {
+  const el = (await fixture(html`<lr-mind-map expand-depth="2" .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const tree = el.shadowRoot!.querySelector('[role="tree"]')!;
+  const root = tree.querySelector(':scope > [role="treeitem"]')!;
+  expect(root.textContent).to.include('Knowledge Graph RAG');
+  expect(root.getAttribute('aria-level')).to.equal('1');
+  expect(root.getAttribute('aria-expanded')).to.equal('true');
+  const group = root.querySelector(':scope > [role="group"]')!;
+  expect(group.querySelectorAll(':scope > [role="treeitem"]').length).to.equal(2);
+});
+
+it('reconciles keyboard focus when the focused topic disappears', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const svg = el.shadowRoot!.querySelector('[part="svg"]')!;
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('kg');
+  el.topics = [{ ...topics[0]!, children: topics[0]!.children!.filter((topic) => topic.id !== 'kg') }];
+  await el.updateComplete;
+  expect((el as unknown as { focusedId: string | null }).focusedId).to.equal('root');
+});
+
+it('does not recompute the O(n) radial layout for focus-only keyboard updates', async () => {
+  const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+  const internals = el as unknown as { relayout(): void };
+  const original = internals.relayout.bind(el);
+  let calls = 0;
+  internals.relayout = () => {
+    calls++;
+    original();
+  };
+  el.shadowRoot!.querySelector('[part="svg"]')!.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+  );
+  await el.updateComplete;
+  expect(calls).to.equal(0);
+});
+
+it('recomputes the implicit hub when locale strings change after mount', async () => {
+  const el = (await fixture(
+    html`<lr-mind-map .topics=${[{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }]}></lr-mind-map>`,
+  )) as LyraMindMap;
+  expect(el.shadowRoot!.querySelector('[part="node-label"]')!.textContent).to.equal('Mind map');
+  el.strings = { mindMapLabel: 'Carte mentale' };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="node-label"]')!.textContent).to.equal('Carte mentale');
+});
+
+it('recomputes token-derived geometry when its allocation changes', async () => {
+  const OriginalResizeObserver = window.ResizeObserver;
+  let notify: ResizeObserverCallback | undefined;
+  class TestResizeObserver {
+    constructor(callback: ResizeObserverCallback) {
+      notify = callback;
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    TestResizeObserver as unknown as typeof ResizeObserver;
+  try {
+    const el = (await fixture(html`<lr-mind-map .topics=${topics}></lr-mind-map>`)) as LyraMindMap;
+    const beforeRoot = nodePosition(el, 'Knowledge Graph RAG');
+    const beforeChild = nodePosition(el, 'Knowledge graphs');
+    const before = Math.hypot(beforeChild.x - beforeRoot.x, beforeChild.y - beforeRoot.y);
+    el.style.setProperty('--lr-mind-map-ring-gap', '8rem');
+    expect(notify).to.exist;
+    notify!(
+      [{ contentRect: { width: 321, height: 240 } } as unknown as ResizeObserverEntry],
+      {} as ResizeObserver,
+    );
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+    const afterRoot = nodePosition(el, 'Knowledge Graph RAG');
+    const afterChild = nodePosition(el, 'Knowledge graphs');
+    const after = Math.hypot(afterChild.x - afterRoot.x, afterChild.y - afterRoot.y);
+    expect(after).to.be.greaterThan(before);
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver = OriginalResizeObserver;
+  }
+});
+
 function nodePosition(el: LyraMindMap, labelSubstring: string): { x: number; y: number } {
   const nodeEl = [...el.shadowRoot!.querySelectorAll('[part="node"]')].find((n) =>
     n.textContent?.includes(labelSubstring),

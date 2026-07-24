@@ -262,6 +262,32 @@ describe('lr-include', () => {
     } finally { window.fetch = original; }
   });
 
+  it('restarts an interrupted same-src load after reconnecting', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = ((_url: string, init?: RequestInit) => {
+      calls++;
+      if (calls === 1) {
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(abortError()));
+        });
+      }
+      return Promise.resolve(response('<h1>Reconnected</h1>'));
+    }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(
+        html`<lr-include src="https://example.test/reconnect.html">Fallback</lr-include>`,
+      );
+      await waitUntil(() => el.hasAttribute('aria-busy'));
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => el.querySelector('h1') !== null);
+      expect(calls).to.equal(2);
+      expect(el.querySelector('h1')!.textContent).to.equal('Reconnected');
+    } finally { window.fetch = original; }
+  });
+
   it('honors a load scheduled while detached, once reconnected', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<h1>Reconnected</h1>'))) as typeof window.fetch;

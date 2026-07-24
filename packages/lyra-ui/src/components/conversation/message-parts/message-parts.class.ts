@@ -17,15 +17,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import type { LyraMarkdownEventMap } from '../markdown/markdown.class.js';
 import type { LyraWidgetRendererEventMap } from '../widget-renderer/widget-renderer.class.js';
-import '../../agent-tools/thinking-panel/thinking-panel.js';
-import '../../agent-tools/tool-call-chip/tool-call-chip.js';
-import '../../agent-tools/tool-result-view/tool-result-view.js';
-import '../../forms/button/button.js';
-import '../../media/attachment-chip/attachment-chip.js';
-import '../../retrieval/citation-badge/citation-badge.js';
-import '../../utility/json-viewer/json-viewer.js';
-import '../markdown/markdown.js';
-import '../widget-renderer/widget-renderer.js';
 import { styles } from './message-parts.styles.js';
 
 export type MessagePartRenderer = (part: MessagePart, index: number) => unknown;

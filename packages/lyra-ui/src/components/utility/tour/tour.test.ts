@@ -95,6 +95,41 @@ describe('lr-tour', () => {
     expect((event2 as CustomEvent).detail).to.deep.equal({ index: 2 });
   });
 
+  it('start() is a no-op when there are no steps', async () => {
+    const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
+    let started = false;
+    tour.addEventListener('lr-tour-start', () => (started = true));
+    tour.start();
+    await tour.updateComplete;
+    expect(tour.open).to.be.false;
+    expect(started).to.be.false;
+    expect(tour.shadowRoot!.querySelector('[part="popover"]')).to.not.exist;
+  });
+
+  it('closes an open overlay when steps clear and reactivates a same-index replacement', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(2)} open></lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+
+    let missing = false;
+    tour.addEventListener('lr-tour-target-missing', () => (missing = true));
+    tour.steps = [{ ...makeSteps(1)[0]!, heading: 'Replacement', target: '#missing-replacement' }];
+    await tour.updateComplete;
+    expect(tour.activeIndex).to.equal(0);
+    expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Replacement');
+    expect(missing).to.be.true;
+
+    tour.steps = [];
+    await tour.updateComplete;
+    expect(tour.open).to.be.false;
+    expect(tour.shadowRoot!.querySelector('[part="popover"]')).to.not.exist;
+  });
+
   it('never mutates the steps array across next()/back()/goToStep()', async () => {
     const original = makeSteps(3);
     const snapshot = JSON.parse(JSON.stringify(original));
@@ -490,6 +525,112 @@ describe('lr-tour', () => {
     expect(clicked).to.be.true;
   });
 
+  it('makes an interactive-target step nonmodal and provides an explicit Tab route to and from the target', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <button id="tour-target-0">Interactive target</button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const target = el.querySelector('#tour-target-0') as HTMLButtonElement;
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    expect(popover.getAttribute('aria-modal')).to.equal('false');
+
+    const next = tour.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+    next.focus();
+    press(next, 'Tab');
+    expect(document.activeElement?.id).to.equal(target.id);
+
+    press(target, 'Tab', { shiftKey: true });
+    expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('next-button');
+  });
+
+  it('does not steal focus from a still-valid interactive target on a same-step steps replacement', async () => {
+    const steps = makeSteps(1, () => ({ interactiveTarget: true }));
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${steps} open></lr-tour>
+        <button id="tour-target-0">Interactive target</button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const target = el.querySelector('#tour-target-0') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    target.focus();
+    expect(document.activeElement?.id).to.equal(target.id);
+    tour.steps = [{ ...steps[0]!, heading: 'Updated heading' }];
+    await tour.updateComplete;
+
+    expect(document.activeElement?.id).to.equal(target.id);
+    expect(tour.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal(
+      'Updated heading',
+    );
+  });
+
+  it('returns focus to the panel when a same-index steps replacement changes or removes the interactive target', async () => {
+    const steps = makeSteps(1, () => ({ interactiveTarget: true }));
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${steps} open></lr-tour>
+        <button id="tour-target-0">Original target</button>
+        <button id="replacement-target">Replacement target</button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const original = el.querySelector('#tour-target-0') as HTMLButtonElement;
+    const replacement = el.querySelector('#replacement-target') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    original.focus();
+    tour.steps = [{ ...steps[0]!, target: '#replacement-target' }];
+    await tour.updateComplete;
+    expect(focusedDescriptor()).to.include('[part=popover]');
+
+    replacement.focus();
+    replacement.remove();
+    tour.steps = [{ ...steps[0]!, target: '#missing-replacement' }];
+    await tour.updateComplete;
+    expect(focusedDescriptor()).to.include('[part=popover]');
+  });
+
+  it('routes Tab only at the boundaries of a multi-control interactive target subtree', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1, () => ({ interactiveTarget: true }))} open></lr-tour>
+        <div id="tour-target-0">
+          <button id="target-first">First target control</button>
+          <button id="target-last">Last target control</button>
+        </div>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    const first = el.querySelector('#target-first') as HTMLButtonElement;
+    const last = el.querySelector('#target-last') as HTMLButtonElement;
+    await tour.updateComplete;
+
+    const next = tour.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement;
+    next.focus();
+    press(next, 'Tab');
+    expect(document.activeElement?.id).to.equal(first.id);
+
+    const internalTab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    first.dispatchEvent(internalTab);
+    expect(internalTab.defaultPrevented).to.be.false;
+
+    const boundaryTab = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    last.dispatchEvent(boundaryTab);
+    expect(boundaryTab.defaultPrevented).to.be.true;
+    expect((tour.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('skip-button');
+
+    const panelFirst = tour.shadowRoot!.querySelector('[part="skip-button"]') as HTMLButtonElement;
+    panelFirst.focus();
+    press(panelFirst, 'Tab', { shiftKey: true });
+    expect(document.activeElement?.id).to.equal(last.id);
+  });
+
   it('tracks the target rect after a resize, updating the mask cutout and spotlight ring geometry', async () => {
     const el = (await fixture(
       html`<div>
@@ -555,6 +696,18 @@ describe('lr-tour', () => {
     tour.showProgress = false;
     await tour.updateComplete;
     expect(tour.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;
+  });
+
+  it('formats both progress numbers with the effective locale', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour lang="ar-EG" .steps=${makeSteps(3)} open></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    expect(tour.shadowRoot!.querySelector('[part="progress-text"]')!.textContent!.trim()).to.equal('Step ١ of ٣');
   });
 
   it('accepts show-progress="false" as a plain-HTML attribute string, not just a JS property binding', async () => {
@@ -663,6 +816,33 @@ describe('lr-tour', () => {
     press(input, 'ArrowRight');
     await tour.updateComplete;
     expect(tour.activeIndex, 'ArrowRight inside a text-editing control must not advance the tour').to.equal(0);
+  });
+
+  it('does not hijack arrows from native and ARIA controls that own directional keys', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(2)} open>
+          <select id="rich-select"><option>One</option><option>Two</option></select>
+          <input id="rich-range" type="range" />
+          <div id="rich-slider" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="10"></div>
+        </lr-tour>
+        ${targetButtons(2)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    for (const id of ['rich-select', 'rich-range', 'rich-slider']) {
+      const control = tour.querySelector(`#${id}`)!;
+      const event = new KeyboardEvent('keydown', {
+        key: 'ArrowRight',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      control.dispatchEvent(event);
+      expect(event.defaultPrevented, `${id} keeps its ArrowRight default`).to.be.false;
+      expect(tour.activeIndex).to.equal(0);
+    }
   });
 
   describe('i18n', () => {
@@ -914,6 +1094,28 @@ describe('lr-tour', () => {
     const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
     const viewportWidth = document.documentElement.clientWidth;
     expect(popover.getBoundingClientRect().width).to.be.at.most(viewportWidth);
+  });
+
+  it('wraps an unbroken heading and keeps every footer action at the shared hit-area floor', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour
+          style="--lr-icon-button-size: 44px;"
+          .steps=${makeSteps(1, () => ({
+            heading: 'AnExceptionallyLongUnbrokenTourHeadingThatMustWrap',
+          }))}
+          open
+        ></lr-tour>
+        ${targetButtons(1)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    await tour.updateComplete;
+    const heading = tour.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+    expect(getComputedStyle(heading).overflowWrap).to.equal('anywhere');
+    for (const button of tour.shadowRoot!.querySelectorAll<HTMLElement>('[part$="-button"]')) {
+      expect(parseFloat(getComputedStyle(button).minBlockSize)).to.be.at.least(44);
+    }
   });
 
   it('collapses the popover enter animation under prefers-reduced-motion', () => {

@@ -30,7 +30,12 @@ const COMMANDS: MentionItem[] = [
 // a real textarea) and wires `.anchor`/`.open` imperatively after mount,
 // exactly like a host application would in response to its own '@'/'/'
 // detection. See LiveComposerIntegration below for the full, real-textarea version.
-function staticDemo(id: string, items: MentionItem[], props: Partial<LyraMentionPopover> = {}) {
+function staticDemo(
+  id: string,
+  items: MentionItem[],
+  props: Partial<LyraMentionPopover> = {},
+  maxWidth = '28rem',
+) {
   setTimeout(() => {
     const container = document.getElementById(id);
     const anchor = container?.querySelector<HTMLElement>('.demo-anchor');
@@ -42,7 +47,7 @@ function staticDemo(id: string, items: MentionItem[], props: Partial<LyraMention
     popover.open = true;
   }, 0);
   return html`
-    <div id=${id} style="max-width: 28rem;">
+    <div id=${id} style="max-width: ${maxWidth};">
       <span class="demo-anchor" style="display: inline-block;">@</span>
       <lr-mention-popover class="demo-popover"></lr-mention-popover>
     </div>
@@ -69,6 +74,22 @@ export const FilteredByQuery: Story = {
 
 export const NoMatches: Story = {
   render: () => staticDemo('mention-demo-empty', PEOPLE, { query: 'zzz', emptyText: 'No teammates match “zzz”' }),
+};
+
+export const NarrowLongContent: Story = {
+  render: () =>
+    staticDemo(
+      'mention-demo-narrow-long',
+      [
+        {
+          id: 'long',
+          label: 'Avery-With-An-Exceptionally-Long-Unbroken-Display-Name',
+          description: 'A-description-without-natural-breakpoints-that-must-not-expand-the-popover-inline-axis',
+        },
+      ],
+      {},
+      '20rem',
+    ),
 };
 
 /**
@@ -110,15 +131,11 @@ function wireDemo(containerId: string): void {
   const closeMention = () => {
     triggerIndex = -1;
     popover.open = false;
-    textarea.removeAttribute('aria-activedescendant');
+    popover.syncActiveDescendant(textarea);
   };
 
   const syncActiveDescendant = () => {
-    if (popover.open && popover.activeDescendantId) {
-      textarea.setAttribute('aria-activedescendant', popover.activeDescendantId);
-    } else {
-      textarea.removeAttribute('aria-activedescendant');
-    }
+    popover.syncActiveDescendant(textarea);
   };
 
   textarea.addEventListener('input', () => {
@@ -138,7 +155,9 @@ function wireDemo(containerId: string): void {
 
   textarea.addEventListener('keydown', (e) => {
     if (popover.open && popover.handleKeyDown(e)) {
-      syncActiveDescendant();
+      if (!popover.syncActiveDescendant(textarea) && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        void popover.focusActiveOption();
+      }
     }
   });
 
@@ -157,6 +176,6 @@ function wireDemo(containerId: string): void {
   }) as EventListener);
 
   popover.addEventListener('lr-mention-close', () => {
-    textarea.removeAttribute('aria-activedescendant');
+    popover.syncActiveDescendant(textarea);
   });
 }

@@ -1,4 +1,5 @@
 import { expect } from '@open-wc/testing';
+import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
 import { parseVCards } from './vcard.js';
 
 const CARD = ['BEGIN:VCARD', 'VERSION:4.0', 'FN:John Q. Public', 'N:Public;John;Quinlan;Mr.;Esq.', 'ORG:ABC\\, Inc.;Division', 'TEL;TYPE=work,voice:+1-404', 'EMAIL;TYPE=work:john@example.com', 'ADR;TYPE=work:;;Main Street;Town;CA;123;USA', 'END:VCARD'].join('\r\n');
@@ -18,4 +19,7 @@ describe('parseVCards', () => {
     expect(parseVCards('BEGIN:VCARD\nFN:A\\, B\\; C\\nD\nEND:VCARD')[0].fn).to.equal('A, B; C\nD');
   });
   it('returns an empty array without a vCard block', () => { expect(parseVCards('plain text')).to.deep.equal([]); });
+  it('rejects contacts beyond the retained-entry ceiling while scanning', () => {
+    expect(() => parseVCards(`${CARD}\r\n${CARD}`, 1)).to.throw(LyraResourceLimitError);
+  });
 });

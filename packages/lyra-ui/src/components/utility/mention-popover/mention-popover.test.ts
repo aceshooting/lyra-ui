@@ -9,6 +9,15 @@ const ITEMS: MentionItem[] = [
   { id: 'carol', label: 'Carol Ibarra', description: 'Engineering' },
 ];
 
+class MentionPopoverShadowHarness extends HTMLElement {
+  constructor() {
+    super();
+    const root = this.attachShadow({ mode: 'open' });
+    root.append(document.createElement('lr-mention-popover'));
+  }
+}
+customElements.define('mention-popover-shadow-harness', MentionPopoverShadowHarness);
+
 function listbox(el: LyraMentionPopover): HTMLElement {
   return el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
 }
@@ -62,6 +71,14 @@ it('filters items against query using the built-in case-insensitive label/descri
   el.query = 'engineering';
   await el.updateComplete;
   expect(el.filteredItems.map((i) => i.id)).to.deep.equal(['carol']);
+});
+
+it('uses the effective locale for built-in case-insensitive filtering', async () => {
+  const el = await openWithItems([{ id: 'istanbul', label: 'İstanbul' }]);
+  el.lang = 'tr';
+  el.query = 'istanbul';
+  await el.updateComplete;
+  expect(el.filteredItems.map((i) => i.id)).to.deep.equal(['istanbul']);
 });
 
 it('overrides the built-in filter via the filter property', async () => {
@@ -275,6 +292,92 @@ it('exposes activeDescendantId as null while closed', async () => {
   expect(el.activeDescendantId).to.be.null;
 });
 
+it('uses element reflection when supported and otherwise offers a same-tree real-focus fallback', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea') as HTMLTextAreaElement & {
+    ariaActiveDescendantElement: Element | null;
+  };
+  document.body.appendChild(textarea);
+  el.anchor = textarea;
+  await el.updateComplete;
+  textarea.focus();
+
+  const active = el.activeDescendantElement;
+  expect(active?.getAttribute('data-id')).to.equal('alice');
+  if (el.syncActiveDescendant(textarea)) {
+    expect(textarea.ariaActiveDescendantElement === active).to.be.true;
+  } else {
+    expect(textarea.hasAttribute('aria-activedescendant')).to.be.false;
+    expect(await el.focusActiveOption()).to.be.true;
+    expect(el.shadowRoot!.activeElement === active).to.be.true;
+
+    active!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('data-id')).to.equal('bob');
+
+    el.shadowRoot!.activeElement!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(document.activeElement === textarea).to.be.true;
+  }
+
+  textarea.remove();
+});
+
+it('focuses the active fallback option when nested inside another shadow root', async () => {
+  const harness = await fixture<MentionPopoverShadowHarness>(
+    html`<mention-popover-shadow-harness></mention-popover-shadow-harness>`,
+  );
+  const el = harness.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    el.items = ITEMS;
+    el.open = true;
+    await el.updateComplete;
+
+    textarea.focus();
+    const active = el.activeDescendantElement!;
+    expect(getComputedStyle(active).visibility).to.equal('visible');
+    expect(active.tabIndex).to.equal(-1);
+    expect(await el.focusActiveOption()).to.be.true;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('alice');
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('recovers real fallback focus when filtering invalidates the focused option', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  textarea.id = 'mention-focus-return';
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+
+    el.query = 'bob';
+    await el.updateComplete;
+    expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset['id']).to.equal('bob');
+
+    el.query = 'no-match';
+    await el.updateComplete;
+    expect(document.activeElement?.id).to.equal(textarea.id);
+
+    el.query = '';
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+    el.items = [];
+    await el.updateComplete;
+    expect(document.activeElement?.id).to.equal(textarea.id);
+  } finally {
+    textarea.remove();
+  }
+});
+
 it('positions the popup (position: fixed) against a plain non-text-control anchor', async () => {
   const wrap = await fixture(html`
     <div>
@@ -423,6 +526,16 @@ it("actually applies place()'s available-space custom properties onto the render
     (v) => v !== '',
   );
   expect(listbox(el).style.getPropertyValue('--lr-positioner-available-inline-size')).to.not.equal('');
+});
+
+it('clips the non-scrolling inline axis and keeps every option at the shared hit-area floor', async () => {
+  const el = await openWithItems();
+  el.style.setProperty('--lr-icon-button-size', '44px');
+  await el.updateComplete;
+
+  const boxStyle = getComputedStyle(listbox(el));
+  expect(['clip', 'hidden']).to.include(boxStyle.overflowX);
+  expect(parseFloat(getComputedStyle(rows(el)[0]!).minBlockSize)).to.be.at.least(44);
 });
 
 /** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)

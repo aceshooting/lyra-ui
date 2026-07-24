@@ -4,6 +4,32 @@ import { getPptxRenderer, loadPptxRenderer, __setPptxRendererForTesting } from '
 afterEach(() => __setPptxRendererForTesting(undefined));
 
 describe('pptx loader', () => {
+  it('normalizes named, default-wrapped, and mixed module shapes capability-first', async () => {
+    const named = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: { source: 'named' } };
+    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: { source: 'default' } };
+
+    expect(await loadPptxRenderer(async () => named as never)).to.equal(named);
+    expect(
+      await loadPptxRenderer(async () => ({ default: fallback }) as never),
+    ).to.equal(fallback);
+    const mixed = await loadPptxRenderer(async () => ({ ...named, default: fallback }) as never);
+    expect(mixed!.PptxViewer).to.equal(named.PptxViewer);
+    expect(mixed!.RECOMMENDED_ZIP_LIMITS).to.equal(named.RECOMMENDED_ZIP_LIMITS);
+  });
+
+  it('falls back from a malformed named capability and fails closed when neither shape can open', async () => {
+    const fallback = { PptxViewer: { open() {} }, RECOMMENDED_ZIP_LIMITS: { source: 'default' } };
+    expect(
+      await loadPptxRenderer(async () => ({ PptxViewer: undefined, default: fallback }) as never),
+    ).to.equal(fallback);
+    expect(
+      await loadPptxRenderer(async () => ({
+        PptxViewer: { open: 'not callable' },
+        default: { PptxViewer: {} },
+      }) as never),
+    ).to.be.null;
+  });
+
   it('loads the installed renderer module', async function () {
     this.timeout(60_000);
     const module = await loadPptxRenderer();

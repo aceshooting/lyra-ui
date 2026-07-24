@@ -1,4 +1,5 @@
 export * from './av-player.class.js';
+import '../../layout/virtual-list/virtual-list.js';
 import { html } from 'lit';
 import { LyraAvPlayer } from './av-player.class.js';
 import { defineElement } from '../../../internal/prefix.js';

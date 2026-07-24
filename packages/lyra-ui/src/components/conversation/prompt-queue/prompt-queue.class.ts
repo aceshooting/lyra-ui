@@ -5,8 +5,6 @@ import type { DocumentRef } from '../../../ai/types.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import '../../forms/button/button.js';
-import '../../forms/textarea/textarea.js';
 import { styles } from './prompt-queue.styles.js';
 
 export interface PromptQueueItem {

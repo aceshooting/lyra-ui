@@ -9,8 +9,11 @@ export const styles = css`
     display: inline;
   }
   [part='base'] {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
     box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: 0 var(--lr-size-6px);
     border: var(--lr-border-width-thin) solid var(--lr-entity-chip-border, transparent);
     border-radius: var(--lr-radius-pill);

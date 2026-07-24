@@ -1,4 +1,4 @@
-import { html, svg, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './icon.styles.js';
@@ -80,7 +80,9 @@ export class LyraIcon extends LyraElement {
 
   override render(): TemplateResult {
     const path = this.path || PATHS[this.name] || '';
-    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${this.label ? 'false' : 'true'} aria-label=${this.label || undefined} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}</svg>`;
+    const hostLabel = this.getAttribute('aria-label');
+    const accessibleLabel = hostLabel ?? this.label;
+    return html`<svg part="svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden=${accessibleLabel ? 'false' : 'true'} aria-label=${accessibleLabel || nothing} focusable="false">${path ? svg`<path d=${path}></path>` : html`<slot @slotchange=${this.onCustomSlotChange}></slot>`}</svg>`;
   }
 }
 declare global { interface HTMLElementTagNameMap { 'lr-icon': LyraIcon; } }

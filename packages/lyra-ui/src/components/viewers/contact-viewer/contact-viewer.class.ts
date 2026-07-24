@@ -5,6 +5,7 @@ import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../in
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { getListFormat } from '../../../internal/intl-cache.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
 
@@ -35,7 +36,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   /** URL to fetch and parse as vCard text. */
   @property() src = '';
   /** Optional display name for the source document. Used as the accessible
-   *  name of `[part='base']`, falling back to a host `aria-label` and then
+   *  name of `[part='base']` after a host `aria-label`, and before
    *  the localized `contactViewerLabel` default, matching the
    *  `csvViewerLabel`-style sibling document viewers. */
   @property() name = '';
@@ -48,6 +49,20 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: ContactFetchState = { kind: 'idle' };
   private generation = 0;
+  private lastLoadSrc = '';
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src) {
+      this.requestUpdate();
+      if (this.src === this.lastLoadSrc) this.scheduleAfterUpdate(() => { void this.load(); });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    super.disconnectedCallback();
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -55,16 +70,24 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   }
 
   private async load(): Promise<void> {
+    this.lastLoadSrc = this.src;
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
-    if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
+    if (!url) {
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.fetchState = { kind: 'error', message: error.message };
+      this.emit('lr-render-error', { error });
+      return;
+    }
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const contacts = parseVCards(await readResponseText(response));
+      const source = await readResponseText(response);
+      if (!this.isConnected || generation !== this.generation) return;
+      const contacts = parseVCards(source);
       if (generation === this.generation) this.fetchState = contacts.length ? { kind: 'loaded', contacts } : { kind: 'empty' };
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
@@ -73,15 +96,55 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     }
   }
 
-  private formatAddress(address: VCardAddress): string { return [address.streetAddress, address.locality, address.region, address.postalCode, address.country].filter(Boolean).join(', '); }
+  private formatList(values: string[]): string {
+    return getListFormat(this.effectiveLocale, { style: 'long', type: 'conjunction' }).format(values);
+  }
+
+  private formatAddress(address: VCardAddress): string {
+    return this.localize('contactViewerAddressFormat', undefined, {
+      poBox: address.poBox,
+      extendedAddress: address.extendedAddress,
+      streetAddress: address.streetAddress,
+      locality: address.locality,
+      region: address.region,
+      postalCode: address.postalCode,
+      country: address.country,
+    })
+      .split(/\r\n|\r|\n/)
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  private formatType(type: string): string {
+    const key = {
+      home: 'contactViewerTypeHome',
+      work: 'contactViewerTypeWork',
+      cell: 'contactViewerTypeCell',
+      voice: 'contactViewerTypeVoice',
+      fax: 'contactViewerTypeFax',
+      internet: 'contactViewerTypeInternet',
+      pref: 'contactViewerTypePreferred',
+      preferred: 'contactViewerTypePreferred',
+    }[type.toLowerCase()];
+    return key ? this.localize(key) : type;
+  }
+
+  private formatTypedValue(value: string, types: string[]): string {
+    if (!types.length) return value;
+    return this.localize('contactViewerTypedValue', undefined, {
+      value,
+      types: this.formatList(types.map((type) => this.formatType(type))),
+    });
+  }
 
   private renderContact(contact: VCardContact): TemplateResult {
     return html`<article part="contact">
       <h3 part="contact-name">${contact.fn || this.localize('contactViewerUnnamedContact')}</h3>
-      ${contact.org.length ? html`<p part="contact-org"><span class="field-label">${this.localize('contactViewerOrganizationLabel')} </span>${contact.org.join(', ')}</p>` : nothing}
-      ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${tel.value}${tel.types.length ? html` <span class="type">(${tel.types.join(', ')})</span>` : nothing}</li>`)}</ul>` : nothing}
-      ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${email.value}${email.types.length ? html` <span class="type">(${email.types.join(', ')})</span>` : nothing}</li>`)}</ul>` : nothing}
-      ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${this.formatAddress(address)}</li>`)}</ul>` : nothing}
+      ${contact.org.length ? html`<p part="contact-org">${this.localize('contactViewerOrganization', undefined, { value: this.formatList(contact.org) })}</p>` : nothing}
+      ${contact.tel.length ? html`<ul part="contact-tel" aria-label=${this.localize('contactViewerPhoneLabel')}>${contact.tel.map((tel) => html`<li>${this.formatTypedValue(tel.value, tel.types)}</li>`)}</ul>` : nothing}
+      ${contact.email.length ? html`<ul part="contact-email" aria-label=${this.localize('contactViewerEmailLabel')}>${contact.email.map((email) => html`<li>${this.formatTypedValue(email.value, email.types)}</li>`)}</ul>` : nothing}
+      ${contact.adr.length ? html`<ul part="contact-adr" aria-label=${this.localize('contactViewerAddressLabel')}>${contact.adr.map((address) => html`<li>${this.formatTypedValue(this.formatAddress(address), address.types)}</li>`)}</ul>` : nothing}
     </article>`;
   }
 
@@ -99,7 +162,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     }
   }
 
-  override render(): TemplateResult { return html`<div part="base" style=${this.maxHeight ? `--lr-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`; }
+  override render(): TemplateResult { return html`<div part="base" role="region" style=${this.maxHeight ? `--lr-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`; }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-contact-viewer': LyraContactViewer; } }

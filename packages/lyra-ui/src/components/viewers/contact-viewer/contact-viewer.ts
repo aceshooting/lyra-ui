@@ -9,5 +9,12 @@ registerDocumentRenderer('text/vcard', { matches: (file: DocumentFile) => /\.vcf
   const element = document.createElement('lr-contact-viewer');
   element.src = file.src;
   element.name = file.name;
+  element.anchor = file.anchor ?? null;
+  element.highlights = file.highlights ?? [];
   return element;
+},
+capabilities: {
+  anchors: ['text-quote', 'fragment'],
+  search: true,
+  textSelect: true,
 } });

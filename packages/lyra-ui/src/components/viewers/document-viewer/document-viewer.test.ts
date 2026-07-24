@@ -40,6 +40,28 @@ describe('registry dispatch', () => {
     expect(preview!.getAttribute('filename')).to.equal('report.pdf');
   });
 
+  it('does not mount fallback or lazy renderer content while closed', async () => {
+    let loads = 0;
+    registerDocumentRenderer('application/pdf', {
+      load: async () => {
+        loads++;
+        return { render: () => html`<p id="loaded"></p>` };
+      },
+    });
+    const el = (await fixture(html`
+      <lr-document-viewer name="report.pdf" mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    await aTimeout(20);
+    expect(loads).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('lr-document-preview, #loaded').length).to.equal(0);
+
+    el.open = true;
+    await aTimeout(20);
+    await el.updateComplete;
+    expect(loads).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('#loaded').length).to.equal(1);
+  });
+
   it('resolves a lazy renderer and renders its output', async () => {
     registerDocumentRenderer('application/pdf', {
       load: () => Promise.resolve({ render: (file) => html`<p id="lazy">${file.name}</p>` }),
@@ -114,6 +136,19 @@ describe('dialog wiring', () => {
     const event = await eventPromise;
     expect(event.detail).to.equal('escape');
     expect(el.open).to.be.false;
+  });
+
+  it('consumes the raw child close event when emitting the translated wrapper event', async () => {
+    const wrapper = await fixture(html`<div><lr-document-viewer open name="f"></lr-document-viewer></div>`);
+    const el = wrapper.querySelector('lr-document-viewer') as LyraDocumentViewer;
+    const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
+    let rawClose = 0;
+    let wrapperClose = 0;
+    wrapper.addEventListener('lr-dialog-close', () => rawClose++);
+    wrapper.addEventListener('lr-close', () => wrapperClose++);
+    dialog.dispatchEvent(new CustomEvent('lr-dialog-close', { detail: 'escape', bubbles: true, composed: true }));
+    expect(rawClose).to.equal(0);
+    expect(wrapperClose).to.equal(1);
   });
 
   it('renders a download action and emits lr-download for safe sources', async () => {
@@ -200,6 +235,63 @@ describe('anchor/highlights/alt widening', () => {
     await el.updateComplete;
     expect(capturedFile?.highlights).to.deep.equal([highlight]);
     expect(capturedFile?.alt).to.equal('Annual report');
+  });
+
+  it('forwards alt and highlights to the built-in fallback preview', async () => {
+    const highlight = {
+      id: 'cite-1',
+      label: 'Chart',
+      anchor: { kind: 'region' as const, rect: { x: 10, y: 20, width: 30, height: 40 } },
+    };
+    const el = (await fixture(html`
+      <lr-document-viewer
+        open
+        name="chart.png"
+        mime-type="image/png"
+        src="data:image/png;base64,iVBORw0KGgo="
+        alt="Quarterly chart"
+        .highlights=${[highlight]}
+      ></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    const preview = el.shadowRoot!.querySelector('lr-document-preview') as HTMLElement & {
+      alt?: string;
+      highlights: unknown[];
+    };
+    expect(preview.alt).to.equal('Quarterly chart');
+    expect(preview.highlights).to.deep.equal([highlight]);
+  });
+
+  it('lets the fallback preview resolve a matching region anchor', async () => {
+    const highlight = {
+      id: 'cite-1',
+      anchor: { kind: 'region' as const, rect: { x: 10, y: 20, width: 30, height: 40 } },
+    };
+    const el = (await fixture(html`
+      <lr-document-viewer
+        open
+        name="chart.png"
+        mime-type="image/png"
+        src="data:image/png;base64,iVBORw0KGgo="
+        .highlights=${[highlight]}
+      ></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    const resultPromise = oneEvent(el, 'lr-anchor-result');
+    el.anchor = 'cite-1';
+    expect((await resultPromise).detail).to.deep.equal({ found: true });
+  });
+
+  it('leaves the shell as the only download-action owner for generic fallback content', async () => {
+    const el = (await fixture(html`
+      <lr-document-viewer
+        open
+        name="archive.bin"
+        mime-type="application/octet-stream"
+        src="https://example.test/archive.bin"
+      ></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    const preview = el.shadowRoot!.querySelector('lr-document-preview')!;
+    expect(el.shadowRoot!.querySelectorAll('[part="download-link"]').length).to.equal(1);
+    expect(preview.shadowRoot!.querySelectorAll('[part="download-link"]').length).to.equal(0);
   });
 
   it('re-resolves (re-renders with a fresh file) when anchor/highlights/alt change without a fresh load', async () => {

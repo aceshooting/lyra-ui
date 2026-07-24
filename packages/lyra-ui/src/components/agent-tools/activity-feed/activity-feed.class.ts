@@ -7,9 +7,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { getDateTimeFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.js';
 import type { LyraVirtualList, VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
-import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './activity-feed.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 

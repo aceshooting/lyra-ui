@@ -6,8 +6,6 @@ import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../conversation/code-block/code-loader.js';
 import type { LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
-import '../document-preview/document-preview.js';
-import '../../utility/diff-view/diff-view.js';
 import { styles } from './document-compare.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -143,7 +141,10 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
     super.updated(changed);
     const anchor = this.anchor;
     if (anchor == null) return;
-    const shouldJump = changed.has('anchor') || (changed.has('view') && this.view === 'side-by-side');
+    const shouldJump =
+      changed.has('anchor') ||
+      (this.view === 'side-by-side' &&
+        (changed.has('view') || changed.has('oldVersion') || changed.has('newVersion')));
     if (!shouldJump) return;
     void this.previewOldEl?.scrollToAnchor(anchor);
     void this.previewNewEl?.scrollToAnchor(anchor);

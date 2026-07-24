@@ -171,7 +171,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           ? html`
               <div part="warnings">
                 <span part="warnings-heading">${this.localize('groundingSummaryWarningsHeading')}</span>
-                <span part="warnings-count">${warnings.length}</span>
+                <span part="warnings-count">${numberFormat.format(warnings.length)}</span>
                 <ul part="warnings-list">
                   ${warnings.map((warning) => html`<li part="warning">${warning}</li>`)}
                 </ul>
@@ -191,7 +191,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
           ? html`
               <div part="evidence">
                 <span part="evidence-heading">${this.localize('groundingSummaryEvidenceHeading')}</span>
-                <span part="evidence-count">${this.citations.length}</span>
+                <span part="evidence-count">${numberFormat.format(this.citations.length)}</span>
                 <div>${this.citations.map((citation, index) => this.renderEvidenceItem(citation, index))}</div>
               </div>
             `

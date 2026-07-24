@@ -1,19 +1,16 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { getPluralRules } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { closeIcon } from '../../../internal/icons.js';
 import type { CancelEventDetail, DocumentRef, RetryEventDetail } from '../../../ai/types.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 // The registering barrels (not the bare *.class.js modules) -- this side effect is what actually
 // defines <lr-badge>/<lr-progress-bar>/<lr-empty>/<lr-virtual-list> as custom elements by the
 // time this component's render() references them.
-import '../../overlays/badge/badge.js';
-import '../../overlays/progress/progress-bar.js';
-import '../../overlays/empty/empty.js';
-import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './ingestion-queue.styles.js';
 
 /**
@@ -158,6 +155,9 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  *   `chunkCount` and `embeddedChunkCount` are set.
  * @csspart item-attempts - The attempt count, only rendered once `attempts` is greater than 0.
  * @csspart item-error - The failure message, only rendered for `stage="failed"` with `error` set.
+ * @csspart failure-live - The visually hidden assertive region that announces only failures that
+ *   transition or are added after mount; historical failed rows remain visible but are not
+ *   re-announced as fresh failures.
  * @csspart item-actions - Wrapper around the retry/cancel buttons.
  * @csspart retry-button - Fires `lr-retry`. Only rendered for `stage="failed"` rows.
  * @csspart cancel-button - Fires `lr-cancel`. Only rendered for non-terminal rows.
@@ -168,7 +168,7 @@ const DEFAULT_VIRTUALIZE_THRESHOLD = 100;
  *   if needed).
  */
 export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The queue to render, in display order. Controlled and never mutated by this component --
    *  pass a new array (e.g. as ingestion progresses) to update it. */
@@ -181,6 +181,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   /** At/above this item count, the list renders through an internal `<lr-virtual-list>`. */
   @property({ type: Number, attribute: 'virtualize-threshold' }) virtualizeThreshold = DEFAULT_VIRTUALIZE_THRESHOLD;
 
+  @state() private failureLiveText = '';
+  private isMounting = true;
+
   /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
    *  property's own default) -- a raw `NaN` (e.g. an invalid `virtualize-threshold` attribute)
    *  would otherwise make `items.length >= virtualizeThreshold` always false, silently disabling
@@ -191,6 +194,30 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
 
   private get isVirtualized(): boolean {
     return this.items.length >= this.effectiveVirtualizeThreshold;
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.failureLiveText = '';
+    this.isMounting = true;
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    const wasMounting = this.isMounting;
+    this.isMounting = false;
+    if (wasMounting || !changed.has('items')) return;
+
+    const previousItems = (changed.get('items') as IngestionQueueItem[] | undefined) ?? [];
+    const previousById = new Map(previousItems.map((item) => [item.id, item]));
+    const freshErrors = this.items.flatMap((item) => {
+      if (item.stage !== 'failed' || !item.error) return [];
+      const previous = previousById.get(item.id);
+      return !previous || previous.stage !== 'failed' || previous.error !== item.error ? [item.error] : [];
+    });
+    this.failureLiveText = freshErrors.length
+      ? getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(freshErrors)
+      : '';
   }
 
   private stageLabel(stage: IngestionStage): string {
@@ -217,10 +244,12 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   }
 
   private chunkCountText(count: number): string {
-    const plural = getPluralRules(this.effectiveLocale).select(count) !== 'one';
+    const safeCount = finiteCount(count);
+    const plural = getPluralRules(this.effectiveLocale).select(safeCount) !== 'one';
+    const formatted = getNumberFormat(this.effectiveLocale).format(safeCount);
     return plural
-      ? this.localize('ingestionChunkCountPlural', undefined, { count })
-      : this.localize('ingestionChunkCount', undefined, { count });
+      ? this.localize('ingestionChunkCountPlural', undefined, { count: formatted })
+      : this.localize('ingestionChunkCount', undefined, { count: formatted });
   }
 
   private onRetryClick(item: IngestionQueueItem): void {
@@ -265,21 +294,21 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
               ${item.chunkCount !== undefined && item.embeddedChunkCount !== undefined
                 ? html`<span part="item-embedding-status"
                     >${this.localize('ingestionEmbeddedOfTotal', undefined, {
-                      embedded: item.embeddedChunkCount,
-                      total: item.chunkCount,
+                      embedded: getNumberFormat(this.effectiveLocale).format(finiteCount(item.embeddedChunkCount)),
+                      total: getNumberFormat(this.effectiveLocale).format(finiteCount(item.chunkCount)),
                     })}</span
                   >`
                 : nothing}
               ${(item.attempts ?? 0) > 0
                 ? html`<span part="item-attempts"
-                    >${this.localize('ingestionAttemptCount', undefined, { count: item.attempts! })}</span
+                    >${this.localize('ingestionAttemptCount', undefined, {
+                      count: getNumberFormat(this.effectiveLocale).format(finiteCount(item.attempts!)),
+                    })}</span
                   >`
                 : nothing}
             </div>`
           : nothing}
-        ${item.stage === 'failed' && item.error
-          ? html`<p part="item-error" role="alert">${item.error}</p>`
-          : nothing}
+        ${item.stage === 'failed' && item.error ? html`<p part="item-error">${item.error}</p>` : nothing}
         ${canRetry || canCancel
           ? html`<div part="item-actions">
               ${canRetry
@@ -326,6 +355,13 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     const virtualized = this.isVirtualized;
     return html`
       <div part="base" role="region" aria-label=${ariaLabel}>
+        <div
+          part="failure-live"
+          class="sr-only"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >${this.failureLiveText}</div>
         ${virtualized
           ? html`<lr-virtual-list
               exportparts="item:item, item-header:item-header, item-name:item-name, item-progress:item-progress, item-meta:item-meta, item-error:item-error, item-actions:item-actions, retry-button:retry-button, cancel-button:cancel-button"

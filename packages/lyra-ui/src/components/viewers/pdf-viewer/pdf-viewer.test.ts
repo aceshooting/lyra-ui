@@ -151,7 +151,9 @@ describe('lr-pdf-viewer', () => {
     (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
     const restore = stubFetch();
     try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/report.pdf';
+      expect((await eventPromise).detail.error).to.exist;
       await waitFor(el, '[part="error"]');
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Bibliothèque manquante.');
     } finally { restore(); }
@@ -174,10 +176,33 @@ describe('lr-pdf-viewer', () => {
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.resolve(response()); }) as typeof window.fetch;
     try {
-      const el = (await fixture(html`<lr-pdf-viewer .src=${'java\tscript:alert(1)'}></lr-pdf-viewer>`)) as LyraPdfViewer;
+      const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'java\tscript:alert(1)';
+      expect((await eventPromise).detail.error).to.exist;
       await waitFor(el, '[part="error"]');
       expect(called).to.be.false;
     } finally { window.fetch = original; }
+  });
+
+  it('rejects a malformed or excessive peer page count before materializing page items', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    let destroyCalls = 0;
+    installFakeLoader(el, {
+      ...fakeDocument(100_001),
+      destroy: () => { destroyCalls++; },
+    } as never);
+    const restore = stubFetch();
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/pathological.pdf';
+      expect((await eventPromise).detail.error).to.exist;
+      await waitFor(el, '[part="error"]');
+      expect(destroyCalls).to.equal(1);
+      expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+    } finally {
+      restore();
+    }
   });
 
   it('paginates and emits page changes', async () => {
@@ -685,9 +710,14 @@ describe('anchor-target adoption', () => {
       el.addEventListener('lr-load', () => { extraLoadFired = true; });
       // The stale first load's document promise now resolves late; it must bail silently instead of
       // clobbering the second (current) document.
-      docPromise.resolve(fakeDocument(1));
+      let staleDestroyCalls = 0;
+      docPromise.resolve({
+        ...fakeDocument(1),
+        destroy: () => { staleDestroyCalls++; },
+      });
       await aTimeout(20);
       expect(extraLoadFired).to.be.false;
+      expect(staleDestroyCalls, 'the superseded PDF worker must be released').to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="page-indicator"]')!.textContent).to.equal('Page 1 of 3');
     } finally {
       restore();
@@ -826,6 +856,63 @@ describe('anchor-target adoption', () => {
       expect(ok).to.be.true;
       expect(canvas.style.width).to.equal('96px');
       expect(await el.renderPageThumbnail(99, canvas)).to.be.false;
+    } finally {
+      restore();
+    }
+  });
+
+  it('renderPageThumbnail rejects non-finite, non-positive, and excessive raster widths', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const canvas = document.createElement('canvas');
+      for (const width of [NaN, Infinity, -1, 0, 4096]) {
+        expect(await el.renderPageThumbnail(1, canvas, { width }), String(width)).to.be.false;
+      }
+    } finally {
+      restore();
+    }
+  });
+
+  it('lets only the latest async page lookup start a render on a shared page canvas', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const doc = fakeDocument(1);
+    installFakeLoader(el, doc);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const canvas = listShadowRoot(el).querySelector('[part="page-canvas"]') as HTMLCanvasElement;
+      const firstPage = deferred<ReturnType<typeof fakePage>>();
+      const secondPage = deferred<ReturnType<typeof fakePage>>();
+      let calls = 0;
+      doc.getPage = () => (++calls === 1 ? firstPage.promise : secondPage.promise);
+      const renders = { first: 0, second: 0 };
+      const invoke = (el as unknown as {
+        renderPage(page: number, target: HTMLCanvasElement): Promise<void>;
+      }).renderPage.bind(el);
+      const first = invoke(1, canvas);
+      const second = invoke(1, canvas);
+      secondPage.resolve({
+        ...fakePage(1),
+        render: () => {
+          renders.second++;
+          return { promise: Promise.resolve(), cancel: () => {} };
+        },
+      });
+      await second;
+      firstPage.resolve({
+        ...fakePage(1),
+        render: () => {
+          renders.first++;
+          return { promise: Promise.resolve(), cancel: () => {} };
+        },
+      });
+      await first;
+      expect(renders).to.deep.equal({ first: 0, second: 1 });
     } finally {
       restore();
     }
@@ -1202,7 +1289,7 @@ describe('goToPage', () => {
     }
   });
 
-  it('still resolves true via the fallback timeout when the target page never mounts at all', async () => {
+  it('resolves false via the fallback timeout when the target page never mounts at all', async () => {
     const el = (await fixture(html`<lr-pdf-viewer style="--lr-pdf-viewer-height: 100px;"></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(30));
     const restore = stubFetch();
@@ -1222,7 +1309,7 @@ describe('goToPage', () => {
       try {
         const started = Date.now();
         const ok = await el.goToPage(20);
-        expect(ok).to.be.true;
+        expect(ok).to.be.false;
         expect(el.page).to.equal(20);
         expect(Date.now() - started).to.be.greaterThan(400);
       } finally {
@@ -1324,6 +1411,55 @@ describe('search', () => {
       const count = await el.search('demand');
       expect(count).to.equal(1);
       expect(el.page).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('normalizes query whitespace with the same rules as document text', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      (el as unknown as { getPageText: () => Promise<string> }).getPageText =
+        () => Promise.resolve('alpha \n\t beta');
+      expect(await el.search('alpha    beta')).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('preserves contextual Greek case folding and raw paint offsets', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer locale="el"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    class GreekTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'ΟΣ';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      getTextContent: () => Promise.resolve({ items: [{ str: 'ΟΣ', hasEOL: false }] }),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: GreekTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.search('ος')).to.equal(1);
+      const mark = listShadowRoot(el).querySelector('mark[part~="search-match"]');
+      expect(mark?.textContent).to.equal('ΟΣ');
     } finally {
       restore();
     }
@@ -1595,14 +1731,41 @@ describe('virtualized page part styling', () => {
       const page = root.querySelector('[part="page"]') as HTMLElement;
       const canvas = root.querySelector('[part="page-canvas"]') as HTMLElement;
       const textLayer = root.querySelector('[part="text-layer"]') as HTMLElement;
+      const listBase = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector(
+        '[part="base"]',
+      ) as HTMLElement;
       expect(page.tagName).to.equal('DIV');
       expect(canvas.tagName).to.equal('CANVAS');
       expect(getComputedStyle(page).position).to.equal('relative');
       expect(getComputedStyle(page).display).to.equal('flex');
-      expect(getComputedStyle(page).justifyContent).to.equal('center');
+      expect(getComputedStyle(page).justifyContent).to.equal('flex-start');
       expect(getComputedStyle(canvas).boxShadow).to.contain(tokenColor(el, '--lr-color-border'));
       expect(getComputedStyle(textLayer).position).to.equal('absolute');
       expect(getComputedStyle(textLayer).overflow).to.equal('hidden');
+      expect(getComputedStyle(listBase).overflowX).to.equal('auto');
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps a max-zoom page horizontally reachable in a 320px allocation', async () => {
+    const wrapper = (await fixture(html`
+      <div style="width: 320px"><lr-pdf-viewer></lr-pdf-viewer></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      el.zoom = 4;
+      await el.updateComplete;
+      await nextFrame();
+      const base = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector(
+        '[part="base"]',
+      ) as HTMLElement;
+      expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+      expect(getComputedStyle(base).overflowX).to.equal('auto');
     } finally {
       restore();
     }

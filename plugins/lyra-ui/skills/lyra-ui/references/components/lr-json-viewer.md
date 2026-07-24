@@ -6,7 +6,7 @@
 - **Class** `LyraJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 8 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

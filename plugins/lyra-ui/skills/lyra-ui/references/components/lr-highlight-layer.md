@@ -6,7 +6,7 @@
 - **Class** `LyraHighlightLayer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,5 +28,7 @@ re-click of the same source citation).
 **Events:** `lr-highlight-activate` — a rect was activated (click, or Enter/Space while focused).
 `detail: { id }`.
 
-**CSS parts:** `base` (the absolutely-positioned overlay, inset 0) and `rect` (one highlight
-rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes).
+**CSS parts:** `base` (the absolutely-positioned overlay, inset 0), `rect` (one visual highlight
+rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
+(transparent activation geometry with a minimum pointer/focus area independent of the visual
+rectangle).

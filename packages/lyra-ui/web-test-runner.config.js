@@ -71,6 +71,67 @@ const echartsProcessInteropPlugin = {
   },
 };
 
+const mouseButtons = new Set(['left', 'middle', 'right']);
+const mouseCommandTypes = new Set(['move', 'click', 'down', 'up']);
+
+function validateMouseCommand(payload) {
+  if (payload === null || typeof payload !== 'object' || !mouseCommandTypes.has(payload.type)) {
+    throw new Error('The send-mouse command requires a move, click, down, or up payload.');
+  }
+
+  if (payload.type === 'move' || payload.type === 'click') {
+    const position = payload.position;
+    if (
+      !Array.isArray(position) ||
+      position.length !== 2 ||
+      !position.every(Number.isInteger)
+    ) {
+      throw new Error('Mouse positions must be an [x, y] tuple of integers.');
+    }
+  }
+
+  if (payload.button !== undefined && !mouseButtons.has(payload.button)) {
+    throw new Error('Mouse buttons must be left, middle, or right.');
+  }
+}
+
+const mouseCommandPlugin = {
+  name: 'lyra-mouse-command',
+  async executeCommand({ command, payload, session }) {
+    if (command !== 'send-mouse' && command !== 'reset-mouse') return;
+    if (session.browser.type !== 'playwright') {
+      throw new Error(`Mouse commands do not support browser type ${session.browser.type}.`);
+    }
+
+    const page = session.browser.getPage(session.id);
+    if (command === 'reset-mouse') {
+      await page.mouse.up({ button: 'left' });
+      await page.mouse.up({ button: 'middle' });
+      await page.mouse.up({ button: 'right' });
+      await page.mouse.move(0, 0);
+      return true;
+    }
+
+    validateMouseCommand(payload);
+    switch (payload.type) {
+      case 'move':
+        await page.mouse.move(payload.position[0], payload.position[1]);
+        return true;
+      case 'click':
+        await page.mouse.click(payload.position[0], payload.position[1], {
+          button: payload.button,
+        });
+        return true;
+      case 'down':
+        await page.mouse.down({ button: payload.button });
+        return true;
+      case 'up':
+        await page.mouse.up({ button: payload.button });
+        return true;
+    }
+  },
+};
+
 const browserProduct = process.env.WTR_BROWSER ?? 'chromium';
 if (!['chromium', 'firefox', 'webkit'].includes(browserProduct)) {
   throw new Error(`Unsupported WTR_BROWSER value: ${browserProduct}`);
@@ -117,6 +178,7 @@ export default {
     mammothEsmInteropPlugin,
     jszipEsmInteropPlugin,
     echartsProcessInteropPlugin,
+    mouseCommandPlugin,
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait

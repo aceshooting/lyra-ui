@@ -16,7 +16,13 @@
 Composable structured-query builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator.
 
-**Properties:** `fields`, `value`, `disabled`, `addCondition`, `removeCondition`. **Events:**
-`lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
+**Properties:** `fields`, `value`, `disabled`.
+
+**Methods:** `addCondition()` appends a condition using the first available field and emits
+`lr-add-condition`; it is a no-op while disabled or when there are no fields.
+`removeCondition(id)` removes the matching condition and emits `lr-remove-condition`; it is a
+no-op while disabled or when the id is absent.
+
+**Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
 `condition`, `field-select`, `operator-select`, `value`, `combinator`, `add-button`,
 `remove-button`, `empty`.

@@ -568,6 +568,28 @@ describe('localization', () => {
     expect(heading.querySelector('[part="tool-name"]')!.textContent).to.equal('outil');
   });
 
+  it('renders repeated heading placeholders and does not append a tool omitted by the translation', async () => {
+    const repeated = (await fixture(html`
+      <lr-tool-approval-dialog
+        tool-name="search"
+        .strings=${{ toolApprovalHeading: '{tool} then {tool}?' }}
+      ></lr-tool-approval-dialog>
+    `)) as LyraToolApprovalDialog;
+    const repeatedHeading = repeated.shadowRoot!.querySelector('h2')!;
+    expect(repeatedHeading.textContent!.trim()).to.equal('search then search?');
+    expect(repeatedHeading.querySelectorAll('[part="tool-name"]')).to.have.length(2);
+
+    const omitted = (await fixture(html`
+      <lr-tool-approval-dialog
+        tool-name="search"
+        .strings=${{ toolApprovalHeading: 'Proceed?' }}
+      ></lr-tool-approval-dialog>
+    `)) as LyraToolApprovalDialog;
+    const omittedHeading = omitted.shadowRoot!.querySelector('h2')!;
+    expect(omittedHeading.textContent!.trim()).to.equal('Proceed?');
+    expect(omittedHeading.querySelector('[part="tool-name"]')).to.not.exist;
+  });
+
   it('does not use the generic tool-name fallback once tool-name is set', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog

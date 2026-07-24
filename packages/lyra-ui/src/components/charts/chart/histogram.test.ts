@@ -130,5 +130,13 @@ it('allows a strings override to reach the histogram dataset label', async () =>
   const el = (await fixture(html`
     <lr-histogram .values=${[1, 2]} .strings=${{ histogramFrequency: 'Häufigkeit' }}></lr-histogram>
   `)) as LyraHistogram;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
   expect(el.datasets[0]?.label).to.equal('Häufigkeit');
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="data-table"] thead th')].map((cell) =>
+      cell.textContent?.trim(),
+    ),
+  ).to.include('Häufigkeit');
 });

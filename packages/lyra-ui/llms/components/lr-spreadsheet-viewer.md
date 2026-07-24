@@ -6,7 +6,7 @@
 - **Class** `LyraSpreadsheetViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `xlsx` — see `llms/peers.md`
-- **Themeable via** 10 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -37,9 +37,11 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell
-covered by a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and
-`cell-highlight` are rendered inside the internal `<lr-virtual-list>` and forwarded via
+**CSS parts:** `base`, `tabs`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a
+structural cell covered by a `highlights` entry), `cell-highlight-action` (the native button
+filling a highlighted cell; focusable and emits `lr-highlight-activate`), `rows`, `spinner`, and
+`error`. `data-row`, `cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the
+internal `<lr-virtual-list>` and forwarded via
 `exportparts`, so `lr-spreadsheet-viewer::part(cell)` reaches them from a consumer stylesheet.
 
 **Themeable custom properties:** `--lr-spreadsheet-viewer-highlight-color` (default

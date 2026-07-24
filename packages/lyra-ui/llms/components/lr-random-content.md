@@ -6,7 +6,7 @@
 - **Class** `LyraRandomContent`, also available unregistered from `@aceshooting/lyra-ui/components/utility/random-content/random-content.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,6 +27,8 @@ children; nothing is moved or cloned.
 - `animation: 'none' | 'fade' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right' = 'none'`
   (reflected) — entrance effect applied to a child the instant it becomes shown
 - `autoplay: boolean = false` (reflected)
+- `paused: boolean = false` (reflected) — suppresses autoplay. The built-in pause/resume action
+  toggles this state; a programmatic assignment remains silent.
 - `autoplayInterval: number = 3000` (attribute `autoplay-interval`) — clamped to a 1000 ms floor
 
 **Methods:** `randomize(): HTMLElement[]` — re-selects using the current `mode`, applies
@@ -42,7 +44,8 @@ each autoplay tick; never when the eligible pool is empty.
 **CSS parts:** `base` — the wrapper around the default slot; carries `role="status"`,
 `aria-atomic="true"`, and `aria-live="polite"`, downgraded to `aria-live="off"` while `autoplay` is
 on (a self-rotating region announcing on every tick would be spam). A host `aria-label` attribute is
-forwarded onto it.
+forwarded onto it. `pause-button` — the localized autoplay pause/resume action, rendered only while
+`autoplay` is enabled and exposed as a toggle with `aria-pressed`.
 
 **Themeable custom properties:** `--lr-random-content-animation-duration` (default `300ms`),
 `--lr-random-content-animation-easing` (default `ease`),
@@ -50,8 +53,8 @@ forwarded onto it.
 directional `fade-*` effects).
 
 **Known gotchas:**
-- There is no built-in trigger UI (no next/previous/shuffle button) and therefore no keyboard
-  interaction: selection changes only via `autoplay` or `randomize()`.
+- There is no next/previous/shuffle action; the only built-in control is the autoplay pause/resume
+  button. Selection changes via autoplay or `randomize()`.
 - Autoplay is suppressed entirely under `prefers-reduced-motion: reduce`, and whenever the eligible
   pool has fewer than 2 children. The preference is re-observed live, not just read once.
 - `fade-left`/`fade-right` are physical-direction transforms (upstream naming), deliberately **not**

@@ -13,6 +13,7 @@ import { convexHull, hullPathD, hullCentroidX, hullTopY, type HullPoint } from '
 import { drawGraphScene, drawPickingScene, pickColorToIndex, type CanvasCamera, type CanvasScene } from './graph-canvas.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import '../../overlays/skeleton/skeleton.class.js';
 
 export type GraphLayout = 'force' | 'layered';
@@ -104,6 +105,11 @@ type SimLink = Omit<GraphLink, 'source' | 'target'> & SimulationLinkDatum<SimNod
    *  stub instead of a real edge, and excluded from `forceLink`'s own simulation input. */
   dangling?: boolean;
 };
+
+type GraphItemIdentity =
+  | { kind: 'node'; id: string }
+  | { kind: 'link'; id: string }
+  | { kind: 'community'; id: string };
 
 const STUB_OFFSET_PX = 14; // matches the length of a typical broken-link stub in comparable UIs
 const EDGE_LABEL_OFFSET_PX = 4; // perpendicular offset from the segment midpoint, in world px
@@ -430,6 +436,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** One roving tab stop across all nodes and links; nodes are the initial entry order. */
   @state() private activeGraphItem = 0;
   @state() private graphLiveText = '';
+  /** Focus repair scheduled by `willUpdate()` after a structural graph change. A numeric value
+   *  targets the surviving flat graph-item index; `'base'` targets the now-empty renderer. */
+  private pendingGraphItemFocus: number | 'base' | undefined;
   /** Gates the mount-time selection announcement in `willUpdate()` so a freshly-mounted graph
    *  never announces its own initial (default-`[]`) selection as though it were a live change --
    *  mirrors `<lr-branch-picker>`'s identical `isMounting` gate. */
@@ -632,6 +641,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       this.hoverRafId = undefined;
     }
     this.pendingHover = undefined;
+    this.pendingGraphItemFocus = undefined;
     if (this.viewportChangeRafId != null) {
       cancelAnimationFrame(this.viewportChangeRafId);
       this.viewportChangeRafId = undefined;
@@ -1405,9 +1415,22 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // `clientX - rect.left`/`clientY - rect.top` are physical viewport offsets, so they must be
     // written to the physical `left`/`top` -- a logical `inset-inline-start` maps to `right` under
     // RTL and would mirror the tooltip across the canvas instead of tracking the cursor.
-    this.canvasTooltipEl.style.left = `${clientX - rect.left}px`;
-    this.canvasTooltipEl.style.top = `${clientY - rect.top}px`;
+    let left = clientX - rect.left;
+    let top = clientY - rect.top;
+    this.canvasTooltipEl.style.left = `${left}px`;
+    this.canvasTooltipEl.style.top = `${top}px`;
     this.canvasTooltipEl.removeAttribute('hidden');
+    const tooltipRect = this.canvasTooltipEl.getBoundingClientRect();
+    const minLeft = Math.max(0, rect.left);
+    const maxRight = Math.min(window.innerWidth, rect.right);
+    const minTop = Math.max(0, rect.top);
+    const maxBottom = Math.min(window.innerHeight, rect.bottom);
+    if (tooltipRect.right > maxRight) left -= tooltipRect.right - maxRight;
+    if (tooltipRect.left < minLeft) left += minLeft - tooltipRect.left;
+    if (tooltipRect.bottom > maxBottom) top -= tooltipRect.bottom - maxBottom;
+    if (tooltipRect.top < minTop) top += minTop - tooltipRect.top;
+    this.canvasTooltipEl.style.left = `${left}px`;
+    this.canvasTooltipEl.style.top = `${top}px`;
   }
 
   private isSelected(kind: GraphPickKind, id: string): boolean {
@@ -1476,27 +1499,43 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     // instead would set a reactive property *after* the update completed,
     // which Lit schedules as a whole extra update pass (a dev-mode warning,
     // and pointless work).
-    if (
+    const structureChanged =
       this.d3 &&
       (changed.has('nodes') ||
         changed.has('links') ||
         changed.has('hiddenTypes') ||
         changed.has('layout') ||
-        (this.layout === 'layered' && changed.has('linkDistance')))
-    ) {
+        (this.layout === 'layered' && changed.has('linkDistance')));
+    const graphItemsChanged = Boolean(structureChanged || changed.has('simNodes') || changed.has('communities'));
+    const activePart = this.shadowRoot?.activeElement?.getAttribute('part') ?? '';
+    const hadGraphItemFocus =
+      graphItemsChanged && ['node', 'link', 'hull', 'cursor-item'].includes(activePart);
+    const previousIndex = this.normalizedGraphItem();
+    const previousIdentity = graphItemsChanged ? this.graphItemIdentity(previousIndex) : undefined;
+
+    if (structureChanged) {
       this.rebuildSimulation();
     }
     // rebuildSimulation() above always reassigns simNodes, so checking it here (after that call)
     // also catches a nodes/links/hiddenTypes-driven rebuild, not just a direct communities set.
-    if (changed.has('simNodes') || changed.has('communities')) {
+    if (graphItemsChanged) {
       this.visibleCommunitiesCache = undefined;
+      const retainedIndex = previousIdentity ? this.graphItemIndex(previousIdentity) : -1;
+      const nextIndex = retainedIndex >= 0 ? retainedIndex : this.normalizedGraphItem(previousIndex);
+      this.activeGraphItem = nextIndex >= 0 ? nextIndex : 0;
+      if (hadGraphItemFocus) {
+        this.pendingGraphItemFocus = nextIndex >= 0 ? nextIndex : 'base';
+        if (nextIndex >= 0) this.graphLiveText = this.graphItemAnnouncement(nextIndex);
+      }
     }
     // Same reasoning as rebuildSimulation() above -- assigning graphLiveText from updated() would
     // schedule a whole extra update pass instead of landing in the render this update is already
     // about to perform.
     if ((changed.has('selectedNodeIds') || changed.has('selectedLinkIds')) && !wasMounting) {
       this.graphLiveText = this.localize('graphSelectionCount', undefined, {
-        count: this.selectedNodeIds.length + this.selectedLinkIds.length,
+        count: getNumberFormat(this.effectiveLocale).format(
+          this.selectedNodeIds.length + this.selectedLinkIds.length,
+        ),
       });
     }
   }
@@ -1539,6 +1578,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       void this.focusNode(this.focusId);
     }
     this.updateFocusHalo();
+    const pendingFocus = this.pendingGraphItemFocus;
+    if (pendingFocus !== undefined) {
+      this.pendingGraphItemFocus = undefined;
+      if (pendingFocus === 'base') {
+        (this.renderRoot.querySelector('[part="canvas"], [part="svg"]') as HTMLElement | SVGElement | null)?.focus();
+      } else {
+        this.focusGraphItemElement(pendingFocus);
+      }
+    }
   }
 
   /** Suppresses hover events/`data-hovered` while a node drag is in progress (tracked from the
@@ -1983,8 +2031,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const hiddenNodeCount = totalNodeCount - visibleNodeCount;
     if (totalNodeCount > 0 && (hiddenNodeCount > 0 || this.lastHiddenNodeCount > 0)) {
       this.graphLiveText = this.localize('graphNodesHidden', undefined, {
-        hidden: hiddenNodeCount,
-        total: totalNodeCount,
+        hidden: getNumberFormat(this.effectiveLocale).format(hiddenNodeCount),
+        total: getNumberFormat(this.effectiveLocale).format(totalNodeCount),
       });
     }
     this.lastHiddenNodeCount = hiddenNodeCount;
@@ -2207,6 +2255,31 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return count ? Math.min(Math.max(index, 0), count - 1) : -1;
   }
 
+  private graphItemIdentity(index: number): GraphItemIdentity | undefined {
+    if (index < 0) return undefined;
+    if (index < this.simNodes.length) {
+      const node = this.simNodes[index];
+      return node ? { kind: 'node', id: node.id } : undefined;
+    }
+    const linkIndex = index - this.simNodes.length;
+    if (linkIndex < this.simLinks.length) {
+      const link = this.simLinks[linkIndex];
+      return link ? { kind: 'link', id: this.linkKey(link) } : undefined;
+    }
+    const community = this.visibleCommunities()[linkIndex - this.simLinks.length]?.community;
+    return community ? { kind: 'community', id: community.id } : undefined;
+  }
+
+  private graphItemIndex(identity: GraphItemIdentity): number {
+    if (identity.kind === 'node') return this.simNodes.findIndex((node) => node.id === identity.id);
+    if (identity.kind === 'link') {
+      const index = this.simLinks.findIndex((link) => this.linkKey(link) === identity.id);
+      return index < 0 ? -1 : this.simNodes.length + index;
+    }
+    const index = this.visibleCommunities().findIndex((entry) => entry.community.id === identity.id);
+    return index < 0 ? -1 : this.simNodes.length + this.simLinks.length + index;
+  }
+
   private graphItemText(index: number): string {
     if (index < this.simNodes.length) {
       const node = this.simNodes[index];
@@ -2222,7 +2295,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return entry
       ? this.localize('graphCommunity', undefined, {
           label: entry.community.label ?? entry.community.id,
-          count: entry.members.length,
+          count: getNumberFormat(this.effectiveLocale).format(entry.members.length),
         })
       : '';
   }
@@ -2230,8 +2303,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   private graphItemAnnouncement(index: number): string {
     return this.localize('graphItemAnnouncement', undefined, {
       item: this.graphItemText(index),
-      index: index + 1,
-      total: this.graphItemCount(),
+      index: getNumberFormat(this.effectiveLocale).format(index + 1),
+      total: getNumberFormat(this.effectiveLocale).format(this.graphItemCount()),
     });
   }
 
@@ -2246,21 +2319,23 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (normalized < 0) return;
     this.activeGraphItem = normalized;
     this.graphLiveText = this.graphItemAnnouncement(normalized);
-    void this.updateComplete.then(() => {
-      // renderer="canvas" has no [part="node"]/[part="link"]/[part="hull"] elements at all -- the
-      // roving tab stop lives on the offscreen [part="cursor-item"] buttons instead (see render()),
-      // in the same flat nodes-then-links-then-hulls order.
-      const items = (
-        this.renderer === 'canvas'
-          ? Array.from(this.renderRoot.querySelectorAll('[part="cursor-item"]'))
-          : [
-              ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
-              ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
-              ...Array.from(this.renderRoot.querySelectorAll('[part="hull"]')),
-            ]
-      ) as HTMLElement[];
-      items[normalized]?.focus();
-    });
+    void this.updateComplete.then(() => this.focusGraphItemElement(normalized));
+  }
+
+  private focusGraphItemElement(index: number): void {
+    // renderer="canvas" has no [part="node"]/[part="link"]/[part="hull"] elements at all -- the
+    // roving tab stop lives on the offscreen [part="cursor-item"] buttons instead (see render()),
+    // in the same flat nodes-then-links-then-hulls order.
+    const items = (
+      this.renderer === 'canvas'
+        ? Array.from(this.renderRoot.querySelectorAll('[part="cursor-item"]'))
+        : [
+            ...Array.from(this.renderRoot.querySelectorAll('[part="node"]')),
+            ...Array.from(this.renderRoot.querySelectorAll('[part="link"]')),
+            ...Array.from(this.renderRoot.querySelectorAll('[part="hull"]')),
+          ]
+    ) as HTMLElement[];
+    items[index]?.focus();
   }
 
   /**
@@ -2332,8 +2407,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             role="group"
             aria-label=${this.accessibleLabel ||
             this.localize('graphDiagram', undefined, {
-              nodeCount: this.simNodes.length,
-              linkCount: this.simLinks.length,
+              nodeCount: getNumberFormat(this.effectiveLocale).format(this.simNodes.length),
+              linkCount: getNumberFormat(this.effectiveLocale).format(this.simLinks.length),
             })}
             tabindex=${this.graphItemCount() ? '-1' : '0'}
           ></canvas>
@@ -2351,7 +2426,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               (entry) =>
                 html`<li>${this.localize('graphCommunity', undefined, {
                   label: entry.community.label ?? entry.community.id,
-                  count: entry.members.length,
+                  count: getNumberFormat(this.effectiveLocale).format(entry.members.length),
                 })}</li>`,
             )}
           </ul>
@@ -2379,6 +2454,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   part="cursor-item"
                   tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
                   aria-label=${this.nodeAccessibleText(n)}
+                  aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('node', n.id)) : nothing}
                   @focus=${() => this.onGraphItemFocus(i)}
                   @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, i, (ev) => this.onNodeClick(n, ev))}
                   @click=${(e: MouseEvent) => this.onNodeClick(n, e)}
@@ -2394,6 +2470,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
                   part="cursor-item"
                   tabindex=${this.normalizedGraphItem() === i ? '0' : '-1'}
                   aria-label=${this.linkAccessibleText(l)}
+                  aria-pressed=${this.selectionMode !== 'none' ? String(this.isSelected('link', this.linkKey(l))) : nothing}
                   @focus=${() => this.onGraphItemFocus(i)}
                   @keydown=${(e: KeyboardEvent) => this.onGraphKeyDown(e, i, (ev) => this.onLinkClick(l, ev))}
                   @click=${(e: MouseEvent) => this.onLinkClick(l, e)}
@@ -2404,7 +2481,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const i = this.simNodes.length + this.simLinks.length + hi;
               const label = this.localize('graphCommunity', undefined, {
                 label: entry.community.label ?? entry.community.id,
-                count: entry.members.length,
+                count: getNumberFormat(this.effectiveLocale).format(entry.members.length),
               });
               return html`
                 <!-- hit-area-exempt: see the node cursor-item above -- same offscreen
@@ -2430,8 +2507,8 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
           role="group"
           aria-label=${this.accessibleLabel ||
           this.localize('graphDiagram', undefined, {
-            nodeCount: this.simNodes.length,
-            linkCount: this.simLinks.length,
+            nodeCount: getNumberFormat(this.effectiveLocale).format(this.simNodes.length),
+            linkCount: getNumberFormat(this.effectiveLocale).format(this.simLinks.length),
           })}
           viewBox="0 0 ${this.safeWidth} ${this.safeHeight}"
           tabindex=${this.graphItemCount() ? '-1' : '0'}
@@ -2463,7 +2540,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
               const fill = sanitizeNodeColor(entry.community.color);
               const label = this.localize('graphCommunity', undefined, {
                 label: entry.community.label ?? entry.community.id,
-                count: entry.members.length,
+                count: getNumberFormat(this.effectiveLocale).format(entry.members.length),
               });
               return svg`<g>
                 <path
@@ -2609,7 +2686,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
             (entry) =>
               html`<li>${this.localize('graphCommunity', undefined, {
                 label: entry.community.label ?? entry.community.id,
-                count: entry.members.length,
+                count: getNumberFormat(this.effectiveLocale).format(entry.members.length),
               })}</li>`,
           )}
         </ul>

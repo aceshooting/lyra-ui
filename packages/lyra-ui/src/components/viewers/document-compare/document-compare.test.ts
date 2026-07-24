@@ -4,6 +4,7 @@ import './document-compare.js';
 import type { LyraDocumentCompare } from './document-compare.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { styles } from './document-compare.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 describe('lr-document-compare', () => {
   describe('view="diff" (default)', () => {
@@ -243,8 +244,8 @@ describe('lr-document-compare', () => {
         calledWith = target;
         return true;
       };
-      const region = previewOld.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
-      region.click();
+      const target = previewOld.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLButtonElement;
+      target.click();
       expect(calledWith).to.equal('h1');
     });
 
@@ -267,8 +268,8 @@ describe('lr-document-compare', () => {
         called = true;
         return true;
       };
-      const region = previewOld.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
-      region.click();
+      const target = previewOld.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLButtonElement;
+      target.click();
       expect(called).to.be.false;
     });
 
@@ -276,8 +277,8 @@ describe('lr-document-compare', () => {
       const el = await highlightsFixture();
       await el.updateComplete;
       const previewOld = el.shadowRoot!.querySelector('[part="pane-old"] lr-document-preview') as LyraDocumentPreview;
-      const region = previewOld.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
-      setTimeout(() => region.click());
+      const target = previewOld.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLButtonElement;
+      setTimeout(() => target.click());
       const ev = await oneEvent(el, 'lr-highlight-activate');
       expect(ev.detail).to.deep.equal({ id: 'h1' });
     });
@@ -334,9 +335,67 @@ describe('lr-document-compare', () => {
       await el.updateComplete;
       expect(calls).to.equal(2);
     });
+
+    it('applies an existing anchor when a version arrives or is replaced later', async () => {
+      const el = (await fixture(html`
+        <lr-document-compare
+          view="side-by-side"
+          .oldVersion=${{ id: 'v1', name: 'Old' }}
+        ></lr-document-compare>
+      `)) as LyraDocumentCompare;
+      await el.updateComplete;
+      const preview = el.shadowRoot!.querySelector('lr-document-preview') as LyraDocumentPreview;
+      const prototype = Object.getPrototypeOf(preview) as {
+        scrollToAnchor(target: unknown): Promise<boolean>;
+      };
+      const original = prototype.scrollToAnchor;
+      const calls: string[] = [];
+      prototype.scrollToAnchor = async function (this: LyraDocumentPreview): Promise<boolean> {
+        calls.push(this.filename);
+        return true;
+      };
+      try {
+        el.anchor = 'shared-id';
+        await el.updateComplete;
+        calls.length = 0;
+
+        el.newVersion = { id: 'v2', name: 'New' };
+        await el.updateComplete;
+        expect(calls).to.include('New');
+
+        calls.length = 0;
+        el.oldVersion = { id: 'v3', name: 'Replacement' };
+        await el.updateComplete;
+        expect(calls).to.include('Replacement');
+      } finally {
+        prototype.scrollToAnchor = original;
+      }
+    });
   });
 
   describe('responsive and RTL', () => {
+    it('paints a rendered hover treatment on each keyboard-focusable pane', async () => {
+      const el = (await fixture(html`
+        <lr-document-compare
+          view="side-by-side"
+          .oldVersion=${{ id: 'old', name: 'Old', text: 'before' }}
+          .newVersion=${{ id: 'new', name: 'New', text: 'after' }}
+        ></lr-document-compare>
+      `)) as LyraDocumentCompare;
+      const pane = el.shadowRoot!.querySelector('[part="pane-old"]') as HTMLElement;
+      const before = getComputedStyle(pane).borderColor;
+      const rect = pane.getBoundingClientRect();
+      try {
+        await sendMouse({
+          type: 'move',
+          position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+        });
+        expect(getComputedStyle(pane).borderColor).to.not.equal(before);
+      } finally {
+        await resetMouse();
+      }
+    });
+
     it('stacks panes below 640px container width', async () => {
       const css = styles.cssText.replace(/\s+/g, ' ');
       expect(css).to.include('@container (max-inline-size: 639.98px)');

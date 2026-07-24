@@ -14,6 +14,22 @@ describe('lr-rag-answer', () => {
     await expect((await fixture(html`<lr-rag-answer loading></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();
     await expect((await fixture(html`<lr-rag-answer answer="Answer"></lr-rag-answer>`)) as LyraRagAnswer).to.be.accessible();
   });
+  it('forwards late host aria-label changes and removal to the loading spinner semantic owner', async () => {
+    const el = (await fixture(
+      html`<lr-rag-answer loading label="Grounded response"></lr-rag-answer>`,
+    )) as LyraRagAnswer;
+    const spinnerLabel = () =>
+      el.shadowRoot!.querySelector('lr-spinner')!.shadowRoot!.querySelector('[role="status"]')!.getAttribute('aria-label');
+
+    expect(spinnerLabel()).to.equal('Grounded response');
+    el.setAttribute('aria-label', 'Loading quarterly evidence');
+    await el.updateComplete;
+    expect(spinnerLabel()).to.equal('Loading quarterly evidence');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    expect(spinnerLabel()).to.equal('Grounded response');
+  });
   it('forwards claim-level visibility to its grounding summary', async () => {
     const assessment = {
       supportedClaims: 1,

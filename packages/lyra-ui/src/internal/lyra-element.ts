@@ -18,7 +18,14 @@ export interface LyraEmitOptions {
 
 export type LyraEventMap = Record<string, Event>;
 
-const FORWARDED_HOST_ARIA_ATTRIBUTES = ['aria-label', 'aria-describedby'] as const;
+const REACTIVE_HOST_ATTRIBUTES = ['aria-label', 'aria-describedby', 'lang', 'dir'] as const;
+const INHERITED_CONTEXT_ATTRIBUTES = ['locale', 'lang', 'dir'] as const;
+
+function composedParentElement(element: Element): Element | null {
+  if (element.parentElement) return element.parentElement;
+  const root = element.getRootNode();
+  return typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot ? root.host : null;
+}
 
 /**
  * Shared base for every Lyra component. Supplies the design-token layer
@@ -29,12 +36,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   static override styles: CSSResultGroup = [tokens];
 
   /**
-   * Components commonly forward these global host attributes to the element
-   * that owns the internal role. They are not reactive Lit properties, so
-   * observe them centrally to keep post-render attribute changes in sync.
+   * Components commonly forward ARIA host attributes to an internal role and derive localization
+   * from `lang`/`dir`. These global attributes are not reactive Lit properties, so observe them
+   * centrally to keep post-render attribute changes in sync.
    */
   static override get observedAttributes(): string[] {
-    return [...new Set([...super.observedAttributes, ...FORWARDED_HOST_ARIA_ATTRIBUTES])];
+    return [...new Set([...super.observedAttributes, ...REACTIVE_HOST_ATTRIBUTES])];
   }
 
   /** Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used. */
@@ -47,6 +54,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private pendingLoadController?: AbortController;
   private loadSchedulePending = false;
   private deferredLoad?: () => void;
+  private inheritedContextObserver?: MutationObserver;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -55,6 +63,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // previous tree must not carry over.
     enableLyraLocaleCache(this);
     invalidateLyraLocaleCache(this);
+    this.observeInheritedContext();
     this.stopLocaleSubscription = subscribeLyraLocale(() => this.requestUpdate());
     const deferred = this.deferredLoad;
     if (deferred) {
@@ -68,6 +77,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     this.pendingLoadController = undefined;
     this.stopLocaleSubscription?.();
     this.stopLocaleSubscription = undefined;
+    this.inheritedContextObserver?.disconnect();
+    this.inheritedContextObserver = undefined;
     invalidateLyraLocaleCache(this);
     super.disconnectedCallback();
   }
@@ -89,10 +100,25 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     super.attributeChangedCallback(name, oldValue, value);
     if (
       oldValue !== value &&
-      FORWARDED_HOST_ARIA_ATTRIBUTES.includes(name as (typeof FORWARDED_HOST_ARIA_ATTRIBUTES)[number])
+      REACTIVE_HOST_ATTRIBUTES.includes(name as (typeof REACTIVE_HOST_ATTRIBUTES)[number])
     ) {
       this.requestUpdate();
     }
+  }
+
+  private observeInheritedContext(): void {
+    this.inheritedContextObserver?.disconnect();
+    if (typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(() => this.requestUpdate());
+    let ancestor = composedParentElement(this);
+    while (ancestor) {
+      observer.observe(ancestor, {
+        attributes: true,
+        attributeFilter: [...INHERITED_CONTEXT_ATTRIBUTES],
+      });
+      ancestor = composedParentElement(ancestor);
+    }
+    this.inheritedContextObserver = observer;
   }
 
   /** Starts a component-owned cancellable load and aborts the previous one. */

@@ -30,3 +30,8 @@ export const MaxHeight: Story = {
 export const FailedFetch: Story = {
   render: () => html`<lr-docx-viewer style="max-inline-size: 32rem;" src="https://example.invalid/missing.docx" name="missing.docx"></lr-docx-viewer>`,
 };
+
+/** Baseline narrow-allocation coverage with a long document name. */
+export const Narrow320: Story = {
+  render: () => html`<div style="max-width:320px"><lr-docx-viewer src=${source} name="International quarterly analytical-engine research report.docx"></lr-docx-viewer></div>`,
+};

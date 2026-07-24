@@ -5,13 +5,6 @@ import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache
 import type { DocumentRef } from '../../../ai/types.js';
 import type { TableColumn } from '../table/table.class.js';
 import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
-import '../table/table.js';
-import '../../forms/checkbox/checkbox.js';
-import '../../overlays/chip/chip.js';
-import '../../overlays/chip/chip-group.js';
-import '../../media/file-icon/file-icon.js';
-import '../../forms/input/input.js';
-import '../../forms/combobox/combobox.js';
 import { styles } from './document-library.styles.js';
 
 /** How recently a document's content was verified/updated, consumer-computed (this component

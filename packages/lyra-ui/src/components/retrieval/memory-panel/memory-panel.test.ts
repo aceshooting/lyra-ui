@@ -479,3 +479,13 @@ describe('lr-memory-panel', () => {
     });
   });
 });
+
+it('formats the forget-all confirmation count with the effective locale', async () => {
+  const el = (await fixture(html`<lr-memory-panel lang="ar-u-nu-arab"></lr-memory-panel>`)) as LyraMemoryPanel;
+  el.longTerm = Array.from({ length: 12 }, (_, index) => ({ id: `memory-${index}`, text: `Memory ${index}` }));
+  await el.updateComplete;
+  (el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+  expect((await readyConfirmBar(section)).textContent).to.include('١٢');
+});

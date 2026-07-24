@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A "next scheduled refresh" countdown with a built-in pause control. Set `next-in-ms` to (re)start a ticking `M:SS` display counting down to the next scheduled action; it shows "Refreshing…" once it reaches zero and fires `lr-poll-due`. A built-in pause/resume button freezes the countdown and suppresses `lr-poll-due` while `paused`, firing `lr-pause-change` and announcing the transition through an internal live region.',
+          'A "next scheduled refresh" countdown with a built-in pause control. Set `next-in-ms` to (re)start a locale-formatted `M:SS` display counting down to the next scheduled action; it shows "Refreshing…" once it reaches zero and fires `lr-poll-due`. A built-in pause/resume button freezes the countdown and suppresses `lr-poll-due` while `paused`, firing `lr-pause-change` and announcing the transition through an internal live region. Setting `active="false"` shows a localized inactive state and disables the pause action.',
       },
     },
   },
@@ -27,6 +27,10 @@ export const ShortCountdown: Story = {
 export const DueRefreshing: Story = {
   name: 'Due / refreshing state',
   render: () => html`<lr-poll-status next-in-ms="1"></lr-poll-status>`,
+};
+
+export const Inactive: Story = {
+  render: () => html`<lr-poll-status next-in-ms="10000" active="false"></lr-poll-status>`,
 };
 
 export const PauseResume: Story = {

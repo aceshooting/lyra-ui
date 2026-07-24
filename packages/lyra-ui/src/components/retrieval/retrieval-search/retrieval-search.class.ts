@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteNumber } from '../../../internal/numbers.js';
 import type { SegmentedItem } from '../../layout/segmented/segmented.class.js';
 import '../../forms/input/input.class.js';
 import '../../layout/segmented/segmented.class.js';
@@ -10,6 +11,7 @@ import '../../overlays/spinner/spinner.class.js';
 import '../../overlays/empty/empty.class.js';
 import type { RetrievalQuery, CancelEventDetail } from '../../../ai/types.js';
 import { styles } from './retrieval-search.styles.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** The three retrieval modes `RetrievalQuery.mode` supports, reused verbatim rather than
  *  redefining the union -- see `src/ai/types.ts`'s own header for why. */
@@ -133,8 +135,15 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
 
   private formatFilterValue(value: unknown): string {
     if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-    if (Array.isArray(value)) return value.map((v) => this.formatFilterValue(v)).join(', ');
+    if (typeof value === 'number') {
+      return getNumberFormat(this.effectiveLocale).format(finiteNumber(value, 0));
+    }
+    if (typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+      return getListFormat(this.effectiveLocale, { type: 'conjunction' }).format(
+        value.map((item) => this.formatFilterValue(item)),
+      );
+    }
     if (value == null) return '';
     try {
       return JSON.stringify(value);
@@ -176,6 +185,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   }
 
   private onQueryInput = (e: CustomEvent<{ value: string }>): void => {
+    e.stopPropagation();
     this.query = e.detail.value;
   };
 
@@ -191,6 +201,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
   };
 
   private onModeChange = (e: CustomEvent<{ value: string }>): void => {
+    e.stopPropagation();
     this.mode = e.detail.value as LyraRetrievalMode;
   };
 
@@ -237,12 +248,18 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               aria-label=${this.localize('retrievalFiltersLabel')}
             >
               ${this.scope.map(
-                (s) => html`<lr-chip tone="brand" removable value=${s} @lr-remove=${() => this.removeScope(s)}
+                (s) => html`<lr-chip tone="brand" removable value=${s} @lr-remove=${(event: Event) => {
+                  event.stopPropagation();
+                  this.removeScope(s);
+                }}
                   >${s}</lr-chip
                 >`,
               )}
               ${Object.entries(this.filters).map(
-                ([k, v]) => html`<lr-chip removable value=${k} @lr-remove=${() => this.removeFilter(k)}
+                ([k, v]) => html`<lr-chip removable value=${k} @lr-remove=${(event: Event) => {
+                  event.stopPropagation();
+                  this.removeFilter(k);
+                }}
                   >${this.localize('retrievalFilterChipLabel', undefined, {
                     key: k,
                     value: this.formatFilterValue(v),
@@ -252,7 +269,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             </lr-chip-group>`
           : nothing}
         ${this.loading
-          ? html`<lr-spinner part="spinner"></lr-spinner>`
+          ? html`<lr-spinner part="spinner" aria-label=${label}></lr-spinner>`
           : this.errorText
             ? html`<div part="error" role="alert">${this.errorText}</div>`
             : this.empty

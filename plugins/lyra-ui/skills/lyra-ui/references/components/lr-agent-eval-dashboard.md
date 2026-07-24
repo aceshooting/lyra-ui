@@ -17,12 +17,14 @@ Controlled evaluation overview with metric cards, a dependency-free trend chart,
 history. It never launches or scores evaluations.
 
 **Properties:** `metrics: AgentEvaluationMetric[] = []` (attribute: false), where each metric is
-`{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `runs:
+`{ id, label, value, format?: 'number' | 'percent' | 'milliseconds' | 'currency' }`; `currency:
+string = 'USD'` is the ISO 4217 code used by currency-formatted metrics (invalid codes safely fall
+back to USD). `runs:
 AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id, label, status,
 metrics?: Record<string, number> }`; `metricId: string = ''`; `label: string = ''`; `showChart:
 boolean = true`; `chartHeight: string = '220px'`.
 
-**Events:** `lr-metric-change` (`{ metricId }`, reserved for host-controlled metric selectors) and
+**Events:** `lr-metric-change` (`{ metricId }`, emitted when a metric selector is activated) and
 `lr-run-select` (`{ runId }`).
 
 **CSS parts:** `base`, `heading`, `metrics`, `metric`, `chart`, `runs`, `runs-heading`, `run`,

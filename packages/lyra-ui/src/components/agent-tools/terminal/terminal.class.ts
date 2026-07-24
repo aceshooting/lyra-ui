@@ -14,9 +14,6 @@ import type {
   TextSelectDetail,
 } from '../../viewers/document-viewer/anchors.js';
 import { styles } from './terminal.styles.js';
-// The registering barrel (not virtual-list.class.js) -- this side effect is what makes
-// <lr-virtual-list> an actually-defined tag by the time this component renders it.
-import '../../layout/virtual-list/virtual-list.js';
 import type { VirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 

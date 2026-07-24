@@ -15,14 +15,6 @@ import type {
   AttachmentChipPreviewDetail,
 } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraVoiceCatalog } from '../voice-picker/voice-picker.class.js';
-import '../../media/attachment-chip/attachment-chip.js';
-import '../../media/attachment-trigger/attachment-trigger.js';
-import '../../retrieval/source-picker/source-picker.js';
-import '../../utility/mention-popover/mention-popover.js';
-import '../chat-composer/chat-composer.js';
-import '../model-select/model-select.js';
-import '../prompt-queue/prompt-queue.js';
-import '../voice-picker/voice-picker.js';
 import { styles } from './prompt-input.styles.js';
 
 export interface PromptSuggestion extends MentionItem {
@@ -139,10 +131,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   protected override updated(_changed: PropertyValues): void {
-    if (this.suggestionPopover && this.suggestionAnchor) {
-      this.suggestionPopover.anchor = this.suggestionAnchor;
+    const popover = this.suggestionPopover;
+    if (popover && this.suggestionAnchor) {
+      popover.anchor = this.suggestionAnchor;
     }
     this.syncSuggestionAria();
+    void popover?.updateComplete.then(() => {
+      if (this.suggestionPopover === popover) this.syncSuggestionAria();
+    });
   }
 
   private suggestions(): PromptSuggestion[] {
@@ -184,26 +180,32 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
-    if (!this.activeSuggestion || !this.suggestionPopover?.open) return;
-    if (this.suggestionPopover.handleKeyDown(event)) {
-      this.requestUpdate();
-      queueMicrotask(() => this.syncSuggestionAria());
+    const popover = this.suggestionPopover;
+    if (!this.activeSuggestion || !popover?.open) return;
+    if (popover.handleKeyDown(event)) {
+      const shouldMoveFocus = event.key === 'ArrowDown' || event.key === 'ArrowUp';
+      void popover.updateComplete.then(async () => {
+        const reflected = this.syncSuggestionAria();
+        if (shouldMoveFocus && !reflected && this.activeSuggestion && popover.open) {
+          await popover.focusActiveOption();
+        }
+      });
     }
   }
 
-  private syncSuggestionAria(): void {
+  private syncSuggestionAria(): boolean {
     const input = this.composer?.input;
     const popover = this.suggestionPopover;
-    if (!input) return;
-    if (this.activeSuggestion && popover?.open) {
-      input.setAttribute('aria-controls', popover.listboxId);
-      const active = popover.activeDescendantId;
-      if (active) input.setAttribute('aria-activedescendant', active);
-      else input.removeAttribute('aria-activedescendant');
-    } else {
-      input.removeAttribute('aria-controls');
-      input.removeAttribute('aria-activedescendant');
-    }
+    if (!input) return false;
+    // Neither aria-controls nor aria-activedescendant string IDREFs can cross
+    // from the composer's shadow root into the mention popover's shadow root.
+    // The popover uses element reflection when the platform accepts that
+    // cross-root reference and otherwise fails closed so keyboard navigation
+    // can transfer real focus into the popover's own tree.
+    input.removeAttribute('aria-controls');
+    if (popover) return popover.syncActiveDescendant(input);
+    input.removeAttribute('aria-activedescendant');
+    return false;
   }
 
   private onSuggestionSelect(event: CustomEvent<{ id: string; label: string }>): void {

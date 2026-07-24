@@ -1,3 +1,5 @@
+import { LyraResourceLimitError } from '../../../internal/resource-loader.js';
+
 export interface VCardName { familyNames: string; givenNames: string; additionalNames: string; honorificPrefixes: string; honorificSuffixes: string; }
 export interface VCardTypedValue { value: string; types: string[]; }
 export interface VCardAddress { poBox: string; extendedAddress: string; streetAddress: string; locality: string; region: string; postalCode: string; country: string; types: string[]; }
@@ -57,6 +59,11 @@ function parseBlock(block: string): VCardContact {
   return contact;
 }
 
-export function parseVCards(text: string): VCardContact[] {
-  return (text.match(/BEGIN:VCARD[\s\S]*?END:VCARD/gi) ?? []).map(parseBlock);
+export function parseVCards(text: string, maxContacts = 10_000): VCardContact[] {
+  const contacts: VCardContact[] = [];
+  for (const match of text.matchAll(/BEGIN:VCARD[\s\S]*?END:VCARD/gi)) {
+    if (contacts.length >= maxContacts) throw new LyraResourceLimitError('The vCard contains too many contacts.');
+    contacts.push(parseBlock(match[0]));
+  }
+  return contacts;
 }

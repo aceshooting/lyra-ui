@@ -4,6 +4,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import axe from 'axe-core';
+import { FAMILY_LABELS } from '../.storybook/story-indexer.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const staticRoot = join(root, 'storybook-static');
@@ -109,13 +110,56 @@ async function waitForStory(page, baseUrl, id, viewport, theme = 'light') {
   currentStoryId = id;
   await page.setViewportSize(viewport);
   const url = `${baseUrl}/iframe.html?id=${id}&viewMode=story&globals=theme:${theme}`;
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+  await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 20_000 });
   await page.waitForFunction(
     () => Boolean(document.querySelector('#storybook-root')?.firstElementChild),
     undefined,
     { timeout: 15_000 },
   );
   await page.waitForTimeout(150);
+}
+
+async function waitForDocs(page, baseUrl, id, theme = 'dark') {
+  currentStoryId = `${id}/docs`;
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  const url = new URL(baseUrl);
+  url.searchParams.set('path', `/docs/${id}`);
+  url.searchParams.set('globals', `theme:${theme}`);
+  await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 20_000 });
+
+  const iframe = await page.waitForSelector('#storybook-preview-iframe', { timeout: 15_000 });
+  const frame = await iframe.contentFrame();
+  if (!frame) throw new Error(`${id} docs iframe was not available`);
+
+  await frame.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
+  try {
+    await frame.waitForFunction(
+      (expectedTheme) => document.documentElement.dataset.lyraTheme === expectedTheme,
+      theme,
+      { timeout: 15_000 },
+    );
+  } catch {
+    const state = await frame.evaluate(() => ({
+      dataset: document.documentElement.dataset.lyraTheme,
+      url: location.href,
+    }));
+    throw new Error(`${id} Docs did not apply theme ${theme}: ${JSON.stringify(state)}`);
+  }
+  return frame;
+}
+
+async function chooseToolbarTheme(page, currentTheme, nextTheme) {
+  const themeButton = page
+    .getByRole('button')
+    .filter({ hasText: new RegExp(`^${currentTheme}$`, 'i') })
+    .first();
+  await themeButton.waitFor({ state: 'visible', timeout: 10_000 });
+  await themeButton.click();
+
+  const option = page.getByRole('menuitem').filter({ hasText: new RegExp(`^${nextTheme}$`, 'i') }).first();
+  await option.waitFor({ state: 'visible', timeout: 10_000 });
+  await option.click();
 }
 
 async function runA11y(page, id) {
@@ -164,6 +208,20 @@ async function main() {
     if (!entries.has(id)) throw new Error(`Storybook catalog is missing required story ${id}`);
   }
 
+  const familyLabels = new Set(Object.values(FAMILY_LABELS));
+  const componentEntries = Object.values(index.entries ?? {}).filter((entry) =>
+    entry.importPath?.includes('/src/components/'),
+  );
+  const ungroupedEntries = componentEntries.filter((entry) => !familyLabels.has(entry.title?.split('/')[0]));
+  if (ungroupedEntries.length) {
+    throw new Error(
+      `Storybook component entries are not grouped by family: ${ungroupedEntries
+        .slice(0, 5)
+        .map((entry) => `${entry.id} (${entry.title})`)
+        .join(', ')}`,
+    );
+  }
+
   const assetNames = await readdir(join(staticRoot, 'assets'));
   if (!assetNames.some((name) => name.startsWith('maplibre-gl-worker-'))) {
     throw new Error(
@@ -196,6 +254,97 @@ async function main() {
   });
 
   try {
+    const docsFrame = await waitForDocs(page, baseUrl, 'checkbox--docs', 'dark');
+    const darkDocsTheme = await docsFrame.evaluate(() => {
+      const wrapper = document.querySelector('.sbdocs-wrapper');
+      const heading = document.querySelector('.sbdocs-title, h1');
+      const checkbox = document.querySelector('lr-checkbox');
+      const checkboxLabel = checkbox?.shadowRoot?.querySelector('[part="label"]');
+      return {
+        dataset: document.documentElement.dataset.lyraTheme,
+        wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
+        headingColor: heading ? getComputedStyle(heading).color : '',
+        checkboxColor: checkboxLabel ? getComputedStyle(checkboxLabel).color : '',
+      };
+    });
+    if (
+      darkDocsTheme.dataset !== 'dark' ||
+      darkDocsTheme.wrapperBackground !== 'rgb(13, 17, 23)' ||
+      darkDocsTheme.headingColor !== 'rgb(240, 246, 252)' ||
+      darkDocsTheme.checkboxColor !== 'rgb(240, 246, 252)'
+    ) {
+      throw new Error(`dark Docs theme is not consistently legible: ${JSON.stringify(darkDocsTheme)}`);
+    }
+
+    for (const privateMember of ['_checked', 'deferredLoad', 'effectiveLocale']) {
+      if ((await docsFrame.getByText(privateMember, { exact: true }).count()) > 0) {
+        throw new Error(`Checkbox Docs exposes non-public API member ${privateMember}`);
+      }
+    }
+    if ((await docsFrame.getByText('checked', { exact: true }).count()) === 0) {
+      throw new Error('Checkbox Docs did not render its public checked API');
+    }
+
+    await chooseToolbarTheme(page, 'Dark', 'Light');
+    await docsFrame.waitForFunction(() => document.documentElement.dataset.lyraTheme === 'light');
+    await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)');
+    const lightDocsTheme = await docsFrame.evaluate(() => {
+      const wrapper = document.querySelector('.sbdocs-wrapper');
+      const heading = document.querySelector('.sbdocs-title, h1');
+      return {
+        wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
+        headingColor: heading ? getComputedStyle(heading).color : '',
+      };
+    });
+    if (
+      lightDocsTheme.wrapperBackground !== 'rgb(255, 255, 255)' ||
+      lightDocsTheme.headingColor !== 'rgb(23, 32, 51)'
+    ) {
+      throw new Error(`light Docs theme did not follow the toolbar: ${JSON.stringify(lightDocsTheme)}`);
+    }
+
+    await chooseToolbarTheme(page, 'Light', 'High contrast');
+    await docsFrame.waitForFunction(() => document.documentElement.dataset.lyraTheme === 'high-contrast');
+
+    const landingFrame = await waitForDocs(page, baseUrl, 'introduction--docs', 'light');
+    const lightLanding = await landingFrame.evaluate(() => {
+      const landing = document.querySelector('.lr-landing');
+      const heading = document.querySelector('.lr-landing h1');
+      return {
+        dataset: document.documentElement.dataset.lyraTheme,
+        backgroundImage: landing ? getComputedStyle(landing).backgroundImage : '',
+        headingColor: heading ? getComputedStyle(heading).color : '',
+      };
+    });
+    if (
+      lightLanding.dataset !== 'light' ||
+      lightLanding.backgroundImage === 'none' ||
+      lightLanding.headingColor !== 'rgb(23, 32, 51)'
+    ) {
+      throw new Error(`Introduction did not render its light theme: ${JSON.stringify(lightLanding)}`);
+    }
+
+    const highContrastLandingFrame = await waitForDocs(page, baseUrl, 'introduction--docs', 'high-contrast');
+    const highContrastLanding = await highContrastLandingFrame.evaluate(() => {
+      const landing = document.querySelector('.lr-landing');
+      const panel = document.querySelector('.lr-landing__panel');
+      const heading = document.querySelector('.lr-landing h1');
+      return {
+        dataset: document.documentElement.dataset.lyraTheme,
+        backgroundImage: landing ? getComputedStyle(landing).backgroundImage : '',
+        panelShadow: panel ? getComputedStyle(panel).boxShadow : '',
+        headingColor: heading ? getComputedStyle(heading).color : '',
+      };
+    });
+    if (
+      highContrastLanding.dataset !== 'high-contrast' ||
+      highContrastLanding.backgroundImage !== 'none' ||
+      highContrastLanding.panelShadow !== 'none' ||
+      highContrastLanding.headingColor !== 'rgb(0, 0, 0)'
+    ) {
+      throw new Error(`Introduction did not render its high-contrast theme: ${JSON.stringify(highContrastLanding)}`);
+    }
+
     for (const id of requiredStories) {
       await waitForStory(page, baseUrl, id, { width: 1280, height: 800 });
       await expectSelector(page, id, storyChecks.get(id));

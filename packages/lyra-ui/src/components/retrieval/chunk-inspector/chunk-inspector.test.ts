@@ -133,6 +133,7 @@ it('shows chunkInspectorEmpty when chunks is empty', async () => {
 it('routes every localized string through this.localize(), provable via a .strings override reaching the rendered DOM', async () => {
   const el = (await fixture(
     html`<lr-chunk-inspector
+      locale="fr"
       .strings=${{
         chunkInspectorLabel: 'Extraits récupérés',
         chunkScore: 'Pertinence {percent}%',
@@ -149,7 +150,12 @@ it('routes every localized string through this.localize(), provable via a .strin
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Extraits récupérés');
   expect(el.shadowRoot!.querySelector('[part~="score"]')!.textContent).to.include('Pertinence 92%');
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent).to.equal('Source sans titre');
-  expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.include('Pertinence élevée');
+  expect(el.shadowRoot!.querySelector('[part="open-button"]')!.getAttribute('aria-label')).to.equal(
+    new Intl.ListFormat('fr', { style: 'short', type: 'conjunction' }).format([
+      'Source sans titre',
+      'Pertinence élevée',
+    ]),
+  );
   expect(el.shadowRoot!.querySelector('[part="toggle"]')!.textContent!.trim()).to.equal('Voir plus');
 
   (el.shadowRoot!.querySelector('[part="toggle"]') as HTMLButtonElement).click();

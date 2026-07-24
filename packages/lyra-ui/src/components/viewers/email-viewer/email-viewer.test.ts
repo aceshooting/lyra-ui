@@ -4,6 +4,8 @@ import type { LyraEmailViewer } from './email-viewer.js';
 import { __setEmailDepsForTesting } from './email-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { styles } from './email-viewer.styles.js';
+import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 const SAMPLE_EML = [
   'From: Ada Lovelace <ada@example.test>', 'To: Grace Hopper <grace@example.test>', 'Subject: Quarterly report',
@@ -124,6 +126,11 @@ describe('lr-email-viewer', () => {
     try {
       expect(el.shadowRoot!.querySelector('[part="from"]')!.textContent).to.contain('Ada Lovelace');
       expect(el.shadowRoot!.querySelector('[part="subject"]')!.textContent).to.contain('Quarterly report');
+      expect(el.shadowRoot!.querySelector('[part="date"]')!.textContent).to.equal(
+        new Intl.DateTimeFormat(el.lang || navigator.language, { dateStyle: 'medium', timeStyle: 'short' }).format(
+          new Date('2026-07-14T09:30:00Z'),
+        ),
+      );
       expect(el.shadowRoot!.querySelector('[part="body-html"] strong')!.textContent).to.equal('up 12%');
     } finally { restore(); }
   });
@@ -145,6 +152,70 @@ describe('lr-email-viewer', () => {
     } finally { restore(); }
   });
 
+  it('localizes an address group as one reorderable whole message', async () => {
+    __setEmailDepsForTesting({
+      PostalMime: {
+        parse: () => Promise.resolve({
+          from: {
+            name: 'Reviewers',
+            group: [
+              { name: 'Ada', address: 'ada@example.test' },
+              { name: 'Grace', address: 'grace@example.test' },
+            ],
+          },
+          text: 'Hello',
+          attachments: [],
+        }),
+      },
+      DOMPurify: undefined,
+    });
+    const restore = stubFetch(TEXT_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`
+        <lr-email-viewer
+          src="https://example.test/message.eml"
+          .strings=${{ emailViewerGroupAddress: '{members} — {name}' }}
+        ></lr-email-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="from"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="from"]')!.textContent).to.equal(
+        'Ada, ada@example.test and Grace, grace@example.test — Reviewers',
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it('searches headers together with the body', async () => {
+    const { el, restore } = await loaded(TEXT_EML);
+    try {
+      expect(await el.search('Plain note')).to.equal(1);
+      expect(await el.search('See you at noon')).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('forwards document anchors/highlights and advertises its text contracts', () => {
+    const definition = getDefaultDocumentRendererRegistry().get('message/rfc822')!;
+    const highlights: LyraHighlight[] = [{ id: 'subject', anchor: { kind: 'text-quote', exact: 'Quarterly' } }];
+    const anchor = { kind: 'fragment' as const, id: 'subject' };
+    const rendered = definition.render!({
+      name: 'message.eml',
+      mimeType: 'message/rfc822',
+      src: 'https://example.test/message.eml',
+      anchor,
+      highlights,
+    }) as LyraEmailViewer;
+    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.highlights).to.equal(highlights);
+    expect(definition.capabilities).to.deep.equal({
+      anchors: ['text-quote', 'fragment'],
+      search: true,
+      textSelect: true,
+    });
+  });
+
   it('shows an error instead of a silently empty body when an HTML-only message has no sanitizer available', async () => {
     __setEmailDepsForTesting({
       PostalMime: { parse: () => Promise.resolve({ html: '<p>Totals are up 12%.</p>', attachments: [] }) },
@@ -162,6 +233,20 @@ describe('lr-email-viewer', () => {
     } finally { restore(); }
   });
 
+  it('treats an installed sanitizer returning empty HTML as valid empty content', async () => {
+    __setEmailDepsForTesting({
+      PostalMime: { parse: () => Promise.resolve({ html: '<script>removed()</script>', text: undefined, attachments: [] }) },
+      DOMPurify: { sanitize: () => '' },
+    });
+    const restore = stubFetch(SAMPLE_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="body-html"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('[part="body-html"]')!.textContent).to.equal('');
+    } finally { restore(); }
+  });
+
   it('still falls back to plain text when DOMPurify is unavailable but the message has a text alternative', async () => {
     __setEmailDepsForTesting({
       PostalMime: { parse: () => Promise.resolve({ html: '<p>Ignored</p>', text: 'See you at noon.', attachments: [] }) },
@@ -176,15 +261,20 @@ describe('lr-email-viewer', () => {
     } finally { restore(); }
   });
 
-  it('rejects unsafe URLs before fetch', async () => {
+  it('rejects unsafe URLs before fetch and emits exactly one render error', async () => {
     let called = false;
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch;
     try {
-      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer .src=${'java\tscript:alert(1)'}></lr-email-viewer>`);
-      await el.updateComplete;
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
+      let count = 0;
+      el.addEventListener('lr-render-error', () => { count++; });
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'java\tscript:alert(1)';
+      await event;
       expect(called).to.be.false;
       expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+      expect(count).to.equal(1);
     } finally { window.fetch = original; }
   });
 
@@ -261,6 +351,20 @@ describe('lr-email-viewer', () => {
     }
   });
 
+  it('reloads an already-loaded source after reconnecting', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve(response(SAMPLE_EML)); }) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
+      await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="body"]') !== null);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => calls === 2);
+    } finally { window.fetch = original; }
+  });
+
   it('supports max-height and localization overrides', async () => {
     const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer max-height="20rem" .strings=${{ emailViewerFrom: 'De' }}></lr-email-viewer>`);
     expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-email-viewer-max-height')).to.equal('20rem');
@@ -305,6 +409,7 @@ describe('lr-email-viewer', () => {
     expect(labeled.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Inbox message');
     const unnamed = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Email viewer');
+    expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
   });
 
   it('supports a .strings override for the emailViewerLabel fallback', async () => {
@@ -410,10 +515,17 @@ describe('lr-email-viewer', () => {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="body"]') !== null);
         // The empty `{}` group member formats to '' and is dropped by formatAddress's own
         // `.filter(Boolean)`, so it contributes coverage of the fallback without appearing here.
+        const person = new Intl.ListFormat('en', { style: 'long', type: 'unit' }).format(['Ada Lovelace', 'ada@example.test']);
         expect(el.shadowRoot!.querySelector('[part="from"]')!.textContent).to.equal(
-          'Ada Lovelace <ada@example.test>, bob@example.test, NoAddress',
+          new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format([person, 'bob@example.test', 'NoAddress']),
         );
         expect(el.shadowRoot!.querySelector('[part="to"]')!.textContent).to.equal('grace@example.test');
+        el.locale = 'ar';
+        await el.updateComplete;
+        const arabicPerson = new Intl.ListFormat('ar', { style: 'long', type: 'unit' }).format(['Ada Lovelace', 'ada@example.test']);
+        expect(el.shadowRoot!.querySelector('[part="from"]')!.textContent).to.equal(
+          new Intl.ListFormat('ar', { style: 'long', type: 'conjunction' }).format([arabicPerson, 'bob@example.test', 'NoAddress']),
+        );
         const buttons = el.shadowRoot!.querySelectorAll('[part="attachment-button"]');
         expect(buttons.length).to.equal(3);
 
@@ -437,6 +549,26 @@ describe('lr-email-viewer', () => {
       } finally {
         restore();
       }
+    });
+
+    it('counts encoded attachment bytes and formats the number with the effective locale', async () => {
+      __setEmailDepsForTesting({
+        PostalMime: {
+          parse: () => Promise.resolve({
+            text: 'body',
+            attachments: [{ filename: 'accent.txt', mimeType: 'text/plain', content: 'é' }],
+          }),
+        },
+        DOMPurify: undefined,
+      });
+      const restore = stubFetch(SAMPLE_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer lang="ar" src="https://example.test/message.eml"></lr-email-viewer>`);
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="attachment-size"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="attachment-size"]')!.textContent).to.equal(
+          `${new Intl.NumberFormat('ar', { maximumFractionDigits: 0 }).format(2)} B`,
+        );
+      } finally { restore(); }
     });
 
     it('lets a no-space filename shrink/wrap inside a narrow host instead of overflowing the row', async () => {
@@ -510,8 +642,8 @@ describe('lr-email-viewer', () => {
       try {
         await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
         const bodyHtml = el.shadowRoot!.querySelector('[part="body-html"]') as HTMLElement;
-        const quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;
-        const toggle = el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement;
+        let quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;
+        let toggle = el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement;
         expect(quoted.hasAttribute('hidden')).to.be.true;
 
         // A click elsewhere in the sanitized body (not on the toggle) must not touch the quote block.
@@ -519,17 +651,36 @@ describe('lr-email-viewer', () => {
         expect(quoted.hasAttribute('hidden')).to.be.true;
 
         toggle.click();
+        await el.updateComplete;
+        quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;
+        toggle = el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement;
         expect(quoted.hasAttribute('hidden')).to.be.false;
         expect(toggle.getAttribute('aria-expanded')).to.equal('true');
         expect(toggle.textContent).to.equal('Hide quoted text');
 
         toggle.click();
+        await el.updateComplete;
+        quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;
+        toggle = el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement;
         expect(quoted.hasAttribute('hidden')).to.be.true;
         expect(toggle.getAttribute('aria-expanded')).to.equal('false');
         expect(toggle.textContent).to.equal('Show quoted text');
       } finally {
         restore();
       }
+    });
+
+    it('preserves reactively-owned HTML quote expansion across unrelated host updates', async () => {
+      const restore = stubFetch(GMAIL_QUOTE_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        (el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement).click();
+        await el.updateComplete;
+        el.name = 'renamed.eml';
+        await el.updateComplete;
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.false;
+      } finally { restore(); }
     });
 
     it('leaves the toggle untouched if its matching quote block is no longer in the DOM', async () => {

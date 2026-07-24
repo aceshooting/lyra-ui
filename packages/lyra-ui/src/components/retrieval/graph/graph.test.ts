@@ -1444,6 +1444,26 @@ describe('type filtering (J5)', () => {
     expect(items.filter((i) => i.getAttribute('tabindex') === '0')).to.have.length(1);
   });
 
+  it('moves real DOM focus to a surviving node when filtering shrinks it to an earlier DOM index', async () => {
+    const el = await mountFiltered();
+    const lastNode = el.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')[2]!;
+    lastNode.focus();
+    expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('C');
+
+    el.hiddenTypes = ['doc'];
+    await el.updateComplete;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    await waitUntil(() => el.shadowRoot!.activeElement?.getAttribute('part') === 'node', undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('C');
+    expect(el.shadowRoot!.querySelectorAll('[part="node"][tabindex="0"], [part="link"][tabindex="0"]')).to.have
+      .length(1);
+  });
+
   it('is accessible with a type hidden', async () => {
     const el = await mountFiltered(['person']);
     await expect(el).to.be.accessible();
@@ -2086,6 +2106,46 @@ describe('canvas renderer — interaction and a11y', () => {
     await el.updateComplete;
     expect(items[1]!.getAttribute('tabindex')).to.equal('0');
     expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.not.equal('');
+  });
+
+  it('exposes explicit selection state on canvas virtual-cursor nodes and links', async () => {
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" selection-mode="multiple" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    el.selectedNodeIds = ['a'];
+    el.selectedLinkIds = ['a->b'];
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const items = [...el.shadowRoot!.querySelectorAll('[part="cursor-item"]')];
+    expect(items.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal(['true', 'false', 'true']);
+  });
+
+  it('clamps the canvas tooltip inside the visible canvas and viewport bounds', async () => {
+    const el = await mountCanvas();
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLDivElement;
+    const originalCanvasRect = canvas.getBoundingClientRect.bind(canvas);
+    const originalTooltipRect = tooltip.getBoundingClientRect.bind(tooltip);
+    canvas.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300, x: 0, y: 0, toJSON() {} }) as DOMRect;
+    tooltip.getBoundingClientRect = () =>
+      ({ left: 395, top: -20, right: 515, bottom: 10, width: 120, height: 30, x: 395, y: -20, toJSON() {} }) as DOMRect;
+    try {
+      const internals = el as unknown as {
+        updateCanvasTooltip(
+          hit: { kind: 'node'; node: (typeof el.simNodes)[number] },
+          clientX: number,
+          clientY: number,
+        ): void;
+      };
+      internals.updateCanvasTooltip({ kind: 'node', node: el.simNodes[0]! }, 395, 5);
+      expect(parseFloat(tooltip.style.left)).to.be.lessThan(395);
+      expect(parseFloat(tooltip.style.top)).to.be.greaterThan(5);
+    } finally {
+      canvas.getBoundingClientRect = originalCanvasRect;
+      tooltip.getBoundingClientRect = originalTooltipRect;
+    }
   });
 
   it('Enter/Space on a cursor-item activates the same click handler as pointer interaction', async () => {
@@ -3950,6 +4010,7 @@ describe('styling', () => {
   // `[part='bar']:hover { filter: brightness(...) }`) rather than a rendered computed-style probe.
   it('gives node/link/hull a hover state alongside their existing :focus-visible rings', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='canvas'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
     expect(css).to.match(/\[part='node'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
     expect(css).to.match(/\[part='link'\]:hover[^{]*\{[^}]*filter:\s*brightness/);
     expect(css).to.match(/\[part='hull'\]:hover[^{]*\{[^}]*filter:\s*brightness/);

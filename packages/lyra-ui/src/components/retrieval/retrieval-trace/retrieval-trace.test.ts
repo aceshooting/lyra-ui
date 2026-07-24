@@ -214,7 +214,7 @@ describe('lr-retrieval-trace', () => {
     const keys = [...el.shadowRoot!.querySelectorAll('[data-id="embed"] [part="evidence-metadata-key"]')].map((k) => k.textContent);
     const values = [...el.shadowRoot!.querySelectorAll('[data-id="embed"] [part="evidence-metadata-value"]')].map((v) => v.textContent);
     expect(keys).to.deep.equal(['model', 'dimensions']);
-    expect(values).to.deep.equal(['text-embedding-3', '1536']);
+    expect(values).to.deep.equal(['text-embedding-3', '1,536']);
   });
 
   it('prunes a stale expanded stage id when stages shrinks, instead of throwing or leaving it expanded (dangling-reference fixture)', async () => {
@@ -285,6 +285,41 @@ describe('lr-retrieval-trace', () => {
     await el.updateComplete;
     const waterfall = el.shadowRoot!.querySelector('lr-span-waterfall') as LyraSpanWaterfall;
     expect(waterfall.shadowRoot!.querySelector('lr-empty')).to.exist;
+  });
+
+  it('uses instance-safe evidence ids for hostile caller-supplied stage ids', async () => {
+    const stage: RetrievalStage = {
+      ...STAGES[0]!,
+      id: 'raw id\" with spaces',
+    };
+    const el = (await fixture(html`<lr-retrieval-trace .stages=${[stage]}></lr-retrieval-trace>`)) as LyraRetrievalTrace;
+    const toggle = el.shadowRoot!.querySelector('[part="evidence-toggle"]')!;
+    const controls = toggle.getAttribute('aria-controls')!;
+    expect(controls).to.not.include(stage.id);
+    expect(el.shadowRoot!.getElementById(controls)).to.equal(el.shadowRoot!.querySelector('[part="evidence-body"]'));
+  });
+
+  it('formats numeric evidence metadata with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-trace lang="ar-u-nu-arab" .stages=${STAGES}></lr-retrieval-trace>`,
+    )) as LyraRetrievalTrace;
+    (el.shadowRoot!.querySelector('[data-id="embed"] [part="evidence-toggle"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const values = [...el.shadowRoot!.querySelectorAll('[part="evidence-metadata-value"]')].map(
+      (value) => value.textContent,
+    );
+    expect(values).to.include('١٬٥٣٦');
+  });
+
+  it('suppresses the raw child span-select event after translating it', async () => {
+    const el = (await fixture(html`<lr-retrieval-trace .stages=${STAGES}></lr-retrieval-trace>`)) as LyraRetrievalTrace;
+    let leaked = 0;
+    el.addEventListener('lr-span-select', () => leaked++);
+    el.shadowRoot!.querySelector('lr-span-waterfall')!.dispatchEvent(
+      new CustomEvent('lr-span-select', { detail: { id: 'rewrite' }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(leaked).to.equal(0);
   });
 
   it('is accessible with stages, an expanded chunk evidence panel, and an expanded metadata panel', async () => {

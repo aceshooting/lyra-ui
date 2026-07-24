@@ -286,3 +286,12 @@ it('can shrink to a 320px allocation fully populated', async () => {
   expect(getComputedStyle(el).minInlineSize).to.equal('0px');
   expect(el.getBoundingClientRect().width).to.be.at.most(320);
 });
+
+it('formats warning and evidence counts with the effective locale', async () => {
+  const el = (await fixture(html`<lr-grounding-summary lang="ar-u-nu-arab"></lr-grounding-summary>`)) as LyraGroundingSummary;
+  el.assessment = { ...ASSESSMENT, warnings: Array.from({ length: 12 }, () => 'Warning') };
+  el.citations = Array.from({ length: 12 }, (_, index) => ({ id: `citation-${index}`, sourceId: 'source' }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="warnings-count"]')!.textContent).to.equal('١٢');
+  expect(el.shadowRoot!.querySelector('[part="evidence-count"]')!.textContent).to.equal('١٢');
+});

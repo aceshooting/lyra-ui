@@ -5,6 +5,7 @@ import {
   scopeFromElement,
   scopeFromItems,
   resolveTextQuote,
+  findTextQuoteRanges,
   buildQuoteAnchor,
 } from './text-quote.js';
 
@@ -173,6 +174,117 @@ describe('scopeFromElement + resolveTextQuote', () => {
       const range = resolveTextQuote(scope, { quote: 'revenue grew', prefix: 'Wrong prefix' });
       expect(range).to.exist;
       expect(range!.toString()).to.equal('revenue grew');
+    } finally {
+      root.remove();
+    }
+  });
+});
+
+describe('locale-aware search ranges', () => {
+  it('uses the requested locale for Turkish case folding', () => {
+    const root = document.createElement('div');
+    root.textContent = 'İzmir';
+    document.body.appendChild(root);
+    try {
+      const ranges = findTextQuoteRanges(scopeFromElement(root), 'izmir', 'tr');
+      expect(ranges).to.have.length(1);
+      expect(ranges[0]!.toString()).to.equal('İzmir');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('maps a match back to the right DOM offsets when case folding expands an earlier character', () => {
+    const root = document.createElement('div');
+    root.textContent = 'İ Foo';
+    document.body.appendChild(root);
+    try {
+      const ranges = findTextQuoteRanges(scopeFromElement(root), 'foo', 'en');
+      expect(ranges).to.have.length(1);
+      expect(ranges[0]!.toString()).to.equal('Foo');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('preserves contextual Greek and Lithuanian whole-string case folding', () => {
+    const root = document.createElement('div');
+    root.textContent = 'ΟΣ I\u0301';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      const greekRanges = findTextQuoteRanges(scope, 'ος', 'el');
+      expect(greekRanges).to.have.length(1);
+      expect(greekRanges[0]!.toString()).to.equal('ΟΣ');
+      expect(resolveTextQuote(scope, { quote: 'ος' }, 'el')?.toString()).to.equal('ΟΣ');
+
+      const lithuanianRanges = findTextQuoteRanges(scope, 'i\u0307\u0301', 'lt');
+      expect(lithuanianRanges).to.have.length(1);
+      expect(lithuanianRanges[0]!.toString()).to.equal('I\u0301');
+      expect(resolveTextQuote(scope, { quote: 'i\u0307\u0301' }, 'lt')?.toString()).to.equal('I\u0301');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('treats Greek medial and final sigma as equivalent for substring queries', () => {
+    const root = document.createElement('div');
+    root.textContent = 'ΟΣ';
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      for (const query of ['Σ', 'σ', 'ς']) {
+        const ranges = findTextQuoteRanges(scope, query, 'el');
+        expect(ranges, query).to.have.length(1);
+        expect(ranges[0]!.toString()).to.equal('Σ');
+      }
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('avoids grapheme offset maps for same-length folds and exact anchors without context', () => {
+    const OriginalSegmenter = Intl.Segmenter;
+    let constructions = 0;
+    class CountingSegmenter extends OriginalSegmenter {
+      constructor(...args: ConstructorParameters<typeof Intl.Segmenter>) {
+        constructions += 1;
+        super(...args);
+      }
+    }
+    Object.defineProperty(Intl, 'Segmenter', {
+      configurable: true,
+      value: CountingSegmenter,
+    });
+    const root = document.createElement('div');
+    root.textContent = `${'A'.repeat(10_000)} Needle`;
+    document.body.appendChild(root);
+    try {
+      const scope = scopeFromElement(root);
+      expect(findTextQuoteRanges(scope, 'needle', 'en')).to.have.length(1);
+      expect(resolveTextQuote(scope, { quote: 'Needle' }, 'en')?.toString()).to.equal('Needle');
+      expect(constructions).to.equal(0);
+    } finally {
+      root.remove();
+      Object.defineProperty(Intl, 'Segmenter', {
+        configurable: true,
+        value: OriginalSegmenter,
+      });
+    }
+  });
+
+  it('scores prefix context in folded offsets when earlier casing expands', () => {
+    const root = document.createElement('div');
+    root.textContent = 'Aİ FOO Xİ FOO';
+    document.body.appendChild(root);
+    try {
+      const range = resolveTextQuote(
+        scopeFromElement(root),
+        { quote: 'foo', prefix: ' xi\u0307 ' },
+        'en',
+      );
+      expect(range).to.exist;
+      expect(range!.startOffset).to.equal(10);
     } finally {
       root.remove();
     }

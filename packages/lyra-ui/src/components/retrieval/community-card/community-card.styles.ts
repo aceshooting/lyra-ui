@@ -35,6 +35,9 @@ export const styles = css`
   }
   [part='title'] button {
     display: block;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     padding: 0;
     border: none;
@@ -82,6 +85,9 @@ export const styles = css`
   }
   [part='member'],
   [part='overflow'] {
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: transparent;
     padding: 0;

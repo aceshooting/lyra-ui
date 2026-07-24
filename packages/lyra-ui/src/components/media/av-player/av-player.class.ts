@@ -16,7 +16,6 @@ import { srOnly } from '../../../internal/a11y.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './av-player.styles.js';
 
 export type AvKind = 'audio' | 'video';

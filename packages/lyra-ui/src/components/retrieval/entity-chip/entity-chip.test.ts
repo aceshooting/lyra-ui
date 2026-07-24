@@ -28,6 +28,15 @@ it('emits lr-entity-activate on click with the entityId', async () => {
   expect(event.detail).to.deep.equal({ id: 'e17' });
 });
 
+it('keeps the compact inline entity target at the live hit-area token override', async () => {
+  const el = (await fixture(
+    html`<lr-entity-chip label="X" style="--lr-icon-button-size:52px"></lr-entity-chip>`,
+  )) as LyraEntityChip;
+  const bounds = (el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getBoundingClientRect();
+  expect(bounds.width).to.be.at.least(52);
+  expect(bounds.height).to.be.at.least(52);
+});
+
 it('emits lr-entity-open on dblclick, and on Space while focused', async () => {
   const el = (await fixture(
     html`<lr-entity-chip entity-id="e17" label="Marie Curie"></lr-entity-chip>`,

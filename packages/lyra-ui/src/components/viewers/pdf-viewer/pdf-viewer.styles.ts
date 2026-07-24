@@ -10,12 +10,21 @@ export const styles = css`
   [part='toolbar'] button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   [part='page-indicator'], [part='zoom-indicator'] { color: var(--lr-color-text); white-space: nowrap; }
   [part='pages'] { --lr-virtual-list-height: var(--lr-pdf-viewer-height); }
+  lr-virtual-list::part(base) { overflow-x: auto; }
   /* Everything below renders through <lr-virtual-list>'s renderItem, i.e. into that element's own
      shadow root rather than this one -- a bare [part='x'] selector can never reach across that
      boundary, so each page-level rule goes through ::part(). ::part() cannot be followed by a
      descendant combinator either, which is why the canvas and the generated text runs carry their
      own part names instead of being addressed as descendants of page/text-layer. */
-  lr-virtual-list::part(page) { position: relative; display: flex; justify-content: center; padding-block: var(--lr-space-m); min-inline-size: 0; }
+  lr-virtual-list::part(page) {
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    inline-size: max-content;
+    min-inline-size: 100%;
+    padding-block: var(--lr-space-m);
+    direction: ltr;
+  }
   /* direction:ltr so the canvas 2D context (which defaults ctx.direction to 'inherit' -> the
      element's computed direction) lays PDF.js's explicitly-positioned glyphs out LTR. Under an
      ancestor dir="rtl" the inherited RTL direction otherwise reorders/overlaps the painted text

@@ -6,7 +6,7 @@
 - **Class** `LyraNotebookViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/notebook-viewer/notebook-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 12 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,7 +48,8 @@ notebook failed.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
 `data-active`), `cell-active` (added alongside `cell` on the cell an anchor currently targets),
-`cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `outputs`, `output`
+`cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
+scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
 an error output), `error-output-label` (the label introducing an error output's traceback),
 `output-toggle`, `error`, `spinner`.

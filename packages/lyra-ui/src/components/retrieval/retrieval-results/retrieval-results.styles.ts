@@ -91,10 +91,6 @@ export const styles = css`
   lr-virtual-list::part(metadata-term) {
     font-weight: var(--lr-font-weight-medium);
   }
-  [part~='metadata-term']::after,
-  lr-virtual-list::part(metadata-term)::after {
-    content: ':';
-  }
   [part~='metadata-value'],
   lr-virtual-list::part(metadata-value) {
     margin: 0;
@@ -106,6 +102,9 @@ export const styles = css`
     padding: var(--lr-space-s);
   }
   [part='load-more'] {
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: transparent;

@@ -1,17 +1,13 @@
 import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { getDateTimeFormat } from '../../../internal/intl-cache.js';
+import { finiteCount } from '../../../internal/numbers.js';
+import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { styles } from './knowledge-base.styles.js';
 import type { TableColumn } from '../../data/table/table.class.js';
-import '../../data/table/table.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
-import '../../overlays/badge/badge.js';
-import '../../data/stat/stat.js';
 import type { MenuSelectDetail } from '../../layout/menu/menu.class.js';
-import '../../layout/menu/menu.js';
-import '../../forms/button/button.js';
 
 /** Sync lifecycle state of one knowledge source, as last reported by the host. */
 export type KnowledgeSourceSyncStatus = 'idle' | 'syncing' | 'paused' | 'synced' | 'error';
@@ -264,7 +260,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
         ${source.documentCount != null
           ? html`<span part="document-count"
               >${this.localize('knowledgeBaseDocumentCount', undefined, {
-                count: source.documentCount,
+                count: getNumberFormat(this.effectiveLocale).format(finiteCount(source.documentCount)),
               })}</span
             >`
           : nothing}
@@ -293,7 +289,10 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
       <lr-menu
         part="actions-menu"
         label=${label}
-        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => this.onRowAction(source, e.detail.value)}
+        @lr-menu-select=${(e: CustomEvent<MenuSelectDetail>) => {
+          e.stopPropagation();
+          this.onRowAction(source, e.detail.value);
+        }}
       >
         <button slot="trigger" type="button" part="actions-trigger" aria-label=${label}>${kebabIcon()}</button>
         <lr-menu-item value="sync" ?disabled=${!canSync}>
@@ -352,28 +351,29 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     const attention = this.sources.filter(
       (s) => s.syncStatus === 'error' || s.indexingHealth === 'failed' || s.indexingHealth === 'degraded',
     ).length;
+    const numberFormat = getNumberFormat(this.effectiveLocale);
     return html`
       <div part="summary">
         <lr-stat
           part="summary-stat"
           label=${this.localize('knowledgeBaseTotalSources')}
-          value=${String(total)}
+          value=${numberFormat.format(total)}
         ></lr-stat>
         <lr-stat
           part="summary-stat"
           label=${this.localize('knowledgeBaseSyncedSources')}
-          value=${String(synced)}
+          value=${numberFormat.format(synced)}
         ></lr-stat>
         <lr-stat
           part="summary-stat"
           label=${this.localize('knowledgeBaseSyncingSources')}
-          value=${String(syncing)}
+          value=${numberFormat.format(syncing)}
         ></lr-stat>
         <lr-stat
           part="summary-stat"
           variant=${attention > 0 ? 'danger' : 'neutral'}
           label=${this.localize('knowledgeBaseNeedsAttention')}
-          value=${String(attention)}
+          value=${numberFormat.format(attention)}
         ></lr-stat>
       </div>
     `;

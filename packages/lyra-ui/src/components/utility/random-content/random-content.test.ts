@@ -273,6 +273,47 @@ it('restarts autoplay after a disconnect/reconnect cycle instead of leaving it p
     .undefined;
 });
 
+it('clears stale focus-within suspension across a focused disconnect/reconnect cycle', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.autoplay = true;
+  el.autoplayInterval = 1000;
+  el.mode = 'sequence';
+  el.innerHTML = '<button id="focused-reconnect">Focused</button><button>Other</button>';
+  container.append(el);
+  await el.updateComplete;
+
+  (el.querySelector('#focused-reconnect') as HTMLButtonElement).focus();
+  await Promise.resolve();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.be.undefined;
+
+  el.remove();
+  container.append(el);
+  await el.updateComplete;
+  await Promise.resolve();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.not.be.undefined;
+});
+
+it('immediately reapplies one configured selection on reconnect without enabling mount announcements', async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const el = document.createElement('lr-random-content') as LyraRandomContent;
+  el.setAttribute('mode', 'sequence');
+  el.innerHTML = '<div id="reconnect-0">0</div><div id="reconnect-1">1</div>';
+  container.append(el);
+  await el.updateComplete;
+  expect(shownIds(el).length).to.equal(1);
+
+  el.remove();
+  expect(shownIds(el).length).to.equal(2);
+  container.append(el);
+  await el.updateComplete;
+
+  expect(shownIds(el).length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-live')).to.equal('off');
+});
+
 it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async () => {
   const el = (await fixture(html`
     <lr-random-content autoplay autoplay-interval="10" mode="sequence">
@@ -293,10 +334,80 @@ it('autoplay ticks at the clamped 1000ms floor and stops on disconnect', async (
   await el.updateComplete;
   expect(shownChild(el).id).to.equal('a1');
 
-  const idAfterRemove = shownChild(el).id;
+  let firedAfterDisconnect = false;
+  el.addEventListener('lr-content-change', () => (firedAfterDisconnect = true));
   el.remove();
   await new Promise((resolve) => setTimeout(resolve, 1200));
-  expect(shownChild(el).id).to.equal(idAfterRemove);
+  expect(firedAfterDisconnect).to.be.false;
+  expect(
+    ([...el.children] as HTMLElement[]).every((child) => !child.hidden),
+    'disconnect restores the author-owned visibility state instead of freezing the last managed selection',
+  ).to.be.true;
+});
+
+it('pauses autoplay while focus is inside and never hides the focused subtree', async () => {
+  const outside = (await fixture(html`<button>Outside</button>`)) as HTMLButtonElement;
+  const el = (await fixture(html`
+    <lr-random-content autoplay autoplay-interval="1000" mode="sequence">
+      <button id="focus-a">A</button>
+      <button id="focus-b">B</button>
+      <button id="focus-c">C</button>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+
+  const focused = el.querySelector('#focus-c') as HTMLButtonElement;
+  focused.hidden = false;
+  focused.removeAttribute('aria-hidden');
+  focused.focus();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer, 'focus inside must suspend autoplay').to.be.undefined;
+
+  el.randomize();
+  expect(focused.hidden, 'a manual reselection must not hide the subtree that still owns focus').to.be.false;
+
+  outside.focus();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer, 'autoplay resumes after focus leaves').to.not.be.undefined;
+});
+
+it('exposes a localized pause/resume action whenever autoplay is enabled', async () => {
+  const el = (await fixture(html`
+    <lr-random-content
+      autoplay
+      .strings=${{ randomContentPause: 'Pause locale', randomContentResume: 'Resume locale' }}
+    >
+      <div>One</div>
+      <div>Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+  expect(button.getAttribute('aria-label')).to.equal('Pause locale');
+  expect(button.getAttribute('aria-pressed')).to.equal('false');
+
+  button.click();
+  await el.updateComplete;
+  expect(el.paused).to.be.true;
+  expect(el.hasAttribute('paused')).to.be.true;
+  expect(button.getAttribute('aria-label')).to.equal('Resume locale');
+  expect(button.getAttribute('aria-pressed')).to.equal('true');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  expect((el as any).timer).to.be.undefined;
+});
+
+it('leaves paused explicitly unset by default', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay>
+      <div>One</div>
+      <div>Two</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  const button = el.shadowRoot!.querySelector('[part="pause-button"]') as HTMLButtonElement;
+  expect(el.paused).to.be.false;
+  expect(el.hasAttribute('paused')).to.be.false;
+  expect(button.getAttribute('aria-pressed')).to.equal('false');
 });
 
 it('does not autoplay-tick when only one eligible child exists', async () => {
@@ -392,12 +503,15 @@ it('forwards a host aria-label to the internal role="status" element, and omits 
   expect(withoutLabel.shadowRoot!.querySelector('[part="base"]')!.hasAttribute('aria-label')).to.be.false;
 });
 
-it('sets aria-live="off" while autoplay is on and "polite" otherwise, always with aria-atomic="true"', async () => {
+it('suppresses the initial mount announcement, then enables polite announcements for manual changes', async () => {
   const idle = (await fixture(html`<lr-random-content><div>1</div></lr-random-content>`)) as LyraRandomContent;
   await idle.updateComplete;
   const idleBase = idle.shadowRoot!.querySelector('[part="base"]')!;
-  expect(idleBase.getAttribute('aria-live')).to.equal('polite');
+  expect(idleBase.getAttribute('aria-live')).to.equal('off');
   expect(idleBase.getAttribute('aria-atomic')).to.equal('true');
+  idle.randomize();
+  await idle.updateComplete;
+  expect(idleBase.getAttribute('aria-live')).to.equal('polite');
 
   const autoplaying = (await fixture(html`
     <lr-random-content autoplay>
@@ -409,6 +523,38 @@ it('sets aria-live="off" while autoplay is on and "polite" otherwise, always wit
   const autoBase = autoplaying.shadowRoot!.querySelector('[part="base"]')!;
   expect(autoBase.getAttribute('aria-live')).to.equal('off');
   expect(autoBase.getAttribute('aria-atomic')).to.equal('true');
+});
+
+it('restores every author-supplied hidden/aria-hidden state when it stops managing a child', async () => {
+  const el = (await fixture(html`
+    <lr-random-content mode="sequence">
+      <div id="author-hidden" hidden aria-hidden="true">Hidden by author</div>
+      <div id="author-visible" aria-hidden="false">Visible by author</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const authorHidden = el.querySelector('#author-hidden') as HTMLElement;
+  const authorVisible = el.querySelector('#author-visible') as HTMLElement;
+
+  el.remove();
+  expect(authorHidden.hidden).to.be.true;
+  expect(authorHidden.getAttribute('aria-hidden')).to.equal('true');
+  expect(authorVisible.hidden).to.be.false;
+  expect(authorVisible.getAttribute('aria-hidden')).to.equal('false');
+});
+
+it('restores the author-supplied hidden="until-found" mode exactly', async () => {
+  const el = (await fixture(html`
+    <lr-random-content mode="sequence">
+      <div id="until-found" hidden="until-found">Findable hidden content</div>
+      <div>Visible content</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const untilFound = el.querySelector('#until-found') as HTMLElement;
+
+  el.remove();
+  expect(untilFound.getAttribute('hidden')).to.equal('until-found');
 });
 
 it('only treats direct children as eligible, not elements re-slotted through a nested wrapper (no flatten)', async () => {
@@ -464,7 +610,7 @@ it('does not overflow a narrow ancestor even with a long intrinsic-width slotted
   expect(getComputedStyle(base).minInlineSize).to.equal('0px');
 });
 
-it('renders correctly with no locale registered -- the component has no built-in text to localize', async () => {
+it('renders non-autoplay content correctly with no locale registered', async () => {
   const el = (await fixture(html`
     <lr-random-content>
       <div id="only">Only child</div>

@@ -84,6 +84,8 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
  * sub-control — the search input and every emoji button — not just one of them.
  *
  * @customElement lr-emoji-picker
+ * @event input - Native-style composed event emitted after a user picks an emoji.
+ * @event change - Native-style composed commit event emitted with `input`.
  * @event lr-change - An emoji was picked. `detail: { emoji: string }`.
  * @event blur - Re-dispatched from the internal search `<input>`'s own `blur` — bubbling and
  *   composed (unlike the native event, which is neither).
@@ -429,6 +431,8 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   private pick(item: EmojiPickerItem): void {
     if (this.effectiveDisabled) return;
     this.value = item.emoji;
+    this.emit('input');
+    this.emit('change');
     this.emit('lr-change', { emoji: item.emoji });
   }
 

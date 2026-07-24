@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './entity-card.styles.js';
 import '../../agent-tools/result-card/result-field.class.js';
 import '../../overlays/badge/badge.class.js';
@@ -156,13 +158,19 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
         ${entity.description ? html`<p part="description">${entity.description}</p>` : nothing}
         <div part="properties">
           ${properties.map(
-            ([key, value]) => html`<lr-result-field part="property" label=${key} value=${String(value)}></lr-result-field>`,
+            ([key, value]) => html`<lr-result-field
+              part="property"
+              label=${key}
+              value=${typeof value === 'number'
+                ? getNumberFormat(this.effectiveLocale).format(finiteNumber(value, 0))
+                : String(value)}
+            ></lr-result-field>`,
           )}
           ${entity.degree != null
             ? html`<lr-result-field
                 part="degree"
                 label=${this.localize('entityDegree')}
-                value=${String(entity.degree)}
+                value=${getNumberFormat(this.effectiveLocale).format(finiteCount(entity.degree))}
               ></lr-result-field>`
             : nothing}
           ${entity.communityId

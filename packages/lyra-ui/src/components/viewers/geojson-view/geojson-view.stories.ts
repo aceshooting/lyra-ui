@@ -21,3 +21,8 @@ export const Default: Story = {
 };
 
 export const Empty: Story = { render: () => html`<lr-geojson-view></lr-geojson-view>` };
+
+/** Baseline narrow-allocation coverage with a long map name. */
+export const Narrow320: Story = {
+  render: () => html`<div style="max-width:320px"><lr-geojson-view src=${src} name="International analytical-engine research observation zones.geojson"></lr-geojson-view></div>`,
+};

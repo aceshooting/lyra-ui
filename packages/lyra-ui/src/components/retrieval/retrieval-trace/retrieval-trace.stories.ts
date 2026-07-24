@@ -97,9 +97,27 @@ export const Empty: Story = {
   render: () => html`<lr-retrieval-trace style="max-width: 40rem"></lr-retrieval-trace>`,
 };
 
-/** 320px container — the timeline's own responsive rules apply, and evidence rows wrap to fit. */
+/** 320px container — responsive rules and long evidence/metadata wrapping are visible together. */
 export const Narrow: Story = {
-  render: () => html`<lr-retrieval-trace style="max-width: 320px" .stages=${stages}></lr-retrieval-trace>`,
+  name: 'Narrow long content (320px)',
+  render: () => html`
+    <lr-retrieval-trace
+      style="inline-size:320px; max-inline-size:100%"
+      active-stage-id="rewrite"
+      .stages=${[
+        {
+          ...stages[0]!,
+          evidence: {
+            text: 'UnbrokenRewrittenQueryEvidenceThatMustWrapInsideTheNarrowTraceWithoutHorizontalOverflow',
+            metadata: {
+              'a-deliberately-long-metadata-key': 'anUnbrokenMetadataValueThatMustRemainContained',
+            },
+          },
+        },
+        ...runningStages.slice(1),
+      ] satisfies RetrievalStage[]}
+    ></lr-retrieval-trace>
+  `,
 };
 
 export const ThemedActiveEvidence: Story = {

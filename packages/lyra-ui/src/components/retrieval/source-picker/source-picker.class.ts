@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -79,6 +79,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   @state() private expandedIds = new Set<string>();
   @state() private query = '';
   @state() private activeId: string | null = null;
+  private pendingFocusIndex: number | 'search' | undefined;
 
   private allLeafIds(entries: LyraSourceEntry[] = this.sources): string[] {
     const acc: string[] = [];
@@ -94,7 +95,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private descendantLeafIds(entry: LyraSourceEntry): string[] {
     if (!entry.children?.length) return [entry.id];
-    return entry.children.flatMap((c) => this.descendantLeafIds(c));
+    return [...new Set(entry.children.flatMap((c) => this.descendantLeafIds(c)))];
   }
 
   private checkedState(entry: LyraSourceEntry): 'true' | 'false' | 'mixed' {
@@ -122,9 +123,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   private visibleRows(): SourceRow[] {
     const rows: SourceRow[] = [];
+    const seenIds = new Set<string>();
     const filtering = this.isFiltering();
     const walk = (list: LyraSourceEntry[], depth: number): void => {
       for (const entry of list) {
+        if (seenIds.has(entry.id)) continue;
+        seenIds.add(entry.id);
         if (filtering && !this.entryMatchesOrHasMatch(entry)) continue;
         const hasChildren = !!entry.children?.length;
         rows.push({ entry, depth, hasChildren });
@@ -133,6 +137,40 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     };
     walk(this.sources, 0);
     return rows;
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!changed.has('sources') && !changed.has('query') && !changed.has('expandedIds')) return;
+
+    const renderedRows = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part~="item"]'));
+    const focusedIndex = renderedRows.indexOf(this.shadowRoot?.activeElement as HTMLElement);
+    const rows = this.visibleRows();
+    const retainedIndex = rows.findIndex((row) => row.entry.id === this.activeId);
+    const nextIndex =
+      retainedIndex >= 0
+        ? retainedIndex
+        : rows.length
+          ? Math.min(Math.max(focusedIndex, 0), rows.length - 1)
+          : -1;
+    this.activeId = nextIndex >= 0 ? rows[nextIndex]!.entry.id : null;
+
+    if (focusedIndex >= 0) {
+      this.pendingFocusIndex = nextIndex >= 0 ? nextIndex : 'search';
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const pending = this.pendingFocusIndex;
+    if (pending === undefined) return;
+    this.pendingFocusIndex = undefined;
+    if (pending === 'search') {
+      (this.renderRoot.querySelector('[part~="search"]') as HTMLElement | null)?.focus();
+      return;
+    }
+    const rows = this.renderRoot.querySelectorAll<HTMLElement>('[part~="item"]');
+    rows[pending]?.focus();
   }
 
   private commitSelection(next: string[]): void {

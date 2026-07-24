@@ -73,9 +73,7 @@ Identical behavior to `<lr-code-block>`'s own method.
 highlighted HTML, and always fires regardless of whether the actual OS clipboard write succeeded),
 `lr-toggle` (`detail: { collapsed: boolean }` — fired when the built-in collapse/expand header
 button is activated), `lr-line-click` (`detail: { line: number }` — a gutter line number was
-activated while `interactiveLines` is set), `lr-highlight-activate` (`detail: { id: string }` —
-declared for parity with this library's other anchor-target viewers; not currently emitted by this
-component), `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
+activated while `interactiveLines` is set), `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
 body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
 **Slots:** none.

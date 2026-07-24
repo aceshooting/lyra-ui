@@ -1,17 +1,13 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import type { DocumentLocator, RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
 import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.class.js';
-import '../../layout/virtual-list/virtual-list.js';
-import '../chunk-inspector/chunk-inspector.js';
-import '../../forms/checkbox/checkbox.js';
-import '../../overlays/spinner/spinner.js';
-import '../../overlays/empty/empty.js';
 import { styles } from './retrieval-results.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** `lr-select`'s detail: the complete updated selection, both as bare ids and as the (deduplicated)
  *  `RetrievalChunk` records they refer to -- a host wanting "what got selected" rarely wants to
@@ -44,16 +40,6 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
     anchor: chunk.locator,
     page: chunk.locator?.kind === 'page' ? chunk.locator.page : undefined,
   };
-}
-
-function formatMetadataValue(value: unknown): string {
-  if (value == null) return '';
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
 }
 
 function safeScore(score: number): number {
@@ -259,6 +245,19 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.emit<RetrievalResultsSelectDetail>('lr-select', { ids, chunks: selectedChunks });
   }
 
+  private formatMetadataValue(value: unknown): string {
+    if (value == null) return '';
+    if (typeof value === 'string' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'number') {
+      return getNumberFormat(this.effectiveLocale).format(finiteNumber(value, 0));
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
   private renderMetadata(metadata?: Record<string, unknown>): TemplateResult | typeof nothing {
     const entries = metadata ? Object.entries(metadata) : [];
     if (entries.length === 0) return nothing;
@@ -268,7 +267,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           ([key, value]) =>
             html`<div part="metadata-entry">
               <dt part="metadata-term">${key}</dt>
-              <dd part="metadata-value">${formatMetadataValue(value)}</dd>
+              <dd part="metadata-value">${this.formatMetadataValue(value)}</dd>
             </div>`,
         )}
       </dl>
@@ -290,8 +289,11 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         ? html`<lr-checkbox
             part="select"
             .checked=${selected}
-            aria-label="${this.localize('select')} ${rowLabel}"
-            @lr-change=${() => this.toggleSelect(chunk)}
+            aria-label=${this.localize('retrievalResultsSelectRow', undefined, { label: rowLabel })}
+            @lr-change=${(event: Event) => {
+              event.stopPropagation();
+              this.toggleSelect(chunk);
+            }}
           ></lr-checkbox>`
         : nothing}
       <div part=${selected ? 'row-body row-body-selected' : 'row-body'} ?data-selected=${selected}>
@@ -315,12 +317,12 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     `;
   };
 
-  private renderLoadMoreFooter(): TemplateResult | typeof nothing {
+  private renderLoadMoreFooter(label: string): TemplateResult | typeof nothing {
     if (!this.hasMore) return nothing;
     return html`
       <div part="load-more-row">
         ${this.loading
-          ? html`<lr-spinner part="spinner"></lr-spinner>`
+          ? html`<lr-spinner part="spinner" aria-label=${label}></lr-spinner>`
           : html`<button type="button" part="load-more" @click=${() => this.emit('lr-load-more')}>
               ${this.localize('loadMore')}
             </button>`}
@@ -329,7 +331,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('chunkInspectorLabel');
+    const label = this.getAttribute('aria-label') || this.label || this.localize('chunkInspectorLabel');
 
     if (this.error) {
       return html`<div part="base"><div part="error" role="alert">${this.error}</div></div>`;
@@ -338,7 +340,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const processed = this.processedChunks;
     if (processed.chunks.length === 0) {
       if (this.loading) {
-        return html`<div part="base"><lr-spinner part="spinner"></lr-spinner></div>`;
+        return html`<div part="base"><lr-spinner part="spinner" aria-label=${label}></lr-spinner></div>`;
       }
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute) so
       // `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces
@@ -371,7 +373,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
           : html`<div role="list">
                 ${processed.chunks.map((c) => html`<div part="row" role="listitem">${this.renderRow(c)}</div>`)}
               </div>
-              ${this.renderLoadMoreFooter()}`}
+              ${this.renderLoadMoreFooter(label)}`}
       </div>
     `;
   }

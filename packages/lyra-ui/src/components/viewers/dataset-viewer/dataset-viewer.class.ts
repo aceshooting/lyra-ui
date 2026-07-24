@@ -8,13 +8,15 @@ import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange, type ParsedCellRange } from '../../../internal/cell-range.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
-import '../../layout/virtual-list/virtual-list.js';
 import { styles } from './dataset-viewer.styles.js';
 import { parseDelimitedRecords } from '../../../internal/delimited-data.js';
 import { LatestTask } from '../../../internal/latest-task.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 
 export interface DatasetTable { fields: string[]; rows: Record<string, string>[]; }
 type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'empty' } | { kind: 'error'; message: string };
+const MAX_SEARCH_MATCHES = 1_000;
 
 export interface LyraDatasetViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
@@ -45,7 +47,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * wrapping a focusable `part="cell-highlight-action"` native button (keeping the ARIA table tree
  * intact) on membership, recomputed per row inside `renderRow()` so a row scrolled out and back
  * in reconstructs its highlight for free, with no persistent DOM to keep in sync. `search()` is a
- * case-insensitive substring match over every body cell's raw string value, ordered row then column.
+ * locale-aware case-insensitive substring match over the header followed by every body cell's raw
+ * string value, ordered row then column.
  *
  * @customElement lr-dataset-viewer
  * @event lr-render-error - Fired when the fetched text fails to parse, or exceeds the resource-size guard.
@@ -58,8 +61,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   matchCount, activeIndex }`.
  * @csspart base - The root wrapper.
  * @csspart body - The scrollable body wrapper.
- * @csspart table - The `role="table"` container. Its accessible name is `name` when set,
- *   otherwise a host `aria-label`, otherwise a localized row-count caption.
+ * @csspart table - The `role="table"` container. Its accessible name is a host `aria-label` when
+ *   set, otherwise `name`, otherwise a localized row-count caption.
  * @csspart header-row - The sticky header row (`role="row"`).
  * @csspart header-cell - A header cell (`role="columnheader"`).
  * @csspart data-row - One virtualized data row.
@@ -80,8 +83,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as delimited text. */
   @property() src = '';
-  /** Display name used for the table's accessible name, taking precedence over a host
-   *  `aria-label`. */
+  /** Display name used for the table's accessible name after an explicit host `aria-label`. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
   @property({ attribute: 'max-height' }) maxHeight = '';
@@ -96,7 +98,21 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   @state() private searchMatches: { row: number; col: number }[] = [];
   @state() private searchActiveIndex = -1;
   private searchQuery = '';
+  private lastSearchLocale = '';
   private loadTask = new LatestTask();
+  private lastLoadSrc = '';
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.src && this.src === this.lastLoadSrc) {
+      this.scheduleAfterUpdate(() => { void this.load(); });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.loadTask.next();
+    super.disconnectedCallback();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
@@ -113,20 +129,38 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    const locale = this.effectiveLocale;
+    if (locale !== this.lastSearchLocale) {
+      const shouldRecompute = !!this.searchQuery;
+      this.lastSearchLocale = locale;
+      if (shouldRecompute) this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); });
+    }
   }
 
   private async load(): Promise<void> {
+    this.lastLoadSrc = this.src;
     const generation = this.loadTask.next();
     const signal = this.beginAbortableLoad();
     if (!this.src) { this.fetchState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
-    if (!url) { this.fetchState = { kind: 'error', message: this.localize('documentPreviewUrlNotAllowed') }; return; }
+    if (!url) {
+      const error = new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed'));
+      this.fetchState = { kind: 'error', message: error.message };
+      this.emit('lr-render-error', { error });
+      return;
+    }
     this.fetchState = { kind: 'loading' };
     try {
       const response = await fetch(url, signal ? { signal } : undefined);
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      const table = await this.parse(await readResponseText(response));
-      if (this.isConnected && this.loadTask.isCurrent(generation)) this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
+      const source = await readResponseText(response);
+      if (!this.isConnected || !this.loadTask.isCurrent(generation)) return;
+      const table = await this.parse(source, generation);
+      if (table === undefined) return;
+      if (this.isConnected && this.loadTask.isCurrent(generation)) {
+        this.fetchState = table ? { kind: 'loaded', table } : { kind: 'empty' };
+        if (table && this.searchQuery) await this.search(this.searchQuery);
+      }
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || !this.loadTask.isCurrent(generation)) return;
       this.fetchState = { kind: 'error', message: error instanceof LyraUserFacingError ? error.message : this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
@@ -138,8 +172,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
    *  that is a distinct, non-error "empty" state, not the same failure as a missing parser library
    *  or an oversized file, and must not be funneled into the same role="alert" chrome as those
    *  genuine failures (matching `<lr-calendar-viewer>`'s identical zero-events handling). */
-  private async parse(text: string): Promise<DatasetTable | null> {
+  private async parse(text: string, generation: number): Promise<DatasetTable | null | undefined> {
     const papa = await loadPapaParseCached();
+    if (!this.isConnected || !this.loadTask.isCurrent(generation)) return undefined;
     if (!papa) throw new LyraUserFacingError(this.localize('datasetViewerMissingParser'));
     const result = parseDelimitedRecords(papa, text);
     if (!result.fields.length || !result.rows.length) return null;
@@ -152,7 +187,12 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   /** `rawRow` is 1-based, always including the header row -- the same raw-file-grid addressing
    *  convention every `cell-range` anchor uses. */
   private cellHighlightsForRow(rawRow: number): ResolvedCellHighlight[] {
-    return this.highlights.flatMap((highlight) => {
+    const seen = new Set<string>();
+    return this.highlights.filter((highlight) => {
+      if (seen.has(highlight.id)) return false;
+      seen.add(highlight.id);
+      return true;
+    }).flatMap((highlight) => {
       if (highlight.anchor.kind !== 'cell-range' || highlight.anchor.sheet) return []; // dataset-viewer has no sheets
       const parsed = parseCellRange(highlight.anchor.range);
       if (!parsed) return [];
@@ -160,16 +200,17 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     });
   }
 
-  private renderCell(value: string, colIndex: number, rowHighlights: ResolvedCellHighlight[]): TemplateResult {
+  private renderCell(value: string, colIndex: number, rowHighlights: ResolvedCellHighlight[], role: 'cell' | 'columnheader' = 'cell'): TemplateResult {
     const colHighlights = rowHighlights.filter((entry) => colIndex >= entry.parsed.startCol && colIndex <= entry.parsed.endCol);
-    if (!colHighlights.length) return html`<div part="cell" role="cell">${value}</div>`;
+    const part = role === 'columnheader' ? 'header-cell' : 'cell';
+    if (!colHighlights.length) return html`<div part=${part} role=${role}>${value}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
     const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     // The outer element must stay a plain `role="cell"` so the ARIA table tree (table > row >
     // cell) remains valid; the activation affordance is a nested native <button>, which carries
     // the button role plus Enter/Space activation on its own, without disturbing that structure.
-    return html`<div part="cell cell-highlight" role="cell" ?data-active=${!!active} style=${active ? '--lr-dataset-viewer-highlight-color: var(--lr-color-warning, var(--lr-color-brand))' : ''}>
+    return html`<div part="${part} cell-highlight" role=${role} ?data-active=${!!active} style=${active ? '--lr-dataset-viewer-highlight-color: var(--lr-color-warning, var(--lr-color-brand))' : ''}>
       <button
         part="cell-highlight-action"
         type="button"
@@ -187,48 +228,78 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
 
   // -- anchor resolution ---------------------------------------------------------------------------
 
-  /** Scrolls raw-grid row `rawRow` into view -- shared by `applyAnchor()` and every search
-   *  navigation method, so both stay byte-identical in how a row coordinate becomes a scroll. There
-   *  is no independent horizontal/column scroll here (unlike `<lr-csv-viewer>`'s `has-header-row`
-   *  grid, this viewer's fixed-width grid columns fit its container without one). */
-  private async jumpToCell(rawRow: number): Promise<boolean> {
+  /** Scrolls raw-grid `(rawRow, col)` into view -- shared by `applyAnchor()` and every search
+   *  navigation method, so both stay byte-identical in how a coordinate becomes a scroll. */
+  private async jumpToCell(rawRow: number, col: number): Promise<boolean> {
     if (this.fetchState.kind !== 'loaded') return false;
+    const { fields, rows } = this.fetchState.table;
+    if (rawRow < 1 || rawRow > rows.length + 1 || col < 0 || col >= fields.length) return false;
     const bodyIndex = rawRow - 2; // -1 raw(1-based) -> 0-based, -1 for the always-present header row
-    if (bodyIndex < 0 || bodyIndex >= this.fetchState.table.rows.length) return false;
+    if (bodyIndex < 0) {
+      const target = this.renderRoot.querySelector('[part="header-row"]')?.querySelectorAll('[part~="header-cell"]')[col] as HTMLElement | undefined;
+      target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      return !!target;
+    }
     this.activeRowKey = bodyIndex;
     await this.updateComplete;
+    await this.scrollColumnIntoView(col);
     return true;
+  }
+
+  private async scrollColumnIntoView(col: number): Promise<void> {
+    const list = this.renderRoot.querySelector('lr-virtual-list') as (HTMLElement & { updateComplete?: Promise<unknown> }) | null;
+    if (list?.updateComplete) await list.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const row = list?.shadowRoot?.querySelector('[part="row"][aria-current="true"]');
+    const target = row?.querySelectorAll('[part~="cell"]')[col] as HTMLElement | undefined;
+    target?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'nearest',
+      inline: 'nearest',
+    });
   }
 
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'cell-range' || anchor.sheet) return false; // dataset-viewer has no sheets
     const parsed = parseCellRange(anchor.range);
     if (!parsed) return false;
-    return this.jumpToCell(parsed.startRow + 1);
+    return this.jumpToCell(parsed.startRow + 1, parsed.startCol);
   }
 
   // -- search ---------------------------------------------------------------------------------------
 
-  /** Case-insensitive substring search over every body cell's raw string value, ordered row then
-   *  column -- the always-present header row itself has no cell values to search (its text lives in
-   *  `fields`, not `rows`). An empty/whitespace-only query behaves like `clearSearch()` and resolves
-   *  `0`. */
+  /** Locale-aware case-insensitive substring search over the header fields followed by every body
+   *  cell's raw string value, ordered row then column. An empty/whitespace-only query behaves like
+   *  `clearSearch()` and resolves `0`. */
   async search(query: string): Promise<number> {
     this.searchQuery = query;
-    const trimmed = query.trim().toLowerCase();
+    this.lastSearchLocale = this.effectiveLocale;
+    const trimmed = query.trim().toLocaleLowerCase(this.effectiveLocale);
     const matches: { row: number; col: number }[] = [];
     if (trimmed && this.fetchState.kind === 'loaded') {
       const { fields, rows } = this.fetchState.table;
-      rows.forEach((row, r) => {
-        fields.forEach((field, c) => {
-          if ((row[field] ?? '').toLowerCase().includes(trimmed)) matches.push({ row: r + 2, col: c });
-        });
-      });
+      searchCells: {
+        for (let c = 0; c < fields.length; c++) {
+          if (fields[c]!.toLocaleLowerCase(this.effectiveLocale).includes(trimmed)) {
+            matches.push({ row: 1, col: c });
+            if (matches.length >= MAX_SEARCH_MATCHES) break searchCells;
+          }
+        }
+        for (let r = 0; r < rows.length; r++) {
+          const row = rows[r]!;
+          for (let c = 0; c < fields.length; c++) {
+            if ((row[fields[c]!] ?? '').toLocaleLowerCase(this.effectiveLocale).includes(trimmed)) {
+              matches.push({ row: r + 2, col: c });
+              if (matches.length >= MAX_SEARCH_MATCHES) break searchCells;
+            }
+          }
+        }
+      }
     }
     this.searchMatches = matches;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
-    if (this.searchActiveIndex >= 0) await this.jumpToCell(matches[0]!.row);
+    if (this.searchActiveIndex >= 0) await this.jumpToCell(matches[0]!.row, matches[0]!.col);
     return matches.length;
   }
 
@@ -238,7 +309,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     if (!this.searchMatches.length) return false;
     this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
     this.emitSearchChange();
-    await this.jumpToCell(this.searchMatches[this.searchActiveIndex]!.row);
+    await this.jumpToCell(this.searchMatches[this.searchActiveIndex]!.row, this.searchMatches[this.searchActiveIndex]!.col);
     return true;
   }
 
@@ -248,7 +319,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     if (!this.searchMatches.length) return false;
     this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.emitSearchChange();
-    await this.jumpToCell(this.searchMatches[this.searchActiveIndex]!.row);
+    await this.jumpToCell(this.searchMatches[this.searchActiveIndex]!.row, this.searchMatches[this.searchActiveIndex]!.col);
     return true;
   }
 
@@ -265,22 +336,21 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.searchActiveIndex });
   }
 
+  private stopInternalEvent = (event: Event): void => { event.stopPropagation(); };
+
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
       case 'loaded': {
         const { fields, rows } = this.fetchState.table;
-        // A host aria-label overrides the computed row-count caption, matching every sibling
-        // document viewer's accessible-name precedence (name, then a host aria-label, then a
-        // localized default) -- but only when name itself is unset, since name is baked directly
-        // into the "named" caption format below and must keep winning over aria-label, same as
-        // those siblings.
-        const label = this.name
-          ? this.localize('datasetViewerCaptionNamed', undefined, { name: this.name, count: rows.length })
-          : this.getAttribute('aria-label') || this.localize('datasetViewerCaption', undefined, { count: rows.length });
+        const localizedCount = getNumberFormat(this.effectiveLocale).format(rows.length);
+        const label = this.getAttribute('aria-label') || (this.name
+          ? this.localize('datasetViewerCaptionNamed', undefined, { name: this.name, count: localizedCount })
+          : this.localize('datasetViewerCaption', undefined, { count: localizedCount }));
+        const headerHighlights = this.cellHighlightsForRow(1);
         return html`
           <div part="table" role="table" aria-label=${label} aria-rowcount=${rows.length + 1} aria-colcount=${fields.length}>
             <div part="header-row" role="row" aria-rowindex="1">
-              ${fields.map((field) => html`<div part="header-cell" role="columnheader">${field}</div>`)}
+              ${fields.map((field, col) => this.renderCell(field, col, headerHighlights, 'columnheader'))}
             </div>
             <lr-virtual-list
               exportparts="data-row:data-row, cell:cell, cell-highlight:cell-highlight, cell-highlight-action:cell-highlight-action"
@@ -290,6 +360,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
               .activeId=${this.activeRowKey}
               item-role="row"
               row-index-offset="1"
+              @lr-load-more=${this.stopInternalEvent}
+              @lr-visible-range-changed=${this.stopInternalEvent}
+              @lr-scroll=${this.stopInternalEvent}
             ></lr-virtual-list>
           </div>
         `;

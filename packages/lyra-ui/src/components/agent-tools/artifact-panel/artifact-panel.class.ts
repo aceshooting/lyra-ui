@@ -3,9 +3,6 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { styles } from './artifact-panel.styles.js';
-// Import the registering barrel (not the bare `.class.js` module) so
-// `<lr-live-region>` is actually defined by the time this component renders it.
-import '../../utility/live-region/live-region.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 
 export interface ArtifactVersion {

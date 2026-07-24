@@ -2,6 +2,7 @@ import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type T
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { resolveLocalizedParts } from '../../../internal/localization.js';
 import '../../layout/details/details.class.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../utility/live-region/live-region.class.js';
@@ -206,7 +207,10 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   private renderHeading(): TemplateResult {
     if (this.heading) return html`${this.heading}`;
     const toolName = this.toolName || this.localize('toolApprovalGenericTool');
-    const pieces = this.localize('toolApprovalHeading').split('{tool}');
+    const template = this.localize('toolApprovalHeading');
+    const pieces = resolveLocalizedParts(template, (marker) =>
+      this.localize('toolApprovalHeading', undefined, { tool: marker }),
+    );
     return html`${pieces.map((piece, index) =>
       index < pieces.length - 1
         ? html`${piece}<span part="tool-name">${toolName}</span>`

@@ -14,6 +14,8 @@ export const styles = css`
   [part='search'] {
     inline-size: 100%;
     box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -54,6 +56,9 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-size-2px);
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
     cursor: grab;

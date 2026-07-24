@@ -72,11 +72,30 @@ it('shows chunkInspectorEmpty when chunks is empty and not loading', async () =>
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('No chunks retrieved');
 });
 
-it('shows a spinner instead of the empty state while loading with no chunks yet', async () => {
-  const el = (await fixture(html`<lr-retrieval-results loading></lr-retrieval-results>`)) as LyraRetrievalResults;
-  await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="spinner"]')).to.exist;
+it('keeps the initial-load spinner semantic owner named after late host aria-label changes', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results loading label="Policy results"></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  const spinner = el.shadowRoot!.querySelector('[part="spinner"]') as HTMLElement & {
+    updateComplete: Promise<boolean>;
+    shadowRoot: ShadowRoot;
+  };
+  const spinnerLabel = () =>
+    spinner.shadowRoot.querySelector('[role="status"]')!.getAttribute('aria-label');
+
+  expect(spinner).to.exist;
+  expect(spinnerLabel()).to.equal('Policy results');
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
+
+  el.setAttribute('aria-label', 'Loading policy search results');
+  await el.updateComplete;
+  await spinner.updateComplete;
+  expect(spinnerLabel()).to.equal('Loading policy search results');
+
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  await spinner.updateComplete;
+  expect(spinnerLabel()).to.equal('Policy results');
 });
 
 it('renders a role="alert" error message and suppresses everything else when error is set', async () => {
@@ -292,6 +311,15 @@ describe('presentation', () => {
     expect(el.shadowRoot!.querySelector('[part="metadata"]')).to.not.exist;
   });
 
+  it('formats numeric metadata with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-retrieval-results lang="ar-u-nu-arab"></lr-retrieval-results>`,
+    )) as LyraRetrievalResults;
+    el.chunks = [{ ...chunks[0]!, metadata: { matches: 1234 } }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="metadata-value"]')!.textContent).to.equal('١٬٢٣٤');
+  });
+
   it('omits the metadata list entirely for a chunk with no metadata', async () => {
     const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
     el.chunks = [chunks[0]!];
@@ -315,6 +343,19 @@ it('forwards lr-chunk-open from a row\'s lr-chunk-inspector, and never leaks the
     'exactly one lr-chunk-open must reach the host, not the re-emit plus the leaked original from lr-chunk-inspector',
   ).to.equal(1);
   expect(events[0]!.detail).to.deep.equal({ id: 'c1', sourceId: 's1' });
+});
+
+it('suppresses the raw child checkbox change event after consuming it', async () => {
+  const el = (await fixture(html`<lr-retrieval-results></lr-retrieval-results>`)) as LyraRetrievalResults;
+  el.chunks = [chunks[0]!];
+  await el.updateComplete;
+  let leaked = 0;
+  el.addEventListener('lr-change', () => leaked++);
+  el.shadowRoot!.querySelector('lr-checkbox')!.dispatchEvent(
+    new CustomEvent('lr-change', { detail: { checked: true }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(leaked).to.equal(0);
 });
 
 it('carries a retrieval locator through to lr-chunk-open and derives its visible page', async () => {
@@ -410,6 +451,19 @@ it('applies a .strings override for the reused empty-state key', async () => {
   )) as LyraRetrievalResults;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('Texte vide');
+});
+
+it('localizes the whole row-selection accessible name instead of concatenating translated fragments', async () => {
+  const el = (await fixture(html`
+    <lr-retrieval-results
+      .strings=${{ retrievalResultsSelectRow: 'Choisir « {label} »' }}
+    ></lr-retrieval-results>
+  `)) as LyraRetrievalResults;
+  el.chunks = chunks;
+  await el.updateComplete;
+
+  const checkbox = flatRows(el)[0]!.querySelector('lr-checkbox') as LyraCheckbox;
+  expect(checkbox.getAttribute('aria-label')).to.equal('Choisir « curie-bio.pdf »');
 });
 
 it('renders and lets selection work under dir="rtl"', async () => {
@@ -536,13 +590,13 @@ describe('row styling across both rendering paths', () => {
         expect(getComputedStyle(entry).display).to.equal('flex');
       });
 
-      it('emphasizes the metadata term, appends its colon, and resets the value margin', async () => {
+      it('emphasizes the metadata term without fixed generated punctuation and resets the value margin', async () => {
         const { el, root } = await render(path);
         const term = root.querySelector('[part~="metadata-term"]') as HTMLElement;
         expect(getComputedStyle(term).fontWeight).to.equal(
           resolvedInShadow(el, 'font-weight: var(--lr-font-weight-medium)', 'font-weight'),
         );
-        expect(getComputedStyle(term, '::after').content).to.include(':');
+        expect(getComputedStyle(term, '::after').content).to.equal('none');
         const value = root.querySelector('[part~="metadata-value"]') as HTMLElement;
         expect(getComputedStyle(value).marginTop).to.equal('0px');
         expect(getComputedStyle(value).overflowWrap).to.equal('anywhere');

@@ -83,6 +83,9 @@ importers:
       publint:
         specifier: ^0.3.22
         version: 0.3.22
+      react:
+        specifier: ^19.2.0
+        version: 19.2.8
       secretlint:
         specifier: ^13.0.4
         version: 13.0.4(supports-color@10.2.2)
@@ -228,6 +231,9 @@ importers:
       marked:
         specifier: ^18.0.7
         version: 18.0.7
+      oxc-parser:
+        specifier: ^0.140.0
+        version: 0.140.0
       papaparse:
         specifier: ^5.5.4
         version: 5.5.4

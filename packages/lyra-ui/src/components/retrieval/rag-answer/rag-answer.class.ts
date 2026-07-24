@@ -2,13 +2,6 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { Citation, CitationSelectEventDetail, DocumentRef, GroundedClaim, GroundingAssessment } from '../../../ai/types.js';
-import '../../conversation/markdown/markdown.js';
-import '../citation-badge/citation-badge.js';
-import '../grounding-summary/grounding-summary.js';
-import '../source-list/source-list.js';
-import '../source-card/source-card.js';
-import '../../overlays/spinner/spinner.js';
-import '../../forms/button/button.js';
 import { styles } from './rag-answer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -67,7 +60,7 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
   }
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('ragAnswerLabel');
-    if (this.loading && !this.answer && !this.error) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" label=${label}></lr-spinner></div>`;
+    if (this.loading && !this.answer && !this.error) return html`<div part="base" role="article" aria-label=${label} aria-busy="true"><lr-spinner part="loading" aria-label=${label}></lr-spinner></div>`;
     return html`<article part="base" aria-label=${label}>
       ${this.error ? html`<div part="error" role="alert">${this.error}</div><lr-button part="retry" variant="neutral" @click=${() => this.emit('lr-retry')}>${this.localize('ragAnswerRetry')}</lr-button>` : nothing}
       ${this.answer || this.hasSlot('answer') ? html`<div part="answer"><slot name="answer"><lr-markdown .content=${this.answer}></lr-markdown></slot></div>` : nothing}

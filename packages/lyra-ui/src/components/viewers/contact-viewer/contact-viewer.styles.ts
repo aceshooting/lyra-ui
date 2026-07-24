@@ -8,6 +8,8 @@ export const styles = css`
   [part='contact-name'] { margin: 0; font-size: var(--lr-font-size-md); font-weight: var(--lr-font-weight-semibold); color: var(--lr-color-text); }
   [part='contact-org'] { margin: 0; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
   [part='contact-tel'], [part='contact-email'], [part='contact-adr'] { display: flex; flex-direction: column; gap: var(--lr-space-2xs); margin: 0; padding: 0; list-style: none; font-size: var(--lr-font-size-sm); color: var(--lr-color-text); }
+  [part='contact-adr'] li { white-space: pre-line; }
+  [part='contact-org'], [part='contact-tel'] li, [part='contact-email'] li { display: flex; flex-wrap: wrap; gap: var(--lr-space-2xs); }
   .field-label, .type { color: var(--lr-color-text-quiet); }
   .type { font-size: var(--lr-font-size-xs); }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }

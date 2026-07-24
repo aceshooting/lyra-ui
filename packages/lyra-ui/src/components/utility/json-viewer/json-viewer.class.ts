@@ -25,7 +25,16 @@ interface SearchState {
   paths: Set<string>;
   /** Every match, in the same document-walk order as `keyMatches`/`valueMatches` were populated in (key before value at the same path). Backs the `searchNext()`/`searchPrevious()` cursor. */
   orderedMatches: { pathKey: string; kind: 'key' | 'value' }[];
+  truncated: boolean;
 }
+
+interface RenderBudget {
+  remaining: number;
+  truncated: boolean;
+}
+
+const MAX_JSON_NODES = 5000;
+const MAX_JSON_DEPTH = 100;
 
 const EMPTY_SEARCH: SearchState = {
   keyMatches: new Set(),
@@ -33,17 +42,37 @@ const EMPTY_SEARCH: SearchState = {
   forceExpand: new Set(),
   paths: new Set(),
   orderedMatches: [],
+  truncated: false,
 };
 
 function isPlainContainer(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** `[key, value]` pairs for an object's own enumerable properties or an array's indices; `[]` for anything else. */
-function entriesOf(value: unknown): [JsonPathSegment, unknown][] {
-  if (Array.isArray(value)) return value.map((v, i): [JsonPathSegment, unknown] => [i, v]);
-  if (isPlainContainer(value)) return Object.entries(value);
-  return [];
+/** A bounded prefix of an object's own enumerable properties or an array's indices. */
+function entriesOf(
+  value: unknown,
+  limit: number,
+): { entries: [JsonPathSegment, unknown][]; truncated: boolean } {
+  const entries: [JsonPathSegment, unknown][] = [];
+  if (Array.isArray(value)) {
+    const count = Math.min(value.length, limit);
+    for (let index = 0; index < count; index += 1) entries.push([index, value[index]]);
+    return { entries, truncated: value.length > count };
+  }
+  if (isPlainContainer(value)) {
+    let truncated = false;
+    for (const key in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+      if (entries.length >= limit) {
+        truncated = true;
+        break;
+      }
+      entries.push([key, value[key]]);
+    }
+    return { entries, truncated };
+  }
+  return { entries, truncated: false };
 }
 
 function valueType(value: unknown): JsonValueType {
@@ -104,6 +133,7 @@ export interface LyraJsonViewerEventMap {
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
  * @csspart toggle - A container node's expand/collapse button (hidden, but present for row alignment, on leaf/empty nodes).
  * @csspart copy-button - A copy-to-clipboard button -- the top-level one (in `toolbar`, labelled "Copy JSON to clipboard") or a per-node one (only rendered when `copyable`; labelled with its own key/type, e.g. "Copy age", so assistive tech can tell rows apart).
+ * @csspart limit - Localized notice shown when the depth/node traversal budget truncates rendering or search.
  * @cssprop [--lr-json-viewer-max-height=none] - Cap on `[part="base"]`'s block size, past which the
  *   viewer scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @cssprop [--lr-json-viewer-font=var(--lr-font-mono)] - Font family used for the rendered tree.
@@ -253,12 +283,30 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const paths = new Set<string>();
     const orderedMatches: { pathKey: string; kind: 'key' | 'value' }[] = [];
     const ancestors = new WeakSet<object>();
+    let truncated = false;
 
     const markAncestors = (path: JsonPathSegment[]): void => {
       for (let i = path.length - 1; i >= 0; i--) forceExpand.add(JSON.stringify(path.slice(0, i)));
     };
 
-    const walk = (value: unknown, path: JsonPathSegment[], keyLabel?: string): void => {
+    type WalkFrame =
+      | { kind: 'visit'; value: unknown; path: JsonPathSegment[]; keyLabel?: string }
+      | { kind: 'leave'; value: object };
+    const stack: WalkFrame[] = [{ kind: 'visit', value: this.data, path: [] }];
+    let visited = 0;
+
+    while (stack.length > 0) {
+      const frame = stack.pop()!;
+      if (frame.kind === 'leave') {
+        ancestors.delete(frame.value);
+        continue;
+      }
+      if (visited >= MAX_JSON_NODES) {
+        truncated = true;
+        break;
+      }
+      visited += 1;
+      const { value, path, keyLabel } = frame;
       const pathKey = JSON.stringify(path);
       paths.add(pathKey);
       const type = valueType(value);
@@ -281,14 +329,23 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         if (hit) markAncestors(path);
       }
       if ((type === 'object' || type === 'array') && !ancestors.has(value as object)) {
+        const available = Math.max(0, MAX_JSON_NODES - visited);
+        const { entries, truncated: entriesTruncated } = entriesOf(value, available);
+        if (entriesTruncated) truncated = true;
+        if (path.length >= MAX_JSON_DEPTH) {
+          if (entries.length > 0) truncated = true;
+          continue;
+        }
         ancestors.add(value as object);
-        for (const [k, v] of entriesOf(value)) walk(v, [...path, k], String(k));
-        ancestors.delete(value as object);
+        stack.push({ kind: 'leave', value: value as object });
+        for (let index = entries.length - 1; index >= 0; index -= 1) {
+          const [key, child] = entries[index]!;
+          stack.push({ kind: 'visit', value: child, path: [...path, key], keyLabel: String(key) });
+        }
       }
-    };
+    }
 
-    walk(this.data, []);
-    return { keyMatches, valueMatches, forceExpand, paths, orderedMatches };
+    return { keyMatches, valueMatches, forceExpand, paths, orderedMatches, truncated };
   }
 
   private renderCopyButton(value: unknown, label: string | undefined): TemplateResult | typeof nothing {
@@ -321,7 +378,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     depth: number,
     search: SearchState,
     ancestors: WeakSet<object>,
+    budget: RenderBudget,
   ): TemplateResult {
+    budget.remaining -= 1;
     const pathKey = JSON.stringify(path);
     const type = valueType(value);
     // A container value already on the current recursion path (i.e. `data`
@@ -330,9 +389,16 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     // stack instead of degrading gracefully.
     const isCircular = (type === 'object' || type === 'array') && ancestors.has(value as object);
     const isContainer = (type === 'object' || type === 'array') && !isCircular;
-    const entries = isContainer ? entriesOf(value) : [];
+    const entrySlice = isContainer
+      ? entriesOf(value, Math.max(0, budget.remaining))
+      : { entries: [], truncated: false };
+    const entries = entrySlice.entries;
+    if (entrySlice.truncated) budget.truncated = true;
     const hasEntries = entries.length > 0;
-    const expanded = hasEntries && this.isExpanded(pathKey, depth, search.forceExpand);
+    const withinDepthBudget = depth < MAX_JSON_DEPTH;
+    if (hasEntries && !withinDepthBudget) budget.truncated = true;
+    const toggleable = hasEntries && withinDepthBudget;
+    const expanded = hasEntries && withinDepthBudget && this.isExpanded(pathKey, depth, search.forceExpand);
     const activeMatch = this.searchState.orderedMatches[this.activeSearchIndex];
     const indentStyle = `padding-inline-start:calc(${depth} * var(--lr-space-l))`;
     const toggleLabel =
@@ -351,9 +417,19 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     // the real recursive descent through *this* subtree, regardless of
     // whenever lit-html itself gets around to resolving the directive.
     let childRows: TemplateResult[] = [];
+    const renderedEntries: [JsonPathSegment, unknown][] = [];
     if (isContainer && expanded) {
       ancestors.add(value as object);
-      childRows = entries.map(([k, v]) => this.renderNode(v, [...path, k], String(k), depth + 1, search, ancestors));
+      for (const [key, child] of entries) {
+        if (budget.remaining <= 0) {
+          budget.truncated = true;
+          break;
+        }
+        renderedEntries.push([key, child]);
+        childRows.push(
+          this.renderNode(child, [...path, key], String(key), depth + 1, search, ancestors, budget),
+        );
+      }
       ancestors.delete(value as object);
     }
 
@@ -362,12 +438,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         <button
           part="toggle"
           type="button"
-          ?hidden=${!hasEntries}
-          tabindex=${hasEntries ? nothing : -1}
-          aria-hidden=${hasEntries ? nothing : 'true'}
-          aria-expanded=${hasEntries ? (expanded ? 'true' : 'false') : nothing}
+          ?hidden=${!toggleable}
+          tabindex=${toggleable ? nothing : -1}
+          aria-hidden=${toggleable ? nothing : 'true'}
+          aria-expanded=${toggleable ? (expanded ? 'true' : 'false') : nothing}
           aria-label=${
-            hasEntries
+            toggleable
               ? // Interpolated via the values arg (not string-concatenated) so word
                 // order stays translatable -- same rationale as renderCopyButton()'s
                 // "Copy {label}" above; toggleLabel is either caller data (a JSON
@@ -375,7 +451,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                 this.localize(expanded ? 'jsonCollapseLabel' : 'jsonExpandLabel', undefined, { label: toggleLabel })
               : nothing
           }
-          @click=${() => hasEntries && this.toggleNode(pathKey, expanded)}
+          @click=${() => toggleable && this.toggleNode(pathKey, expanded)}
         >
           <span class="chevron">${chevronIcon()}</span>
         </button>
@@ -432,7 +508,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
           ? html`
               <div class="children" role="list">
                 ${repeat(
-                  entries,
+                  renderedEntries,
                   ([k]) => JSON.stringify([...path, k]),
                   (_entry, i) => childRows[i],
                 )}
@@ -534,6 +610,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   override render(): TemplateResult {
+    const budget: RenderBudget = { remaining: MAX_JSON_NODES, truncated: false };
+    const tree = this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet(), budget);
+    const limited = budget.truncated || this.searchState.truncated;
     return html`
       <div part="base" style=${this.maxHeight ? `--lr-json-viewer-max-height:${this.maxHeight}` : nothing}>
         ${this.copyable
@@ -549,8 +628,14 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
             </div>`
           : nothing}
         <div part="tree" role="list">
-          ${this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet())}
+          ${tree}
         </div>
+        ${limited
+          ? html`<p part="limit">${this.localize('jsonViewerLimit', undefined, {
+              count: getNumberFormat(this.effectiveLocale).format(MAX_JSON_NODES),
+              depth: getNumberFormat(this.effectiveLocale).format(MAX_JSON_DEPTH),
+            })}</p>`
+          : nothing}
       </div>
     `;
   }

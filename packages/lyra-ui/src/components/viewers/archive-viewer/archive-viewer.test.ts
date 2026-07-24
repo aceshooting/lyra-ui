@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import './archive-viewer.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
@@ -25,6 +25,34 @@ describe('lr-archive-viewer', () => {
   it('renders the empty archive message', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); const restore = stubFetch(await buildZip({})); try { el.src = 'https://example.test/empty.zip'; await waitUntil(() => el.shadowRoot!.querySelector('.empty-note')?.textContent === 'This archive is empty.'); } finally { restore(); } });
   it('renders a missing-peer error and rejects unsafe URLs', async () => { const missing = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); useLibrary(missing, null); const restore = stubFetch(new ArrayBuffer(0)); try { missing.src = 'https://example.test/archive.zip'; await waitUntil(() => missing.shadowRoot!.querySelector('[part="error"]') !== null); expect(missing.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Archive preview is unavailable.'); } finally { restore(); }
     let called = false; const original = window.fetch; window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch; try { const unsafe = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer .src=${'java\tscript:alert(1)'}></lr-archive-viewer>`); await unsafe.updateComplete; expect(called).to.be.false; expect(unsafe.shadowRoot!.querySelector('[part="error"]')).to.exist; } finally { window.fetch = original; }
+  });
+  it('emits one lr-render-error for an unsafe source without fetching it', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const original = window.fetch;
+    let fetchCalls = 0;
+    let errorCount = 0;
+    window.fetch = (() => {
+      fetchCalls++;
+      return Promise.reject(new Error('unexpected'));
+    }) as typeof window.fetch;
+    el.addEventListener('lr-render-error', () => errorCount++);
+    try {
+      const eventPromise = oneEvent(el, 'lr-render-error');
+      el.src = 'java\tscript:alert(1)';
+      const event = (await Promise.race([
+        eventPromise,
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 100)),
+      ])) as CustomEvent<{ error: unknown }> | null;
+      expect(event).to.not.be.null;
+      if (!event) return;
+      expect(event.detail.error).to.be.instanceOf(Error);
+      await el.updateComplete;
+      expect(fetchCalls).to.equal(0);
+      expect(errorCount).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
+    } finally {
+      window.fetch = original;
+    }
   });
   it('applies localized empty strings and is accessible', async () => { const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer .strings=${{ documentPreviewEmpty: 'Aucun {type} à afficher.' }}></lr-archive-viewer>`); expect(el.shadowRoot!.querySelector('.empty-note')!.textContent).to.equal('Aucun document à afficher.'); await expect(el).to.be.accessible(); });
 
@@ -55,7 +83,22 @@ describe('lr-archive-viewer', () => {
     const fakeLibrary = {
       loadAsync: () => Promise.resolve({
         forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
-          cb('README.txt', { name: 'README.txt', dir: false, async: () => Promise.resolve(new Uint8Array(11)) });
+          const handlers = new Map<string, (...args: unknown[]) => void>();
+          cb('README.txt', {
+            name: 'README.txt',
+            dir: false,
+            async: () => Promise.reject(new Error('must use the bounded stream path')),
+            internalStream: () => ({
+              on(type: string, handler: (...args: unknown[]) => void) {
+                handlers.set(type, handler);
+                return this;
+              },
+              resume() {
+                handlers.get('data')?.(new Uint8Array(11));
+                handlers.get('end')?.();
+              },
+            }),
+          } as never);
         },
       }),
     };
@@ -68,6 +111,126 @@ describe('lr-archive-viewer', () => {
       await waitUntil(() => list.items?.length === 1 && list.items[0].size === 11);
       expect(list.items[0].size).to.equal(11);
     } finally { restore(); }
+  });
+
+  it('enforces the aggregate uncompressed ceiling when entry headers omit their sizes', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const oversizedLength = 60 * 1024 * 1024;
+    let eagerAllocations = 0;
+    const streamingFile = (name: string) => ({
+      name,
+      dir: false,
+      async: async () => {
+        eagerAllocations++;
+        throw new Error('the missing-metadata path must not eagerly allocate the complete entry');
+      },
+      internalStream: () => {
+        const handlers = new Map<string, (...args: unknown[]) => void>();
+        return {
+          on(type: string, handler: (...args: unknown[]) => void) {
+            handlers.set(type, handler);
+            return this;
+          },
+          resume() {
+            handlers.get('data')?.({ length: oversizedLength } as Uint8Array);
+            handlers.get('end')?.();
+          },
+        };
+      },
+    });
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array> }) => void) {
+          cb('one.bin', streamingFile('one.bin'));
+          cb('two.bin', streamingFile('two.bin'));
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      let errors = 0;
+      el.addEventListener('lr-render-error', () => errors++);
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(
+        () => el.shadowRoot!.querySelector('[part="error"]') !== null || el.shadowRoot!.querySelector('lr-virtual-list') !== null,
+      );
+      expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(1);
+      expect(errors).to.equal(1);
+      expect(eagerAllocations).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('reloads its source after reconnecting the same element instance', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    useLibrary(el, {
+      loadAsync: async () => ({ forEach: () => {} }),
+    } as unknown as ArchiveLibraryApi);
+    const original = window.fetch;
+    let fetchCount = 0;
+    window.fetch = (() => {
+      fetchCount++;
+      return Promise.resolve({
+        ok: true,
+        headers: { get: () => null },
+        arrayBuffer: async () => new ArrayBuffer(0),
+      } as unknown as Response);
+    }) as typeof window.fetch;
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => fetchCount === 1);
+      const container = document.createElement('div');
+      document.body.append(container);
+      container.append(el);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(fetchCount).to.equal(2);
+      container.remove();
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('emits lr-render-error when the optional archive peer is unavailable', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    useLibrary(el, null);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      let errors = 0;
+      el.addEventListener('lr-render-error', () => errors++);
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
+      expect(errors).to.equal(1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('formats entry sizes with the effective locale', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer locale="ar-EG"></lr-archive-viewer>`);
+    const fakeLibrary = {
+      loadAsync: () => Promise.resolve({
+        forEach(cb: (path: string, file: { name: string; dir: boolean; async: (type: string) => Promise<Uint8Array>; _data?: { uncompressedSize?: number } }) => void) {
+          cb('README.txt', {
+            name: 'README.txt',
+            dir: false,
+            _data: { uncompressedSize: 11 },
+            async: async () => new Uint8Array(11),
+          });
+        },
+      }),
+    };
+    useLibrary(el, fakeLibrary as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelector('[part~="entry-size"]') != null);
+      const size = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector('[part~="entry-size"]')!;
+      expect(size.textContent).to.include(new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(11));
+    } finally {
+      restore();
+    }
   });
 
   it('names the listing region from `name`, forwards a host aria-label, and omits the role when neither is set', async () => {

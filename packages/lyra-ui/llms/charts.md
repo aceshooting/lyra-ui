@@ -71,14 +71,13 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
   keeps only the newest `maxPoints`; point-based scatter/bubble series are left unchanged
 
-**Methods:** `resetZoom()` (reset any active zoom/pan to the original view), `refreshTheme()`, and
-`exportData('csv' | 'png')` (returns a spreadsheet-safe CSV snapshot or the current PNG data URL
-when Chart.js is loaded)
-(forces a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style. A
+**Methods:** `resetZoom()` resets any active zoom/pan to the original view. `refreshTheme()` forces
+a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style. A
 built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme` flips or an
 ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
 theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
-escape hatch for theme changes those signals can't observe)
+escape hatch for theme changes those signals can't observe. `exportData('csv' | 'png')` returns a
+spreadsheet-safe CSV snapshot or the current PNG data URL when Chart.js is loaded.
 
 The instance method `seriesPalette(): string[]` resolves the categorical series ramp
 (`--lr-color-chart-1..8`) through `getComputedStyle` and returns the concrete, theme-aware colors —
@@ -491,8 +490,8 @@ instead of `canvas` when the optional box-plot peer fails to load)
 (also `getComputedStyle`-resolved on every draw), but declared in its own stylesheet, not a
 re-export: `lr-box-plot` has no `zoom`, so no `reset-zoom-button` chrome exists here.
 
-**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` (plus `chart.js` transitively, loaded
-independently of the base `chart-loader.ts`).
+**Optional peer deps:** `@sgratzl/chartjs-chart-boxplot` plus `chart.js`; Chart.js is obtained
+through the same cached `chart-loader.ts` used by `lr-chart`.
 
 ```html
 <lr-box-plot y-label="Latency (ms)"></lr-box-plot>

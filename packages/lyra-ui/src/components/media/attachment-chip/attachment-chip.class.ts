@@ -7,6 +7,9 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './attachment-chip.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
+
+export { FILE_SIZE_UNIT_KEYS, formatFileSize } from './file-size.js';
 
 export type AttachmentChipStatus = 'pending' | 'uploading' | 'error' | 'done';
 
@@ -42,44 +45,6 @@ function retryIcon(): SVGTemplateResult {
       focusable="false"
     ><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
   `;
-}
-
-const BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
-
-/** Maps each BYTE_UNITS abbreviation to its LyraMessageKey, for callers that
- *  want a localized unit label (see formatFileSize's unitLabel parameter). */
-export const FILE_SIZE_UNIT_KEYS: Record<(typeof BYTE_UNITS)[number], string> = {
-  B: 'fileSizeUnitB',
-  KB: 'fileSizeUnitKb',
-  MB: 'fileSizeUnitMb',
-  GB: 'fileSizeUnitGb',
-  TB: 'fileSizeUnitTb',
-};
-
-/**
- * `512` -> `"512 B"`; `2415919` -> `"2.3 MB"`. Whole bytes never get a
- * decimal (there's no meaningful fraction of a byte); every unit past that
- * gets exactly one decimal place. Returns `""` for a negative/non-finite
- * input so a missing/unknown size renders nothing instead of `"NaN B"`.
- * `unitLabel` resolves each abbreviation to its displayed label -- defaults
- * to the identity function (today's plain English abbreviations), so every
- * existing single-argument call site/test is unaffected.
- */
-export function formatFileSize(
-  bytes: number,
-  unitLabel: (unit: (typeof BYTE_UNITS)[number]) => string = (unit) => unit,
-  numberLabel: (value: number, fractionDigits: number) => string = (value, fractionDigits) =>
-    value.toFixed(fractionDigits),
-): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '';
-  if (bytes < 1024) return `${numberLabel(Math.round(bytes), 0)} ${unitLabel('B')}`;
-  let value = bytes;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
-    value /= 1024;
-    unitIndex++;
-  }
-  return `${numberLabel(value, 1)} ${unitLabel(BYTE_UNITS[unitIndex]!)}`; // safe: unitIndex ∈ [0, BYTE_UNITS.length - 1]
 }
 
 /** Visible (not just color-coded) text for every non-resting status --

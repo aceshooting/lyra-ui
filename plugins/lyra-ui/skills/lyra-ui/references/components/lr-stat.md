@@ -21,7 +21,8 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `unit: string = ''`
 - `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
   URL schemes keep the stat non-interactive
-- `target?: string` / `rel?: string` — forwarded to the anchor while `href` is active
+- `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
+  `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
 - `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)

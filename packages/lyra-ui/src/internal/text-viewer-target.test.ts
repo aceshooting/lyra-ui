@@ -1,5 +1,5 @@
 import { fixture, expect, oneEvent } from '@open-wc/testing';
-import { html as litHtml, nothing } from 'lit';
+import { html as litHtml, nothing, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from './text-viewer-target.js';
@@ -17,12 +17,24 @@ class StubTextViewerBase extends LyraElement<LyraTextViewerTargetEventMap> {
   render() {
     if (this.noBody) return litHtml`<div part="not-body">no body here</div>${this.renderAnchorLiveRegion()}`;
     return litHtml`<div part="body" id=${this.rootId ?? nothing}
-      ><p id="section-one">${PARAGRAPH_ONE}</p><p>${PARAGRAPH_TWO}</p></div
+      ><p id="section-one">${PARAGRAPH_ONE}</p><p>${PARAGRAPH_TWO}</p><p>İzmir</p></div
     >${this.renderAnchorLiveRegion()}`;
   }
 }
 
-class StubTextViewer extends TextViewerTarget(StubTextViewerBase) {}
+class StubTextViewer extends TextViewerTarget(StubTextViewerBase) {
+  @property({ type: Number }) loadToken = 0;
+  scheduledLoadCount = 0;
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.hasUpdated && changed.has('loadToken')) {
+      this.scheduleAfterUpdate(() => {
+        this.scheduledLoadCount += 1;
+      });
+    }
+  }
+}
 defineElement('text-viewer-target-test-stub', StubTextViewer);
 
 declare global {
@@ -35,6 +47,7 @@ type Internals = {
   searchActiveIndex: number;
   searchRanges: Range[];
   searchQuery: string;
+  selectionRoot: Element | null;
   searchHandle?: { release(): void; setRanges: unknown; setActive: unknown; flash: unknown };
   anchorRetryIntervalMs: number;
   anchorTimeoutMs: number;
@@ -89,6 +102,65 @@ describe('TextViewerTarget mixin', () => {
     expect(internals(el).searchActiveIndex).to.equal(-1);
     const { detail } = await eventPromise;
     expect(detail).to.deep.equal({ query: 'no-such-phrase-in-body', matchCount: 0, activeIndex: -1 });
+  });
+
+  it('recomputes an active search with locale-aware case folding when the inherited locale changes', async () => {
+    const wrapper = await fixture<HTMLDivElement>(
+      litHtml`<div lang="en"><lr-text-viewer-target-test-stub></lr-text-viewer-target-test-stub></div>`,
+    );
+    const el = wrapper.querySelector('lr-text-viewer-target-test-stub') as StubTextViewer;
+    await el.updateComplete;
+    expect(await el.search('izmir')).to.equal(0);
+
+    let localeChangeDetail: { query: string; matchCount: number; activeIndex: number } | undefined;
+    el.addEventListener('lr-search-change', (event) => {
+      localeChangeDetail = event.detail;
+    });
+    wrapper.setAttribute('lang', 'tr');
+    await Promise.resolve();
+    await el.updateComplete;
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(internals(el).searchRanges).to.have.length(1);
+    expect(internals(el).searchRanges[0]!.toString()).to.equal('İzmir');
+    expect(internals(el).searchActiveIndex).to.equal(0);
+    expect(localeChangeDetail).to.deep.equal({ query: 'izmir', matchCount: 1, activeIndex: 0 });
+  });
+
+  it('does not consume a viewer load callback when locale search recomputation is also queued', async () => {
+    const wrapper = await fixture<HTMLDivElement>(
+      litHtml`<div lang="en"><lr-text-viewer-target-test-stub></lr-text-viewer-target-test-stub></div>`,
+    );
+    const el = wrapper.querySelector('lr-text-viewer-target-test-stub') as StubTextViewer;
+    await el.updateComplete;
+    expect(await el.search('izmir')).to.equal(0);
+    const loadsBeforeChange = el.scheduledLoadCount;
+
+    wrapper.setAttribute('lang', 'tr');
+    el.loadToken = 1;
+    await Promise.resolve();
+    await el.updateComplete;
+    await Promise.resolve();
+    await el.updateComplete;
+
+    expect(el.scheduledLoadCount - loadsBeforeChange).to.equal(1);
+    expect(internals(el).searchRanges).to.have.length(1);
+  });
+
+  it('does not emit a search-change event when only host highlights change', async () => {
+    const el = await stubFixture();
+    await el.search('fox');
+    let eventCount = 0;
+    el.addEventListener('lr-search-change', () => {
+      eventCount += 1;
+    });
+
+    el.highlights = [];
+    await el.updateComplete;
+    await Promise.resolve();
+
+    expect(eventCount).to.equal(0);
   });
 
   it('searchNext()/searchPrevious() cycle through matches and wrap around in both directions', async () => {
@@ -244,6 +316,27 @@ describe('TextViewerTarget mixin', () => {
       el.remove();
       expect(released).to.be.true;
       expect(internals(el).searchHandle).to.be.undefined;
+    });
+
+    it('rebinds selection and repaints an active search after reconnect', async () => {
+      const el = await stubFixture();
+      const parent = el.parentElement!;
+      await el.search('fox');
+      const originalHandle = internals(el).searchHandle;
+      expect(originalHandle).to.exist;
+
+      el.remove();
+      expect(internals(el).searchHandle).to.be.undefined;
+      expect(internals(el).selectionRoot).to.be.null;
+
+      parent.append(el);
+      await Promise.resolve();
+      await el.updateComplete;
+
+      expect(internals(el).selectionRoot?.getAttribute('part')).to.equal('body');
+      expect(internals(el).searchHandle).to.exist;
+      expect(internals(el).searchHandle === originalHandle).to.be.false;
+      expect(internals(el).searchRanges).to.have.length(2);
     });
   });
 

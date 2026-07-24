@@ -24,14 +24,14 @@ export const styles = css`
      cell-highlight, so a highlight reads identically across the table viewers. The active/inactive
      distinction can't be expressed as a [data-active] attribute selector chained onto ::part()
      (unsupported), so renderCell() sets --lr-csv-viewer-highlight-color inline instead -- custom
-     properties inherit through the shadow boundary the same as anywhere else. The unconditional
-     outline would otherwise swallow the focus ring on this focusable cell, hence the paired
-     :focus-visible rule. */
-  lr-virtual-list::part(cell-highlight) { outline: var(--lr-border-width-medium) solid var(--lr-csv-viewer-highlight-color, var(--lr-color-brand)); outline-offset: calc(-1 * var(--lr-border-width-medium)); cursor: pointer; }
+     properties inherit through the shadow boundary the same as anywhere else. The nested action
+     owns the focus ring while the structural cell keeps the highlight outline. */
+  [part~='cell-highlight'], lr-virtual-list::part(cell-highlight) { outline: var(--lr-border-width-medium) solid var(--lr-csv-viewer-highlight-color, var(--lr-color-brand)); outline-offset: calc(-1 * var(--lr-border-width-medium)); cursor: pointer; padding: 0; }
+  [part='cell-highlight-action'], lr-virtual-list::part(cell-highlight-action) { all: unset; box-sizing: border-box; display: block; inline-size: 100%; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: var(--lr-space-2xs) var(--lr-space-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   /* Mouse users get the same "this is interactive" feedback keyboard users already get from the
      focus-visible ring below -- matching dataset-viewer's cell-highlight-action hover treatment. */
-  lr-virtual-list::part(cell-highlight):hover { background: var(--lr-color-brand-quiet); }
-  lr-virtual-list::part(cell-highlight):focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
+  [part='cell-highlight-action']:hover, lr-virtual-list::part(cell-highlight-action):hover { background: var(--lr-color-brand-quiet); }
+  [part='cell-highlight-action']:focus-visible, lr-virtual-list::part(cell-highlight-action):focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
   [part='rows'] { --lr-virtual-list-height: var(--lr-size-20rem); min-inline-size: max-content; }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { color: var(--lr-color-danger); text-align: center; }

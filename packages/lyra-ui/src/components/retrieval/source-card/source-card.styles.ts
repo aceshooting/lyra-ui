@@ -8,6 +8,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
     padding: var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
@@ -35,6 +36,11 @@ export const styles = css`
   }
   [part='title'] {
     align-self: flex-start;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     border: none;
     background: none;
     padding: 0;
@@ -55,6 +61,8 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='excerpt'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-sm);
     line-height: var(--lr-line-height-1-4);
@@ -64,6 +72,9 @@ export const styles = css`
   }
   [part='toggle'] {
     align-self: flex-start;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: none;
     background: none;
     padding: 0;
@@ -78,6 +89,8 @@ export const styles = css`
     text-decoration: underline;
   }
   [part='full'] {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
     padding-block-start: var(--lr-space-xs);
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
     color: var(--lr-color-text);

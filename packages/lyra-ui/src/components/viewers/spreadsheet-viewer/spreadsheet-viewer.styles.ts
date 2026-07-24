@@ -13,17 +13,13 @@ export const styles = css`
      reaches one shadow boundary in, matching dataset-viewer's identical precedent. */
   lr-virtual-list::part(data-row) { display: grid; min-inline-size: max-content; align-items: center; }
   lr-virtual-list::part(cell) { padding: var(--lr-space-2xs) var(--lr-space-xs); border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--lr-font-size-sm); color: var(--lr-color-text); }
-  /* A highlighted cell reaches the DOM through that same virtualized path, so it needs the same
-     one-shadow-hop selector -- and the same outline tokens <lr-dataset-viewer> gives its own
-     cell-highlight, so a highlight reads identically across the table viewers. The active/inactive
-     distinction can't be expressed as a [data-active] attribute selector chained onto ::part()
-     (unsupported), so renderCell() sets --lr-spreadsheet-viewer-highlight-color inline instead --
-     custom properties inherit through the shadow boundary the same as anywhere else. The
-     unconditional outline would otherwise swallow the focus ring on this focusable cell, hence the
-     paired :focus-visible rule. */
-  lr-virtual-list::part(cell-highlight) { outline: var(--lr-border-width-medium) solid var(--lr-spreadsheet-viewer-highlight-color, var(--lr-color-brand)); outline-offset: calc(-1 * var(--lr-border-width-medium)); cursor: pointer; }
-  lr-virtual-list::part(cell-highlight):hover { background: var(--lr-color-brand-quiet); }
-  lr-virtual-list::part(cell-highlight):focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
+  /* Body cell highlights live in lr-virtual-list's shadow root, so both the structural cell and
+     its nested native action are styled through exported parts. Header highlights use the matching
+     local part selectors. The per-cell color custom property inherits across the shadow boundary. */
+  [part~='cell-highlight'], lr-virtual-list::part(cell-highlight) { outline: var(--lr-border-width-medium) solid var(--lr-spreadsheet-viewer-highlight-color, var(--lr-color-brand)); outline-offset: calc(-1 * var(--lr-border-width-medium)); padding: 0; }
+  [part='cell-highlight-action'], lr-virtual-list::part(cell-highlight-action) { all: unset; box-sizing: border-box; display: block; inline-size: 100%; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: var(--lr-space-2xs) var(--lr-space-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  [part='cell-highlight-action']:hover, lr-virtual-list::part(cell-highlight-action):hover { background: var(--lr-color-brand-quiet); }
+  [part='cell-highlight-action']:focus-visible, lr-virtual-list::part(cell-highlight-action):focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: calc(var(--lr-focus-ring-offset) * -1); }
   [part='rows'] { --lr-virtual-list-height: var(--lr-size-20rem); min-inline-size: max-content; }
   .empty-note, [part='error'] { margin: 0; padding: var(--lr-space-m); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); }
   [part='error'] { color: var(--lr-color-danger); text-align: center; }

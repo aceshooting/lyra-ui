@@ -6,7 +6,7 @@
 - **Class** `LyraSvgViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/svg-viewer/svg-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `dompurify` — see `llms/peers.md`
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -36,6 +36,9 @@ Enter/Space.
 
 **CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
+`region-highlight-target` (transparent activation geometry with an independent minimum hit area),
+`highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`
+(one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-zoomable-frame>` while `zoomable`).
 
@@ -48,7 +51,11 @@ inline `var()` fallback at the point of use rather than a `:host` declaration, s
 the element *or on any ancestor*: `::part(region-highlight)[data-active]` is invalid CSS — Shadow
 Parts forbids an attribute selector after `::part()` — so re-pointing a shared `--lr-color-*` token,
 and repainting everything else reading it, was previously the only way. Unset, it falls back to
-exactly the tokens the rule used before.
+exactly the tokens the rule used before. The tone-specific resting border and hover tint use
+`--lr-svg-viewer-highlight-accent-color`, `--lr-svg-viewer-highlight-success-color`,
+`--lr-svg-viewer-highlight-warning-color`, `--lr-svg-viewer-highlight-danger-color`, and
+`--lr-svg-viewer-highlight-neutral-color` (defaulting respectively to the matching
+brand/success/warning/danger/neutral color tokens).
 
 **Optional peer dependency:** `dompurify`.
 

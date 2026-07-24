@@ -57,7 +57,8 @@ KPI/stat card — value + unit + label + optional icon/trend/caption.
 - `unit: string = ''`
 - `href?: string` — when it resolves to a safe URL, the root is a real whole-stat `<a>`; unsafe
   URL schemes keep the stat non-interactive
-- `target?: string` / `rel?: string` — forwarded to the anchor while `href` is active
+- `target?: string` — forwarded to the anchor while `href` is active; a nonempty target derives
+  `rel="noopener noreferrer"` rather than exposing a separately settable `rel`
 - `variant: 'neutral'|'success'|'warning'|'danger' = 'neutral'` (reflected)
 - `trend: number = NaN` (a `NaN` sentinel hides the trend pill entirely — set an actual number to
   show it)
@@ -1118,9 +1119,13 @@ deeply-nested node's own shadow root still reaches it).
 
 **Properties:**
 - `data: TreeItem[] = []` (attribute: false) — `TreeItem { id: string; label: string; children?:
-  TreeItem[]; badge?: string | number; icon?: unknown; description?: string; accessibleLabel?:
-  string }`; `icon` renders as a decorative leading visual, `description` as secondary visible row
-  text, and `accessibleLabel` names the `role="treeitem"` host without changing its visible label
+  TreeItem[]; selected?: boolean; disabled?: boolean; badge?: string | number; badges?: TreeBadge[];
+  icon?: unknown; description?: string; accessibleLabel?: string }`. `TreeBadge` is `{ text:
+  string; tone?: TreeBadgeTone; label?: string }`, where `TreeBadgeTone` is
+  `'neutral'|'brand'|'success'|'warning'|'danger'`. The legacy singular `badge` renders first;
+  `badges` adds tone-mapped chips after it and each chip's accessible name uses `label ?? text`.
+  `icon` renders as a decorative leading visual, `description` as secondary visible row text, and
+  `accessibleLabel` names the `role="treeitem"` host without changing its visible label
 - `label: string = ''` — accessible name for the tree; `role="tree"` lives on an internal
   `[part="base"]` element. The component forwards a host `aria-label` to that semantic element when
   `label` is empty; `label` takes precedence when both are set. External `aria-labelledby` idrefs
@@ -1196,9 +1201,11 @@ through `lr-tree`'s light DOM.
 
 **Slots:** none.
 
-**CSS parts:** `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`. `icon` is
-`aria-hidden="true"`; `content` groups the primary label and optional wrapping secondary
-description while preserving one interactive treeitem per row.
+**CSS parts:** `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`. `badge`
+is applied to the legacy singular badge and to every `badges` chip; additive chips carry
+`data-tone="neutral|brand|success|warning|danger"`. `icon` is `aria-hidden="true"`; `content`
+groups the primary label and optional wrapping secondary description while preserving one
+interactive treeitem per row.
 
 **Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for
 indentation), plus the shared tokens listed above.
@@ -1849,7 +1856,13 @@ parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker
 Composable structured-query builder for tabular or dashboard data: condition rows combined with an
 AND/OR combinator.
 
-**Properties:** `fields`, `value`, `disabled`, `addCondition`, `removeCondition`. **Events:**
-`lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
+**Properties:** `fields`, `value`, `disabled`.
+
+**Methods:** `addCondition()` appends a condition using the first available field and emits
+`lr-add-condition`; it is a no-op while disabled or when there are no fields.
+`removeCondition(id)` removes the matching condition and emits `lr-remove-condition`; it is a
+no-op while disabled or when the id is absent.
+
+**Events:** `lr-input`, `lr-add-condition`, `lr-remove-condition`. **CSS parts:** `base`, `conditions`,
 `condition`, `field-select`, `operator-select`, `value`, `combinator`, `add-button`,
 `remove-button`, `empty`.

@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import type { LyraChatComposer } from '../chat-composer/chat-composer.class.js';
 import type { LyraMentionPopover } from '../../utility/mention-popover/mention-popover.class.js';
 import './prompt-input.js';
@@ -39,12 +39,25 @@ it('detects mention triggers, anchors the popover to the real textarea, and inse
   );
   await el.updateComplete;
   const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  await popover.updateComplete;
   expect(popover.open).to.be.true;
   expect(popover.query).to.equal('ad');
   expect(popover.anchor?.tagName).to.equal('TEXTAREA');
-  expect(composer.input?.getAttribute('aria-controls')).to.equal(popover.listboxId);
-  expect(composer.input?.getAttribute('aria-activedescendant')).to.equal(popover.activeDescendantId);
+  expect(
+    composer.input?.hasAttribute('aria-controls'),
+    'a document-owned input must not publish a string IDREF into the popover shadow root',
+  ).to.be.false;
+  const reflected = (
+    composer.input as HTMLTextAreaElement & { ariaActiveDescendantElement?: Element | null }
+  ).ariaActiveDescendantElement === popover.activeDescendantElement;
+  if (!reflected) {
+    expect(
+      composer.input?.hasAttribute('aria-activedescendant'),
+      'unsupported cross-root reflection must fail closed without a broken string IDREF',
+    ).to.be.false;
+  }
 
+  composer.input!.focus();
   const initialActiveDescendant = popover.activeDescendantId;
   const keydown = new KeyboardEvent('keydown', {
     key: 'ArrowDown',
@@ -52,11 +65,35 @@ it('detects mention triggers, anchors the popover to the real textarea, and inse
     composed: true,
     cancelable: true,
   });
-  composer.dispatchEvent(keydown);
+  composer.input!.dispatchEvent(keydown);
   await el.updateComplete;
   expect(keydown.defaultPrevented).to.be.true;
   expect(popover.activeDescendantId).to.not.equal(initialActiveDescendant);
-  expect(composer.input?.getAttribute('aria-activedescendant')).to.equal(popover.activeDescendantId);
+  await waitUntil(() => {
+    const currentReflection = (
+      composer.input as HTMLTextAreaElement & { ariaActiveDescendantElement?: Element | null }
+    ).ariaActiveDescendantElement;
+    return (
+      currentReflection === popover.activeDescendantElement ||
+      (popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id === 'adam'
+    );
+  });
+  const usesReflection = (
+    composer.input as HTMLTextAreaElement & { ariaActiveDescendantElement?: Element | null }
+  ).ariaActiveDescendantElement === popover.activeDescendantElement;
+  if (usesReflection) {
+    expect(
+      (composer.input as HTMLTextAreaElement & { ariaActiveDescendantElement?: Element | null })
+        .ariaActiveDescendantElement === popover.activeDescendantElement,
+    ).to.be.true;
+    expect(composer.shadowRoot!.activeElement === composer.input).to.be.true;
+  } else {
+    expect(
+      composer.input?.hasAttribute('aria-activedescendant'),
+      'the fallback must continue avoiding a broken string IDREF',
+    ).to.be.false;
+    expect((popover.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('adam');
+  }
 
   const selected = oneEvent(el, 'lr-mention-select');
   popover.dispatchEvent(
@@ -130,6 +167,37 @@ it('gates every composed interaction while disabled and forwards host click to t
   await el.updateComplete;
   el.click();
   expect(composer.shadowRoot!.activeElement?.getAttribute('part')).to.equal('textarea');
+});
+
+it('makes previewable attachments inert and suppresses their wrapper events while disabled', async () => {
+  const el = (await fixture(html`<lr-prompt-input
+    disabled
+    .attachments=${[{
+      id: 'doc-1',
+      name: 'report.pdf',
+      mimeType: 'application/pdf',
+      uri: 'https://example.test/report.pdf',
+    }]}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  const attachment = el.shadowRoot!.querySelector('lr-attachment-chip') as HTMLElement & {
+    inert: boolean;
+  };
+  let previewEvents = 0;
+  el.addEventListener('lr-attachment-preview', () => previewEvents++);
+
+  attachment.dispatchEvent(new CustomEvent('lr-preview', {
+    bubbles: true,
+    composed: true,
+    detail: {
+      id: 'doc-1',
+      name: 'report.pdf',
+      mimeType: 'application/pdf',
+      src: 'https://example.test/report.pdf',
+    },
+  }));
+
+  expect(attachment.inert).to.be.true;
+  expect(previewEvents).to.equal(0);
 });
 
 it('applies per-instance strings to the prompt label', async () => {

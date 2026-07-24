@@ -59,6 +59,17 @@ describe('lr-agent-eval-dashboard', () => {
     expect((await event).detail).to.deep.equal({ metricId: 'second' });
   });
 
+  it('localizes the metric accessible value label with placeholders', async () => {
+    const el = (await fixture(html`
+      <lr-agent-eval-dashboard
+        .metrics=${[{ id: 'accuracy', label: 'Accuracy', value: 0.75 }]}
+        .strings=${{ chartValueLabel: '{value} ← {label}' }}
+      ></lr-agent-eval-dashboard>
+    `)) as LyraAgentEvalDashboard;
+    const metric = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="metric"]')!;
+    expect(metric.getAttribute('aria-label')).to.equal('0.75 ← Accuracy');
+  });
+
   it('renders a strings override in the DOM', async () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard .strings=${{ evaluationDashboardNoRuns: 'No executions yet' }}></lr-agent-eval-dashboard>

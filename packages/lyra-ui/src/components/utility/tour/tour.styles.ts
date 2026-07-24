@@ -69,6 +69,7 @@ export const styles = css`
   [part='heading'] {
     font-weight: var(--lr-font-weight-semibold);
     font-size: var(--lr-font-size-lg);
+    overflow-wrap: anywhere;
   }
   [part='body'] {
     color: var(--lr-color-text);
@@ -116,6 +117,12 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+  }
+  [part='previous-button'],
+  [part='skip-button'],
+  [part='next-button'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
   }
   [part='previous-button'] {
     margin-inline-end: auto;

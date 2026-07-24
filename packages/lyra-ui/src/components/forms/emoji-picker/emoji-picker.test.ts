@@ -361,6 +361,25 @@ describe('keyboard navigation', () => {
     expect(event.detail).to.deep.equal({ emoji: '🐶' });
   });
 
+  it('emits native-style input and change events when a user picks an emoji', async () => {
+    const el = await connectEmojiPicker();
+    el.groups = groups;
+    await el.updateComplete;
+    const first = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="emoji"]')!;
+    const events = Promise.all([
+      oneEvent(el, 'input'),
+      oneEvent(el, 'change'),
+      oneEvent(el, 'lr-change'),
+    ]);
+
+    first.click();
+
+    const [inputEvent, changeEvent, lyraEvent] = await events;
+    expect(inputEvent.composed).to.be.true;
+    expect(changeEvent.composed).to.be.true;
+    expect(lyraEvent.detail).to.deep.equal({ emoji: '😀' });
+  });
+
   it('navigates the grid from the search input via the combobox contract', async () => {
     const el = await connectEmojiPicker();
     el.groups = groups;

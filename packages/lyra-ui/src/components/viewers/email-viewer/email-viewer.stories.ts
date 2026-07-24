@@ -12,3 +12,8 @@ const source = `data:message/rfc822;charset=utf-8,${encodeURIComponent(SAMPLE_EM
 export const Default: Story = { render: () => html`<lr-email-viewer style="max-inline-size: 36rem;" src=${source} name="report.eml"></lr-email-viewer>` };
 export const NoSourceSet: Story = { render: () => html`<lr-email-viewer style="max-inline-size: 36rem;"></lr-email-viewer>` };
 export const MaxHeight: Story = { render: () => html`<lr-email-viewer style="max-inline-size: 36rem;" max-height="8rem" src=${source} name="report.eml"></lr-email-viewer>` };
+
+/** Baseline narrow-allocation coverage with long message metadata. */
+export const Narrow320: Story = {
+  render: () => html`<div style="max-width:320px"><lr-email-viewer src=${source} name="International quarterly analytical-engine correspondence.eml"></lr-email-viewer></div>`,
+};

@@ -1,5 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, state } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import type { DialogCloseReason } from '../../overlays/dialog/dialog.class.js';
@@ -12,6 +12,7 @@ import {
   type DocumentRendererRegistry,
 } from './registry.js';
 import type { AnchorResultDetail, LyraAnchor, LyraHighlight } from './anchors.js';
+import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import { styles } from './document-viewer.styles.js';
 
 export type DocumentViewerCloseReason = DialogCloseReason;
@@ -80,11 +81,20 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
 
   private generation = 0;
   private resolvedLazy?: { def: DocumentRendererDefinition; resolved: DocumentRendererDefinition };
+  @query('lr-document-preview') private fallbackPreviewEl?: LyraDocumentPreview;
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (!this.open) {
+      if (changed.has('open')) {
+        this.generation++;
+        this.renderState = { kind: 'fallback' };
+      }
+      return;
+    }
     if (
       !this.hasUpdated ||
+      changed.has('open') ||
       changed.has('name') ||
       changed.has('mimeType') ||
       changed.has('src') ||
@@ -159,6 +169,16 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   private finishAnchorResult(def: DocumentRendererDefinition | undefined, file: DocumentFile, generation: number): void {
     if (file.anchor == null) return;
     if (generation !== this.generation) return;
+    if (!def) {
+      this.scheduleAfterUpdate(() => {
+        void (async () => {
+          const found = (await this.fallbackPreviewEl?.scrollToAnchor(file.anchor!)) ?? false;
+          if (generation !== this.generation) return;
+          this.emit<AnchorResultDetail>('lr-anchor-result', { found });
+        })();
+      });
+      return;
+    }
     if (this.isAnchorCapable(def, file.anchor)) return;
     this.scheduleAfterUpdate(() => {
       if (generation !== this.generation) return;
@@ -182,6 +202,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   }
 
   private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
+    event.stopPropagation();
     this.open = false;
     this.emit<DocumentViewerCloseReason>('lr-close', event.detail);
   };
@@ -205,6 +226,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
             src=${this.src}
             mime-type=${this.mimeType}
             filename=${this.name}
+            .alt=${this.alt}
+            .highlights=${this.highlights}
+            .suppressDownload=${true}
           ></lr-document-preview>
         `;
     }
@@ -220,7 +244,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         closable
         @lr-dialog-close=${this.onDialogClose}
       >
-        <div part="body">${this.renderBody()}</div>
+        <div part="body">${this.open ? this.renderBody() : nothing}</div>
         ${downloadHref
           ? html`
               <a

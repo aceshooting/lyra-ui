@@ -29,6 +29,8 @@ export const styles = css`
     gap: var(--lr-space-s);
     align-items: center;
     inline-size: 100%;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-s);
     border: 0;
@@ -80,4 +82,3 @@ export const styles = css`
     }
   }
 `;
-

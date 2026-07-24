@@ -153,7 +153,8 @@ between several values across a single element's lifetime.
 - mounting a message with `status="failed"` (or any other non-`"sent"` status) already set does
   **not** announce anything — only a genuine *later* transition (`changed.get('status') !==
   undefined`, i.e. not the very first update) triggers the live-region announcement.
-- `lr-retry` fires with no detail payload at all (`undefined`), not e.g. `{ status: 'failed' }`.
+- `lr-retry` carries `{ messageId?: string }`; the field is the component's `messageId` when set,
+  and is omitted otherwise.
 - the header/footer/avatar/badges/attachments/actions wrappers are shown/hidden via the `hidden`
   attribute, not conditional templating. Whether each slot currently has content is checked once via
   a light-DOM children scan on the very first update (`willUpdate`, gated on `!this.hasUpdated`) and

@@ -4,12 +4,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './test-results.styles.js';
-// The registering barrels (not the bare *.class.js modules) -- this side effect is what
-// actually defines <lr-empty>/<lr-spinner>/<lr-live-region> as custom elements by the
-// time this component's render() references them.
-import '../../overlays/empty/empty.js';
-import '../../overlays/spinner/spinner.js';
-import '../../utility/live-region/live-region.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 

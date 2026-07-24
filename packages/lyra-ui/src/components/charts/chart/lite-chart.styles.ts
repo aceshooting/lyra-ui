@@ -69,8 +69,13 @@ export const styles = css`
   [part='bar'] {
     cursor: pointer;
   }
+  [data-mark-hit-target] {
+    cursor: pointer;
+  }
   :where([part='bar']):hover,
-  :where([part='point']):hover {
+  :where([part='point']):hover,
+  :where(.mark-hit-group):hover [part='bar'],
+  :where(.mark-hit-group):hover [part='point'] {
     filter: brightness(var(--lr-hover-brightness));
   }
   [part='bar'][data-selected],
@@ -82,6 +87,11 @@ export const styles = css`
   [part='point']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  :where(.mark-hit-group):has([part='bar']:focus-visible, [part='point']:focus-visible)
+    [data-mark-hit-target] {
+    stroke: var(--lr-focus-ring-color);
+    stroke-width: var(--lr-focus-ring-width);
   }
   [part='line'] {
     fill: none;

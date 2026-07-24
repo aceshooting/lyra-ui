@@ -1981,6 +1981,30 @@ describe('review remediation regressions', () => {
     expect(datasets[0].borderColor).to.equal('rgb(21, 31, 41)');
     expect(datasets[1].borderColor).to.equal(seriesPalette(el)[1]);
   });
+
+  it('materializes color-mix expressions before handing them to canvas', async () => {
+    const el = (await fixture(html`
+      <lr-chart
+        style="
+          --mix-start: rgb(255, 0, 0);
+          --mix-end: rgb(0, 0, 255);
+        "
+      ></lr-chart>
+    `)) as LyraChart;
+    el.datasets = [
+      {
+        label: 'Mixed',
+        data: [1],
+        color: 'color-mix(in srgb, var(--mix-start) 50%, var(--mix-end))',
+      },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const color = (el as any).buildConfig().data.datasets[0].borderColor as string;
+    expect(color).to.not.match(/(?:color-mix|var)\(/);
+    expect(CSS.supports('color', color)).to.be.true;
+  });
 });
 
 describe('data labels and stack totals', () => {

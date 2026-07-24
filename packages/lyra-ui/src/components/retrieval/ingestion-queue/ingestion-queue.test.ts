@@ -37,6 +37,31 @@ it('is accessible in the empty state', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('clips horizontal overflow from long queue metadata', async () => {
+  const el = (await fixture(
+    html`<lr-ingestion-queue .items=${[item({ id: '1', stage: 'failed', error: 'x'.repeat(500) })]}></lr-ingestion-queue>`,
+  )) as LyraIngestionQueue;
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="item-error"]') as HTMLElement;
+  expect(getComputedStyle(list).overflowX).to.be.oneOf(['clip', 'hidden']);
+  expect(getComputedStyle(error).overflowWrap).to.equal('anywhere');
+});
+
+it('formats chunk progress and attempt counts with the effective locale', async () => {
+  const el = (await fixture(html`
+    <lr-ingestion-queue
+      lang="ar-u-nu-arab"
+      .items=${[
+        item({ id: '1', stage: 'embedding', chunkCount: 1234, embeddedChunkCount: 1000, attempts: 2 }),
+      ]}
+    ></lr-ingestion-queue>
+  `)) as LyraIngestionQueue;
+  const meta = el.shadowRoot!.querySelector('[part="item-meta"]')!;
+  expect(meta.textContent).to.include('١٬٢٣٤');
+  expect(meta.textContent).to.include('١٬٠٠٠');
+  expect(meta.textContent).to.include('٢');
+});
+
 describe('populated rows', () => {
   it('renders one [part="item"] row per item, carrying data-stage, name, and a stage badge', async () => {
     const el = (await fixture(
@@ -165,7 +190,7 @@ describe('populated rows', () => {
     expect(rows[1]!.querySelector('[part="item-attempts"]')!.textContent!.trim()).to.equal('Attempt 2');
   });
 
-  it('shows the failure message with role="alert" only for a failed item with an error', async () => {
+  it('renders historical failure detail without mounting it as a fresh alert', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue
         .items=${[
@@ -178,7 +203,31 @@ describe('populated rows', () => {
     expect(rows[0]!.querySelector('[part="item-error"]')).to.not.exist;
     const error = rows[1]!.querySelector('[part="item-error"]') as HTMLElement;
     expect(error.textContent!.trim()).to.equal('Unsupported file type');
-    expect(error.getAttribute('role')).to.equal('alert');
+    expect(error.hasAttribute('role')).to.be.false;
+    const live = el.shadowRoot!.querySelector('[part="failure-live"]') as HTMLElement;
+    expect(live.getAttribute('role')).to.equal('alert');
+    expect(live.textContent!.trim()).to.equal('');
+  });
+
+  it('announces only failures that transition or are added after mount', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        .items=${[item({ id: '1', stage: 'queued' })]}
+      ></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    const liveText = () => el.shadowRoot!.querySelector('[part="failure-live"]')!.textContent!.trim();
+    expect(liveText()).to.equal('');
+
+    el.items = [item({ id: '1', stage: 'failed', error: 'Unsupported file type' })];
+    await el.updateComplete;
+    expect(liveText()).to.equal('Unsupported file type');
+
+    el.items = [
+      item({ id: '1', stage: 'failed', error: 'Unsupported file type' }),
+      item({ id: '2', stage: 'failed', error: 'Network unavailable' }),
+    ];
+    await el.updateComplete;
+    expect(liveText()).to.equal('Network unavailable');
   });
 });
 
@@ -254,6 +303,24 @@ describe('retry/cancel affordances', () => {
     )) as LyraIngestionQueue;
     const retry = el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement;
     expect(retry.getAttribute('aria-label')).to.equal('Retry Q3 report.pdf');
+  });
+
+  it('keeps compact retry/cancel targets at the live hit-area token override', async () => {
+    const el = (await fixture(
+      html`<lr-ingestion-queue
+        style="--lr-icon-button-size: 52px"
+        .items=${[
+          item({ id: '1', stage: 'failed' }),
+          item({ id: '2', stage: 'queued' }),
+        ]}
+      ></lr-ingestion-queue>`,
+    )) as LyraIngestionQueue;
+    for (const part of ['retry-button', 'cancel-button']) {
+      const target = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      const bounds = target.getBoundingClientRect();
+      expect(bounds.width, part).to.be.at.least(52);
+      expect(bounds.height, part).to.be.at.least(52);
+    }
   });
 });
 

@@ -101,6 +101,52 @@ it('re-resolves locale and direction when reconnected under a different ancestor
   expect(el.exposedDirection).to.equal('rtl');
 });
 
+it('re-renders when host lang and dir attributes change the effective locale context', async () => {
+  const el = await fixture<DemoLocale>(html`<lr-demo-locale lang="en" dir="ltr"></lr-demo-locale>`);
+  expect(el.exposedLocale).to.equal('en');
+  expect(el.exposedDirection).to.equal('ltr');
+
+  el.setAttribute('lang', 'tr');
+  el.setAttribute('dir', 'rtl');
+  await el.updateComplete;
+
+  expect(el.exposedLocale).to.equal('tr');
+  expect(el.exposedDirection).to.equal('rtl');
+});
+
+it('re-renders when ancestor lang and dir attributes change the inherited locale context', async () => {
+  const wrapper = await fixture<HTMLDivElement>(
+    html`<div lang="en" dir="ltr"><lr-demo-locale></lr-demo-locale></div>`,
+  );
+  const el = wrapper.querySelector('lr-demo-locale') as DemoLocale;
+  await el.updateComplete;
+  expect(el.exposedLocale).to.equal('en');
+  expect(el.exposedDirection).to.equal('ltr');
+
+  wrapper.setAttribute('lang', 'tr');
+  wrapper.setAttribute('dir', 'rtl');
+  await Promise.resolve();
+  await el.updateComplete;
+
+  expect(el.exposedLocale).to.equal('tr');
+  expect(el.exposedDirection).to.equal('rtl');
+});
+
+it('inherits and reacts to locale context across a shadow-root host boundary', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div lang="tr"></div>`);
+  const shadow = host.attachShadow({ mode: 'open' });
+  const el = document.createElement('lr-demo-locale') as DemoLocale;
+  shadow.append(el);
+  await el.updateComplete;
+  expect(el.exposedLocale).to.equal('tr');
+
+  host.setAttribute('lang', 'lt');
+  await Promise.resolve();
+  await el.updateComplete;
+
+  expect(el.exposedLocale).to.equal('lt');
+});
+
 it('makes notifications non-cancelable unless a caller opts into veto semantics', async () => {
   const el = await fixture<Demo>(`<lr-demo-base></lr-demo-base>`);
   const events: CustomEvent[] = [];

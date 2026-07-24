@@ -48,7 +48,9 @@ describe('lr-csv-viewer', () => {
   it('loads a src that changed while detached once it is reconnected', async () => {
     const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     const parent = el.parentElement!;
-    const restore = fetchText(CSV);
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(CSV) } as Response); }) as typeof window.fetch;
     try {
       el.remove();
       await aTimeout(0);
@@ -56,7 +58,21 @@ describe('lr-csv-viewer', () => {
       await aTimeout(0);
       parent.append(el);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null, 'src set while detached was never loaded after reconnect');
-    } finally { restore(); }
+      expect(calls).to.equal(1);
+    } finally { window.fetch = original; }
+  });
+  it('reloads an already-loaded source after reconnecting', async () => {
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve({ ok: true, status: 200, statusText: 'OK', text: () => Promise.resolve(CSV) } as Response); }) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`<lr-csv-viewer src="https://example.test/people.csv"></lr-csv-viewer>`)) as LyraCsvViewer;
+      await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => calls === 2);
+    } finally { window.fetch = original; }
   });
   it('can treat every row as data through a false property binding', async () => {
     const el = (await fixture(html`<lr-csv-viewer .hasHeaderRow=${false}></lr-csv-viewer>`)) as LyraCsvViewer;
@@ -77,6 +93,33 @@ describe('lr-csv-viewer', () => {
     expect(named.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('quarterly.csv');
     const unnamed = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
     expect(unnamed.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('CSV document');
+  });
+  it('exposes the accessible name on a region and lets the host aria-label override name', async () => {
+    const el = (await fixture(html`<lr-csv-viewer name="quarterly.csv" aria-label="Quarterly report"></lr-csv-viewer>`)) as LyraCsvViewer;
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Quarterly report');
+  });
+  it('emits exactly one render error for an unsafe URL', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    let count = 0;
+    el.addEventListener('lr-render-error', () => { count++; });
+    const event = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:alert(1)';
+    await event;
+    await aTimeout(0);
+    expect(count).to.equal(1);
+  });
+  it('emits a render error when the optional parser is unavailable', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve(null);
+    const restore = fetchText(CSV);
+    try {
+      const event = oneEvent(el, 'lr-render-error');
+      el.src = 'https://example.test/people.csv';
+      await event;
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('CSV preview is unavailable.');
+    } finally { restore(); }
   });
   it('supports a .strings override for the csvViewerLabel fallback', async () => {
     const el = (await fixture(html`<lr-csv-viewer .strings=${{ csvViewerLabel: 'Document CSV' }}></lr-csv-viewer>`)) as LyraCsvViewer;
@@ -102,6 +145,39 @@ describe('lr-csv-viewer', () => {
       }
     });
 
+    it('resolves and scrolls a header-row anchor', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to.be.true;
+      } finally { restore(); }
+    });
+
+    it('renders header highlights with table-cell semantics and one nested action', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+        el.highlights = [
+          { id: 'duplicate', anchor: { kind: 'cell-range', range: 'A1' }, label: 'First' },
+          { id: 'duplicate', anchor: { kind: 'cell-range', range: 'B1' }, label: 'Ignored duplicate' },
+        ];
+        await el.updateComplete;
+        const header = el.shadowRoot!.querySelector('[part="header-row"]')!;
+        expect(header.getAttribute('role')).to.equal('row');
+        expect(header.querySelectorAll('[part~="cell-highlight"]')).to.have.lengthOf(1);
+        const highlighted = header.querySelector('[part~="cell-highlight"]')!;
+        expect(highlighted.getAttribute('role')).to.equal('columnheader');
+        const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLElement;
+        expect(action).to.exist;
+        expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
+        expect(getComputedStyle(action).minBlockSize).to.equal('40px');
+      } finally { restore(); }
+    });
+
     it('resolves false for an anchor with a sheet set (csv has no sheets)', async () => {
       const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
       shrinkAnchorRetry(el);
@@ -110,6 +186,20 @@ describe('lr-csv-viewer', () => {
         el.src = 'https://example.test/people.csv';
         await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
         expect(await el.scrollToAnchor({ kind: 'cell-range', sheet: 'Sheet1', range: 'A2' })).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
+    it('truthfully rejects rows and columns outside the parsed grid', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      shrinkAnchorRetry(el);
+      const restore = fetchText(GRID_CSV);
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'A999' })).to.be.false;
+        expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'K2' })).to.be.false;
       } finally {
         restore();
       }
@@ -126,11 +216,12 @@ describe('lr-csv-viewer', () => {
         const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
         expect(highlighted).to.exist;
-        expect(highlighted.getAttribute('tabindex')).to.equal('0');
-        expect(highlighted.getAttribute('role')).to.equal('button');
-        expect(highlighted.getAttribute('aria-label')).to.equal('First result');
+        expect(highlighted.getAttribute('role')).to.equal('cell');
+        const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
+        expect(action).to.exist;
+        expect(action.getAttribute('aria-label')).to.equal('First result');
         const listener = oneEvent(el, 'lr-highlight-activate');
-        highlighted.click();
+        action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
         expect(event.detail).to.deep.equal({ id: 'h1' });
       } finally {
@@ -138,7 +229,7 @@ describe('lr-csv-viewer', () => {
       }
     });
 
-    it('activates a highlighted cell via Enter/Space and never a plain cell', async () => {
+    it('uses a native keyboard-activatable button and never makes a plain cell interactive', async () => {
       const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
       const restore = fetchText(GRID_CSV);
       try {
@@ -150,10 +241,8 @@ describe('lr-csv-viewer', () => {
         const plain = list.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
         expect(plain.hasAttribute('tabindex')).to.be.false;
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
-        const listener = oneEvent(el, 'lr-highlight-activate');
-        highlighted.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
-        const event = (await listener) as CustomEvent<{ id: string }>;
-        expect(event.detail).to.deep.equal({ id: 'h1' });
+        const action = highlighted.querySelector('[part="cell-highlight-action"]')!;
+        expect(action.tagName).to.equal('BUTTON');
       } finally {
         restore();
       }
@@ -178,6 +267,30 @@ describe('lr-csv-viewer', () => {
       } finally {
         restore();
       }
+    });
+
+    it('case-folds with the effective locale and can navigate a header match', async () => {
+      const el = (await fixture(html`<lr-csv-viewer lang="tr"></lr-csv-viewer>`)) as LyraCsvViewer;
+      const restore = fetchText('İSTANBUL,Role\nAnkara,Capital');
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="header-row"]') !== null);
+        expect(await el.search('istanbul')).to.equal(1);
+      } finally { restore(); }
+    });
+
+    it('recomputes an active search when the host language changes', async () => {
+      const el = (await fixture(html`<lr-csv-viewer lang="en"></lr-csv-viewer>`)) as LyraCsvViewer;
+      const restore = fetchText('City\nİSTANBUL\nistanbul');
+      try {
+        el.src = 'https://example.test/people.csv';
+        await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+        expect(await el.search('istanbul')).to.equal(1);
+        el.lang = 'tr';
+        await el.updateComplete;
+        await aTimeout(0);
+        expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(2);
+      } finally { restore(); }
     });
 
     it('searchPrevious wraps backward', async () => {
@@ -225,6 +338,32 @@ describe('lr-csv-viewer', () => {
         restore();
       }
     });
+
+    it('caps retained search matches before allocating an unbounded result list', async () => {
+      const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+      (el as unknown as { fetchState: unknown }).fetchState = {
+        kind: 'loaded',
+        rows: Array.from({ length: 1_001 }, () => ['hit']),
+      };
+      await el.updateComplete;
+      expect(await el.search('hit')).to.equal(1_000);
+      expect((el as unknown as { searchMatches: unknown[] }).searchMatches).to.have.lengthOf(1_000);
+    });
+  });
+
+  it('does not leak internal virtual-list events through the viewer host', async () => {
+    const el = (await fixture(html`<lr-csv-viewer></lr-csv-viewer>`)) as LyraCsvViewer;
+    const restore = fetchText(GRID_CSV);
+    try {
+      el.src = 'https://example.test/people.csv';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      let leaked = 0;
+      for (const name of ['lr-load-more', 'lr-visible-range-changed', 'lr-scroll']) {
+        el.addEventListener(name as never, () => { leaked++; });
+        el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+      }
+      expect(leaked).to.equal(0);
+    } finally { restore(); }
   });
 
   describe('cell-highlight styling', () => {
@@ -279,7 +418,7 @@ describe('lr-csv-viewer', () => {
       } finally { restore(); }
     });
 
-    it('swaps the highlight outline for the shared focus ring while the cell is focused', async () => {
+    it('shows the shared focus ring on the nested highlight action', async () => {
       // The highlight outline is unconditional, so without an explicit :focus-visible rule it would
       // simply swallow the focus ring on this focusable cell -- indistinguishable from an unfocused
       // highlight. Probing the active (warning-tinted) highlight makes the swap unambiguous.
@@ -289,8 +428,9 @@ describe('lr-csv-viewer', () => {
       try {
         const { highlighted } = await mountHighlighted(el, 'h1');
         expect(getComputedStyle(highlighted).outlineColor).to.equal('rgb(4, 5, 6)');
-        highlighted.focus();
-        expect(getComputedStyle(highlighted).outlineColor).to.equal('rgb(1, 2, 3)');
+        const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLElement;
+        action.focus();
+        expect(getComputedStyle(action).outlineColor).to.equal('rgb(1, 2, 3)');
       } finally { restore(); }
     });
 
@@ -315,7 +455,7 @@ describe('lr-csv-viewer', () => {
       const restore = fetchText(GRID_CSV);
       try {
         const { highlighted } = await mountHighlighted(el);
-        expect(highlighted.getAttribute('role')).to.equal('button');
+        expect(highlighted.getAttribute('role')).to.equal('cell');
         await expect(el).to.be.accessible();
       } finally { restore(); }
     });

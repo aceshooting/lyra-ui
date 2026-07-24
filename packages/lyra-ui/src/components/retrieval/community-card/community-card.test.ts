@@ -176,3 +176,12 @@ it('gives the title button, member, and overflow parts hover/focus-visible', () 
   expect(css).to.match(/\[part='member'\]:focus-visible[^{]*\{[^}]*outline:/);
   expect(css).to.match(/\[part='overflow'\]:focus-visible[^{]*\{[^}]*outline:/);
 });
+
+it('formats member and overflow counts with the effective locale', async () => {
+  const el = (await fixture(html`<lr-community-card lang="ar-u-nu-arab" max-members="1"></lr-community-card>`)) as LyraCommunityCard;
+  el.community = { ...community, memberCount: 1234 };
+  el.members = members;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="member-count"]')!.textContent).to.include('١٬٢٣٤');
+  expect(el.shadowRoot!.querySelector('[part="overflow"]')!.textContent).to.include('١٬٢٣٣');
+});

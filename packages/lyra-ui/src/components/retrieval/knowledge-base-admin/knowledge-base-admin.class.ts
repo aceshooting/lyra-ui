@@ -4,8 +4,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
 import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
-import '../knowledge-base/knowledge-base.js';
-import '../ingestion-queue/ingestion-queue.js';
 import { styles } from './knowledge-base-admin.styles.js';
 
 let knowledgeBaseAdminInstance = 0;

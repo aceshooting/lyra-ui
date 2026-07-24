@@ -36,6 +36,25 @@ it('formats relation-group counts with the effective locale', async () => {
   expect(el.shadowRoot!.querySelector('[part="group-header"]')!.textContent).to.contain('٢');
 });
 
+it('formats multi-value node metadata as a locale-aware list instead of fixed punctuation', async () => {
+  const el = (await fixture(
+    html`<lr-neighbor-list
+      lang="fr"
+      .rows=${[
+        {
+          relation: 'works_for',
+          direction: 'out',
+          node: { id: 'acme', label: 'Acme', type: 'organisation', degree: 3 },
+        },
+      ]}
+    ></lr-neighbor-list>`,
+  )) as LyraNeighborList;
+  const meta = el.shadowRoot!.querySelector('[part="node-meta"]')!;
+  expect(meta.textContent).to.equal(
+    new Intl.ListFormat('fr', { style: 'short', type: 'unit' }).format(['organisation', '3']),
+  );
+});
+
 it('renders one row per entry, each with the node label and relation text', async () => {
   const el = (await fixture(html`<lr-neighbor-list></lr-neighbor-list>`)) as LyraNeighborList;
   el.rows = rows;

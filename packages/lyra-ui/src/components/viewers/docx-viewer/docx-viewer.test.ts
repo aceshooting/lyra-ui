@@ -102,7 +102,9 @@ describe('lr-docx-viewer', () => {
     useLibrary(el, { mammoth: undefined, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
+      const event = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/report.docx';
+      await event;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "mammoth" package installed to convert this document.',
@@ -117,7 +119,9 @@ describe('lr-docx-viewer', () => {
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<h1>Unsafe</h1>', messages: [] }) }, DOMPurify: undefined });
     const restore = stubFetch(BUFFER);
     try {
+      const event = oneEvent(el, 'lr-render-error');
       el.src = 'https://example.test/report.docx';
+      await event;
       await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
         'This viewer needs the optional "dompurify" package installed to render safely.',
@@ -145,15 +149,21 @@ describe('lr-docx-viewer', () => {
     }
   });
 
-  it('rejects unsafe URLs without fetching', async () => {
+  it('rejects unsafe URLs without fetching and emits exactly one render error', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
     let called = false;
     const original = window.fetch;
     window.fetch = (() => { called = true; return Promise.reject(new Error('unexpected')); }) as typeof window.fetch;
     try {
+      let count = 0;
+      el.addEventListener('lr-render-error', () => { count++; });
+      const event = oneEvent(el, 'lr-render-error');
       el.src = 'java\tscript:alert(1)';
+      await event;
+      await aTimeout(0);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') !== null);
       expect(called).to.be.false;
+      expect(count).to.equal(1);
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Document URL is not allowed.');
     } finally {
       window.fetch = original;
@@ -196,17 +206,36 @@ describe('lr-docx-viewer', () => {
     }
   });
 
-  it('prefers the name property over a host aria-label, which in turn wins over the localized default', async () => {
+  it('lets a host aria-label override the name property on the role=document owner', async () => {
     const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer name="Named report" aria-label="Q3 report"></lr-docx-viewer>`);
     useLibrary(el, { mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Text</p>', messages: [] }) }, DOMPurify: { sanitize: (value: string) => value } });
     const restore = stubFetch(BUFFER);
     try {
       el.src = 'https://example.test/report.docx';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Named report');
+      expect(el.shadowRoot!.querySelector('[part="content"]')!.getAttribute('aria-label')).to.equal('Q3 report');
     } finally {
       restore();
     }
+  });
+
+  it('reloads an already-loaded source after reconnecting', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    useLibrary(el, {
+      mammoth: { convertToHtml: () => Promise.resolve({ value: '<p>Ready</p>', messages: [] }) },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const original = window.fetch;
+    let calls = 0;
+    window.fetch = (() => { calls++; return Promise.resolve({ ok: true, status: 200, statusText: 'OK', arrayBuffer: () => Promise.resolve(BUFFER) } as Response); }) as typeof window.fetch;
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="content"]') !== null);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await waitUntil(() => calls === 2);
+    } finally { window.fetch = original; }
   });
 
   it('reports a generic failure message for a non-OK HTTP response', async () => {
@@ -710,6 +739,23 @@ describe('search', () => {
     } finally {
       restore();
     }
+  });
+
+  it('case-folds with the effective locale', async () => {
+    const { el, restore } = await loadWithMarkup('<p>İSTANBUL</p>');
+    try {
+      el.lang = 'tr';
+      await el.updateComplete;
+      expect(await el.search('istanbul')).to.equal(1);
+    } finally { restore(); }
+  });
+
+  it('caps match objects and painted marks for adversarial repetitive content', async () => {
+    const { el, restore } = await loadWithMarkup(`<p>${'x '.repeat(1500)}</p>`);
+    try {
+      expect(await el.search('x')).to.equal(1000);
+      expect(el.shadowRoot!.querySelectorAll('[part~="search-match"]').length).to.equal(1000);
+    } finally { restore(); }
   });
 
   it('wraps around in both directions', async () => {

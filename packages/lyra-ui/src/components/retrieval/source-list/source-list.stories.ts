@@ -81,3 +81,31 @@ export const Interactive: Story = {
     </div>
   `,
 };
+
+export const NarrowAllStates: Story = {
+  name: 'Narrow long content + states (320px)',
+  render: () => html`
+    <div style="display:grid; gap:1rem; inline-size:320px; max-inline-size:100%;">
+      <lr-source-list label-plural="2 sources with deliberately long labels">
+        <lr-source-card
+          source-id="collapsed-long"
+          title="collapsed-source-with-a-very-long-unbroken-filename-that-must-not-overflow.pdf"
+        >
+          <span slot="excerpt">Collapsed list state.</span>
+        </lr-source-card>
+      </lr-source-list>
+      <lr-source-list label-plural="1 expanded source with long evidence" expanded>
+        <lr-source-card
+          source-id="expanded-long"
+          title="expanded-source-with-a-very-long-unbroken-filename-that-must-not-overflow.pdf"
+        >
+          <span slot="excerpt"
+            >UnbrokenExcerptTokenThatMustWrapInsideTheNarrowSourceListWithoutHorizontalScrolling.</span
+          >
+          <span slot="full">Long full evidence remains reachable from the card disclosure.</span>
+        </lr-source-card>
+      </lr-source-list>
+      <lr-source-list label="Empty source list"></lr-source-list>
+    </div>
+  `,
+};

@@ -6,7 +6,7 @@
 - **Class** `LyraCsvViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/csv-viewer/csv-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `papaparse` — see `llms/peers.md`
-- **Themeable via** 10 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,9 +39,11 @@ Enter/Space. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor
 `scrollToAnchor()` call. `lr-search-change` (`detail: { query, matchCount, activeIndex }`) — from
 `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
 
-**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a cell covered by
-a `highlights` entry), `rows`, `spinner`, and `error`. `data-row`, `cell` and `cell-highlight` are
-rendered inside the internal `<lr-virtual-list>` and forwarded via `exportparts`, so
+**CSS parts:** `base`, `sheet`, `header-row`, `data-row`, `cell`, `cell-highlight` (a structural
+cell covered by a `highlights` entry), `cell-highlight-action` (the native button filling a
+highlighted cell; emits `lr-highlight-activate`), `rows`, `spinner`, and `error`. `data-row`,
+`cell`, `cell-highlight`, and `cell-highlight-action` are rendered inside the internal
+`<lr-virtual-list>` and forwarded via `exportparts`, so
 `lr-csv-viewer::part(cell)` reaches them from a consumer stylesheet.
 
 **Themeable custom properties:** `--lr-csv-viewer-max-height` (default `none`) — maximum block size

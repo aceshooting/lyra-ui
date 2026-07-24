@@ -1,4 +1,13 @@
 export * from './evaluation-run.class.js';
+import '../../utility/live-region/live-region.js';
+import '../../overlays/progress/progress-bar.js';
+import '../../overlays/empty/empty.js';
+import '../../layout/details/details.js';
+import '../../overlays/badge/badge.js';
+import '../../conversation/markdown/markdown.js';
+import '../../conversation/code-block/code-block.js';
+import '../../retrieval/grounding-summary/grounding-summary.js';
+import '../tool-timeline/tool-timeline.js';
 import { LyraEvaluationRun } from './evaluation-run.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 defineElement('evaluation-run', LyraEvaluationRun);

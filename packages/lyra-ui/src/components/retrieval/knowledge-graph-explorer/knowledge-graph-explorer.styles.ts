@@ -26,6 +26,7 @@ export const styles = css`
     gap: var(--lr-size-2px);
     max-block-size: var(--lr-size-12rem);
     overflow-y: auto;
+    overflow-x: clip;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
@@ -36,12 +37,16 @@ export const styles = css`
   [part='search-result'] button {
     display: block;
     inline-size: 100%;
+    box-sizing: border-box;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     text-align: start;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
   [part='search-result'] button:hover {

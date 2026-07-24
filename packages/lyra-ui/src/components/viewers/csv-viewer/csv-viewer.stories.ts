@@ -10,3 +10,8 @@ const src = `data:text/csv;charset=utf-8,${encodeURIComponent(sample)}`;
 export const QuotedFields: Story = { render: () => html`<lr-csv-viewer src=${src} name="scientists.csv"></lr-csv-viewer>` };
 export const NoHeaderRow: Story = { render: () => html`<lr-csv-viewer src=${src} name="scientists.csv" .hasHeaderRow=${false}></lr-csv-viewer>` };
 export const Empty: Story = { render: () => html`<lr-csv-viewer></lr-csv-viewer>` };
+
+/** Baseline narrow-allocation coverage with long cell content and horizontal scrolling. */
+export const Narrow320: Story = {
+  render: () => html`<div style="max-width:320px"><lr-csv-viewer src=${src} name="scientists-with-long-notes.csv"></lr-csv-viewer></div>`,
+};

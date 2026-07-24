@@ -10,9 +10,10 @@ description: >
 # lyra-ui
 
 `@aceshooting/lyra-ui` is a free, MIT-licensed, framework-agnostic Lit 3 web-component library — an
-independent alternative to Shoelace and Web Awesome. 251 custom elements under the `lr-` prefix,
-each shipping its own design tokens, localization, RTL support and (for form controls) native form
-association. No runtime dependency on Shoelace or Web Awesome.
+independent alternative to Shoelace and Web Awesome. Its custom elements use the `lr-` prefix and
+ship with design tokens, localization, RTL support and (for form controls) native form association.
+No runtime dependency on Shoelace or Web Awesome. The current element count and complete tag list
+live in `references/index.md`; do not repeat a remembered count.
 
 ## Look up the exact API before writing any `lr-*` markup
 
@@ -36,6 +37,22 @@ payloads, slots, CSS parts, themeable properties, a usage snippet and known gotc
 **If the project already has lyra-ui installed, prefer its own copies**: the same files ship inside
 the package at `node_modules/@aceshooting/lyra-ui/llms/`. They match the exact installed version,
 which may differ from whatever this skill last shipped with.
+
+If local package references are unavailable, use the public machine surfaces rather than guessing:
+
+| Need | Public fallback |
+|---|---|
+| Search by intent, synonym, typo, or localized name | `GET https://www.lyra-ui.com/api/v1/components/search?q=<query>` |
+| Exact component API | `GET https://www.lyra-ui.com/api/v1/components/<lr-tag>` |
+| Search shared/component documentation | `GET https://www.lyra-ui.com/api/v1/documentation/search?q=<query>` |
+| Resolve a Web Awesome/Shoelace tag | `GET https://www.lyra-ui.com/api/v1/migrations/<wa-or-sl-tag>` |
+| Complete structured index | `https://www.lyra-ui.com/component-api-index.json` |
+
+MCP clients can connect to `https://www.lyra-ui.com/mcp` (streamable HTTP, no authentication).
+Use `search_components` to discover a tag, `get_component` to retrieve its exact API,
+`search_documentation` for library-wide behavior, and `resolve_migration` for `wa-*`/`sl-*`
+lookups. Equivalent resources are `lyra://catalog`, `lyra://component/{tag}`, and
+`lyra://guide/{topic}`.
 
 ## Non-negotiable conventions
 

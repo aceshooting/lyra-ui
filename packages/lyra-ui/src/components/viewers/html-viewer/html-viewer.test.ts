@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './html-viewer.js';
 import type { LyraHtmlViewer } from './html-viewer.js';
 import { __setHtmlSanitizerForTesting } from './dompurify-loader.js';
@@ -47,7 +47,10 @@ describe('lr-html-viewer', () => {
     } finally { window.fetch = original; }
   });
   it('rejects unsafe URLs and emits lr-render-error with a rendered failure message for a failed fetch', async () => {
-    const el = (await fixture(html`<lr-html-viewer src="javascript:alert(1)"></lr-html-viewer>`)) as LyraHtmlViewer;
+    const el = (await fixture(html`<lr-html-viewer></lr-html-viewer>`)) as LyraHtmlViewer;
+    const unsafeEvent = oneEvent(el, 'lr-render-error');
+    el.src = 'javascript:alert(1)';
+    expect((await unsafeEvent).detail.error).to.exist;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[role="alert"]')!.textContent).to.equal('Document URL is not allowed.');
     const original = window.fetch;
@@ -60,6 +63,28 @@ describe('lr-html-viewer', () => {
       await el.updateComplete;
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('Failed to load document.');
     } finally { window.fetch = original; }
+  });
+  it('reloads the same HTML source after a disconnect/reconnect', async () => {
+    const original = window.fetch;
+    let fetchCount = 0;
+    window.fetch = (() => {
+      fetchCount++;
+      return Promise.resolve(response(`<p>load ${fetchCount}</p>`));
+    }) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`
+        <lr-html-viewer src="https://example.test/a.html"></lr-html-viewer>
+      `)) as LyraHtmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
+      const parent = el.parentElement!;
+      el.remove();
+      parent.append(el);
+      await aTimeout(20);
+      expect(fetchCount).to.equal(2);
+      expect(el.shadowRoot!.querySelector('[part="html"]')!.textContent).to.equal('load 2');
+    } finally {
+      window.fetch = original;
+    }
   });
   it('shows a localized missing-sanitizer error instead of a silently empty document when the optional dompurify peer is unavailable', async () => {
     __setHtmlSanitizerForTesting(null);

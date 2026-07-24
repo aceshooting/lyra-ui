@@ -2,7 +2,6 @@ import { html, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import '../../utility/live-region/live-region.js';
 import { styles } from './handoff-divider.styles.js';
 
 /**

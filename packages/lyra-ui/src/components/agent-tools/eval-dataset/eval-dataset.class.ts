@@ -2,14 +2,9 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { TableColumn } from '../../data/table/table.class.js';
-import '../../data/table/table.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
-import '../../overlays/chip/chip.js';
-import '../../overlays/chip/chip-group.js';
 import type { LyraFileInputEventMap } from '../../media/file-input/file-input.class.js';
-import '../../media/file-input/file-input.js';
 import type { ExportFormatOption, LyraExportButtonEventMap } from '../../utility/export-button/export-button.class.js';
-import '../../utility/export-button/export-button.js';
 import { styles } from './eval-dataset.styles.js';
 
 const MAX_RENDERED_EXAMPLES = 100;

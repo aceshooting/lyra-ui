@@ -15,10 +15,11 @@
 
 A caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete
 inside a plain-text `<textarea>`/`<input>` the host owns. First-party invention (no Web Awesome
-equivalent). It never takes DOM focus itself — the host's own input keeps focus, and this
-component conveys the active row via `activeDescendantId` for the host to apply as its own
-input's `aria-activedescendant`, the same pattern `<lr-select>`/`<lr-combobox>` use for their
-own listbox.
+equivalent). On platforms accepting cross-root ARIA element reflection, the host's own input keeps
+focus and `syncActiveDescendant()` points it at the active option. Where that reference is rejected,
+`focusActiveOption()` moves real focus into this component's shadow listbox so the focus owner and
+option share one tree scope. A string `aria-activedescendant` cannot resolve from a host input in
+the document into an option in this component's shadow root.
 
 **Properties:**
 - `anchor?: HTMLElement` (attribute: false) — the element to position the popup relative to. A
@@ -38,18 +39,26 @@ own listbox.
 - `filteredItems: MentionItem[]` — read-only getter; `items` filtered by `query` via `filter` (or
   the built-in default). Empty `query` returns `items` unfiltered.
 - `activeDescendantId: string | null` — read-only getter; the `id` of the currently-highlighted
-  row, or `null` while closed or when `filteredItems` is empty.
-- `listboxId: string` — read-only getter; the `id` of the `role="listbox"` element, for a host that
-  also wants to wire `aria-controls`.
+  internal row, or `null` while closed or when `filteredItems` is empty. Useful for diagnostics and
+  same-tree consumers; do not copy it to an external control as a string IDREF.
+- `activeDescendantElement: HTMLElement | null` — read-only getter; the highlighted shadow option
+  for the platform's element-reference ARIA API.
+- `listboxId: string` — read-only getter; the internal `id` of the `role="listbox"` element. Like
+  `activeDescendantId`, it cannot form a cross-shadow string IDREF from a host input.
 
-**Methods:** `handleKeyDown(e: KeyboardEvent): boolean` — the host's own text-control `keydown`
-handler calls this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight) and
-`Enter`/`Tab` (commits the highlighted row) — both pairs return `false` with no `preventDefault()`
-when `filteredItems` is empty, letting the keystroke fall through to the host's own control unchanged
-(e.g. the textarea's caret still moves to the next line on ArrowDown when there's nothing to
-navigate); `Escape` always closes with no selection and returns `true`. Returns `true` whenever the
-key was intercepted (`preventDefault()` already called) and the host should not also act on it,
-`false` otherwise (including for any key this method doesn't recognize).
+**Methods:**
+- `handleKeyDown(e: KeyboardEvent): boolean` — the host's own text-control `keydown` handler calls
+  this while the popover is open. Handles `ArrowDown`/`ArrowUp` (moves the highlight) and
+  `Enter`/`Tab` (commits the highlighted row) — both pairs return `false` with no
+  `preventDefault()` when `filteredItems` is empty, letting the keystroke fall through to the
+  host's own control unchanged. `Escape` closes with no selection. Returns `true` whenever the key
+  was intercepted and `false` for keys the method does not recognize.
+- `syncActiveDescendant(control: HTMLElement): boolean` — clears any string
+  `aria-activedescendant`, then applies `ariaActiveDescendantElement` when the platform accepts the
+  cross-root reference. Returns whether that reference was accepted.
+- `focusActiveOption(): Promise<boolean>` — same-tree fallback after a consumed navigation key
+  when `syncActiveDescendant()` returns `false`. Focuses the active option, lets the popover handle
+  subsequent navigation, and restores focus to `anchor` when the popover closes.
 
 **Exported types:** `MentionItem { id: string; label: string; description?: string; icon?: string
 }`; `MentionFilter = (item: MentionItem, query: string) => boolean`; `MentionSelectDetail { id:
@@ -91,7 +100,13 @@ available space. See `lr-tour` for the shared-clamp note.
   const popover = document.getElementById('mentions');
 
   textarea.addEventListener('keydown', (e) => {
-    if (popover.open && popover.handleKeyDown(e)) return; // consumed
+    if (popover.open && popover.handleKeyDown(e)) {
+      if (!popover.syncActiveDescendant(textarea) &&
+          (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        void popover.focusActiveOption();
+      }
+      return;
+    }
   });
   textarea.addEventListener('input', () => {
     popover.anchor = textarea;
@@ -101,6 +116,7 @@ available space. See `lr-tour` for the shared-clamp note.
     ];
     popover.query = 'a'; // detected since the trigger character
     popover.open = true;
+    popover.updateComplete.then(() => popover.syncActiveDescendant(textarea));
   });
 
   popover.addEventListener('lr-mention-select', (e) => {
@@ -111,11 +127,11 @@ available space. See `lr-tour` for the shared-clamp note.
 
 Integration is entirely the host's responsibility: detect a mention/command trigger in the host's
 own `input` handling, set `anchor`/`items`/`query` and flip `open = true`, forward every `keydown`
-through `handleKeyDown()` while open, and keep the host's own input's `aria-activedescendant` (and
-optionally `aria-controls`, via `listboxId`) in sync with `activeDescendantId`. Setting `open =
-false` whenever the query stops looking like an active mention context (a space typed, the trigger
-deleted, the input blurred, …) is also the host's job — `lr-mention-close` fires automatically
-from that, there is no separate "tell it to close" call needed.
+through `handleKeyDown()` while open, and call `syncActiveDescendant()` after opening and after each
+consumed navigation key. If it returns `false`, call `focusActiveOption()` after the first consumed
+ArrowUp/ArrowDown so the fallback owns navigation from then on. Setting `open = false` whenever the
+query stops looking like an active mention context (a space typed, the trigger deleted, the input
+blurred, …) is also the host's job — `lr-mention-close` fires automatically from that.
 
 Positioning measures exactly where the caret currently paints via a hidden-mirror-element technique
 (`caretClientRect()`) and positions against that single point with `internal/positioner.js`'s
@@ -127,6 +143,9 @@ fresh `query` is the proxy for "the caret may have moved").
 - a host-level `aria-label` attribute on `<lr-mention-popover>` now takes priority over `label`
   (and its localized default) when resolving `[part="listbox"]`'s accessible name — previously it
   was silently ignored. Matches the same fallback on `<lr-combobox>`/`<lr-table>`.
+- Never copy `activeDescendantId` or `listboxId` onto a document-owned control as a string ARIA
+  IDREF; shadow-root IDs are outside that control's tree scope. Use `syncActiveDescendant()` and its
+  `focusActiveOption()` fallback.
 - The popover opens pre-highlighted on the top match (index 0), unlike `<lr-combobox>`'s own
   listbox which opens with nothing highlighted (`-1`) — a bare Enter right after opening commits
   immediately.

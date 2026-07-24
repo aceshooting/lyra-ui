@@ -2,6 +2,8 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { finiteNumber } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { RetrievalChunk } from '../../../ai/types.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
@@ -81,17 +83,6 @@ function toLyraChunk(chunk: RetrievalChunk): LyraChunk {
   return { id: chunk.id, text: chunk.text, score: chunk.score, sourceId: chunk.source.id, title: chunk.source.name };
 }
 
-function formatMetadataValue(value: unknown): string {
-  if (value == null) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-
 export interface LyraRetrievalTraceEventMap {
   'lr-stage-select': CustomEvent<{ id: string }>;
   'lr-stage-toggle': CustomEvent<{ id: string; expanded: boolean }>;
@@ -136,7 +127,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   /** Ids of stages whose evidence panel is open. Absence means collapsed -- every stage starts collapsed. */
   @state() private expandedStageIds = new Set<string>();
 
-  private readonly evidenceIdBase = nextId('retrieval-trace');
+  private readonly evidenceDomIds = new WeakMap<RetrievalStage, string>();
 
   private stageLabel(stage: RetrievalStage): string {
     if (stage.label) return stage.label;
@@ -167,6 +158,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   }
 
   private onStageSelect = (e: CustomEvent<{ id: string }>): void => {
+    e.stopPropagation();
     const { id } = e.detail;
     this.emit('lr-stage-select', { id });
     // Selecting a stage in the timeline opens its evidence panel the first time (a "click a
@@ -209,7 +201,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
               ([key, value]) =>
                 html`<div part="evidence-metadata-row">
                   <dt part="evidence-metadata-key">${key}</dt>
-                  <dd part="evidence-metadata-value">${formatMetadataValue(value)}</dd>
+                  <dd part="evidence-metadata-value">${this.formatMetadataValue(value)}</dd>
                 </div>`,
             )}
           </dl>`
@@ -217,10 +209,32 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     `;
   }
 
+  private formatMetadataValue(value: unknown): string {
+    if (value == null) return '';
+    if (typeof value === 'string' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'number') {
+      return getNumberFormat(this.effectiveLocale).format(finiteNumber(value, 0));
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private evidenceDomId(stage: RetrievalStage): string {
+    let id = this.evidenceDomIds.get(stage);
+    if (!id) {
+      id = nextId('retrieval-trace-evidence');
+      this.evidenceDomIds.set(stage, id);
+    }
+    return id;
+  }
+
   private renderEvidenceRow(stage: RetrievalStage): TemplateResult | typeof nothing {
     if (!hasEvidence(stage.evidence)) return nothing;
     const expanded = this.expandedStageIds.has(stage.id);
-    const bodyId = `${this.evidenceIdBase}-${stage.id}`;
+    const bodyId = this.evidenceDomId(stage);
     const label = this.stageLabel(stage);
     return html`
       <div part="evidence-row" data-id=${stage.id} ?data-active=${this.activeStageId === stage.id}>

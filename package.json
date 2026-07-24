@@ -56,6 +56,7 @@
     "maplibre-gl": "^6.0.0",
     "playwright": "^1.61.1",
     "publint": "^0.3.22",
+    "react": "^19.2.0",
     "secretlint": "^13.0.4",
     "storybook": "^10.5.3",
     "tailwindcss": "^4.3.3",

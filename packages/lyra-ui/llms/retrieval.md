@@ -1201,8 +1201,10 @@ Both `RetryEventDetail` and `CancelEventDetail` come from `@aceshooting/lyra-ui/
 per-item stage label), `item-progress`,
 `item-chunk-count`, `item-embedding-status` (the "N of M chunks embedded" text, only once both
 `chunkCount` and `embeddedChunkCount` are set), `item-attempts` (only once `attempts > 0`),
-`item-error` (only for `stage="failed"` with `error` set), `item-actions`, `retry-button`,
-`cancel-button`, `empty`.
+`item-error` (only for `stage="failed"` with `error` set), `failure-live` (the visually hidden
+assertive region that announces only failures added or transitioned after mount; historical failed
+rows remain visible without being re-announced), `item-actions`, `retry-button`, `cancel-button`,
+`empty`.
 
 In virtualized mode (at or above `virtualizeThreshold`) the rows live in the internal
 `lr-virtual-list`'s shadow root, and `item`, `item-header`, `item-name`, `item-progress`,

@@ -4,9 +4,6 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { AgentStatusKind } from '../../../ai/types.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
-import '../../charts/chart/lite-chart.js';
-import '../../data/stat/stat.js';
-import '../../overlays/badge/badge.js';
 import { styles } from './agent-eval-dashboard.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -102,7 +99,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
               type="button"
               data-metric-id=${metric.id}
               aria-pressed=${active?.id === metric.id ? 'true' : 'false'}
-              aria-label=${`${metric.label}: ${value}`}
+              aria-label=${this.localize('chartValueLabel', undefined, { label: metric.label, value })}
               @click=${() => this.emit('lr-metric-change', { metricId: metric.id })}
             ><lr-stat appearance="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
