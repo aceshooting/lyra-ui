@@ -148377,6 +148377,17 @@
               }
             },
             {
+              "kind": "field",
+              "name": "wrapLabels",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When true, allows step labels to wrap when the effective orientation is vertical. The\ndefault preserves the single-line labels used by the original stepper contract; horizontal\nlabels remain single-line even when this property is enabled.",
+              "attribute": "wrap-labels",
+              "reflects": true
+            },
+            {
               "kind": "method",
               "name": "addEventListener",
               "return": {
@@ -148716,6 +148727,15 @@
               "default": "\"container\"",
               "description": "Which box `orientationBreakpoint` measures. `'container'` (the default) observes this\nstepper's own `[part=\"base\"]` inline size via `ResizeObserver`, comparing strictly `<`.\n`'viewport'` instead evaluates `matchMedia('(max-width: <breakpoint>)')`, which is inclusive\n(`<=`) -- native `max-width` semantics, deliberately, so the crossing point matches a CSS\n`@media` rule authored with the same length exactly.\n\nA stepper given a fixed width in a row layout cannot react to that row stacking by measuring\nitself -- its own width never changes. That case requires `'viewport'`, which also lets the\nbrowser resolve a `rem` breakpoint with real `@media` semantics.",
               "fieldName": "orientationBreakpointBasis"
+            },
+            {
+              "name": "wrap-labels",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "When true, allows step labels to wrap when the effective orientation is vertical. The\ndefault preserves the single-line labels used by the original stepper contract; horizontal\nlabels remain single-line even when this property is enabled.",
+              "fieldName": "wrapLabels"
             }
           ],
           "superclass": {

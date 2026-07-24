@@ -15552,6 +15552,15 @@
                   "OrientationBreakpointBasis"
                 ]
               }
+            },
+            {
+              "name": "wrap-labels",
+              "description": "When true, allows step labels to wrap when the effective orientation is vertical. The\ndefault preserves the single-line labels used by the original stepper contract; horizontal\nlabels remain single-line even when this property is enabled.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
             }
           ]
         },

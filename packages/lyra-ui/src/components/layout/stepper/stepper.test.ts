@@ -315,6 +315,47 @@ describe("lr-stepper", () => {
     await expect(el).to.be.accessible();
   });
 
+  it("keeps labels single-line by default, and wraps them only for an opted-in vertical axis", async () => {
+    const el = (await fixture(
+      html`<lr-stepper orientation="vertical" .steps=${steps()}></lr-stepper>`
+    )) as LyraStepper;
+    const label = stepButtons(el)[0]!.querySelector('[part="step-label"]')!;
+    expect(el.wrapLabels).to.be.false;
+    expect(getComputedStyle(label).whiteSpace).to.equal("nowrap");
+
+    el.wrapLabels = true;
+    await el.updateComplete;
+    expect(el.hasAttribute("wrap-labels")).to.be.true;
+    expect(getComputedStyle(label).whiteSpace).to.equal("normal");
+    expect(getComputedStyle(label).minInlineSize).to.equal("0px");
+    expect(getComputedStyle(label).overflowWrap).to.equal("anywhere");
+
+    el.orientation = "horizontal";
+    await el.updateComplete;
+    expect(getComputedStyle(label).whiteSpace).to.equal("nowrap");
+  });
+
+  it("follows the effective responsive axis when wrapping labels", async () => {
+    const el = (await fixture(
+      html`<lr-stepper
+        wrap-labels
+        orientation="horizontal"
+        orientation-breakpoint="99999px"
+        orientation-breakpoint-basis="viewport"
+        .steps=${steps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const label = stepButtons(el)[0]!.querySelector('[part="step-label"]')!;
+    await el.updateComplete;
+    expect(el.effectiveOrientation).to.equal("vertical");
+    expect(getComputedStyle(label).whiteSpace).to.equal("normal");
+
+    el.orientationBreakpoint = "1px";
+    await el.updateComplete;
+    expect(el.effectiveOrientation).to.equal("horizontal");
+    expect(getComputedStyle(label).whiteSpace).to.equal("nowrap");
+  });
+
   it('forwards a host aria-label to the role="list" element, and omits the attribute when unset', async () => {
     const el = (await fixture(
       html`<lr-stepper .steps=${steps()}></lr-stepper>`

@@ -58,6 +58,10 @@ decides whether/how `steps` changes in response.
   identically-named contract.
 - `narrowOrientation: 'horizontal' | 'vertical' = 'vertical'` (reflected, attribute
   `narrow-orientation`)
+- `wrapLabels: boolean = false` (reflected, attribute `wrap-labels`) — when true, allows long
+  labels to wrap when the effective orientation is vertical. The default preserves single-line
+  labels, and horizontal labels remain single-line even when this is enabled. Set this when a
+  narrow or localized vertical stepper would otherwise clip labels or overflow its allocation.
 - `effectiveOrientation: 'horizontal' | 'vertical'` (readonly getter) — the live layout/navigation
   axis actually in effect; identical to `orientation` whenever `orientationBreakpoint` is unset or
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while

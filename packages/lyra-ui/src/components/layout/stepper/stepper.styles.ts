@@ -150,4 +150,17 @@ export const styles = css`
   [part="step-label"] {
     white-space: nowrap;
   }
+  :host([wrap-labels][orientation="vertical"]) [part="step-label"],
+  :host([wrap-labels][data-effective-orientation="vertical"]) [part="step-label"] {
+    min-inline-size: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  /* An active breakpoint can temporarily make an authored vertical stepper horizontal. Keep the
+     opt-in vertical-only, and let the later effective-axis rule win over the authored-axis rule. */
+  :host([wrap-labels][data-effective-orientation="horizontal"]) [part="step-label"] {
+    min-inline-size: auto;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
 `;

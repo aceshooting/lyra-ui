@@ -35,6 +35,24 @@ const lockedStepsWithTitle: StepItem[] = [
   },
 ];
 
+const longLabelSteps: StepItem[] = [
+  {
+    id: 'account',
+    label: 'Account and organization details',
+    state: 'completed',
+  },
+  {
+    id: 'profile',
+    label: 'Profile and notification preferences',
+    state: 'current',
+  },
+  {
+    id: 'review',
+    label: 'Review and confirm everything before submitting',
+    state: 'pending',
+  },
+];
+
 const meta: Meta = {
   title: 'Stepper',
   component: 'lr-stepper',
@@ -57,6 +75,27 @@ export const Horizontal: Story = {
 
 export const Vertical: Story = {
   render: () => html`<lr-stepper orientation="vertical" .steps=${wizardSteps}></lr-stepper>`,
+};
+
+export const WrappedVerticalLabels: Story = {
+  name: 'Wrapped vertical labels',
+  render: () => html`
+    <div style="inline-size: 12rem">
+      <lr-stepper
+        orientation="vertical"
+        wrap-labels
+        .steps=${longLabelSteps}
+      ></lr-stepper>
+    </div>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Set `wrap-labels` to allow long labels to wrap when the stepper is vertical. Horizontal labels remain single-line.',
+      },
+    },
+  },
 };
 
 export const WithError: Story = {

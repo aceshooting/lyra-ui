@@ -166,6 +166,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   @property({ reflect: true, attribute: "narrow-orientation" })
   narrowOrientation: StepperOrientation = "vertical";
 
+  /** When true, allows step labels to wrap when the effective orientation is vertical. The
+   *  default preserves the single-line labels used by the original stepper contract; horizontal
+   *  labels remain single-line even when this property is enabled. */
+  @property({ type: Boolean, reflect: true, attribute: "wrap-labels" })
+  wrapLabels = false;
+
   /** Accessible name for the `role="list"` step strip. Attribute-reflects from a host-level
    *  `aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS
    *  property. Unset, the list renders without an `aria-label` (the role carries no localized
