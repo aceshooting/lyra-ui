@@ -7,21 +7,23 @@
 # Packages under packages/* are versioned and released independently, driven
 # entirely by pending changesets in .changeset/. Steps: ensure main is clean
 # and up to date (offering to commit+push pending work instead of failing)
-# -> (optionally) upgrade all workspace deps to latest -> ask which of the
+# -> (optionally) run scripts/upgrade.sh for all workspace deps -> ask which of the
 # packages with pending changesets to release this run -> consume changesets
 # for just those packages -> per-package lint/test/build/manifest -> print a
-# full review (versions, bump kind, tags, artifacts) and confirm -> pack ->
+# full review (versions, bump kind, tags, artifacts) and confirm. Before the
+# review, the sibling website's scripts/upgrade.sh is run so its dependency
+# manifests, generated Lyra corpus, and verification are current -> pack ->
 # commit -> tag each as "<name>@<version>" -> push -> GitHub Release per
 # package with its artifacts. Creating that GitHub Release is what triggers
 # the actual `npm publish` -- it runs in .github/workflows/publish.yml, not
 # in this script, so it gets npm provenance (only possible from CI).
 #
 # Flags:
-#   --upgrade-deps   Run `pnpm -r up --latest` before the version bump (off by
+#   --upgrade-deps   Run scripts/upgrade.sh before the version bump (off by
 #                     default). Shows a `git diff` of every affected
 #                     package.json/lockfile and requires a separate typed
-#                     confirmation before lint/test/build proceed, since this
-#                     can silently pull in unrelated major-version bumps.
+#                     confirmation before the release proceeds, since this can
+#                     silently pull in unrelated major-version bumps.
 #
 # The sibling website is deployed separately after the release. Its build runs
 # ../lyra-ui.com/scripts/build-docs.mjs, which regenerates this Storybook and
@@ -33,14 +35,18 @@ GH_HOSTNAME="github.com"
 GH_ACCOUNT="aceshooting"
 
 UPGRADE_DEPS=0
+SKIP_SITE_UPGRADE=0
 for arg in "$@"; do
   case "$arg" in
     --upgrade-deps)
       UPGRADE_DEPS=1
       ;;
+    --skip-site-upgrade)
+      SKIP_SITE_UPGRADE=1
+      ;;
     *)
       echo "Error: unrecognized argument '$arg'." >&2
-      echo "Usage: $(basename "${BASH_SOURCE[0]}") [--upgrade-deps]" >&2
+      echo "Usage: $(basename "${BASH_SOURCE[0]}") [--upgrade-deps] [--skip-site-upgrade]" >&2
       exit 1
       ;;
   esac
@@ -236,9 +242,14 @@ for dir in "${PKG_DIRS[@]}"; do
 done
 
 if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
+  WORKSPACE_UPGRADE_SCRIPT="$ROOT_DIR/scripts/upgrade.sh"
+  if [[ ! -f "$WORKSPACE_UPGRADE_SCRIPT" ]]; then
+    echo "Error: workspace upgrade script not found at $WORKSPACE_UPGRADE_SCRIPT." >&2
+    exit 1
+  fi
   echo
   echo "==> Upgrading all workspace dependencies to latest (--upgrade-deps)"
-  pnpm -r up --latest
+  bash "$WORKSPACE_UPGRADE_SCRIPT"
 
   echo
   echo "==> Dependency upgrade diff"
@@ -251,7 +262,7 @@ if [[ "$UPGRADE_DEPS" -eq 1 ]]; then
   fi
 else
   echo
-  echo "==> Skipping dependency upgrade (pass --upgrade-deps to run 'pnpm -r up --latest')"
+  echo "==> Skipping dependency upgrade (pass --upgrade-deps to run scripts/upgrade.sh)"
 fi
 
 echo
@@ -304,6 +315,20 @@ for dir in "${RELEASE_DIRS[@]}"; do
   echo "==> [$name] Generate manifest"
   pnpm --filter "$name" --if-present run manifest
 done
+
+if [[ "$SKIP_SITE_UPGRADE" -eq 0 ]]; then
+  SITE_UPGRADE_SCRIPT="$ROOT_DIR/../lyra-ui.com/scripts/upgrade.sh"
+  if [[ ! -f "$SITE_UPGRADE_SCRIPT" ]]; then
+    echo "Error: sibling site upgrade script not found at $SITE_UPGRADE_SCRIPT." >&2
+    exit 1
+  fi
+  echo
+  echo "==> Upgrading and verifying sibling lyra-ui.com before publishing"
+  bash "$SITE_UPGRADE_SCRIPT"
+else
+  echo
+  echo "==> Skipping sibling lyra-ui.com upgrade (--skip-site-upgrade)"
+fi
 
 # ---------------------------------------------------------------------------
 # Full review before doing anything irreversible.
