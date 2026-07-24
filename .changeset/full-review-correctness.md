@@ -13,3 +13,4 @@ across the component families.
   reconnect behavior while preserving empty and error states.
 - Fix container-responsive layouts, hover/focus parity, reduced-motion behavior, theme-token
   resolution, and viewer allocation/geometry updates.
+- Avoid quadratic DOM walks when painting capped DOCX search matches.

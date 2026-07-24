@@ -64,10 +64,15 @@ export const ForcedOverlayFullscreen: Story = {
 
 export const ForcedOverlayBottomSheet: Story = {
   name: 'mode="overlay" variant="bottom-sheet"',
-  render: () => html`
+  render: (_args, context) => html`
     <div>
       <button @click=${openPanel}>Open panel</button>
-      <lr-responsive-panel mode="overlay" variant="bottom-sheet" label="Share" open>
+      <lr-responsive-panel
+        mode="overlay"
+        variant="bottom-sheet"
+        label="Share"
+        .open=${context.viewMode !== 'docs'}
+      >
         <span slot="header" style="font-weight: 600;">Share</span>
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
           <button dir="auto">Copy link</button>

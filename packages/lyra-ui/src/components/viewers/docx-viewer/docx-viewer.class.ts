@@ -94,6 +94,18 @@ function pointAtOffset(entries: DocxTextIndexEntry[], offset: number): { node: T
  *  boundary, not just a single text node. */
 function wrapRangeInSearchMarks(range: Range, part: string): HTMLElement[] {
   const doc = range.startContainer.ownerDocument ?? document;
+  if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+    const textNode = range.startContainer as Text;
+    let target = textNode;
+    if (range.endOffset < target.data.length) target.splitText(range.endOffset);
+    if (range.startOffset > 0) target = target.splitText(range.startOffset);
+    if (!target.data) return [];
+    const mark = doc.createElement('mark');
+    mark.setAttribute('part', part);
+    target.parentNode?.insertBefore(mark, target);
+    mark.appendChild(target);
+    return [mark];
+  }
   const ancestor = range.commonAncestorContainer;
   const walkRoot = ancestor.nodeType === Node.TEXT_NODE ? ancestor.parentNode! : ancestor;
   const walker = doc.createTreeWalker(walkRoot, NodeFilter.SHOW_TEXT);
