@@ -10,7 +10,7 @@ import {
   LYRA_DEFAULT_STRINGS,
   type LyraLocaleStrings,
   type LyraMessageKey,
-} from '@aceshooting/lyra-ui/localization.js';
+} from '../src/localization.js';
 
 const strings: LyraLocaleStrings = { close: 'Fermer' };
 const key: LyraMessageKey = 'close';
