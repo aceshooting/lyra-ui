@@ -4,6 +4,14 @@ import './page-rail.js';
 import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 class StubViewer extends EventTarget implements PageThumbnailSource {
   page = 1;
   renderCalls: { page: number; width?: number }[] = [];
@@ -88,7 +96,7 @@ describe('lr-page-rail', () => {
     try {
       const el = await fixture<LyraPageRail>(html`<lr-page-rail for="doc-source" page-count="2"></lr-page-rail>`);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.exist;
+      expect(el.shadowRoot!.querySelector('lr-virtual-list') !== null).to.be.true;
     } finally {
       viewer.remove();
     }
@@ -194,14 +202,15 @@ describe('lr-page-rail', () => {
     const viewer = new ReloadingViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
     viewer.emitLoad(1);
-    await waitUntil(() => viewer.calls.length === 1);
-    const staleCanvas = viewer.calls[0]!.canvas;
+    await waitUntil(() => viewer.calls.length >= 1);
+    const firstCallCount = viewer.calls.length;
+    const staleCanvases = viewer.calls.map((call) => call.canvas);
 
     viewer.document = 'second';
     viewer.emitLoad(1);
-    await waitUntil(() => viewer.calls.length === 2);
-    const currentCanvas = viewer.calls[1]!.canvas;
-    expect(currentCanvas).to.not.equal(staleCanvas);
+    await waitUntil(() => viewer.calls.length > firstCallCount);
+    const currentCanvas = viewer.calls.at(-1)!.canvas;
+    expect(staleCanvases.includes(currentCanvas)).to.be.false;
     expect(currentCanvas.dataset['document']).to.equal('second');
 
     firstRender.resolve();
@@ -228,8 +237,8 @@ describe('lr-page-rail', () => {
       return list?.shadowRoot?.querySelector('lr-file-icon') != null;
     });
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    expect(list.shadowRoot!.querySelector('lr-file-icon')).to.exist;
-    expect(list.shadowRoot!.querySelector('canvas')).to.not.exist;
+    expect(list.shadowRoot!.querySelector('lr-file-icon') !== null).to.be.true;
+    expect(list.shadowRoot!.querySelector('canvas') === null).to.be.true;
   });
 
   it('typing a digit jumps to that page in mediated mode', async () => {
@@ -355,7 +364,7 @@ describe('lr-page-rail', () => {
     viewer.emitLoad(1);
     await waitUntil(() => viewer.renderCalls.some((call) => (call.width ?? Infinity) <= 120));
     expect(viewer.renderCalls.at(-1)!.width).to.be.at.most(120);
-    expect(el.shadowRoot!.querySelector('[part="base"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="base"]') !== null).to.be.true;
   });
 
   it('sanitizes a negative or NaN thumb-width before it reaches renderPageThumbnail', async () => {

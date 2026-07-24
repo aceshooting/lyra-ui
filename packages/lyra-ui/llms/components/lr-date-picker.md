@@ -99,9 +99,11 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `<input>`'s computed accessible name; wins over `label`/`placeholder`/the localized `date`
   fallback in that order. Attribute-reflects from a host-level `aria-label` so a plain-markup
   consumer gets ARIA-name forwarding without setting a JS property.
-- `clearLabel: string = 'Clear'` (attribute `clear-label` — accessible label for the clear button)
-- `openLabel: string = 'Open calendar'` (attribute `open-label` — accessible label for the
-  calendar-toggle button)
+- `clearLabel: string = ''` (attribute `clear-label` — accessible label for the clear button;
+  empty uses the localized `clear` message, whose English fallback is `"Clear"`)
+- `openLabel: string = ''` (attribute `open-label` — accessible label for the calendar-toggle
+  button; empty uses the localized `openCalendar` message, whose English fallback is
+  `"Open calendar"`)
 - `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
   `role="dialog"` calendar popover)
 - `spellcheck: boolean = true` — forwarded to the internal `<input>`

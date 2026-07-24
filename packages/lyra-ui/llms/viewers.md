@@ -898,7 +898,9 @@ re-click of the same source citation).
 **CSS parts:** `base` (the absolutely-positioned overlay, inset 0), `rect` (one visual highlight
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
 (transparent activation geometry with a minimum pointer/focus area independent of the visual
-rectangle).
+rectangle). When more than one logical highlight would create overlapping minimum hit areas, the
+individual targets are replaced by `highlight-actions` (a non-overlapping action list) containing
+one `highlight-action` button per rendered highlight.
 
 ## `lr-page-rail`
 

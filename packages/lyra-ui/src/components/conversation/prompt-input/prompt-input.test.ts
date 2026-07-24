@@ -1,8 +1,9 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import type { LyraAttachmentChip } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraChatComposer } from '../chat-composer/chat-composer.class.js';
 import type { LyraMentionPopover } from '../../utility/mention-popover/mention-popover.class.js';
 import './prompt-input.js';
-import type { LyraPromptInput } from './prompt-input.class.js';
+import type { LyraPromptInput, PromptInputAttachment } from './prompt-input.class.js';
 
 it('composes attachments, model, voice, sources, queue, and the chat composer', async () => {
   const el = (await fixture(html`<lr-prompt-input
@@ -143,6 +144,107 @@ it('emits attachment additions and removals as controlled requests', async () =>
     new CustomEvent('lr-remove', { bubbles: true, composed: true, detail: { id: 'doc-1' } }),
   );
   expect((await removed as CustomEvent<{ id: string }>).detail.id).to.equal('doc-1');
+});
+
+it('translates composed control events from its host without leaking the raw child events', async () => {
+  const el = (await fixture(html`<lr-prompt-input
+    .attachments=${[{
+      id: 'doc-1',
+      name: 'report.pdf',
+      mimeType: 'application/pdf',
+      uri: 'https://example.test/report.pdf',
+    }]}
+    .modelCatalog=${['fast']}
+    .sources=${[{ id: 'doc-1', label: 'Report' }]}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  const modelSelect = el.shadowRoot!.querySelector('lr-model-select')!;
+  const sourcePicker = el.shadowRoot!.querySelector('lr-source-picker')!;
+  const attachment = el.shadowRoot!.querySelector('lr-attachment-chip')!;
+
+  let leakedModelChanges = 0;
+  el.addEventListener('lr-change', () => leakedModelChanges++);
+  const modelChanged = oneEvent(el, 'lr-model-change');
+  modelSelect.dispatchEvent(new CustomEvent('lr-change', {
+    bubbles: true,
+    composed: true,
+    detail: { value: 'fast', inCatalog: true },
+  }));
+  const modelEvent = await modelChanged as CustomEvent<{ value: string; inCatalog: boolean }>;
+  expect(modelEvent.target === el).to.be.true;
+  expect(modelEvent.detail).to.deep.equal({ value: 'fast', inCatalog: true });
+  expect(leakedModelChanges).to.equal(0);
+
+  const sourceTargets: string[] = [];
+  el.addEventListener('lr-sources-change', (event) => {
+    sourceTargets.push((event.target as Element).tagName);
+  });
+  sourcePicker.dispatchEvent(new CustomEvent('lr-sources-change', {
+    bubbles: true,
+    composed: true,
+    detail: { selectedIds: ['doc-1'] },
+  }));
+  expect(sourceTargets).to.deep.equal(['LR-PROMPT-INPUT']);
+
+  const previewed = oneEvent(el, 'lr-attachment-preview');
+  attachment.dispatchEvent(new CustomEvent('lr-preview', {
+    bubbles: true,
+    composed: true,
+    detail: {
+      id: 'doc-1',
+      name: 'report.pdf',
+      mimeType: 'application/pdf',
+      src: 'https://example.test/report.pdf',
+    },
+  }));
+  const previewEvent = await previewed as CustomEvent<{ id: string; src: string }>;
+  expect(previewEvent.target === el).to.be.true;
+  expect(previewEvent.detail.id).to.equal('doc-1');
+  expect(previewEvent.detail.src).to.equal('https://example.test/report.pdf');
+});
+
+it('forwards attachment lifecycle state and exposes a translated retry request', async () => {
+  const attachments: PromptInputAttachment[] = [
+    {
+      id: 'failed-doc',
+      name: 'failed.pdf',
+      status: 'error',
+    },
+    {
+      id: 'uploading-doc',
+      name: 'uploading.pdf',
+      status: 'uploading',
+      progress: 42,
+    },
+  ];
+  const el = (await fixture(html`<lr-prompt-input
+    .attachments=${attachments}
+  ></lr-prompt-input>`)) as LyraPromptInput;
+  const chips = Array.from(
+    el.shadowRoot!.querySelectorAll('lr-attachment-chip'),
+  ) as LyraAttachmentChip[];
+  const failed = chips[0]!;
+  const uploading = chips[1]!;
+  await Promise.all(chips.map((chip) => chip.updateComplete));
+
+  expect(failed.status).to.equal('error');
+  expect(uploading.status).to.equal('uploading');
+  expect(uploading.progress).to.equal(42);
+  expect(
+    uploading.shadowRoot!.querySelector('[part="progress"]')?.getAttribute('aria-valuenow'),
+  ).to.equal('42');
+
+  let rawRetries = 0;
+  el.addEventListener('lr-retry', () => rawRetries++);
+  const retried = oneEvent(el, 'lr-attachment-retry');
+  failed.dispatchEvent(new CustomEvent('lr-retry', {
+    bubbles: true,
+    composed: true,
+    detail: { id: 'failed-doc' },
+  }));
+  const retryEvent = await retried as CustomEvent<{ id: string }>;
+  expect(retryEvent.target === el).to.be.true;
+  expect(retryEvent.detail.id).to.equal('failed-doc');
+  expect(rawRetries).to.equal(0);
 });
 
 it('gates every composed interaction while disabled and forwards host click to the composer', async () => {

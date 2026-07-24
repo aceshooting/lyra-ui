@@ -157,7 +157,7 @@ async function chooseToolbarTheme(page, currentTheme, nextTheme) {
   await themeButton.waitFor({ state: 'visible', timeout: 10_000 });
   await themeButton.click();
 
-  const option = page.getByRole('menuitem').filter({ hasText: new RegExp(`^${nextTheme}$`, 'i') }).first();
+  const option = page.getByRole('option').filter({ hasText: new RegExp(`^${nextTheme}$`, 'i') }).first();
   await option.waitFor({ state: 'visible', timeout: 10_000 });
   await option.click();
 }
@@ -255,9 +255,10 @@ async function main() {
 
   try {
     const docsFrame = await waitForDocs(page, baseUrl, 'checkbox--docs', 'dark');
+    await docsFrame.waitForSelector('lr-checkbox', { timeout: 15_000 });
     const darkDocsTheme = await docsFrame.evaluate(() => {
       const wrapper = document.querySelector('.sbdocs-wrapper');
-      const heading = document.querySelector('.sbdocs-title, h1');
+      const heading = document.querySelector('.sbdocs-title');
       const checkbox = document.querySelector('lr-checkbox');
       const checkboxLabel = checkbox?.shadowRoot?.querySelector('[part="label"]');
       return {
@@ -290,7 +291,7 @@ async function main() {
     await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)');
     const lightDocsTheme = await docsFrame.evaluate(() => {
       const wrapper = document.querySelector('.sbdocs-wrapper');
-      const heading = document.querySelector('.sbdocs-title, h1');
+      const heading = document.querySelector('.sbdocs-title');
       return {
         wrapperBackground: wrapper ? getComputedStyle(wrapper).backgroundColor : '',
         headingColor: heading ? getComputedStyle(heading).color : '',
@@ -298,7 +299,7 @@ async function main() {
     });
     if (
       lightDocsTheme.wrapperBackground !== 'rgb(255, 255, 255)' ||
-      lightDocsTheme.headingColor !== 'rgb(23, 32, 51)'
+      lightDocsTheme.headingColor !== 'rgb(26, 26, 26)'
     ) {
       throw new Error(`light Docs theme did not follow the toolbar: ${JSON.stringify(lightDocsTheme)}`);
     }
@@ -310,16 +311,19 @@ async function main() {
     const lightLanding = await landingFrame.evaluate(() => {
       const landing = document.querySelector('.lr-landing');
       const heading = document.querySelector('.lr-landing h1');
+      const primaryButtonText = document.querySelector('.lr-landing__button--primary p');
       return {
         dataset: document.documentElement.dataset.lyraTheme,
         backgroundImage: landing ? getComputedStyle(landing).backgroundImage : '',
-        headingColor: heading ? getComputedStyle(heading).color : '',
+        headingBackground: heading ? getComputedStyle(heading).backgroundImage : '',
+        primaryButtonColor: primaryButtonText ? getComputedStyle(primaryButtonText).color : '',
       };
     });
     if (
       lightLanding.dataset !== 'light' ||
       lightLanding.backgroundImage === 'none' ||
-      lightLanding.headingColor !== 'rgb(23, 32, 51)'
+      lightLanding.headingBackground === 'none' ||
+      lightLanding.primaryButtonColor !== 'rgb(255, 255, 255)'
     ) {
       throw new Error(`Introduction did not render its light theme: ${JSON.stringify(lightLanding)}`);
     }
@@ -327,7 +331,7 @@ async function main() {
     const highContrastLandingFrame = await waitForDocs(page, baseUrl, 'introduction--docs', 'high-contrast');
     const highContrastLanding = await highContrastLandingFrame.evaluate(() => {
       const landing = document.querySelector('.lr-landing');
-      const panel = document.querySelector('.lr-landing__panel');
+      const panel = document.querySelector('.lr-landing__showcase');
       const heading = document.querySelector('.lr-landing h1');
       return {
         dataset: document.documentElement.dataset.lyraTheme,

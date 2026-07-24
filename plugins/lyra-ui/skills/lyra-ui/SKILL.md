@@ -4,7 +4,7 @@ description: >
   Use when writing or reviewing code that imports @aceshooting/lyra-ui, uses any lr-* custom
   element, or migrates a project off Web Awesome (wa-*) or Shoelace (sl-*) components. Covers
   component APIs (attributes, slots, events, parts, CSS custom properties), design-token theming,
-  localization, framework/TypeScript integration, and the wa-*/sl-* -> lr-* migration paths.
+  localization, framework/TypeScript integration, and migration paths from wa-*/sl-* to lr-*.
 ---
 
 # lyra-ui

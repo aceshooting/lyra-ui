@@ -24,7 +24,7 @@ import type { LyraHighlightLayer, HighlightLayerItem } from '../highlight-layer/
 import type { LyraAnchor, HighlightActivateDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { loadPdfJs, type PdfJsApi } from './pdf-loader.js';
 import { styles } from './pdf-viewer.styles.js';
-import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { getNumberFormat, getSegmenter } from '../../../internal/intl-cache.js';
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
@@ -78,33 +78,124 @@ interface PdfSearchMatch {
   length: number;
 }
 
-/** Collapses whitespace runs to single spaces and lower-cases for case-insensitive search, while
- *  keeping a normalized-index -> raw-index offset table so a match found in the normalized text can
- *  be mapped back to a range in the original `getPageText()` output for painting. */
-function normalizeForSearch(raw: string, locale: string): { text: string; rawOffsets: number[] } {
+interface NormalizedSearchText {
+  text: string;
+  /** Inclusive raw start for each UTF-16 unit in `text`. */
+  rawStarts: number[];
+  /** Exclusive raw end for each UTF-16 unit in `text`. */
+  rawEnds: number[];
+}
+
+interface SearchCaseSegment {
+  text: string;
+  start: number;
+  end: number;
+}
+
+function searchCaseFold(value: string, locale: string): string {
+  let lowered: string;
+  try {
+    lowered = value.toLocaleLowerCase(locale);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    lowered = value.toLowerCase();
+  }
+  // Unicode caseless matching treats the medial and final lowercase sigma forms as equivalent.
+  return lowered.replaceAll('ς', 'σ');
+}
+
+function searchCaseSegments(value: string, locale: string): SearchCaseSegment[] {
+  if (typeof Intl.Segmenter === 'function') {
+    let segments: Intl.Segments;
+    try {
+      segments = getSegmenter(locale, { granularity: 'grapheme' }).segment(value);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      segments = getSegmenter(undefined, { granularity: 'grapheme' }).segment(value);
+    }
+    return [...segments].map(({ segment, index }) => ({
+      text: segment,
+      start: index,
+      end: index + segment.length,
+    }));
+  }
+
+  const segments: SearchCaseSegment[] = [];
+  let start = 0;
+  for (const text of value) {
+    segments.push({ text, start, end: start + text.length });
+    start += text.length;
+  }
+  return segments;
+}
+
+/** Collapses whitespace runs to single spaces and locale-folds the complete string so contextual
+ *  Unicode casing is preserved. Start/end maps retain the raw range behind each folded UTF-16 unit;
+ *  an expanded grapheme maps every expansion unit to the complete raw grapheme so painted matches
+ *  never split or overrun the original PDF text layer. */
+function normalizeForSearch(raw: string, locale: string): NormalizedSearchText {
   let text = '';
-  const rawOffsets: number[] = [];
+  const rawStarts: number[] = [];
+  const rawEnds: number[] = [];
   let lastWasSpace = false;
   for (let i = 0; i < raw.length; i++) {
     const ch = raw[i]!;
     if (/\s/.test(ch)) {
       if (!lastWasSpace && text.length > 0) {
         text += ' ';
-        rawOffsets.push(i);
+        rawStarts.push(i);
+        rawEnds.push(i + 1);
         lastWasSpace = true;
       }
       continue;
     }
-    const folded = ch.toLocaleLowerCase(locale);
-    text += folded;
-    for (let offset = 0; offset < folded.length; offset++) rawOffsets.push(i);
+    text += ch;
+    rawStarts.push(i);
+    rawEnds.push(i + 1);
     lastWasSpace = false;
   }
   if (text.endsWith(' ')) {
     text = text.slice(0, -1);
-    rawOffsets.pop();
+    rawStarts.pop();
+    rawEnds.pop();
   }
-  return { text, rawOffsets };
+
+  const folded = searchCaseFold(text, locale);
+  if (folded.length === text.length) return { text: folded, rawStarts, rawEnds };
+
+  const segments = searchCaseSegments(text, locale);
+  const isolatedLength = segments.reduce(
+    (length, segment) => length + searchCaseFold(segment.text, locale).length,
+    0,
+  );
+  const foldedStarts: number[] = [];
+  const foldedEnds: number[] = [];
+  let foldedStart = 0;
+  for (const segment of segments) {
+    const foldedEnd =
+      segment.end === text.length
+        ? folded.length
+        : isolatedLength === folded.length
+          ? foldedStart + searchCaseFold(segment.text, locale).length
+          : searchCaseFold(text.slice(0, segment.end), locale).length;
+    const foldedLength = foldedEnd - foldedStart;
+    const rawLength = segment.end - segment.start;
+    if (foldedLength === rawLength) {
+      for (let offset = 0; offset < foldedLength; offset++) {
+        foldedStarts.push(rawStarts[segment.start + offset]!);
+        foldedEnds.push(rawEnds[segment.start + offset]!);
+      }
+    } else {
+      const rawStart = rawStarts[segment.start]!;
+      const rawEnd = rawEnds[segment.end - 1]!;
+      for (let offset = 0; offset < foldedLength; offset++) {
+        foldedStarts.push(rawStart);
+        foldedEnds.push(rawEnd);
+      }
+    }
+    foldedStart = foldedEnd;
+  }
+  return { text: folded, rawStarts: foldedStarts, rawEnds: foldedEnds };
 }
 
 export interface LyraPdfViewerEventMap extends LyraAnchorTargetEventMap {
@@ -774,12 +865,12 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
         continue;
       }
       if (generation !== this.searchGeneration) return this.searchMatches.length;
-      const { text, rawOffsets } = normalizeForSearch(raw, this.effectiveLocale);
+      const { text, rawStarts, rawEnds } = normalizeForSearch(raw, this.effectiveLocale);
       let from = 0;
       let idx: number;
       while ((idx = text.indexOf(normalizedQuery, from)) !== -1) {
-        const rawStart = rawOffsets[idx] ?? 0;
-        const rawEndExclusive = (rawOffsets[idx + normalizedQuery.length - 1] ?? rawStart) + 1;
+        const rawStart = rawStarts[idx] ?? 0;
+        const rawEndExclusive = rawEnds[idx + normalizedQuery.length - 1] ?? rawStart;
         matches.push({ page, start: rawStart, length: rawEndExclusive - rawStart });
         if (matches.length >= MAX_SEARCH_MATCHES) break;
         from = idx + Math.max(1, normalizedQuery.length);

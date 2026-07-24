@@ -287,16 +287,34 @@ describe('lr-retrieval-trace', () => {
     expect(waterfall.shadowRoot!.querySelector('lr-empty')).to.exist;
   });
 
-  it('uses instance-safe evidence ids for hostile caller-supplied stage ids', async () => {
+  it('uses instance- and occurrence-safe evidence ids for hostile and duplicate stages', async () => {
     const stage: RetrievalStage = {
       ...STAGES[0]!,
       id: 'raw id\" with spaces',
     };
-    const el = (await fixture(html`<lr-retrieval-trace .stages=${[stage]}></lr-retrieval-trace>`)) as LyraRetrievalTrace;
-    const toggle = el.shadowRoot!.querySelector('[part="evidence-toggle"]')!;
-    const controls = toggle.getAttribute('aria-controls')!;
-    expect(controls).to.not.include(stage.id);
-    expect(el.shadowRoot!.getElementById(controls)).to.equal(el.shadowRoot!.querySelector('[part="evidence-body"]'));
+    const wrapper = (await fixture(
+      html`<div>
+        <lr-retrieval-trace .stages=${[stage, stage]}></lr-retrieval-trace>
+        <lr-retrieval-trace .stages=${[stage]}></lr-retrieval-trace>
+      </div>`,
+    )) as HTMLDivElement;
+    const traces = [...wrapper.querySelectorAll('lr-retrieval-trace')] as LyraRetrievalTrace[];
+    const firstControls = [...traces[0]!.shadowRoot!.querySelectorAll('[part="evidence-toggle"]')].map(
+      (toggle) => toggle.getAttribute('aria-controls')!,
+    );
+    const secondControls = traces[1]!.shadowRoot!
+      .querySelector('[part="evidence-toggle"]')!
+      .getAttribute('aria-controls')!;
+
+    expect(firstControls).to.have.length(2);
+    expect(new Set(firstControls).size).to.equal(2);
+    expect(new Set([...firstControls, secondControls]).size).to.equal(3);
+    for (const controls of firstControls) {
+      expect(controls).to.not.include(stage.id);
+      expect(traces[0]!.shadowRoot!.getElementById(controls)?.getAttribute('part')).to.equal(
+        'evidence-body',
+      );
+    }
   });
 
   it('formats numeric evidence metadata with the effective locale', async () => {

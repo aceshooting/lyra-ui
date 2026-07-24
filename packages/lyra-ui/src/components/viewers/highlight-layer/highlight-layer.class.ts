@@ -33,6 +33,9 @@ export interface LyraHighlightLayerEventMap {
  * @csspart rect - One highlight rectangle (`data-tone`/`data-active`/`data-flash` state attributes).
  * @csspart rect-target - Transparent activation geometry around a rectangle, with a minimum
  *   pointer/focus area independent of the caller-supplied visual coordinates.
+ * @csspart highlight-actions - Non-overlapping actions used when more than one logical highlight
+ *   would otherwise create ambiguous minimum hit areas.
+ * @csspart highlight-action - One action in the non-overlapping highlight action list.
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -62,7 +65,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
         }, null);
         const nextItem = nextIndex === null ? null : this.items[nextIndex]!;
         const activeElement = this.shadowRoot?.activeElement as HTMLElement | null;
-        const shouldTransferFocus = activeElement?.matches('[part="rect-target"][data-primary]') ?? false;
+        const shouldTransferFocus = activeElement?.matches('[data-item-action]') ?? false;
         if (shouldTransferFocus && nextItem) {
           const previousTargetIndex = previousItems?.indexOf(nextItem) ?? -1;
           if (previousTargetIndex >= 0) this.primaryTarget(previousTargetIndex)?.focus();
@@ -157,8 +160,8 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
 
   private primaryTarget(itemIndex: number): HTMLElement | null {
     return (
-      [...this.renderRoot.querySelectorAll<HTMLElement>('[part="rect-target"][data-primary]')].find(
-        (rect) => rect.dataset['itemIndex'] === String(itemIndex),
+      [...this.renderRoot.querySelectorAll<HTMLElement>('[data-item-action]')].find(
+        (target) => target.dataset['itemIndex'] === String(itemIndex),
       ) ?? null
     );
   }
@@ -213,6 +216,8 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     const activeIndex = this.activeId
       ? this.items.findIndex((item) => item.id === this.activeId && item.rects.length > 0)
       : -1;
+    const renderedIndexes = this.itemIndexesWithRects();
+    const useActionList = this.interactive && renderedIndexes.length > 1;
     const ariaLabel = this.getAttribute('aria-label') || this.localize('highlightLayerLabel');
     return html`
       <div part="base" role="group" aria-label=${ariaLabel}>
@@ -226,12 +231,14 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
             const isPrimary = rectIndex === 0;
             return html`
               ${this.interactive
-                ? html`
+                ? !useActionList
+                  ? html`
                     <span
                       part="rect-target"
                       data-id=${item.id}
                       data-item-index=${index}
                       ?data-primary=${isPrimary}
+                      ?data-item-action=${isPrimary}
                       aria-current=${isPrimary ? String(isActive) : nothing}
                       aria-hidden=${!isPrimary ? 'true' : nothing}
                       role=${isPrimary ? 'button' : nothing}
@@ -246,6 +253,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
                       @keydown=${isPrimary ? (e: KeyboardEvent) => this.onRectKeyDown(e, index) : nothing}
                     ></span>
                   `
+                  : nothing
                 : nothing}
               <span
                 part="rect"
@@ -261,6 +269,33 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
             `;
           });
         })}
+        ${useActionList
+          ? html`
+              <div part="highlight-actions">
+                ${renderedIndexes.map((index) => {
+                  const item = this.items[index]!;
+                  const label = this.rectLabel(item, index);
+                  return html`
+                    <button
+                      part="highlight-action"
+                      type="button"
+                      data-id=${item.id}
+                      data-item-index=${index}
+                      data-item-action
+                      aria-current=${String(activeIndex === index)}
+                      tabindex=${tabStop === index ? '0' : '-1'}
+                      aria-label=${label}
+                      @click=${() => this.onRectClick(item.id)}
+                      @focus=${() => this.onRectFocus(item)}
+                      @keydown=${(e: KeyboardEvent) => this.onRectKeyDown(e, index)}
+                    >
+                      ${label}
+                    </button>
+                  `;
+                })}
+              </div>
+            `
+          : nothing}
       </div>
     `;
   }

@@ -83,7 +83,7 @@ describe('lr-calendar-viewer', () => {
     await event;
     await aTimeout(0);
     expect(count).to.equal(1);
-    expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.be.true;
     expect((el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).style.getPropertyValue('--lr-calendar-viewer-max-height')).to.equal('20rem');
   });
   it('reloads the same source after reconnecting and restores its named region', async () => {

@@ -557,6 +557,26 @@ it('restores the author-supplied hidden="until-found" mode exactly', async () =>
   expect(untilFound.getAttribute('hidden')).to.equal('until-found');
 });
 
+it('observes late author hidden/aria-hidden changes and restores their latest values', async () => {
+  const el = (await fixture(html`
+    <lr-random-content mode="sequence">
+      <div id="late-author-state">First</div>
+      <div>Second</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const item = el.querySelector('#late-author-state') as HTMLElement;
+
+  item.setAttribute('hidden', 'until-found');
+  item.setAttribute('aria-hidden', 'true');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  item.remove();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(item.getAttribute('hidden')).to.equal('until-found');
+  expect(item.getAttribute('aria-hidden')).to.equal('true');
+});
+
 it('only treats direct children as eligible, not elements re-slotted through a nested wrapper (no flatten)', async () => {
   const el = (await fixture(html`
     <lr-random-content items="1" mode="sequence">

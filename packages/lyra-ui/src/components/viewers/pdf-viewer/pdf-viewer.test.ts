@@ -1465,6 +1465,40 @@ describe('search', () => {
     }
   });
 
+  it('maps locale-fold expansions back to the complete raw grapheme', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer locale="en"></lr-pdf-viewer>`)) as LyraPdfViewer;
+    class ExpandedTextLayer {
+      constructor(private options: { container: HTMLElement }) {}
+      render(): Promise<void> {
+        const span = document.createElement('span');
+        span.textContent = 'İX';
+        this.options.container.appendChild(span);
+        return Promise.resolve();
+      }
+      cancel(): void {}
+    }
+    const page = {
+      ...fakePage(1),
+      getTextContent: () => Promise.resolve({ items: [{ str: 'İX', hasEOL: false }] }),
+    };
+    const doc = { numPages: 1, getPage: () => Promise.resolve(page) };
+    (el as unknown as { loadLibrary: () => Promise<unknown> }).loadLibrary = () => Promise.resolve({
+      getDocument: () => ({ promise: Promise.resolve(doc) }),
+      GlobalWorkerOptions: { workerSrc: '' },
+      TextLayer: ExpandedTextLayer,
+    });
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.search('i\u0307x')).to.equal(1);
+      const mark = listShadowRoot(el).querySelector('mark[part~="search-match"]');
+      expect(mark?.textContent).to.equal('İX');
+    } finally {
+      restore();
+    }
+  });
+
   it('skips a page whose getPageText rejects and keeps scanning the rest', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(3));

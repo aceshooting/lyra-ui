@@ -5,6 +5,30 @@ import type { DiffOp } from './diff-line-diff.js';
 import { styles } from './diff-view.styles.js';
 
 describe('lr-diff-view', () => {
+  it('renders the localized size fallback instead of diffing past maxLines', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view
+        .oldText=${'a\nb\nc'}
+        .newText=${'a\nb\nd'}
+        .maxLines=${2}
+        .strings=${{ diffViewTooLarge: 'Diff trop grande' }}
+      ></lr-diff-view>`,
+    )) as LyraDiffView;
+
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Diff trop grande');
+    expect(el.shadowRoot!.querySelector('[part="line"]')).to.not.exist;
+  });
+
+  it('defaults maxLines to 5000 and leaves ordinary diffs unchanged', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`,
+    )) as LyraDiffView;
+
+    expect(el.maxLines).to.equal(5000);
+    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="line"]')).to.have.length(3);
+  });
+
   it('renders interleaved add/remove/equal lines, not all-removed-then-all-added', async () => {
     const el = (await fixture(html`
       <lr-diff-view .oldText=${'a\nb\nc\nd\ne'} .newText=${'a\nb\nX\nd\ne'}></lr-diff-view>

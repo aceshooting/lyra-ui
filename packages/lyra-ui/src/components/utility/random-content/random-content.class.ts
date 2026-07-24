@@ -87,6 +87,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     HTMLElement,
     { hiddenAttribute: string | null; ariaHidden: string | null }
   >();
+  private authorStateObserver?: MutationObserver;
+  private authorStateObserverPauseDepth = 0;
   private focusWithin = false;
   @state() private announcementsEnabled = false;
   // Distinguishes a genuine later `updated()` pass from the very first one.
@@ -99,6 +101,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.startAuthorStateObserver();
     this.mediaQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.reduceMotion = this.mediaQuery?.matches ?? false;
     this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
@@ -117,6 +120,8 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   override disconnectedCallback(): void {
     this.stopAutoplay();
+    this.stopAuthorStateObserver();
+    this.focusWithin = false;
     this.restoreManagedPool();
     this.mediaQuery?.removeEventListener('change', this.onMotionPreferenceChange);
     this.mediaQuery = undefined;
@@ -229,7 +234,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     return [...selected.slice(0, -1), focusedItem];
   }
 
-  private captureAndRestorePool(pool: HTMLElement[]): void {
+  private reconcileManagedPool(pool: HTMLElement[]): void {
     const nextPool = new Set(pool);
     for (const item of this.managedPool) {
       if (!nextPool.has(item)) this.restoreAuthorState(item);
@@ -262,8 +267,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     this.previousSelection = undefined;
   }
 
-  private applySelection(pool: HTMLElement[], selected: HTMLElement[]): void {
-    this.captureAndRestorePool(pool);
+  private applyManagedSelection(pool: HTMLElement[], selected: HTMLElement[]): void {
     const selectedSet = new Set(selected);
     for (const el of pool) {
       const shown = selectedSet.has(el);
@@ -272,11 +276,78 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     }
   }
 
+  private applySelection(pool: HTMLElement[], selected: HTMLElement[]): void {
+    this.withAuthorStateObserverPaused(() => {
+      this.reconcileManagedPool(pool);
+      this.applyManagedSelection(pool, selected);
+    });
+  }
+
+  private captureAuthorStateMutations(records: MutationRecord[]): void {
+    for (const record of records) {
+      if (record.type !== 'attributes' || !(record.target instanceof HTMLElement)) continue;
+      const item = record.target;
+      if (!this.managedPool.has(item)) continue;
+      const state = this.authorState.get(item);
+      if (!state) continue;
+      if (record.attributeName === 'hidden') state.hiddenAttribute = item.getAttribute('hidden');
+      if (record.attributeName === 'aria-hidden') state.ariaHidden = item.getAttribute('aria-hidden');
+    }
+  }
+
+  private observeAuthorState(): void {
+    this.authorStateObserver?.observe(this, {
+      attributes: true,
+      attributeFilter: ['hidden', 'aria-hidden'],
+      subtree: true,
+    });
+  }
+
+  private startAuthorStateObserver(): void {
+    if (this.authorStateObserver) return;
+    this.authorStateObserver = new MutationObserver((records) => {
+      this.captureAuthorStateMutations(records);
+      // Keep the current component-owned selection applied while retaining the author's latest
+      // values for exact restoration when an item leaves the pool or the host disconnects.
+      this.withAuthorStateObserverPaused(() => {
+        const selected = this.preserveFocusedSubtree(this.lastPool, this.previousSelection ?? []);
+        this.applyManagedSelection(this.lastPool, selected);
+        this.previousSelection = selected;
+      });
+    });
+    this.observeAuthorState();
+  }
+
+  private stopAuthorStateObserver(): void {
+    const observer = this.authorStateObserver;
+    if (!observer) return;
+    this.captureAuthorStateMutations(observer.takeRecords());
+    observer.disconnect();
+    this.authorStateObserver = undefined;
+    this.authorStateObserverPauseDepth = 0;
+  }
+
+  private withAuthorStateObserverPaused<T>(operation: () => T): T {
+    const observer = this.authorStateObserver;
+    const outermost = this.authorStateObserverPauseDepth === 0;
+    if (outermost && observer) {
+      this.captureAuthorStateMutations(observer.takeRecords());
+      observer.disconnect();
+    }
+    this.authorStateObserverPauseDepth += 1;
+    try {
+      return operation();
+    } finally {
+      this.authorStateObserverPauseDepth -= 1;
+      if (outermost && observer && this.isConnected) this.observeAuthorState();
+    }
+  }
+
   private reselect(options: { resetPrevious?: boolean; announce?: boolean } = {}): HTMLElement[] {
     const pool = this.eligible();
     this.lastPool = pool;
     if (pool.length === 0) {
-      this.captureAndRestorePool(pool);
+      this.withAuthorStateObserverPaused(() => this.reconcileManagedPool(pool));
       this.previousSelection = undefined;
       return [];
     }

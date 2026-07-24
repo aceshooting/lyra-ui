@@ -127,7 +127,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   /** Ids of stages whose evidence panel is open. Absence means collapsed -- every stage starts collapsed. */
   @state() private expandedStageIds = new Set<string>();
 
-  private readonly evidenceDomIds = new WeakMap<RetrievalStage, string>();
+  private readonly evidenceDomIdPrefix = nextId('retrieval-trace-evidence');
 
   private stageLabel(stage: RetrievalStage): string {
     if (stage.label) return stage.label;
@@ -222,19 +222,13 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
     }
   }
 
-  private evidenceDomId(stage: RetrievalStage): string {
-    let id = this.evidenceDomIds.get(stage);
-    if (!id) {
-      id = nextId('retrieval-trace-evidence');
-      this.evidenceDomIds.set(stage, id);
-    }
-    return id;
-  }
-
-  private renderEvidenceRow(stage: RetrievalStage): TemplateResult | typeof nothing {
+  private renderEvidenceRow(stage: RetrievalStage, occurrenceIndex: number): TemplateResult | typeof nothing {
     if (!hasEvidence(stage.evidence)) return nothing;
     const expanded = this.expandedStageIds.has(stage.id);
-    const bodyId = this.evidenceDomId(stage);
+    // The occurrence index keeps repeated references to the exact same caller object distinct;
+    // the per-instance prefix keeps parallel trace instances distinct without exposing a raw
+    // caller-controlled stage id in the DOM.
+    const bodyId = `${this.evidenceDomIdPrefix}-${occurrenceIndex}`;
     const label = this.stageLabel(stage);
     return html`
       <div part="evidence-row" data-id=${stage.id} ?data-active=${this.activeStageId === stage.id}>
@@ -272,7 +266,7 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
           @lr-span-select=${this.onStageSelect}
         ></lr-span-waterfall>
         ${hasAnyEvidence
-          ? html`<div part="evidence-list">${this.stages.map((stage) => this.renderEvidenceRow(stage))}</div>`
+          ? html`<div part="evidence-list">${this.stages.map((stage, index) => this.renderEvidenceRow(stage, index))}</div>`
           : nothing}
       </div>
     `;

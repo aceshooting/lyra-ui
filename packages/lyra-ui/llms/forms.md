@@ -46,8 +46,10 @@ shared `FormAssociated` mixin — see gotchas).
   clear/pick. Forward `options.signal` to `fetch(url, { signal })` to cancel the request when a
   newer query supersedes it or the element disconnects. `loadingText` is shown while a call is in
   flight; a stale in-flight call that resolves after a newer one (or after disconnect) is dropped
-  via a monotonic token. The `options` parameter is optional in the type, so a legacy
-  `(query) => …` source stays assignable.)
+  via a monotonic token. The exported type requires the `options` parameter; an existing
+  one-parameter `(query) => …` function remains assignable under TypeScript's ordinary function
+  parameter compatibility, but consumers that need cancellation should accept and forward
+  `options.signal`.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)
@@ -312,31 +314,29 @@ exactly like the multi-option case, until the trigger is actually activated.
   single-option auto-commit behavior described above
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
 selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
 `lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
 `lr-change`). All three carry `detail: { value: string }` (the new selection) and fire only on a
-real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`.
+real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`, and bubbling,
+composed `focus`/`blur` events re-dispatched from the internal trigger.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
-attribute when provided)
-
-**`lr-select` deliberately has no `start`/`end` adornment slots**, unlike
-`lr-input`/`lr-combobox`/`lr-date-input`. Two reasons, both structural rather than incidental:
-its `[part='trigger']` is a native `<button>`, and HTML's content model forbids interactive
-descendants inside one — so the slot could only ever accept decorative content, a materially
-different contract from the other three that would read as the same feature; and the trigger lays
-out with `justify-content: space-between`, so injecting a leading element pushes the selected label
-into the middle of the control instead of leaving it at the start. **Instead:** put a glyph in the
-`label` slot, or compose the select into `<lr-control-group>` alongside the adornment.
+attribute when provided), `start` (non-interactive adornment before the selected-value label), and
+`end` (non-interactive adornment after the label and before the expand icon). The adornments live
+inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
+content in either slot.
 
 When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `group-label` (a heading
-row emitted inside the listbox whenever an option's `group` differs from the previous one's — a
-presentational `<div>`, not a `role="group"`; options with an empty `group` get no heading),
+**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `listbox`,
+`group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
+the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
+get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 
@@ -501,9 +501,11 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `<input>`'s computed accessible name; wins over `label`/`placeholder`/the localized `date`
   fallback in that order. Attribute-reflects from a host-level `aria-label` so a plain-markup
   consumer gets ARIA-name forwarding without setting a JS property.
-- `clearLabel: string = 'Clear'` (attribute `clear-label` — accessible label for the clear button)
-- `openLabel: string = 'Open calendar'` (attribute `open-label` — accessible label for the
-  calendar-toggle button)
+- `clearLabel: string = ''` (attribute `clear-label` — accessible label for the clear button;
+  empty uses the localized `clear` message, whose English fallback is `"Clear"`)
+- `openLabel: string = ''` (attribute `open-label` — accessible label for the calendar-toggle
+  button; empty uses the localized `openCalendar` message, whose English fallback is
+  `"Open calendar"`)
 - `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
   `role="dialog"` calendar popover)
 - `spellcheck: boolean = true` — forwarded to the internal `<input>`
@@ -725,8 +727,10 @@ the shadow boundary.
 
 | Event | Detail | Description |
 | --- | --- | --- |
-| `lr-input` | `{ value: string }` | Fired on every user-driven edit. |
-| `lr-change` | `{ value: string }` | Fired on native `change` timing (blur after a committed edit). |
+| `input` | none | Native-style composed event fired on every user-driven edit. |
+| `change` | none | Native-style composed event fired at native `change` timing. |
+| `lr-input` | `{ value: string }` | Compatibility alias fired on every user-driven edit. |
+| `lr-change` | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit). |
 | `blur` | none | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event. |
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
 
@@ -1002,8 +1006,9 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `inputMode: string = ''` (attribute `inputmode`) / `enterKeyHint: string = ''` (attribute
   `enterkeyhint`) — these four are forwarded verbatim to the native input; an empty string omits
   the attribute entirely
-- `min?: number` / `max?: number` (attributes `min`/`max`) / `step?: number | 'any'` (attribute
-  `step`, accepts the native `'any'` value alongside a number) — forwarded verbatim to the native
+- `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
+  `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
+  — forwarded verbatim to the native
   input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
   `type="time"`. On `lr-input` itself the `min`/`max` *attributes* are number-converted, so a
   non-numeric bound only survives a direct property assignment; the declared type also admits a
@@ -1273,9 +1278,9 @@ interface PhoneNumberAdapter {
   native telephone input.
 - `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
   the untouched default routes through the shared localized `select` message.
-- `incompleteText: string = 'The value is invalid.'` (attribute `incomplete-text`) — validation
-  message for dial-like input that can still become valid with more digits. The untouched default
-  routes through the shared localized `valueInvalid` message.
+- `incompleteText: string = 'This phone number is incomplete.'` (attribute `incomplete-text`) —
+  validation message for dial-like input that can still become valid with more digits. The
+  untouched default routes through the localized `phoneInputIncomplete` message.
 - `invalidText: string = 'The value is invalid.'` (attribute `invalid-text`) — completed-invalid
   message, localized through the same shared key while left at its default.
 - `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,
@@ -1436,8 +1441,9 @@ key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
 
 **Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host([disabled])`
-dimming), plus (for `presets`) `--lr-color-text`, `--lr-color-on-brand` (the active preset
+`--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host(:disabled)`
+dimming, including ancestor-fieldset disablement), plus (for `presets`) `--lr-color-text`,
+`--lr-color-on-brand` (the active preset
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
 
@@ -1654,7 +1660,7 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 `lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
 
-**Methods:** `focus(options?)` and `blur()` forward to the internal checkbox control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
@@ -1755,7 +1761,7 @@ control's visible, clickable label (same as `<lr-checkbox>`).
 **Events:** `lr-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
 Space/Enter); not fired for a programmatic `.checked` assignment.
 
-**Methods:** `focus(options?)` and `blur()` forward to the internal switch control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
 
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as
@@ -1973,7 +1979,9 @@ hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-dupl
 `false`), `editable` (reflected, default `false` — see below), and `delimiter: string | null` (default
 `','` — see below).
 **Slots:** `label`, `hint`, `error`.
-**Events:** `input`, `change`, `lr-add` (`detail: { value }`), `lr-remove`
+**Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
+`focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),
+`lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
 (`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
@@ -1982,7 +1990,8 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
-glyph), `input`, `hint`, `error`. `focus()` and `blur()` forward to the internal text input.
+glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
+input.
 
 **`editable` — editing a token in place.** Off by default, in which case the token row renders
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a
@@ -2145,8 +2154,10 @@ supporting text rendered below the search/grid; unset renders no hint chrome. `e
 `error` content when provided); unset renders no error chrome. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` —
 visual size; scales the emoji grid item box and its glyph proportionally, floored at 24px (WCAG 2.5.8).
 
-**Events:** `lr-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
-the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
+**Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
+`lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
+`value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
+host events. Programmatic `value` changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction
@@ -2221,7 +2232,10 @@ freeform-comment keys with a submit-and-next flow for working through an eval qu
 renders `<lr-textarea>`.
 
 **Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
-required?, min?, max?, step? }`), `value: RubricValue = {}` (attribute: false), `itemId: string = ''`
+required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` contains
+`RubricKeyOption { value: string; label?: string; description?: string }`, `multiple?` selects the
+checkbox-group category route, and `placeholder?` customizes comment input), `value: RubricValue =
+{}` (attribute: false), `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
 boolean = false`, and the shared form properties `name` and `disabled`. `errors: Record<string,
 string>` is the current per-key validation-message state.

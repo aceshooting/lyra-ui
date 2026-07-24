@@ -678,8 +678,10 @@ shared `FormAssociated` mixin — see gotchas).
   clear/pick. Forward `options.signal` to `fetch(url, { signal })` to cancel the request when a
   newer query supersedes it or the element disconnects. `loadingText` is shown while a call is in
   flight; a stale in-flight call that resolves after a newer one (or after disconnect) is dropped
-  via a monotonic token. The `options` parameter is optional in the type, so a legacy
-  `(query) => …` source stays assignable.)
+  via a monotonic token. The exported type requires the `options` parameter; an existing
+  one-parameter `(query) => …` function remains assignable under TypeScript's ordinary function
+  parameter compatibility, but consumers that need cancellation should accept and forward
+  `options.signal`.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)
@@ -944,31 +946,29 @@ exactly like the multi-option case, until the trigger is actually activated.
   single-option auto-commit behavior described above
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
 selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
 `lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
 `lr-change`). All three carry `detail: { value: string }` (the new selection) and fire only on a
-real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`.
+real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`, and bubbling,
+composed `focus`/`blur` events re-dispatched from the internal trigger.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
-attribute when provided)
-
-**`lr-select` deliberately has no `start`/`end` adornment slots**, unlike
-`lr-input`/`lr-combobox`/`lr-date-input`. Two reasons, both structural rather than incidental:
-its `[part='trigger']` is a native `<button>`, and HTML's content model forbids interactive
-descendants inside one — so the slot could only ever accept decorative content, a materially
-different contract from the other three that would read as the same feature; and the trigger lays
-out with `justify-content: space-between`, so injecting a leading element pushes the selected label
-into the middle of the control instead of leaving it at the start. **Instead:** put a glyph in the
-`label` slot, or compose the select into `<lr-control-group>` alongside the adornment.
+attribute when provided), `start` (non-interactive adornment before the selected-value label), and
+`end` (non-interactive adornment after the label and before the expand icon). The adornments live
+inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
+content in either slot.
 
 When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `group-label` (a heading
-row emitted inside the listbox whenever an option's `group` differs from the previous one's — a
-presentational `<div>`, not a `role="group"`; options with an empty `group` get no heading),
+**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `listbox`,
+`group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
+the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
+get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 
@@ -1133,9 +1133,11 @@ Text field + calendar popover, **form-associated** via the shared `FormAssociate
   `<input>`'s computed accessible name; wins over `label`/`placeholder`/the localized `date`
   fallback in that order. Attribute-reflects from a host-level `aria-label` so a plain-markup
   consumer gets ARIA-name forwarding without setting a JS property.
-- `clearLabel: string = 'Clear'` (attribute `clear-label` — accessible label for the clear button)
-- `openLabel: string = 'Open calendar'` (attribute `open-label` — accessible label for the
-  calendar-toggle button)
+- `clearLabel: string = ''` (attribute `clear-label` — accessible label for the clear button;
+  empty uses the localized `clear` message, whose English fallback is `"Clear"`)
+- `openLabel: string = ''` (attribute `open-label` — accessible label for the calendar-toggle
+  button; empty uses the localized `openCalendar` message, whose English fallback is
+  `"Open calendar"`)
 - `dialogLabel: string = 'Choose date'` (attribute `dialog-label` — accessible name for the
   `role="dialog"` calendar popover)
 - `spellcheck: boolean = true` — forwarded to the internal `<input>`
@@ -11527,7 +11529,9 @@ re-click of the same source citation).
 **CSS parts:** `base` (the absolutely-positioned overlay, inset 0), `rect` (one visual highlight
 rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and `rect-target`
 (transparent activation geometry with a minimum pointer/focus area independent of the visual
-rectangle).
+rectangle). When more than one logical highlight would create overlapping minimum hit areas, the
+individual targets are replaced by `highlight-actions` (a non-overlapping action list) containing
+one `highlight-action` button per rendered highlight.
 
 ## `lr-page-rail`
 
@@ -14230,13 +14234,20 @@ upload, retrieval, or model call.
 **Properties:** `value`, `status`, `placeholder`, `disabled`, `submitOnEnter`, `attachments`,
 `attachmentCapabilities`, `mentionItems`, `commandItems`, `modelCatalog`, `model`, `voiceCatalog`,
 `voice`, `sources`, `selectedSourceIds`, `queue`, `label`, `accessibleLabel` (attribute
-`aria-label`).
+`aria-label`). Each `PromptInputAttachment` may carry the attachment chip's optional lifecycle
+`status` and numeric `progress` in addition to its document/file metadata.
 
 **Methods:** `focus(options)`, `blur()`, and `click()` forward to the composed chat input;
 `select()` and its selection APIs forward to the same native text surface.
 
-**Events:** `lr-input`, `lr-submit`, `lr-stop`, `lr-mention-select`, `lr-attachments-add`,
-`lr-attachment-remove`, `lr-model-change`, `lr-voice-change`.
+**Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
+`lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),
+`lr-attachment-remove` (`{ id }`), `lr-model-change`/`lr-voice-change`
+(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedIds }`), `lr-queue-change`
+(`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
+`lr-audio-request`, `lr-attachment-retry` (`{ id }`), and `lr-attachment-preview`
+(`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
+`lr-prompt-input`; all composed interactions are suppressed while `disabled`.
 
 **Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
 

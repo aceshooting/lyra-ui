@@ -20,13 +20,20 @@ upload, retrieval, or model call.
 **Properties:** `value`, `status`, `placeholder`, `disabled`, `submitOnEnter`, `attachments`,
 `attachmentCapabilities`, `mentionItems`, `commandItems`, `modelCatalog`, `model`, `voiceCatalog`,
 `voice`, `sources`, `selectedSourceIds`, `queue`, `label`, `accessibleLabel` (attribute
-`aria-label`).
+`aria-label`). Each `PromptInputAttachment` may carry the attachment chip's optional lifecycle
+`status` and numeric `progress` in addition to its document/file metadata.
 
 **Methods:** `focus(options)`, `blur()`, and `click()` forward to the composed chat input;
 `select()` and its selection APIs forward to the same native text surface.
 
-**Events:** `lr-input`, `lr-submit`, `lr-stop`, `lr-mention-select`, `lr-attachments-add`,
-`lr-attachment-remove`, `lr-model-change`, `lr-voice-change`.
+**Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
+`lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),
+`lr-attachment-remove` (`{ id }`), `lr-model-change`/`lr-voice-change`
+(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedIds }`), `lr-queue-change`
+(`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
+`lr-audio-request`, `lr-attachment-retry` (`{ id }`), and `lr-attachment-preview`
+(`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
+`lr-prompt-input`; all composed interactions are suppressed while `disabled`.
 
 **Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
 

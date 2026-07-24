@@ -161,7 +161,11 @@ function wireDemo(containerId: string): void {
     }
   });
 
-  textarea.addEventListener('blur', closeMention);
+  textarea.addEventListener('blur', (event) => {
+    // The same-tree fallback deliberately moves focus from the textarea into
+    // the popover. Shadow retargeting exposes that move as the popover host.
+    if (event.relatedTarget !== popover) closeMention();
+  });
 
   popover.addEventListener('lr-mention-select', ((e: CustomEvent<{ id: string; label: string }>) => {
     const caret = textarea.selectionStart ?? 0;

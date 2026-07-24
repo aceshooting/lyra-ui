@@ -13,6 +13,7 @@ import type { PromptQueueChangeDetail } from '../prompt-queue/prompt-queue.class
 import type {
   AttachmentChipIdDetail,
   AttachmentChipPreviewDetail,
+  AttachmentChipStatus,
 } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraVoiceCatalog } from '../voice-picker/voice-picker.class.js';
 import { styles } from './prompt-input.styles.js';
@@ -25,6 +26,8 @@ export interface PromptSuggestion extends MentionItem {
 export interface PromptInputAttachment extends DocumentRef {
   file?: File;
   size?: number;
+  status?: AttachmentChipStatus;
+  progress?: number;
 }
 
 interface ActiveSuggestion {
@@ -70,6 +73,13 @@ export interface LyraPromptInputEventMap {
  * @event lr-attachment-remove - Attachment removal was requested. `detail: { id }`.
  * @event lr-model-change - Model selection changed. `detail: { value, inCatalog }`.
  * @event lr-voice-change - Voice selection changed. `detail: { value, inCatalog }`.
+ * @event lr-sources-change - Retrieval source selection changed. `detail: { selectedIds }`.
+ * @event lr-queue-change - The queued prompts changed.
+ * @event lr-send-now - Immediate submission of a queued prompt was requested. `detail: { item }`.
+ * @event lr-camera-request - Camera capture was requested.
+ * @event lr-audio-request - Audio capture was requested.
+ * @event lr-attachment-retry - Retrying an attachment was requested. `detail: { id }`.
+ * @event lr-attachment-preview - Previewing an attachment was requested.
  * @csspart base - The prompt surface.
  * @csspart controls - Model, voice, and source controls.
  * @csspart sources - The collapsible source-picker region.
@@ -232,6 +242,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   private onPick(event: CustomEvent<{ capability: AttachmentCapability; files: FileList | File[] }>): void {
     event.stopPropagation();
+    if (this.disabled) return;
     this.emit('lr-attachments-add', {
       files: Array.from(event.detail.files),
       capability: event.detail.capability,
@@ -240,6 +251,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   private reemit<K extends keyof LyraPromptInputEventMap>(event: LyraPromptInputEventMap[K], name: K): void {
     event.stopPropagation();
+    if (this.disabled) return;
     this.emit(name, event.detail);
   }
 
@@ -251,10 +263,14 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
       .size=${attachment.size ?? 0}
       .mimeType=${attachment.mimeType ?? ''}
       .previewSrc=${attachment.uri ?? ''}
+      .status=${attachment.status ?? 'pending'}
+      .progress=${attachment.progress ?? 0}
       .removable=${!this.disabled}
+      .inert=${this.disabled}
       compact
       @lr-remove=${(event: Event) => {
         event.stopPropagation();
+        if (this.disabled) return;
         this.emit('lr-attachment-remove', { id: attachment.id });
       }}
       @lr-retry=${(event: CustomEvent<AttachmentChipIdDetail>) =>
@@ -272,10 +288,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             .catalog=${this.modelCatalog}
             .value=${this.model}
             .disabled=${this.disabled}
-            @lr-change=${(event: CustomEvent<{ value: string; inCatalog: boolean }>) => {
-              event.stopPropagation();
-              this.emit('lr-model-change', event.detail);
-            }}
+            @lr-change=${(event: CustomEvent<{ value: string; inCatalog: boolean }>) =>
+              this.reemit(event, 'lr-model-change')}
           ></lr-model-select>`
         : nothing}
       ${this.voiceCatalog?.length
@@ -283,10 +297,8 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
             .catalog=${this.voiceCatalog}
             .value=${this.voice}
             .disabled=${this.disabled}
-            @lr-change=${(event: CustomEvent<{ value: string; inCatalog: boolean }>) => {
-              event.stopPropagation();
-              this.emit('lr-voice-change', event.detail);
-            }}
+            @lr-change=${(event: CustomEvent<{ value: string; inCatalog: boolean }>) =>
+              this.reemit(event, 'lr-voice-change')}
           ></lr-voice-picker>`
         : nothing}
       ${this.sources.length

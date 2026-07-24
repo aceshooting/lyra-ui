@@ -62,6 +62,11 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
 
     protected override updated(changed: PropertyValues): void {
       super.updated(changed);
+      // Reactive state written during a subclass's disconnect teardown can still complete an
+      // already-scheduled Lit update while the host is detached. Never re-bind the global
+      // selection listener or recreate highlight handles from that detached update; reconnect
+      // requests a fresh update above and restores both resources then.
+      if (!this.isConnected) return;
       const root = this.textContentRoot();
       if (root !== this.selectionRoot) {
         this.selectionRoot = root;

@@ -34,8 +34,8 @@ describe('lr-svg-viewer', () => {
       await aTimeout(20);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       await el.updateComplete;
-      expect(el.shadowRoot!.querySelector('[part="svg"]')).to.exist;
-      expect(el.shadowRoot!.querySelector('script')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
+      expect(el.shadowRoot!.querySelector('script') === null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="svg"]')!.getAttribute('aria-label')).to.equal('Chart');
     } finally {
       window.fetch = original;
@@ -127,7 +127,7 @@ describe('lr-svg-viewer', () => {
       el.remove();
       parent.append(el);
       await waitUntil(() => fetchCount === 2);
-      expect(el.shadowRoot!.querySelector('[part="svg"]')).to.exist;
+      expect(el.shadowRoot!.querySelector('[part="svg"]') !== null).to.be.true;
     } finally {
       window.fetch = original;
     }
@@ -209,7 +209,7 @@ describe('zoomable', () => {
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('lr-zoomable-frame') === null).to.be.true;
     } finally {
       restore();
     }
@@ -223,7 +223,7 @@ describe('zoomable', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       const frame = el.shadowRoot!.querySelector('lr-zoomable-frame');
       expect(frame).to.exist;
-      expect(frame!.querySelector('[part="svg"] circle')).to.exist;
+      expect(frame!.querySelector('[part="svg"] circle') !== null).to.be.true;
     } finally {
       restore();
     }
@@ -476,8 +476,8 @@ describe('back-compat', () => {
     try {
       el.src = 'https://example.test/icon.svg';
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
-      expect(el.shadowRoot!.querySelector('lr-zoomable-frame')).to.not.exist;
-      expect(el.shadowRoot!.querySelector('[part="highlight-layer"]')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('lr-zoomable-frame') === null).to.be.true;
+      expect(el.shadowRoot!.querySelector('[part="highlight-layer"]') === null).to.be.true;
     } finally {
       restore();
     }

@@ -62,7 +62,6 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border-radius: var(--lr-radius);
     cursor: grab;
-    min-inline-size: 0;
   }
   [part='item'][aria-disabled='true'] {
     cursor: not-allowed;

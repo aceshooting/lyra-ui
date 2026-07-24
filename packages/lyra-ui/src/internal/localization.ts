@@ -212,6 +212,8 @@ export type LyraMessageKey =
   | 'documentPreviewGenericError'
   | 'ebookViewerLoadError'
   | 'ebookViewerRegionLabel'
+  | 'ebookViewerPreviousChapter'
+  | 'ebookViewerNextChapter'
   | 'fileTypeFile'
   | 'fileTypePdf'
   | 'fileTypeWord'
@@ -1368,6 +1370,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   documentPreviewGenericError: 'Something went wrong.',
   ebookViewerLoadError: 'Failed to load the ebook.',
   ebookViewerRegionLabel: 'Ebook content',
+  ebookViewerPreviousChapter: 'Previous chapter',
+  ebookViewerNextChapter: 'Next chapter',
   fileTypeFile: 'File',
   fileTypePdf: 'PDF',
   fileTypeWord: 'Word document',

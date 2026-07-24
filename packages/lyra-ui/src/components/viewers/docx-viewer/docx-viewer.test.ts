@@ -697,6 +697,30 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('lets component-scoped properties theme fallback highlights and search states', async () => {
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    try {
+      el.style.setProperty('--lr-docx-viewer-highlight-accent-background', 'rgb(1, 2, 3)');
+      el.style.setProperty('--lr-docx-viewer-search-match-background', 'rgb(4, 5, 6)');
+      el.style.setProperty('--lr-docx-viewer-search-match-active-background', 'rgb(7, 8, 9)');
+      el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
+      await el.updateComplete;
+      const highlight = el.shadowRoot!.querySelector(
+        '[part="content"] mark[data-lr-highlight-tone="accent"]',
+      ) as HTMLElement;
+      expect(getComputedStyle(highlight).backgroundColor).to.equal('rgb(1, 2, 3)');
+
+      await el.search('Hello');
+      const match = el.shadowRoot!.querySelector('[part~="search-match-active"]') as HTMLElement;
+      expect(getComputedStyle(match).backgroundColor).to.equal('rgb(7, 8, 9)');
+    } finally {
+      restore();
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
+    }
+  });
+
   it('gives the clickable <mark>-wrap highlight fallback a :hover rule matching its cursor:pointer affordance', () => {
     // Browser test runners don't synthesize a real :hover pseudo-class from a dispatched event
     // (same constraint documented at tabs.test.ts's identical stylesheet-source check), so this

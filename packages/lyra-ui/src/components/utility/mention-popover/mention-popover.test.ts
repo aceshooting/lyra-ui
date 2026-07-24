@@ -349,6 +349,29 @@ it('focuses the active fallback option when nested inside another shadow root', 
   }
 });
 
+it('keeps the fallback open when the host blur contract recognizes focus entering the popover', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    let movedIntoPopover = false;
+    textarea.addEventListener('blur', (event) => {
+      movedIntoPopover = event.relatedTarget === el;
+      if (!movedIntoPopover) el.open = false;
+    });
+
+    textarea.focus();
+    expect(await el.focusActiveOption()).to.be.true;
+    await el.updateComplete;
+    expect(movedIntoPopover).to.be.true;
+    expect(el.open).to.be.true;
+  } finally {
+    textarea.remove();
+  }
+});
+
 it('recovers real fallback focus when filtering invalidates the focused option', async () => {
   const el = await openWithItems();
   const textarea = document.createElement('textarea');

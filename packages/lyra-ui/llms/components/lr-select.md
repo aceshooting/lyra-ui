@@ -53,31 +53,29 @@ exactly like the multi-option case, until the trigger is actually activated.
   single-option auto-commit behavior described above
 - `value: string` — a getter/setter; always a single string (no `multiple` mode)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
+
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
 selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
 `lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
 `lr-change`). All three carry `detail: { value: string }` (the new selection) and fire only on a
-real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`.
+real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`, and bubbling,
+composed `focus`/`blur` events re-dispatched from the internal trigger.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
-attribute when provided)
-
-**`lr-select` deliberately has no `start`/`end` adornment slots**, unlike
-`lr-input`/`lr-combobox`/`lr-date-input`. Two reasons, both structural rather than incidental:
-its `[part='trigger']` is a native `<button>`, and HTML's content model forbids interactive
-descendants inside one — so the slot could only ever accept decorative content, a materially
-different contract from the other three that would read as the same feature; and the trigger lays
-out with `justify-content: space-between`, so injecting a leading element pushes the selected label
-into the middle of the control instead of leaving it at the start. **Instead:** put a glyph in the
-`label` slot, or compose the select into `<lr-control-group>` alongside the adornment.
+attribute when provided), `start` (non-interactive adornment before the selected-value label), and
+`end` (non-interactive adornment after the label and before the expand icon). The adornments live
+inside the native trigger `<button>`, so never place links, buttons, inputs, or other interactive
+content in either slot.
 
 When hint/error content is present, the trigger's `aria-describedby` references stable shadow-local
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `listbox`, `group-label` (a heading
-row emitted inside the listbox whenever an option's `group` differs from the previous one's — a
-presentational `<div>`, not a `role="group"`; options with an empty `group` get no heading),
+**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `listbox`,
+`group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
+the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
+get no heading),
 `option`, `option-dot` (the leading status dot, when a row's `dotColor` is set), `option-label`,
 `option-sub` (a row's secondary line, when `sub` is set), `expand-icon`, `error`, `hint`
 

@@ -9,6 +9,10 @@ const ITEMS: HighlightLayerItem[] = [
   { id: 'b', rects: [{ x: 10, y: 20, width: 20, height: 5 }], tone: 'warning' },
 ];
 
+function itemActions(el: LyraHighlightLayer): HTMLElement[] {
+  return [...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-item-action]')];
+}
+
 describe('lr-highlight-layer', () => {
   it('defaults to empty items, active-id null, and interactive true', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
@@ -19,7 +23,7 @@ describe('lr-highlight-layer', () => {
 
   it('renders nothing when items is empty', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
-    expect(el.shadowRoot!.querySelector('[part="base"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="base"]') === null).to.be.true;
   });
 
   it('renders one rect per item at percent-of-box coordinates', async () => {
@@ -28,6 +32,25 @@ describe('lr-highlight-layer', () => {
     expect(rects).to.have.length(2);
     expect((rects[0] as HTMLElement).style.left).to.equal('10%');
     expect((rects[0] as HTMLElement).getAttribute('data-tone')).to.equal('accent');
+  });
+
+  it('lets component-scoped properties theme one highlight tone and flash state', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer
+        style="
+          --lr-highlight-layer-warning-background: rgb(1, 2, 3);
+          --lr-highlight-layer-warning-outline: rgb(4, 5, 6);
+          --lr-highlight-layer-flash-background: rgb(7, 8, 9);
+        "
+        .items=${[{ id: 'warning', tone: 'warning', rects: [{ x: 10, y: 10, width: 20, height: 5 }] }]}
+      ></lr-highlight-layer>
+    `);
+    const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
+    expect(getComputedStyle(rect).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(rect).outlineColor).to.equal('rgb(4, 5, 6)');
+    el.flash('warning');
+    await el.updateComplete;
+    expect(getComputedStyle(rect).backgroundColor).to.equal('rgb(7, 8, 9)');
   });
 
   it('positions rects with physical left/top under dir="rtl" so they stay over non-mirroring content', async () => {
@@ -44,7 +67,7 @@ describe('lr-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(
       html`<lr-highlight-layer .items=${ITEMS} active-id="b"></lr-highlight-layer>`,
     );
-    const targets = el.shadowRoot!.querySelectorAll('[part="rect-target"]');
+    const targets = itemActions(el);
     expect(targets[0].getAttribute('aria-current')).to.equal('false');
     expect(targets[1].getAttribute('aria-current')).to.equal('true');
   });
@@ -64,11 +87,10 @@ describe('lr-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${items}></lr-highlight-layer>
     `);
-    const targets = [...el.shadowRoot!.querySelectorAll('[part="rect-target"]')];
-    expect(targets.filter((target) => target.getAttribute('role') === 'button')).to.have.length(2);
+    const targets = itemActions(el);
+    expect(targets).to.have.length(2);
     expect(targets.filter((target) => target.getAttribute('tabindex') === '0')).to.have.length(1);
-    expect(targets[1].getAttribute('aria-hidden')).to.equal('true');
-    expect(targets[1].hasAttribute('tabindex')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="rect"]').length).to.equal(3);
   });
 
   it('uses occurrence identity when duplicate public ids are supplied', async () => {
@@ -79,12 +101,12 @@ describe('lr-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${duplicates} active-id="same"></lr-highlight-layer>
     `);
-    let targets = [...el.shadowRoot!.querySelectorAll('[part="rect-target"]')] as HTMLElement[];
+    let targets = itemActions(el);
     expect(targets.map((target) => target.getAttribute('aria-current'))).to.deep.equal(['true', 'false']);
     targets[0]!.focus();
     targets[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await el.updateComplete;
-    targets = [...el.shadowRoot!.querySelectorAll('[part="rect-target"]')] as HTMLElement[];
+    targets = itemActions(el);
     expect(targets.map((target) => target.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label')).to.equal(
       'Highlight: Second',
@@ -99,7 +121,7 @@ describe('lr-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${items}></lr-highlight-layer>
     `);
-    const first = el.shadowRoot!.querySelector('[part="rect-target"]') as HTMLElement;
+    const first = itemActions(el)[0]!;
     first.focus();
     let uncaught: unknown;
     const onError = (event: ErrorEvent): void => {
@@ -119,14 +141,14 @@ describe('lr-highlight-layer', () => {
 
   it('names a labeled rect via highlightWithLabel and an unlabeled one via highlightOfTotal', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
-    const targets = el.shadowRoot!.querySelectorAll('[part="rect-target"]');
+    const targets = itemActions(el);
     expect(targets[0].getAttribute('aria-label')).to.equal('Highlight: Zone A');
     expect(targets[1].getAttribute('aria-label')).to.equal('Highlight 2 of 2');
   });
 
   it('emits lr-highlight-activate on rect click', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
-    const rect = el.shadowRoot!.querySelectorAll('[part="rect-target"]')[1] as HTMLElement;
+    const rect = itemActions(el)[1]!;
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     rect.click();
     expect((await eventPromise).detail).to.deep.equal({ id: 'b' });
@@ -134,7 +156,7 @@ describe('lr-highlight-layer', () => {
 
   it('emits lr-highlight-activate on Enter/Space when a rect is focused', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
-    const rect = el.shadowRoot!.querySelector('[part="rect-target"]') as HTMLElement;
+    const rect = itemActions(el)[0]!;
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect((await eventPromise).detail).to.deep.equal({ id: 'a' });
@@ -142,18 +164,18 @@ describe('lr-highlight-layer', () => {
 
   it('is one roving tab stop: only one rect has tabindex="0"', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
-    const rects = [...el.shadowRoot!.querySelectorAll('[part="rect-target"]')];
+    const rects = itemActions(el);
     const zeroTab = rects.filter((r) => r.getAttribute('tabindex') === '0');
     expect(zeroTab).to.have.length(1);
   });
 
   it('ArrowDown moves the roving tab stop to the next rect', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>`);
-    const first = el.shadowRoot!.querySelector('[part="rect-target"]') as HTMLElement;
+    const first = itemActions(el)[0]!;
     first.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
     first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await el.updateComplete;
-    const rects = [...el.shadowRoot!.querySelectorAll('[part="rect-target"]')];
+    const rects = itemActions(el);
     expect(rects[1].getAttribute('tabindex')).to.equal('0');
     expect(rects[0].getAttribute('tabindex')).to.equal('-1');
   });
@@ -166,13 +188,13 @@ describe('lr-highlight-layer', () => {
     const el = await fixture<LyraHighlightLayer>(html`
       <lr-highlight-layer .items=${items}></lr-highlight-layer>
     `);
-    const targets = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="rect-target"]')];
+    const targets = itemActions(el);
     targets[2]!.focus();
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('c');
 
     el.items = items.slice(0, 2);
     await el.updateComplete;
-    const surviving = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="rect-target"]')];
+    const surviving = itemActions(el);
     expect((el.shadowRoot!.activeElement as HTMLElement | null)?.dataset.id).to.equal('b');
     expect(surviving.filter((target) => target.tabIndex === 0).map((target) => target.dataset.id)).to.deep.equal([
       'b',
@@ -184,7 +206,7 @@ describe('lr-highlight-layer', () => {
       html`<lr-highlight-layer .items=${ITEMS} .interactive=${false}></lr-highlight-layer>`,
     );
     const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
-    expect(el.shadowRoot!.querySelector('[part="rect-target"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="rect-target"]') === null).to.be.true;
     expect(rect.hasAttribute('role')).to.be.false;
     expect(rect.hasAttribute('tabindex')).to.be.false;
   });
@@ -195,7 +217,7 @@ describe('lr-highlight-layer', () => {
     );
     expect(el.interactive).to.be.false;
     const rect = el.shadowRoot!.querySelector('[part="rect"]') as HTMLElement;
-    expect(el.shadowRoot!.querySelector('[part="rect-target"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="rect-target"]') === null).to.be.true;
     expect(rect.hasAttribute('role')).to.be.false;
     expect(rect.hasAttribute('tabindex')).to.be.false;
   });
@@ -218,10 +240,10 @@ describe('lr-highlight-layer', () => {
     `);
     el.flash('a');
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[data-flash]') !== null).to.be.true;
     await new Promise((resolve) => setTimeout(resolve, 80));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
   });
 
   it('clears flash state for a zero-duration reduced-motion equivalent', async () => {
@@ -235,7 +257,7 @@ describe('lr-highlight-layer', () => {
     await el.updateComplete;
     await new Promise((resolve) => setTimeout(resolve, 0));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
   });
 
   it('clears transient flash state when disconnected or when items are replaced', async () => {
@@ -247,13 +269,13 @@ describe('lr-highlight-layer', () => {
     el.remove();
     document.body.append(el);
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
 
     el.flash('a');
     await el.updateComplete;
     el.items = ITEMS.map((item) => ({ ...item }));
     await el.updateComplete;
-    expect(el.shadowRoot!.querySelector('[data-flash]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
   });
 
   it('adds a transparent minimum pointer area around small percentage rects', async () => {
@@ -313,7 +335,7 @@ describe('lr-highlight-layer', () => {
         }}
       ></lr-highlight-layer>
     `);
-    const targets = el.shadowRoot!.querySelectorAll('[part="rect-target"]');
+    const targets = itemActions(el);
     expect(targets[0].getAttribute('aria-label')).to.equal('Surlignage : Zone A');
     expect(targets[1].getAttribute('aria-label')).to.equal('Surlignage 2 sur 2');
   });
@@ -328,6 +350,7 @@ describe('lr-highlight-layer', () => {
   it('gives an interactive rect a hover state matching its focus-visible affordance', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='rect-target'\]:hover/);
+    expect(css).to.match(/\[part='highlight-action'\]:hover/);
   });
 });
 

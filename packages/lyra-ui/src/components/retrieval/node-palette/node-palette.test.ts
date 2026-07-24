@@ -179,7 +179,7 @@ it('dims a disabled item through the shared disabled-opacity token', async () =>
 it('keeps the search and compact item at the live hit-area token override', async () => {
   const el = (await fixture(
     html`<lr-node-palette
-      style="--lr-icon-button-size: 52px; inline-size: 80px"
+      style="--lr-icon-button-size: 52px; inline-size: 32px"
       .items=${[{ type: 'x', label: 'X' }]}
     ></lr-node-palette>`,
   )) as LyraNodePalette;

@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
@@ -90,6 +91,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
       0,
       MAX_PAGE_COUNT,
     );
+    // `lr-load` describes a fresh document even when the source object and page count are unchanged.
+    // Replace each canvas so older peer work can finish only into detached render targets.
+    this.invalidateThumbnails();
   };
 
   private readonly onViewerPageChange = (e: Event): void => {
@@ -229,13 +233,8 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   }
 
   private invalidateThumbnails(): void {
-    const generation = ++this.thumbnailGeneration;
+    this.thumbnailGeneration++;
     this.thumbnailStates = new Map();
-    const canvases = [...this.canvases.entries()];
-    this.scheduleAfterUpdate(() => {
-      if (generation !== this.thumbnailGeneration) return;
-      for (const [page, canvas] of canvases) void this.loadThumbnail(page, canvas);
-    });
   }
 
   private async loadThumbnail(pageNumber: number, canvas: HTMLCanvasElement): Promise<void> {
@@ -325,9 +324,10 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           ${this.boundViewer
             ? thumbState === 'unavailable'
               ? html`<lr-file-icon decorative></lr-file-icon>`
-              : html`<canvas aria-hidden="true" ${ref(this.canvasRef(number))}></canvas>${thumbState !== 'ready'
-                  ? html`<lr-skeleton variant="rect" aria-hidden="true"></lr-skeleton>`
-                  : nothing}`
+              : html`${keyed(
+                  this.thumbnailGeneration,
+                  html`<canvas aria-hidden="true" ${ref(this.canvasRef(number))}></canvas>`,
+                )}${thumbState !== 'ready' ? html`<lr-skeleton variant="rect" aria-hidden="true"></lr-skeleton>` : nothing}`
             : html`<lr-file-icon decorative></lr-file-icon>`}
         </span>
         <span part="page-number" aria-hidden="true">${numberFormat.format(number)}</span>

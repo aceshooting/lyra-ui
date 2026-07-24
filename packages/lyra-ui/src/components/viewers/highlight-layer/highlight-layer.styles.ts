@@ -54,6 +54,33 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  [part='highlight-actions'] {
+    position: absolute;
+    z-index: var(--lr-layer-content);
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: grid;
+    gap: var(--lr-space-xs);
+    padding: var(--lr-space-xs);
+    pointer-events: none;
+  }
+  [part='highlight-action'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius-xs);
+    color: var(--lr-color-text);
+    background: var(--lr-color-surface);
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  [part='highlight-action']:hover {
+    background: var(--lr-color-surface-raised);
+  }
+  [part='highlight-action']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='rect']:where([data-flash]) {
     background: var(--lr-color-brand);
     animation: lr-highlight-layer-flash var(--lr-transition-ambient);

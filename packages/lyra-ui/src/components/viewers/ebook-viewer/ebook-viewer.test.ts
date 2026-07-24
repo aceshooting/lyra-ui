@@ -413,9 +413,21 @@ describe('lr-ebook-viewer', () => {
     }
   });
 
-  it('is accessible and supports localized navigation labels', async () => {
-    const el = await fixture(html`<lr-ebook-viewer .strings=${{ previous: 'Précédent', next: 'Suivant' }}></lr-ebook-viewer>`);
-    expect(el.shadowRoot!.querySelector('[part="previous-button"]')!.getAttribute('aria-label')).to.equal('Précédent');
+  it('is accessible and supports component-specific localized navigation labels', async () => {
+    const el = await fixture(html`
+      <lr-ebook-viewer
+        .strings=${{
+          ebookViewerPreviousChapter: 'Chapitre précédent',
+          ebookViewerNextChapter: 'Chapitre suivant',
+        }}
+      ></lr-ebook-viewer>
+    `);
+    expect(el.shadowRoot!.querySelector('[part="previous-button"]')!.getAttribute('aria-label')).to.equal(
+      'Chapitre précédent',
+    );
+    expect(el.shadowRoot!.querySelector('[part="next-button"]')!.getAttribute('aria-label')).to.equal(
+      'Chapitre suivant',
+    );
     await expect(el).to.be.accessible();
   });
 

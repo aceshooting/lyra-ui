@@ -151,17 +151,19 @@ export interface LyraMentionPopoverEventMap {
  *    host's own handler should stop, e.g. skip submitting the message on an
  *    Enter that actually picked a mention) and `false` otherwise.
  * 4. Set `open = false` whenever the query stops looking like an active
- *    mention context (a space typed, the trigger character deleted, the
- *    input blurred, …) — `lr-mention-close` fires automatically from that
- *    (see below), there is no separate "tell it to close" call needed.
+ *    mention context (a space typed, the trigger character deleted, or focus
+ *    leaving both the input and this popover) — `lr-mention-close` fires
+ *    automatically from that (see below), there is no separate "tell it to
+ *    close" call needed.
  * 5. Call `syncActiveDescendant()` after opening and after every consumed
  *    navigation key. It uses cross-root ARIA element reflection where the
  *    platform supports it and never installs a broken string IDREF. When it
  *    returns `false`, call `focusActiveOption()` after the first consumed
  *    navigation key. That fallback moves real focus into the shadow listbox,
- *    where each option and its focus owner share one tree scope; subsequent
- *    navigation is handled by the popover and focus returns to `anchor` when
- *    it closes.
+ *    where each option and its focus owner share one tree scope; a host blur
+ *    handler must therefore keep the popover open when `relatedTarget` is this
+ *    component. Subsequent navigation is handled by the popover and focus
+ *    returns to `anchor` when it closes.
  *
  * Positioning: when `anchor` is a plain `<textarea>` or single-line text
  * `<input>`, this component measures exactly where the caret currently
@@ -211,7 +213,9 @@ export interface LyraMentionPopoverEventMap {
  *     popover.query = detectedQuery;
  *     popover.open = detectedQuery !== null;
  *   });
- *   textarea.addEventListener('blur', () => (popover.open = false));
+ *   textarea.addEventListener('blur', (event) => {
+ *     if (event.relatedTarget !== popover) popover.open = false;
+ *   });
  *
  *   popover.addEventListener('lr-mention-select', (e) => {
  *     // splice `${e.detail.label}` into the textarea at the trigger offset
