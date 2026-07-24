@@ -763,7 +763,17 @@ it("associates a touched checkbox's error through aria-describedby", async () =>
   field(el, 'confirm').dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
   await el.updateComplete;
   expect(checkbox.getAttribute('aria-describedby')).to.include('-err');
-  expect(checkbox.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-describedby')).to.include('-err');
+  const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+    ariaDescribedByElements?: Element[];
+  };
+  if ('ariaDescribedByElements' in base) {
+    expect(base.ariaDescribedByElements?.map((element) => element.id)).to.include(
+      checkbox.getAttribute('aria-describedby'),
+    );
+    expect(base.getAttribute('aria-describedby')).to.equal('');
+  } else {
+    expect(base.getAttribute('aria-describedby')).to.include('-err');
+  }
 });
 
 it('participates in a form: submits the resolved value as JSON under name', async () => {

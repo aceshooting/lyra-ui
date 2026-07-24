@@ -16,6 +16,13 @@
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+`aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
+the consumer did not supply one), rather than the shadow-private popup, so the relationship
+resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
+that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
+browsers intentionally serialize the internal control's `aria-controls` content attribute as an
+empty string after that assignment.
 **Methods:** `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
 HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
 `trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location

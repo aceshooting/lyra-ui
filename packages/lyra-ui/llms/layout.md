@@ -1512,7 +1512,10 @@ since those attributes belong on the actual interactive trigger, which lives out
 component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
 generated id only when the consumer did not provide one, rather than the shadow-private list id.
 `lr-button`/`lr-icon-button` forward the popup/expanded values to their focused shadow-internal
-native control and resolve the controls element-reference across their shadow boundary), default
+native control and resolve the controls element-reference across their shadow boundary. In a
+supporting browser, the reflected `ariaControlsElements` list is the source of truth and its setter
+intentionally clears the internal control's serialized `aria-controls` value; browsers without the
+API retain the string as a best-effort fallback), default
 (`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
 an implicit `separator` role),
 `header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
@@ -1642,6 +1645,12 @@ and the open popup also closes it, but deliberately does *not* refocus the trigg
 click itself already moved focus somewhere the user chose.
 
 **Known gotchas:**
+- A supporting browser reports `trigger.shadowRoot`'s focused control
+  `getAttribute('aria-controls') === ''` after the element-reference relationship is assigned.
+  Inspect `ariaControlsElements` instead. This is the platform's reflected-element-reference
+  contract, not a missing menu id; setting the string again would discard the cross-shadow
+  relationship. Browsers without that API keep the string fallback, and `aria-controls` itself is
+  optional for the menu-button pattern.
 - `<lr-menu-item>`'s click handler lives on an inner shadow-DOM element (`[part="base"]`), not the
   host — calling `.click()` directly on the `<lr-menu-item>` host element in a test does **not**
   trigger selection; either click (or dispatch on) the element returned by

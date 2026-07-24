@@ -303,6 +303,13 @@ it('drives the button:hover foreground from --lr-icon-button-color-hover', () =>
   );
 });
 
+it('drives the button:hover border from --lr-icon-button-border-hover, falling back to the base border', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.include(
+    'border: var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0));',
+  );
+});
+
 it('renders unset background/color exactly as before (unset-regression)', async () => {
   const el = await fixture(html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`);
   const cs = getComputedStyle(el.shadowRoot!.querySelector('button')!);

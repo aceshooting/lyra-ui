@@ -49,12 +49,15 @@ const requireFromPackage = createRequire(join(packageDir, 'package.json'));
 const requireFromLoaderHost = createRequire(requireFromPackage.resolve('@web/dev-server-esbuild'));
 const esbuild = requireFromLoaderHost('esbuild');
 
-// The barrel plus five single-component entries spanning the size range: a primitive (button), a
-// form control with overlay machinery (select), a canvas/SVG visualization (gauge), a
-// document-viewer shell around an optional peer (pdf-viewer), and the largest interactive family
-// (flow-canvas). Budgeting representatives keeps the check fast while still catching a regression
-// in any of the shared layers (LyraElement base, form internals, overlay stack, viewer chrome).
+// The side-effect-free localization runtime, the barrel, and five single-component entries
+// spanning the size range: a primitive (button), a form control with overlay machinery (select), a
+// canvas/SVG visualization (gauge), a document-viewer shell around an optional peer (pdf-viewer),
+// and the largest interactive family (flow-canvas). Budgeting representatives keeps the check fast
+// while still catching a regression in any of the shared layers (LyraElement base, form internals,
+// overlay stack, viewer chrome). The localization entry has its own tight budget so a component
+// registration import cannot silently enter that application-only runtime.
 const entries = [
+  'dist/localization.js',
   'dist/lyra.js',
   'dist/components/forms/button/button.js',
   'dist/components/forms/select/select.js',

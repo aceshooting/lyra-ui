@@ -9,6 +9,7 @@ export const BorderedTinted: Story = {
       aria-label="Search"
       style="
         --lr-icon-button-border: var(--lr-border-width-thin) solid var(--lr-color-border);
+        --lr-icon-button-border-hover: var(--lr-border-width-thin) solid var(--lr-color-brand);
         --lr-icon-button-background: var(--lr-color-brand-quiet);
         --lr-icon-button-background-hover: var(--lr-color-brand);
         --lr-icon-button-color: var(--lr-color-brand);

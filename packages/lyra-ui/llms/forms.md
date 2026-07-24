@@ -898,13 +898,16 @@ box no matter what tier or override is in play.
 
 **Known gotchas:**
 - `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
-  a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
-  idref is not copied across the shadow boundary.
+  a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
+  are resolved onto the focused internal control through `ariaDescribedByElements`; external
+  `aria-labelledby` is not copied across the shadow boundary.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
   For host `aria-controls`, targets in the host's own root are resolved through the reflected
   element-reference API so a popup relationship survives the component's shadow boundary; browsers
-  without that API retain the forwarded string attribute as a best-effort fallback. This is what
-  lets either button serve as an `lr-menu` trigger.
+  with that API expose the relationship through `ariaControlsElements` and intentionally serialize
+  the `aria-controls` content attribute as an empty string. Browsers without the API retain the
+  forwarded string attribute as a best-effort fallback. A reflected element list and a non-empty
+  serialized string cannot coexist; this is what lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
@@ -930,10 +933,13 @@ app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the f
 button whose purpose isn't generic.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
-native button. Host `aria-controls` targets in the host's own root are resolved through the
-reflected element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
-exposes the menu relationship and expanded state on the element that actually receives focus;
-browsers without that API retain the forwarded string attribute as a best-effort fallback.
+native button. Host `aria-describedby` targets in the host's own root are resolved through
+`ariaDescribedByElements`. Host `aria-controls` targets use the corresponding
+`ariaControlsElements` API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>` exposes
+the menu relationship and expanded state on the element that actually receives focus. Supporting
+browsers intentionally clear each serialized internal IDREF attribute after its explicit element
+list is assigned. Browsers without those APIs retain the forwarded string attributes as
+best-effort fallbacks.
 
 **Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
@@ -976,7 +982,9 @@ counterpart to it. `--lr-icon-button-background` (default `transparent`) tints t
 its hover-state background, `--lr-icon-button-color` (default `inherit`) its icon/text color,
 `--lr-icon-button-color-hover` (default `var(--lr-icon-button-color, inherit)`) its hover-state
 foreground, and `--lr-icon-button-border` (default `0`) the complete native-button border
-shorthand. These are the same per-component indirection `lr-button`'s
+shorthand. `--lr-icon-button-border-hover` (default
+`var(--lr-icon-button-border, 0)`) replaces that complete shorthand on hover. These are the same
+per-component indirection `lr-button`'s
 `--lr-button-fill`/`--lr-button-on-fill` provide, letting a single button be bordered and tinted
 without a `::part(button)` rule. Left unset, each falls back to the original value, so rendering is
 unchanged.
@@ -1666,9 +1674,12 @@ silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host eve
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
 host so the control still has an accessible name.
 
-Host `aria-describedby` is forwarded to the internal `role="checkbox"`, so an externally-owned
-description can be associated with one checkbox inside a group. The attribute is omitted from the
-internal role when unset and tracks host attribute changes.
+Host `aria-describedby` targets in the host's own root are resolved onto the internal
+`role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
+valid across the shadow boundary. In supporting browsers the explicit element list intentionally
+leaves the internal role's serialized attribute empty; browsers without the reflected-reference
+API keep the string fallback. The relationship tracks host attribute changes and clears when
+unset.
 
 **CSS parts:** `base` (the whole interactive control, `role="checkbox"`), `box` (the small square
 showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),

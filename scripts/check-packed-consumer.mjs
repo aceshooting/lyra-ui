@@ -9,6 +9,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const uiPackage = join(root, 'packages', 'lyra-ui');
 const flagsPackage = join(root, 'packages', 'lyra-flags');
 const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const binName = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
 
 const optionalPeers = [
@@ -129,7 +130,13 @@ async function pack(packageDir, destination) {
   return join(destination, packed[0]);
 }
 
-async function writeFixture(fixtureDir, packageTarball, flagsTarball, withOptionalPeers) {
+async function writeFixture(
+  fixtureDir,
+  packageTarball,
+  flagsTarball,
+  withOptionalPeers,
+  maplibreVersion = '^6.0.0',
+) {
   const dependencies = {
     '@aceshooting/lyra-ui': `file:${relative(fixtureDir, packageTarball)}`,
   };
@@ -149,7 +156,7 @@ async function writeFixture(fixtureDir, packageTarball, flagsTarball, withOption
       'd3-selection': '^3.0.0',
       'd3-zoom': '^3.0.0',
       dompurify: '^3.4.12',
-      'maplibre-gl': '^6.0.0',
+      'maplibre-gl': maplibreVersion,
       marked: '^18.0.6',
       shiki: '^4.3.1',
     });
@@ -159,7 +166,9 @@ async function writeFixture(fixtureDir, packageTarball, flagsTarball, withOption
     join(fixtureDir, 'package.json'),
     `${JSON.stringify(
       {
-        name: withOptionalPeers ? 'lr-packed-consumer-with-peers' : 'lr-packed-consumer-core',
+        name: withOptionalPeers
+          ? `lr-packed-consumer-with-maplibre-${maplibreVersion.startsWith('^5') ? 'v5' : 'v6'}`
+          : 'lr-packed-consumer-core',
         private: true,
         type: 'module',
         dependencies,
@@ -196,6 +205,28 @@ console.log('Node ESM package imports passed.');
 `,
   );
   await writeFile(
+    join(fixtureDir, 'src', 'node-localization-import.mjs'),
+    `const localization = await import('@aceshooting/lyra-ui/localization.js');
+if (typeof document !== 'undefined') {
+  throw new Error('plain Node unexpectedly exposes a document before the localization import');
+}
+if (
+  typeof localization.registerLyraLocale !== 'function' ||
+  typeof localization.setLyraLocale !== 'function' ||
+  typeof localization.resolveLyraString !== 'function' ||
+  'LyraElement' in localization
+) {
+  throw new Error('the side-effect-free localization entry exposed the wrong surface');
+}
+localization.registerLyraLocale('packed-consumer', { close: 'Close packed consumer' });
+if (!localization.getRegisteredLyraLocales().includes('packed-consumer')) {
+  throw new Error('the public localization registry did not retain a registered locale');
+}
+console.log('Side-effect-free localization import passed.');
+`,
+  );
+
+  await writeFile(
     join(fixtureDir, 'src', 'node-gemstones-data-import.mjs'),
     `const palette = await import('@aceshooting/lyra-ui/theme/gemstones-data.js');
 if (typeof document !== 'undefined') {
@@ -226,6 +257,12 @@ import { loadD3 } from '@aceshooting/lyra-ui/components/retrieval/graph/graph-lo
 import { seriesPalette } from '@aceshooting/lyra-ui/components/charts/chart/chart.class.js';
 import { createLyraThemeBootstrap } from '@aceshooting/lyra-ui/theme.js';
 import {
+  getRegisteredLyraLocales,
+  registerLyraLocale,
+  type LyraLocaleStrings,
+  type LyraMessageKey,
+} from '@aceshooting/lyra-ui/localization.js';
+import {
   DEFAULT_GEMSTONE,
   GEMSTONE_KEYS,
   GEMSTONES,
@@ -241,6 +278,9 @@ const Empty = GranularLyraEmpty satisfies typeof LyraEmpty;
 const dialog = new LyraDialog();
 const table = new LyraTable();
 const events: [LyraChartEventMap, LyraGraphEventMap, LyraMapEventMap] | undefined = undefined;
+const localeStrings: LyraLocaleStrings = { close: 'Close' };
+const localeKey: LyraMessageKey = 'close';
+registerLyraLocale('packed-typecheck', localeStrings);
 defineElement('consumer-empty', Empty);
 void [
   name,
@@ -254,6 +294,8 @@ void [
   loadD3,
   seriesPalette,
   createLyraThemeBootstrap,
+  getRegisteredLyraLocales,
+  localeKey,
   DEFAULT_GEMSTONE,
   GEMSTONE_KEYS,
   GEMSTONES,
@@ -314,7 +356,12 @@ export default defineConfig({
     flag: `import flagUrl from '@aceshooting/lyra-flags/flags/fr.svg';\nexport { flagUrl };\n`,
     codeBlock: `import '@aceshooting/lyra-ui/components/conversation/code-block/code-block.js';\nexport const loaded = true;\n`,
     chart: `import '@aceshooting/lyra-ui/components/charts/chart/chart.js';\nexport const loaded = true;\n`,
-    map: `import '@aceshooting/lyra-ui/components/media/map/map.js';
+    map: maplibreVersion.startsWith('^5')
+      ? `import '@aceshooting/lyra-ui/components/media/map/map.js';
+import 'maplibre-gl/dist/maplibre-gl.css';
+export const loaded = true;
+`
+      : `import '@aceshooting/lyra-ui/components/media/map/map.js';
 import { setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 setWorkerUrl(workerUrl);
@@ -355,7 +402,7 @@ function formatBytes(bytes) {
   return `${(bytes / 1024).toFixed(1)} KiB`;
 }
 
-async function runBundle(fixtureDir, entry, config, noOptionalPeers) {
+async function runBundle(fixtureDir, entry, config, noOptionalPeers, maplibreMajor = 6) {
   const env = {
     ...process.env,
     CI: 'true',
@@ -382,7 +429,11 @@ async function runBundle(fixtureDir, entry, config, noOptionalPeers) {
   if (config.maxGzipBytes != null && output.gzipBytes > config.maxGzipBytes) {
     violations.push(`gzip ${formatBytes(output.gzipBytes)} exceeds budget ${formatBytes(config.maxGzipBytes)}`);
   }
-  if (entry === 'map' && !output.files.some((file) => /maplibre-gl-worker/.test(file))) {
+  if (
+    entry === 'map' &&
+    maplibreMajor === 6 &&
+    !output.files.some((file) => /maplibre-gl-worker/.test(file))
+  ) {
     violations.push('the Vite consumer did not emit MapLibre v6’s module worker');
   }
   if (violations.length > 0) {
@@ -402,11 +453,13 @@ async function main() {
     const tarballDir = join(workspace, 'packages');
     const coreFixture = join(workspace, 'core');
     const optionalFixture = join(workspace, 'optional');
+    const maplibreV5Fixture = join(workspace, 'maplibre-v5');
     await Promise.all([
       writeFile(join(workspace, '.keep'), ''),
       mkdir(tarballDir, { recursive: true }),
       mkdir(join(coreFixture, 'src'), { recursive: true }),
       mkdir(join(optionalFixture, 'src'), { recursive: true }),
+      mkdir(join(maplibreV5Fixture, 'src'), { recursive: true }),
     ]);
 
     const uiTarball = await pack(uiPackage, tarballDir);
@@ -427,6 +480,7 @@ async function main() {
 
     await writeFixture(coreFixture, uiTarball, flagsTarball, false);
     await writeFixture(optionalFixture, uiTarball, flagsTarball, true);
+    await writeFixture(maplibreV5Fixture, uiTarball, flagsTarball, true, '^5.24.0');
     await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], coreFixture, 'core fixture install');
     await run(
       pnpm,
@@ -434,7 +488,25 @@ async function main() {
       optionalFixture,
       'optional-peer fixture install',
     );
+    await run(
+      npm,
+      ['install', '--ignore-scripts', '--strict-peer-deps'],
+      maplibreV5Fixture,
+      'MapLibre v5 npm fixture install',
+    );
+    await run(
+      npm,
+      ['ls', 'maplibre-gl', '--all'],
+      maplibreV5Fixture,
+      'MapLibre v5 peer tree check',
+    );
 
+    await run(
+      process.execPath,
+      ['src/node-localization-import.mjs'],
+      coreFixture,
+      'side-effect-free localization import check',
+    );
     await run(
       process.execPath,
       ['src/node-gemstones-data-import.mjs'],
@@ -448,6 +520,12 @@ async function main() {
       coreFixture,
       'consumer declaration check',
     );
+    await run(
+      join(maplibreV5Fixture, 'node_modules', '.bin', binName('tsc')),
+      ['--noEmit', '--skipLibCheck', 'false', '-p', 'tsconfig.json'],
+      maplibreV5Fixture,
+      'MapLibre v5 consumer declaration check',
+    );
 
     for (const [entry, config] of Object.entries(bundleEntries)) {
       await runBundle(
@@ -457,6 +535,7 @@ async function main() {
         config.fixture === 'core',
       );
     }
+    await runBundle(maplibreV5Fixture, 'map', bundleEntries.map, false, 5);
 
     console.log('Packed-consumer checks passed.');
   } finally {

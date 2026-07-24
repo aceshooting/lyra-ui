@@ -100165,7 +100165,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-button>` — a generic action-button primitive. Renders an internal native\n`<button part=\"base\">`. `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nWhen `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see\n`safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set) the root\nrenders as a real `<a part=\"base\" href=…>` instead — for a link styled\nas a button (e.g. a CTA). Native navigation is then the anchor's own activation, so the\nsubmit/reset click handler and `type` (submit/reset) have no effect in that mode. When the\nbutton is disabled (its own `disabled` or an ancestor `<fieldset disabled>`) the anchor renders\nwith `aria-disabled=\"true\"` and **no `href`** — an href-less anchor is not focusable or\nnavigable, so a disabled link button genuinely cannot be activated (unlike a bare\n`aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the\nnative `<button>`.\n\n`accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor\nas a literal string (for an icon-only button with no visible label); external\n`aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\nHost `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic\ncontrol. When host `aria-controls` names elements in the host's own root, the controls\nrelationship is resolved onto the internal control through the reflected element-reference API\nso it remains valid across this component's shadow boundary; browsers without that API retain\nthe forwarded string attribute as a best-effort fallback.",
+          "description": "`<lr-button>` — a generic action-button primitive. Renders an internal native\n`<button part=\"base\">`. `type=\"submit\"`/`type=\"reset\"`\nare handled by this component itself via the host's own `closest('form')` — a shadow-internal\nnative `<button type=\"submit\">` does not participate in an ancestor light-DOM form's submission\non its own, since form-submitter semantics don't cross the shadow boundary.\n\nWhen `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see\n`safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set) the root\nrenders as a real `<a part=\"base\" href=…>` instead — for a link styled\nas a button (e.g. a CTA). Native navigation is then the anchor's own activation, so the\nsubmit/reset click handler and `type` (submit/reset) have no effect in that mode. When the\nbutton is disabled (its own `disabled` or an ancestor `<fieldset disabled>`) the anchor renders\nwith `aria-disabled=\"true\"` and **no `href`** — an href-less anchor is not focusable or\nnavigable, so a disabled link button genuinely cannot be activated (unlike a bare\n`aria-disabled` on a still-navigable link). An unsafe/unparseable `href` falls back to the\nnative `<button>`.\n\n`accessibleLabel` (attribute `aria-label`) is forwarded reactively to the internal button/anchor\nas a literal string (for an icon-only button with no visible label). Host `aria-describedby`\nIDREFs are resolved through `ariaDescribedByElements`; external `aria-labelledby` is not copied\nacross the shadow boundary.\nHost `aria-haspopup` and `aria-expanded` values are likewise forwarded to the internal semantic\ncontrol. When host `aria-controls` names elements in the host's own root, the controls\nrelationship is resolved onto the internal control through the reflected element-reference API\nso it remains valid across this component's shadow boundary. Assigning that relationship\nintentionally clears the serialized `aria-controls` value; read `ariaControlsElements` in a\nsupporting browser. Browsers without that API retain the forwarded string attribute as a\nbest-effort fallback.",
           "name": "LyraButton",
           "cssProperties": [
             {
@@ -100489,6 +100489,15 @@
             },
             {
               "kind": "field",
+              "name": "hasSyncedDescribedByElements",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "href",
               "type": {
                 "text": "string | undefined"
@@ -100628,6 +100637,16 @@
               "privacy": "private",
               "default": "null",
               "attribute": "aria-controls"
+            },
+            {
+              "kind": "field",
+              "name": "triggerDescribedBy",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "attribute": "aria-describedby"
             },
             {
               "kind": "field",
@@ -100918,6 +100937,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "syncDescribedByElements",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
             }
           ],
           "attributes": [
@@ -100937,6 +100966,14 @@
               },
               "default": "null",
               "fieldName": "triggerControls"
+            },
+            {
+              "name": "aria-describedby",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "fieldName": "triggerDescribedBy"
             },
             {
               "name": "aria-expanded",
@@ -102084,7 +102121,7 @@
           ],
           "slots": [
             {
-              "description": "Label text, rendered next to the box. Clicking it toggles the checkbox, the same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the control still has an accessible name. A host `aria-describedby` attribute is forwarded to the internal `role=\"checkbox\"` so externally-owned descriptions can be associated with this individual control.",
+              "description": "Label text, rendered next to the box. Clicking it toggles the checkbox, the same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the host so the control still has an accessible name. A host `aria-describedby` attribute is resolved onto the internal `role=\"checkbox\"` through `ariaDescribedByElements` so externally-owned descriptions remain valid across the shadow boundary.",
               "name": ""
             }
           ],
@@ -102268,6 +102305,15 @@
             {
               "kind": "field",
               "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasSyncedDescribedByElements",
               "type": {
                 "text": "boolean"
               },
@@ -111918,7 +111964,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-icon-button>` — an accessible icon-only action button.\n\nSet `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted\ncontent is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so\nany complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — renders at its own natural\naspect ratio instead of being forced into a 1:1 box. Bare SVG geometry (`<path>`, `<circle>`,\nand a handful of other raw primitives) with no enclosing `<svg>` of its own is detected and\ncloned into a real, internal SVG-namespaced element so it still paints — the same fallback\n`<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a\nslotted `<lr-flag>`) is never run through it.\n\nHost `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal\nnative button. When host `aria-controls` names elements in the host's own root, the controls\nrelationship is resolved onto that focused control through the reflected element-reference API\nso it remains valid across this component's shadow boundary; browsers without that API retain\nthe forwarded string attribute as a best-effort fallback.\n\nForm-associated (mirroring `<lr-button>`'s identical shape): discoverable through\n`form.elements`, and `type=\"submit\"`/`type=\"reset\"` are handled by this component itself via\nthe host's own `closest('form')` — a shadow-internal native `<button type=\"submit\">` does not\nparticipate in an ancestor light-DOM form's submission on its own, since form-submitter\nsemantics don't cross the shadow boundary.",
+          "description": "`<lr-icon-button>` — an accessible icon-only action button.\n\nSet `icon` for one of `<lr-icon>`'s named glyphs, or slot your own content instead. Slotted\ncontent is a **sibling** of the built-in glyph rather than being piped through `<lr-icon>`, so\nany complete element — an `<svg>`, an `<img>`, an `<lr-flag>` — renders at its own natural\naspect ratio instead of being forced into a 1:1 box. Bare SVG geometry (`<path>`, `<circle>`,\nand a handful of other raw primitives) with no enclosing `<svg>` of its own is detected and\ncloned into a real, internal SVG-namespaced element so it still paints — the same fallback\n`<lr-icon>`'s own custom-content slot uses, but narrowly scoped so a custom element (e.g. a\nslotted `<lr-flag>`) is never run through it.\n\nHost `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal\nnative button. Host `aria-describedby` IDREFs are resolved through `ariaDescribedByElements`.\nWhen host `aria-controls` names elements in the host's own root, the controls relationship is\nresolved onto that focused control through the reflected element-reference API so it remains\nvalid across this component's shadow boundary. Assigning that relationship intentionally clears\nthe serialized `aria-controls` value; read `ariaControlsElements` in a supporting browser.\nBrowsers without that API retain the forwarded string attribute as a best-effort fallback.\n\nForm-associated (mirroring `<lr-button>`'s identical shape): discoverable through\n`form.elements`, and `type=\"submit\"`/`type=\"reset\"` are handled by this component itself via\nthe host's own `closest('form')` — a shadow-internal native `<button type=\"submit\">` does not\nparticipate in an ancestor light-DOM form's submission on its own, since form-submitter\nsemantics don't cross the shadow boundary.",
           "name": "LyraIconButton",
           "cssProperties": [
             {
@@ -111955,6 +112001,11 @@
               "description": "Complete border shorthand of the native button.",
               "name": "--lr-icon-button-border",
               "default": "0"
+            },
+            {
+              "description": "Complete border shorthand on hover.",
+              "name": "--lr-icon-button-border-hover",
+              "default": "var(--lr-icon-button-border, 0)"
             }
           ],
           "cssParts": [
@@ -112097,6 +112148,15 @@
             },
             {
               "kind": "field",
+              "name": "hasSyncedDescribedByElements",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
               "name": "icon",
               "type": {
                 "text": "string"
@@ -112217,6 +112277,16 @@
               "privacy": "private",
               "default": "null",
               "attribute": "aria-controls"
+            },
+            {
+              "kind": "field",
+              "name": "triggerDescribedBy",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "attribute": "aria-describedby"
             },
             {
               "kind": "field",
@@ -112498,6 +112568,16 @@
             },
             {
               "kind": "method",
+              "name": "syncDescribedByElements",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "syncFallbackGeometry",
               "privacy": "private",
               "return": {
@@ -112516,6 +112596,14 @@
               },
               "default": "null",
               "fieldName": "triggerControls"
+            },
+            {
+              "name": "aria-describedby",
+              "type": {
+                "text": "string | null"
+              },
+              "default": "null",
+              "fieldName": "triggerDescribedBy"
             },
             {
               "name": "aria-expanded",
@@ -141836,7 +141924,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.",
+          "description": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control. In supporting browsers,\nassigning the element reference intentionally clears the internal control's serialized\n`aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers\nwithout the reflected element-reference API retain the string as a best-effort fallback.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.",
           "name": "LyraMenu",
           "cssParts": [
             {
@@ -161378,7 +161466,7 @@
               "text": "Promise<MaplibreModule | null>"
             }
           },
-          "description": "Lazily loads the optional peer dependency `maplibre-gl` once per page.\nResolves to `null` (with a one-time warning) if it isn't installed —\nmirrors `<lr-flag>`'s peer-dependency pattern. Consumers must separately\nimport `maplibre-gl/dist/maplibre-gl.css` and configure MapLibre v6's\nmodule-worker URL for their bundler once they install the peer."
+          "description": "Lazily loads the optional peer dependency `maplibre-gl` once per page.\nResolves to `null` (with a one-time warning) if it isn't installed —\nmirrors `<lr-flag>`'s peer-dependency pattern. Consumers must separately\nimport `maplibre-gl/dist/maplibre-gl.css`. MapLibre v6 consumers also configure its module-worker\nURL for their bundler once they install the peer; v5's standard build includes its worker."
         }
       ],
       "exports": [
@@ -161398,7 +161486,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-map>` — a maplibre-gl wrapper with a declarative legend, choropleth\nGeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays\n(arbitrary shapes rendered as a source plus fill/line/circle layers,\nindependent of `choropleth`'s field/stops color-interpolation), plus a raw\n`map` escape hatch. Requires the optional peer dep `maplibre-gl`\n(consumers also import its CSS and configure its module-worker URL once).\nMapLibre v6 is ESM-only and requires WebGL2.\n\nThe underlying `maplibregl.Map` — and the WebGL context it opens — isn't\nconstructed until this element is first visible in the viewport (tracked\nvia `IntersectionObserver`), even once the `maplibre-gl` peer dependency\nhas finished loading. Browsers hard-cap concurrent WebGL contexts per\npage, so a grid/dashboard of many `<lr-map>` instances only constructs\nthe ones actually on-screen instead of racing to exhaust that budget the\ninstant each one mounts. `map` stays `undefined` (and `lr-map-load`\ndoesn't fire) until construction actually happens.",
+          "description": "`<lr-map>` — a maplibre-gl wrapper with a declarative legend, choropleth\nGeoJSON layer, markers, and additive `dataLayers` GeoJSON overlays\n(arbitrary shapes rendered as a source plus fill/line/circle layers,\nindependent of `choropleth`'s field/stops color-interpolation), plus a raw\n`map` escape hatch. Requires the optional peer dep `maplibre-gl`\nv5 or v6 (consumers also import its CSS). MapLibre v6 is ESM-only, requires WebGL2, and needs\nits module-worker URL configured once; v5's standard build includes its worker.\n\nThe underlying `maplibregl.Map` — and the WebGL context it opens — isn't\nconstructed until this element is first visible in the viewport (tracked\nvia `IntersectionObserver`), even once the `maplibre-gl` peer dependency\nhas finished loading. Browsers hard-cap concurrent WebGL contexts per\npage, so a grid/dashboard of many `<lr-map>` instances only constructs\nthe ones actually on-screen instead of racing to exhaust that budget the\ninstant each one mounts. `map` stays `undefined` (and `lr-map-load`\ndoesn't fire) until construction actually happens.",
           "name": "LyraMap",
           "cssParts": [
             {
@@ -170646,6 +170734,16 @@
             },
             {
               "kind": "field",
+              "name": "generatedHostId",
+              "privacy": "private",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraPopover",
+                "module": "src/components/overlays/overlay/popover.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "inheritedContextObserver",
               "type": {
                 "text": "MutationObserver | undefined"
@@ -171402,7 +171500,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-popover>` — a click-triggered, light-dismiss floating surface.",
+          "description": "`<lr-popover>` — a click-triggered, light-dismiss floating surface.\n\nThe slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.\n`aria-controls` targets this public host (which receives a stable generated `id` when the\nconsumer did not supply one), not the shadow-private popup. That keeps the relationship\nresolvable for native triggers and lets `<lr-button>`/`<lr-icon-button>` reflect the host onto\ntheir focused shadow-internal controls through `ariaControlsElements`.",
           "name": "LyraPopover",
           "cssProperties": [
             {
@@ -171526,6 +171624,12 @@
               "type": {
                 "text": "string"
               },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "generatedHostId",
               "privacy": "private",
               "readonly": true
             },
@@ -172145,7 +172249,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tooltip>` — a localized, hover/focus tooltip for a consumer-owned trigger.\nPlain content uses tooltip semantics. When the default slot contains an actionable descendant,\nthe popup promotes to a named dialog and remains open while pointer or focus is inside so its\ncontrols can be reached. Prefer `<lr-popover>` when click-to-open ownership is desired.",
+          "description": "`<lr-tooltip>` — a localized, hover/focus tooltip for a consumer-owned trigger.\nPlain content uses tooltip semantics. When the default slot contains an actionable descendant,\nthe popup promotes to a named dialog and remains open while pointer or focus is inside so its\ncontrols can be reached. Prefer `<lr-popover>` when click-to-open ownership is desired.\n\nWhile open, the trigger's `aria-describedby` targets a hidden text proxy in this component's\nlight DOM rather than the shadow-private popup. Native triggers can resolve that ID directly;\n`<lr-button>` and `<lr-icon-button>` reflect it onto their focused internal controls through\n`ariaDescribedByElements`, where the serialized internal attribute is intentionally empty.",
           "name": "LyraTooltip",
           "cssProperties": [
             {
@@ -172246,6 +172350,20 @@
               "type": {
                 "text": "number"
               }
+            },
+            {
+              "kind": "field",
+              "name": "descriptionId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "descriptionProxy",
+              "type": {
+                "text": "HTMLSpanElement | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -172630,6 +172748,16 @@
             },
             {
               "kind": "method",
+              "name": "ensureDescriptionProxy",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
               "name": "isPopupTarget",
               "privacy": "private",
               "return": {
@@ -172872,6 +173000,16 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "updateDescriptionProxy",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
             },
             {
               "kind": "method",

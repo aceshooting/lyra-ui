@@ -1,7 +1,10 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { syncAriaControlsElements } from '../../../internal/aria-controls.js';
+import {
+  syncAriaControlsElements,
+  syncAriaDescribedByElements,
+} from '../../../internal/aria-controls.js';
 import { styles } from './icon-button.styles.js';
 
 /** Raw SVG geometry primitives that render nothing when parsed as top-level light-DOM children
@@ -51,10 +54,12 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * slotted `<lr-flag>`) is never run through it.
  *
  * Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
- * native button. When host `aria-controls` names elements in the host's own root, the controls
- * relationship is resolved onto that focused control through the reflected element-reference API
- * so it remains valid across this component's shadow boundary; browsers without that API retain
- * the forwarded string attribute as a best-effort fallback.
+ * native button. Host `aria-describedby` IDREFs are resolved through `ariaDescribedByElements`.
+ * When host `aria-controls` names elements in the host's own root, the controls relationship is
+ * resolved onto that focused control through the reflected element-reference API so it remains
+ * valid across this component's shadow boundary. Assigning that relationship intentionally clears
+ * the serialized `aria-controls` value; read `ariaControlsElements` in a supporting browser.
+ * Browsers without that API retain the forwarded string attribute as a best-effort fallback.
  *
  * Form-associated (mirroring `<lr-button>`'s identical shape): discoverable through
  * `form.elements`, and `type="submit"`/`type="reset"` are handled by this component itself via
@@ -84,6 +89,8 @@ function cloneToSvgNamespace(node: Element): SVGElement | null {
  * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Icon/text color
  *   on hover.
  * @cssprop [--lr-icon-button-border=0] - Complete border shorthand of the native button.
+ * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, 0)] - Complete border
+ *   shorthand on hover.
  */
 export class LyraIconButton extends LyraElement {
   static override styles = [LyraElement.styles, styles];
@@ -97,6 +104,7 @@ export class LyraIconButton extends LyraElement {
 
   private _disabled = false;
   private _fieldsetDisabled = false;
+  private hasSyncedDescribedByElements = false;
 
   get disabled(): boolean {
     return this._disabled;
@@ -123,6 +131,7 @@ export class LyraIconButton extends LyraElement {
   @property({ attribute: 'aria-haspopup' }) private triggerHasPopup: string | null = null;
   @property({ attribute: 'aria-expanded' }) private triggerExpanded: string | null = null;
   @property({ attribute: 'aria-controls' }) private triggerControls: string | null = null;
+  @property({ attribute: 'aria-describedby' }) private triggerDescribedBy: string | null = null;
   @property() label = '';
   /** Forwarded to this component's own submit/reset handling (`onClick` below) — see the class
    *  doc comment for why this component (not the shadow-internal `<button>`) owns that behavior. */
@@ -179,6 +188,16 @@ export class LyraIconButton extends LyraElement {
     // updated() layered under this class must still run.
     this.syncFallbackGeometry();
     syncAriaControlsElements(this, this.buttonEl, this.triggerControls);
+    this.syncDescribedByElements();
+  }
+
+  private syncDescribedByElements(): void {
+    if (!this.triggerDescribedBy && !this.hasSyncedDescribedByElements) return;
+    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+      this,
+      this.buttonEl,
+      this.triggerDescribedBy,
+    );
   }
 
   /** Mirrors `<lr-icon>`'s own `syncCustomNodes()`: repopulates `[part="fallback"]` from scratch
@@ -205,6 +224,7 @@ export class LyraIconButton extends LyraElement {
       aria-haspopup=${this.triggerHasPopup ?? nothing}
       aria-expanded=${this.triggerExpanded ?? nothing}
       aria-controls=${this.triggerControls || nothing}
+      aria-describedby=${this.triggerDescribedBy || nothing}
       @click=${this.onClick}
     >${this.icon ? html`<lr-icon name=${this.icon}></lr-icon>` : nothing}${this.hasBareGeometry ? html`<svg part="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"></svg>` : nothing}<slot @slotchange=${this.onSlotChange}></slot></button>`;
   }

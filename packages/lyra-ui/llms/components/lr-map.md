@@ -74,10 +74,11 @@ not installed)
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
 
-**Optional peer deps:** `maplibre-gl` (lazy-loaded). MapLibre v6 is ESM-only and requires WebGL2.
-The consumer must **separately** import `maplibre-gl/dist/maplibre-gl.css` and configure the v6
-module-worker URL for its bundler once — the component cannot choose a bundler-specific worker URL.
-For Vite:
+**Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). The consumer must **separately**
+import `maplibre-gl/dist/maplibre-gl.css`. MapLibre v5's standard build includes its worker.
+MapLibre v6 is ESM-only, requires WebGL2, and additionally needs its module-worker URL configured
+for the bundler once — the component cannot choose a bundler-specific worker URL. For Vite with
+v6:
 
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>

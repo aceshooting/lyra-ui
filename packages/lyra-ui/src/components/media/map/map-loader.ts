@@ -7,8 +7,8 @@ let maplibre: Promise<MaplibreModule | null> | undefined;
  * Lazily loads the optional peer dependency `maplibre-gl` once per page.
  * Resolves to `null` (with a one-time warning) if it isn't installed —
  * mirrors `<lr-flag>`'s peer-dependency pattern. Consumers must separately
- * import `maplibre-gl/dist/maplibre-gl.css` and configure MapLibre v6's
- * module-worker URL for their bundler once they install the peer.
+ * import `maplibre-gl/dist/maplibre-gl.css`. MapLibre v6 consumers also configure its module-worker
+ * URL for their bundler once they install the peer; v5's standard build includes its worker.
  */
 export function loadMaplibre(): Promise<MaplibreModule | null> {
   if (!maplibre) {

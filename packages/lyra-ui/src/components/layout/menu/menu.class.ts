@@ -101,7 +101,10 @@ export interface LyraMenuEventMap {
  * `id` only when the consumer did not supply one), rather than a shadow-private popup id, so the
  * relationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe
  * those attributes, forward the popup/expanded values to their shadow-internal native controls,
- * and resolve the controls element-reference onto that focused control.
+ * and resolve the controls element-reference onto that focused control. In supporting browsers,
+ * assigning the element reference intentionally clears the internal control's serialized
+ * `aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers
+ * without the reflected element-reference API retain the string as a best-effort fallback.
  *
  * The popup is always rendered (never `display:none`) so `.focus()` calls on
  * its content work synchronously the instant it opens — visually hidden via

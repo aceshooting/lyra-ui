@@ -91,6 +91,7 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+  `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims), `@aceshooting/lyra-ui/internal/*` (shared internals, all documented below).
 
@@ -361,7 +362,10 @@ in the per-component sections:
   overrides, merged over the registered catalog.
 
 ```ts
-import { registerLyraLocale, setLyraLocale } from '@aceshooting/lyra-ui';
+import {
+  registerLyraLocale,
+  setLyraLocale,
+} from '@aceshooting/lyra-ui/localization.js';
 
 registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer' }); // app-wide, partial catalogs fine
 setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inherit it
@@ -371,13 +375,16 @@ setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inher
 <lr-toast .strings=${{ close: 'Fermer' }}></lr-toast>
 ```
 
-Exported from the package root: `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`,
-`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
-`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
-`LyraLocaleStrings` / `LyraMessageKey`. **`LYRA_DEFAULT_STRINGS` is the authoritative key list**
-(1005 keys, matching the `LyraMessageKey` union) — read it to find the key to override rather than
-guessing one. Lookup falls back exact locale → base language → English. Date, number, byte,
-relative-time and calendar output goes through `Intl`.
+The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
+`registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getRegisteredLyraLocales`,
+`subscribeLyraLocaleRegistry`, `resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`,
+`LYRA_DEFAULT_STRINGS`, and the types `LyraLocaleStrings` / `LyraMessageKey`. The package root
+continues to re-export the same surface for compatibility, but it also registers the non-peer-gated
+component graph; use the dedicated entry when the application only needs locale setup.
+**`LYRA_DEFAULT_STRINGS` is the authoritative key list** (1005 keys, matching the
+`LyraMessageKey` union) — read it to find the key to override rather than guessing one. Lookup
+falls back exact locale → base language → English. Date, number, byte, relative-time and calendar
+output goes through `Intl`.
 
 `getRegisteredLyraLocales(): string[]` lists every locale with strings registered via
 `registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),
@@ -1545,13 +1552,16 @@ box no matter what tier or override is in play.
 
 **Known gotchas:**
 - `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
-  a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
-  idref is not copied across the shadow boundary.
+  a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
+  are resolved onto the focused internal control through `ariaDescribedByElements`; external
+  `aria-labelledby` is not copied across the shadow boundary.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
   For host `aria-controls`, targets in the host's own root are resolved through the reflected
   element-reference API so a popup relationship survives the component's shadow boundary; browsers
-  without that API retain the forwarded string attribute as a best-effort fallback. This is what
-  lets either button serve as an `lr-menu` trigger.
+  with that API expose the relationship through `ariaControlsElements` and intentionally serialize
+  the `aria-controls` content attribute as an empty string. Browsers without the API retain the
+  forwarded string attribute as a best-effort fallback. A reflected element list and a non-empty
+  serialized string cannot coexist; this is what lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
@@ -1577,10 +1587,13 @@ app-wide with `registerLyraLocale()` (see `llms/shared.md`); don't rely on the f
 button whose purpose isn't generic.
 
 Host `aria-haspopup` and `aria-expanded` values are forwarded reactively to the shadow-internal
-native button. Host `aria-controls` targets in the host's own root are resolved through the
-reflected element-reference API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>`
-exposes the menu relationship and expanded state on the element that actually receives focus;
-browsers without that API retain the forwarded string attribute as a best-effort fallback.
+native button. Host `aria-describedby` targets in the host's own root are resolved through
+`ariaDescribedByElements`. Host `aria-controls` targets use the corresponding
+`ariaControlsElements` API, so using `<lr-icon-button slot="trigger">` inside `<lr-menu>` exposes
+the menu relationship and expanded state on the element that actually receives focus. Supporting
+browsers intentionally clear each serialized internal IDREF attribute after its explicit element
+list is assigned. Browsers without those APIs retain the forwarded string attributes as
+best-effort fallbacks.
 
 **Methods:** `focus(options?)`, `blur()` — forward to the native button. `click()` also forwards to
 the native button, activating it — including this component's own `type="submit"`/`type="reset"`
@@ -1623,7 +1636,9 @@ counterpart to it. `--lr-icon-button-background` (default `transparent`) tints t
 its hover-state background, `--lr-icon-button-color` (default `inherit`) its icon/text color,
 `--lr-icon-button-color-hover` (default `var(--lr-icon-button-color, inherit)`) its hover-state
 foreground, and `--lr-icon-button-border` (default `0`) the complete native-button border
-shorthand. These are the same per-component indirection `lr-button`'s
+shorthand. `--lr-icon-button-border-hover` (default
+`var(--lr-icon-button-border, 0)`) replaces that complete shorthand on hover. These are the same
+per-component indirection `lr-button`'s
 `--lr-button-fill`/`--lr-button-on-fill` provide, letting a single button be bordered and tinted
 without a `::part(button)` rule. Left unset, each falls back to the original value, so rendering is
 unchanged.
@@ -2313,9 +2328,12 @@ silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host eve
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
 host so the control still has an accessible name.
 
-Host `aria-describedby` is forwarded to the internal `role="checkbox"`, so an externally-owned
-description can be associated with one checkbox inside a group. The attribute is omitted from the
-internal role when unset and tracks host attribute changes.
+Host `aria-describedby` targets in the host's own root are resolved onto the internal
+`role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
+valid across the shadow boundary. In supporting browsers the explicit element list intentionally
+leaves the internal role's serialized attribute empty; browsers without the reflected-reference
+API keep the string fallback. The relationship tracks host attribute changes and clears when
+unset.
 
 **CSS parts:** `base` (the whole interactive control, `role="checkbox"`), `box` (the small square
 showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),
@@ -6389,7 +6407,10 @@ since those attributes belong on the actual interactive trigger, which lives out
 component's shadow root. `aria-controls` targets the `lr-menu` host, which receives a stable
 generated id only when the consumer did not provide one, rather than the shadow-private list id.
 `lr-button`/`lr-icon-button` forward the popup/expanded values to their focused shadow-internal
-native control and resolve the controls element-reference across their shadow boundary), default
+native control and resolve the controls element-reference across their shadow boundary. In a
+supporting browser, the reflected `ariaControlsElements` list is the source of truth and its setter
+intentionally clears the internal control's serialized `aria-controls` value; browsers without the
+API retain the string as a best-effort fallback), default
 (`<lr-menu-item>` elements, plus optionally plain `<hr>` dividers — native `<hr>` already carries
 an implicit `separator` role),
 `header` and `footer` (composed, deliberately non-menu-item content — a filter/search field, a
@@ -6519,6 +6540,12 @@ and the open popup also closes it, but deliberately does *not* refocus the trigg
 click itself already moved focus somewhere the user chose.
 
 **Known gotchas:**
+- A supporting browser reports `trigger.shadowRoot`'s focused control
+  `getAttribute('aria-controls') === ''` after the element-reference relationship is assigned.
+  Inspect `ariaControlsElements` instead. This is the platform's reflected-element-reference
+  contract, not a missing menu id; setting the string again would discard the cross-shadow
+  relationship. Browsers without that API keep the string fallback, and `aria-controls` itself is
+  optional for the menu-button pattern.
 - `<lr-menu-item>`'s click handler lives on an inner shadow-DOM element (`[part="base"]`), not the
   host — calling `.click()` directly on the `<lr-menu-item>` host element in a test does **not**
   trigger selection; either click (or dispatch on) the element returned by
@@ -7572,6 +7599,13 @@ computed-label value so the two can never disagree.
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+`aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
+the consumer did not supply one), rather than the shadow-private popup, so the relationship
+resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
+that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
+browsers intentionally serialize the internal control's `aria-controls` content attribute as an
+empty string after that assignment.
 **Methods:** `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
 HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
 `trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
@@ -7609,6 +7643,14 @@ same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, de
 (default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
 
+While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
+not the shadow-private popup. Native triggers resolve that ID directly. `lr-button` and
+`lr-icon-button` resolve the same proxy onto their focused shadow-internal controls through
+`ariaDescribedByElements`; in supporting browsers that explicit element-reference assignment
+intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
+author-provided descriptions are merged while open and restored when the trigger is replaced or
+the tooltip disconnects.
+
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
 *local drawing space* (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
@@ -7636,6 +7678,8 @@ menu-item behavior is needed.
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
 `popupRole` is seeded to `'menu'` in the constructor — that is the only difference from `lr-popover`,
 whose whole surface (including `showAt()`) is inherited unchanged.
+Its trigger therefore uses the same public-host `aria-controls` target and Lyra-button
+element-reference forwarding described above.
 **Events:** `lr-show`, `lr-hide` — inherited from `lr-popover`; neither fires for the initial render.
 **Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`.
 **Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —
@@ -9121,10 +9165,11 @@ not installed)
 **Themeable custom properties:** shared tokens only — `--lr-space-xs/-s`, `--lr-color-surface`,
 `--lr-color-border`, `--lr-shadow`, `--lr-radius`.
 
-**Optional peer deps:** `maplibre-gl` (lazy-loaded). MapLibre v6 is ESM-only and requires WebGL2.
-The consumer must **separately** import `maplibre-gl/dist/maplibre-gl.css` and configure the v6
-module-worker URL for its bundler once — the component cannot choose a bundler-specific worker URL.
-For Vite:
+**Optional peer deps:** `maplibre-gl` `>=5 <7` (lazy-loaded). The consumer must **separately**
+import `maplibre-gl/dist/maplibre-gl.css`. MapLibre v5's standard build includes its worker.
+MapLibre v6 is ESM-only, requires WebGL2, and additionally needs its module-worker URL configured
+for the bundler once — the component cannot choose a bundler-specific worker URL. For Vite with
+v6:
 
 ```html
 <lr-map center="[2.35, 48.85]" zoom="10"></lr-map>
@@ -11876,9 +11921,10 @@ alongside the `lr-json-viewer` fallback), `error` (the error region, `role="aler
 Registered by importing `geojson-view/geojson-view.js` directly — not part of the root barrel, the
 same as `lr-map`/`lr-graph`, since it depends on the same optional `maplibre-gl` peer. Remote
 resources are capped at 25 MB; exceeding it surfaces the localized `documentPreviewResourceTooLarge`
-message instead of the map. MapLibre v6 is ESM-only and requires WebGL2; consumers must import its
-CSS and configure its module-worker URL for their bundler before this viewer constructs the nested
-map. See `llms/components/lr-map.md` for the Vite example and the other bundler variants.
+message instead of the map. Lyra supports MapLibre v5 and v6; consumers must import its CSS.
+MapLibre v5's standard build includes its worker, while v6 is ESM-only, requires WebGL2, and needs
+its module-worker URL configured for the bundler before this viewer constructs the nested map. See
+`llms/components/lr-map.md` for the Vite v6 example and the other bundler variants.
 
 # Conversation & chat UI (`components/conversation/`)
 

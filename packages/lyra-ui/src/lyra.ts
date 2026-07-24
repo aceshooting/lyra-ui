@@ -510,8 +510,8 @@ export {
   resolveLyraLocale,
   resolveLyraString,
   LYRA_DEFAULT_STRINGS,
-} from './internal/localization.js';
-export type { LyraLocaleStrings, LyraMessageKey } from './internal/localization.js';
+} from './localization.js';
+export type { LyraLocaleStrings, LyraMessageKey } from './localization.js';
 export type { FormAssociatedInterface } from './internal/form-associated.js';
 export { LyraMarkdown } from './components/conversation/markdown/markdown.js';
 export { LyraMarkdownCore } from './components/conversation/markdown/markdown-core.js';

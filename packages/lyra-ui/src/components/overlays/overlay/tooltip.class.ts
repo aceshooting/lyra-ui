@@ -21,6 +21,11 @@ const DEFAULT_DISTANCE = 6;
  * the popup promotes to a named dialog and remains open while pointer or focus is inside so its
  * controls can be reached. Prefer `<lr-popover>` when click-to-open ownership is desired.
  *
+ * While open, the trigger's `aria-describedby` targets a hidden text proxy in this component's
+ * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly;
+ * `<lr-button>` and `<lr-icon-button>` reflect it onto their focused internal controls through
+ * `ariaDescribedByElements`, where the serialized internal attribute is intentionally empty.
+ *
  * @customElement lr-tooltip
  * @slot trigger - The element that receives hover/focus listeners.
  * @slot - Tooltip content.
@@ -72,6 +77,8 @@ export class LyraTooltip extends LyraElement {
    *  its own trigger-scoped keydown handler below, unaffected by this. */
   private overlayHandle?: OverlayHandle;
   private readonly tooltipId = nextId('tooltip');
+  private readonly descriptionId = nextId('tooltip-description');
+  private descriptionProxy?: HTMLSpanElement;
   private contentObserver?: MutationObserver;
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -103,10 +110,15 @@ export class LyraTooltip extends LyraElement {
       }
       this.syncTriggerA11y();
     }
+    if (changed.has('content') || changed.has('accessibleLabel')) this.updateDescriptionProxy();
   }
   override connectedCallback(): void {
     super.connectedCallback();
-    this.contentObserver ??= new MutationObserver(() => this.updateInteractiveContent());
+    this.ensureDescriptionProxy();
+    this.contentObserver ??= new MutationObserver(() => {
+      this.ensureDescriptionProxy();
+      this.updateInteractiveContent();
+    });
     this.contentObserver.observe(this, { childList: true, subtree: true, attributes: true });
     if (this.trigger && !this.triggerDescription) {
       this.snapshotTriggerDescription(this.trigger);
@@ -206,7 +218,7 @@ export class LyraTooltip extends LyraElement {
   private syncTriggerA11y(): void {
     if (!this.trigger) return;
     const descriptions = new Set((this.triggerDescription?.value ?? '').split(/\s+/).filter(Boolean));
-    if (this.open) descriptions.add(this.tooltipId);
+    if (this.open) descriptions.add(this.descriptionId);
     if (descriptions.size > 0) this.trigger.setAttribute('aria-describedby', [...descriptions].join(' '));
     else this.trigger.removeAttribute('aria-describedby');
   }
@@ -265,7 +277,7 @@ export class LyraTooltip extends LyraElement {
       if (!this.trigger || !this.triggerDescription) return;
       const current = this.trigger.getAttribute('aria-describedby');
       const descriptions = new Set((this.triggerDescription.value ?? '').split(/\s+/).filter(Boolean));
-      if (this.open) descriptions.add(this.tooltipId);
+      if (this.open) descriptions.add(this.descriptionId);
       const generated = descriptions.size > 0 ? [...descriptions].join(' ') : null;
       if (current === generated) return;
       this.triggerDescription.had = this.trigger.hasAttribute('aria-describedby');
@@ -344,6 +356,31 @@ export class LyraTooltip extends LyraElement {
     this.interactiveContent = slot.assignedElements({ flatten: true }).some(
       (element) => element.matches(selector) || element.querySelector(selector) !== null,
     );
+    this.updateDescriptionProxy();
+  }
+  private ensureDescriptionProxy(): void {
+    if (!this.descriptionProxy) {
+      this.descriptionProxy = document.createElement('span');
+      this.descriptionProxy.id = this.descriptionId;
+      this.descriptionProxy.slot = '__lr-tooltip-description';
+      this.descriptionProxy.hidden = true;
+      this.descriptionProxy.dataset['lyraTooltipDescription'] = '';
+    }
+    if (this.descriptionProxy.parentElement !== this) this.append(this.descriptionProxy);
+    this.updateDescriptionProxy();
+  }
+  private updateDescriptionProxy(): void {
+    if (!this.descriptionProxy) return;
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('[part="popup"] slot:not([name])');
+    const assignedText =
+      slot
+        ?.assignedNodes({ flatten: true })
+        .map((node) => node.textContent ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim() ?? '';
+    const description = (this.accessibleLabel || assignedText || this.content).trim();
+    if (this.descriptionProxy.textContent !== description) this.descriptionProxy.textContent = description;
   }
   private onTriggerKeyDown = (event: KeyboardEvent): void => {
     // WCAG 1.4.13: content shown on hover/focus must be dismissable without
@@ -359,6 +396,7 @@ export class LyraTooltip extends LyraElement {
     const label = this.getAttribute('aria-label') || this.accessibleLabel;
     return html`
       <span part="trigger"><slot name="trigger" @slotchange=${this.onTriggerSlotChange}></slot></span>
+      <slot name="__lr-tooltip-description" hidden></slot>
       <div id=${this.tooltipId} part="popup" role=${this.interactiveContent ? 'dialog' : 'tooltip'}
         aria-label=${this.interactiveContent ? label || this.localize('popover') : label || nothing}
         ?data-hidden=${!this.open}

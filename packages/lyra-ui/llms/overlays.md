@@ -643,6 +643,13 @@ computed-label value so the two can never disagree.
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
 
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
+The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+`aria-controls` targets the public `lr-popover` host (which receives a stable generated `id` when
+the consumer did not supply one), rather than the shadow-private popup, so the relationship
+resolves from a native light-DOM trigger. `lr-button` and `lr-icon-button` additionally reflect
+that host onto their focused shadow-internal controls through `ariaControlsElements`; supporting
+browsers intentionally serialize the internal control's `aria-controls` content attribute as an
+empty string after that assignment.
 **Methods:** `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?:
 HTMLElement })` opens the popover anchored to an arbitrary rectangle instead of the slotted
 `trigger` — for a graph node, a canvas pixel, a chart datum, or any other non-DOM location
@@ -680,6 +687,14 @@ same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, de
 (default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
 
+While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
+not the shadow-private popup. Native triggers resolve that ID directly. `lr-button` and
+`lr-icon-button` resolve the same proxy onto their focused shadow-internal controls through
+`ariaDescribedByElements`; in supporting browsers that explicit element-reference assignment
+intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
+author-provided descriptions are merged while open and restored when the trigger is replaced or
+the tooltip disconnects.
+
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
 *local drawing space* (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`
@@ -707,6 +722,8 @@ menu-item behavior is needed.
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
 `popupRole` is seeded to `'menu'` in the constructor — that is the only difference from `lr-popover`,
 whose whole surface (including `showAt()`) is inherited unchanged.
+Its trigger therefore uses the same public-host `aria-controls` target and Lyra-button
+element-reference forwarding described above.
 **Events:** `lr-show`, `lr-hide` — inherited from `lr-popover`; neither fires for the initial render.
 **Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`.
 **Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —

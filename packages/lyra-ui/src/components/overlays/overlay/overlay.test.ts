@@ -4,6 +4,8 @@ import type { LyraTooltip } from './tooltip.class.js';
 import './popover.js';
 import './tooltip.js';
 import './dropdown.js';
+import '../../forms/button/button.js';
+import '../../forms/icon-button/icon-button.js';
 
 it('opens a popover from its slotted trigger and wires dialog semantics', async () => {
   const el = await fixture(html`
@@ -27,6 +29,61 @@ it('uses menu semantics for dropdowns', async () => {
   trigger.click();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
   expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('menu');
+});
+
+it('targets the public popover host from a native trigger aria-controls relationship', async () => {
+  const el = await fixture(html`
+    <lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>
+  `);
+  const trigger = el.querySelector('button') as HTMLButtonElement;
+  const controls = trigger.getAttribute('aria-controls');
+
+  expect(el.id).to.not.equal('');
+  expect(controls).to.equal(el.id);
+  expect((el.getRootNode() as Document | ShadowRoot).getElementById(controls!)).to.equal(el);
+});
+
+it("resolves a popover host onto lr-button's focused internal control", async () => {
+  const el = await fixture(html`
+    <lr-popover><lr-button slot="trigger">Open</lr-button><p>Details</p></lr-popover>
+  `);
+  const trigger = el.querySelector('lr-button')!;
+  await trigger.updateComplete;
+  const focusedControl = trigger.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement & {
+    ariaControlsElements?: Element[];
+  };
+
+  expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
+  if ('ariaControlsElements' in focusedControl) {
+    expect(focusedControl.ariaControlsElements?.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements?.[0]).to.equal(el);
+    expect(focusedControl.getAttribute('aria-controls')).to.equal('');
+  } else {
+    expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
+  }
+});
+
+it("resolves a dropdown host onto lr-icon-button's focused internal control", async () => {
+  const el = await fixture(html`
+    <lr-dropdown>
+      <lr-icon-button slot="trigger" icon="more" aria-label="Actions"></lr-icon-button>
+      <button role="menuitem">Item</button>
+    </lr-dropdown>
+  `);
+  const trigger = el.querySelector('lr-icon-button')!;
+  await trigger.updateComplete;
+  const focusedControl = trigger.shadowRoot!.querySelector('button') as HTMLButtonElement & {
+    ariaControlsElements?: Element[];
+  };
+
+  expect(trigger.getAttribute('aria-controls')).to.equal(el.id);
+  if ('ariaControlsElements' in focusedControl) {
+    expect(focusedControl.ariaControlsElements?.length).to.equal(1);
+    expect(focusedControl.ariaControlsElements?.[0]).to.equal(el);
+    expect(focusedControl.getAttribute('aria-controls')).to.equal('');
+  } else {
+    expect(focusedControl.getAttribute('aria-controls')).to.equal(el.id);
+  }
 });
 
 // lr-dropdown is its own registered custom element (extending LyraPopover with popupRole='menu'
@@ -58,12 +115,88 @@ it('does not let a closed popup/dropdown occupy a layout box in its host', async
 
 it('shows a tooltip after focus and describes the trigger', async () => {
   const el = await fixture(html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`);
-  const trigger = el.querySelector('button') as HTMLButtonElement;
+  const trigger = el.querySelector('button') as HTMLButtonElement & {
+    ariaDescribedByElements?: Element[];
+  };
   trigger.focus();
   await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
   expect(el.hasAttribute('open')).to.be.true;
-  expect(trigger.hasAttribute('aria-describedby')).to.be.true;
+  const description = el.querySelector('[data-lyra-tooltip-description]')!;
+  expect(description.textContent).to.equal('Helpful text');
+  if ('ariaDescribedByElements' in trigger) {
+    expect(trigger.ariaDescribedByElements?.length).to.equal(1);
+    expect(trigger.ariaDescribedByElements?.[0]).to.equal(description);
+    expect(trigger.getAttribute('aria-describedby')).to.equal(description.id);
+  } else {
+    expect(trigger.hasAttribute('aria-describedby')).to.be.true;
+  }
   await expect(el).to.be.accessible();
+});
+
+it("resolves a tooltip popup onto lr-button's focused internal control", async () => {
+  const el = await fixture(html`
+    <lr-tooltip delay="0">
+      Helpful text
+      <lr-button slot="trigger">Help</lr-button>
+    </lr-tooltip>
+  `);
+  const trigger = el.querySelector('lr-button')!;
+  trigger.focus();
+  await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  await trigger.updateComplete;
+  const focusedControl = trigger.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement & {
+    ariaDescribedByElements?: Element[];
+  };
+  const description = el.querySelector('[data-lyra-tooltip-description]')!;
+
+  if ('ariaDescribedByElements' in focusedControl) {
+    expect(focusedControl.ariaDescribedByElements?.length).to.equal(1);
+    expect(focusedControl.ariaDescribedByElements?.[0]).to.equal(description);
+    expect(focusedControl.getAttribute('aria-describedby')).to.equal('');
+  } else {
+    expect(focusedControl.hasAttribute('aria-describedby')).to.be.true;
+  }
+});
+
+it("resolves a tooltip popup onto lr-icon-button's focused internal control", async () => {
+  const el = await fixture(html`
+    <lr-tooltip delay="0">
+      Helpful text
+      <lr-icon-button slot="trigger" icon="help" aria-label="Help"></lr-icon-button>
+    </lr-tooltip>
+  `);
+  const trigger = el.querySelector('lr-icon-button')!;
+  trigger.focus();
+  await (el as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+  await trigger.updateComplete;
+  const focusedControl = trigger.shadowRoot!.querySelector('button') as HTMLButtonElement & {
+    ariaDescribedByElements?: Element[];
+  };
+  const description = el.querySelector('[data-lyra-tooltip-description]')!;
+
+  if ('ariaDescribedByElements' in focusedControl) {
+    expect(focusedControl.ariaDescribedByElements?.length).to.equal(1);
+    expect(focusedControl.ariaDescribedByElements?.[0]).to.equal(description);
+    expect(focusedControl.getAttribute('aria-describedby')).to.equal('');
+  } else {
+    expect(focusedControl.hasAttribute('aria-describedby')).to.be.true;
+  }
+});
+
+it('keeps the tooltip description proxy synchronized without including trigger text', async () => {
+  const el = await fixture(html`
+    <lr-tooltip delay="0">
+      <span>Initial help</span>
+      <button slot="trigger">Do not describe this trigger label</button>
+    </lr-tooltip>
+  `);
+  const description = el.querySelector('[data-lyra-tooltip-description]')!;
+  expect(description.textContent).to.equal('Initial help');
+
+  const content = el.querySelector('span:not([data-lyra-tooltip-description])')!;
+  content.textContent = 'Updated help';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(description.textContent).to.equal('Updated help');
 });
 
 it('promotes actionable tooltip content to a focus-persistent dialog surface', async () => {

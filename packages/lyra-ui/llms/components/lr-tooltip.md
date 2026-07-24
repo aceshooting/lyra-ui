@@ -28,6 +28,14 @@ same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, de
 (default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
 
+While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
+not the shadow-private popup. Native triggers resolve that ID directly. `lr-button` and
+`lr-icon-button` resolve the same proxy onto their focused shadow-internal controls through
+`ariaDescribedByElements`; in supporting browsers that explicit element-reference assignment
+intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
+author-provided descriptions are merged while open and restored when the trigger is replaced or
+the tooltip disconnects.
+
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
 *local drawing space* (pre pan/zoom), not viewport pixels, so they can't be passed to `showAt()`

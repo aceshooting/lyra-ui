@@ -23,6 +23,12 @@ export interface LyraPopoverEventMap {
 /**
  * `<lr-popover>` — a click-triggered, light-dismiss floating surface.
  *
+ * The slotted trigger receives `aria-haspopup`, `aria-expanded`, and `aria-controls`.
+ * `aria-controls` targets this public host (which receives a stable generated `id` when the
+ * consumer did not supply one), not the shadow-private popup. That keeps the relationship
+ * resolvable for native triggers and lets `<lr-button>`/`<lr-icon-button>` reflect the host onto
+ * their focused shadow-internal controls through `ariaControlsElements`.
+ *
  * @customElement lr-popover
  * @slot trigger - The interactive element that toggles the popover.
  * @slot - Popover content.
@@ -79,7 +85,8 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   /** Registered with the shared overlay manager while every popover is open, so one topmost stack
    *  owns Escape and focus restoration. */
   private overlayHandle?: OverlayHandle;
-  private readonly popupId = nextId('popover');
+  private readonly generatedHostId = nextId('popover');
+  private readonly popupId = nextId('popover-popup');
   private firstUpdate = true;
 
   protected override updated(changed: PropertyValues): void {
@@ -111,6 +118,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   }
   override connectedCallback(): void {
     super.connectedCallback();
+    if (!this.id) this.id = this.generatedHostId;
     if (this.trigger && !this.triggerA11y) {
       this.snapshotTriggerA11y(this.trigger);
       this.syncTriggerA11y();
@@ -217,7 +225,9 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   }
   private get generatedControls(): string {
     const controls = new Set((this.triggerA11y?.controls ?? '').split(/\s+/).filter(Boolean));
-    controls.add(this.popupId);
+    // The trigger lives in this component's light DOM, so a string IDREF cannot resolve the
+    // shadow-private popup. Point at the public host, matching lr-menu's trigger contract.
+    controls.add(this.id);
     return [...controls].join(' ');
   }
   private snapshotTriggerA11y(trigger: HTMLElement): void {

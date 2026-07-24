@@ -132,8 +132,8 @@ export interface LyraMapEventMap {
  * (arbitrary shapes rendered as a source plus fill/line/circle layers,
  * independent of `choropleth`'s field/stops color-interpolation), plus a raw
  * `map` escape hatch. Requires the optional peer dep `maplibre-gl`
- * (consumers also import its CSS and configure its module-worker URL once).
- * MapLibre v6 is ESM-only and requires WebGL2.
+ * v5 or v6 (consumers also import its CSS). MapLibre v6 is ESM-only, requires WebGL2, and needs
+ * its module-worker URL configured once; v5's standard build includes its worker.
  *
  * The underlying `maplibregl.Map` — and the WebGL context it opens — isn't
  * constructed until this element is first visible in the viewport (tracked

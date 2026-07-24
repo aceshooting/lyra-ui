@@ -2,6 +2,7 @@ import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type P
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
 import { styles } from './checkbox.styles.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
@@ -116,9 +117,9 @@ export interface LyraCheckboxEventMap {
  * checkbox, the same as clicking a native checkbox's associated `<label>`.
  * If left empty, set `aria-label` on the host so the control still has an
  * accessible name.
- * A host `aria-describedby` attribute is forwarded to the internal
- * `role="checkbox"` so externally-owned descriptions can be associated with
- * this individual control.
+ * A host `aria-describedby` attribute is resolved onto the internal `role="checkbox"` through
+ * `ariaDescribedByElements` so externally-owned descriptions remain valid across the shadow
+ * boundary.
  * @event input - The user toggled the checkbox; bubbling and composed like a native form event.
  * @event change - Fired immediately after `input` for the same user toggle.
  * @event lr-change - Compatibility alias fired after `input` and `change` (click or Space).
@@ -181,6 +182,7 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
   // label starts empty and text is added afterward. Mirrors
   // `<lr-option>`'s identical `labelObserver`.
   private labelObserver?: MutationObserver;
+  private hasSyncedDescribedByElements = false;
   // What `form.reset()` restores to — captured once from the declarative
   // `checked` content attribute at first connect. A pre-connect `.checked`
   // property assignment changes live state but not the reset default, matching
@@ -338,6 +340,18 @@ export class LyraCheckbox extends LyraElement<LyraCheckboxEventMap> {
     if (!this.hasUpdated) {
       this.hasLabelSlot = Array.from(this.childNodes).some((n) => (n.textContent ?? '').trim().length > 0);
     }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    const describedBy = this.getAttribute('aria-describedby');
+    if (!describedBy && !this.hasSyncedDescribedByElements) return;
+    const control = this.renderRoot.querySelector<HTMLElement>('[part="base"]') ?? undefined;
+    this.hasSyncedDescribedByElements = syncAriaDescribedByElements(
+      this,
+      control,
+      describedBy,
+    );
   }
 
   private updateValidity(): void {

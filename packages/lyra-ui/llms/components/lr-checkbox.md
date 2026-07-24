@@ -38,9 +38,12 @@ silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host eve
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the
 host so the control still has an accessible name.
 
-Host `aria-describedby` is forwarded to the internal `role="checkbox"`, so an externally-owned
-description can be associated with one checkbox inside a group. The attribute is omitted from the
-internal role when unset and tracks host attribute changes.
+Host `aria-describedby` targets in the host's own root are resolved onto the internal
+`role="checkbox"` through `ariaDescribedByElements`, so an externally-owned description remains
+valid across the shadow boundary. In supporting browsers the explicit element list intentionally
+leaves the internal role's serialized attribute empty; browsers without the reflected-reference
+API keep the string fallback. The relationship tracks host attribute changes and clears when
+unset.
 
 **CSS parts:** `base` (the whole interactive control, `role="checkbox"`), `box` (the small square
 showing the checkmark/indeterminate dash), `checkmark` (the checkmark or indeterminate-dash glyph),

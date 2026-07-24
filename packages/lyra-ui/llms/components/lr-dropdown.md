@@ -19,6 +19,8 @@ menu-item behavior is needed.
 **Properties:** `open`, `placement`, `distance`, `accessibleLabel` (`aria-label`), and `popupRole` (`popup-role`).
 `popupRole` is seeded to `'menu'` in the constructor — that is the only difference from `lr-popover`,
 whose whole surface (including `showAt()`) is inherited unchanged.
+Its trigger therefore uses the same public-host `aria-controls` target and Lyra-button
+element-reference forwarding described above.
 **Events:** `lr-show`, `lr-hide` — inherited from `lr-popover`; neither fires for the initial render.
 **Slots:** `trigger`, default menu content. **CSS parts:** `trigger`, `popup`, `content`.
 **Themeable custom properties:** `--lr-overlay-max-inline-size` (default `--lr-size-20rem` —

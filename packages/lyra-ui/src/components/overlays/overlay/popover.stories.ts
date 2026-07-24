@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './popover.js';
+import '../../forms/button/button.js';
 import type { LyraPopover } from './popover.js';
 
 const meta: Meta = { title: 'Overlay/Popover', component: 'lr-popover', tags: ['autodocs'] };
@@ -15,6 +16,18 @@ export const Default: Story = {
     html`<lr-popover .open=${context.viewMode !== 'docs'}
       ><button slot="trigger">Open details</button><p>Floating content.</p></lr-popover
     >`,
+};
+
+/** Lyra buttons preserve the trigger relationship across their own shadow boundary: the
+ *  popover points `aria-controls` at its public host and the focused native button receives that
+ *  target through `ariaControlsElements` in supporting browsers. */
+export const LyraButtonTrigger: Story = {
+  render: () => html`
+    <lr-popover>
+      <lr-button slot="trigger">Open details</lr-button>
+      <p>Floating content controlled by the Lyra button.</p>
+    </lr-popover>
+  `,
 };
 
 function onSurfaceClick(e: MouseEvent): void {

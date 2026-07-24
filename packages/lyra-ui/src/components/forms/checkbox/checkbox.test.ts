@@ -140,7 +140,7 @@ it('does not set an empty aria-label on the inner element when the host has none
 });
 
 describe('aria-describedby forwarding', () => {
-  it('forwards the host description ids to the inner role="checkbox" element', async () => {
+  it('resolves host description ids onto the inner role="checkbox" element', async () => {
     const el = (await fixture(html`
       <div>
         <span id="description">This option is unavailable during maintenance.</span>
@@ -148,26 +148,58 @@ describe('aria-describedby forwarding', () => {
       </div>
     `)) as HTMLElement;
     const checkbox = el.querySelector('lr-checkbox') as LyraCheckbox;
-    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-describedby')).to.equal('description');
+    const description = el.querySelector('#description')!;
+    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[];
+    };
+    if ('ariaDescribedByElements' in base) {
+      expect(base.ariaDescribedByElements?.length).to.equal(1);
+      expect(base.ariaDescribedByElements?.[0]).to.equal(description);
+      expect(base.getAttribute('aria-describedby')).to.equal('');
+    } else {
+      expect(base.getAttribute('aria-describedby')).to.equal('description');
+    }
   });
 
   it('updates forwarding when the host description attribute is added, changed, or removed', async () => {
-    const checkbox = (await fixture(html`<lr-checkbox>Advanced mode</lr-checkbox>`)) as LyraCheckbox;
-    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const wrapper = await fixture(html`
+      <div>
+        <span id="first-description">First description</span>
+        <span id="second-description">Second description</span>
+        <lr-checkbox>Advanced mode</lr-checkbox>
+      </div>
+    `);
+    const checkbox = wrapper.querySelector('lr-checkbox') as LyraCheckbox;
+    const first = wrapper.querySelector('#first-description')!;
+    const second = wrapper.querySelector('#second-description')!;
+    const base = checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement & {
+      ariaDescribedByElements?: Element[];
+    };
     expect(base.hasAttribute('aria-describedby')).to.be.false;
 
     checkbox.setAttribute('aria-describedby', 'first-description');
     await checkbox.updateComplete;
-    expect(base.getAttribute('aria-describedby')).to.equal('first-description');
+    if ('ariaDescribedByElements' in base) {
+      expect(base.ariaDescribedByElements).to.deep.equal([first]);
+    } else {
+      expect(base.getAttribute('aria-describedby')).to.equal('first-description');
+    }
 
     checkbox.setAttribute('aria-describedby', 'second-description');
     await checkbox.updateComplete;
-    expect(base.getAttribute('aria-describedby')).to.equal('second-description');
+    if ('ariaDescribedByElements' in base) {
+      expect(base.ariaDescribedByElements).to.deep.equal([second]);
+    } else {
+      expect(base.getAttribute('aria-describedby')).to.equal('second-description');
+    }
 
     checkbox.removeAttribute('aria-describedby');
     await checkbox.updateComplete;
-    expect(base.hasAttribute('aria-describedby')).to.be.false;
+    if ('ariaDescribedByElements' in base) {
+      expect(base.ariaDescribedByElements ?? []).to.deep.equal([]);
+    } else {
+      expect(base.hasAttribute('aria-describedby')).to.be.false;
+    }
   });
 });
 

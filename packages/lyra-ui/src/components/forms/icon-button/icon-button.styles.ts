@@ -5,7 +5,7 @@ export const styles = css`
      glyph still pads out to a full target, while slotted content larger than it grows the button
      and keeps its own aspect ratio instead of being squashed to 1:1. */
   button { display: inline-flex; align-items: center; justify-content: center; min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); padding: 0; border: var(--lr-icon-button-border, 0); border-radius: var(--lr-icon-button-radius); background: var(--lr-icon-button-background, transparent); color: var(--lr-icon-button-color, inherit); cursor: pointer; }
-  button:hover { background: var(--lr-icon-button-background-hover, var(--lr-color-surface)); color: var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit)); }
+  button:hover { border: var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0)); background: var(--lr-icon-button-background-hover, var(--lr-color-surface)); color: var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit)); }
   button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
   button:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
   /* Mirrors lr-icon's own default box so the bare-geometry SVG fallback sizes the same as a

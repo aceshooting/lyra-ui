@@ -140,13 +140,16 @@ box no matter what tier or override is in play.
 
 **Known gotchas:**
 - `accessibleLabel`/a host `aria-label` is forwarded reactively to the internal button or anchor as
-  a literal string (for an icon-only button); an external `aria-labelledby`/`aria-describedby`
-  idref is not copied across the shadow boundary.
+  a literal string (for an icon-only button). Host `aria-describedby` targets in the host's root
+  are resolved onto the focused internal control through `ariaDescribedByElements`; external
+  `aria-labelledby` is not copied across the shadow boundary.
 - Host `aria-haspopup` and `aria-expanded` values are forwarded to the internal semantic control.
   For host `aria-controls`, targets in the host's own root are resolved through the reflected
   element-reference API so a popup relationship survives the component's shadow boundary; browsers
-  without that API retain the forwarded string attribute as a best-effort fallback. This is what
-  lets either button serve as an `lr-menu` trigger.
+  with that API expose the relationship through `ariaControlsElements` and intentionally serialize
+  the `aria-controls` content attribute as an empty string. Browsers without the API retain the
+  forwarded string attribute as a best-effort fallback. A reflected element list and a non-empty
+  serialized string cannot coexist; this is what lets either button serve as an `lr-menu` trigger.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.

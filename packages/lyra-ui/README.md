@@ -55,8 +55,9 @@ npm install @aceshooting/lyra-ui
 # optional peer: maplibre-gl, only needed for <lr-map> — also import
 #   `maplibre-gl/dist/maplibre-gl.css` yourself once, since lr-map only
 #   ships its own legend/popup chrome CSS, not maplibre-gl's own stylesheet.
-#   MapLibre v6 is ESM-only, requires WebGL2, and also needs its module-worker
-#   URL configured for your bundler before the first map is constructed.
+#   Lyra supports MapLibre v5 and v6. v5's standard build includes its worker;
+#   v6 is ESM-only, requires WebGL2, and also needs its module-worker URL
+#   configured for your bundler before the first map is constructed.
 #   <lr-map> falls back to OpenStreetMap's demo tile server when you don't
 #   set `mapStyle` — fine for local dev, but NOT for production (no capacity
 #   guarantees, requires an identifying User-Agent, subject to IP-blocking —
@@ -64,7 +65,7 @@ npm install @aceshooting/lyra-ui
 #   apps must supply their own `mapStyle`.
 ```
 
-For example, Vite consumers configure MapLibre v6's self-contained worker once:
+For example, Vite consumers using MapLibre v6 configure its self-contained worker once:
 
 ```js
 import { setWorkerUrl } from 'maplibre-gl';
@@ -265,12 +266,19 @@ Markdown, phone-number metadata, and flag artwork remain optional peer dependenc
 `aria-label`s) resolves through a small runtime, in two ways you can combine:
 
 ```ts
-import { registerLyraLocale, setLyraLocale } from '@aceshooting/lyra-ui';
+import {
+  registerLyraLocale,
+  setLyraLocale,
+} from '@aceshooting/lyra-ui/localization.js';
 
 // App-wide: register translations once, anywhere in the app.
 registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer', /* ... */ });
 setLyraLocale('fr'); // or just set <html lang="fr">/an ancestor `lang` — components pick it up
 ```
+
+The dedicated `localization.js` entry is side-effect-free: it does not register the component
+graph. The package root continues to re-export the same runtime for compatibility, but importing
+it also registers the non-peer-gated components.
 
 ```html
 <!-- Per-instance: override specific keys on one element without a global registry. -->

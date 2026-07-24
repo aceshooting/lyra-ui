@@ -2445,6 +2445,13 @@
       }
     },
     {
+      "name": "--lr-icon-button-border-hover",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-icon-button>`** (default: `var(--lr-icon-button-border, 0)`) — Complete border shorthand on hover."
+      }
+    },
+    {
       "name": "--lr-icon-button-color",
       "description": {
         "kind": "markdown",

@@ -86,7 +86,13 @@ it("forwards menu trigger semantics to lr-button's focused native control", asyn
   if ("ariaControlsElements" in focusedControl) {
     expect(focusedControl.ariaControlsElements.length).to.equal(1);
     expect(focusedControl.ariaControlsElements[0]?.id).to.equal(el.id);
+    // Reflected element-reference setters intentionally clear the serialized attribute. The
+    // relationship above, not getAttribute(), is the supported browser's source of truth.
+    expect(focusedControl.getAttribute("aria-controls")).to.equal("");
   } else {
+    // Browsers without reflected element references keep the rendered string as a best-effort
+    // fallback. It cannot cross the shadow boundary, but aria-controls is optional for menu
+    // buttons and the required haspopup/expanded semantics remain intact.
     expect(focusedControl.getAttribute("aria-controls")).to.equal(el.id);
   }
 
@@ -121,6 +127,7 @@ it("forwards menu trigger semantics to lr-icon-button's focused native control",
   if ("ariaControlsElements" in focusedControl) {
     expect(focusedControl.ariaControlsElements.length).to.equal(1);
     expect(focusedControl.ariaControlsElements[0]?.id).to.equal(el.id);
+    expect(focusedControl.getAttribute("aria-controls")).to.equal("");
   } else {
     expect(focusedControl.getAttribute("aria-controls")).to.equal(el.id);
   }

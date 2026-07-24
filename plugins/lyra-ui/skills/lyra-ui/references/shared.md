@@ -41,6 +41,7 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
+  `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
   (happy-dom shims), `@aceshooting/lyra-ui/internal/*` (shared internals, all documented below).
 
@@ -311,7 +312,10 @@ in the per-component sections:
   overrides, merged over the registered catalog.
 
 ```ts
-import { registerLyraLocale, setLyraLocale } from '@aceshooting/lyra-ui';
+import {
+  registerLyraLocale,
+  setLyraLocale,
+} from '@aceshooting/lyra-ui/localization.js';
 
 registerLyraLocale('fr', { close: 'Fermer', retry: 'Réessayer' }); // app-wide, partial catalogs fine
 setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inherit it
@@ -321,13 +325,16 @@ setLyraLocale('fr'); // …or just set <html lang="fr"> and let components inher
 <lr-toast .strings=${{ close: 'Fermer' }}></lr-toast>
 ```
 
-Exported from the package root: `registerLyraLocale`, `setLyraLocale`, `getLyraLocale`,
-`getRegisteredLyraLocales`, `subscribeLyraLocaleRegistry`, `resolveLyraLocale`,
-`resolveLyraDirection`, `resolveLyraString`, `LYRA_DEFAULT_STRINGS`, and the types
-`LyraLocaleStrings` / `LyraMessageKey`. **`LYRA_DEFAULT_STRINGS` is the authoritative key list**
-(1005 keys, matching the `LyraMessageKey` union) — read it to find the key to override rather than
-guessing one. Lookup falls back exact locale → base language → English. Date, number, byte,
-relative-time and calendar output goes through `Intl`.
+The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
+`registerLyraLocale`, `setLyraLocale`, `getLyraLocale`, `getRegisteredLyraLocales`,
+`subscribeLyraLocaleRegistry`, `resolveLyraLocale`, `resolveLyraDirection`, `resolveLyraString`,
+`LYRA_DEFAULT_STRINGS`, and the types `LyraLocaleStrings` / `LyraMessageKey`. The package root
+continues to re-export the same surface for compatibility, but it also registers the non-peer-gated
+component graph; use the dedicated entry when the application only needs locale setup.
+**`LYRA_DEFAULT_STRINGS` is the authoritative key list** (1005 keys, matching the
+`LyraMessageKey` union) — read it to find the key to override rather than guessing one. Lookup
+falls back exact locale → base language → English. Date, number, byte, relative-time and calendar
+output goes through `Intl`.
 
 `getRegisteredLyraLocales(): string[]` lists every locale with strings registered via
 `registerLyraLocale()`, plus `'en'` (always available through the built-in English fallback),

@@ -44,7 +44,9 @@ export const GearMenu: Story = {
 
 /** Lyra's own icon-button can be the trigger without losing the menu-button relationship:
  *  `aria-haspopup`, `aria-expanded`, and the controls reference reach its shadow-internal native
- *  button, which is the element that actually receives focus. */
+ *  button, which is the element that actually receives focus. Supporting browsers expose the
+ *  cross-shadow relationship through `ariaControlsElements`, whose setter intentionally clears
+ *  the internal button's serialized `aria-controls` string. */
 export const LyraIconButtonTrigger: Story = {
   render: () => html`
     <lr-menu label="Account actions">

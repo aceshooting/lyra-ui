@@ -4,10 +4,14 @@ it('resolves the published root entry and representative granular subpaths', asy
   // Importing the complete barrel can contend with the other module-heavy
   // test files when the full suite starts them concurrently.
   this.timeout(60_000);
+  const localization = await import('@aceshooting/lyra-ui/localization.js');
   const root = await import('@aceshooting/lyra-ui');
   const classEntry = await import('@aceshooting/lyra-ui/components/overlays/empty/empty.class.js');
   const helperEntry = await import('@aceshooting/lyra-ui/components/utility/export-button/csv.js');
 
+  expect(typeof localization.registerLyraLocale).to.equal('function');
+  expect(typeof localization.setLyraLocale).to.equal('function');
+  expect(typeof localization.resolveLyraString).to.equal('function');
   expect(typeof root.LyraElement).to.equal('function');
   expect(typeof root.groupByRecency).to.equal('function');
   expect(typeof classEntry.LyraEmpty).to.equal('function');

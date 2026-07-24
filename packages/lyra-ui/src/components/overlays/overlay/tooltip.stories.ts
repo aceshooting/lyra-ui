@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './tooltip.js';
+import '../../forms/icon-button/icon-button.js';
 import type { LyraTooltip } from './tooltip.js';
 
 const meta: Meta = { title: 'Overlay/Tooltip', component: 'lr-tooltip', tags: ['autodocs'] };
@@ -12,6 +13,17 @@ export const Default: Story = {
     html`<lr-tooltip .open=${context.viewMode !== 'docs'} manual delay="0"
       >Helpful context<button slot="trigger">Hover or focus</button></lr-tooltip
     >`,
+};
+
+/** The hidden light-DOM description proxy lets the icon button's focused native control resolve
+ *  the tooltip text through `ariaDescribedByElements`, despite both components having shadows. */
+export const LyraIconButtonTrigger: Story = {
+  render: () => html`
+    <lr-tooltip delay="0">
+      Explain this action
+      <lr-icon-button slot="trigger" icon="help" aria-label="Help"></lr-icon-button>
+    </lr-tooltip>
+  `,
 };
 
 export const ActionableContent: Story = {
