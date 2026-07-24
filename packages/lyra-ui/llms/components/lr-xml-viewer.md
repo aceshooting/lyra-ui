@@ -72,10 +72,12 @@ so lowering it never squashes the chevron below its own box — the visible glyp
 the hit target follows the token, and it can never fall under the accessible minimum from this
 component's own rules.
 
-```html
-<lr-xml-viewer .xml=${payload} collapsed-depth="2" copyable
-  search=${query}
-></lr-xml-viewer>
+```ts
+const viewer = document.querySelector('lr-xml-viewer');
+viewer.xml = payload;
+viewer.collapsedDepth = 2;
+viewer.copyable = true;
+await viewer.search(query);
 ```
 
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the

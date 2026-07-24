@@ -40,8 +40,10 @@ supporting text rendered below the search/grid; unset renders no hint chrome. `e
 `error` content when provided); unset renders no error chrome. `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` —
 visual size; scales the emoji grid item box and its glyph proportionally, floored at 24px (WCAG 2.5.8).
 
-**Events:** `lr-change` with `detail: { emoji }` (an emoji was picked — click, or Enter/Space on
-the active grid cell; also sets `value`), plus the shared form `input`, `change`, `focus`, and `blur`.
+**Events:** a pick emits native-style composed `input`, then `change` (both with no detail), then
+`lr-change` with `detail: { emoji }` (click, or Enter/Space on the active grid cell; also sets
+`value`). The internal search input's `focus` and `blur` are re-dispatched as bubbling, composed
+host events. Programmatic `value` changes are silent.
 
 **Keyboard:** the grid is a roving-tabindex listbox (a single Tab stop — only the active emoji is
 tabbable). ArrowLeft/ArrowRight step the active item backward/forward following reading direction

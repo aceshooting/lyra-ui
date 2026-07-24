@@ -275,15 +275,247 @@ it('consumes child native-style events before emitting one group event surface',
   const el = (await fixture(html`
     <lr-checkbox-group><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
   `)) as LyraCheckboxGroup;
-  const events: Array<{ type: string; target: EventTarget | null }> = [];
-  el.addEventListener('input', (event) => events.push({ type: event.type, target: event.target }));
-  el.addEventListener('change', (event) => events.push({ type: event.type, target: event.target }));
-  el.addEventListener('lr-change', (event) => events.push({ type: event.type, target: event.target }));
+  const events: Array<{ type: string; target: EventTarget | null; detail: unknown }> = [];
+  el.addEventListener('input', (event) => events.push({
+    type: event.type,
+    target: event.target,
+    detail: (event as CustomEvent).detail,
+  }));
+  el.addEventListener('change', (event) => events.push({
+    type: event.type,
+    target: event.target,
+    detail: (event as CustomEvent).detail,
+  }));
+  el.addEventListener('lr-change', (event) => events.push({
+    type: event.type,
+    target: event.target,
+    detail: (event as CustomEvent).detail,
+  }));
 
   (el.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
 
   expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
   expect(events.every(({ target }) => target === el)).to.be.true;
+  expect(events.map(({ detail }) => detail)).to.deep.equal([
+    { value: ['a'] },
+    { value: ['a'] },
+    { value: ['a'] },
+  ]);
+});
+
+it('syncs value and FormData silently when a child is checked or renamed programmatically', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-checkbox-group name="picks"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const child = form.querySelector('lr-checkbox') as LyraCheckbox;
+  const events: Event[] = [];
+  group.addEventListener('input', (event) => events.push(event));
+  group.addEventListener('change', (event) => events.push(event));
+  group.addEventListener('lr-change', (event) => events.push(event));
+
+  child.checked = true;
+  await child.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await group.updateComplete;
+
+  expect(group.value).to.deep.equal(['a']);
+  expect(new FormData(form).getAll('picks')).to.deep.equal(['a']);
+
+  child.value = 'b';
+  await child.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await group.updateComplete;
+
+  expect(group.value).to.deep.equal(['b']);
+  expect(new FormData(form).getAll('picks')).to.deep.equal(['b']);
+  expect(events, 'programmatic child changes are silent').to.deep.equal([]);
+});
+
+it('disconnects child observation and reconciles current child state when reconnected', async () => {
+  const container = await fixture(html`
+    <div>
+      <lr-checkbox-group name="picks"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+    </div>
+  `);
+  const group = container.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const child = group.querySelector('lr-checkbox') as LyraCheckbox;
+
+  group.remove();
+  child.checked = true;
+  await child.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(group.value, 'a disconnected group has no active child observer').to.deep.equal([]);
+
+  container.append(group);
+  await group.updateComplete;
+  expect(group.value).to.deep.equal(['a']);
+});
+
+it('owns only checkboxes whose closest checkbox group is itself', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-checkbox-group name="outer">
+        <lr-checkbox value="outer" checked>Outer</lr-checkbox>
+        <lr-checkbox-group name="inner">
+          <lr-checkbox value="inner" checked>Inner</lr-checkbox>
+        </lr-checkbox-group>
+      </lr-checkbox-group>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+
+  await group.updateComplete;
+
+  expect(group.value).to.deep.equal(['outer']);
+  expect(new FormData(form).getAll('outer')).to.deep.equal(['outer']);
+});
+
+it('does not treat a nested group support slot as outer support content', async () => {
+  const outer = (await fixture(html`
+    <lr-checkbox-group>
+      <lr-checkbox value="outer">Outer</lr-checkbox>
+      <lr-checkbox-group>
+        <span slot="label">Inner label</span>
+        <span slot="hint">Inner hint</span>
+        <span slot="error">Inner error</span>
+        <lr-checkbox value="inner">Inner</lr-checkbox>
+      </lr-checkbox-group>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  await outer.updateComplete;
+
+  expect((outer.shadowRoot!.querySelector('[part="form-control-label"]') as HTMLElement).hidden).to.be.true;
+  expect((outer.shadowRoot!.querySelector('[part="hint"]') as HTMLElement).hidden).to.be.true;
+  expect((outer.shadowRoot!.querySelector('[part="error"]') as HTMLElement).hidden).to.be.true;
+});
+
+it('keeps an option whose non-top-level wrapper has an inert slot attribute', async () => {
+  const group = (await fixture(html`
+    <lr-checkbox-group>
+      <div>
+        <span slot="hint"><lr-checkbox value="option" checked>Option</lr-checkbox></span>
+      </div>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  await group.updateComplete;
+
+  expect(group.value).to.deep.equal(['option']);
+  group.disabled = true;
+  expect((group.querySelector('lr-checkbox') as LyraCheckbox).effectiveDisabled).to.be.true;
+});
+
+it('excludes checkboxes under named support-slot subtrees while preserving default-slot wrappers', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-checkbox-group name="topics" required>
+        <div slot="label"><lr-checkbox value="label" checked>Label helper</lr-checkbox></div>
+        <div slot="hint"><lr-checkbox value="hint" checked>Hint helper</lr-checkbox></div>
+        <div slot="error"><lr-checkbox value="error" checked>Error helper</lr-checkbox></div>
+        <div data-options><lr-checkbox value="option" checked>Option</lr-checkbox></div>
+      </lr-checkbox-group>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const named = [...group.querySelectorAll('[slot] lr-checkbox')] as LyraCheckbox[];
+  const option = group.querySelector('[data-options] lr-checkbox') as LyraCheckbox;
+  await group.updateComplete;
+
+  expect(group.value).to.deep.equal(['option']);
+  expect(new FormData(form).getAll('topics')).to.deep.equal(['option']);
+  expect(group.checkValidity()).to.be.true;
+
+  group.disabled = true;
+  expect(option.effectiveDisabled, 'a checkbox wrapped in the default options slot is owned').to.be.true;
+  expect(named.every((box) => !box.effectiveDisabled), 'support-slot checkboxes are not group controls').to.be.true;
+
+  group.disabled = false;
+  option.checked = false;
+  await option.updateComplete;
+  await group.updateComplete;
+  expect(group.value).to.deep.equal([]);
+  expect(new FormData(form).getAll('topics')).to.deep.equal([]);
+  expect(group.checkValidity()).to.be.false;
+});
+
+it('reconciles controllers, disablement, form state, and event ownership when a wrapper changes slots', async () => {
+  const form = (await fixture(html`
+    <form>
+      <lr-checkbox-group name="topics" required>
+        <div data-wrapper><lr-checkbox value="option" checked>Option</lr-checkbox></div>
+      </lr-checkbox-group>
+    </form>
+  `)) as HTMLFormElement;
+  const group = form.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const wrapper = group.querySelector('[data-wrapper]') as HTMLElement;
+  const option = wrapper.querySelector('lr-checkbox') as LyraCheckbox;
+  await group.updateComplete;
+
+  group.disabled = true;
+  expect(option.effectiveDisabled).to.be.true;
+
+  wrapper.slot = 'hint';
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await Promise.all([group.updateComplete, option.updateComplete]);
+  expect(option.effectiveDisabled, 'leaving the options slot releases group disablement').to.be.false;
+
+  group.disabled = false;
+  expect(group.value).to.deep.equal([]);
+  expect(new FormData(form).getAll('topics')).to.deep.equal([]);
+  expect(group.checkValidity()).to.be.false;
+
+  const events: Event[] = [];
+  group.addEventListener('input', (event) => events.push(event));
+  group.addEventListener('change', (event) => events.push(event));
+  group.addEventListener('lr-change', (event) => events.push(event));
+  option.click();
+  expect(events.map((event) => event.type)).to.deep.equal(['input', 'change', 'lr-change']);
+  expect(events.every((event) => event.target === option), 'support-slot child events pass through unchanged').to.be.true;
+  expect(group.value, 'a support-slot event is not translated into group state').to.deep.equal([]);
+
+  option.checked = true;
+  option.value = 'renamed';
+  await option.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await group.updateComplete;
+  expect(group.value, 'removed child controllers cannot silently resync the group').to.deep.equal([]);
+
+  wrapper.removeAttribute('slot');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await group.updateComplete;
+  expect(group.value).to.deep.equal(['renamed']);
+  expect(new FormData(form).getAll('topics')).to.deep.equal(['renamed']);
+  expect(group.checkValidity()).to.be.true;
+
+  option.value = 'updated';
+  await option.updateComplete;
+  await group.updateComplete;
+  expect(group.value, 'default-slot wrappers regain programmatic child observation').to.deep.equal(['updated']);
+  expect(new FormData(form).getAll('topics')).to.deep.equal(['updated']);
+});
+
+it('does not consume or translate events emitted by a nested checkbox group', async () => {
+  const outer = (await fixture(html`
+    <lr-checkbox-group>
+      <lr-checkbox value="outer" checked>Outer</lr-checkbox>
+      <lr-checkbox-group>
+        <lr-checkbox value="inner">Inner</lr-checkbox>
+      </lr-checkbox-group>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const inner = outer.querySelector('lr-checkbox-group') as LyraCheckboxGroup;
+  const events: Array<{ type: string; target: EventTarget | null }> = [];
+  outer.addEventListener('input', (event) => events.push({ type: event.type, target: event.target }));
+  outer.addEventListener('change', (event) => events.push({ type: event.type, target: event.target }));
+  outer.addEventListener('lr-change', (event) => events.push({ type: event.type, target: event.target }));
+
+  (inner.querySelector('lr-checkbox')!.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+
+  expect(outer.value).to.deep.equal(['outer']);
+  expect(events.map(({ type }) => type)).to.deep.equal(['input', 'change', 'lr-change']);
+  expect(events.every(({ target }) => target === inner)).to.be.true;
 });
 
 it('settles its public and form values after child defaults are restored on form reset', async () => {

@@ -43,7 +43,12 @@ interface ItemPending {
   scope: MemoryScope;
 }
 
-type PendingAction = ItemPending | { kind: 'forget-all' };
+interface ForgetAllPending {
+  kind: 'forget-all';
+  longTerm: LyraMemoryItem[];
+}
+
+type PendingAction = ItemPending | ForgetAllPending;
 
 export interface LyraMemoryAddDetail {
   item: LyraMemoryItem;
@@ -174,7 +179,14 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (!this.pending || this.pending.kind === 'forget-all') return;
+    if (!this.pending) return;
+    if (this.pending.kind === 'forget-all') {
+      // The confirmation applies to the exact controlled collection the user saw. If the host
+      // replaces that collection while the prompt is open, approving the stale prompt must not
+      // authorize clearing newly supplied memories.
+      if (changed.has('longTerm')) this.pending = null;
+      return;
+    }
     if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
     const items = this.pending.scope === 'short-term' ? this.shortTerm : this.longTerm;
     if (!items.includes(this.pending.item)) this.pending = null;
@@ -210,7 +222,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private startForgetAllPending(): void {
-    this.pending = { kind: 'forget-all' };
+    this.pending = { kind: 'forget-all', longTerm: this.longTerm };
   }
 
   private refocusItem(scope: MemoryScope, index: number): void {
@@ -227,8 +239,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   }
 
   private resolveItemDecision(p: ItemPending, approved: boolean): void {
+    if (this.pending !== p) return;
     const items = p.scope === 'short-term' ? this.shortTerm : this.longTerm;
-    const index = Math.max(0, items.indexOf(p.item));
+    const index = items.indexOf(p.item);
+    if (index < 0) return;
     this.pending = null;
     if (approved) {
       if (p.kind === 'add') this.emit<LyraMemoryAddDetail>('lr-add', { item: p.item });
@@ -237,7 +251,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     this.refocusItem(p.scope, index);
   }
 
-  private resolveForgetAllDecision(approved: boolean): void {
+  private resolveForgetAllDecision(pending: ForgetAllPending, approved: boolean): void {
+    if (this.pending !== pending || this.longTerm !== pending.longTerm) return;
     this.pending = null;
     if (approved) this.emit<undefined>('lr-forget');
     void this.updateComplete.then(() => {
@@ -349,11 +364,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
           heading=${this.localize('memoryPanelConfirmForgetHeading')}
           @lr-approve=${(e: CustomEvent) => {
             e.stopPropagation();
-            this.resolveForgetAllDecision(true);
+            this.resolveForgetAllDecision(forgetPending, true);
           }}
           @lr-deny=${(e: CustomEvent) => {
             e.stopPropagation();
-            this.resolveForgetAllDecision(false);
+            this.resolveForgetAllDecision(forgetPending, false);
           }}
           >${this.localize('memoryPanelConfirmForgetBody', undefined, {
             count: getNumberFormat(this.effectiveLocale).format(this.longTerm.length),

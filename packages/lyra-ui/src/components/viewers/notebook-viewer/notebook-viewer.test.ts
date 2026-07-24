@@ -175,6 +175,75 @@ describe('parsing and rendering', () => {
     }
   });
 
+  it('rejects sparse cell arrays supplied as public values or serialized with null holes', async () => {
+    const validCell = { cell_type: 'raw', id: 'raw1', source: 'plain text', metadata: {} };
+    const sparseCells = [validCell, validCell];
+    delete sparseCells[1];
+    const values: unknown[] = [
+      { nbformat: 4, nbformat_minor: 5, cells: sparseCells },
+      JSON.stringify({ nbformat: 4, nbformat_minor: 5, cells: [validCell, null] }),
+    ];
+    for (const notebook of values) {
+      const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      const errorPromise = oneEvent(el, 'lr-render-error');
+      el.notebook = notebook as never;
+      await errorPromise;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+        'This file is not a valid Jupyter notebook.',
+      );
+    }
+  });
+
+  it('rejects sparse nested public arrays without firing lr-load', async () => {
+    const sparse = (value: unknown): unknown[] => {
+      const values = [value, value];
+      delete values[1];
+      return values;
+    };
+    const validStream = { output_type: 'stream', name: 'stdout', text: 'ok' };
+    const notebooks = [
+      {
+        nbformat: 4, nbformat_minor: 5,
+        cells: [{ cell_type: 'raw', source: sparse('plain text') }],
+      },
+      {
+        nbformat: 4, nbformat_minor: 5,
+        cells: [{ cell_type: 'code', source: '', outputs: sparse(validStream) }],
+      },
+      {
+        nbformat: 4, nbformat_minor: 5,
+        cells: [{
+          cell_type: 'code',
+          source: '',
+          outputs: [{ output_type: 'stream', name: 'stdout', text: sparse('line') }],
+        }],
+      },
+      {
+        nbformat: 4, nbformat_minor: 5,
+        cells: [{
+          cell_type: 'code',
+          source: '',
+          outputs: [{ output_type: 'error', ename: 'Error', evalue: 'bad', traceback: sparse('frame') }],
+        }],
+      },
+    ];
+    for (const notebook of notebooks) {
+      const el = (await fixture(html`<lr-notebook-viewer></lr-notebook-viewer>`)) as LyraNotebookViewer;
+      let loadCount = 0;
+      let errorCount = 0;
+      el.addEventListener('lr-load', () => loadCount++);
+      el.addEventListener('lr-render-error', () => errorCount++);
+      el.notebook = notebook as never;
+      await el.updateComplete;
+      expect(loadCount).to.equal(0);
+      expect(errorCount).to.equal(1);
+      expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal(
+        'This file is not a valid Jupyter notebook.',
+      );
+    }
+  });
+
   it('rejects pathologically deep JSON output without overflowing the JavaScript stack', async () => {
     const payload: Record<string, unknown> = {};
     let cursor = payload;
@@ -339,6 +408,40 @@ describe('loading a notebook from src', () => {
 });
 
 describe('rendering non-text outputs', () => {
+  it('restarts an invalidated inline sanitization after reconnect', async () => {
+    let resolveFirst!: (value: { sanitize(raw: string): string }) => void;
+    let resolveSecond!: (value: { sanitize(raw: string): string }) => void;
+    const first = new Promise<{ sanitize(raw: string): string }>((resolve) => { resolveFirst = resolve; });
+    const second = new Promise<{ sanitize(raw: string): string }>((resolve) => { resolveSecond = resolve; });
+    __setNotebookSanitizerForTesting(first);
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [{
+        cell_type: 'code', id: 'c1', source: 'x',
+        outputs: [{ output_type: 'display_data', data: { 'text/html': '<b>Safe</b>' } }],
+      }],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).textContent?.includes('Loading document') ?? false);
+    await aTimeout(0);
+    await el.updateComplete;
+    await aTimeout(0);
+    el.remove();
+    expect((el as unknown as { sanitizationTasks: Map<string, unknown> }).sanitizationTasks.size).to.equal(0);
+    __setNotebookSanitizerForTesting(second);
+    document.body.append(el);
+    await waitUntil(
+      () => (el as unknown as { sanitizationTasks: Map<string, unknown> }).sanitizationTasks.size === 1,
+    );
+    resolveSecond({ sanitize: (raw) => raw });
+    await waitUntil(() => rowRoot(el).querySelector('b')?.textContent === 'Safe');
+    expect(rowRoot(el).querySelectorAll('b').length).to.equal(1);
+    resolveFirst({ sanitize: (raw) => `stale:${raw}` });
+    await aTimeout(0);
+    expect(rowRoot(el).textContent).to.include('Safe');
+    expect(rowRoot(el).textContent).to.not.include('stale:');
+  });
+
   it('renders image/png and image/jpeg outputs as base64 data-URL images', async () => {
     const notebook = {
       nbformat: 4, nbformat_minor: 5,
@@ -462,6 +565,20 @@ describe('rendering non-text outputs', () => {
     const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.getAttribute('data-output-type')).to.equal('execute_result');
     expect(output.textContent).to.equal('This output type cannot be displayed.');
+  });
+});
+
+describe('event boundaries', () => {
+  it('does not expose the internal virtual-list range event', async () => {
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${NOTEBOOK}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+    let leaked = 0;
+    el.addEventListener('lr-visible-range-changed', () => leaked++);
+    el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent(
+      'lr-visible-range-changed',
+      { detail: { start: 0, end: 1 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
   });
 });
 

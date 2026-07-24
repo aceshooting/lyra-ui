@@ -687,7 +687,7 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
         el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
         await el.updateComplete;
         const mark = el.shadowRoot!.querySelector('[part="content"] mark[data-lr-highlight-tone="accent"]');
-        expect(mark).to.exist;
+        expect(mark !== null).to.equal(true);
         expect(mark!.getAttribute('part')).to.equal('highlight');
       } finally {
         restore();
@@ -700,21 +700,30 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
   it('lets component-scoped properties theme fallback highlights and search states', async () => {
     const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
     (globalThis as { Highlight?: unknown }).Highlight = undefined;
-    const { el, restore } = await loadWithMarkup('<p>Hello world</p>');
+    const { el, restore } = await loadWithMarkup('<p>Hello world Hello</p>');
     try {
       el.style.setProperty('--lr-docx-viewer-highlight-accent-background', 'rgb(1, 2, 3)');
       el.style.setProperty('--lr-docx-viewer-search-match-background', 'rgb(4, 5, 6)');
       el.style.setProperty('--lr-docx-viewer-search-match-active-background', 'rgb(7, 8, 9)');
       el.highlights = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'world' } }];
       await el.updateComplete;
-      const highlight = el.shadowRoot!.querySelector(
+      const highlight = el.shadowRoot!.querySelector<HTMLElement>(
         '[part="content"] mark[data-lr-highlight-tone="accent"]',
-      ) as HTMLElement;
-      expect(getComputedStyle(highlight).backgroundColor).to.equal('rgb(1, 2, 3)');
+      );
+      expect(highlight !== null).to.equal(true);
+      expect(getComputedStyle(highlight!).backgroundColor).to.equal('rgb(1, 2, 3)');
 
       await el.search('Hello');
-      const match = el.shadowRoot!.querySelector('[part~="search-match-active"]') as HTMLElement;
-      expect(getComputedStyle(match).backgroundColor).to.equal('rgb(7, 8, 9)');
+      const matches = Array.from(
+        el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="search-match"]'),
+      );
+      expect(matches.length).to.equal(2);
+      const active = matches.find((match) => match.getAttribute('part')?.includes('search-match-active'));
+      const inactive = matches.find((match) => !match.getAttribute('part')?.includes('search-match-active'));
+      expect(active !== undefined).to.equal(true);
+      expect(inactive !== undefined).to.equal(true);
+      expect(getComputedStyle(active!).backgroundColor).to.equal('rgb(7, 8, 9)');
+      expect(getComputedStyle(inactive!).backgroundColor).to.equal('rgb(4, 5, 6)');
     } finally {
       restore();
       (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;

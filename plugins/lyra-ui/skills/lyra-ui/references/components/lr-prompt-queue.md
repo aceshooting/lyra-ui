@@ -16,12 +16,19 @@
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
 
-**Properties:** `items: PromptQueueItem[]`; `editable: boolean = true`; `disabled`; `label`;
-`accessibleLabel` (attribute `aria-label`).
+**Properties:** `items: PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
+(reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`PromptQueueItem = { id: string; value: string; attachments?: DocumentRef[]; createdAt?: number;
+metadata?: Record<string, unknown> }`.
 
-**Events:** `lr-queue-change` (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`).
+**Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
+`reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
+these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `actions`, `action`, `empty`.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';

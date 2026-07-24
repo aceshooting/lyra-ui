@@ -19,11 +19,12 @@ export const styles = css`
   lr-virtual-list::part(page) {
     position: relative;
     display: flex;
-    justify-content: flex-start;
+    /* Center a fitting page, but fall back to the logical start when it overflows so neither edge
+       becomes unreachable through the scroll container. */
+    justify-content: safe center;
     inline-size: max-content;
     min-inline-size: 100%;
     padding-block: var(--lr-space-m);
-    direction: ltr;
   }
   /* direction:ltr so the canvas 2D context (which defaults ctx.direction to 'inherit' -> the
      element's computed direction) lays PDF.js's explicitly-positioned glyphs out LTR. Under an

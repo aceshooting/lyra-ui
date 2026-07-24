@@ -16,12 +16,21 @@
 Side-by-side retrieval/reranking workbench showing effective rank, top-k Jaccard overlap, and
 dense/sparse/rerank/final score breakdowns.
 
-**Properties:** `sets: RetrievalComparisonSet[]`, `topK`, `selectedChunkId`, `label`.
+**Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
+`RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
+`topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''`.
+`RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
+trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 
 **Events:** `lr-chunk-select` (`{ setId, chunk }`).
 
 **CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
 `chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
+
+Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
+is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled.
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';

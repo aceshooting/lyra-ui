@@ -17,21 +17,39 @@ The composed prompt surface: chat composer, attachment controls/chips, model and
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
 upload, retrieval, or model call.
 
-**Properties:** `value`, `status`, `placeholder`, `disabled`, `submitOnEnter`, `attachments`,
-`attachmentCapabilities`, `mentionItems`, `commandItems`, `modelCatalog`, `model`, `voiceCatalog`,
-`voice`, `sources`, `selectedSourceIds`, `queue`, `label`, `accessibleLabel` (attribute
-`aria-label`).
+**Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
+`placeholder: string = ''`; `disabled: boolean = false` (reflected);
+`submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
+`attachments: PromptInputAttachment[] = []`, `attachmentCapabilities: AttachmentCapability[] =
+['files', 'image', 'audio']`, `mentionItems: PromptSuggestion[] = []`, `commandItems:
+PromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`,
+`sources: LyraSourceEntry[] = []`, `selectedSourceIds: string[] = []`, and `queue:
+PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
-**Methods:** `focus(options)`, `blur()`, and `click()` forward to the composed chat input;
-`select()` and its selection APIs forward to the same native text surface.
+`PromptSuggestion` extends `MentionItem { id, label, description?, icon? }` with optional
+`insertText` (defaults to `label`). `PromptInputAttachment` extends `DocumentRef { id, name,
+mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, and numeric
+`progress?`.
 
-**Events:** `lr-input`, `lr-submit`, `lr-stop`, `lr-mention-select`, `lr-attachments-add`,
-`lr-attachment-remove`, `lr-model-change`, `lr-voice-change`.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
+`select()` selects its native text surface. `click()` is inert while disabled.
+
+**Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
+`lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),
+`lr-attachment-remove` (`{ id }`), `lr-model-change`/`lr-voice-change`
+(`{ value, inCatalog }`), `lr-sources-change` (`{ selectedIds }`), `lr-queue-change`
+(`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
+`lr-audio-request`, `lr-attachment-retry` (`{ id }`), and `lr-attachment-preview`
+(`{ id, name, mimeType, src }`). Child events are stopped and re-emitted from
+`lr-prompt-input`; all composed interactions are suppressed while `disabled`.
 
 **Slots:** `controls`, `leading`, `chips`, `trailing`, `footer`.
 
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
 `composer`, `leading`, `chips`, `footer`.
+
+**Optional peer deps:** none of its own.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';

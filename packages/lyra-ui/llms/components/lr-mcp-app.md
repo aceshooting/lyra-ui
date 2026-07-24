@@ -18,14 +18,33 @@ with injected CSP; remote documents are URL-validated. The frame can only reques
 messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
 unless explicitly enabled in `resource.permissions`.
 
-**Properties:** `resource: McpAppResource | null`; `height`; `maxHeight`; `label`;
-`accessibleLabel` (attribute `aria-label`). **Methods:** `postHostContext(context)`,
-`postToolResult(requestId, result?, error?)`.
+**Properties:**
 
-**Events:** `lr-mcp-ready`, `lr-mcp-tool-call`, `lr-mcp-send-message`, `lr-mcp-open-link`,
-`lr-mcp-log`, `lr-mcp-resize`.
+- `resource: McpAppResource | null = null` (attribute: false) — either inline `html` or a safe
+  remote `src`, plus the required logical `uri`. `McpAppResource = { uri: string; title?: string;
+  html?: string; src?: string; csp?: McpAppCsp; permissions?: McpAppPermissions; metadata?:
+  Record<string, unknown> }`. CSP domain arrays accept HTTP(S) origins only. Permissions are
+  optional booleans for camera, microphone, geolocation, clipboard read, and clipboard write.
+- `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
+  frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
+- `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`) — frame
+  title precedence is host `aria-label`, `label`, resource title, then the localized fallback.
+
+**Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
+`postToolResult(requestId: string, result?: unknown, error?: string): void` resolves a prior tool
+request. Both are no-ops before a frame exists.
+
+**Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
+`McpAppToolCallDetail`, and `LyraMcpAppEventMap`.
+
+**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call` (`{ requestId?, name, args }`),
+`lr-mcp-send-message` (`{ message }`), `lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
+(`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
+component does not execute tools, send messages, or navigate itself.
 
 **CSS parts:** `base`, `frame`, `loading`, `error`.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';

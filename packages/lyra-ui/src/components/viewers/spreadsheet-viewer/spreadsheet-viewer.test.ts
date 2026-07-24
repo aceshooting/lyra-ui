@@ -269,7 +269,7 @@ describe('lr-spreadsheet-viewer', () => {
       el.src = 'https://example.test/book.xls';
       await event;
       expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal('This document is too large to preview.');
-      expect(el.shadowRoot!.querySelector('[part="sheet"]')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('[part="sheet"]') === null).to.be.true;
     } finally { restore(); }
   });
 
@@ -291,7 +291,7 @@ describe('lr-spreadsheet-viewer', () => {
         expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
           'This document is too large to preview.',
         );
-        expect(el.shadowRoot!.querySelector('lr-tabs')).to.equal(null);
+        expect(el.shadowRoot!.querySelector('lr-tabs') === null).to.be.true;
       } finally {
         restore();
       }
@@ -427,7 +427,7 @@ describe('lr-spreadsheet-viewer', () => {
         const highlighted = list.shadowRoot!.querySelector('[part~="cell-highlight"]') as HTMLElement;
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
         action.focus();
-        expect(list.shadowRoot!.activeElement).to.equal(action);
+        expect(list.shadowRoot!.activeElement === action).to.be.true;
       } finally {
         restore();
       }

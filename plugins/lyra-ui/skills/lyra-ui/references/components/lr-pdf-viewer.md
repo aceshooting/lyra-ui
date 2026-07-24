@@ -87,7 +87,7 @@ through the exported parts above rather than through dedicated custom properties
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when
-a PDF is opened. Deviates from the shared degraded-render contract: an absent `pdfjs-dist` renders
+a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 

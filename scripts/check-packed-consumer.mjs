@@ -68,9 +68,14 @@ const bundleEntries = {
   // already before this bump. Measured ~27.4 KiB gzip as of this bump; budget leaves modest
   // headroom for normal Lit/token growth while staying tight enough to catch an accidental heavy
   // import.
+  //
+  // Raised from 31_000 after the 2026-07-23 full-repository remediation made inherited
+  // locale/direction changes reactive in LyraElement. The isolated button remained a single
+  // 31_014 B-gzip (30.3 KiB) file with no optional-peer chunk; 32_000 leaves less than 1 KiB of
+  // headroom while accommodating the intentional shared-base behavior.
   button: {
     fixture: 'core',
-    maxGzipBytes: 31_000,
+    maxGzipBytes: 32_000,
   },
   flag: {
     fixture: 'optional',

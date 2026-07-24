@@ -17,12 +17,19 @@ Controlled nested-agent hierarchy with lifecycle badges, task/model context, gua
 selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cycles and orphan
 parents remain renderable instead of recursing forever.
 
-**Properties:** `runs: SubagentRun[]`, `selectedRunId`, `label`.
+**Properties:** `runs: SubagentRun[] = []` (attribute: false);
+`selectedRunId: string = ''` (attribute `selected-run-id`); `label: string = ''`.
+`SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
+string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
+Record<string, unknown> }`.
 
 **Events:** `lr-run-select` (`{ run }`), `lr-cancel`/`lr-retry` (`{ runId }`).
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
-`task`, `model`, `progress`, `actions`, `cancel`, `retry`, `empty`.
+`task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
+
+At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
+the logical depth. Progress is finite and clamped. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';

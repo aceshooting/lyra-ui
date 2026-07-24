@@ -46,6 +46,8 @@ export interface OverlayDeactivateOptions {
 export interface OverlayHandle {
   /** Moves focus inside unless focus is already within the current panel. */
   focusInitial(): void;
+  /** Replaces the eventual focus-return target without unregistering or reordering the overlay. */
+  updateRestoreFocusTo(target: HTMLElement | null): void;
   /** Removes the overlay permanently. Safe to call repeatedly. */
   deactivate(options?: OverlayDeactivateOptions): void;
   /** Temporarily unregisters during disconnect, preserving the original return target. */
@@ -547,6 +549,9 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
       if (entry.active && entry.registered && entry.state.stack[entry.state.stack.length - 1] === entry) {
         focusEntry(entry);
       }
+    },
+    updateRestoreFocusTo: (target) => {
+      if (entry.active) entry.restoreFocusTo = target;
     },
     deactivate: (deactivateOptions = {}) => {
       deactivateEntry(entry, deactivateOptions.restoreFocus !== false);

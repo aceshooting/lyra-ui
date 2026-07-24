@@ -16,16 +16,23 @@
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
 `DocumentLocator` into ask, quote, cite, and copy actions.
 
-**Properties:** `open`, `text`, `anchor`, `rect`, `actions`, `label`, `accessibleLabel` (attribute
-`aria-label`).
+**Properties:** `open: boolean = false` (reflected); `text: string = ''`;
+`anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
+`actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`.
 
-**Events:** `lr-selection-action` (`{ action, text, anchor }`), `lr-dismiss`, `lr-copy-error`.
+**Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
+`lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
+the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 
 **Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
 `--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
 provide their own fixed-position anchor.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';

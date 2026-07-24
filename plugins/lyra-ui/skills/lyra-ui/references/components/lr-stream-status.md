@@ -63,10 +63,10 @@ visibility is driven purely by whether anything is slotted into it, not by `phas
 message text color, stalled border), `--lr-color-warning-quiet` (stalled background tint),
 `--lr-space-s` / `--lr-space-xs` (base gap, stalled padding, actions gap), `--lr-radius`
 (base corner radius), `--lr-transition-base` (background/border-color transitions and the
-streaming pulse animation's cycle length). The component also sets two internal, phase-driven
-custom properties (`--lr-stream-status-dot-color`, `--lr-stream-status-dot-opacity`) on
-`:host`, but its own `:host([phase="..."])` rules outrank a page-level override for every phase
-except the default `idle`, so these aren't a practical external theming hook.
+dot's color/opacity transitions), and `--lr-transition-ambient` (the streaming pulse cycle).
+The phase defaults flow through `--lr-stream-status-dot-color` and
+`--lr-stream-status-dot-opacity`; setting either custom property on the element or an ancestor
+wins through the shadow cascade and is the supported per-instance override.
 
 **Optional peer deps:** none.
 

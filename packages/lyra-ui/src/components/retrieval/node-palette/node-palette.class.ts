@@ -98,7 +98,36 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   }
 
   private rovingList(filtered = this.filtered): PaletteItem[] {
-    return filtered.filter((i) => !i.disabled);
+    return this.categorized(filtered).flatMap((group) => group.items).filter((item) => !item.disabled);
+  }
+
+  /** Enabled items in the order represented by the currently committed item elements. */
+  private lastRenderedRovingList: PaletteItem[] = [];
+  private pendingFocusIndex: number | null = null;
+
+  private itemElements(): HTMLElement[] {
+    return Array.from(
+      this.renderRoot.querySelectorAll('[part="item"]:not([aria-disabled="true"])'),
+    ) as HTMLElement[];
+  }
+
+  private occurrenceAt(items: PaletteItem[], index: number): number {
+    const item = items[index];
+    let occurrence = 0;
+    for (let i = 0; i < index; i++) {
+      if (items[i] === item) occurrence++;
+    }
+    return occurrence;
+  }
+
+  private indexOfOccurrence(items: PaletteItem[], item: PaletteItem, occurrence: number): number {
+    let seen = 0;
+    for (let index = 0; index < items.length; index++) {
+      if (items[index] !== item) continue;
+      if (seen === occurrence) return index;
+      seen++;
+    }
+    return -1;
   }
 
   override disconnectedCallback(): void {
@@ -108,8 +137,54 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     this.isMounting = true;
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    const previous = this.lastRenderedRovingList;
+    const next = this.rovingList();
+    const structureChanged =
+      previous.length !== next.length || previous.some((item, index) => item !== next[index]);
+    if (!this.hasUpdated || !structureChanged) return;
+
+    const oldElements = this.itemElements();
+    const focusedIndex = oldElements.indexOf(this.shadowRoot?.activeElement as HTMLElement);
+    const referenceIndex = focusedIndex >= 0
+      ? focusedIndex
+      : Math.min(Math.max(0, this.activeIndex), Math.max(0, previous.length - 1));
+
+    let nextIndex = 0;
+    const previousItem = previous[referenceIndex];
+    if (!changed.has('queryText') && previousItem) {
+      const occurrence = this.occurrenceAt(previous, referenceIndex);
+      const preservedIndex = this.indexOfOccurrence(next, previousItem, occurrence);
+      nextIndex = preservedIndex >= 0
+        ? preservedIndex
+        : Math.min(referenceIndex, Math.max(0, next.length - 1));
+    }
+
+    if (focusedIndex >= 0) {
+      if (next.length === 0) {
+        (this.renderRoot.querySelector('input') as HTMLInputElement | null)?.focus();
+      } else {
+        const nextItem = next[nextIndex]!;
+        const nextOccurrence = this.occurrenceAt(next, nextIndex);
+        const survivingOldIndex = this.indexOfOccurrence(previous, nextItem, nextOccurrence);
+        const survivingOldElement = oldElements[survivingOldIndex];
+        if (survivingOldElement) survivingOldElement.focus();
+        else (this.renderRoot.querySelector('input') as HTMLInputElement | null)?.focus();
+        this.pendingFocusIndex = nextIndex;
+      }
+    }
+    this.activeIndex = next.length === 0 ? 0 : nextIndex;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.lastRenderedRovingList = this.rovingList();
+    const pendingFocusIndex = this.pendingFocusIndex;
+    if (pendingFocusIndex !== null) {
+      this.pendingFocusIndex = null;
+      this.itemElements()[Math.min(pendingFocusIndex, this.lastRenderedRovingList.length - 1)]?.focus();
+    }
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (!wasMounting && (changed.has('queryText') || changed.has('items'))) {
@@ -152,10 +227,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
 
   private focusItem(index: number): void {
     void this.updateComplete.then(() => {
-      const els = Array.from(
-        this.renderRoot.querySelectorAll('[part="item"]:not([aria-disabled="true"])'),
-      ) as HTMLElement[];
-      els[index]?.focus();
+      this.itemElements()[index]?.focus();
     });
   }
 
@@ -210,6 +282,9 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       tabindex=${rovingIndex === this.activeIndex && !item.disabled ? '0' : '-1'}
       draggable=${item.disabled ? 'false' : 'true'}
       @click=${() => this.place(item)}
+      @focus=${() => {
+        if (rovingIndex >= 0) this.activeIndex = rovingIndex;
+      }}
       @keydown=${(e: KeyboardEvent) => this.onItemKeyDown(e, rovingIndex, item)}
       @dragstart=${(e: DragEvent) => this.onItemDragStart(e, item)}
     >
@@ -222,8 +297,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
   override render(): TemplateResult {
     const filtered = this.filtered;
     const groups = this.categorized(filtered);
-    const rovingList = this.rovingList(filtered);
-    const rovingIndices = new Map(rovingList.map((item, index) => [item, index]));
+    let nextRovingIndex = 0;
     return html`<div part="base">
       <slot name="header"></slot>
       <input
@@ -244,9 +318,10 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
           : groups.map(
             (group, groupIndex) => {
               const headingId = `${this.listId}-group-${groupIndex}`;
-              const content = group.items.map((item) =>
-                this.itemTemplate(item, rovingIndices.get(item) ?? -1),
-              );
+              const content = group.items.map((item) => {
+                const rovingIndex = item.disabled ? -1 : nextRovingIndex++;
+                return this.itemTemplate(item, rovingIndex);
+              });
               return group.category
                 ? html`<div role="group" aria-labelledby=${headingId}>
                     <div id=${headingId} part="group-header" role="presentation">${group.category}</div>

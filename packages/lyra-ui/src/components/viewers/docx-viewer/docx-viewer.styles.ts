@@ -102,26 +102,26 @@ export const styles = css`
      below never matches on that path); the <mark>-wrap fallback path styles the real elements
      text-highlights.ts creates in this same shadow tree. Both are kept in sync by tone. */
   ::highlight(lr-highlight-accent) {
-    background-color: var(--lr-color-brand-quiet);
+    background-color: var(--lr-docx-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
   }
   ::highlight(lr-highlight-success) {
-    background-color: var(--lr-color-success-quiet);
+    background-color: var(--lr-docx-viewer-highlight-success-background, var(--lr-color-success-quiet));
   }
   ::highlight(lr-highlight-warning) {
-    background-color: var(--lr-color-warning-quiet);
+    background-color: var(--lr-docx-viewer-highlight-warning-background, var(--lr-color-warning-quiet));
   }
   ::highlight(lr-highlight-danger) {
-    background-color: var(--lr-color-danger-quiet);
+    background-color: var(--lr-docx-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
   }
   ::highlight(lr-highlight-neutral) {
-    background-color: var(--lr-color-surface);
+    background-color: var(--lr-docx-viewer-highlight-neutral-background, var(--lr-color-surface));
   }
   ::highlight(lr-highlight-active) {
-    background-color: var(--lr-color-brand-quiet);
+    background-color: var(--lr-docx-viewer-highlight-active-background, var(--lr-color-brand-quiet));
     text-decoration: underline;
   }
   [part='content'] mark[data-lr-highlight-tone] {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-docx-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
     color: inherit;
     border-radius: calc(var(--lr-radius) * 0.5);
     cursor: pointer;
@@ -130,29 +130,29 @@ export const styles = css`
     filter: brightness(var(--lr-hover-brightness));
   }
   [part='content'] mark[data-lr-highlight-tone='success'] {
-    background: var(--lr-color-success-quiet);
+    background: var(--lr-docx-viewer-highlight-success-background, var(--lr-color-success-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='warning'] {
-    background: var(--lr-color-warning-quiet);
+    background: var(--lr-docx-viewer-highlight-warning-background, var(--lr-color-warning-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='danger'] {
-    background: var(--lr-color-danger-quiet);
+    background: var(--lr-docx-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
   }
   [part='content'] mark[data-lr-highlight-tone='neutral'] {
-    background: var(--lr-color-surface);
+    background: var(--lr-docx-viewer-highlight-neutral-background, var(--lr-color-surface));
   }
   [part='content'] mark[data-lr-highlight-name='lr-highlight-active'] {
-    outline: var(--lr-border-width-thin) solid var(--lr-color-brand);
+    outline: var(--lr-border-width-thin) solid var(--lr-docx-viewer-highlight-active-outline, var(--lr-color-brand));
     outline-offset: var(--lr-focus-ring-offset);
   }
 
   [part='content'] mark[part~='search-match'] {
-    background: var(--lr-color-warning-quiet);
+    background: var(--lr-docx-viewer-search-match-background, var(--lr-color-warning-quiet));
     color: inherit;
     border-radius: var(--lr-radius-xs);
   }
   [part='content'] mark[part~='search-match-active'] {
-    background: var(--lr-color-warning);
-    color: var(--lr-color-on-warning);
+    background: var(--lr-docx-viewer-search-match-active-background, var(--lr-color-warning));
+    color: var(--lr-docx-viewer-search-match-active-foreground, var(--lr-color-on-warning));
   }
 `;

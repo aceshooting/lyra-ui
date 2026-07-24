@@ -133,6 +133,7 @@ export type LyraMessageKey =
   | 'diffViewNewLabel'
   | 'diffViewHiddenLines'
   | 'diffViewHiddenLinesPlural'
+  | 'diffViewTooLarge'
   | 'jsonArray'
   | 'jsonObject'
   | 'jsonValue'
@@ -1291,6 +1292,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   diffViewNewLabel: 'Modified',
   diffViewHiddenLines: '{count} unchanged line',
   diffViewHiddenLinesPlural: '{count} unchanged lines',
+  diffViewTooLarge: 'Diff is too large to display.',
   jsonArray: 'array',
   jsonObject: 'object',
   jsonValue: 'value',

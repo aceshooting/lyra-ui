@@ -45,6 +45,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
     private lastSearchLocale = '';
     private searchRecomputePending = false;
     private searchHandle?: HighlightHandle;
+    private readonly disconnectWaiters = new Set<() => void>();
 
     /** Viewer-specific hook for the rendered document region. */
     protected textContentRoot(): Element | null {
@@ -69,6 +70,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       if (!this.isConnected) return;
       const root = this.textContentRoot();
       if (root !== this.selectionRoot) {
+        (this as unknown as { unbindTextSelection(): void }).unbindTextSelection();
         this.selectionRoot = root;
         if (root) (this as unknown as { bindTextSelection(contentRoot: Element): void }).bindTextSelection(root);
       }
@@ -90,6 +92,8 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
     }
 
     override disconnectedCallback(): void {
+      for (const resolve of this.disconnectWaiters) resolve();
+      this.disconnectWaiters.clear();
       this.searchHandle?.release();
       this.searchHandle = undefined;
       this.selectionRoot = null;
@@ -121,7 +125,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       this.searchActiveIndex = -1;
       this.lastSearchText = '';
       this.lastSearchLocale = '';
-      await this.updateComplete;
+      if (!(await this.waitForUpdateOrDisconnect())) return 0;
       this.updateSearchRanges();
       this.searchActiveIndex = this.searchRanges.length > 0 ? 0 : -1;
       this.paintRanges();
@@ -205,10 +209,39 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
     }
 
+    private async waitForUpdateOrDisconnect(): Promise<boolean> {
+      while (this.isConnected) {
+        let resolveDisconnect!: () => void;
+        const disconnected = new Promise<false>((resolve) => {
+          resolveDisconnect = () => resolve(false);
+        });
+        this.disconnectWaiters.add(resolveDisconnect);
+        try {
+          const completed = await Promise.race([
+            this.updateComplete.then(() => true as const),
+            disconnected,
+          ]);
+          if (completed) return true;
+        } finally {
+          this.disconnectWaiters.delete(resolveDisconnect);
+        }
+        // A DOM move can synchronously disconnect and reconnect the same instance before the
+        // disconnect promise's continuation runs. In that case, wait for the reconnect update
+        // instead of abandoning the non-empty query with stale ranges.
+      }
+      return false;
+    }
+
     private paintRanges(): void {
+      if (!this.isConnected) {
+        this.searchHandle?.release();
+        this.searchHandle = undefined;
+        return;
+      }
       const root = this.textContentRoot();
       if (!root) {
         this.searchHandle?.release();
+        this.searchHandle = undefined;
         return;
       }
       this.searchHandle ??= acquireHighlightHandle(this, this.ownerDocument);

@@ -866,6 +866,20 @@ describe('zoomable (image format)', () => {
     expect(frame).to.exist;
     expect(frame!.querySelector('img')).to.exist;
   });
+
+  it('does not expose the internal zoomable-frame event', async () => {
+    const el = (await fixture(
+      html`<lr-document-preview zoomable mime-type="image/png" src="https://example.test/photo.png"></lr-document-preview>`,
+    )) as LyraDocumentPreview;
+    const frame = el.shadowRoot!.querySelector('lr-zoomable-frame')!;
+    let leaked = 0;
+    el.addEventListener('lr-zoom-change', () => leaked++);
+    frame.dispatchEvent(new CustomEvent(
+      'lr-zoom-change',
+      { detail: { zoom: 2 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
 });
 
 describe('region highlights (image format)', () => {
@@ -884,7 +898,7 @@ describe('region highlights (image format)', () => {
     content.style.height = '200px';
     const visual = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
     const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
-    expect(target).to.exist;
+    expect(target !== null).to.be.true;
     const visualBox = visual.getBoundingClientRect();
     const targetBox = target.getBoundingClientRect();
     expect(visualBox.width).to.be.lessThan(20);

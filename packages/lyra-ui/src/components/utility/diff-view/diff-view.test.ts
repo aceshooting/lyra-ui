@@ -16,7 +16,21 @@ describe('lr-diff-view', () => {
     )) as LyraDiffView;
 
     expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Diff trop grande');
-    expect(el.shadowRoot!.querySelector('[part="line"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="line"]').length).to.equal(0);
+  });
+
+  it('renders the English size fallback with no locale registered', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view
+        .oldText=${'a\nb\nc'}
+        .newText=${'a\nb\nd'}
+        .maxLines=${2}
+      ></lr-diff-view>`,
+    )) as LyraDiffView;
+
+    expect(el.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal(
+      'Diff is too large to display.',
+    );
   });
 
   it('defaults maxLines to 5000 and leaves ordinary diffs unchanged', async () => {
@@ -25,8 +39,30 @@ describe('lr-diff-view', () => {
     )) as LyraDiffView;
 
     expect(el.maxLines).to.equal(5000);
-    expect(el.shadowRoot!.querySelector('[part="limit"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('[part="line"]')).to.have.length(3);
+  });
+
+  it('enforces the default ceiling and accepts explicit Infinity as the documented opt-out', async () => {
+    const oversized = Array.from({ length: 5001 }, (_, index) => `line-${index}`).join('\n');
+    const limited = (await fixture(
+      html`<lr-diff-view
+        .oldText=${''}
+        .newText=${oversized}
+        .strings=${{ diffViewTooLarge: 'Too large' }}
+      ></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(limited.shadowRoot!.querySelector('[part="limit"]')!.textContent).to.equal('Too large');
+
+    const unbounded = (await fixture(
+      html`<lr-diff-view
+        .oldText=${'a\nb\nc'}
+        .newText=${'a\nb\nd'}
+        .maxLines=${Number.POSITIVE_INFINITY}
+      ></lr-diff-view>`,
+    )) as LyraDiffView;
+    expect(unbounded.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(0);
+    expect(unbounded.shadowRoot!.querySelectorAll('[part="line"]').length).to.be.greaterThan(0);
   });
 
   it('renders interleaved add/remove/equal lines, not all-removed-then-all-added', async () => {

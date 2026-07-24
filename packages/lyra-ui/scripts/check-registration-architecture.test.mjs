@@ -505,6 +505,76 @@ for (const [description, source] of [
       export default prefix;
     `,
   ],
+  [
+    'indexing an array containing the registrar cannot hide registration',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      [defineElement][0]('registered', class {});
+    `,
+  ],
+  [
+    'storing the registrar in an object capability is fail-closed',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      const capability = { defineElement };
+      capability.defineElement('registered', class {});
+    `,
+  ],
+  [
+    'passing an object containing the registrar is fail-closed',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      install({ defineElement });
+    `,
+  ],
+  [
+    'default-exporting an object containing the registrar is fail-closed',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      export default { defineElement };
+    `,
+  ],
+  [
+    'an expression-bodied arrow cannot return the registrar capability',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      (() => defineElement)()('registered', class {});
+    `,
+  ],
+  [
+    'a callback cannot carry the registrar capability',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      install(() => defineElement);
+    `,
+  ],
+  [
+    'a parameter default cannot invoke the registrar',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      function install(value = defineElement('registered', class {})) {}
+      install();
+    `,
+  ],
+  [
+    'a body var does not shadow the registrar inside a parameter default',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      function install(value = defineElement('registered', class {})) {
+        var defineElement = () => {};
+      }
+      install();
+    `,
+  ],
+  [
+    'a class field cannot carry the registrar capability',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      export class Registry {
+        static registrar = defineElement;
+      }
+    `,
+  ],
 ]) {
   const modulesWithRegistrationCapability = new Map([
     ['/src/components/example/example.class.ts', source],
@@ -515,6 +585,60 @@ for (const [description, source] of [
       modulesWithRegistrationCapability,
     ),
     [['/src/components/example/example.class.ts']],
+    description,
+  );
+}
+
+for (const [description, source] of [
+  [
+    'an ordinary object property named defineElement is not a capability edge',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      const safe = () => {};
+      const capability = { defineElement: safe };
+      capability.defineElement();
+      void defineElement;
+    `,
+  ],
+  [
+    'an unrelated prefix namespace member is not a registration edge',
+    `
+      import * as prefix from '../../../internal/prefix.js';
+      const name = prefix.tag('example');
+      void name;
+    `,
+  ],
+  [
+    'a parameter binding shadows the registrar in parameter defaults',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      function install(defineElement = () => {}) {
+        return defineElement;
+      }
+      void install;
+    `,
+  ],
+  [
+    'a class field key named defineElement is not a capability edge',
+    `
+      import { defineElement } from '../../../internal/prefix.js';
+      class Registry {
+        defineElement = () => {};
+      }
+      void defineElement;
+      void Registry;
+    `,
+  ],
+]) {
+  const modulesWithoutRegistrationCapability = new Map([
+    ['/src/components/example/example.class.ts', source],
+  ]);
+  assert.deepEqual(
+    findTransitiveRegistrationPaths(
+      ['/src/components/example/example.class.ts'],
+      modulesWithoutRegistrationCapability,
+    ),
+    [],
     description,
   );
 }

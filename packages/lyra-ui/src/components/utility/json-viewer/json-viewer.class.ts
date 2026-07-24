@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
@@ -148,7 +149,7 @@ export interface LyraJsonViewerEventMap {
  *   circular-reference marker color.
  */
 export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The value to render. Any JSON-serializable value, plus `undefined`. */
   @property({ attribute: false }) data: unknown;
@@ -560,6 +561,36 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     });
   }
 
+  private revealActiveMatch(): void {
+    const match = this.searchState.orderedMatches[this.activeSearchIndex];
+    if (!match) return;
+    let path: unknown;
+    try {
+      path = JSON.parse(match.pathKey);
+    } catch {
+      return;
+    }
+    if (!Array.isArray(path)) return;
+    let next: Map<string, boolean> | null = null;
+    for (let depth = 0; depth < path.length; depth++) {
+      const ancestorKey = JSON.stringify(path.slice(0, depth));
+      if (this.expandedOverrides.get(ancestorKey) === true) continue;
+      next ??= new Map(this.expandedOverrides);
+      next.set(ancestorKey, true);
+    }
+    if (next) this.expandedOverrides = next;
+  }
+
+  private activeSearchAnnouncement(): string {
+    const total = this.searchState.orderedMatches.length;
+    if (this.activeSearchIndex < 0 || total === 0) return '';
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    return this.localize('viewerSearchActiveMatch', undefined, {
+      current: numberFormat.format(this.activeSearchIndex + 1),
+      total: numberFormat.format(total),
+    });
+  }
+
   /**
    * Sets the declarative `search` property and awaits the recompute -- the resolved count is the
    * number of matches (also `searchState.orderedMatches.length` / rendered `[data-match]` spans).
@@ -578,21 +609,25 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     return this.searchState.orderedMatches.length;
   }
 
-  /** Advances the cursor to the next match (wrapping), scrolling it into view. Resolves `false` with no match to move to. */
+  /** Advances the cursor to the next match (wrapping), revealing collapsed ancestors and
+   *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchNext(): Promise<boolean> {
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % total;
+    this.revealActiveMatch();
     this.emitSearchChange();
     await this.scrollActiveMatchIntoView();
     return true;
   }
 
-  /** Moves the cursor to the previous match (wrapping), scrolling it into view. Resolves `false` with no match to move to. */
+  /** Moves the cursor to the previous match (wrapping), revealing collapsed ancestors and
+   *  scrolling the selected match into view. Resolves `false` with no match to move to. */
   async searchPrevious(): Promise<boolean> {
     const total = this.searchState.orderedMatches.length;
     if (total === 0) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + total) % total;
+    this.revealActiveMatch();
     this.emitSearchChange();
     await this.scrollActiveMatchIntoView();
     return true;
@@ -636,6 +671,9 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               depth: getNumberFormat(this.effectiveLocale).format(MAX_JSON_DEPTH),
             })}</p>`
           : nothing}
+        <span class="sr-only" role="status" aria-live="polite" aria-atomic="true"
+          >${this.activeSearchAnnouncement()}</span
+        >
       </div>
     `;
   }

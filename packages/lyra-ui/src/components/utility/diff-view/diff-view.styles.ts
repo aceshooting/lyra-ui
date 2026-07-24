@@ -22,6 +22,11 @@ export const styles = css`
     margin: 0;
     padding: var(--lr-space-s);
   }
+  [part='limit'] {
+    padding: var(--lr-space-m);
+    color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
+  }
   .split-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

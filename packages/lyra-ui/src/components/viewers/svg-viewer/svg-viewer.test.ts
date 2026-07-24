@@ -228,6 +228,24 @@ describe('zoomable', () => {
       restore();
     }
   });
+
+  it('does not expose the internal zoomable-frame event', async () => {
+    const el = (await fixture(html`<lr-svg-viewer zoomable></lr-svg-viewer>`)) as LyraSvgViewer;
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-zoomable-frame') !== null);
+      let leaked = 0;
+      el.addEventListener('lr-zoom-change', () => leaked++);
+      el.shadowRoot!.querySelector('lr-zoomable-frame')!.dispatchEvent(new CustomEvent(
+        'lr-zoom-change',
+        { detail: { zoom: 2 }, bubbles: true, composed: true },
+      ));
+      expect(leaked).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
 });
 
 describe('region highlights', () => {
@@ -248,7 +266,7 @@ describe('region highlights', () => {
       content.style.height = '200px';
       const visual = el.shadowRoot!.querySelector('[part="region-highlight"]') as HTMLElement;
       const target = el.shadowRoot!.querySelector('[part="region-highlight-target"]') as HTMLElement;
-      expect(target).to.exist;
+      expect(target !== null).to.be.true;
       const visualBox = visual.getBoundingClientRect();
       const targetBox = target.getBoundingClientRect();
       expect(visualBox.width).to.be.lessThan(20);

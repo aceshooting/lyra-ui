@@ -694,10 +694,10 @@ visibility is driven purely by whether anything is slotted into it, not by `phas
 message text color, stalled border), `--lr-color-warning-quiet` (stalled background tint),
 `--lr-space-s` / `--lr-space-xs` (base gap, stalled padding, actions gap), `--lr-radius`
 (base corner radius), `--lr-transition-base` (background/border-color transitions and the
-streaming pulse animation's cycle length). The component also sets two internal, phase-driven
-custom properties (`--lr-stream-status-dot-color`, `--lr-stream-status-dot-opacity`) on
-`:host`, but its own `:host([phase="..."])` rules outrank a page-level override for every phase
-except the default `idle`, so these aren't a practical external theming hook.
+dot's color/opacity transitions), and `--lr-transition-ambient` (the streaming pulse cycle).
+The phase defaults flow through `--lr-stream-status-dot-color` and
+`--lr-stream-status-dot-opacity`; setting either custom property on the element or an ancestor
+wins through the shadow cascade and is the supported per-instance override.
 
 **Optional peer deps:** none.
 
@@ -1114,7 +1114,7 @@ of the stream arrives.
 cursor bar's inline size), `--lr-streaming-text-cursor-height` (default `1em`) — both
 component-specific, since no shared "inline cursor bar" token exists, the same pattern
 `<lr-typing-indicator>`'s own `--lr-typing-cursor-width`/`-height` use, plus shared
-`--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-base` (blink animation
+`--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation
 cycle length).
 
 **Optional peer deps:** none — internally imports and auto-registers `<lr-markdown>` for
@@ -1395,10 +1395,11 @@ component's own `part="pre"`/`part="code"` hooks and strips shiki's default `tab
 `<pre>`, since `[part="body"]` is already the single scrollable/focusable region (`role="group"`,
 `tabindex="0"`) for the code area. Dark mode is handled via shiki's own "dual themes" feature: every
 token carries its light color as a plain inline `color`/`background-color` and its dark color in
-`--shiki-dark`/`--shiki-dark-bg` custom properties, which an `!important` media-query rule in
-`code-block.styles.ts` reassigns under `prefers-color-scheme: dark` — the one deliberate exception in
-this component to every other color being a `--lr-*` token, since these values come from shiki's own
-theme data.
+`--shiki-dark`/`--shiki-dark-bg` custom properties. The component watches its resolved Lyra theme
+tokens and sets `data-dark-theme="true"` on the code body when the effective surface is dark; an
+`!important` state rule then activates Shiki's dark values. This follows explicit Lyra theme
+overrides instead of consulting `prefers-color-scheme` directly. Shiki's generated colors are the
+one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
 - `copyable` defaults to `true` and reflects — see the property note above about overriding it with a
@@ -2431,14 +2432,24 @@ optional-peer fallback.
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 
-**Properties:** `parts: MessagePart[]`; `renderMarkdown: boolean = true`; `showReasoning: boolean =
-true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attribute
-`aria-label`).
+**Properties:** `parts: MessagePart[] = []` (attribute: false); `renderMarkdown: boolean = true`
+(attribute `render-markdown`, reflected) and `showReasoning: boolean = true` (attribute
+`show-reasoning`, reflected), both with string-aware true-default conversion;
+`renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
+part to the built-in renderer; `label: string = ''`; `accessibleLabel: string | null = null`
+(attribute `aria-label`, highest naming precedence).
+
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
+discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+**Slots:** none. **Optional peer deps:** those of composed content only: Markdown can use
+`marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own
+fallback.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
@@ -2469,14 +2480,23 @@ The composed prompt surface: chat composer, attachment controls/chips, model and
 retrieval-source scope, mention/slash-command popup, and queued follow-up prompts. It performs no
 upload, retrieval, or model call.
 
-**Properties:** `value`, `status`, `placeholder`, `disabled`, `submitOnEnter`, `attachments`,
-`attachmentCapabilities`, `mentionItems`, `commandItems`, `modelCatalog`, `model`, `voiceCatalog`,
-`voice`, `sources`, `selectedSourceIds`, `queue`, `label`, `accessibleLabel` (attribute
-`aria-label`). Each `PromptInputAttachment` may carry the attachment chip's optional lifecycle
-`status` and numeric `progress` in addition to its document/file metadata.
+**Properties:** `value: string = ''`; `status: 'idle' | 'sending' | 'streaming' = 'idle'`;
+`placeholder: string = ''`; `disabled: boolean = false` (reflected);
+`submitOnEnter: boolean = true` (attribute `submit-on-enter`, string-aware true-default converter);
+`attachments: PromptInputAttachment[] = []`, `attachmentCapabilities: AttachmentCapability[] =
+['files', 'image', 'audio']`, `mentionItems: PromptSuggestion[] = []`, `commandItems:
+PromptSuggestion[] = []`, `modelCatalog?: LyraModelCatalog`, `voiceCatalog?: LyraVoiceCatalog`,
+`sources: LyraSourceEntry[] = []`, `selectedSourceIds: string[] = []`, and `queue:
+PromptQueueItem[] = []` (all attribute: false); `model: string = ''`; `voice: string = ''`;
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
 
-**Methods:** `focus(options)`, `blur()`, and `click()` forward to the composed chat input;
-`select()` and its selection APIs forward to the same native text surface.
+`PromptSuggestion` extends `MentionItem { id, label, description?, icon? }` with optional
+`insertText` (defaults to `label`). `PromptInputAttachment` extends `DocumentRef { id, name,
+mimeType?, uri?, version? }` with `file?`, `size?`, attachment-chip `status?`, and numeric
+`progress?`.
+
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the composed chat input;
+`select()` selects its native text surface. `click()` is inert while disabled.
 
 **Events:** `lr-input` (`{ value }`), `lr-submit` (`{ value }`), `lr-stop`,
 `lr-mention-select` (`{ id, label, trigger }`), `lr-attachments-add` (`{ files, capability }`),
@@ -2492,6 +2512,8 @@ upload, retrieval, or model call.
 **CSS parts:** `base`, `controls`, `sources`, `sources-summary`, `source-picker`, `queue`,
 `composer`, `leading`, `chips`, `footer`.
 
+**Optional peer deps:** none of its own.
+
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.js';
 ```
@@ -2501,12 +2523,19 @@ import '@aceshooting/lyra-ui/components/conversation/prompt-input/prompt-input.j
 Controlled editable queue of follow-up turns. Reordering, editing, and removal emit a complete
 proposed queue; send-now emits the complete selected item.
 
-**Properties:** `items: PromptQueueItem[]`; `editable: boolean = true`; `disabled`; `label`;
-`accessibleLabel` (attribute `aria-label`).
+**Properties:** `items: PromptQueueItem[] = []` (attribute: false); `editable: boolean = true`
+(reflected, string-aware true-default converter); `disabled: boolean = false` (reflected);
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`PromptQueueItem = { id: string; value: string; attachments?: DocumentRef[]; createdAt?: number;
+metadata?: Record<string, unknown> }`.
 
-**Events:** `lr-queue-change` (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`).
+**Events:** `lr-queue-change` (`PromptQueueChangeDetail = { items, reason, itemId }`, with
+`reason: 'edit' | 'remove' | 'reorder'`), `lr-send-now` (`{ item }`). The queue is controlled:
+these events propose complete next values without mutating `items`.
 
 **CSS parts:** `base`, `heading`, `list`, `item`, `value`, `editor`, `actions`, `action`, `empty`.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.js';
@@ -2517,16 +2546,23 @@ import '@aceshooting/lyra-ui/components/conversation/prompt-queue/prompt-queue.j
 Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus a format-neutral
 `DocumentLocator` into ask, quote, cite, and copy actions.
 
-**Properties:** `open`, `text`, `anchor`, `rect`, `actions`, `label`, `accessibleLabel` (attribute
-`aria-label`).
+**Properties:** `open: boolean = false` (reflected); `text: string = ''`;
+`anchor: DocumentLocator | null = null`, `rect: DOMRectReadOnly | null = null`, and
+`actions: SelectionAction[] = ['ask', 'quote', 'cite', 'copy']` (attribute: false);
+`label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`).
+`SelectionAction = 'ask' | 'quote' | 'cite' | 'copy'`.
 
-**Events:** `lr-selection-action` (`{ action, text, anchor }`), `lr-dismiss`, `lr-copy-error`.
+**Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
+`lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
+the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 
 **Themeable custom properties:** `--lr-selection-toolbar-inline-start` and
 `--lr-selection-toolbar-block-start` are normally computed from `rect`; hosts may override them to
 provide their own fixed-position anchor.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection-toolbar.js';
@@ -2542,8 +2578,13 @@ import '@aceshooting/lyra-ui/components/conversation/selection-toolbar/selection
 Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
 `lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.
 
-**Properties:** `state`, `voiceState`, `level`, `stream`, `entries`, `muted`, `showCapture`,
-`errorCode`, `label`.
+**Properties:** `state: RealtimeConnectionState = 'disconnected'` (reflected), where the closed set
+is `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'`; `voiceState:
+AudioVisualizerState = 'idle'` (attribute `voice-state`); `level: number | null = null` (finite,
+clamped by the composed visualizer); `stream: MediaStream | null = null` and `entries:
+LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflected);
+`showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
+converter); `errorCode: string = ''` (attribute `error-code`); `label: string = ''`.
 
 **Events:** `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), `lr-interrupt`; the
 composed push-to-talk events continue bubbling.
@@ -2552,6 +2593,10 @@ composed push-to-talk events continue bubbling.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.
+
+**Slots:** `controls` — provider-specific actions appended to the built-in session controls.
+**Optional peer deps:** none. Transport, credentials, capture permission, and media playback
+remain host-owned.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js';

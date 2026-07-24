@@ -1946,16 +1946,21 @@ selected value is submitted under `name` and `required` requires at least one se
 
 **Properties:** `label`, `hint`, `errorText`, `value`, `name`, `required`, `disabled`, and
 `accessibleLabel` (`aria-label`). **Slots:** default checkboxes, `label`, `hint`, `error`.
-**Events:** `input`, `change`, and `lr-change` with `{ value: string[] }`.
+**Events:** a user toggle emits exactly one group-owned `input`, then `change`, then `lr-change`;
+all three carry `{ value: string[] }`. The owned child's corresponding events are consumed at the
+group boundary, so an ancestor does not receive a second, differently shaped sequence.
+Programmatic child/property synchronization is silent.
 **CSS parts:** `form-control`, `form-control-label`, `options`, `hint`, `error`.
 
 **`value` is a read-out of child state, not an input.** The children are the single source of
 truth. An internal sync recomputes `value` from them and reassigns it on every child toggle,
-`slotchange`, `name`/`required` change, blur, and `form.reset()` — so a host assignment is
-silently overwritten by the next of those. `connectedCallback()` runs that sync **before the first
-render**, which means even a constructor-time or template-time `.value=${…}` binding is discarded
-before anything can observe it. Assigning `value` logs a `console.warn` naming the property (once
-per group instance).
+programmatic child `checked`/`value`/`disabled` update, `slotchange`, `name`/`required` change,
+blur, and `form.reset()` — so a host assignment is silently overwritten by the next of those.
+Only a checkbox whose nearest `lr-checkbox-group` ancestor is this group contributes; a nested
+group owns its own descendants and form entries. `connectedCallback()` runs that sync **before the
+first render**, which means even a constructor-time or template-time `.value=${…}` binding is
+discarded before anything can observe it. Assigning `value` logs a `console.warn` naming the
+property (once per group instance).
 
 - **To preselect**, set `checked` on the children: `<lr-checkbox value="a" checked>`.
 - **To read the selection**, use this property or the `lr-change` event detail.

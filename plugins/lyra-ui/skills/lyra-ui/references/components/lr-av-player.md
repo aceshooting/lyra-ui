@@ -21,8 +21,8 @@ distinct from `<lr-transcript-feed>` (live captions for an in-progress voice ses
 `anchorKinds: ['time-range']` only — no text selection is bound. The transcript virtualizes through
 `<lr-virtual-list>` the same way `lr-pdf-viewer` virtualizes pages.
 
-**Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'` (attribute:
-false auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
+**Properties:** `src: string = ''`, `name: string = ''`, `kind?: 'audio' | 'video'`
+(attribute-backed auto-detection override), `mimeType: string = ''` (attribute `mime-type`), `poster: string =
 ''`, `loop: boolean = false`, `muted: boolean = false`, `preload: 'none' | 'metadata' | 'auto' =
 'metadata'`, `playbackRate: number = 1` (attribute `playback-rate`, reflected), `rates: number[] =
 [0.75, 1, 1.25, 1.5, 2]` (attribute: false), `cues: LyraAvCue[] = []` (attribute: false), `peaks:

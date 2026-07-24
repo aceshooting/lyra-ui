@@ -60,8 +60,10 @@ shared `FormAssociated` mixin — see gotchas).
   clear/pick. Forward `options.signal` to `fetch(url, { signal })` to cancel the request when a
   newer query supersedes it or the element disconnects. `loadingText` is shown while a call is in
   flight; a stale in-flight call that resolves after a newer one (or after disconnect) is dropped
-  via a monotonic token. The `options` parameter is optional in the type, so a legacy
-  `(query) => …` source stays assignable.)
+  via a monotonic token. The exported type requires the `options` parameter; an existing
+  one-parameter `(query) => …` function remains assignable under TypeScript's ordinary function
+  parameter compatibility, but consumers that need cancellation should accept and forward
+  `options.signal`.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value)

@@ -31,11 +31,13 @@ string. First-party invention (no Web Awesome equivalent).
   (single letters/digits upper-cased).
 
 **Exported types/functions (also directly usable standalone):** `KbdKeyLabel { visual: string;
-word: string }` — one resolved token's rendered glyph and spelled-out word.
-`shortcutTokenLabel(rawToken: string, isMac: boolean): KbdKeyLabel` — resolves a single token,
-parameterized on `isMac` so both platform branches are unit-testable without spoofing `navigator`.
-`parseShortcut(keys: string, isMac: boolean): KbdKeyLabel[]` — splits and resolves a full `keys`
-string.
+word: string }` — one resolved token's rendered glyph and spelled-out word; `KbdLocalize = (key:
+string, fallback: string) => string`.
+`shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel`
+resolves a single token, parameterized on `isMac` so both platform branches are unit-testable
+without spoofing `navigator`; the optional callback localizes spoken key names.
+`parseShortcut(keys: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel[]` splits and
+resolves a full `keys` string with the same optional localization callback.
 
 **Events:** none — purely presentational.
 

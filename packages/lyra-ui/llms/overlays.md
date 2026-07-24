@@ -46,8 +46,8 @@ DOM.
 
 **Themeable custom properties:** `--lr-toast-accent-width` (4px),
 `--lr-toast-show-duration`/`--lr-toast-hide-duration`
-(`var(--lr-transition-base, 180ms ease-out)` — 180ms by default, matching the JS-side show/hide
-animation timer, which is not itself reading this token), `--lr-toast-padding`
+(`var(--lr-transition-base, 180ms ease-out)` — the show/hide lifecycle reads the resolved computed
+transition duration and uses it for its completion fallback), `--lr-toast-padding`
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`1rem`) — both are auto-swapped per `size`, from a
 compact `xs` up to a roomier `xl` — `--lr-toast-accent-color` (defaults to `--lr-color-border`,
 auto-swapped per `variant` to `--lr-color-brand/-success/-warning/-danger`).
@@ -91,10 +91,8 @@ at another, since `placement` is a per-call option rather than a single global r
 ```
 
 **Known gotchas:**
-- possible nested live-region double-announcement: the stack region is
-  `role="status" aria-live="polite"` **and** each `lr-toast-item` independently self-assigns its
-  own `role` (`status`/`alert`) — nesting live regions can cause some screen readers to announce a
-  new toast twice. Plausible from the code, unverified against real AT.
+- the stack itself has no live-region role; each `lr-toast-item` owns the single `status`/`alert`
+  role appropriate to its current variant, avoiding nested live-region announcements.
 - the close button's accessible name is derived from the toast's own message text (`"Close: <first
   40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
@@ -430,16 +428,13 @@ already follow.
   whole pill using a loud-color-on-quiet-tint convention; `neutral` has no dedicated token pair, so
   it falls back to a plain bordered-surface look)
 - `removable: boolean = false` (reflected — shows the remove (×) button)
-- `selected: boolean = false` (reflected) — opt-in toggle/pressed mode: when set, `[part='base']`
-  itself becomes focusable and keyboard-activatable (Enter/Space, mirroring native `<button>`
-  behavior), reflects `aria-pressed` (explicitly `"false"`, not omitted, whenever toggle mode is
-  active but unpressed), and toggles on click/activation, emitting `lr-chip-select`.
-  Has no effect (no interactive semantics added to `[part='base']`) when combined with `removable`,
-  since the remove button already nests inside `[part='base']` — a focusable descendant of a
-  `role="button"` ancestor isn't allowed there, and this component's two real use cases (a
-  chart-series visibility toggle, a category filter chip) never need both at once. `false` (the
-  default, with `toggleable` also left at its default) reproduces the exact passive-label-pill
-  output.
+- `selected: boolean = false` (reflected) — current value for opt-in toggle/pressed mode. Once
+  toggle mode is active, a separate native `[part='toggle-button']` owns focus, Enter/Space/click
+  activation, and explicit `"true"`/`"false"` `aria-pressed`; `[part='base']` remains a container
+  and the default-slot label is inert. Activation proposes the opposite value through the
+  cancelable `lr-chip-select` event and mutates `selected` only when that event is not prevented.
+  Has no toggle effect when combined with `removable`, where the remove button is the sole control.
+  `false` (with `toggleable` also left at its default) reproduces the passive label-pill output.
 - `toggleable: boolean = false` (reflected) — explicit opt-in into `selected`'s toggle/pressed
   interactive mode, independent of `selected`'s own current value. Setting `selected` to `true` at
   any point opts in automatically and keeps `toggleable` `true` from then on (enough for a chip that
@@ -452,16 +447,21 @@ already follow.
 
 **Events:** `lr-remove` (`detail: { value }` — the remove (×) button was activated via click or
 Enter/Space while focused; only rendered/reachable while `removable`), `lr-chip-select`
-(`detail: { value, selected }` — fired on click, or Enter/Space while focused, when `selected` mode
-is active and `removable` is not set; the chip has already toggled its own `selected` state by the
-time this fires)
+(`detail: { value, selected }` — cancelable; fired from the native toggle button on click or
+Enter/Space with the proposed next state when toggle mode is active and `removable` is not set.
+Calling `preventDefault()` keeps the current `selected` state unchanged)
 
-**Slots:** default (the chip's label content), `icon` (optional leading icon or status dot; nothing
-reserved for it — no extra gap — when left empty)
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the active internal control
+(toggle or remove button); a passive chip's `click()` retains ordinary host behavior.
+
+**Slots:** default (the chip's label content; inert in toggle mode, so move links/buttons outside a
+toggleable chip), `icon` (optional leading icon or status dot; nothing reserved for it — no extra
+gap — when left empty)
 
 **CSS parts:** `base` (the pill's root container), `icon` (wrapper around the `icon` slot; hidden
-entirely while empty), `label` (wrapper around the default slot), `remove-button` (the remove (×)
-affordance, only rendered while `removable`)
+entirely while empty), `label` (non-interactive wrapper around the default slot), `toggle-button`
+(the real native toggle control, rendered over the label in toggle mode), `remove-button` (the
+remove (×) affordance, only rendered while `removable`)
 
 **Themeable custom properties:** `--lr-chip-accent`, `--lr-chip-bg`, `--lr-chip-border`
 (component-local trio swapped per `tone` rather than repeating background/color/border per part per
@@ -571,11 +571,6 @@ than a stylesheet-only solution.
   `<lr-chip>` in its shadow DOM — don't expect `<lr-chip>`'s CSS parts or custom properties to
   reach it.
 
-**Additional API surface:**
-
-- `blur()` — Forwards host blur to the internal control.
-- `part="toggle-button"` — The real toggle control, rendered over the non-interactive label when toggle mode is active.
-
 ---
 
 ## `lr-kbd`
@@ -598,11 +593,13 @@ string. First-party invention (no Web Awesome equivalent).
   (single letters/digits upper-cased).
 
 **Exported types/functions (also directly usable standalone):** `KbdKeyLabel { visual: string;
-word: string }` — one resolved token's rendered glyph and spelled-out word.
-`shortcutTokenLabel(rawToken: string, isMac: boolean): KbdKeyLabel` — resolves a single token,
-parameterized on `isMac` so both platform branches are unit-testable without spoofing `navigator`.
-`parseShortcut(keys: string, isMac: boolean): KbdKeyLabel[]` — splits and resolves a full `keys`
-string.
+word: string }` — one resolved token's rendered glyph and spelled-out word; `KbdLocalize = (key:
+string, fallback: string) => string`.
+`shortcutTokenLabel(rawToken: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel`
+resolves a single token, parameterized on `isMac` so both platform branches are unit-testable
+without spoofing `navigator`; the optional callback localizes spoken key names.
+`parseShortcut(keys: string, isMac: boolean, localize?: KbdLocalize): KbdKeyLabel[]` splits and
+resolves a full `keys` string with the same optional localization callback.
 
 **Events:** none — purely presentational.
 
@@ -658,8 +655,10 @@ the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt(
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
 `showAt()` behaves exactly as before.
 `hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
-`{ focusTrigger: true }` to return focus to the slotted trigger (as Escape does), or omit it to
-close without moving focus (as a bare `el.open = false` does). No-op when already closed.
+`{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
+dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
+anchor's explicit `returnFocusTo`; a virtual anchor with no return target closes without moving
+focus. No-op when already closed.
 **Events:** `lr-show`, `lr-hide`. **Slots:** `trigger`, default content. **CSS parts:** `trigger`,
 `popup`, `content`. **Themeable custom properties:** `--lr-overlay-max-inline-size` (default
 `--lr-size-20rem` — maximum inline size of the popup).

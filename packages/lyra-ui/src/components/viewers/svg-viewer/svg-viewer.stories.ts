@@ -13,6 +13,22 @@ const src = `data:image/svg+xml,${encodeURIComponent(source)}`;
 export const Default: Story = { render: () => html`<lr-svg-viewer src=${src} name="Example illustration"></lr-svg-viewer>` };
 export const Empty: Story = { render: () => html`<lr-svg-viewer></lr-svg-viewer>` };
 
+/** Baseline narrow-allocation coverage with long metadata and multiple region actions. */
+export const Narrow320: Story = {
+  render: () => html`
+    <div style="max-inline-size:320px">
+      <lr-svg-viewer
+        src=${src}
+        name="International quarterly analytical-engine research diagram.svg"
+        .highlights=${[
+          { id: 'h1', anchor: { kind: 'region', rect: { x: 8, y: 20, width: 4, height: 8 } }, label: 'First analytical-engine result' },
+          { id: 'h2', anchor: { kind: 'region', rect: { x: 13, y: 20, width: 4, height: 8 } }, label: 'Second analytical-engine result' },
+        ]}
+      ></lr-svg-viewer>
+    </div>
+  `,
+};
+
 export const ThemedActiveRegion: Story = {
   name: 'Themed active region (cssprop)',
   parameters: {

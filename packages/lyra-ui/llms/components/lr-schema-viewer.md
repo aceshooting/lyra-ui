@@ -17,12 +17,22 @@ Recursive JSON Schema inspector with property/branch selection, required and con
 validation issues, `$ref` visibility, composition branches, cycle protection, and a depth ceiling.
 It intentionally does not fetch remote references or validate values.
 
-**Properties:** `schema`, `issues`, `selectedPath`, `maxDepth`, `label`.
+**Properties:** `schema: JsonSchemaNode | null = null` and `issues: SchemaValidationIssue[] = []`
+(attribute: false); `selectedPath: string = ''` (attribute `selected-path`);
+`maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
+
+**Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
+required/enum/const/default/examples, and oneOf/anyOf/allOf while preserving unknown schema
+keywords. `SchemaValidationIssue = { path: string; message: string; severity?: 'error' | 'warning'
+| 'info' }`.
 
 **Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
-`description`, `constraints`, `issue`, `empty`.
+`description`, `constraints`, `issue`, `limit`, `empty`.
+
+Rendering is capped at 500 schema nodes; `limit` reports truncation. Cycles stop at the repeated
+node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';

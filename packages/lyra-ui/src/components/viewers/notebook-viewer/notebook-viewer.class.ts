@@ -48,14 +48,24 @@ interface NotebookDoc {
 function joinSource(source: string | string[] | undefined): string {
   return Array.isArray(source) ? source.join('') : (source ?? '');
 }
+
+function isDenseArray(value: unknown[]): boolean {
+  for (let index = 0; index < value.length; index++) {
+    if (!Object.prototype.hasOwnProperty.call(value, index)) return false;
+  }
+  return true;
+}
+
 function joinText(text: unknown): string {
   if (typeof text === 'string') return text;
-  return Array.isArray(text) && text.every((item) => typeof item === 'string') ? text.join('') : '';
+  return Array.isArray(text) && isDenseArray(text) && text.every((item) => typeof item === 'string')
+    ? text.join('')
+    : '';
 }
 
 function isTextValue(value: unknown): value is string | string[] {
   return typeof value === 'string' ||
-    (Array.isArray(value) && value.every((item) => typeof item === 'string'));
+    (Array.isArray(value) && isDenseArray(value) && value.every((item) => typeof item === 'string'));
 }
 
 function isJsonValue(value: unknown): boolean {
@@ -117,8 +127,11 @@ function isNotebookShape(value: unknown): value is NotebookDoc {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   if (!Number.isInteger(v['nbformat']) || !Number.isInteger(v['nbformat_minor']) || !Array.isArray(v['cells'])) return false;
+  const cells = v['cells'];
   let outputCount = 0;
-  return v['cells'].every((value) => {
+  for (let index = 0; index < cells.length; index++) {
+    if (!Object.prototype.hasOwnProperty.call(cells, index)) return false;
+    const value = cells[index];
     if (typeof value !== 'object' || value === null) return false;
     const cell = value as Record<string, unknown>;
     if (!['markdown', 'code', 'raw'].includes(String(cell['cell_type']))) return false;
@@ -126,11 +139,13 @@ function isNotebookShape(value: unknown): value is NotebookDoc {
     if (cell['id'] !== undefined && typeof cell['id'] !== 'string') return false;
     if (cell['execution_count'] !== undefined && cell['execution_count'] !== null &&
         (!Number.isInteger(cell['execution_count']) || (cell['execution_count'] as number) < 0)) return false;
-    if (cell['outputs'] === undefined) return true;
+    if (cell['outputs'] === undefined) continue;
     if (!Array.isArray(cell['outputs'])) return false;
+    if (!isDenseArray(cell['outputs'])) return false;
     outputCount += cell['outputs'].length;
-    return outputCount <= MAX_OUTPUTS && cell['outputs'].every(isNotebookOutput);
-  });
+    if (outputCount > MAX_OUTPUTS || !cell['outputs'].every(isNotebookOutput)) return false;
+  }
+  return true;
 }
 
 type NotebookState =
@@ -177,9 +192,9 @@ export interface LyraNotebookViewerEventMap {
  *   `detail: { error }`.
  * @csspart base - The root scroll container.
  * @csspart cell - One cell row (`data-cell-type`, `data-active`).
- * @csspart cell-active - Added alongside `cell` on the cell an anchor currently targets. A second
- *   part name rather than an attribute selector, because Shadow Parts forbids an attribute selector
- *   after `::part()`.
+ * @csspart cell-active - Added alongside `cell` on the cell currently targeted by an anchor or the
+ *   active search match. A second part name rather than an attribute selector, because Shadow Parts
+ *   forbids an attribute selector after `::part()`.
  * @csspart cell-gutter - The `In [n]`/`Out [n]` label column.
  * @csspart cell-source - A cell's source content.
  * @csspart raw-source - A horizontally scrollable raw-cell source surface.
@@ -193,7 +208,7 @@ export interface LyraNotebookViewerEventMap {
  * @cssprop [--lr-notebook-viewer-max-height=none] - Maximum block size of the scrollable body
  *   before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-notebook-viewer-active-bg=var(--lr-color-brand-quiet)] - Background of the
- *   `[part="cell"]` currently targeted by an anchor.
+ *   `[part="cell"]` currently targeted by an anchor or the active search match.
  */
 export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -261,6 +276,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     super.connectedCallback();
     if (this.hasUpdated && this.src && this._notebook === undefined) {
       this.scheduleAfterUpdate(() => { void this.loadFromSrc(); });
+    }
+    if (this.hasUpdated && this._notebook !== undefined && this.loadState.kind === 'loaded') {
+      // Disconnect invalidates and clears every in-flight/cached sanitizer result. A pure DOM move
+      // schedules no Lit update of its own, so explicitly repaint the retained inline document to
+      // let each still-visible HTML/SVG output enqueue fresh sanitization work.
+      this.requestUpdate();
     }
   }
 
@@ -617,6 +638,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       : '';
   }
 
+  private stopVirtualListEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.name || this.localize('notebookViewerLabel');
     return html`<div
@@ -633,6 +658,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
             .renderItem=${this.renderCell}
             .keyFunction=${(item: unknown, i: number) => (item as NotebookCell).id ?? i}
             .activeId=${this.activeCellIndex ?? ''}
+            @lr-visible-range-changed=${this.stopVirtualListEvent}
           ></lr-virtual-list>`
         : this.loadState.kind === 'loading'
           ? html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`

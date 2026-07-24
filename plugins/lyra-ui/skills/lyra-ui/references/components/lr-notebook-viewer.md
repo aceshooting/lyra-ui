@@ -37,17 +37,21 @@ shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
-`searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and flashing the
-target cell; `clearSearch()` clears the query and matches.
+`searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and marking the
+target cell with the persistent active-cell paint; `clearSearch()` clears the query and matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
-`lr-highlight-activate` — `detail: { id }`. `lr-search-change` — `detail: { query, matchCount,
-activeIndex }`. `lr-render-error` — `detail: { error }`, fetching, parsing, or validating the
-notebook failed.
+`lr-search-change` — `detail: { query, matchCount, activeIndex }`. `lr-render-error` —
+`detail: { error }`, fetching, parsing, or validating the notebook failed.
+
+Migration note: the previously declared `lr-highlight-activate` event was never emitted by
+`lr-notebook-viewer` and has been removed from its class/EventMap contract. Use `anchor` plus
+`lr-anchor-result` for notebook cell navigation outcomes.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
-`data-active`), `cell-active` (added alongside `cell` on the cell an anchor currently targets),
+`data-active`), `cell-active` (added alongside `cell` on the cell currently targeted by an anchor
+or the active search match),
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
@@ -64,9 +68,9 @@ remain on the elements for scripting.
 **Themeable custom properties:** `--lr-notebook-viewer-max-height` (default `none`).
 
 `--lr-notebook-viewer-active-bg` (default `var(--lr-color-brand-quiet)`) is the background of the
-cell currently targeted by an anchor — the `cell-active` part. It is an inline `var()` fallback at
-the point of use rather than a `:host` declaration, so it can be set on the element or on any
-ancestor.
+cell currently targeted by an anchor or the active search match — the `cell-active` part. It is an
+inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
+the element or on any ancestor.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to

@@ -28,6 +28,9 @@ const SAMPLE_TEXT = `{
   "rows": 128
 }`;
 const textDataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(SAMPLE_TEXT)}`;
+const narrowTextDataUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(
+  'A deliberately long document line with InternationalQuarterlyAnalyticalEngineResearchWithoutConvenientBreakpoints and localized surrounding prose.',
+)}`;
 
 const PNG_1X1_RED_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
@@ -188,6 +191,19 @@ export const NoFilename: Story = {
       src=${textDataUrl}
       mime-type="text/plain"
     ></lr-document-preview>
+  `,
+};
+
+/** Baseline narrow-allocation coverage with long filename and unbroken document content. */
+export const Narrow320: Story = {
+  render: () => html`
+    <div style="max-inline-size:320px">
+      <lr-document-preview
+        src=${narrowTextDataUrl}
+        mime-type="text/plain"
+        filename="international-quarterly-analytical-engine-research-report-with-a-very-long-name.txt"
+      ></lr-document-preview>
+    </div>
   `,
 };
 

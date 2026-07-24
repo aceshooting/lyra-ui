@@ -252,15 +252,16 @@ position) survives the transition.
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
   CSS `inset` independently from `fullscreenInset`; when empty, it follows `fullscreenInset`
 - `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
-  chart/table toggle inside the same card chrome; `WidgetView { id: string; label: string; icon?:
-  TemplateResult }`. Each entry gets a header toggle button (`[part='view-toggle']`) and a
-  `<slot name="view-${id}">`. Empty (the default) renders today's single unnamed default slot as the
-  sole view, unchanged.
+  chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
+  TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
+  (`[part='view-toggle']`) and a `<slot name="view-${id}">`. An icon-only view should set
+  `ariaLabel`; if both labels are omitted, the button uses `id` as a last-resort accessible name.
+  Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
 - `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the label-derived fullscreen
-  dialog name.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
+  fullscreen dialog name.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
   under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and
@@ -549,9 +550,8 @@ before, so rendering is unchanged. Otherwise shared tokens —
 Ordered multi-step wizard/form navigation: an index/label per step, `current`/`completed`/`disabled`/
 `error` state, and click-to-jump. First-party invention (no Web Awesome equivalent). Fully
 data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
-click, or Enter/Space on a non-disabled step, fires a cancelable `lr-step-select`, and the host
-decides whether/how `steps` changes in response (mirroring `lr-dialog-close`'s cancelable-event
-convention).
+click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
+decides whether/how `steps` changes in response.
 
 **Properties:**
 - `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
@@ -597,19 +597,20 @@ convention).
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
   `orientationBreakpoint` resolves to a usable length).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
-  `role="tablist"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the
-  tablist renders without an `aria-label` (there is no localized default name).
+  `role="list"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the list
+  renders without an `aria-label` (there is no localized default name).
 
 **Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
-focused, on a non-`disabled` step. Cancelable, though this component takes no default action of its
-own to prevent (it never mutates `steps`) — `preventDefault()` is available for a host that wants a
-single place to short-circuit its own listener's follow-up work. `lr-stepper-orientation-change`
+focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
+action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
 **Slots:** none.
 
-**CSS parts:** `base` (root wrapper, `role="tablist"`), `step` (a single step button, `role="tab"`),
+**CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
+one step), `step` (a single native button; the current step carries `aria-current="step"` and every
+other step carries `aria-current="false"`),
 `step-icon` (optional leading topic glyph from the step's `icon` field; only rendered when the step
 has one, additionally to — never instead of — `step-index`/`step-check`), `step-index` (the numbered
 index chip, shown for `pending`/`current`/`error` steps), `step-check` (the completed-checkmark
@@ -660,15 +661,11 @@ each falls back to the token its rule used before. Otherwise shared tokens —
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.
-- `role="tablist"`/`role="tab"` back the keyboard/focus contract (roving tabindex, arrow-key
-  navigation) even though this isn't a `<lr-tabs>`-style panel switcher — there's no associated
-  `role="tabpanel"`, since this component renders no panel content of its own.
+- The stepper exposes ordered progress/navigation semantics (`list`/`listitem` plus native step
+  buttons), not tabs: it owns no tab panels. Roving tabindex and orientation-aware arrow-key
+  navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
-
-**Additional API surface:**
-
-- `part="step-item"` — The `role="listitem"` wrapper for one step.
 
 ---
 
@@ -960,7 +957,7 @@ invention (no Web Awesome equivalent).
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
-- `activeId: string = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
+- `activeId: string | number | '' = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
   result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.
@@ -1699,8 +1696,10 @@ docked case.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
 - `resizable: boolean = true` (reflected) — when `false`, no drag handle renders at all and the panel
-  is a fixed size. (Assign `false` via a **property** binding, e.g. `.resizable=${false}` — a
-  `?resizable=${false}` boolean-attribute binding cannot override a `true` default; see AGENTS.md.)
+  is a fixed size. Its string-aware converter accepts `resizable="false"` as false despite the
+  true default. A Lit property binding (`.resizable=${false}`) also disables it; a false
+  boolean-attribute binding (`?resizable=${false}`) only removes the attribute and cannot override
+  a true-defaulting property.
 
 **Exported helper:** `parseLengthPx(length: string, containerPx: number, fontSizeEl: Element =
 document.documentElement): number | undefined` — resolves an arbitrary CSS length (`px`, `rem`, `em`,
@@ -2006,10 +2005,25 @@ false), `accessibleLabel: string | null = null` (attribute `aria-label` — name
 
 Dashboard filter row that composes Lyra inputs and removable chips, with reset and loading states.
 
-**Properties:** `filters`, `value`, `disabled`, `loading`, `label`, `hasActiveFilters`,
-`invalidFilterIds`, `checkValidity`, `reportValidity`, `reset`. **Events:** `lr-input`, `lr-reset`,
-`lr-validity-change`. **CSS parts:** `base`, `controls`, `filter-control`, `active-filters`,
-`chips`, `chip`, `reset-button`, `status`.
+**Properties:**
+
+- `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
+- `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
+  writes are shallow-copied.
+- `label: string = ''` — accessible name for the internal `role="group"`.
+- `disabled: boolean = false` (reflected) — disables every filter control and reset action.
+- `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
+  filters editable.
+- `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
+- `invalidFilterIds: string[]` (read-only) — ids of required filters whose values are unset.
+
+**Methods:** `checkValidity(): boolean` returns whether every required filter is set without
+revealing errors; `reportValidity(): boolean` returns the same state and reveals every current
+required-field error; `reset(): void` restores each definition's `defaultValue` (or unsets it),
+unless the bar is disabled.
+
+**Events:** `lr-input`, `lr-reset`, `lr-validity-change`. **CSS parts:** `base`, `controls`,
+`filter-control`, `active-filters`, `chips`, `chip`, `reset-button`, `status`.
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
 composes them and never invents a control of its own. `'select'`/`'combobox'` map to their

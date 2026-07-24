@@ -48,6 +48,7 @@ export type LyraDiffViewLayout = 'unified' | 'split';
  *   (`"empty"` is an unbalanced-replace placeholder cell in `layout="split"` and never carries a
  *   `+`/`-` prefix; `"fold"` is the collapsed-unchanged-lines marker `contextLines` produces).
  * @csspart copy-button - The copy affordance, only rendered while `copyable`.
+ * @csspart limit - The localized fallback rendered when either input exceeds `maxLines`.
  * @csspart side - One column in `layout="split"` (`data-side="old"|"new"`).
  * @cssprop [--lr-diff-view-font=var(--lr-font-mono)] - Font family used for the diff lines.
  * @cssprop [--lr-diff-view-add-background=var(--lr-color-success-quiet)] - Added-line background.
@@ -90,7 +91,12 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
    *  and `git diff`'s `-U<n>` use. A negative or non-finite value is treated as unset (no folding). */
   @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
 
+  /** Maximum lines accepted on either input side before rendering a bounded fallback. Defaults
+   *  to `5000`. Set to `Infinity` explicitly to opt back into unbounded diffing. */
+  @property({ type: Number, attribute: 'max-lines' }) maxLines = 5000;
+
   @state() private justCopied = false;
+  @state() private diffTooLarge = false;
 
   @state() private highlightedOldLines: string[] | null = null;
   @state() private highlightedNewLines: string[] | null = null;
@@ -101,17 +107,29 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
 
-  // The O(n*m) LCS table only actually needs recomputing when the two compared texts change --
-  // caching it here means a render triggered purely by `justCopied` toggling (the copy-button
-  // label swap) reuses the same result instead of re-running the diff from scratch.
+  // The O(n*m) LCS computation only needs rerunning when the compared texts or their ceiling
+  // changes. A render triggered purely by `justCopied` toggling reuses the same result.
   private diffOps: DiffOp[] = [];
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('oldText') || changed.has('newText')) {
-      this.diffOps = computeLineDiff(splitLines(this.oldText), splitLines(this.newText));
+    if (changed.has('oldText') || changed.has('newText') || changed.has('maxLines')) {
+      const oldLines = splitLines(this.oldText);
+      const newLines = splitLines(this.newText);
+      const maxLines =
+        this.maxLines === Number.POSITIVE_INFINITY
+          ? Number.POSITIVE_INFINITY
+          : finiteCount(this.maxLines, 5000);
+      this.diffTooLarge = oldLines.length > maxLines || newLines.length > maxLines;
+      this.diffOps = this.diffTooLarge ? [] : computeLineDiff(oldLines, newLines);
     }
-    if (changed.has('oldText') || changed.has('newText') || changed.has('language') || changed.has('languages')) {
+    if (
+      changed.has('oldText') ||
+      changed.has('newText') ||
+      changed.has('language') ||
+      changed.has('languages') ||
+      changed.has('maxLines')
+    ) {
       this.syncHighlight();
     }
   }
@@ -125,6 +143,11 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   private syncHighlight(): void {
     const token = ++this.highlightToken;
+    if (this.diffTooLarge) {
+      this.highlightedOldLines = null;
+      this.highlightedNewLines = null;
+      return;
+    }
     const lang = this.language;
     const languages = this.languages;
     if (!lang || !languages?.[lang]) {
@@ -335,6 +358,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   }
 
   override render(): TemplateResult {
+    if (this.diffTooLarge) {
+      return html`<div part="base"><div part="limit">${this.localize('diffViewTooLarge')}</div></div>`;
+    }
     return html`
       <div part="base">
         ${this.copyable

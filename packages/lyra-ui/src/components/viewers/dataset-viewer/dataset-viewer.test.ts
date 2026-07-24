@@ -269,7 +269,7 @@ describe('lr-dataset-viewer', () => {
         const highlighted = header.querySelector('[part~="cell-highlight"]')!;
         expect(highlighted.getAttribute('role')).to.equal('columnheader');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLElement;
-        expect(action).to.exist;
+        expect(action !== null).to.be.true;
         expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
         expect(getComputedStyle(action).minBlockSize).to.equal('40px');
       } finally { restore(); }

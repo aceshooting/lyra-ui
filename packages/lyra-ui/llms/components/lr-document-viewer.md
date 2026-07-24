@@ -38,10 +38,11 @@ type. First-party invention.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per
-  applied `anchor` when the resolved renderer can't honor it (it declares no `capabilities.anchors`,
-  or none matching the anchor's `kind`), when the lazy renderer failed to load, or when the file fell
-  back to `<lr-document-preview>`. A capable renderer instead emits its own `lr-anchor-result` from
-  its embedded `DocumentAnchorTarget` mixin, which composes up through this element unchanged — the
+  applied `anchor` when a resolved renderer can't honor it (it declares no `capabilities.anchors`,
+  or none matching the anchor's `kind`). When the file uses `<lr-document-preview>`—including after
+  a lazy renderer fails to load—the shell delegates to that preview's `scrollToAnchor()` and emits
+  its actual `found` result. A capable renderer instead emits its own `lr-anchor-result` from its
+  embedded `DocumentAnchorTarget` mixin, which composes up through this element unchanged — the
   shell stays silent in that case, so the event fires exactly once either way. A string `anchor`
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 

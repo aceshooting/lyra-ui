@@ -197,7 +197,7 @@ it('recomputes token-derived geometry when its allocation changes', async () => 
     const beforeChild = nodePosition(el, 'Knowledge graphs');
     const before = Math.hypot(beforeChild.x - beforeRoot.x, beforeChild.y - beforeRoot.y);
     el.style.setProperty('--lr-mind-map-ring-gap', '8rem');
-    expect(notify).to.exist;
+    expect(typeof notify).to.equal('function');
     notify!(
       [{ contentRect: { width: 321, height: 240 } } as unknown as ResizeObserverEntry],
       {} as ResizeObserver,

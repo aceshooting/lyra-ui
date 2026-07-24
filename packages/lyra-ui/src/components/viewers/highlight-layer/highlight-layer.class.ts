@@ -36,6 +36,17 @@ export interface LyraHighlightLayerEventMap {
  * @csspart highlight-actions - Non-overlapping actions used when more than one logical highlight
  *   would otherwise create ambiguous minimum hit areas.
  * @csspart highlight-action - One action in the non-overlapping highlight action list.
+ * @cssprop --lr-highlight-layer-accent-background - Accent highlight background.
+ * @cssprop --lr-highlight-layer-accent-outline - Accent highlight outline.
+ * @cssprop --lr-highlight-layer-success-background - Success highlight background.
+ * @cssprop --lr-highlight-layer-success-outline - Success highlight outline.
+ * @cssprop --lr-highlight-layer-warning-background - Warning highlight background.
+ * @cssprop --lr-highlight-layer-warning-outline - Warning highlight outline.
+ * @cssprop --lr-highlight-layer-danger-background - Danger highlight background.
+ * @cssprop --lr-highlight-layer-danger-outline - Danger highlight outline.
+ * @cssprop --lr-highlight-layer-neutral-background - Neutral highlight background.
+ * @cssprop --lr-highlight-layer-neutral-outline - Neutral highlight outline.
+ * @cssprop --lr-highlight-layer-flash-background - Flash-state background.
  */
 export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> {
   static override styles = [LyraElement.styles, styles];

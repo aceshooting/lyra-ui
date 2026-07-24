@@ -92,9 +92,9 @@ interface PhoneNumberAdapter {
   native telephone input.
 - `countryLabel: string = 'Select'` (attribute `country-label`) — country-selector accessible name;
   the untouched default routes through the shared localized `select` message.
-- `incompleteText: string = 'The value is invalid.'` (attribute `incomplete-text`) — validation
-  message for dial-like input that can still become valid with more digits. The untouched default
-  routes through the shared localized `valueInvalid` message.
+- `incompleteText: string = 'This phone number is incomplete.'` (attribute `incomplete-text`) —
+  validation message for dial-like input that can still become valid with more digits. The
+  untouched default routes through the localized `phoneInputIncomplete` message.
 - `invalidText: string = 'The value is invalid.'` (attribute `invalid-text`) — completed-invalid
   message, localized through the same shared key while left at its default.
 - `autocomplete: string = 'tel'`, `inputmode: 'tel'|'numeric'|'text' = 'tel'`,

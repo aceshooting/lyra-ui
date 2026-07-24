@@ -52,8 +52,9 @@ key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
 
 **Themeable custom properties:** mostly shared tokens — `--lr-color-border`, `--lr-color-brand`,
-`--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host([disabled])`
-dimming), plus (for `presets`) `--lr-color-text`, `--lr-color-on-brand` (the active preset
+`--lr-color-surface`, `--lr-shadow` (track/handles), `--lr-opacity-disabled` (`:host(:disabled)`
+dimming, including ancestor-fieldset disablement), plus (for `presets`) `--lr-color-text`,
+`--lr-color-on-brand` (the active preset
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
 

@@ -16,8 +16,39 @@
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
 `lr-document-preview` for side-by-side rendered content.
 
-**Properties:** `oldVersion`, `newVersion`, `view`, `diffLayout`, `language`, `languages`, `anchor`,
-`copyable`, `syncScroll`. **Events:** `lr-copy`, `lr-download`, `lr-highlight-activate`,
-`lr-render-error`. **CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`,
-`pane-empty`. **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
+**Properties:**
+
+- `oldVersion?: DocumentCompareVersion`, `newVersion?: DocumentCompareVersion` (attribute: false) —
+  the before/after inputs. `DocumentCompareVersion` extends `DocumentRef`
+  (`id`, `name`, `mimeType?`, `uri?`, `version?`) with `text?: string` for diff mode and
+  `highlights?: LyraHighlight[]` for its own preview pane.
+- `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
+  preview panes.
+- `diffLayout: 'unified' | 'split' = 'unified'` (attribute `diff-layout`, reflected) — forwarded
+  to `lr-diff-view` in diff mode.
+- `copyable: boolean = false` — forwards the diff copy action.
+- `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
+  attribute: false) — optional syntax highlighting forwarded to the diff.
+- `syncScroll: boolean = true` (attribute `sync-scroll`) — proportionally mirrors either
+  side-by-side pane's scroll fraction to the other. The true-default converter accepts the literal
+  `sync-scroll="false"`.
+- `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
+  preview panes; repeated assignment of the same value still re-runs.
+
+**Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
+'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
+
+**Synchronized anchors:** activating a region highlight whose id exists in the opposite version
+scrolls that pane to its corresponding highlight, while the original `lr-highlight-activate`
+continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
+columns already share one scroll container.
+
+**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { src, filename }`),
+`lr-highlight-activate` (`detail: { id }`), and `lr-render-error` (`detail: { error }`).
+
+**Slots:** none.
+
+**CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`, `pane-empty`.
+
+**Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.

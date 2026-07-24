@@ -266,6 +266,48 @@ describe('lr-memory-panel', () => {
     expect(el.shadowRoot!.querySelector('[part="forget-all-button"]')).to.exist;
   });
 
+  it('cancels a pending forget-all decision when controlled longTerm data changes', async () => {
+    const el = await populated();
+    (el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+    const staleConfirmBar = await readyConfirmBar(section);
+    const staleApprove = staleConfirmBar.shadowRoot!.querySelector(
+      '[part="approve-button"]',
+    ) as HTMLButtonElement;
+    let forgot = false;
+    el.addEventListener('lr-forget', () => (forgot = true));
+    expect(section.querySelectorAll('lr-confirm-bar').length).to.equal(1);
+
+    el.longTerm = [...longTermItems, { id: 'l3', text: 'A newly controlled memory.' }];
+    await el.updateComplete;
+
+    expect(section.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+    expect(section.querySelectorAll('[part="forget-all-button"]').length).to.equal(1);
+    staleApprove.click();
+    expect(forgot).to.be.false;
+  });
+
+  it('rejects stale forget-all approval in the same turn as a controlled longTerm replacement', async () => {
+    const el = await populated();
+    (el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+    const staleConfirmBar = await readyConfirmBar(section);
+    const staleApprove = staleConfirmBar.shadowRoot!.querySelector(
+      '[part="approve-button"]',
+    ) as HTMLButtonElement;
+    let forgot = false;
+    el.addEventListener('lr-forget', () => (forgot = true));
+
+    el.longTerm = [...longTermItems, { id: 'l3', text: 'A newly controlled memory.' }];
+    staleApprove.click();
+
+    expect(forgot).to.be.false;
+    await el.updateComplete;
+    expect(section.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+  });
+
   it('re-emits child events unmodified (lr-toggle bubbles up from a nested lr-provenance-panel)', async () => {
     const el = await populated();
     (el.shadowRoot!.querySelector('[part="item"][data-id="l1"] [part="expand-toggle"]') as HTMLButtonElement).click();
@@ -342,6 +384,48 @@ describe('lr-memory-panel', () => {
     el.shortTerm = [{ ...shortTermItems[0]! }, shortTermItems[1]!];
     await el.updateComplete;
     expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+  });
+
+  it('rejects stale item approval in the same turn as a controlled collection replacement', async () => {
+    const el = await populated();
+    const row = el.shadowRoot!.querySelector('[part="item"][data-id="l2"]')!;
+    (row.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const staleConfirmBar = await readyConfirmBar(row);
+    const staleApprove = staleConfirmBar.shadowRoot!.querySelector(
+      '[part="approve-button"]',
+    ) as HTMLButtonElement;
+    let removed = false;
+    el.addEventListener('lr-remove', () => (removed = true));
+
+    el.longTerm = [{ ...longTermItems[0]! }, { id: 'replacement', text: 'Replacement memory.' }];
+    staleApprove.click();
+
+    expect(removed).to.be.false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+  });
+
+  it('does not let a stale item handler clear a newly started pending action', async () => {
+    const el = await populated();
+    const firstRow = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+    const secondRow = el.shadowRoot!.querySelector('[part="item"][data-id="s2"]')!;
+    (firstRow.querySelector('[part="remove-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const staleConfirmBar = await readyConfirmBar(firstRow);
+    const staleApprove = staleConfirmBar.shadowRoot!.querySelector(
+      '[part="approve-button"]',
+    ) as HTMLButtonElement;
+    let removed = false;
+    el.addEventListener('lr-remove', () => (removed = true));
+
+    (secondRow.querySelector('[part="add-button"]') as HTMLButtonElement).click();
+    staleApprove.click();
+
+    expect(removed).to.be.false;
+    await el.updateComplete;
+    const secondRowAfterUpdate = el.shadowRoot!.querySelector('[part="item"][data-id="s2"]')!;
+    expect(secondRowAfterUpdate.querySelectorAll('lr-confirm-bar').length).to.equal(1);
   });
 
   it('moves focus to a surviving row when approval synchronously removes the focused item', async () => {

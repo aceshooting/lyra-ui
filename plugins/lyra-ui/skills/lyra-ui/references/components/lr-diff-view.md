@@ -6,7 +6,7 @@
 - **Class** `LyraDiffView`, also available unregistered from `@aceshooting/lyra-ui/components/utility/diff-view/diff-view.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,6 +38,9 @@ First-party invention (no Web Awesome equivalent).
 - `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
   lines around each change and collapses longer unchanged runs into a localized fold marker. The
   default `undefined` shows every line; negative and non-finite values also disable folding.
+- `maxLines: number = 5000` (attribute `max-lines`) — maximum logical lines accepted on either
+  side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
+  highlighting the diff. Set the property to `Infinity` explicitly to opt into unbounded diffing.
 
 **Events:** `lr-copy` (`detail: { text: string }` — the full unified-diff text, fired on
 copy-button activation regardless of whether the clipboard write actually succeeded).
@@ -48,7 +51,8 @@ copy-button activation regardless of whether the clipboard write actually succee
 `data-type="equal"|"add"|"remove"|"empty"|"fold"` — `"empty"` is an unbalanced-replace placeholder cell in
 `layout="split"` and never carries a `+`/`-` prefix; `"fold"` is the localized unchanged-lines
 marker), `copy-button` (the copy affordance, only
-rendered while `copyable`), `side` (one column in `layout="split"`, `data-side="old"|"new"`).
+rendered while `copyable`), `limit` (the localized over-`maxLines` fallback), `side` (one column in
+`layout="split"`, `data-side="old"|"new"`).
 
 **Themeable custom properties:** `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
@@ -76,13 +80,13 @@ same line-diff function this component's own `render()`/copy handler call, expos
 consumer can compute or unit-test the same alignment without instantiating the element at all.
 
 **Known gotchas:**
-- the alignment is a genuine O(n·m) longest-common-subsequence dynamic program over lines (split on
-  `\n`), not a naive "every removed line then every added line" — fine for a typical
-  tool-call/transcript-sized diff, but a very large pair of texts costs quadratic time/memory;
-  there's no line-count guard or chunking of its own.
-- `oldText`/`newText` are recomputed into the diff on every render — this component keeps no separate
-  cached diff state, so binding either property to something that changes on every keystroke
-  recomputes the whole alignment each time.
+- line splitting normalizes LF, CRLF, and lone CR endings before alignment and syntax-token indexing,
+  so files that differ only by line-ending convention do not appear wholly changed.
+- alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
+  memory. The 5,000-line per-side default ceiling bounds pathological inputs; `Infinity` is an
+  explicit performance-risk opt-out.
+- the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
+  `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
 
 **Additional API surface:**
 

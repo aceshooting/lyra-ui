@@ -15,10 +15,25 @@
 
 Dashboard filter row that composes Lyra inputs and removable chips, with reset and loading states.
 
-**Properties:** `filters`, `value`, `disabled`, `loading`, `label`, `hasActiveFilters`,
-`invalidFilterIds`, `checkValidity`, `reportValidity`, `reset`. **Events:** `lr-input`, `lr-reset`,
-`lr-validity-change`. **CSS parts:** `base`, `controls`, `filter-control`, `active-filters`,
-`chips`, `chip`, `reset-button`, `status`.
+**Properties:**
+
+- `filters: FilterBarFilterDefinition[] = []` (attribute: false) — filter schema in render order.
+- `value: FilterBarValue = {}` (attribute: false) — current values keyed by filter id; reads and
+  writes are shallow-copied.
+- `label: string = ''` — accessible name for the internal `role="group"`.
+- `disabled: boolean = false` (reflected) — disables every filter control and reset action.
+- `loading: boolean = false` (reflected) — shows the status spinner and disables reset while leaving
+  filters editable.
+- `hasActiveFilters: boolean` (read-only) — whether any configured filter currently has a value.
+- `invalidFilterIds: string[]` (read-only) — ids of required filters whose values are unset.
+
+**Methods:** `checkValidity(): boolean` returns whether every required filter is set without
+revealing errors; `reportValidity(): boolean` returns the same state and reveals every current
+required-field error; `reset(): void` restores each definition's `defaultValue` (or unsets it),
+unless the bar is disabled.
+
+**Events:** `lr-input`, `lr-reset`, `lr-validity-change`. **CSS parts:** `base`, `controls`,
+`filter-control`, `active-filters`, `chips`, `chip`, `reset-button`, `status`.
 
 Each filter definition's `type` selects which existing Lyra input renders it — this component
 composes them and never invents a control of its own. `'select'`/`'combobox'` map to their

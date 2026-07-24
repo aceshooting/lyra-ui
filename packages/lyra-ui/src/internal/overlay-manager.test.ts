@@ -44,6 +44,43 @@ it('routes Escape only to the topmost overlay across different overlay owners', 
   bottomHandle.deactivate();
 });
 
+it('updates a return target without changing stack order or moving focus', () => {
+  const initialReturn = document.createElement('button');
+  initialReturn.dataset.overlayBackground = '';
+  initialReturn.dataset.returnTarget = 'initial';
+  const nextReturn = document.createElement('button');
+  nextReturn.dataset.overlayBackground = '';
+  nextReturn.dataset.returnTarget = 'next';
+  document.body.append(initialReturn, nextReturn);
+  initialReturn.focus();
+
+  const bottom = createOverlay(document, 'bottom-update');
+  const top = createOverlay(document, 'top-update');
+  const dismissed: string[] = [];
+  const bottomHandle = activateOverlay({
+    host: bottom.host,
+    panel: () => bottom.panel,
+    onEscape: () => dismissed.push('bottom'),
+    restoreFocusTo: initialReturn,
+  });
+  const topHandle = activateOverlay({
+    host: top.host,
+    panel: () => top.panel,
+    onEscape: () => dismissed.push('top'),
+  });
+  top.first.focus();
+
+  bottomHandle.updateRestoreFocusTo(nextReturn);
+
+  expect((deepActiveElement(document) as HTMLElement | null)?.textContent).to.equal('top-update first');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  expect(dismissed).to.deep.equal(['top']);
+
+  topHandle.deactivate({ restoreFocus: false });
+  bottomHandle.deactivate();
+  expect((document.activeElement as HTMLElement | null)?.dataset.returnTarget).to.equal('next');
+});
+
 it('pulls an escaped focus position back inside and wraps both Tab boundaries', () => {
   const outside = document.createElement('button');
   outside.dataset.overlayBackground = '';

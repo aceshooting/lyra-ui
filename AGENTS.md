@@ -190,8 +190,9 @@ Security-sensitive; no automated gate covers any of it. Full rules:
 - Consumer-supplied `src`: `safeFetchUrl()` → byte-ceiling readers
   (`readResponseArrayBuffer`/`readResponseText`, plus entry/row caps) → unconditional
   `DOMPurify.sanitize()` → generation-token guard after every `await`.
-- Peer loaders read `mod.default ?? mod` — getting it wrong makes the sanitizer silently no-op
-  (a security bug, not an interop nit).
+- Peer loaders validate the required capability: prefer a named API when the package provides one,
+  then a validated default export; default-shaped peers use `mod.default ?? mod`. Getting sanitizer
+  normalization wrong makes it silently no-op (a security bug, not an interop nit).
 - Peer load failure fails closed with a localized `role="alert"`; empty-but-valid results get
   their own state, never the error path.
 - A new optional peer registers in `peerDependencies` + `peerDependenciesMeta.optional` +

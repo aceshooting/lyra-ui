@@ -44,6 +44,10 @@ clears the query, matches, and painted search annotation.
 `mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
 announce through).
 
+The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
+`ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
+unambiguous beside other previous/next controls and are overridable through `.strings`.
+
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
 matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
 search: true, textSelect: true }` capabilities.

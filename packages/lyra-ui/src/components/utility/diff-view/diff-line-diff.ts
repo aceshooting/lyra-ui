@@ -3,46 +3,125 @@ export interface DiffOp {
   text: string;
 }
 
+type LineMatch = readonly [oldIndex: number, newIndex: number];
+
+/** Returns LCS lengths for every prefix of `newLines[newStart:newEnd]` using one row. */
+function prefixLengths(
+  oldLines: string[],
+  oldStart: number,
+  oldEnd: number,
+  newLines: string[],
+  newStart: number,
+  newEnd: number,
+  reverse: boolean,
+): Uint32Array {
+  const newLength = newEnd - newStart;
+  const lengths = new Uint32Array(newLength + 1);
+  const oldFirst = reverse ? oldEnd - 1 : oldStart;
+  const oldLimit = reverse ? oldStart - 1 : oldEnd;
+  const oldStep = reverse ? -1 : 1;
+  for (let oldIndex = oldFirst; oldIndex !== oldLimit; oldIndex += oldStep) {
+    let diagonal = 0;
+    for (let offset = 1; offset <= newLength; offset += 1) {
+      const previous = lengths[offset]!;
+      const newIndex = reverse ? newEnd - offset : newStart + offset - 1;
+      lengths[offset] =
+        oldLines[oldIndex] === newLines[newIndex]
+          ? diagonal + 1
+          : Math.max(lengths[offset]!, lengths[offset - 1]!);
+      diagonal = previous;
+    }
+  }
+  return lengths;
+}
+
+/** Finds Hirschberg's split while keeping the two temporary rows out of recursive frames. */
+function splitOffset(
+  oldLines: string[],
+  oldStart: number,
+  oldMiddle: number,
+  oldEnd: number,
+  newLines: string[],
+  newStart: number,
+  newEnd: number,
+): number {
+  const prefix = prefixLengths(oldLines, oldStart, oldMiddle, newLines, newStart, newEnd, false);
+  const suffix = prefixLengths(oldLines, oldMiddle, oldEnd, newLines, newStart, newEnd, true);
+  const newLength = newEnd - newStart;
+  let bestOffset = 0;
+  let bestLength = -1;
+  for (let offset = 0; offset <= newLength; offset += 1) {
+    const length = prefix[offset]! + suffix[newLength - offset]!;
+    // Keep the first maximum for deterministic left-biased alignment.
+    if (length > bestLength) {
+      bestLength = length;
+      bestOffset = offset;
+    }
+  }
+  return bestOffset;
+}
+
+function collectMatches(
+  oldLines: string[],
+  oldStart: number,
+  oldEnd: number,
+  newLines: string[],
+  newStart: number,
+  newEnd: number,
+  matches: LineMatch[],
+): void {
+  const oldLength = oldEnd - oldStart;
+  const newLength = newEnd - newStart;
+  if (oldLength === 0 || newLength === 0) return;
+  if (oldLength === 1) {
+    for (let newIndex = newStart; newIndex < newEnd; newIndex += 1) {
+      if (oldLines[oldStart] === newLines[newIndex]) {
+        matches.push([oldStart, newIndex]);
+        return;
+      }
+    }
+    return;
+  }
+  if (newLength === 1) {
+    for (let oldIndex = oldStart; oldIndex < oldEnd; oldIndex += 1) {
+      if (oldLines[oldIndex] === newLines[newStart]) {
+        matches.push([oldIndex, newStart]);
+        return;
+      }
+    }
+    return;
+  }
+
+  const oldMiddle = oldStart + Math.floor(oldLength / 2);
+  const newMiddle =
+    newStart +
+    splitOffset(oldLines, oldStart, oldMiddle, oldEnd, newLines, newStart, newEnd);
+  collectMatches(oldLines, oldStart, oldMiddle, newLines, newStart, newMiddle, matches);
+  collectMatches(oldLines, oldMiddle, oldEnd, newLines, newMiddle, newEnd, matches);
+}
+
 /**
- * A real line-level diff via the classic O(n*m) longest-common-subsequence dynamic program --
+ * A real line-level diff using Hirschberg's linear-space longest-common-subsequence algorithm --
  * not a lexical/syntax-highlighting pass, and not "every removed line then every added line."
- * Fine for the typical size of a tool-call/transcript diff this component targets; a full Myers
- * implementation would be asymptotically faster on very large inputs but isn't needed to fix the
- * filed defect (alignment), only to make it correct.
+ * Runtime remains O(n*m), while peak working memory is linear rather than an eager
+ * `(oldLines.length + 1) × (newLines.length + 1)` JavaScript-number matrix.
  */
 export function computeLineDiff(oldLines: string[], newLines: string[]): DiffOp[] {
-  const m = oldLines.length;
-  const n = newLines.length;
-  const lcs: number[][] = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0));
-  for (let i = m - 1; i >= 0; i--) {
-    for (let j = n - 1; j >= 0; j--) {
-      lcs[i]![j] = oldLines[i] === newLines[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
-    }
-  }
+  const matches: LineMatch[] = [];
+  collectMatches(oldLines, 0, oldLines.length, newLines, 0, newLines.length, matches);
+
   const ops: DiffOp[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < m && j < n) {
-    if (oldLines[i] === newLines[j]) {
-      ops.push({ type: 'equal', text: oldLines[i]! });
-      i++;
-      j++;
-    } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
-      ops.push({ type: 'remove', text: oldLines[i]! });
-      i++;
-    } else {
-      ops.push({ type: 'add', text: newLines[j]! });
-      j++;
-    }
+  let oldIndex = 0;
+  let newIndex = 0;
+  for (const [matchedOldIndex, matchedNewIndex] of matches) {
+    while (oldIndex < matchedOldIndex) ops.push({ type: 'remove', text: oldLines[oldIndex++]! });
+    while (newIndex < matchedNewIndex) ops.push({ type: 'add', text: newLines[newIndex++]! });
+    ops.push({ type: 'equal', text: oldLines[matchedOldIndex]! });
+    oldIndex = matchedOldIndex + 1;
+    newIndex = matchedNewIndex + 1;
   }
-  while (i < m) {
-    ops.push({ type: 'remove', text: oldLines[i]! });
-    i++;
-  }
-  while (j < n) {
-    ops.push({ type: 'add', text: newLines[j]! });
-    j++;
-  }
+  while (oldIndex < oldLines.length) ops.push({ type: 'remove', text: oldLines[oldIndex++]! });
+  while (newIndex < newLines.length) ops.push({ type: 'add', text: newLines[newIndex++]! });
   return ops;
 }
 

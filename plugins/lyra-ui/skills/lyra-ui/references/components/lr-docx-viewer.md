@@ -6,7 +6,7 @@
 - **Class** `LyraDocxViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
-- **Themeable via** 8 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -49,6 +49,17 @@ currently active search match, also carries `search-match`).
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+Highlight backgrounds are independently themeable with
+`--lr-docx-viewer-highlight-accent-background`,
+`--lr-docx-viewer-highlight-success-background`,
+`--lr-docx-viewer-highlight-warning-background`,
+`--lr-docx-viewer-highlight-danger-background`, and
+`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens.
+`--lr-docx-viewer-highlight-active-background` and
+`--lr-docx-viewer-highlight-active-outline` style the active host highlight.
+`--lr-docx-viewer-search-match-background`,
+`--lr-docx-viewer-search-match-active-background`, and
+`--lr-docx-viewer-search-match-active-foreground` style resting and active search matches.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`

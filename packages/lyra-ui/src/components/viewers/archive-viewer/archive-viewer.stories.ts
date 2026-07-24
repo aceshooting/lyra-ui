@@ -8,3 +8,15 @@ type Story = StoryObj;
 const source = 'data:application/zip;base64,UEsDBAoAAAAAAEyY71zIWnOsFAAAABQAAAAKAAAAUkVBRE1FLnR4dGhlbGxvIGZyb20gU3Rvcnlib29rUEsDBAoAAAAAAEyY71wAAAAAAAAAAAAAAAAEAAAAc3JjL1BLAQIUAAoAAAAAAEyY71zIWnOsFAAAABQAAAAKAAAAAAAAAAAAAAAAAAAAAABSRUFETUUudHh0UEsBAhQACgAAAAAATJjvXAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAQAAAAPAAAAHNyYy9QSwUGAAAAAAIAAgBqAAAAXgAAAAAA';
 export const Default: Story = { render: () => html`<lr-archive-viewer style="max-inline-size: 28rem;" src=${source} name="archive.zip"></lr-archive-viewer>` };
 export const NoSourceSet: Story = { render: () => html`<lr-archive-viewer style="max-inline-size: 28rem;"></lr-archive-viewer>` };
+
+/** Baseline narrow-allocation coverage with a long archive name and populated entry list. */
+export const Narrow320: Story = {
+  render: () => html`
+    <div style="max-inline-size:320px">
+      <lr-archive-viewer
+        src=${source}
+        name="International-quarterly-analytical-engine-research-materials-and-correspondence.zip"
+      ></lr-archive-viewer>
+    </div>
+  `,
+};

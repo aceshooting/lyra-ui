@@ -48,6 +48,18 @@ describe('lr-page-rail', () => {
     expect(list.items).to.deep.equal([1, 2, 3, 4, 5]);
   });
 
+  it('does not expose the internal virtual-list range event', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="2"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    let leaked = 0;
+    el.addEventListener('lr-visible-range-changed', () => leaked++);
+    list.dispatchEvent(new CustomEvent(
+      'lr-visible-range-changed',
+      { detail: { start: 0, end: 1 }, bubbles: true, composed: true },
+    ));
+    expect(leaked).to.equal(0);
+  });
+
   it('wired mode: tracks pageCount from the viewer\'s lr-load event', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
@@ -216,7 +228,7 @@ describe('lr-page-rail', () => {
     firstRender.resolve();
     await aTimeout(0);
     const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
-    expect(list.shadowRoot!.querySelector('canvas')).to.equal(currentCanvas);
+    expect(list.shadowRoot!.querySelector('canvas') === currentCanvas).to.be.true;
     expect(currentCanvas.dataset['document']).to.equal('second');
   });
 

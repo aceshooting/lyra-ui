@@ -210,10 +210,11 @@ type. First-party invention.
 - `lr-download` — `detail: { src, filename }`, emitted when the native safe download action is
   activated. The browser download itself is handled by the link.
 - `lr-anchor-result` — `detail: { found }`. Emitted by this shell as `{ found: false }` once per
-  applied `anchor` when the resolved renderer can't honor it (it declares no `capabilities.anchors`,
-  or none matching the anchor's `kind`), when the lazy renderer failed to load, or when the file fell
-  back to `<lr-document-preview>`. A capable renderer instead emits its own `lr-anchor-result` from
-  its embedded `DocumentAnchorTarget` mixin, which composes up through this element unchanged — the
+  applied `anchor` when a resolved renderer can't honor it (it declares no `capabilities.anchors`,
+  or none matching the anchor's `kind`). When the file uses `<lr-document-preview>`—including after
+  a lazy renderer fails to load—the shell delegates to that preview's `scrollToAnchor()` and emits
+  its actual `found` result. A capable renderer instead emits its own `lr-anchor-result` from its
+  embedded `DocumentAnchorTarget` mixin, which composes up through this element unchanged — the
   shell stays silent in that case, so the event fires exactly once either way. A string `anchor`
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 
@@ -294,6 +295,17 @@ currently active search match, also carries `search-match`).
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
+Highlight backgrounds are independently themeable with
+`--lr-docx-viewer-highlight-accent-background`,
+`--lr-docx-viewer-highlight-success-background`,
+`--lr-docx-viewer-highlight-warning-background`,
+`--lr-docx-viewer-highlight-danger-background`, and
+`--lr-docx-viewer-highlight-neutral-background`, defaulting to the matching quiet color tokens.
+`--lr-docx-viewer-highlight-active-background` and
+`--lr-docx-viewer-highlight-active-outline` style the active host highlight.
+`--lr-docx-viewer-search-match-background`,
+`--lr-docx-viewer-search-match-active-background`, and
+`--lr-docx-viewer-search-match-active-foreground` style resting and active search matches.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -348,8 +360,8 @@ of `[part="body"]`; also settable via the `max-height` property, which writes th
 
 **Optional peer dependencies:** install `postal-mime` and `dompurify` with
 `pnpm add postal-mime dompurify`. The component registers `message/rfc822` and falls back to
-matching `.eml` filenames in `<lr-document-viewer>`. Deviates from the shared degraded-render
-contract: an absent `postal-mime` renders `[part="error"]` with the localized
+matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is explicit: an absent
+`postal-mime` renders `[part="error"]` with the localized
 `emailViewerMissingParser` message (nothing is parseable without it), and an HTML-only message
 (no `text/plain` alternative) with `dompurify` absent renders the localized
 `documentViewerMissingSanitizer` message rather than silently showing an empty body.
@@ -448,6 +460,10 @@ clears the query, matches, and painted search annotation.
 **CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
 `mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
 announce through).
+
+The toolbar buttons use the component-specific localized labels `ebookViewerPreviousChapter` and
+`ebookViewerNextChapter` (English: “Previous chapter” / “Next chapter”), so they remain
+unambiguous beside other previous/next controls and are overridable through `.strings`.
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
 matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
@@ -724,7 +740,7 @@ through the exported parts above rather than through dedicated custom properties
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when
-a PDF is opened. Deviates from the shared degraded-render contract: an absent `pdfjs-dist` renders
+a PDF is opened. An absent `pdfjs-dist` fails closed and renders
 `[part="error"]` with the localized `pdfViewerMissingLibrary` message — there is no partial PDF
 rendering without it.
 
@@ -866,7 +882,8 @@ operate on the included text.
   `'blocked-url'` (`src` failed the allowlist; `fetch()` never ran), `'network'` (`fetch()` rejected),
   `'http'` (response not `ok`; `status` carries the code), `'missing-sanitizer'` (the optional
   `dompurify` peer failed to load), or `'resource-too-large'` (the body exceeded the shared 25 MB
-  cap). `status` is `0` for every reason but `'http'`.
+  cap). Non-HTTP reasons use status `0`; `'http'` normally carries the response code, but an opaque
+  `mode="no-cors"` response is also classified as `'http'` with status `0`.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
@@ -874,9 +891,9 @@ include).
 
 **CSS parts:** `base` — the `display: contents` wrapper around the default slot.
 
-Deviates from the shared degraded-render contract: an absent `dompurify` fires
-`lr-include-error` with `reason: 'missing-sanitizer'` and leaves the existing content in place —
-unsanitized markup is never transcluded.
+An absent `dompurify` fails closed: it fires `lr-include-error` with
+`reason: 'missing-sanitizer'` and leaves the existing content in place — unsanitized markup is
+never transcluded.
 
 ## `lr-highlight-layer`
 
@@ -901,6 +918,16 @@ rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and
 rectangle). When more than one logical highlight would create overlapping minimum hit areas, the
 individual targets are replaced by `highlight-actions` (a non-overlapping action list) containing
 one `highlight-action` button per rendered highlight.
+
+**Themeable custom properties:**
+`--lr-highlight-layer-accent-background`, `--lr-highlight-layer-accent-outline`,
+`--lr-highlight-layer-success-background`, `--lr-highlight-layer-success-outline`,
+`--lr-highlight-layer-warning-background`, `--lr-highlight-layer-warning-outline`,
+`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-danger-outline`,
+`--lr-highlight-layer-neutral-background`, and `--lr-highlight-layer-neutral-outline` control each
+tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
+`--lr-highlight-layer-flash-background` controls the temporary flash state (default
+`--lr-color-brand`).
 
 ## `lr-page-rail`
 
@@ -965,17 +992,21 @@ shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
-`searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and flashing the
-target cell; `clearSearch()` clears the query and matches.
+`searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and marking the
+target cell with the persistent active-cell paint; `clearSearch()` clears the query and matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
-`lr-highlight-activate` — `detail: { id }`. `lr-search-change` — `detail: { query, matchCount,
-activeIndex }`. `lr-render-error` — `detail: { error }`, fetching, parsing, or validating the
-notebook failed.
+`lr-search-change` — `detail: { query, matchCount, activeIndex }`. `lr-render-error` —
+`detail: { error }`, fetching, parsing, or validating the notebook failed.
+
+Migration note: the previously declared `lr-highlight-activate` event was never emitted by
+`lr-notebook-viewer` and has been removed from its class/EventMap contract. Use `anchor` plus
+`lr-anchor-result` for notebook cell navigation outcomes.
 
 **CSS parts:** `base` (the root scroll container), `cell` (`data-cell-type="code|markdown|raw"`,
-`data-active`), `cell-active` (added alongside `cell` on the cell an anchor currently targets),
+`data-active`), `cell-active` (added alongside `cell` on the cell currently targeted by an anchor
+or the active search match),
 `cell-gutter` (the `In [n]`/`Out [n]` label column), `cell-source`, `raw-source` (the horizontally
 scrollable preformatted surface for a raw cell), `outputs`, `output`
 (`data-output-type`, `data-stream`), `output-error` (added alongside `output` on a stderr stream or
@@ -992,9 +1023,9 @@ remain on the elements for scripting.
 **Themeable custom properties:** `--lr-notebook-viewer-max-height` (default `none`).
 
 `--lr-notebook-viewer-active-bg` (default `var(--lr-color-brand-quiet)`) is the background of the
-cell currently targeted by an anchor — the `cell-active` part. It is an inline `var()` fallback at
-the point of use rather than a `:host` declaration, so it can be set on the element or on any
-ancestor.
+cell currently targeted by an anchor or the active search match — the `cell-active` part. It is an
+inline `var()` fallback at the point of use rather than a `:host` declaration, so it can be set on
+the element or on any ancestor.
 
 **Optional peer deps:** `marked`+`dompurify` (markdown cells, falls back to plain text per cell),
 `shiki` (code cells, falls back to unhighlighted), `dompurify` (HTML/SVG outputs, falls back to
@@ -1070,10 +1101,12 @@ so lowering it never squashes the chevron below its own box — the visible glyp
 the hit target follows the token, and it can never fall under the accessible minimum from this
 component's own rules.
 
-```html
-<lr-xml-viewer .xml=${payload} collapsed-depth="2" copyable
-  search=${query}
-></lr-xml-viewer>
+```ts
+const viewer = document.querySelector('lr-xml-viewer');
+viewer.xml = payload;
+viewer.collapsedDepth = 2;
+viewer.copyable = true;
+await viewer.search(query);
 ```
 
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
@@ -1084,10 +1117,41 @@ tree.
 Comparison surface for two document versions, using `lr-diff-view` for textual diffs and
 `lr-document-preview` for side-by-side rendered content.
 
-**Properties:** `oldVersion`, `newVersion`, `view`, `diffLayout`, `language`, `languages`, `anchor`,
-`copyable`, `syncScroll`. **Events:** `lr-copy`, `lr-download`, `lr-highlight-activate`,
-`lr-render-error`. **CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`,
-`pane-empty`. **Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
+**Properties:**
+
+- `oldVersion?: DocumentCompareVersion`, `newVersion?: DocumentCompareVersion` (attribute: false) —
+  the before/after inputs. `DocumentCompareVersion` extends `DocumentRef`
+  (`id`, `name`, `mimeType?`, `uri?`, `version?`) with `text?: string` for diff mode and
+  `highlights?: LyraHighlight[]` for its own preview pane.
+- `view: 'diff' | 'side-by-side' = 'diff'` (reflected) — one inline text diff or two rendered
+  preview panes.
+- `diffLayout: 'unified' | 'split' = 'unified'` (attribute `diff-layout`, reflected) — forwarded
+  to `lr-diff-view` in diff mode.
+- `copyable: boolean = false` — forwards the diff copy action.
+- `language: string = ''`, `languages?: Record<string, ShikiLanguageInput>` (the latter
+  attribute: false) — optional syntax highlighting forwarded to the diff.
+- `syncScroll: boolean = true` (attribute `sync-scroll`) — proportionally mirrors either
+  side-by-side pane's scroll fraction to the other. The true-default converter accepts the literal
+  `sync-scroll="false"`.
+- `anchor: LyraAnchor | string | null = null` (attribute: false) — sends the same target to both
+  preview panes; repeated assignment of the same value still re-runs.
+
+**Exported types:** `DocumentCompareVersion`; `LyraDocumentCompareView = 'diff' |
+'side-by-side'`; `DocumentComparePaneSide = 'old' | 'new'`.
+
+**Synchronized anchors:** activating a region highlight whose id exists in the opposite version
+scrolls that pane to its corresponding highlight, while the original `lr-highlight-activate`
+continues bubbling unchanged. The shared `anchor` property drives both panes. In diff mode, split
+columns already share one scroll container.
+
+**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { src, filename }`),
+`lr-highlight-activate` (`detail: { id }`), and `lr-render-error` (`detail: { error }`).
+
+**Slots:** none.
+
+**CSS parts:** `base`, `diff`, `panes`, `pane-old`, `pane-new`, `pane-header`, `pane-empty`.
+
+**Themeable custom properties:** `--lr-document-compare-pane-max-height` (default
 `var(--lr-size-24rem)`) — maximum block size of a `side-by-side` pane before it scrolls internally.
 
 ## `lr-geojson-view`

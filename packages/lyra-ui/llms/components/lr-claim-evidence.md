@@ -16,12 +16,21 @@
 Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete `Citation[]`
 records. Dangling citation ids are ignored rather than rendered as invented evidence.
 
-**Properties:** `claims`, `citations`, `selectedClaimId`, `label`.
+**Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (attribute: false);
+`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''`.
+`GroundedClaim = { id, text, status, citationIds, answerRange?, confidence?, explanation? }`, with
+`status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
+is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
+(`id`, source/chunk ids, label, locator/ranges, quote, metadata).
 
 **Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`).
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
 `confidence`, `explanation`, `evidence`, `empty`.
+
+Selection is controlled: activation emits the complete claim but does not assign
+`selectedClaimId`. Evidence preserves `citations` order and silently skips dangling ids.
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';

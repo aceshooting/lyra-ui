@@ -46,7 +46,8 @@ operate on the included text.
   `'blocked-url'` (`src` failed the allowlist; `fetch()` never ran), `'network'` (`fetch()` rejected),
   `'http'` (response not `ok`; `status` carries the code), `'missing-sanitizer'` (the optional
   `dompurify` peer failed to load), or `'resource-too-large'` (the body exceeded the shared 25 MB
-  cap). `status` is `0` for every reason but `'http'`.
+  cap). Non-HTTP reasons use status `0`; `'http'` normally carries the response code, but an opaque
+  `mode="no-cors"` response is also classified as `'http'` with status `0`.
 
 **Slots:** default — fallback content shown until (or unless) a fetch succeeds. It is overwritten by
 the sanitized fragment on success, and left untouched on failure (as is any previously successful
@@ -54,6 +55,6 @@ include).
 
 **CSS parts:** `base` — the `display: contents` wrapper around the default slot.
 
-Deviates from the shared degraded-render contract: an absent `dompurify` fires
-`lr-include-error` with `reason: 'missing-sanitizer'` and leaves the existing content in place —
-unsanitized markup is never transcluded.
+An absent `dompurify` fails closed: it fires `lr-include-error` with
+`reason: 'missing-sanitizer'` and leaves the existing content in place — unsanitized markup is
+never transcluded.

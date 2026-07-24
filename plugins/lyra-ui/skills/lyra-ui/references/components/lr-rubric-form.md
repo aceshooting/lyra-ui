@@ -20,7 +20,10 @@ freeform-comment keys with a submit-and-next flow for working through an eval qu
 renders `<lr-textarea>`.
 
 **Properties:** `keys: RubricKey[] = []` (attribute: false, each `{ key, type, label?, description?,
-required?, min?, max?, step? }`), `value: RubricValue = {}` (attribute: false), `itemId: string = ''`
+required?, min?, max?, step?, options?, multiple?, placeholder? }`; `options?` contains
+`RubricKeyOption { value: string; label?: string; description?: string }`, `multiple?` selects the
+checkbox-group category route, and `placeholder?` customizes comment input), `value: RubricValue =
+{}` (attribute: false), `itemId: string = ''`
 (attribute `item-id`, reflected), `hasNext: boolean = false` (attribute `has-next`), `skippable:
 boolean = false`, and the shared form properties `name` and `disabled`. `errors: Record<string,
 string>` is the current per-key validation-message state.

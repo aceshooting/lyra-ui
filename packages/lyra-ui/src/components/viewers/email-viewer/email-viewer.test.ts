@@ -242,7 +242,7 @@ describe('lr-email-viewer', () => {
     try {
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`);
       await waitUntil(() => el.shadowRoot!.querySelector('[part="body-html"]') !== null);
-      expect(el.shadowRoot!.querySelector('[part="error"]')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be.true;
       expect(el.shadowRoot!.querySelector('[part="body-html"]')!.textContent).to.equal('');
     } finally { restore(); }
   });

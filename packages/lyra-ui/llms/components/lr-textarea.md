@@ -94,8 +94,10 @@ the shadow boundary.
 
 | Event | Detail | Description |
 | --- | --- | --- |
-| `lr-input` | `{ value: string }` | Fired on every user-driven edit. |
-| `lr-change` | `{ value: string }` | Fired on native `change` timing (blur after a committed edit). |
+| `input` | none | Native-style composed event fired on every user-driven edit. |
+| `change` | none | Native-style composed event fired at native `change` timing. |
+| `lr-input` | `{ value: string }` | Compatibility alias fired on every user-driven edit. |
+| `lr-change` | `{ value: string }` | Compatibility alias fired on native `change` timing (blur after a committed edit). |
 | `blur` | none | Re-dispatched from the internal native `<textarea>`'s own `blur` -- bubbling and composed, unlike the native event. |
 | `focus` | none | Re-dispatched from the internal native `<textarea>`'s own `focus`, for the same reason as `blur`. |
 

@@ -16,8 +16,13 @@
 Provider-neutral realtime voice shell composing connection state, `lr-audio-visualizer`,
 `lr-push-to-talk`, and `lr-transcript-feed`. Transport/authentication/playback remain host-owned.
 
-**Properties:** `state`, `voiceState`, `level`, `stream`, `entries`, `muted`, `showCapture`,
-`errorCode`, `label`.
+**Properties:** `state: RealtimeConnectionState = 'disconnected'` (reflected), where the closed set
+is `'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error'`; `voiceState:
+AudioVisualizerState = 'idle'` (attribute `voice-state`); `level: number | null = null` (finite,
+clamped by the composed visualizer); `stream: MediaStream | null = null` and `entries:
+LyraTranscriptEntry[] = []` (attribute: false); `muted: boolean = false` (reflected);
+`showCapture: boolean = true` (attribute `show-capture`, reflected, string-aware true-default
+converter); `errorCode: string = ''` (attribute `error-code`); `label: string = ''`.
 
 **Events:** `lr-connect`, `lr-disconnect`, `lr-mute-change` (`{ muted }`), `lr-interrupt`; the
 composed push-to-talk events continue bubbling.
@@ -26,6 +31,10 @@ composed push-to-talk events continue bubbling.
 
 **CSS parts:** `base`, `header`, `status`, `activity`, `controls`, `connect`, `disconnect`, `mute`,
 `interrupt`, `capture`, `transcript`, `error`.
+
+**Slots:** `controls` — provider-specific actions appended to the built-in session controls.
+**Optional peer deps:** none. Transport, credentials, capture permission, and media playback
+remain host-owned.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/realtime-session/realtime-session.js';

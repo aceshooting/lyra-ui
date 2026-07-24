@@ -103,7 +103,7 @@ describe('lr-tour', () => {
     await tour.updateComplete;
     expect(tour.open).to.be.false;
     expect(started).to.be.false;
-    expect(tour.shadowRoot!.querySelector('[part="popover"]')).to.not.exist;
+    expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
   });
 
   it('closes an open overlay when steps clear and reactivates a same-index replacement', async () => {
@@ -127,7 +127,7 @@ describe('lr-tour', () => {
     tour.steps = [];
     await tour.updateComplete;
     expect(tour.open).to.be.false;
-    expect(tour.shadowRoot!.querySelector('[part="popover"]')).to.not.exist;
+    expect(tour.shadowRoot!.querySelectorAll('[part="popover"]').length).to.equal(0);
   });
 
   it('never mutates the steps array across next()/back()/goToStep()', async () => {

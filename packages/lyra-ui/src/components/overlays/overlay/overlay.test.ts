@@ -426,12 +426,20 @@ it('re-anchors an already-open showAt() popover when called again with fresh coo
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   const firstTop = popup.style.top;
+  const internals = el as unknown as { cleanup?: () => void };
+  const firstCleanup = internals.cleanup!;
+  let cleanupCount = 0;
+  internals.cleanup = () => {
+    cleanupCount++;
+    firstCleanup();
+  };
 
   el.showAt({ x: 10, y: 400 });
   await new Promise((r) => requestAnimationFrame(() => r(null)));
   await new Promise((r) => requestAnimationFrame(() => r(null)));
 
   expect(el.open, 'showAt() called again while open must stay open, not toggle').to.be.true;
+  expect(cleanupCount, 're-anchoring must stop the previous auto-update subscription').to.equal(1);
   expect(popup.style.top, 'a second showAt() call must reposition against the new rect').to.not.equal(firstTop);
 });
 
@@ -480,10 +488,9 @@ it('closes a showAt()-opened popover on an outside pointerdown (light dismiss)',
   expect(el.open, 'an outside pointerdown must still light-dismiss a showAt()-opened popover').to.be.false;
 });
 
-it('leaves normal slotted-trigger popover behavior unchanged when showAt() is never used', async () => {
-  // Regression guard for the virtual-anchor widening: a popover that never calls showAt() must
-  // behave byte-identical to before -- same open/close via trigger click, same Escape-returns-
-  // focus-to-trigger behavior.
+it('keeps slotted-trigger Escape focus return when showAt() is never used', async () => {
+  // Regression guard for the virtual-anchor path: a popover that never calls showAt() restores
+  // focus to its real trigger through the same manager-backed close policy.
   const el = await fixture(html`
     <lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>
   `);
@@ -569,6 +576,122 @@ it('routes a single Escape press to only the topmost of two nested showAt()-open
   expect(outer.open, 'a second Escape press closes the next overlay down the stack').to.be.false;
 });
 
+it('keeps stack ownership and top-overlay focus when an underlying popover is re-anchored with showAt()', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-popover id="underlying"><button id="underlying-action">Underlying action</button></lr-popover>
+      <lr-popover id="top"><button id="top-action">Top action</button></lr-popover>
+    </div>
+  `);
+  const underlying = wrapper.querySelector('#underlying') as LyraPopover;
+  const top = wrapper.querySelector('#top') as LyraPopover;
+  underlying.showAt({ x: 10, y: 10 });
+  await underlying.updateComplete;
+  top.showAt({ x: 50, y: 50 });
+  await top.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const topAction = top.querySelector('#top-action') as HTMLButtonElement;
+  topAction.focus();
+  expect(topAction.matches(':focus'), 'test precondition: focus starts within the top overlay').to.be.true;
+
+  underlying.showAt({ x: 100, y: 100 });
+  await underlying.updateComplete;
+
+  expect(
+    (document.activeElement as HTMLElement | null)?.id,
+    're-anchoring an underlying popover must not disturb focus in the top overlay',
+  ).to.equal(topAction.id);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await underlying.updateComplete;
+  await top.updateComplete;
+  expect(top.open, 're-anchoring must not promote the underlying popover to the top of the overlay stack').to.be.false;
+  expect(underlying.open).to.be.true;
+});
+
+it('keeps stack ownership when an underlying open popover receives a replacement trigger', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-popover id="underlying">
+        <button slot="trigger">Underlying trigger</button>
+        <button id="underlying-action">Underlying action</button>
+      </lr-popover>
+      <lr-popover id="top">
+        <button slot="trigger">Top trigger</button>
+        <button id="top-action">Top action</button>
+      </lr-popover>
+    </div>
+  `);
+  const underlying = wrapper.querySelector('#underlying') as LyraPopover;
+  const top = wrapper.querySelector('#top') as LyraPopover;
+  (underlying.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
+  await underlying.updateComplete;
+  (top.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
+  await top.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const topAction = top.querySelector('#top-action') as HTMLButtonElement;
+  topAction.focus();
+  expect(topAction.matches(':focus'), 'test precondition: focus starts within the top overlay').to.be.true;
+
+  const replacement = document.createElement('button');
+  replacement.slot = 'trigger';
+  replacement.textContent = 'Replacement underlying trigger';
+  underlying.querySelector('[slot="trigger"]')!.replaceWith(replacement);
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  await underlying.updateComplete;
+
+  expect(
+    (document.activeElement as HTMLElement | null)?.id,
+    'replacing an underlying trigger must preserve focus in the top overlay',
+  ).to.equal(topAction.id);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  await underlying.updateComplete;
+  await top.updateComplete;
+  expect(top.open, 'a trigger refresh must not promote the underlying popover to the top of the stack').to.be.false;
+  expect(underlying.open).to.be.true;
+});
+
+it('does not transiently focus an underlying overlay when the top popover receives a replacement trigger', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <lr-popover id="underlying">
+        <button slot="trigger">Underlying trigger</button>
+        <button id="underlying-action">Underlying action</button>
+      </lr-popover>
+      <lr-popover id="top">
+        <button slot="trigger">Top trigger</button>
+        <button id="top-action">Top action</button>
+      </lr-popover>
+    </div>
+  `);
+  const underlying = wrapper.querySelector('#underlying') as LyraPopover;
+  const top = wrapper.querySelector('#top') as LyraPopover;
+  (underlying.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
+  await underlying.updateComplete;
+  (top.querySelector('[slot="trigger"]') as HTMLButtonElement).click();
+  await top.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  const underlyingAction = underlying.querySelector('#underlying-action') as HTMLButtonElement;
+  const topAction = top.querySelector('#top-action') as HTMLButtonElement;
+  topAction.focus();
+  expect(topAction.matches(':focus'), 'test precondition: focus starts within the top overlay').to.be.true;
+  let underlyingFocusCount = 0;
+  underlyingAction.addEventListener('focus', () => underlyingFocusCount++);
+
+  const replacement = document.createElement('button');
+  replacement.slot = 'trigger';
+  replacement.textContent = 'Replacement top trigger';
+  top.querySelector('[slot="trigger"]')!.replaceWith(replacement);
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  await top.updateComplete;
+
+  expect(underlyingFocusCount, 'refreshing the top popover target must not focus the overlay underneath').to.equal(0);
+  expect((document.activeElement as HTMLElement | null)?.id, 'the existing focus within the top popover must be preserved')
+    .to.equal(topAction.id);
+});
+
 it('routes a single Escape press to only the topmost of a showAt()-opened popover nested under a showAt()-opened tooltip', async () => {
   const tooltip = (await fixture(html`<lr-tooltip>Outer</lr-tooltip>`)) as LyraTooltip;
   const popover = (await fixture(html`<lr-popover><p>Inner</p></lr-popover>`)) as LyraPopover;
@@ -604,8 +727,98 @@ it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is ne
   expect(document.activeElement, 'Escape must not move focus off the trigger, as before').to.equal(trigger);
 });
 
+describe('lr-popover focus return', () => {
+  async function setup(): Promise<{
+    el: LyraPopover;
+    trigger: HTMLButtonElement;
+    action: HTMLButtonElement;
+    outside: HTMLButtonElement;
+  }> {
+    const wrapper = await fixture(html`
+      <div>
+        <button id="outside">Outside</button>
+        <lr-popover>
+          <button slot="trigger">Open</button>
+          <button id="action">Action</button>
+        </lr-popover>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-popover') as LyraPopover;
+    const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+    const action = el.querySelector('#action') as HTMLButtonElement;
+    const outside = wrapper.querySelector('#outside') as HTMLButtonElement;
+    trigger.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    return { el, trigger, action, outside };
+  }
+
+  it('returns focus to the trigger after light dismiss', async () => {
+    const { el, trigger, action, outside } = await setup();
+    action.focus();
+
+    outside.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(document.activeElement).to.equal(trigger);
+  });
+
+  it('returns focus to the trigger after a programmatic open=false assignment', async () => {
+    const { el, trigger, action } = await setup();
+    action.focus();
+
+    el.open = false;
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(document.activeElement).to.equal(trigger);
+  });
+
+  it('returns focus to the trigger after Escape on the trigger', async () => {
+    const { el, trigger } = await setup();
+    trigger.focus();
+
+    trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(document.activeElement).to.equal(trigger);
+  });
+
+  it('returns focus to the trigger after Escape in the popup', async () => {
+    const { el, trigger, action } = await setup();
+    action.focus();
+
+    action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(document.activeElement).to.equal(trigger);
+  });
+});
+
 describe('lr-popover hide()', () => {
-  it('closes the popover without moving focus by default', async () => {
+  it('returns focus to the trigger by default', async () => {
+    const el = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    outside.focus();
+    try {
+      el.hide();
+      await el.updateComplete;
+      expect(el.open).to.be.false;
+      expect(document.activeElement).to.equal(trigger);
+    } finally {
+      document.body.removeChild(outside);
+    }
+  });
+
+  it('preserves focus when called with { focusTrigger: false }', async () => {
     const el = (await fixture(
       html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
     )) as LyraPopover;
@@ -614,10 +827,9 @@ describe('lr-popover hide()', () => {
     document.body.appendChild(outside);
     outside.focus();
     try {
-      el.hide();
+      el.hide({ focusTrigger: false });
       await el.updateComplete;
       expect(el.open).to.be.false;
-      // Default hide() does not steal focus (matches a bare `el.open = false`).
       expect(document.activeElement).to.equal(outside);
     } finally {
       document.body.removeChild(outside);

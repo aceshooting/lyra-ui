@@ -22,8 +22,8 @@ disagree.
 **Properties:**
 - `for: string = ''` — id of the target `lr-flow-canvas`; when empty, the nearest ancestor canvas
   is used (the slotted-into-a-corner-slot case, the primary wiring)
-- `label: string = ''` — accessible name for the map region; falls back to a host `aria-label`, then
-  a localized default
+- `label: string = ''` — accessible name for the map region. A host `aria-label` takes precedence,
+  followed by `label`, then the localized default
 
 **Events:** none.
 

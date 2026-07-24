@@ -35,8 +35,10 @@ stack overflow on cyclic `data`.
 **Methods:** `runSearch(query)` sets the declarative `search` property and awaits the recompute,
 resolving the match count — named distinctly from `search` because a class member can't share a name
 with a reactive property. `searchNext()`/`searchPrevious()` advance/step back a match cursor
-(wrapping) and scroll the active match into view, resolving `false` when there are no matches.
-`clearSearch()` resets `search` to `''`, clearing all matches and the cursor.
+(wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
+mark it as the active `aria-current` result, announce its position, and scroll it into view;
+they resolve `false` when there are no matches. `clearSearch()` resets `search` to `''`, clearing all
+matches and the cursor.
 
 **Events:** `lr-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
 per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
@@ -99,9 +101,11 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
   binding, never as a plain HTML attribute.
 - Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
-- An explicit per-node expand/collapse (from clicking a node's `toggle` button) permanently overrides
-  both `collapsedDepth` and any search-driven auto-expand for that path, until `data` is reassigned
-  with a different shape.
+- An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
+  `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
+  `searchNext()`/`searchPrevious()` navigation may reopen the ancestors of the selected result so
+  the active match is never hidden; otherwise the override persists until `data` is reassigned with
+  a different shape.
 - Per-node copy buttons call `stopPropagation()` on click so clicking one doesn't also toggle the
   row's expand/collapse state.
 

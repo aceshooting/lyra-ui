@@ -21,8 +21,22 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
   `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`,
   `lr-bubble-chart`, `lr-scatter-chart`), `lr-box-plot`, `lr-histogram`, `lr-map`, `lr-graph`,
   `lr-knowledge-graph-explorer`, and `lr-geojson-view`. Those always need their own subpath import.
-  The barrel also re-exports every class and type (every `Lyra*EventMap` type included), so it is the
-  one import that defeats tree-shaking — prefer per-component entries in application code.
+  The barrel also re-exports a broad compatibility surface of commonly used classes, helpers, and
+  types, but it is not an exhaustive promise that every component-owned type or future export is
+  present. It is the one import that defeats tree-shaking — prefer the owning component entry in
+  application code, both for the smallest bundle and the complete contract of that component.
+- **Document anchor/highlight types.** The granular document-viewer entry owns and exports
+  `LyraAnchor`, `LyraAnchorKind`, `LyraHighlight`, `LyraHighlightTone`,
+  `AnchorTargetCapabilities`, `HighlightActivateDetail`, `TextSelectDetail`, and
+  `AnchorResultDetail`:
+  ```ts
+  import type {
+    LyraAnchor,
+    LyraHighlight,
+    AnchorTargetCapabilities,
+  } from '@aceshooting/lyra-ui/components/viewers/document-viewer/document-viewer.js';
+  ```
+  Use that entry instead of depending on incidental root-barrel coverage.
 - **`lr-flag`** registers from the barrel, but resolving a flag by `country`/`language` (rather than
   a pre-resolved `src`) additionally needs
   `import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';` once.
@@ -397,13 +411,14 @@ preferred in production.
 
 ## Optional peer dependencies
 
-All 26 peers are optional and lazily loaded; nothing is imported eagerly. `llms/peers.md` is the
-generated component → peer table. The shared contract: a component resolves its peer through a
-dynamic `import()` on first use, rendering an `<lr-skeleton>` placeholder with `aria-busy="true"` on
-the host meanwhile; if the peer is genuinely absent it falls back to an empty/degraded render plus a
-single deduped `console.warn` — it never throws and never blocks paint. `lr-phone-input` is the
-exception: it takes a consumer-built adapter (`loadLibphonenumberAdapter()`) rather than importing
-`libphonenumber-js` itself.
+All 26 peers are optional and their implementations are loaded on demand; nothing is imported
+eagerly. `llms/peers.md` is the generated component → peer table. Loading and failure UI is
+component-specific: viewer sections document their localized loading/error/notice states, while
+`lr-include` preserves its light-DOM fallback/live region and emits `lr-include-error` when its
+sanitizer is unavailable. Some components additionally issue a deduped warning. Consult the owning
+component section instead of assuming every peer user renders an `<lr-skeleton>` or the same
+degraded state. `lr-phone-input` is the exception to dynamic peer import: it takes a consumer-built
+adapter (`loadLibphonenumberAdapter()`) rather than importing `libphonenumber-js` itself.
 
 ## Framework integration
 

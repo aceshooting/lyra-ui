@@ -83,7 +83,7 @@ it('keeps the initial-load spinner semantic owner named after late host aria-lab
   const spinnerLabel = () =>
     spinner.shadowRoot.querySelector('[role="status"]')!.getAttribute('aria-label');
 
-  expect(spinner).to.exist;
+  expect(spinner != null).to.be.true;
   expect(spinnerLabel()).to.equal('Policy results');
   expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;
 

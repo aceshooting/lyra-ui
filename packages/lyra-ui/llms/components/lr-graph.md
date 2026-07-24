@@ -171,9 +171,9 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
 - while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows a
-  `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"` — but if they fail to load
-  (not installed), it still settles into a permanently empty `<svg>` (0 nodes/0 links) plus a
-  one-time console warning, same as before; the skeleton only covers the loading window itself.
+  `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
+  example, because they are not installed), the graph fails closed with a localized
+  `part="error"` / `role="alert"` message instead of leaving an empty SVG.
 - `GraphNode.color` is sanitized (rejects `;`/`{`/`}`) before being written into the
   `--lr-node-fill` inline custom property, so an untrusted color string can't break out of that
   CSS declaration.

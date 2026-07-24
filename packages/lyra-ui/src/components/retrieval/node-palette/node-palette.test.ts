@@ -135,6 +135,54 @@ it('steps over disabled rows when moving focus through the enabled roving list',
   expect(el.shadowRoot!.activeElement?.textContent).to.contain('Webhook');
 });
 
+it('assigns same-object duplicate entries distinct roving positions', async () => {
+  const duplicate: PaletteItem = { type: 'duplicate', label: 'Duplicate' };
+  const el = (await fixture(
+    html`<lr-node-palette .items=${[duplicate, duplicate]}></lr-node-palette>`,
+  )) as LyraNodePalette;
+  const rows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
+  expect(rows.map((row) => row.getAttribute('tabindex'))).to.deep.equal(['0', '-1']);
+
+  rows[0]!.focus();
+  rows[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+  await waitUntil(() => rows.indexOf(el.shadowRoot!.activeElement as HTMLElement) === 1);
+  expect(rows.indexOf(el.shadowRoot!.activeElement as HTMLElement)).to.equal(1);
+  expect(rows.map((row) => row.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
+});
+
+it('keeps roving state and real focus on a surviving item across reorder, then transfers it on shrink', async () => {
+  const first: PaletteItem = { type: 'first', label: 'First' };
+  const second: PaletteItem = { type: 'second', label: 'Second' };
+  const third: PaletteItem = { type: 'third', label: 'Third' };
+  const el = (await fixture(
+    html`<lr-node-palette .items=${[first, second, third]}></lr-node-palette>`,
+  )) as LyraNodePalette;
+  const initialRows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')];
+  initialRows[1]!.focus();
+  await el.updateComplete;
+  expect(initialRows.map((row) => row.getAttribute('tabindex'))).to.deep.equal(['-1', '0', '-1']);
+
+  el.items = [third, first, second];
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(el.shadowRoot!.activeElement?.textContent).to.contain('Second');
+  expect(
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')].map((row) =>
+      row.getAttribute('tabindex'),
+    ),
+  ).to.deep.equal(['-1', '-1', '0']);
+
+  el.items = [third, first];
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  expect(el.shadowRoot!.activeElement?.textContent).to.contain('First');
+  expect(
+    [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="item"]')].map((row) =>
+      row.getAttribute('tabindex'),
+    ),
+  ).to.deep.equal(['-1', '0']);
+});
+
 it('hides arbitrary item icons from the accessible name', async () => {
   const el = (await fixture(
     html`<lr-node-palette .items=${[{ type: 'x', label: 'Node', icon: html`Icon text` }]}></lr-node-palette>`,

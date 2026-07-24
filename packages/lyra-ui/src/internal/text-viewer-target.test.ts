@@ -48,6 +48,7 @@ type Internals = {
   searchRanges: Range[];
   searchQuery: string;
   selectionRoot: Element | null;
+  selectionCleanup?: () => void;
   searchHandle?: { release(): void; setRanges: unknown; setActive: unknown; flash: unknown };
   anchorRetryIntervalMs: number;
   anchorTimeoutMs: number;
@@ -297,6 +298,17 @@ describe('TextViewerTarget mixin', () => {
       await el.updateComplete;
       expect(released).to.be.true;
     });
+
+    it('unbinds the old selection root when the body disappears', async () => {
+      const el = await stubFixture();
+      expect(typeof internals(el).selectionCleanup).to.equal('function');
+
+      el.noBody = true;
+      await el.updateComplete;
+
+      expect(internals(el).selectionRoot).to.be.null;
+      expect(internals(el).selectionCleanup).to.be.undefined;
+    });
   });
 
   describe('disconnectedCallback()', () => {
@@ -323,7 +335,7 @@ describe('TextViewerTarget mixin', () => {
       const parent = el.parentElement!;
       await el.search('fox');
       const originalHandle = internals(el).searchHandle;
-      expect(originalHandle).to.exist;
+      expect(originalHandle !== undefined).to.be.true;
 
       el.remove();
       expect(internals(el).searchHandle).to.be.undefined;
@@ -334,9 +346,34 @@ describe('TextViewerTarget mixin', () => {
       await el.updateComplete;
 
       expect(internals(el).selectionRoot?.getAttribute('part')).to.equal('body');
-      expect(internals(el).searchHandle).to.exist;
+      expect(internals(el).searchHandle !== undefined).to.be.true;
       expect(internals(el).searchHandle === originalHandle).to.be.false;
       expect(internals(el).searchRanges).to.have.length(2);
+    });
+
+    it('does not reacquire a highlight handle when an in-flight search resumes detached', async () => {
+      const el = await stubFixture();
+      const pendingSearch = el.search('fox');
+
+      el.remove();
+      await pendingSearch;
+
+      expect(internals(el).searchHandle).to.be.undefined;
+    });
+
+    it('finishes an in-flight search after a synchronous disconnect and reconnect', async () => {
+      const el = await stubFixture();
+      const parent = el.parentElement!;
+      const pendingSearch = el.search('fox');
+
+      el.remove();
+      parent.append(el);
+
+      expect(await pendingSearch).to.equal(2);
+      await el.updateComplete;
+      expect(internals(el).searchQuery).to.equal('fox');
+      expect(internals(el).searchRanges).to.have.length(2);
+      expect(internals(el).searchHandle).to.not.be.undefined;
     });
   });
 

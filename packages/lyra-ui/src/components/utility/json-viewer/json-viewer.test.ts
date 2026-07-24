@@ -341,7 +341,7 @@ it('bounds broad search traversal instead of matching beyond the node budget', a
     html`<lr-json-viewer .data=${data} collapsed-depth="0" search="needle-at-tail"></lr-json-viewer>`,
   )) as LyraJsonViewer;
   expect(el.shadowRoot!.querySelectorAll('[data-match]').length).to.equal(0);
-  expect(el.shadowRoot!.querySelector('[part="limit"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="limit"]') !== null).to.be.true;
 });
 
 it('renders a bigint value via String() instead of throwing from JSON.stringify', async () => {
@@ -632,16 +632,37 @@ describe('imperative search API', () => {
     expect(detail!.activeIndex).to.equal(-1);
   });
 
-  it('a user-collapsed ancestor keeps its override while the cursor still advances', async () => {
-    const el = (await fixture(html`<lr-json-viewer .data=${SAMPLE} collapsed-depth=${99}></lr-json-viewer>`)) as LyraJsonViewer;
-    await el.runSearch('name');
-    // The "team" toggle button, force-expanded by the match -- user collapses it explicitly.
-    const toggles = [...el.shadowRoot!.querySelectorAll('[part="toggle"]')] as HTMLButtonElement[];
-    const teamToggle = toggles.find((t) => t.getAttribute('aria-expanded') === 'true');
-    teamToggle?.click();
-    await el.updateComplete;
-    expect(await el.searchNext()).to.be.true;
-    expect(await el.searchNext()).to.be.true; // still advances even though a match may now be hidden
+  it('reveals, marks, announces, and scrolls to a selected match hidden by a collapsed ancestor', async () => {
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    let scrolledPart: string | null = null;
+    HTMLElement.prototype.scrollIntoView = function () {
+      scrolledPart = this.getAttribute('part');
+    };
+    try {
+      const el = (await fixture(
+        html`<lr-json-viewer .data=${SAMPLE} collapsed-depth=${99}></lr-json-viewer>`,
+      )) as LyraJsonViewer;
+      await el.runSearch('name');
+      const teamRow = [...el.shadowRoot!.querySelectorAll<HTMLElement>('.row')].find(
+        (row) => row.querySelector('[part="key"]')?.textContent === 'team',
+      )!;
+      const teamToggle = teamRow.querySelector('[part="toggle"]') as HTMLButtonElement;
+      teamToggle.click();
+      await el.updateComplete;
+      expect(teamToggle.getAttribute('aria-expanded')).to.equal('false');
+
+      expect(await el.searchNext()).to.be.true;
+      expect(await el.searchNext()).to.be.true;
+
+      const active = el.shadowRoot!.querySelector<HTMLElement>('[data-active]');
+      expect(active?.getAttribute('aria-current')).to.equal('true');
+      expect(teamToggle.getAttribute('aria-expanded')).to.equal('true');
+      expect(el.shadowRoot!.querySelectorAll('[part="key"][data-match]').length).to.equal(2);
+      expect(el.shadowRoot!.querySelector('[role="status"]')?.textContent).to.equal('Match 2 of 2');
+      expect(scrolledPart).to.equal('key');
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
   });
 
   it('emits exactly one lr-search-change when data reshapes, resetting activeIndex to -1', async () => {

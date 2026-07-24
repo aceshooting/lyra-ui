@@ -37,8 +37,10 @@ docked case.
 - `collapsible: boolean = false` (reflected)
 - `collapsed: boolean = false` (reflected)
 - `resizable: boolean = true` (reflected) — when `false`, no drag handle renders at all and the panel
-  is a fixed size. (Assign `false` via a **property** binding, e.g. `.resizable=${false}` — a
-  `?resizable=${false}` boolean-attribute binding cannot override a `true` default; see AGENTS.md.)
+  is a fixed size. Its string-aware converter accepts `resizable="false"` as false despite the
+  true default. A Lit property binding (`.resizable=${false}`) also disables it; a false
+  boolean-attribute binding (`?resizable=${false}`) only removes the attribute and cannot override
+  a true-defaulting property.
 
 **Exported helper:** `parseLengthPx(length: string, containerPx: number, fontSizeEl: Element =
 document.documentElement): number | undefined` — resolves an arbitrary CSS length (`px`, `rem`, `em`,

@@ -1282,6 +1282,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   };
 
   private onVisibleRangeChanged = (event: CustomEvent<{ start: number }>): void => {
+    event.stopPropagation();
     if (this.loadState.kind !== 'ready') return;
     const next = this.clampPage(event.detail.start + 1);
     if (next === this.page) return;

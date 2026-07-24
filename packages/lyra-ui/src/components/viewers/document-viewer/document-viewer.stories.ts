@@ -62,6 +62,21 @@ export const ClosedByDefault: Story = {
   render: () => html`<lr-document-viewer name="report.pdf" mime-type="application/pdf"></lr-document-viewer>`,
 };
 
+/** Baseline narrow-allocation coverage for the open shell with long document metadata. */
+export const Narrow320: Story = {
+  render: (_args, context) => html`
+    <div style="max-inline-size:320px">
+      <lr-document-viewer
+        style="--lr-dialog-width:320px;--lr-dialog-max-width:320px"
+        .open=${context.viewMode !== 'docs'}
+        name="international-quarterly-analytical-engine-research-report-with-a-very-long-name.json"
+        mime-type="application/json"
+        src=${textDataUrl}
+      ></lr-document-viewer>
+    </div>
+  `,
+};
+
 const SAMPLE_PDF_URL = '/fixtures/sample.pdf';
 
 interface CitationSource {

@@ -145,10 +145,11 @@ component's own `part="pre"`/`part="code"` hooks and strips shiki's default `tab
 `<pre>`, since `[part="body"]` is already the single scrollable/focusable region (`role="group"`,
 `tabindex="0"`) for the code area. Dark mode is handled via shiki's own "dual themes" feature: every
 token carries its light color as a plain inline `color`/`background-color` and its dark color in
-`--shiki-dark`/`--shiki-dark-bg` custom properties, which an `!important` media-query rule in
-`code-block.styles.ts` reassigns under `prefers-color-scheme: dark` — the one deliberate exception in
-this component to every other color being a `--lr-*` token, since these values come from shiki's own
-theme data.
+`--shiki-dark`/`--shiki-dark-bg` custom properties. The component watches its resolved Lyra theme
+tokens and sets `data-dark-theme="true"` on the code body when the effective surface is dark; an
+`!important` state rule then activates Shiki's dark values. This follows explicit Lyra theme
+overrides instead of consulting `prefers-color-scheme` directly. Shiki's generated colors are the
+one deliberate exception to every other color being a `--lr-*` token.
 
 **Known gotchas:**
 - `copyable` defaults to `true` and reflects — see the property note above about overriding it with a

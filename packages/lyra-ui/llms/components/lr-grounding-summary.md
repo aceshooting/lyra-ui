@@ -34,8 +34,8 @@ and `lr-citation-badge` for each evidence entry.
   `GroundingSummaryThresholds { high: number; medium: number }` (exported here), both 0–1 fractions,
   applied to both `coverage` and `confidence`: `>= high` → `success` tone, `>= medium` → `warning`,
   below → `danger`
-- `label: string = ''` — accessible group label; falls back to a host `aria-label`, then the
-  localized `groundingSummaryLabel`
+- `label: string = ''` — accessible group label. A host `aria-label` takes precedence, followed by
+  `label`, then the localized `groundingSummaryLabel`
 - `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
   `lr-claim-evidence`; set false to keep the aggregate scorecard only
 

@@ -33,11 +33,10 @@ export interface LyraDocumentViewerEventMap {
  *   detail is the dialog close reason.
  * @event lr-download - Fired when the viewer's safe download action is
  *   activated. The browser download itself is handled by the native link.
- * @event lr-anchor-result - Fired with `{ found: false }` once per applied `anchor` when the
- *   resolved renderer can't honor it (no `capabilities`, or an unsupported anchor kind) or the
- *   file fell back to `<lr-document-preview>`. An anchor-capable renderer instead reports its
- *   own jump result through its embedded `DocumentAnchorTarget` mixin, which composes up through
- *   this element unchanged.
+ * @event lr-anchor-result - Fired once per applied `anchor`. An incapable resolved renderer
+ *   produces `{ found: false }`; the `<lr-document-preview>` fallback reports its actual anchor
+ *   result. An anchor-capable renderer reports its own jump result through its embedded
+ *   `DocumentAnchorTarget` mixin, which composes up through this element unchanged.
  * @csspart body - Wrapper around the active renderer or fallback preview.
  * @csspart download-link - The native download action shown when `src` is safe.
  * @cssprop [--lr-document-viewer-max-height=70vh] - Maximum block size of the dialog body before it scrolls internally.
@@ -161,11 +160,12 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     this.finishAnchorResult(resolved, file, generation);
   }
 
-  /** Emits `lr-anchor-result { found: false }` from the shell itself when the resolved renderer
-   *  isn't capable of `file.anchor`'s kind (or, for a highlight-id anchor, declares no anchor
-   *  capability at all). When it IS capable, the embedded viewer's own `DocumentAnchorTarget`
-   *  mixin emits `lr-anchor-result` after its own scroll attempt, and that composed event
-   *  surfaces through this element unchanged -- so the shell must not also emit in that case. */
+  /** Delegates to the fallback preview and emits its actual anchor result when there is no resolved
+   *  renderer. Otherwise the shell emits `lr-anchor-result { found: false }` when the renderer
+   *  cannot honor `file.anchor`'s kind (or, for a highlight-id anchor, declares no anchor
+   *  capability at all). A capable embedded viewer's own `DocumentAnchorTarget` mixin emits after
+   *  its scroll attempt and that composed event surfaces through this element unchanged, so the
+   *  shell must not also emit in that case. */
   private finishAnchorResult(def: DocumentRendererDefinition | undefined, file: DocumentFile, generation: number): void {
     if (file.anchor == null) return;
     if (generation !== this.generation) return;

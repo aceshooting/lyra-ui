@@ -172,7 +172,7 @@ describe('lr-csv-viewer', () => {
         const highlighted = header.querySelector('[part~="cell-highlight"]')!;
         expect(highlighted.getAttribute('role')).to.equal('columnheader');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLElement;
-        expect(action).to.exist;
+        expect(action !== null).to.be.true;
         expect(getComputedStyle(highlighted).outlineStyle).to.equal('solid');
         expect(getComputedStyle(action).minBlockSize).to.equal('40px');
       } finally { restore(); }
@@ -218,7 +218,7 @@ describe('lr-csv-viewer', () => {
         expect(highlighted).to.exist;
         expect(highlighted.getAttribute('role')).to.equal('cell');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
-        expect(action).to.exist;
+        expect(action !== null).to.be.true;
         expect(action.getAttribute('aria-label')).to.equal('First result');
         const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();

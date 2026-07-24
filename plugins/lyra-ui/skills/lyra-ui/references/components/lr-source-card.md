@@ -28,7 +28,7 @@ direct light-DOM children of the list (plain composition — no `.items` array p
 - `labelPlural: string = ''` (attribute `label-plural`) — fully consumer-built, already-pluralized
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back
-  to the literal word `"Sources"`.
+  to the localized `sourceListDefaultLabel` string (English default: `"Sources"`).
 
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
@@ -129,10 +129,9 @@ forwarding scenarios or engines that don't fire `slotchange` for content already
 time.
 
 **Known gotchas:**
-- This library has no built-in i18n/pluralization (the same stance `<lr-empty>`'s plain
-  `description` prop takes) — `lr-source-list`'s header text is entirely consumer-supplied via
-  `label`/`label-plural`; there's no automatic "N sources" string generation beyond the literal
-  `"Sources"` fallback.
+- `lr-source-list` does not automatically build an “N sources” plural summary: provide
+  `labelPlural` when that is wanted. Its no-label fallback is localized through
+  `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.
 - `lr-source-card`'s own expand/collapse (`full` slot, `lr-expand` event) is completely
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at

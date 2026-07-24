@@ -18,13 +18,16 @@ gate catches.
   (4) Guard every state write after an `await` with a generation token captured at call start
   (`if (generation !== this.generation) return;`), so a fast `src` reassignment can't be
   clobbered by a stale, slower response.
-- **An optional-peer loader falls back to the bare module namespace.** A `*-loader.ts` reading
-  `.default` off a dynamically-imported peer uses `mod.default ?? mod` (or
-  `'default' in mod ? mod.default : mod`) — different bundler and CJS-interop configurations
-  resolve the same package either way. For a sanitizer specifically (`dompurify-loader.ts`),
-  getting this wrong means sanitization silently **no-ops instead of throwing** — a security bug,
-  not an interop nit. `spreadsheet-loader.ts`/`archive-loader.ts`/`calendar-loader.ts` show the
-  right shape.
+- **Normalize an optional peer by its required capability, not by export shape alone.** When the
+  package exposes a named API, validate and prefer that named capability, then validate the
+  default export as an interop fallback; `pptx-loader.ts` demonstrates this for
+  `PptxViewer.open`. Factory/default-shaped peers use `mod.default ?? mod` (or
+  `'default' in mod ? mod.default : mod`) so different bundler and CJS-interop configurations
+  resolve the same package either way. In every case, reject a candidate that lacks the callable
+  capability the component needs. For a sanitizer specifically (`dompurify-loader.ts`), getting
+  this wrong means sanitization silently **no-ops instead of throwing** — a security bug, not an
+  interop nit. `spreadsheet-loader.ts`/`archive-loader.ts`/`calendar-loader.ts` show the
+  namespace/default shape.
 - **Optional-peer load failure fails closed, visibly.** A component whose render depends on a
   peer that fails to load sets a visible, accessible error state — `role="alert"` with a
   localized message — rather than flipping a loading flag and returning, which leaves an empty

@@ -587,7 +587,7 @@ describe('localization', () => {
     `)) as LyraToolApprovalDialog;
     const omittedHeading = omitted.shadowRoot!.querySelector('h2')!;
     expect(omittedHeading.textContent!.trim()).to.equal('Proceed?');
-    expect(omittedHeading.querySelector('[part="tool-name"]')).to.not.exist;
+    expect(omittedHeading.querySelector('[part="tool-name"]') === null).to.be.true;
   });
 
   it('does not use the generic tool-name fallback once tool-name is set', async () => {

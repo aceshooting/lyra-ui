@@ -92,17 +92,18 @@ tokens — `--lr-space-xs`, `--lr-space-l`,
 **Optional peer deps:** none.
 
 ```html
-<lr-file-input multiple accept=".csv,.xlsx" allowed-mime-types='["text/csv"]'></lr-file-input>
+<lr-file-input id="dataset-files" multiple accept=".csv,.xlsx"></lr-file-input>
 <script>
-  document.querySelector('lr-file-input').addEventListener('lr-files', (e) => {
+  const input = document.querySelector('#dataset-files');
+  input.allowedMimeTypes = ['text/csv'];
+  input.addEventListener('lr-files', (e) => {
     console.log('accepted:', e.detail.files, 'rejected:', e.detail.rejected); // rejected[i].reason
   });
 </script>
 ```
 
 Note: `allowedMimeTypes`/`forbiddenMimeTypes` are complex properties (`attribute: false`) — set
-them via JS (`el.allowedMimeTypes = [...]`), not as a JSON string attribute; the snippet above is
-illustrative of intent only.
+them via JS (`el.allowedMimeTypes = [...]`), not as a JSON string attribute.
 
 `accept.ts` exports `matchesAccept(file, accept, assumeExtensionMatch?)` (internal — not
 re-exported from the package root) — parses the same three `accept` forms the browser's native
@@ -115,8 +116,7 @@ an extension-only `accept` list.
 **Known gotchas:**
 - Paste-from-clipboard **is** supported and on by default: a `paste` event on the dropzone reads
   `e.clipboardData.files` and routes it through the same accept/reject classification as a drop.
-  Set `paste="false"` (or `.paste = false`) to opt out. (The package README's "Known limitations"
-  entry claiming there is no paste support, and none for dragged folders, is stale — both work.)
+  Set `paste="false"` (or `.paste = false`) to opt out.
 - Dragged folders **are** detected via `webkitGetAsEntry()` and reported as
   `rejected[].reason === 'directory'` (paired with a synthetic zero-byte `File` carrying the folder
   name), not silently accepted as a phantom file.

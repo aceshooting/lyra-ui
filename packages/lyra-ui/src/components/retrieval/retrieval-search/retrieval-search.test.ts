@@ -257,7 +257,7 @@ describe('loading / error / empty status region', () => {
     const spinnerLabel = () =>
       spinner.shadowRoot.querySelector('[role="status"]')!.getAttribute('aria-label');
 
-    expect(spinner).to.exist;
+    expect(spinner != null).to.be.true;
     expect(spinnerLabel()).to.equal('Knowledge search');
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
     expect(el.shadowRoot!.querySelector('[part="empty"]')).to.not.exist;

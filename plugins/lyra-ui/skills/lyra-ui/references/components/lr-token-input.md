@@ -24,7 +24,9 @@ hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-dupl
 `false`), `editable` (reflected, default `false` — see below), and `delimiter: string | null` (default
 `','` — see below).
 **Slots:** `label`, `hint`, `error`.
-**Events:** `input`, `change`, `lr-add` (`detail: { value }`), `lr-remove`
+**Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
+`focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),
+`lr-remove`
 (`detail: { value, index }` — cancelable; `preventDefault()` keeps the token in `value`
 unchanged), and `lr-token-edit`
 (`detail: { value, previousValue, index }` — an existing token was edited in place and committed).
@@ -33,7 +35,8 @@ token's text, doubling as the roving-focus edit trigger — rendered only while 
 `token-editor` (the inline text field that replaces a token's text while it is open for editing —
 rendered only while `editable` and only for the token being edited), `remove` (the
 per-token remove button, floored at the shared `--lr-icon-button-size` tap size around a compact
-glyph), `input`, `hint`, `error`. `focus()` and `blur()` forward to the internal text input.
+glyph), `input`, `hint`, `error`. `focus()`, `blur()`, and `click()` forward to the internal text
+input.
 
 **`editable` — editing a token in place.** Off by default, in which case the token row renders
 exactly as it does without the feature and stays non-focusable. Turn it on and each token becomes a

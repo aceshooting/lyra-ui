@@ -33,6 +33,8 @@ export function clearNotebookSanitizerCache(): void {
 }
 
 /** @internal test-only hook to force a specific resolved sanitizer (e.g. simulate a missing optional peer); pass `undefined` to reset to the real loader. */
-export function __setNotebookSanitizerForTesting(value: OptionalPeerApi | null | undefined): void {
+export function __setNotebookSanitizerForTesting(
+  value: OptionalPeerApi | Promise<OptionalPeerApi | null> | null | undefined,
+): void {
   sanitizer = value === undefined ? undefined : Promise.resolve(value);
 }

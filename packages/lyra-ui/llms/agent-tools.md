@@ -1971,14 +1971,33 @@ with injected CSP; remote documents are URL-validated. The frame can only reques
 messages, navigation, logs, and clamped resizing through typed events. Capabilities are denied
 unless explicitly enabled in `resource.permissions`.
 
-**Properties:** `resource: McpAppResource | null`; `height`; `maxHeight`; `label`;
-`accessibleLabel` (attribute `aria-label`). **Methods:** `postHostContext(context)`,
-`postToolResult(requestId, result?, error?)`.
+**Properties:**
 
-**Events:** `lr-mcp-ready`, `lr-mcp-tool-call`, `lr-mcp-send-message`, `lr-mcp-open-link`,
-`lr-mcp-log`, `lr-mcp-resize`.
+- `resource: McpAppResource | null = null` (attribute: false) — either inline `html` or a safe
+  remote `src`, plus the required logical `uri`. `McpAppResource = { uri: string; title?: string;
+  html?: string; src?: string; csp?: McpAppCsp; permissions?: McpAppPermissions; metadata?:
+  Record<string, unknown> }`. CSP domain arrays accept HTTP(S) origins only. Permissions are
+  optional booleans for camera, microphone, geolocation, clipboard read, and clipboard write.
+- `height: number = 320`, `maxHeight: number = 800` (attribute `max-height`) — requested and maximum
+  frame heights in pixels; runtime values and resize requests clamp to 120–10,000.
+- `label: string = ''`; `accessibleLabel: string | null = null` (attribute `aria-label`) — frame
+  title precedence is host `aria-label`, `label`, resource title, then the localized fallback.
+
+**Methods:** `postHostContext(context: unknown): void` posts host state into the active frame;
+`postToolResult(requestId: string, result?: unknown, error?: string): void` resolves a prior tool
+request. Both are no-ops before a frame exists.
+
+**Exported types:** `McpAppResource`, `McpAppCsp`, `McpAppPermissions`,
+`McpAppToolCallDetail`, and `LyraMcpAppEventMap`.
+
+**Events:** `lr-mcp-ready` (`{ uri }`), `lr-mcp-tool-call` (`{ requestId?, name, args }`),
+`lr-mcp-send-message` (`{ message }`), `lr-mcp-open-link` (`{ href }`), `lr-mcp-log`
+(`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
+component does not execute tools, send messages, or navigate itself.
 
 **CSS parts:** `base`, `frame`, `loading`, `error`.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
@@ -1986,11 +2005,23 @@ import '@aceshooting/lyra-ui/components/agent-tools/mcp-app/mcp-app.js';
 
 ## `lr-prompt-studio`
 
-Controlled prompt-development workbench for ordered role messages, `{{variable}}` substitution,
-saved versions, resolved preview, and save/run intents.
+Prompt-development workbench for ordered role messages, `{{variable}}` substitution, saved
+versions, resolved preview, and save/run intents. Message and variable edits update the component's
+current arrays before emitting their complete next state; persistence and execution remain
+host-owned.
 
-**Properties:** `messages`, `variables`, `versions`, `selectedVersionId`, `label`, `running`,
-`disabled`.
+**Properties:** `messages: PromptStudioMessage[] = []` and
+`variables: PromptStudioVariable[] = []` are property-only editor state: user edits update the
+current arrays before `lr-change` is emitted, while the host remains responsible for persistence.
+`versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
+`selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
+`running: boolean = false` and `disabled: boolean = false` (both reflected).
+
+**Exported types:** `PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool'`;
+`PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
+description? }`; `PromptStudioVersion = { id: string; label: string; messages:
+PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
+`PromptStudioState = { messages, variables }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
 `lr-version-select` (`{ version }`).
@@ -1998,6 +2029,8 @@ saved versions, resolved preview, and save/run intents.
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
 `preview`, `save`, `run`.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';
@@ -2017,12 +2050,22 @@ Recursive JSON Schema inspector with property/branch selection, required and con
 validation issues, `$ref` visibility, composition branches, cycle protection, and a depth ceiling.
 It intentionally does not fetch remote references or validate values.
 
-**Properties:** `schema`, `issues`, `selectedPath`, `maxDepth`, `label`.
+**Properties:** `schema: JsonSchemaNode | null = null` and `issues: SchemaValidationIssue[] = []`
+(attribute: false); `selectedPath: string = ''` (attribute `selected-path`);
+`maxDepth: number = 20` (attribute `max-depth`, clamped to 100); `label: string = ''`.
+
+**Exported types:** `JsonSchemaNode` covers `$ref`, type/title/description, properties/items,
+required/enum/const/default/examples, and oneOf/anyOf/allOf while preserving unknown schema
+keywords. `SchemaValidationIssue = { path: string; message: string; severity?: 'error' | 'warning'
+| 'info' }`.
 
 **Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
-`description`, `constraints`, `issue`, `empty`.
+`description`, `constraints`, `issue`, `limit`, `empty`.
+
+Rendering is capped at 500 schema nodes; `limit` reports truncation. Cycles stop at the repeated
+node rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
@@ -2043,12 +2086,19 @@ Controlled nested-agent hierarchy with lifecycle badges, task/model context, gua
 selection, cancel, and retry intents. `SubagentRun.parentId` creates nesting; cycles and orphan
 parents remain renderable instead of recursing forever.
 
-**Properties:** `runs: SubagentRun[]`, `selectedRunId`, `label`.
+**Properties:** `runs: SubagentRun[] = []` (attribute: false);
+`selectedRunId: string = ''` (attribute `selected-run-id`); `label: string = ''`.
+`SubagentRun = { id: string; parentId?: string; label: string; status: AgentStatusKind; task?:
+string; model?: string; progress?: number; startedAt?: number; endedAt?: number; metadata?:
+Record<string, unknown> }`.
 
 **Events:** `lr-run-select` (`{ run }`), `lr-cancel`/`lr-retry` (`{ runId }`).
 
 **CSS parts:** `base`, `list`, `run`, `run-selected`, `run-row`, `run-trigger`, `label`, `status`,
-`task`, `model`, `progress`, `actions`, `cancel`, `retry`, `empty`.
+`task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
+
+At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
+the logical depth. Progress is finite and clamped. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';

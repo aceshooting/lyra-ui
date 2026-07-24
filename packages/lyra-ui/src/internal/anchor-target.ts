@@ -120,8 +120,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       // retry against a detached element.
       this.anchorGeneration++;
       this.cancelAnchorRetry();
-      this.selectionCleanup?.();
-      this.selectionCleanup = undefined;
+      this.unbindTextSelection();
       super.disconnectedCallback();
     }
 
@@ -243,7 +242,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
      *  where `Selection.getComposedRanges()` exists, `ShadowRoot.getSelection()` next, else
      *  `document.getSelection()`. Collapsed selections never fire. */
     protected bindTextSelection(contentRoot: Element): void {
-      this.selectionCleanup?.();
+      this.unbindTextSelection();
 
       const onSelectionEnd = (): void => {
         const range = selectionRange(this);
@@ -275,6 +274,12 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         document.removeEventListener('selectionchange', onSelectionChange);
         if (debounceHandle !== undefined) cancelAnimationFrame(debounceHandle);
       };
+    }
+
+    /** Removes the current selection-root listeners without requiring the host to disconnect. */
+    protected unbindTextSelection(): void {
+      this.selectionCleanup?.();
+      this.selectionCleanup = undefined;
     }
   }
   return DocumentAnchorTargetElement;

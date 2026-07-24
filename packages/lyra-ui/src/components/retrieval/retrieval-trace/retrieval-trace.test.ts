@@ -78,14 +78,33 @@ describe('lr-retrieval-trace', () => {
     expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Custom trace label');
   });
 
-  it('lets an explicit label win over a host aria-label', async () => {
+  it('keeps host aria-label ahead of label across late add, change, and removal', async () => {
     const el = (await fixture(
-      html`<lr-retrieval-trace aria-label="Ignored" label="Explicit label" .stages=${STAGES}></lr-retrieval-trace>`,
+      html`<lr-retrieval-trace label="Explicit label" .stages=${STAGES}></lr-retrieval-trace>`,
     )) as LyraRetrievalTrace;
-    await el.updateComplete;
     const waterfall = el.shadowRoot!.querySelector('lr-span-waterfall') as LyraSpanWaterfall;
     await waterfall.updateComplete;
     expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Explicit label');
+
+    el.setAttribute('aria-label', 'Host trace label');
+    await el.updateComplete;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Host trace label');
+
+    el.setAttribute('aria-label', 'Changed host label');
+    await el.updateComplete;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Changed host label');
+
+    el.removeAttribute('aria-label');
+    await el.updateComplete;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Explicit label');
+
+    el.label = '';
+    await el.updateComplete;
+    await waterfall.updateComplete;
+    expect(waterfall.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Span timeline');
   });
 
   it('forwards activeStageId to the internal waterfall as activeSpanId', async () => {

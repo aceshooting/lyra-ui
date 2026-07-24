@@ -16,13 +16,26 @@
 Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
 and run history. The host computes metrics and owns evaluation execution.
 
-**Properties:** `metrics: RagEvaluationMetric[]`, `runs: RagEvaluationRun[]`, `metricId`, `slice`,
-`label`, `showChart`, `chartHeight`.
+**Properties:** `metrics: RagEvaluationMetric[] = []` and `runs: RagEvaluationRun[] = []`
+(attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
+display when unset/unmatched); `slice: string = ''`; `label: string = ''`;
+`showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
+converter); `chartHeight: string = '220px'` (attribute `chart-height`).
 
-**Events:** `lr-metric-change`, `lr-slice-change`, `lr-run-select`.
+`RagEvaluationMetric = { id, label, category, format? }`, where category is
+`'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
+`RagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
+
+**Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
+`lr-run-select` (`{ run }`). All are controlled intents; the component does not mutate the
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.
+
+Percent values clamp to 0–1 and all numbers use `effectiveLocale`. The chart is built from the
+filtered run order; the host computes every metric and owns evaluation execution.
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';

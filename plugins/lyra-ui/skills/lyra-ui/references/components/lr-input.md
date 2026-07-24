@@ -36,8 +36,9 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `inputMode: string = ''` (attribute `inputmode`) / `enterKeyHint: string = ''` (attribute
   `enterkeyhint`) — these four are forwarded verbatim to the native input; an empty string omits
   the attribute entirely
-- `min?: number` / `max?: number` (attributes `min`/`max`) / `step?: number | 'any'` (attribute
-  `step`, accepts the native `'any'` value alongside a number) — forwarded verbatim to the native
+- `min?: number | string` / `max?: number | string` (attributes `min`/`max`) /
+  `step?: number | 'any'` (attribute `step`, accepts the native `'any'` value alongside a number)
+  — forwarded verbatim to the native
   input and validated by it. Intended for `type="number"`; `step` is equally meaningful on
   `type="time"`. On `lr-input` itself the `min`/`max` *attributes* are number-converted, so a
   non-numeric bound only survives a direct property assignment; the declared type also admits a

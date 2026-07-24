@@ -283,7 +283,7 @@ describe('locale-aware search ranges', () => {
         { quote: 'foo', prefix: ' xi\u0307 ' },
         'en',
       );
-      expect(range).to.exist;
+      expect(range !== null).to.be.true;
       expect(range!.startOffset).to.equal(10);
     } finally {
       root.remove();

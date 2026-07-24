@@ -158,9 +158,9 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
   zoom/drag are still pointer-only with no keyboard equivalent. Links (`<line part="link">`) are now
   keyboard-operable too (`tabindex="0"`, `role="button"`, `aria-label`, Enter/Space), matching nodes.
 - while the `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection` peers are resolving, the host shows a
-  `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"` — but if they fail to load
-  (not installed), it still settles into a permanently empty `<svg>` (0 nodes/0 links) plus a
-  one-time console warning, same as before; the skeleton only covers the loading window itself.
+  `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
+  example, because they are not installed), the graph fails closed with a localized
+  `part="error"` / `role="alert"` message instead of leaving an empty SVG.
 - `GraphNode.color` is sanitized (rejects `;`/`{`/`}`) before being written into the
   `--lr-node-fill` inline custom property, so an untrusted color string can't break out of that
   CSS declaration.
@@ -937,7 +937,7 @@ direct light-DOM children of the list (plain composition — no `.items` array p
 - `labelPlural: string = ''` (attribute `label-plural`) — fully consumer-built, already-pluralized
   header summary, e.g. `"3 sources"` or `"1 source"`; this component never counts or pluralizes on
   its own. Takes precedence over `label` when both are set. If neither is set, the header falls back
-  to the literal word `"Sources"`.
+  to the localized `sourceListDefaultLabel` string (English default: `"Sources"`).
 
 **Getters:** `sourceCount: number` — read-only, live-updated count of the currently-slotted children,
 handy for building a `label-plural` string reactively, e.g. `` list.labelPlural = `${list.sourceCount} sources` ``.
@@ -1038,10 +1038,9 @@ forwarding scenarios or engines that don't fire `slotchange` for content already
 time.
 
 **Known gotchas:**
-- This library has no built-in i18n/pluralization (the same stance `<lr-empty>`'s plain
-  `description` prop takes) — `lr-source-list`'s header text is entirely consumer-supplied via
-  `label`/`label-plural`; there's no automatic "N sources" string generation beyond the literal
-  `"Sources"` fallback.
+- `lr-source-list` does not automatically build an “N sources” plural summary: provide
+  `labelPlural` when that is wanted. Its no-label fallback is localized through
+  `sourceListDefaultLabel`, and a per-instance `.strings` override reaches the rendered header.
 - `lr-source-card`'s own expand/collapse (`full` slot, `lr-expand` event) is completely
   independent of the parent list's `expanded`/`lr-toggle` — collapsing the list doesn't reset an
   individual card's `fullExpanded` state, and there is no cross-talk between the two components at
@@ -1136,8 +1135,8 @@ and `lr-citation-badge` for each evidence entry.
   `GroundingSummaryThresholds { high: number; medium: number }` (exported here), both 0–1 fractions,
   applied to both `coverage` and `confidence`: `>= high` → `success` tone, `>= medium` → `warning`,
   below → `danger`
-- `label: string = ''` — accessible group label; falls back to a host `aria-label`, then the
-  localized `groundingSummaryLabel`
+- `label: string = ''` — accessible group label. A host `aria-label` takes precedence, followed by
+  `label`, then the localized `groundingSummaryLabel`
 - `showClaims: boolean = true` (attribute `show-claims`) — renders `assessment.claims` through
   `lr-claim-evidence`; set false to keep the aggregate scorecard only
 
@@ -1600,8 +1599,9 @@ fetches, ranks, or computes retrieval results itself.
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
-- `label: string = ''` — accessible name for the timeline; falls back to a host `aria-label`, then
-  the waterfall's own localized default
+- `label: string = ''` — accessible name for the timeline. A host `aria-label` takes precedence,
+  followed by `label`, then the waterfall's own localized default; late attribute changes and
+  removal update that resolved name
 
 **Events:** `lr-stage-select` (`detail: { id: string }`, a stage's bar was activated — click, Enter,
 Space), `lr-stage-toggle` (`detail: { id: string; expanded: boolean }`, an evidence panel was
@@ -1690,12 +1690,21 @@ correlated ids/details from their composed primitives).
 Controlled claim-by-claim grounding audit relating `GroundedClaim[]` to complete `Citation[]`
 records. Dangling citation ids are ignored rather than rendered as invented evidence.
 
-**Properties:** `claims`, `citations`, `selectedClaimId`, `label`.
+**Properties:** `claims: GroundedClaim[] = []` and `citations: Citation[] = []` (attribute: false);
+`selectedClaimId: string = ''` (attribute `selected-claim-id`); `label: string = ''`.
+`GroundedClaim = { id, text, status, citationIds, answerRange?, confidence?, explanation? }`, with
+`status: 'supported' | 'partially-supported' | 'unsupported' | 'contradicted'`. Claim confidence
+is clamped to 0–1 for localized percent display. `Citation` is the shared AI citation record
+(`id`, source/chunk ids, label, locator/ranges, quote, metadata).
 
 **Events:** `lr-claim-select` (`{ claim }`), `lr-citation-select` (`{ citation }`).
 
 **CSS parts:** `base`, `list`, `claim`, `claim-selected`, `claim-trigger`, `status`, `claim-text`,
 `confidence`, `explanation`, `evidence`, `empty`.
+
+Selection is controlled: activation emits the complete claim but does not assign
+`selectedClaimId`. Evidence preserves `citations` order and silently skips dangling ids.
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.js';
@@ -1706,12 +1715,21 @@ import '@aceshooting/lyra-ui/components/retrieval/claim-evidence/claim-evidence.
 Side-by-side retrieval/reranking workbench showing effective rank, top-k Jaccard overlap, and
 dense/sparse/rerank/final score breakdowns.
 
-**Properties:** `sets: RetrievalComparisonSet[]`, `topK`, `selectedChunkId`, `label`.
+**Properties:** `sets: RetrievalComparisonSet[] = []` (attribute: false), where
+`RetrievalComparisonSet = { id: string; label: string; chunks: RetrievalChunk[] }`;
+`topK: number = 10` (attribute `top-k`, finite integer with minimum 1);
+`selectedChunkId: string = ''` (attribute `selected-chunk-id`); `label: string = ''`.
+`RetrievalChunk` is the shared AI record carrying id/text/score/source plus optional rank, locator,
+trace metadata, and `scores?: { dense?, sparse?, rerank?, final }`.
 
 **Events:** `lr-chunk-select` (`{ setId, chunk }`).
 
 **CSS parts:** `base`, `overlap`, `sets`, `set`, `set-heading`, `chunks`, `chunk`,
 `chunk-selected`, `chunk-rank`, `chunk-title`, `chunk-text`, `scores`, `score`, `empty`.
+
+Chunks are ordered by effective rank, then score, then input order before the top-k slice. Overlap
+is pairwise Jaccard similarity across those visible chunk ids. Selection is controlled.
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-compare.js';
@@ -1722,13 +1740,26 @@ import '@aceshooting/lyra-ui/components/retrieval/retrieval-compare/retrieval-co
 Controlled RAG evaluation overview with latest metric cards, per-metric trends, evaluation slices,
 and run history. The host computes metrics and owns evaluation execution.
 
-**Properties:** `metrics: RagEvaluationMetric[]`, `runs: RagEvaluationRun[]`, `metricId`, `slice`,
-`label`, `showChart`, `chartHeight`.
+**Properties:** `metrics: RagEvaluationMetric[] = []` and `runs: RagEvaluationRun[] = []`
+(attribute: false); `metricId: string = ''` (attribute `metric-id`, with the first metric used for
+display when unset/unmatched); `slice: string = ''`; `label: string = ''`;
+`showChart: boolean = true` (attribute `show-chart`, reflected, string-aware true-default
+converter); `chartHeight: string = '220px'` (attribute `chart-height`).
 
-**Events:** `lr-metric-change`, `lr-slice-change`, `lr-run-select`.
+`RagEvaluationMetric = { id, label, category, format? }`, where category is
+`'retrieval' | 'generation' | 'system' | custom-string` and format is `'number' | 'percent'`.
+`RagEvaluationRun = { id, label, metrics: Record<string, number>; slice?, timestamp?, metadata? }`.
+
+**Events:** `lr-metric-change` (`{ metricId }`), `lr-slice-change` (`{ slice }`), and
+`lr-run-select` (`{ run }`). All are controlled intents; the component does not mutate the
+corresponding selection properties.
 
 **CSS parts:** `base`, `heading`, `slices`, `slice`, `slice-selected`, `metrics`, `metric`,
 `metric-selected`, `chart`, `runs`, `runs-heading`, `run`, `empty`.
+
+Percent values clamp to 0–1 and all numbers use `effectiveLocale`. The chart is built from the
+filtered run order; the host computes every metric and owns evaluation execution.
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/retrieval/rag-eval-dashboard/rag-eval-dashboard.js';

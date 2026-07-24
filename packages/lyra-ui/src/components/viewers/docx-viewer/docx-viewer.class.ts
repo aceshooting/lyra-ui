@@ -178,6 +178,16 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @csspart search-match - A painted in-document search match.
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @cssprop [--lr-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
+ * @cssprop --lr-docx-viewer-highlight-accent-background - Accent highlight background.
+ * @cssprop --lr-docx-viewer-highlight-success-background - Success highlight background.
+ * @cssprop --lr-docx-viewer-highlight-warning-background - Warning highlight background.
+ * @cssprop --lr-docx-viewer-highlight-danger-background - Danger highlight background.
+ * @cssprop --lr-docx-viewer-highlight-neutral-background - Neutral highlight background.
+ * @cssprop --lr-docx-viewer-highlight-active-background - Active highlight background.
+ * @cssprop --lr-docx-viewer-highlight-active-outline - Active fallback-highlight outline.
+ * @cssprop --lr-docx-viewer-search-match-background - Search-match background.
+ * @cssprop --lr-docx-viewer-search-match-active-background - Active search-match background.
+ * @cssprop --lr-docx-viewer-search-match-active-foreground - Active search-match foreground.
  */
 export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];

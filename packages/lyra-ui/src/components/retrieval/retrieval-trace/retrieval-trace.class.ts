@@ -121,7 +121,8 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   @property({ attribute: false }) stages: RetrievalStage[] = [];
   /** Controlled selection, forwarded verbatim to the internal `<lr-span-waterfall>`'s `activeSpanId`. */
   @property({ attribute: 'active-stage-id' }) activeStageId: string | null = null;
-  /** Accessible name for the internal timeline. Falls back to a host `aria-label`, then the timeline's own localized default. */
+  /** Accessible name for the internal timeline. A host `aria-label` wins; otherwise this value
+   *  falls back to the timeline's own localized default. */
   @property() label = '';
 
   /** Ids of stages whose evidence panel is open. Absence means collapsed -- every stage starts collapsed. */
@@ -250,12 +251,12 @@ export class LyraRetrievalTrace extends LyraElement<LyraRetrievalTraceEventMap> 
   override render(): TemplateResult {
     const spans = this.toSpans();
     const hasAnyEvidence = this.stages.some((s) => hasEvidence(s.evidence));
-    // Falls back to a host `aria-label` before the internal timeline's own localized default --
-    // mirrors `<lr-trace-tree>`'s identical `label` fallback chain. The internal
+    // A host `aria-label` wins over `label`, then falls back to the internal timeline's own
+    // localized default. The internal
     // `<lr-span-waterfall>` already has this same fallback built in for *its own* host
     // `aria-label`, but that never sees this component's `aria-label` (attributes don't cross
     // custom-element boundaries), so the resolution has to happen here and be forwarded.
-    const label = this.label || this.getAttribute('aria-label') || '';
+    const label = this.getAttribute('aria-label') || this.label || '';
     return html`
       <div part="base">
         <lr-span-waterfall

@@ -13,11 +13,23 @@
 
 ## `lr-prompt-studio`
 
-Controlled prompt-development workbench for ordered role messages, `{{variable}}` substitution,
-saved versions, resolved preview, and save/run intents.
+Prompt-development workbench for ordered role messages, `{{variable}}` substitution, saved
+versions, resolved preview, and save/run intents. Message and variable edits update the component's
+current arrays before emitting their complete next state; persistence and execution remain
+host-owned.
 
-**Properties:** `messages`, `variables`, `versions`, `selectedVersionId`, `label`, `running`,
-`disabled`.
+**Properties:** `messages: PromptStudioMessage[] = []` and
+`variables: PromptStudioVariable[] = []` are property-only editor state: user edits update the
+current arrays before `lr-change` is emitted, while the host remains responsible for persistence.
+`versions: PromptStudioVersion[] = []` is a property-only host-controlled input;
+`selectedVersionId: string = ''` (attribute `selected-version-id`); `label: string = ''`;
+`running: boolean = false` and `disabled: boolean = false` (both reflected).
+
+**Exported types:** `PromptStudioRole = 'system' | 'user' | 'assistant' | 'tool'`;
+`PromptStudioMessage = { id, role, content, name? }`; `PromptStudioVariable = { name, value,
+description? }`; `PromptStudioVersion = { id: string; label: string; messages:
+PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`; and
+`PromptStudioState = { messages, variables }`.
 
 **Events:** `lr-change`, `lr-run`, `lr-save` (all carry complete messages/variables);
 `lr-version-select` (`{ version }`).
@@ -25,6 +37,8 @@ saved versions, resolved preview, and save/run intents.
 **CSS parts:** `base`, `toolbar`, `editor`, `messages`, `message`, `message-role`,
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
 `preview`, `save`, `run`.
+
+**Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/prompt-studio/prompt-studio.js';

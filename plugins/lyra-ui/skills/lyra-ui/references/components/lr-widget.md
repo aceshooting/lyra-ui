@@ -34,15 +34,16 @@ position) survives the transition.
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
   CSS `inset` independently from `fullscreenInset`; when empty, it follows `fullscreenInset`
 - `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
-  chart/table toggle inside the same card chrome; `WidgetView { id: string; label: string; icon?:
-  TemplateResult }`. Each entry gets a header toggle button (`[part='view-toggle']`) and a
-  `<slot name="view-${id}">`. Empty (the default) renders today's single unnamed default slot as the
-  sole view, unchanged.
+  chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
+  TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
+  (`[part='view-toggle']`) and a `<slot name="view-${id}">`. An icon-only view should set
+  `ariaLabel`; if both labels are omitted, the button uses `id` as a last-resort accessible name.
+  Empty (the default) renders today's single unnamed default slot as the sole view, unchanged.
 - `activeView: string = ''` (attribute: false) — the currently active view's `id`; defaults to the
   first entry of `views` (or `''` when `views` is empty). Settable directly to control the active
   view externally; also updated internally when a view toggle is clicked.
-- `accessibleLabel: string = ''` (attribute `aria-label`) — overrides the label-derived fullscreen
-  dialog name.
+- `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the label-derived
+  fullscreen dialog name.
 - `storageKey?: string` (attribute `storage-key`) — when set, persists `collapsed` to `localStorage`
   under `lr-widget:${storageKey}` and restores it on the next mount (mirrors `lr-app-rail`'s/
   `lr-table`'s identical `storage-key` pattern). Without a `storageKey` there is no persistence and

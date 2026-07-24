@@ -16,9 +16,8 @@
 Ordered multi-step wizard/form navigation: an index/label per step, `current`/`completed`/`disabled`/
 `error` state, and click-to-jump. First-party invention (no Web Awesome equivalent). Fully
 data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
-click, or Enter/Space on a non-disabled step, fires a cancelable `lr-step-select`, and the host
-decides whether/how `steps` changes in response (mirroring `lr-dialog-close`'s cancelable-event
-convention).
+click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
+decides whether/how `steps` changes in response.
 
 **Properties:**
 - `steps: StepItem[] = []` (attribute: false) — `StepItem { id: string; label: string; state:
@@ -64,19 +63,20 @@ convention).
   doesn't resolve to a length. Also reflected as `data-effective-orientation` (only present while
   `orientationBreakpoint` resolves to a usable length).
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
-  `role="tablist"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the
-  tablist renders without an `aria-label` (there is no localized default name).
+  `role="list"` step strip; attribute-reflects from a host-level `aria-label`. Unset, the list
+  renders without an `aria-label` (there is no localized default name).
 
 **Events:** `lr-step-select` (`detail: { index, id }`) — fired on click, or Enter/Space while
-focused, on a non-`disabled` step. Cancelable, though this component takes no default action of its
-own to prevent (it never mutates `steps`) — `preventDefault()` is available for a host that wants a
-single place to short-circuit its own listener's follow-up work. `lr-stepper-orientation-change`
+focused, on a non-`disabled` step. It is non-cancelable because the component takes no default
+action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
 **Slots:** none.
 
-**CSS parts:** `base` (root wrapper, `role="tablist"`), `step` (a single step button, `role="tab"`),
+**CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
+one step), `step` (a single native button; the current step carries `aria-current="step"` and every
+other step carries `aria-current="false"`),
 `step-icon` (optional leading topic glyph from the step's `icon` field; only rendered when the step
 has one, additionally to — never instead of — `step-index`/`step-check`), `step-index` (the numbered
 index chip, shown for `pending`/`current`/`error` steps), `step-check` (the completed-checkmark
@@ -127,14 +127,10 @@ each falls back to the token its rule used before. Otherwise shared tokens —
 - there's no built-in "step forward/back" method — advancing the wizard is entirely the host's job:
   react to `lr-step-select` (or its own Next/Back buttons) and reassign `steps` with updated
   `state` values.
-- `role="tablist"`/`role="tab"` back the keyboard/focus contract (roving tabindex, arrow-key
-  navigation) even though this isn't a `<lr-tabs>`-style panel switcher — there's no associated
-  `role="tabpanel"`, since this component renders no panel content of its own.
+- The stepper exposes ordered progress/navigation semantics (`list`/`listitem` plus native step
+  buttons), not tabs: it owns no tab panels. Roving tabindex and orientation-aware arrow-key
+  navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
-
-**Additional API surface:**
-
-- `part="step-item"` — The `role="listitem"` wrapper for one step.
 
 ---

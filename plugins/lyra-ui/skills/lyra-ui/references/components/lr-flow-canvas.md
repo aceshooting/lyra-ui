@@ -36,8 +36,10 @@ controlled-component contract.
   `lr-node-palette` drag sets, emitting `lr-node-add`
 - `locked: boolean = false` (reflected) — freezes pan/zoom/drag/connect without touching the other
   gesture flags
-- `selectedNodeIds: string[] = []`, `selectedEdgeIds: string[] = []` (attribute: false) — controlled;
-  the host assigns these back from `lr-selection-change`
+- `selectedNodeIds: string[] = []`, `selectedEdgeIds: string[] = []` (attribute: false) — seed or
+  replace selection state. Node/edge activation and clear-selection gestures also update these
+  arrays internally before emitting `lr-selection-change`; a host may assign its own authoritative
+  state back.
 - `minZoom: number = 0.25` (attribute `min-zoom`), `maxZoom: number = 2` (attribute `max-zoom`)
 - `grid: number = 8` — snap step in content px for drags/nudges/drop positions (`0` disables
   snapping); also the dotted background's base spacing
@@ -116,9 +118,10 @@ treatment entirely.
 ```
 
 **Known gotchas:**
-- Fully controlled: `nodes`/`edges`/`selectedNodeIds`/`selectedEdgeIds` are never mutated
-  internally — `lr-node-move`, `lr-selection-change`, `lr-connect`, `lr-node-add`, and
-  `lr-selection-delete` are all requests the host applies back, same contract as `lr-table`.
+- `nodes` and `edges` are controlled inputs: move, connect, add, and delete events are requests the
+  host applies back. Selection is hybrid state: `selectedNodeIds`/`selectedEdgeIds` accept external
+  replacement, while node/edge activation and clear-selection gestures update them internally and
+  emit `lr-selection-change`.
 - Auto-layout (via the dependency-free `layeredLayout()` util) only ever positions nodes that are
   missing an explicit `position`; a node the host has already positioned is left exactly where it is
   and used as a fixed anchor for the rest of the layout pass.

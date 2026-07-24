@@ -519,10 +519,10 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     return html`
       <div part="base">
         <div part="toolbar">
-          <button part="previous-button" type="button" aria-label=${this.localize('previous')} ?disabled=${disabled} @click=${this.previous}>
+          <button part="previous-button" type="button" aria-label=${this.localize('ebookViewerPreviousChapter')} ?disabled=${disabled} @click=${this.previous}>
             <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>
           </button>
-          <button part="next-button" type="button" aria-label=${this.localize('next')} ?disabled=${disabled} @click=${this.next}>
+          <button part="next-button" type="button" aria-label=${this.localize('ebookViewerNextChapter')} ?disabled=${disabled} @click=${this.next}>
             <span part="next-icon" aria-hidden="true">${chevronIcon()}</span>
           </button>
         </div>

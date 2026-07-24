@@ -48,7 +48,7 @@ of the stream arrives.
 cursor bar's inline size), `--lr-streaming-text-cursor-height` (default `1em`) — both
 component-specific, since no shared "inline cursor bar" token exists, the same pattern
 `<lr-typing-indicator>`'s own `--lr-typing-cursor-width`/`-height` use, plus shared
-`--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-base` (blink animation
+`--lr-space-xs` (cursor's `margin-inline-start`) and `--lr-transition-ambient` (blink animation
 cycle length).
 
 **Optional peer deps:** none — internally imports and auto-registers `<lr-markdown>` for

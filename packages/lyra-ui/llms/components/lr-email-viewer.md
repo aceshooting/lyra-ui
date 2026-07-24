@@ -51,8 +51,8 @@ of `[part="body"]`; also settable via the `max-height` property, which writes th
 
 **Optional peer dependencies:** install `postal-mime` and `dompurify` with
 `pnpm add postal-mime dompurify`. The component registers `message/rfc822` and falls back to
-matching `.eml` filenames in `<lr-document-viewer>`. Deviates from the shared degraded-render
-contract: an absent `postal-mime` renders `[part="error"]` with the localized
+matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is explicit: an absent
+`postal-mime` renders `[part="error"]` with the localized
 `emailViewerMissingParser` message (nothing is parseable without it), and an HTML-only message
 (no `text/plain` alternative) with `dompurify` absent renders the localized
 `documentViewerMissingSanitizer` message rather than silently showing an empty body.

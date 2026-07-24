@@ -209,8 +209,10 @@ stack overflow on cyclic `data`.
 **Methods:** `runSearch(query)` sets the declarative `search` property and awaits the recompute,
 resolving the match count — named distinctly from `search` because a class member can't share a name
 with a reactive property. `searchNext()`/`searchPrevious()` advance/step back a match cursor
-(wrapping) and scroll the active match into view, resolving `false` when there are no matches.
-`clearSearch()` resets `search` to `''`, clearing all matches and the cursor.
+(wrapping), reveal that selected match even when one of its ancestors was explicitly collapsed,
+mark it as the active `aria-current` result, announce its position, and scroll it into view;
+they resolve `false` when there are no matches. `clearSearch()` resets `search` to `''`, clearing all
+matches and the cursor.
 
 **Events:** `lr-copy` (`detail: { text: string }`) — fired by the top-level copy button or a
 per-node one. Fires even when `navigator.clipboard` is unavailable or the write silently failed
@@ -273,9 +275,11 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
   binding, never as a plain HTML attribute.
 - Search highlighting auto-expands only the *ancestors* of a match, not the whole tree — a
   non-matching sibling subtree elsewhere stays collapsed (or expanded) exactly as it already was.
-- An explicit per-node expand/collapse (from clicking a node's `toggle` button) permanently overrides
-  both `collapsedDepth` and any search-driven auto-expand for that path, until `data` is reassigned
-  with a different shape.
+- An explicit per-node expand/collapse (from clicking a node's `toggle` button) overrides
+  `collapsedDepth` and declarative search-driven auto-expansion for that path. Imperative
+  `searchNext()`/`searchPrevious()` navigation may reopen the ancestors of the selected result so
+  the active match is never hidden; otherwise the override persists until `data` is reassigned with
+  a different shape.
 - Per-node copy buttons call `stopPropagation()` on click so clicking one doesn't also toggle the
   row's expand/collapse state.
 
@@ -620,6 +624,9 @@ First-party invention (no Web Awesome equivalent).
 - `contextLines: number | undefined` (attribute: `context-lines`) — keeps this many unchanged
   lines around each change and collapses longer unchanged runs into a localized fold marker. The
   default `undefined` shows every line; negative and non-finite values also disable folding.
+- `maxLines: number = 5000` (attribute `max-lines`) — maximum logical lines accepted on either
+  side. Larger input renders the localized `diffViewTooLarge` fallback without computing or
+  highlighting the diff. Set the property to `Infinity` explicitly to opt into unbounded diffing.
 
 **Events:** `lr-copy` (`detail: { text: string }` — the full unified-diff text, fired on
 copy-button activation regardless of whether the clipboard write actually succeeded).
@@ -630,7 +637,8 @@ copy-button activation regardless of whether the clipboard write actually succee
 `data-type="equal"|"add"|"remove"|"empty"|"fold"` — `"empty"` is an unbalanced-replace placeholder cell in
 `layout="split"` and never carries a `+`/`-` prefix; `"fold"` is the localized unchanged-lines
 marker), `copy-button` (the copy affordance, only
-rendered while `copyable`), `side` (one column in `layout="split"`, `data-side="old"|"new"`).
+rendered while `copyable`), `limit` (the localized over-`maxLines` fallback), `side` (one column in
+`layout="split"`, `data-side="old"|"new"`).
 
 **Themeable custom properties:** `--lr-diff-view-font` (default `var(--lr-font-mono)`), plus
 shared tokens `--lr-color-border`/`-surface`/`-success`/`-success-quiet`/`-danger`/
@@ -658,13 +666,13 @@ same line-diff function this component's own `render()`/copy handler call, expos
 consumer can compute or unit-test the same alignment without instantiating the element at all.
 
 **Known gotchas:**
-- the alignment is a genuine O(n·m) longest-common-subsequence dynamic program over lines (split on
-  `\n`), not a naive "every removed line then every added line" — fine for a typical
-  tool-call/transcript-sized diff, but a very large pair of texts costs quadratic time/memory;
-  there's no line-count guard or chunking of its own.
-- `oldText`/`newText` are recomputed into the diff on every render — this component keeps no separate
-  cached diff state, so binding either property to something that changes on every keystroke
-  recomputes the whole alignment each time.
+- line splitting normalizes LF, CRLF, and lone CR endings before alignment and syntax-token indexing,
+  so files that differ only by line-ending convention do not appear wholly changed.
+- alignment uses Hirschberg longest-common-subsequence matching: O(n·m) time with linear working
+  memory. The 5,000-line per-side default ceiling bounds pathological inputs; `Infinity` is an
+  explicit performance-risk opt-out.
+- the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
+  `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
 
 **Additional API surface:**
 

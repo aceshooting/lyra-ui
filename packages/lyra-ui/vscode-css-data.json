@@ -1759,10 +1759,80 @@
       }
     },
     {
+      "name": "--lr-docx-viewer-highlight-accent-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Accent highlight background."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-highlight-active-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Active highlight background."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-highlight-active-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Active fallback-highlight outline."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-highlight-danger-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Danger highlight background."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-highlight-neutral-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Neutral highlight background."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-highlight-success-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Success highlight background."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-highlight-warning-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Warning highlight background."
+      }
+    },
+    {
       "name": "--lr-docx-viewer-max-height",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-docx-viewer>`** (default: `none`) — Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-search-match-active-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Active search-match background."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-search-match-active-foreground",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Active search-match foreground."
+      }
+    },
+    {
+      "name": "--lr-docx-viewer-search-match-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-docx-viewer>`** — Search-match background."
       }
     },
     {
@@ -2267,6 +2337,83 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-heatmap>`** (default: `var(--lr-color-text)`) — Hover tooltip text color."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-accent-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Accent highlight background."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-accent-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Accent highlight outline."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-danger-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Danger highlight background."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-danger-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Danger highlight outline."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-flash-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Flash-state background."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-neutral-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Neutral highlight background."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-neutral-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Neutral highlight outline."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-success-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Success highlight background."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-success-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Success highlight outline."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-warning-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Warning highlight background."
+      }
+    },
+    {
+      "name": "--lr-highlight-layer-warning-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-highlight-layer>`** — Warning highlight outline."
       }
     },
     {
@@ -2945,7 +3092,7 @@
       "name": "--lr-notebook-viewer-active-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"cell\"]` currently targeted by an anchor."
+        "value": "**`<lr-notebook-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Background of the `[part=\"cell\"]` currently targeted by an anchor or the active search match."
       }
     },
     {

@@ -159,6 +159,10 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     }
   }
 
+  private stopZoomableFrameEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   /** Wraps `content` in the internal `<lr-zoomable-frame>` when `zoomable`; otherwise renders it
    *  (plus the highlight layer, which needs the same relatively-positioned sibling context either
    *  way) unwrapped, preserving pre-`zoomable` DOM exactly. */
@@ -169,6 +173,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     </div>`;
     const frame = this.zoomable ? html`<lr-zoomable-frame
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
+      @lr-zoom-change=${this.stopZoomableFrameEvent}
     >${inner}</lr-zoomable-frame>` : inner;
     return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
   }

@@ -78,7 +78,7 @@ invention (no Web Awesome equivalent).
 - `overscan: number = 6` — extra rows rendered beyond the visible viewport on each side; finite
   values are floored and clamped to 0–100, while non-finite values use the default 6, so an invalid
   runtime value cannot disable windowing and render the entire collection.
-- `activeId: string = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
+- `activeId: string | number | '' = ''` (attribute `active-id`) — when set and it matches a row's `keyFunction`
   result (compared with `Object.is` against the typed value — attribute values arrive as strings, so
   assign the property directly for a numeric key), that row is smoothly scrolled into view whenever
   this changes, and rendered with `aria-current="true"`.

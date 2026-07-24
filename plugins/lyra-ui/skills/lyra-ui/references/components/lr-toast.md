@@ -60,8 +60,8 @@ DOM.
 
 **Themeable custom properties:** `--lr-toast-accent-width` (4px),
 `--lr-toast-show-duration`/`--lr-toast-hide-duration`
-(`var(--lr-transition-base, 180ms ease-out)` — 180ms by default, matching the JS-side show/hide
-animation timer, which is not itself reading this token), `--lr-toast-padding`
+(`var(--lr-transition-base, 180ms ease-out)` — the show/hide lifecycle reads the resolved computed
+transition duration and uses it for its completion fallback), `--lr-toast-padding`
 (`var(--lr-space-m)`), `--lr-toast-font-size` (`1rem`) — both are auto-swapped per `size`, from a
 compact `xs` up to a roomier `xl` — `--lr-toast-accent-color` (defaults to `--lr-color-border`,
 auto-swapped per `variant` to `--lr-color-brand/-success/-warning/-danger`).
@@ -105,10 +105,8 @@ at another, since `placement` is a per-call option rather than a single global r
 ```
 
 **Known gotchas:**
-- possible nested live-region double-announcement: the stack region is
-  `role="status" aria-live="polite"` **and** each `lr-toast-item` independently self-assigns its
-  own `role` (`status`/`alert`) — nesting live regions can cause some screen readers to announce a
-  new toast twice. Plausible from the code, unverified against real AT.
+- the stack itself has no live-region role; each `lr-toast-item` owns the single `status`/`alert`
+  role appropriate to its current variant, avoiding nested live-region announcements.
 - the close button's accessible name is derived from the toast's own message text (`"Close: <first
   40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or

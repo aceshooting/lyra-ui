@@ -341,6 +341,10 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     `;
   };
 
+  private stopVirtualListEvent(event: Event): void {
+    event.stopPropagation();
+  }
+
   override render(): TemplateResult {
     const count = this.effectivePageCount();
     const items = Array.from({ length: count }, (_unused, i) => i + 1);
@@ -358,6 +362,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
           .renderItem=${this.renderPageItem}
           .keyFunction=${(item: unknown) => item as number}
           .activeId=${this.safePage}
+          @lr-visible-range-changed=${this.stopVirtualListEvent}
         ></lr-virtual-list>
       </div>
     `;

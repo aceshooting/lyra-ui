@@ -64,10 +64,12 @@ capacity), `segment` (one occupied segment — carries `data-tone` and, for cust
 <lr-context-meter variant="ring" total="128000" .segments=${segments}></lr-context-meter>
 ```
 
-`role="img"` and a computed `aria-label` are set imperatively on the *host* element itself in
-`willUpdate` (mirroring `lr-gauge`'s "meter" role convention) — every internal node (`track`,
-`segment`, the ring's `<svg>`, `label`) is `aria-hidden`, so a screen reader gets one meaningful
-summary string instead of the raw markup. That summary's "used" figure is the sum of
+An internal visually-hidden semantic node carries `role="meter"` plus `aria-valuenow`,
+`aria-valuemin`, and `aria-valuemax` whenever `total > 0`; without a valid positive total it uses
+`role="group"` and omits numeric meter attributes. Its accessible name is the host `aria-label`
+when present, otherwise the generated summary. A separate visually-hidden segment list exposes
+each labeled quantity, while the visible track, segments, ring SVG, and visible label remain
+`aria-hidden`. The summary's "used" figure is the sum of
 `segments[].value`, clamped to `total` whenever `total > 0` so the announced text can never claim
 more than 100% used (e.g. `segments` summing to `150000` against `total="128000"` still announces
 `"128,000 of 128,000 used"`) — matching what the *visual* meter shows, since each segment's ratio is
@@ -81,8 +83,8 @@ numbers, so the two circular-meter components in the library share one visual sc
 
 **Known gotchas:**
 - The ring variant's per-segment `<title>` and the bar variant's per-segment `title=` attribute are
-  native mouse-hover tooltips only — they sit inside `aria-hidden` markup, so screen readers never
-  read them; only the host's own `role="img"`/`aria-label` carries accessible information.
+  native mouse-hover tooltips only — they sit inside `aria-hidden` markup. Screen readers use the
+  hidden meter/group summary and segment list instead.
 - `variant="ring"` fixes the host at `8em × 8em` (`:host([variant='ring'])`) — the bar variant's
   `inline-size: 100%` does not apply in ring mode; resize it via `font-size` or an explicit
   width/height override on the host instead.

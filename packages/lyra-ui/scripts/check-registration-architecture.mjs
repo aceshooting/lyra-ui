@@ -214,6 +214,98 @@ function isRegistrarReference(node, bindings, namespaces) {
   );
 }
 
+/**
+ * Returns whether a runtime expression contains the registrar capability. This is deliberately
+ * narrower than a generic AST walk: object property names and non-computed member names are not
+ * values, while object property values, array elements, spreads, and computed operands are.
+ */
+function containsRegistrarCapability(node, bindings, namespaces) {
+  node = unwrapExpression(node);
+  if (!node) return false;
+  if (
+    isRegistrarReference(node, bindings, namespaces) ||
+    isNamespaceReference(node, namespaces)
+  ) {
+    return true;
+  }
+  if (node.type === 'SpreadElement') {
+    return containsRegistrarCapability(node.argument, bindings, namespaces);
+  }
+  if (node.type === 'SequenceExpression' || node.type === 'ArrayExpression') {
+    const expressions = node.type === 'SequenceExpression' ? node.expressions : node.elements;
+    return expressions.some((expression) =>
+      expression && containsRegistrarCapability(expression, bindings, namespaces)
+    );
+  }
+  if (node.type === 'ObjectExpression') {
+    return node.properties.some((property) => {
+      if (property.type === 'SpreadElement') {
+        return containsRegistrarCapability(property.argument, bindings, namespaces);
+      }
+      return containsRegistrarCapability(property.value, bindings, namespaces);
+    });
+  }
+  if (node.type === 'MemberExpression') {
+    const object = unwrapExpression(node.object);
+    // Accessing an unrelated member of the imported prefix namespace is not an escape. A direct
+    // `prefix.defineElement` member was already recognized by isRegistrarReference() above.
+    if (!isNamespaceReference(object, namespaces)) {
+      if (containsRegistrarCapability(object, bindings, namespaces)) return true;
+    }
+    return Boolean(
+      node.computed &&
+      containsRegistrarCapability(node.property, bindings, namespaces)
+    );
+  }
+  if (node.type === 'CallExpression' || node.type === 'NewExpression') {
+    return (
+      containsRegistrarCapability(node.callee, bindings, namespaces) ||
+      node.arguments.some((argument) =>
+        containsRegistrarCapability(argument, bindings, namespaces)
+      )
+    );
+  }
+  if (
+    node.type === 'AssignmentExpression' ||
+    node.type === 'BinaryExpression' ||
+    node.type === 'LogicalExpression'
+  ) {
+    return (
+      containsRegistrarCapability(node.left, bindings, namespaces) ||
+      containsRegistrarCapability(node.right, bindings, namespaces)
+    );
+  }
+  if (node.type === 'ConditionalExpression') {
+    return (
+      containsRegistrarCapability(node.test, bindings, namespaces) ||
+      containsRegistrarCapability(node.consequent, bindings, namespaces) ||
+      containsRegistrarCapability(node.alternate, bindings, namespaces)
+    );
+  }
+  if (
+    node.type === 'AwaitExpression' ||
+    node.type === 'UnaryExpression' ||
+    node.type === 'UpdateExpression' ||
+    node.type === 'YieldExpression'
+  ) {
+    return containsRegistrarCapability(node.argument, bindings, namespaces);
+  }
+  if (node.type === 'TaggedTemplateExpression') {
+    return (
+      containsRegistrarCapability(node.tag, bindings, namespaces) ||
+      node.quasi.expressions.some((expression) =>
+        containsRegistrarCapability(expression, bindings, namespaces)
+      )
+    );
+  }
+  if (node.type === 'TemplateLiteral') {
+    return node.expressions.some((expression) =>
+      containsRegistrarCapability(expression, bindings, namespaces)
+    );
+  }
+  return false;
+}
+
 function directVariableDeclarations(statements) {
   return statements
     .filter((statement) => statement.type === 'VariableDeclaration')
@@ -285,15 +377,37 @@ function programRegistersElement(program) {
   if (imported.bindings.size === 0 && imported.namespaces.size === 0) return false;
   let found = false;
 
+  const walkBindingInitializers = (pattern, bindings, namespaces) => {
+    if (found || !pattern) return;
+    if (pattern.type === 'TSParameterProperty') {
+      walkBindingInitializers(pattern.parameter, bindings, namespaces);
+    } else if (pattern.type === 'AssignmentPattern') {
+      walk(pattern.right, bindings, namespaces);
+      walkBindingInitializers(pattern.left, bindings, namespaces);
+    } else if (pattern.type === 'RestElement') {
+      walkBindingInitializers(pattern.argument, bindings, namespaces);
+    } else if (pattern.type === 'ArrayPattern') {
+      for (const element of pattern.elements) {
+        walkBindingInitializers(element, bindings, namespaces);
+      }
+    } else if (pattern.type === 'ObjectPattern') {
+      for (const property of pattern.properties) {
+        if (property.type === 'RestElement') {
+          walkBindingInitializers(property.argument, bindings, namespaces);
+          continue;
+        }
+        if (property.computed) walk(property.key, bindings, namespaces);
+        walkBindingInitializers(property.value, bindings, namespaces);
+      }
+    }
+  };
+
   const walk = (node, bindings, namespaces) => {
     if (found || !node || typeof node !== 'object') return;
     if (
       node.type === 'VariableDeclarator' &&
       node.init &&
-      (
-        isRegistrarReference(node.init, bindings, namespaces) ||
-        isNamespaceReference(node.init, namespaces)
-      )
+      containsRegistrarCapability(node.init, bindings, namespaces)
     ) {
       // Aliasing the registrar (including exporting that alias later) is itself an unsafe
       // registration-capability edge. Treat it fail-closed instead of requiring every downstream
@@ -303,10 +417,7 @@ function programRegistersElement(program) {
     }
     if (
       node.type === 'AssignmentExpression' &&
-      (
-        isRegistrarReference(node.right, bindings, namespaces) ||
-        isNamespaceReference(node.right, namespaces)
-      )
+      containsRegistrarCapability(node.right, bindings, namespaces)
     ) {
       found = true;
       return;
@@ -327,10 +438,7 @@ function programRegistersElement(program) {
     }
     if (
       node.type === 'ExportDefaultDeclaration' &&
-      (
-        isRegistrarReference(node.declaration, bindings, namespaces) ||
-        isNamespaceReference(node.declaration, namespaces)
-      )
+      containsRegistrarCapability(node.declaration, bindings, namespaces)
     ) {
       found = true;
       return;
@@ -338,10 +446,7 @@ function programRegistersElement(program) {
     if (
       node.type === 'ReturnStatement' &&
       node.argument &&
-      (
-        isRegistrarReference(node.argument, bindings, namespaces) ||
-        isNamespaceReference(node.argument, namespaces)
-      )
+      containsRegistrarCapability(node.argument, bindings, namespaces)
     ) {
       found = true;
       return;
@@ -349,7 +454,7 @@ function programRegistersElement(program) {
     if (
       node.type === 'CallExpression' &&
       (
-        isRegistrarReference(node.callee, bindings, namespaces) ||
+        containsRegistrarCapability(node.callee, bindings, namespaces) ||
         (
           unwrapExpression(node.callee)?.type === 'MemberExpression' &&
           ['apply', 'bind', 'call'].includes(propertyName(unwrapExpression(node.callee)) ?? '') &&
@@ -361,13 +466,17 @@ function programRegistersElement(program) {
         )
         ||
         node.arguments.some((argument) =>
-          argument.type !== 'SpreadElement' &&
-          (
-            isRegistrarReference(argument, bindings, namespaces) ||
-            isNamespaceReference(argument, namespaces)
-          )
+          containsRegistrarCapability(argument, bindings, namespaces)
         )
       )
+    ) {
+      found = true;
+      return;
+    }
+    if (
+      (node.type === 'PropertyDefinition' || node.type === 'AccessorProperty') &&
+      node.value &&
+      containsRegistrarCapability(node.value, bindings, namespaces)
     ) {
       found = true;
       return;
@@ -378,15 +487,35 @@ function programRegistersElement(program) {
       node.type === 'FunctionExpression' ||
       node.type === 'ArrowFunctionExpression'
     ) {
+      const parameterBindings = new Set(bindings);
+      const parameterNamespaces = new Set(namespaces);
+      const parameterNames = new Set();
+      if (node.id) parameterNames.add(node.id.name);
+      for (const parameter of node.params) collectBindingNames(parameter, parameterNames);
+      for (const name of parameterNames) {
+        parameterBindings.delete(name);
+        parameterNamespaces.delete(name);
+      }
+
       const functionBindings = new Set(bindings);
       const functionNamespaces = new Set(namespaces);
-      const localNames = new Set();
-      if (node.id) localNames.add(node.id.name);
-      for (const parameter of node.params) collectBindingNames(parameter, localNames);
+      const localNames = new Set(parameterNames);
       collectFunctionVarBindings(node.body, localNames);
       for (const name of localNames) {
         functionBindings.delete(name);
         functionNamespaces.delete(name);
+      }
+      for (const parameter of node.params) {
+        walkBindingInitializers(parameter, parameterBindings, parameterNamespaces);
+      }
+      if (
+        !found &&
+        node.type === 'ArrowFunctionExpression' &&
+        node.body.type !== 'BlockStatement' &&
+        containsRegistrarCapability(node.body, functionBindings, functionNamespaces)
+      ) {
+        found = true;
+        return;
       }
       walk(node.body, functionBindings, functionNamespaces);
       return;

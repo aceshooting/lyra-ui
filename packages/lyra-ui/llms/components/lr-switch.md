@@ -34,7 +34,7 @@ control's visible, clickable label (same as `<lr-checkbox>`).
 **Events:** `lr-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
 Space/Enter); not fired for a programmatic `.checked` assignment.
 
-**Methods:** `focus(options?)` and `blur()` forward to the internal switch control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
 
 **Slots:**
 - default — label text, rendered next to the track. Clicking it toggles the switch, the same as

@@ -32,7 +32,7 @@ visual box/checkmark. Structurally the same idea as `<lr-switch>` (form-associat
 `lr-change` alias (`detail: { checked: boolean }`). Programmatic `.checked` assignments are
 silent. Internal `focus`/`blur` are re-dispatched as bubbling, composed host events.
 
-**Methods:** `focus(options?)` and `blur()` forward to the internal checkbox control.
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal checkbox control.
 
 **Slots:** default — label text, rendered next to the box. Clicking it toggles the checkbox, the
 same as clicking a native checkbox's associated `<label>`. If left empty, set `aria-label` on the

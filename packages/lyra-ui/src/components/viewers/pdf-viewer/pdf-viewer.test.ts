@@ -199,7 +199,7 @@ describe('lr-pdf-viewer', () => {
       expect((await eventPromise).detail.error).to.exist;
       await waitFor(el, '[part="error"]');
       expect(destroyCalls).to.equal(1);
-      expect(el.shadowRoot!.querySelector('lr-virtual-list')).to.not.exist;
+      expect(el.shadowRoot!.querySelector('lr-virtual-list') === null).to.be.true;
     } finally {
       restore();
     }
@@ -285,9 +285,13 @@ describe('lr-pdf-viewer', () => {
     try {
       el.src = 'https://example.test/report.pdf';
       await waitFor(el, 'lr-virtual-list');
+      let leaked = 0;
+      el.addEventListener('lr-visible-range-changed', () => leaked++);
+      const pageChange = oneEvent(el, 'lr-page-change');
       el.shadowRoot!.querySelector('lr-virtual-list')!.dispatchEvent(new CustomEvent('lr-visible-range-changed', { detail: { start: 2, end: 3 }, bubbles: true, composed: true }));
-      await el.updateComplete;
+      expect((await pageChange).detail).to.deep.equal({ page: 3, pageCount: 5 });
       expect(el.page).to.equal(3);
+      expect(leaked).to.equal(0);
     } finally { restore(); }
   });
 
@@ -1756,6 +1760,18 @@ describe('virtualized page part styling', () => {
     return listShadowRoot(el);
   }
 
+  function expectPageLayersAligned(root: ShadowRoot): void {
+    const canvasRect = root.querySelector('[part="page-canvas"]')!.getBoundingClientRect();
+    for (const [name, selector] of [
+      ['text-layer', '[part="text-layer"]'],
+      ['highlight-layer', 'lr-highlight-layer'],
+    ] as const) {
+      const layerRect = root.querySelector(selector)!.getBoundingClientRect();
+      expect(layerRect.left, `${name} left`).to.be.closeTo(canvasRect.left, 0.5);
+      expect(layerRect.width, `${name} width`).to.be.closeTo(canvasRect.width, 0.5);
+    }
+  }
+
   it('styles the page wrapper, its canvas, and its text layer', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));
@@ -1772,7 +1788,7 @@ describe('virtualized page part styling', () => {
       expect(canvas.tagName).to.equal('CANVAS');
       expect(getComputedStyle(page).position).to.equal('relative');
       expect(getComputedStyle(page).display).to.equal('flex');
-      expect(getComputedStyle(page).justifyContent).to.equal('flex-start');
+      expect(getComputedStyle(page).justifyContent).to.equal('safe center');
       expect(getComputedStyle(canvas).boxShadow).to.contain(tokenColor(el, '--lr-color-border'));
       expect(getComputedStyle(textLayer).position).to.equal('absolute');
       expect(getComputedStyle(textLayer).overflow).to.equal('hidden');
@@ -1781,6 +1797,30 @@ describe('virtualized page part styling', () => {
       restore();
     }
   });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`centers fitting page layers together in ${direction}`, async () => {
+      const wrapper = (await fixture(html`
+        <div dir=${direction} style="width: 320px"><lr-pdf-viewer></lr-pdf-viewer></div>
+      `)) as HTMLElement;
+      const el = wrapper.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+      installFakeLoader(el, fakeDocument(1));
+      const restore = stubFetch();
+      try {
+        const root = await loadedPage(el);
+        await nextFrame();
+        const pageRect = root.querySelector('[part="page"]')!.getBoundingClientRect();
+        const canvasRect = root.querySelector('[part="page-canvas"]')!.getBoundingClientRect();
+        expect(canvasRect.left + canvasRect.width / 2, 'canvas center').to.be.closeTo(
+          pageRect.left + pageRect.width / 2,
+          0.5,
+        );
+        expectPageLayersAligned(root);
+      } finally {
+        restore();
+      }
+    });
+  }
 
   it('keeps a max-zoom page horizontally reachable in a 320px allocation', async () => {
     const wrapper = (await fixture(html`
@@ -1800,6 +1840,31 @@ describe('virtualized page part styling', () => {
       ) as HTMLElement;
       expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
       expect(getComputedStyle(base).overflowX).to.equal('auto');
+      expectPageLayersAligned(listShadowRoot(el));
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps max-zoom page layers aligned and reachable in RTL', async () => {
+    const wrapper = (await fixture(html`
+      <div dir="rtl" style="width: 320px"><lr-pdf-viewer></lr-pdf-viewer></div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-pdf-viewer') as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(1));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      el.zoom = 4;
+      await el.updateComplete;
+      await nextFrame();
+      const base = el.shadowRoot!.querySelector('lr-virtual-list')!.shadowRoot!.querySelector(
+        '[part="base"]',
+      ) as HTMLElement;
+      expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+      expect(getComputedStyle(base).overflowX).to.equal('auto');
+      expectPageLayersAligned(listShadowRoot(el));
     } finally {
       restore();
     }

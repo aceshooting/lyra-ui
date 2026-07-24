@@ -35,8 +35,9 @@ fetches, ranks, or computes retrieval results itself.
   stage whose evidence has none of the three renders no disclosure row at all
 - `activeStageId: string | null = null` (attribute `active-stage-id`) — controlled selection,
   forwarded verbatim to the internal `lr-span-waterfall`'s `activeSpanId`
-- `label: string = ''` — accessible name for the timeline; falls back to a host `aria-label`, then
-  the waterfall's own localized default
+- `label: string = ''` — accessible name for the timeline. A host `aria-label` takes precedence,
+  followed by `label`, then the waterfall's own localized default; late attribute changes and
+  removal update that resolved name
 
 **Events:** `lr-stage-select` (`detail: { id: string }`, a stage's bar was activated — click, Enter,
 Space), `lr-stage-toggle` (`detail: { id: string; expanded: boolean }`, an evidence panel was

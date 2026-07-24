@@ -68,9 +68,8 @@ function checkmarkGlyph() {
  * `<lr-stepper>` — ordered multi-step wizard/form navigation: label + index per step,
  * current/completed/locked/error state, click-to-jump. First-party invention (no Web Awesome
  * equivalent). Fully data-driven and controlled, like `lr-table`'s `columns`/`rows` -- it never
- * mutates `steps` itself; a click or Enter/Space on a non-disabled step fires a cancelable
- * `lr-step-select`, and the host decides whether/how `steps` changes in response (mirroring
- * `lr-dialog-close`'s cancelable-event convention).
+ * mutates `steps` itself; a click or Enter/Space on a non-disabled step fires a non-cancelable
+ * `lr-step-select`, and the host decides whether/how `steps` changes in response.
  *
  * An opt-in `orientationBreakpoint` (unset by default -- no behavior change) makes the effective
  * layout/navigation axis respond to a measured inline size instead of only the authored

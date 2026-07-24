@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type ReactiveController, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -130,6 +130,8 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
   private _writingValue = false;
   private _warnedValueAssigned = false;
   private _warnedDuplicateValues = new Set<string>();
+  private childObserver?: MutationObserver;
+  private childControllers = new Map<LyraCheckbox, ReactiveController>();
 
   /** The form submission key each checked child checkbox's value is grouped under in the group's
    *  own `FormData` entry (see `sync()`). Reflected synchronously for native form APIs; renaming
@@ -194,8 +196,24 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
   }
 
+  private checkboxGroupOwner(element: Element): Element | null {
+    const group = element.closest('lr-checkbox-group');
+    if (!group) return null;
+    let topLevelChild = element;
+    while (topLevelChild.parentElement && topLevelChild.parentElement !== group) {
+      topLevelChild = topLevelChild.parentElement;
+    }
+    if (topLevelChild.parentElement !== group) return null;
+    const slot = topLevelChild.getAttribute('slot');
+    return slot === 'label' || slot === 'hint' || slot === 'error' ? null : group;
+  }
+
+  private ownsCheckbox(element: Element): element is LyraCheckbox {
+    return element.localName === 'lr-checkbox' && this.checkboxGroupOwner(element) === this;
+  }
+
   private get boxes(): LyraCheckbox[] {
-    return Array.from(this.querySelectorAll('lr-checkbox')) as unknown as LyraCheckbox[];
+    return Array.from(this.querySelectorAll<LyraCheckbox>('lr-checkbox')).filter((box) => this.ownsCheckbox(box));
   }
 
   /** Whether the group is disabled explicitly or by an ancestor fieldset. */
@@ -254,8 +272,14 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.toggleAttribute('data-invalid', this.touched && !this.internals.validity.valid);
   }
 
+  private isOwnedCheckbox(target: EventTarget | null): target is LyraCheckbox {
+    return target instanceof Element && this.ownsCheckbox(target);
+  }
+
   private onChildEvent = (event: Event): void => {
-    if (event.target === this) return;
+    // Only the public events emitted by a directly-owned checkbox are translated. In particular,
+    // leave nested groups and interactive content slotted inside a checkbox untouched.
+    if (!this.isOwnedCheckbox(event.target)) return;
     event.stopImmediatePropagation();
     if (event.type !== 'change' || this.effectiveDisabled) return;
     this.sync();
@@ -264,10 +288,48 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     this.emit('lr-change', { value: this.value });
   };
 
+  private reconcileChildControllers(): void {
+    const current = new Set(this.boxes);
+    for (const [box, controller] of this.childControllers) {
+      if (current.has(box)) continue;
+      box.removeController(controller);
+      this.childControllers.delete(box);
+      // A checkbox removed from every group must not retain this group's disabled state. If it
+      // moved directly into another group, that new owner is responsible for its own state. A
+      // checkbox moved into this group's label/hint/error subtree still has this as its closest
+      // group, but is no longer an option, so release the inherited disabled state here.
+      const nextOwner = this.checkboxGroupOwner(box);
+      if (!nextOwner || nextOwner === this) box.setGroupDisabled?.(false);
+    }
+    for (const box of current) {
+      if (this.childControllers.has(box) || typeof box.addController !== 'function') continue;
+      const controller: ReactiveController = {
+        hostUpdated: () => {
+          if (this.isConnected && this.ownsCheckbox(box)) this.sync();
+        },
+      };
+      box.addController(controller);
+      this.childControllers.set(box, controller);
+    }
+  }
+
+  private onChildMutations = (records: MutationRecord[]): void => {
+    if (records.some((record) => record.type === 'childList' || record.attributeName === 'slot')) {
+      this.onSlotChange();
+      return;
+    }
+    if (records.some((record) => this.isOwnedCheckbox(record.target))) this.sync();
+  };
+
+  private hasDirectSupportSlot(name: 'label' | 'hint' | 'error'): boolean {
+    return Array.from(this.children).some((child) => child.getAttribute('slot') === name);
+  }
+
   private onSlotChange = (): void => {
-    this.hasLabelSlot = !!this.querySelector('[slot="label"]');
-    this.hasHintSlot = !!this.querySelector('[slot="hint"]');
-    this.hasErrorSlot = !!this.querySelector('[slot="error"]');
+    this.hasLabelSlot = this.hasDirectSupportSlot('label');
+    this.hasHintSlot = this.hasDirectSupportSlot('hint');
+    this.hasErrorSlot = this.hasDirectSupportSlot('error');
+    this.reconcileChildControllers();
     this.sync();
     this.propagateDisabled();
   };
@@ -280,12 +342,26 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
     // Initialize light-DOM-derived state before the first render. Doing this in firstUpdated()
     // schedules a redundant follow-up update and triggers Lit's change-in-update warning.
     this.onSlotChange();
+    this.childObserver = new MutationObserver(this.onChildMutations);
+    this.childObserver.observe(this, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ['checked', 'value', 'disabled', 'slot'],
+    });
   }
 
   override disconnectedCallback(): void {
     this.removeEventListener('input', this.onChildEvent);
     this.removeEventListener('change', this.onChildEvent);
     this.removeEventListener('lr-change', this.onChildEvent);
+    this.childObserver?.disconnect();
+    this.childObserver = undefined;
+    for (const [box, controller] of this.childControllers) {
+      box.removeController(controller);
+      box.setGroupDisabled?.(false);
+    }
+    this.childControllers.clear();
     super.disconnectedCallback();
   }
 

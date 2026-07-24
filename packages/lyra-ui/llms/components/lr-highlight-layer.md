@@ -6,7 +6,7 @@
 - **Class** `LyraHighlightLayer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/highlight-layer/highlight-layer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,3 +34,13 @@ rectangle; carries `data-tone`/`data-active`/`data-flash` state attributes), and
 rectangle). When more than one logical highlight would create overlapping minimum hit areas, the
 individual targets are replaced by `highlight-actions` (a non-overlapping action list) containing
 one `highlight-action` button per rendered highlight.
+
+**Themeable custom properties:**
+`--lr-highlight-layer-accent-background`, `--lr-highlight-layer-accent-outline`,
+`--lr-highlight-layer-success-background`, `--lr-highlight-layer-success-outline`,
+`--lr-highlight-layer-warning-background`, `--lr-highlight-layer-warning-outline`,
+`--lr-highlight-layer-danger-background`, `--lr-highlight-layer-danger-outline`,
+`--lr-highlight-layer-neutral-background`, and `--lr-highlight-layer-neutral-outline` control each
+tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
+`--lr-highlight-layer-flash-background` controls the temporary flash state (default
+`--lr-color-brand`).

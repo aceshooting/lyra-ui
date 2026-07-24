@@ -16,14 +16,24 @@
 Ordered renderer for provider-neutral `MessagePart[]`: text, reasoning, tool call/result, citation,
 attachment, data/widget, audio, and error parts can interleave without flattening stream order.
 
-**Properties:** `parts: MessagePart[]`; `renderMarkdown: boolean = true`; `showReasoning: boolean =
-true`; `renderPart?: (part, index) => unknown`; `label`; `accessibleLabel` (attribute
-`aria-label`).
+**Properties:** `parts: MessagePart[] = []` (attribute: false); `renderMarkdown: boolean = true`
+(attribute `render-markdown`, reflected) and `showReasoning: boolean = true` (attribute
+`show-reasoning`, reflected), both with string-aware true-default conversion;
+`renderPart?: MessagePartRenderer` (attribute: false), where returning `undefined` delegates that
+part to the built-in renderer; `label: string = ''`; `accessibleLabel: string | null = null`
+(attribute `aria-label`, highest naming precedence).
+
+`MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
+discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 
 **Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
+
+**Slots:** none. **Optional peer deps:** those of composed content only: Markdown can use
+`marked`/`dompurify`, and code content can use `shiki`; every composed primitive retains its own
+fallback.
 
 ```ts
 import '@aceshooting/lyra-ui/components/conversation/message-parts/message-parts.js';
