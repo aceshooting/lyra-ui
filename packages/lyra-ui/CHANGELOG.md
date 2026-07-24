@@ -1,5 +1,71 @@
 # Changelog
 
+## 7.0.0
+
+### Major Changes
+
+- fb14fa1: Make the approved breaking contract corrections for the next major release.
+
+  - `<lr-checkbox-group>` now consumes each child's native-style events and emits exactly one
+    group-owned `input`, `change`, and `lr-change` sequence with `{ value: string[] }`. It also scopes
+    selection to checkboxes owned by that group and silently resynchronizes its value and form data
+    after programmatic child changes. Consumers that listened for leaked child events on the group
+    must instead listen on the child checkbox itself.
+  - `<lr-diff-view>` now defaults `maxLines` to `5000` and renders a localized fallback above that
+    ceiling. Set `maxLines` to `Infinity` to preserve uncapped behavior; the line diff now uses a
+    linear-space algorithm, but exceptionally large diffs can still be expensive.
+  - `<lr-popover>` now returns focus to its trigger consistently after light dismiss and
+    programmatic close, matching its Escape behavior. Use `hide({ focusTrigger: false })` when a
+    programmatic close must leave focus elsewhere.
+  - Remove the never-emitted `lr-highlight-activate` event declarations from `<lr-code-block>`,
+    `<lr-code-block-core>`, and `<lr-notebook-viewer>`. Listen to the viewer's documented anchor and
+    text-selection events instead.
+  - `<lr-stepper>` now exposes list/progress-navigation semantics with
+    `aria-current="step"` instead of incomplete tab semantics without associated tab panels.
+    Selected-step state and keyboard activation remain available.
+  - Toggleable `<lr-chip>` instances now put their toggle semantics on a separate native control;
+    default-slot content is an inert label rather than an unrestricted interactive subtree. Move
+    links and buttons outside a toggleable chip.
+
+### Minor Changes
+
+- fb14fa1: Expand the public component contracts needed by advanced consumers.
+
+  - Export the document-viewer anchor, highlight, search, selection, and target types through the
+    owning granular component entry, with type tests covering those imports.
+  - Complete native-style `input`/`change`, focus, selection, and editing contracts across the
+    affected form and conversation controls, including emoji picker and token input.
+  - Add the documented viewer navigation, search, highlight, comparison, preview, and theme hooks,
+    plus the corresponding component parts and custom properties.
+  - Complete the typed agent-evaluation, evaluation-dataset, retrieval, and data-view surfaces that
+    previously required consumers to infer internal shapes.
+
+- 19022c7: Resolve the current feature-request backlog:
+
+  - add configurable no-flash theme bootstraps and a Lit-free gemstone palette entry;
+  - expose a pre-mount chart `seriesPalette()` helper and document its theme-token indirection;
+  - let `lr-app-rail` select persisted fields, including `preferredMode`, without restoring transient
+    mobile-open state;
+  - add `lr-icon-button` border and hover-foreground tokens;
+  - size gemstone swatches from their fill token and keep `lr-table`'s unnamed-grid warning out of
+    production; and
+  - document the supported SheetJS CDN install path and the unsafe npm-audit downgrade suggestion.
+
+### Patch Changes
+
+- fb14fa1: Correct accessibility, localization, lifecycle, security, responsive-layout, and rendering defects
+  across the component families.
+
+  - Reconcile accessible names, stateful ARIA, roving focus, focus return, wrapped-child event
+    suppression, live regions, disabled behavior, and native control forwarding.
+  - Make inherited locale and direction reactive through composed trees, use locale-aware text
+    folding and sparse highlight offsets, and localize the remaining viewer and status messages.
+  - Harden remote viewer loading, sanitization, generation ownership, size/resource guards, and
+    reconnect behavior while preserving empty and error states.
+  - Fix container-responsive layouts, hover/focus parity, reduced-motion behavior, theme-token
+    resolution, and viewer allocation/geometry updates.
+  - Avoid quadratic DOM walks when painting capped DOCX search matches.
+
 ## 6.2.0
 
 ### Minor Changes
