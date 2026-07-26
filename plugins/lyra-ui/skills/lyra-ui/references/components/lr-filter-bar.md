@@ -57,3 +57,48 @@ value means no debounce at all: every keystroke commits immediately. A pending d
 **cancelled outright** by `reset()`, by removing that filter's chip, and on disconnect — a stale
 keystroke can never overwrite a reset or fire after teardown. `debounce` is ignored for every other
 `type`, whose commits are discrete choices with nothing to debounce.
+
+### Custom controls
+
+Use `type: 'custom'` when an existing Lyra control does not fit the built-in filter types. Provide a
+`custom` object with a `render(context)` function and an `adapter`. The renderer owns the control's
+markup and should bind the context's `value`, `disabled`, `required`, and `errorText` as appropriate;
+`context.onValueChange` (or its `onInput`/`onChange` aliases) reads the event through
+`adapter.valueFromEvent` and commits it to the filter bar. `context.setValue(value)` is available for
+controls that expose a value without an event payload, and `context.onFocusout` marks the filter
+touched for required validation.
+
+The adapter's optional `emptyValue` is used when the active chip is removed, and its optional
+`formatValue` controls the chip's display text. Custom values may be strings, string arrays,
+booleans, or `undefined`, so controls such as `lr-time-range`, `lr-checkbox`, and an async-backed
+`lr-combobox` can participate in the same controlled `value`, active-chip, reset, disabled, and
+validation contract:
+
+```ts
+const filters: FilterBarFilterDefinition[] = [
+  {
+    id: 'archived',
+    label: 'Include archived',
+    type: 'custom',
+    custom: {
+      adapter: {
+        valueFromEvent: (event) =>
+          (event as CustomEvent<{ checked: boolean }>).detail.checked,
+        emptyValue: false,
+        formatValue: (value) => value === true ? 'Enabled' : 'Disabled',
+      },
+      render: (context) => html`
+        <lr-checkbox
+          ?checked=${context.value === true}
+          ?disabled=${context.disabled}
+          @lr-change=${context.onValueChange}
+          @focusout=${context.onFocusout}
+        >${context.label}</lr-checkbox>
+      `,
+    },
+  },
+];
+```
+
+The custom renderer returns a Lit `TemplateResult`; the filter bar places it in its
+`filter-control` part and re-renders it whenever the controlled value or validation state changes.
