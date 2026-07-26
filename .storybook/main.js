@@ -43,6 +43,12 @@ const config = {
   staticDirs: [
     { from: './lyra-mark.svg', to: './lyra-mark.svg' },
     { from: '../packages/lyra-ui/src/components/viewers/pdf-viewer/fixtures/sample.pdf', to: './fixtures/sample.pdf' },
+    // A synthetic (ffmpeg testsrc, no third-party content), silent 2s h264 clip -- MediaCard's
+    // Video story used to point at an external MDN-hosted URL, which the release-time
+    // `docs:check-show-code` sweep flagged with `net::ERR_ABORTED` (the browser aborting the
+    // in-flight fetch when the docs page's "Show code" clicks re-render the canvas). A local
+    // fixture removes both the external dependency and that sweep noise.
+    { from: '../packages/lyra-ui/src/components/media/media-card/fixtures/sample.mp4', to: './fixtures/sample-video.mp4' },
     { from: '../packages/lyra-ui/llms.txt', to: './llms.txt' },
     { from: '../packages/lyra-ui/llms-full.txt', to: './llms-full.txt' },
     // The split reference llms.txt links into — one file per component plus the shared/token/peer/

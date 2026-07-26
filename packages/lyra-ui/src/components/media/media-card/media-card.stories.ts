@@ -23,7 +23,9 @@ export default meta;
 type Story = StoryObj;
 
 const SAMPLE_IMAGE = 'https://picsum.photos/seed/lr-media-card/640/400';
-const SAMPLE_VIDEO = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+// A local fixture (not an external URL like SAMPLE_IMAGE above) -- see .storybook/main.js's
+// staticDirs entry for why.
+const SAMPLE_VIDEO = '/fixtures/sample-video.mp4';
 
 export const Image: Story = {
   render: () => html`
