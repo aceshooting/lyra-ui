@@ -440,6 +440,13 @@ echo "==> Committing version bump"
 git add pnpm-lock.yaml packages/*/package.json packages/*/CHANGELOG.md .changeset
 for dir in "${PKG_DIRS[@]}"; do
   [[ -f "$dir/custom-elements.json" ]] && git add "$dir/custom-elements.json"
+  # `pnpm pack` above already ran each package's `prepack` lifecycle script (build -> manifest ->
+  # generate-editor-data -> llms), which re-stamps the new version into these three files. Without
+  # staging them here too, the release commit ships a stale embedded version that reddens
+  # static-checks' freshness gate on the very next push (see docs/agents/ci-and-gates.md).
+  [[ -f "$dir/vscode-html-data.json" ]] && git add "$dir/vscode-html-data.json"
+  [[ -f "$dir/vscode-css-data.json" ]] && git add "$dir/vscode-css-data.json"
+  [[ -f "$dir/web-types.json" ]] && git add "$dir/web-types.json"
 done
 subject_parts=()
 for dir in "${RELEASE_DIRS[@]}"; do
