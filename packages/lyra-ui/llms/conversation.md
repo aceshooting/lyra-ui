@@ -2014,13 +2014,17 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. Unset renders only the built-in `rowActions`.
+the host normally and never trigger `lr-select`. An open nested `lr-menu` keeps its virtual row
+above later rows even if focus temporarily leaves the menu. Unset renders only the built-in
+`rowActions`.
 `renderLeading?: (thread: ChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 leading content in each virtualized row. `renderExcerpt?: (thread: ChatThread) => TemplateResult`
 (attribute: false) — renders rich content into the row item's own `excerpt` slot, winning over the
 plain-string `excerpt` property (e.g. a server-highlighted search-match snippet), while leaving the
-built-in title layout and inline-rename affordance untouched. `renderMeta?: (thread: ChatThread) =>
-TemplateResult` (attribute: false) — appends structured metadata in the row's meta region.
+built-in title layout and inline-rename affordance untouched. `<mark>` descendants returned by this
+hook receive the default, component-themeable highlight treatment documented below.
+`renderMeta?: (thread: ChatThread) => TemplateResult` (attribute: false) — appends structured
+metadata in the row's meta region.
 `renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's title/excerpt/meta content area with custom non-interactive row content.
 `formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
@@ -2062,6 +2066,14 @@ Data mode additionally forwards each row `<lr-conversation-item>`'s own parts un
 prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-item-leading`, `row-item-content`,
 `row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
+
+**Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
+`--lr-thread-list-excerpt-highlight-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-thread-list-excerpt-highlight-foreground` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
+`--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
+internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
+marks returned by `renderRowContent` or any other hook.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderExcerpt`,

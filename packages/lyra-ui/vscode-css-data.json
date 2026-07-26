@@ -4461,6 +4461,34 @@
       }
     },
     {
+      "name": "--lr-thread-list-excerpt-highlight-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thread-list>`** (default: `var(--lr-color-warning-quiet)`) — Background of `<mark>` descendants returned by `renderExcerpt`."
+      }
+    },
+    {
+      "name": "--lr-thread-list-excerpt-highlight-foreground",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thread-list>`** (default: `inherit`) — Foreground of `<mark>` descendants returned by `renderExcerpt`."
+      }
+    },
+    {
+      "name": "--lr-thread-list-excerpt-highlight-padding",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thread-list>`** (default: `0`) — Padding of `<mark>` descendants returned by `renderExcerpt`."
+      }
+    },
+    {
+      "name": "--lr-thread-list-excerpt-highlight-radius",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thread-list>`** (default: `var(--lr-radius-xs)`) — Corner radius of `<mark>` descendants returned by `renderExcerpt`."
+      }
+    },
+    {
       "name": "--lr-time-range-base-size",
       "description": {
         "kind": "markdown",

@@ -47,11 +47,15 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
   }
 });
 
-it('defaults to rows=3, resize="vertical", empty value', async () => {
+it('defaults to rows=3, resize="vertical", editable, and an empty value', async () => {
   const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
   expect(el.rows).to.equal(3);
   expect(el.resize).to.equal('vertical');
   expect(el.value).to.equal('');
+  expect(el.readonly).to.equal(false);
+  expect(el.hasAttribute('readonly')).to.equal(false);
+  expect(textarea.readOnly).to.equal(false);
 });
 
 it('reflects rows/placeholder onto the native textarea', async () => {
@@ -103,6 +107,74 @@ it('participates in native form validation via required', async () => {
   expect(el.checkValidity()).to.be.false;
   el.value = 'filled in';
   expect(el.checkValidity()).to.be.true;
+});
+
+describe('readonly', () => {
+  it('reactively reflects and forwards readonly while preserving focus and selection', async () => {
+    const el = (await fixture(html`
+      <lr-textarea readonly value="selectable text"></lr-textarea>
+    `)) as LyraTextarea;
+    const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+    expect(el.readonly).to.equal(true);
+    expect(el.hasAttribute('readonly')).to.equal(true);
+    expect(textarea.readOnly).to.equal(true);
+    expect(textarea.disabled).to.equal(false);
+
+    el.focus();
+    el.setSelectionRange(0, 10);
+    expect(el.shadowRoot!.activeElement?.id).to.equal('textarea');
+    expect(el.selectionStart).to.equal(0);
+    expect(el.selectionEnd).to.equal(10);
+
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('readonly')).to.equal(false);
+    expect(textarea.readOnly).to.equal(false);
+  });
+
+  it('submits readonly values while suspending and restoring required and length validity', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-textarea name="notes" value="abc" minlength="5" required readonly></lr-textarea>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-textarea') as LyraTextarea;
+
+    expect(new FormData(form).get('notes')).to.equal('abc');
+    expect(el.effectiveDisabled).to.equal(false);
+    expect(el.validity.valid).to.equal(true);
+
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.validity.tooShort).to.equal(true);
+
+    el.readonly = true;
+    await el.updateComplete;
+    expect(el.validity.valid).to.equal(true);
+
+    el.value = '';
+    expect(el.validity.valid).to.equal(true);
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.validity.valueMissing).to.equal(true);
+  });
+
+  it('keeps programmatic range edits form-synchronized and silent while readonly', async () => {
+    const form = (await fixture(html`
+      <form><lr-textarea name="notes" value="hello world" readonly></lr-textarea></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-textarea') as LyraTextarea;
+    const seen: string[] = [];
+    for (const name of ['input', 'change', 'lr-input', 'lr-change']) {
+      el.addEventListener(name, () => seen.push(name));
+    }
+
+    el.setRangeText('there', 6, 11);
+    expect(el.value).to.equal('hello there');
+    expect(new FormData(form).get('notes')).to.equal('hello there');
+    expect(seen).to.deep.equal([]);
+  });
 });
 
 describe('length constraints', () => {

@@ -57,14 +57,34 @@ export const styles = css`
      how high its own z-index is: that z-index only orders siblings inside the row's own context.
      The last row always looks correct, which is why a small fixture never catches it.
 
-     :focus-within lifts the row for exactly as long as something inside it holds focus -- the
-     lifetime of an open popup -- and costs nothing the rest of the time. The value deliberately
-     matches [part='group'] below rather than exceeding it, so the two land on the same layer and
-     DOM order decides: groups render before the rows, so a row wins while (and only while) it holds
-     focus -- which is the right outcome, since a group header is a non-interactive
-     (pointer-events: none) label and the focused row is where the user is working. */
-  [part='row']:focus-within {
+     :focus-within lifts the row while something inside it holds focus. An open lr-menu is included
+     explicitly as well: opening a menu can trigger a virtual measurement/render pass after the
+     menu moves focus, and that pass can transiently drop focus to <body> while the fixed popup
+     remains open. Keying the layer to the popup's own durable open state prevents that valid
+     imperative-open path from falling back under later rows.
+
+     The value deliberately matches [part='group'] below rather than exceeding it, so the two land
+     on the same layer and DOM order decides: groups render before the rows, so an active row wins
+     while the group header remains non-interactive decoration. */
+  [part='row']:where(:focus-within, :has(lr-menu[open])) {
     z-index: var(--lr-layer-content);
+  }
+  /* lr-thread-list's renderItem callback is rendered inside this shadow root, so descendant
+     content such as a rich excerpt's <mark> cannot be reached by the thread-list stylesheet or
+     by a consumer rule following ::part(row-excerpt). Keep the selector pinned to the callback's
+     dedicated part so marks in other virtualized row hooks retain their own semantics. The public
+     properties inherit from lr-thread-list through this host and remain component-scoped. */
+  [part='row'] [part~='row-excerpt'] mark {
+    background: var(
+      --lr-thread-list-excerpt-highlight-background,
+      var(--lr-color-warning-quiet)
+    );
+    color: var(--lr-thread-list-excerpt-highlight-foreground, inherit);
+    border-radius: var(
+      --lr-thread-list-excerpt-highlight-radius,
+      var(--lr-radius-xs)
+    );
+    padding: var(--lr-thread-list-excerpt-highlight-padding, 0);
   }
   [part='group'] {
     position: absolute;

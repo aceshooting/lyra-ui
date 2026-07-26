@@ -73918,6 +73918,28 @@
           "kind": "class",
           "description": "`<lr-thread-list>` — the conversation sidebar: a grouped, searchable list of chat sessions with\npin/archive/delete/rename affordances. *Data mode* (non-empty `threads`, or empty `threads` with\nnothing slotted) renders every row as a `<lr-conversation-item>` inside an internal\n`<lr-virtual-list>` — virtualized by construction, scroll position and per-row state survive a\n`threads` replacement; zero rows renders the built-in empty state. *Slotted mode* (empty `threads`\n*and* real slotted content) renders host-supplied `<lr-conversation-item>`s from the default slot\nas-is: no grouping, virtualization, or row actions in that mode — those are data-mode-only by design\n(shadow DOM cannot inject group headers between slotted children).\n\nNo thread CRUD or persistence: every mutation (`lr-thread-pin`/`-archive`/`-delete`/`-rename`) is\na controlled event carrying the *requested* new state — the host mutates `threads`.\n\nData mode: a host needing content with no home in `lr-conversation-item`'s own\n`title`/`excerpt`/`meta`/`actions` surface sets `wrapRow` to wrap the already-built row. For\ncommon row composition, `renderLeading`, `renderExcerpt`, `renderMeta`, and `renderRowContent`\nprovide focused virtualized render hooks -- `renderExcerpt` renders into the row item's own\n`excerpt` slot (winning over the plain-string `excerpt` property) for rich per-row content such\nas a highlighted search snippet. A host needing a fully custom\n`actions` surface itself — beyond `rowActions`'s closed `pin | archive | delete` set, e.g. a\n`<lr-menu>` with Rename/Delete — sets `renderActions` instead; its content is appended after any\nbuilt-in `rowActions` output in the same slot, and `wrapRow` continues to compose around the result.",
           "name": "LyraThreadList",
+          "cssProperties": [
+            {
+              "description": "Background of `<mark>` descendants returned by `renderExcerpt`.",
+              "name": "--lr-thread-list-excerpt-highlight-background",
+              "default": "var(--lr-color-warning-quiet)"
+            },
+            {
+              "description": "Foreground of `<mark>` descendants returned by `renderExcerpt`.",
+              "name": "--lr-thread-list-excerpt-highlight-foreground",
+              "default": "inherit"
+            },
+            {
+              "description": "Corner radius of `<mark>` descendants returned by `renderExcerpt`.",
+              "name": "--lr-thread-list-excerpt-highlight-radius",
+              "default": "var(--lr-radius-xs)"
+            },
+            {
+              "description": "Padding of `<mark>` descendants returned by `renderExcerpt`.",
+              "name": "--lr-thread-list-excerpt-highlight-padding",
+              "default": "0"
+            }
+          ],
           "cssParts": [
             {
               "description": "The root.",
@@ -74348,7 +74370,7 @@
               "type": {
                 "text": "(thread: ChatThread) => TemplateResult | undefined"
               },
-              "description": "Data mode only: appended after any built-in `rowActions` buttons in the same row's `actions`\nslot -- the escape hatch for a fully custom per-row action surface (e.g. a `<lr-menu>` with\nRename/Delete, mirroring an app's own richer row-action menu) that `rowActions`'s closed\n`pin | archive | delete` set can't express. Additive, not a replacement: both render together\nwhen `rowActions` is also non-empty, the same composition direction `wrapRow` already takes\nelsewhere on the row (it only ever adds content, never removes built-in output) -- set\n`rowActions` to `[]` (its default) to omit the built-in buttons and use only the callback's\ncontent. Receives the *current* thread on every render, re-invoked per row through the\nvirtualized `renderItem` path exactly like `wrapRow` -- never memoized or stale. Rendered as a\nDOM sibling of the row's own selectable region (`lr-conversation-item`'s `[part=\"option\"]`),\nthe same structural reason the built-in `rowActions` buttons don't also trigger `lr-select` --\nso ordinary Lyra controls returned here (`lr-menu`, `lr-icon-button`, etc.) fire their own\nevents normally without also selecting the row. Unset (the default) leaves `rowActions`'\noutput byte-for-byte unchanged."
+              "description": "Data mode only: appended after any built-in `rowActions` buttons in the same row's `actions`\nslot -- the escape hatch for a fully custom per-row action surface (e.g. a `<lr-menu>` with\nRename/Delete, mirroring an app's own richer row-action menu) that `rowActions`'s closed\n`pin | archive | delete` set can't express. Additive, not a replacement: both render together\nwhen `rowActions` is also non-empty, the same composition direction `wrapRow` already takes\nelsewhere on the row (it only ever adds content, never removes built-in output) -- set\n`rowActions` to `[]` (its default) to omit the built-in buttons and use only the callback's\ncontent. Receives the *current* thread on every render, re-invoked per row through the\nvirtualized `renderItem` path exactly like `wrapRow` -- never memoized or stale. Rendered as a\nDOM sibling of the row's own selectable region (`lr-conversation-item`'s `[part=\"option\"]`),\nthe same structural reason the built-in `rowActions` buttons don't also trigger `lr-select` --\nso ordinary Lyra controls returned here (`lr-menu`, `lr-icon-button`, etc.) fire their own\nevents normally without also selecting the row. A nested open `lr-menu` also keeps its\nvirtual row above later rows even if focus temporarily leaves the menu. Unset (the default)\nleaves `rowActions`' output byte-for-byte unchanged."
             },
             {
               "kind": "field",
@@ -128117,7 +128139,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-textarea>` — a multiline plain-text input primitive, form-associated via the\n`FormAssociated` mixin (see `<lr-chat-composer>`/`<lr-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nShips an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +\n`form-control-label`/`hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left\nunset, the chrome remains hidden. A consumer preferring their own form-field layout can still\nignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\n`minlength`/`maxlength` are forwarded to the internal native `<textarea>` and bridged into this\nelement's own `ElementInternals` as `tooShort`/`tooLong` by `updateValidity()`.",
+          "description": "`<lr-textarea>` — a multiline plain-text input primitive, form-associated via the\n`FormAssociated` mixin (see `<lr-chat-composer>`/`<lr-date-input>` for the same shape), so it\nparticipates in native `<form>` submission/validation/reset like any other text control --\n`name`/`value`/`disabled`/`required`/`checkValidity()`/`reportValidity()` all come from that mixin.\n\nShips an opt-in `label`/`hint`/`errorText` form-control chrome (props + matching named slots +\n`form-control-label`/`hint`/`error` parts), mirroring `<lr-select>`'s exact pattern -- left\nunset, the chrome remains hidden. A consumer preferring their own form-field layout can still\nignore these and wrap the element. A host `aria-label` is forwarded to the internal textbox;\nexternal `aria-labelledby`/`aria-describedby` idrefs are not copied across the shadow boundary.\n\n`minlength`/`maxlength` are forwarded to the internal native `<textarea>` and bridged into this\nelement's own `ElementInternals` as `tooShort`/`tooLong` by `updateValidity()`.\n`readonly` keeps the value focusable, selectable, copyable, and form-submittable while barring\nuser edits and constraint validation, matching the native textarea contract.",
           "name": "LyraTextarea",
           "cssProperties": [
             {
@@ -128465,6 +128487,17 @@
               },
               "default": "''",
               "attribute": "placeholder"
+            },
+            {
+              "kind": "field",
+              "name": "readonly",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Forwards native read-only behavior to the internal textarea. The value remains focusable,\nselectable, copyable, and form-submittable; constraint validation is suspended until the\nproperty is unset.",
+              "attribute": "readonly",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -129158,6 +129191,15 @@
               },
               "default": "''",
               "fieldName": "placeholder"
+            },
+            {
+              "name": "readonly",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Forwards native read-only behavior to the internal textarea. The value remains focusable,\nselectable, copyable, and form-submittable; constraint validation is suspended until the\nproperty is unset.",
+              "fieldName": "readonly"
             },
             {
               "name": "required",

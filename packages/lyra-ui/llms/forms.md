@@ -667,6 +667,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
 | `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
+| `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
 | `hint` | `hint` | `string` | `''` | Hint text below the field. |
 | `errorText` | `error-text` | `string` | `''` | Error text below the field (overridden by slotted `error` content). |
@@ -689,6 +690,10 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 `validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
 (from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
 `maxlength` unset constrains nothing, exactly as before they existed.
+
+While `readonly`, all three constraint flags are suspended and `checkValidity()` succeeds, matching
+native textarea behavior. The value remains a successful form value and is restored by form reset;
+unsetting `readonly` restores the applicable required and length constraints.
 
 Two behaviors are worth knowing, both inherited from the platform and both shared with `lr-input`:
 

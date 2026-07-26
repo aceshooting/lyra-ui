@@ -40,6 +40,8 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  *
  * `minlength`/`maxlength` are forwarded to the internal native `<textarea>` and bridged into this
  * element's own `ElementInternals` as `tooShort`/`tooLong` by `updateValidity()`.
+ * `readonly` keeps the value focusable, selectable, copyable, and form-submittable while barring
+ * user edits and constraint validation, matching the native textarea contract.
  *
  * @customElement lr-textarea
  * @event input - Native-style composed event fired on every user-driven edit.
@@ -74,6 +76,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  grow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize="auto"`). */
   @property() resize: TextareaResize = 'vertical';
   @property() placeholder = '';
+  /** Forwards native read-only behavior to the internal textarea. The value remains focusable,
+   *  selectable, copyable, and form-submittable; constraint validation is suspended until the
+   *  property is unset. */
+  @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
@@ -246,6 +252,10 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    * `internal/length-constraints.ts`).
    */
   protected updateValidity(): void {
+    if (this.readonly) {
+      this[SET_ANCHORED_VALIDITY]({});
+      return;
+    }
     if (this.required && this.value === '') {
       this[SET_ANCHORED_VALIDITY]({ valueMissing: true }, this.localize('fieldRequired'));
       return;
@@ -272,7 +282,9 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     super.updated(changed);
     // A constraint that tightens without a value write (`el.maxlength = 3` over an existing value)
     // reaches the native textarea only on this render, so validity has to be recomputed after it.
-    if (changed.has('minlength') || changed.has('maxlength')) this.updateValidity();
+    if (changed.has('minlength') || changed.has('maxlength') || changed.has('readonly')) {
+      this.updateValidity();
+    }
     if (changed.has('resize')) {
       if (this.resize === 'auto') {
         this.armResizeObserver();
@@ -413,6 +425,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
           .value=${this.value}
           ?required=${this.required}
           ?disabled=${this.effectiveDisabled}
+          ?readonly=${this.readonly}
           @input=${this.onInput}
           @change=${this.onChange}
           @focus=${this.onFocus}

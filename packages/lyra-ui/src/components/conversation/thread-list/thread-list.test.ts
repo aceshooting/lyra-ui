@@ -1,9 +1,12 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './thread-list.js';
 import '../../overlays/chip/chip.js';
+import '../../layout/menu/menu.js';
+import '../../layout/menu/menu-item.js';
 import type { LyraThreadList } from './thread-list.js';
 import type { LyraConversationItem } from '../conversation-item/conversation-item.class.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
+import type { LyraMenu } from '../../layout/menu/menu.class.js';
 import { styles } from './thread-list.styles.js';
 
 type ChatThreadLike = { id: string };
@@ -531,6 +534,67 @@ describe('data mode', () => {
       expect(selectFired).to.be.false;
     });
 
+    it('paints a real open menu in an earlier virtual row above the later rows it overlaps', async () => {
+      const el = (await fixture(
+        html`<lr-thread-list
+          grouping="none"
+          style="block-size:240px"
+          .threads=${threads.filter((thread) => !thread.archived)}
+          .renderActions=${(thread: { id: string }) => html`
+            <lr-menu id="menu-${thread.id}" label="Conversation actions" placement="bottom-end">
+              <button slot="trigger" type="button" aria-label="Conversation actions">⋮</button>
+              <lr-menu-item id="item-${thread.id}" value="rename">Rename</lr-menu-item>
+              <lr-menu-item value="delete" destructive>Delete</lr-menu-item>
+            </lr-menu>
+          `}
+        ></lr-thread-list>`,
+      )) as LyraThreadList;
+      await el.updateComplete;
+      await nextFrame();
+
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+      const rowBoxes = [
+        ...list.shadowRoot!.querySelectorAll<HTMLElement>('[part="row"]'),
+      ];
+      const firstMenu = dataRows(el)[0].querySelector<LyraMenu>('lr-menu')!;
+      const firstRowBox = rowBoxes.find((row) => row.querySelector('#menu-p1'))!;
+      expect(getComputedStyle(firstRowBox).zIndex).to.equal('auto');
+
+      firstMenu.show();
+      await firstMenu.updateComplete;
+      await nextFrame();
+      expect(firstMenu.open).to.equal(true);
+      expect(getComputedStyle(firstRowBox).zIndex).to.equal('1');
+
+      const popupRect = firstMenu.shadowRoot!
+        .querySelector<HTMLElement>('[part="popup"]')!
+        .getBoundingClientRect();
+      const overlappingLaterRow = rowBoxes
+        .filter((row) => row !== firstRowBox)
+        .find((row) => {
+          const rect = row.getBoundingClientRect();
+          return (
+            Math.min(popupRect.right, rect.right) > Math.max(popupRect.left, rect.left) &&
+            Math.min(popupRect.bottom, rect.bottom) > Math.max(popupRect.top, rect.top)
+          );
+        });
+      expect(overlappingLaterRow !== undefined).to.equal(true);
+
+      const laterRect = overlappingLaterRow!.getBoundingClientRect();
+      const x =
+        (Math.max(popupRect.left, laterRect.left) +
+          Math.min(popupRect.right, laterRect.right)) /
+        2;
+      const y =
+        (Math.max(popupRect.top, laterRect.top) +
+          Math.min(popupRect.bottom, laterRect.bottom)) /
+        2;
+      const topmost = list.shadowRoot!.elementFromPoint(x, y);
+      expect(topmost === firstMenu || (topmost !== null && firstMenu.contains(topmost))).to.equal(
+        true,
+      );
+    });
+
     it('is re-invoked per row with the current thread on every render (not memoized)', async () => {
       const received: string[] = [];
       const localThreads = [{ id: 't1', title: 'Today thread', timestamp: now }];
@@ -885,6 +949,87 @@ it('renders a renderExcerpt hook into the row item\'s excerpt slot, winning over
   // Slotted content wins over the plain-string `excerpt` property per lr-conversation-item's own
   // slot doc -- the plain "plain excerpt" text must not be what's rendered.
   expect(excerptPart.textContent).to.not.contain('plain excerpt');
+});
+
+it('gives renderExcerpt marks token-driven default highlight styling', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      grouping="none"
+      .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
+      .renderExcerpt=${() => html`
+        <span
+          data-testid="highlight-reference"
+          style="
+            background:var(--lr-color-warning-quiet);
+            color:inherit;
+            border-radius:var(--lr-radius-xs);
+            padding:0;
+          "
+        ></span>
+        <mark data-testid="highlight">match</mark>
+      `}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const row = dataRows(el)[0];
+  const mark = row.querySelector<HTMLElement>('[data-testid="highlight"]')!;
+  const reference = row.querySelector<HTMLElement>('[data-testid="highlight-reference"]')!;
+  const actual = getComputedStyle(mark);
+  const expected = getComputedStyle(reference);
+
+  expect(actual.backgroundColor).to.equal(expected.backgroundColor);
+  expect(actual.color).to.equal(expected.color);
+  expect(actual.borderRadius).to.equal(expected.borderRadius);
+  expect(actual.paddingTop).to.equal(expected.paddingTop);
+  expect(actual.paddingRight).to.equal(expected.paddingRight);
+});
+
+it('themes renderExcerpt marks through component-scoped custom properties', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      grouping="none"
+      style="
+        --lr-thread-list-excerpt-highlight-background:rgb(1, 2, 3);
+        --lr-thread-list-excerpt-highlight-foreground:rgb(4, 5, 6);
+        --lr-thread-list-excerpt-highlight-radius:7px;
+        --lr-thread-list-excerpt-highlight-padding:3px 5px;
+      "
+      .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
+      .renderExcerpt=${() => html`<mark data-testid="highlight">match</mark>`}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const mark = dataRows(el)[0].querySelector<HTMLElement>('[data-testid="highlight"]')!;
+  const computed = getComputedStyle(mark);
+
+  expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(computed.color).to.equal('rgb(4, 5, 6)');
+  expect(computed.borderRadius).to.equal('7px');
+  expect(computed.paddingTop).to.equal('3px');
+  expect(computed.paddingRight).to.equal('5px');
+});
+
+it('does not apply excerpt-highlight hooks to marks outside renderExcerpt', async () => {
+  const el = (await fixture(
+    html`<lr-thread-list
+      grouping="none"
+      style="
+        --lr-thread-list-excerpt-highlight-background:rgb(1, 2, 3);
+        --lr-thread-list-excerpt-highlight-radius:7px;
+      "
+      .threads=${[{ id: 't1', title: 'Thread 1', excerpt: 'plain excerpt' }]}
+      .renderRowContent=${() => html`<mark data-testid="content-mark">content</mark>`}
+    ></lr-thread-list>`,
+  )) as LyraThreadList;
+  await el.updateComplete;
+  await nextFrame();
+  const mark = dataRows(el)[0].querySelector<HTMLElement>('[data-testid="content-mark"]')!;
+  const computed = getComputedStyle(mark);
+
+  expect(computed.backgroundColor).to.not.equal('rgb(1, 2, 3)');
+  expect(computed.borderRadius).to.not.equal('7px');
 });
 
 it('leaves rendering unchanged when renderExcerpt is unset', async () => {
@@ -1325,6 +1470,7 @@ describe('keyboard navigation past the rendered window', () => {
     await el.updateComplete;
 
     const viewport = viewportEl(el);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
     const scrollEvents: boolean[] = [];
     viewport.addEventListener('scroll', (e) => scrollEvents.push(e.isTrusted));
 
@@ -1332,20 +1478,29 @@ describe('keyboard navigation past the rendered window', () => {
     expect(rowsBefore.length).to.be.greaterThan(1);
     expect(rowsBefore.length, 'the window is smaller than the full list').to.be.lessThan(20);
     const lastId = rowsBefore[rowsBefore.length - 1].id;
+    const expectedNextId =
+      manyThreads[manyThreads.findIndex((thread) => thread.id === lastId) + 1]!.id;
     (rowsBefore[rowsBefore.length - 1].shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
 
+    const scrollComplete = oneEvent(list, 'lr-scroll');
     el.shadowRoot!
       .querySelector('[part="list"]')!
       .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
-    await nextFrame();
+    await scrollComplete;
+    await list.updateComplete;
     await nextFrame();
     await el.updateComplete;
 
     const rowsAfter = dataRows(el);
     const newLast = rowsAfter[rowsAfter.length - 1];
+    const focusedRowId =
+      rowsAfter.find((row) => row.shadowRoot?.activeElement?.getAttribute('part') === 'option')?.id ??
+      'no focused row';
     expect(newLast.id, 'a further row mounted past the previous window edge').to.not.equal(lastId);
     expect(viewport.scrollTop, 'the list actually scrolled').to.be.greaterThan(0);
-    expect(newLast.shadowRoot!.activeElement === newLast.shadowRoot!.querySelector('[part="option"]')).to.be.true;
+    expect(focusedRowId, 'focus reaches the next row beyond the old window edge').to.equal(
+      expectedNextId,
+    );
 
     expect(scrollEvents.length, 'the scroll really happened').to.be.greaterThan(0);
     expect(

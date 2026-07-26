@@ -41,6 +41,16 @@ export const NoResize: Story = {
   render: () => html`<lr-textarea placeholder="Fixed size" resize="none" rows="4"></lr-textarea>`,
 };
 
+export const Readonly: Story = {
+  render: () => html`
+    <lr-textarea
+      label="Published summary"
+      value="This text remains focusable, selectable, copyable, and form-submittable."
+      readonly
+    ></lr-textarea>
+  `,
+};
+
 export const Disabled: Story = {
   render: () => html`<lr-textarea placeholder="Can't type here" disabled></lr-textarea>`,
 };

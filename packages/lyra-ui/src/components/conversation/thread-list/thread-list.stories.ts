@@ -165,32 +165,46 @@ export const RenderHooks: Story = {
 /** `renderExcerpt` renders into the row item's own `excerpt` slot -- which wins over the
  *  plain-string `excerpt` property -- so rich content like a search-match highlight can be shown
  *  without giving up the built-in title layout and inline-rename affordance the way
- *  `renderRowContent` would require. */
+ *  `renderRowContent` would require. The first list uses the shipped highlight defaults; the
+ *  second retunes all four component-scoped highlight properties. */
 export const HighlightedExcerpt: Story = {
-  render: () => html`
-    <style>
-      mark {
-        background: var(--lr-color-warning);
-        color: var(--lr-color-on-warning);
-        border-radius: var(--lr-radius-xs);
-      }
-    </style>
-    <div style="block-size:400px;inline-size:360px;border:1px solid var(--lr-color-border);">
-      <lr-thread-list
-        .threads=${threads}
-        .renderExcerpt=${(thread: ChatThread) => {
-          const excerpt = thread.excerpt ?? '';
-          const query = 'token';
-          const index = excerpt.toLowerCase().indexOf(query);
-          if (index === -1) return html`${excerpt}`;
-          return html`${excerpt.slice(0, index)}<mark>${excerpt.slice(
-            index,
-            index + query.length,
-          )}</mark>${excerpt.slice(index + query.length)}`;
-        }}
-      ></lr-thread-list>
-    </div>
-  `,
+  render: () => {
+    const renderExcerpt = (thread: ChatThread) => {
+      const excerpt = thread.excerpt ?? '';
+      const query = 'token';
+      const index = excerpt.toLowerCase().indexOf(query);
+      if (index === -1) return html`${excerpt}`;
+      return html`${excerpt.slice(0, index)}<mark>${excerpt.slice(
+        index,
+        index + query.length,
+      )}</mark>${excerpt.slice(index + query.length)}`;
+    };
+    return html`
+      <div
+        style="
+          display:grid;
+          grid-template-columns:repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+          gap:var(--lr-space-m);
+        "
+      >
+        <div style="block-size:400px;border:1px solid var(--lr-color-border);">
+          <lr-thread-list .threads=${threads} .renderExcerpt=${renderExcerpt}></lr-thread-list>
+        </div>
+        <div style="block-size:400px;border:1px solid var(--lr-color-border);">
+          <lr-thread-list
+            style="
+              --lr-thread-list-excerpt-highlight-background:var(--lr-color-brand-quiet);
+              --lr-thread-list-excerpt-highlight-foreground:var(--lr-color-text);
+              --lr-thread-list-excerpt-highlight-radius:var(--lr-radius-pill);
+              --lr-thread-list-excerpt-highlight-padding:0 var(--lr-space-2xs);
+            "
+            .threads=${threads}
+            .renderExcerpt=${renderExcerpt}
+          ></lr-thread-list>
+        </div>
+      </div>
+    `;
+  },
 };
 
 /** Row density from the outside, with no token override. In data mode this component builds each

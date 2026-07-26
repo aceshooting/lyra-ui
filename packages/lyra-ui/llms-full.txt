@@ -1321,6 +1321,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
 | `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
+| `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
 | `hint` | `hint` | `string` | `''` | Hint text below the field. |
 | `errorText` | `error-text` | `string` | `''` | Error text below the field (overridden by slotted `error` content). |
@@ -1343,6 +1344,10 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 `validity` reports `valueMissing` (from `required`), `tooShort` (from `minlength`), and `tooLong`
 (from `maxlength`) — the complete set a native `<textarea>` can produce. Leaving `minlength` and
 `maxlength` unset constrains nothing, exactly as before they existed.
+
+While `readonly`, all three constraint flags are suspended and `checkValidity()` succeeds, matching
+native textarea behavior. The value remains a successful form value and is restored by form reset;
+unsetting `readonly` restores the applicable required and length constraints.
 
 Two behaviors are worth knowing, both inherited from the platform and both shared with `lr-input`:
 
@@ -6094,19 +6099,20 @@ history sidebar); it is not the right approach for a hundred-thousand-row list w
 - A sticky band only appears when `renderStickyGroup` *and* at least one valid `groups` entry are
   both present; `groups` alone renders positioned markers with nothing pinned, and
   `renderStickyGroup` alone renders no overlay element at all.
-- **A row that renders a popup needs the focused-row lift, and this is why `[part='row']` has one.**
+- **A row that renders a popup needs the active-row lift, and this is why `[part='row']` has one.**
   Each row carries `will-change: transform` (a compositor hint for the per-frame translate), which
   makes every row its own stacking context. Rows otherwise carry no `z-index`, so they paint in DOM
   order and each one paints over the previous. Anything a row renders that overflows its own box —
   an `<lr-menu>` popup in a row-action menu, a tooltip, an outward focus ring — is therefore painted
   *underneath* every following row, no matter how high its own `z-index` is: that `z-index` only
   orders siblings inside the row's own context. The last row always looks correct, which is exactly
-  why a short fixture never catches it. `[part='row']:focus-within` lifts the row to
-  `--lr-layer-content` for precisely as long as something inside it holds focus — the lifetime of an
-  open popup — and costs nothing otherwise. The value deliberately *matches* `[part='group']`'s
-  rather than exceeding it, so the two land on the same layer and DOM order decides: groups render
-  before the rows, so a focused row wins while (and only while) it holds focus, which is right — a
-  group header is a non-interactive `pointer-events: none` label.
+  why a short fixture never catches it. A row lifts to `--lr-layer-content` while something inside
+  it holds focus or while it contains an open `lr-menu`. The explicit menu-open branch covers
+  imperative opening and virtual measurement/render cycles, where focus can temporarily return to
+  the document while the popup remains visible. The value deliberately *matches*
+  `[part='group']`'s rather than exceeding it, so the two land on the same layer and DOM order
+  decides: groups render before the rows, so an active row wins while (and only while) it needs to,
+  which is right — a group header is a non-interactive `pointer-events: none` label.
 
 ---
 
@@ -14117,13 +14123,17 @@ icon — the item has no default slot to receive one); unset renders the built-i
 `renderActions?: (thread: ChatThread) => TemplateResult` (attribute: false) — data mode only:
 appends host-supplied content (re-invoked per row on every render, e.g. a `lr-menu` with custom
 actions) after the built-in `rowActions` output in each row's `actions` slot; events it fires reach
-the host normally and never trigger `lr-select`. Unset renders only the built-in `rowActions`.
+the host normally and never trigger `lr-select`. An open nested `lr-menu` keeps its virtual row
+above later rows even if focus temporarily leaves the menu. Unset renders only the built-in
+`rowActions`.
 `renderLeading?: (thread: ChatThread) => TemplateResult` (attribute: false) — renders non-interactive
 leading content in each virtualized row. `renderExcerpt?: (thread: ChatThread) => TemplateResult`
 (attribute: false) — renders rich content into the row item's own `excerpt` slot, winning over the
 plain-string `excerpt` property (e.g. a server-highlighted search-match snippet), while leaving the
-built-in title layout and inline-rename affordance untouched. `renderMeta?: (thread: ChatThread) =>
-TemplateResult` (attribute: false) — appends structured metadata in the row's meta region.
+built-in title layout and inline-rename affordance untouched. `<mark>` descendants returned by this
+hook receive the default, component-themeable highlight treatment documented below.
+`renderMeta?: (thread: ChatThread) => TemplateResult` (attribute: false) — appends structured
+metadata in the row's meta region.
 `renderRowContent?: (thread: ChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's title/excerpt/meta content area with custom non-interactive row content.
 `formatGroupLabel?: (key: ThreadBucketKey, date?: Date) => string` (attribute: false) — overrides
@@ -14165,6 +14175,14 @@ Data mode additionally forwards each row `<lr-conversation-item>`'s own parts un
 prefix: `row-item-base`, `row-item-active-indicator`, `row-item-option`, `row-item-leading`, `row-item-content`,
 `row-item-title`, `row-item-title-input`, `row-item-rename-button`, `row-item-excerpt`,
 `row-item-meta`, `row-item-timestamp`, `row-item-actions`.
+
+**Themeable excerpt highlights:** `<mark>` descendants returned by `renderExcerpt` use
+`--lr-thread-list-excerpt-highlight-background` (default `var(--lr-color-warning-quiet)`),
+`--lr-thread-list-excerpt-highlight-foreground` (default `inherit`),
+`--lr-thread-list-excerpt-highlight-radius` (default `var(--lr-radius-xs)`), and
+`--lr-thread-list-excerpt-highlight-padding` (default `0`). These properties inherit through the
+internal virtual-list shadow tree, so set them on `lr-thread-list` or any ancestor. They do not style
+marks returned by `renderRowContent` or any other hook.
 
 **Keep the two prefixes straight — they are different surfaces.** The `row-*` parts wrap *this*
 component's own render-callback output (`wrapRow`, `renderLeading`, `renderExcerpt`,

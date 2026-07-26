@@ -57,9 +57,6 @@ type ThreadListItem =
     }
   | { kind: 'thread'; thread: ChatThread };
 
-/** Only used when a keyboard nudge past the rendered window happens with no rendered row to measure
- *  -- roughly one default-density conversation row. */
-const FALLBACK_ROW_HEIGHT_PX = 48;
 const ICON_VIEW_BOX = '0 0 24 24';
 const ICON_STROKE_WIDTH = '1.75';
 
@@ -194,6 +191,14 @@ function defaultFilter(thread: ChatThread, query: string, locale: string): boole
  * @csspart row-item-meta - Data mode: the row item's `meta` wrapper.
  * @csspart row-item-timestamp - Data mode: the row item's `<time>` element.
  * @csspart row-item-actions - Data mode: the row item's `actions` wrapper.
+ * @cssprop [--lr-thread-list-excerpt-highlight-background=var(--lr-color-warning-quiet)] -
+ *   Background of `<mark>` descendants returned by `renderExcerpt`.
+ * @cssprop [--lr-thread-list-excerpt-highlight-foreground=inherit] - Foreground of `<mark>`
+ *   descendants returned by `renderExcerpt`.
+ * @cssprop [--lr-thread-list-excerpt-highlight-radius=var(--lr-radius-xs)] - Corner radius of
+ *   `<mark>` descendants returned by `renderExcerpt`.
+ * @cssprop [--lr-thread-list-excerpt-highlight-padding=0] - Padding of `<mark>` descendants
+ *   returned by `renderExcerpt`.
  */
 export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -246,8 +251,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
    *  DOM sibling of the row's own selectable region (`lr-conversation-item`'s `[part="option"]`),
    *  the same structural reason the built-in `rowActions` buttons don't also trigger `lr-select` --
    *  so ordinary Lyra controls returned here (`lr-menu`, `lr-icon-button`, etc.) fire their own
-   *  events normally without also selecting the row. Unset (the default) leaves `rowActions`'
-   *  output byte-for-byte unchanged. */
+   *  events normally without also selecting the row. A nested open `lr-menu` also keeps its
+   *  virtual row above later rows even if focus temporarily leaves the menu. Unset (the default)
+   *  leaves `rowActions`' output byte-for-byte unchanged. */
   @property({ attribute: false }) renderActions?: (thread: ChatThread) => TemplateResult;
 
   /** Data mode only: renders non-interactive content in the row's leading slot, before its title
@@ -615,32 +621,40 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       this.optionEl(rows[targetIndex]!)?.focus(); // safe: targetIndex in [0, rows.length) checked above
       return;
     }
-    // Past the currently-rendered edge -- nudge the internal virtual list's scroll position by
-    // roughly one row so the next row mounts, then focus whichever row ends up at that edge. Both
-    // halves go through that component's public surface: its `scrollContainer`, and its `lr-scroll`
-    // notification, which fires once the scroll has been folded into a re-render. Waiting for a
-    // plain animation frame instead would race that re-render, and forcing it with a synthetic
-    // `scroll` event dispatched into the child's shadow root would be a fabricated user gesture.
+    // Past the currently-rendered edge: resolve the exact adjacent thread in the child's complete
+    // item model, scroll that item into view, then focus it by stable id after the scroll has been
+    // folded into a render. Focusing an overscanned edge row may itself move the viewport; choosing
+    // whichever row happens to land at the new rendered edge can therefore skip several threads on
+    // browsers that apply that focus scroll later in the frame.
     const list = this.virtualListEl;
-    const container = list?.scrollContainer;
-    if (!list || !container) return;
-    const rowHeight = rows[0]?.getBoundingClientRect().height || FALLBACK_ROW_HEIGHT_PX;
-    const before = container.scrollTop;
-    container.scrollTop = before + (e.key === 'ArrowDown' ? rowHeight : -rowHeight);
-    // Already at that end of the list: nothing more will mount, and the focused row stays put.
-    if (container.scrollTop === before) return;
-    const key = e.key;
-    list.addEventListener(
-      'lr-scroll',
-      () => {
-        void list.updateComplete.then(() => {
-          const refreshed = this.rowElements();
-          const edgeRow = key === 'ArrowDown' ? refreshed[refreshed.length - 1] : refreshed[0];
-          if (edgeRow) this.optionEl(edgeRow)?.focus();
-        });
-      },
-      { once: true },
+    if (!list?.scrollContainer) return;
+    const currentRow = rows[currentIndex];
+    if (!currentRow) return;
+    const items = list.items as ThreadListItem[];
+    const currentItemIndex = items.findIndex(
+      (item) => item.kind === 'thread' && item.thread.id === currentRow.id,
     );
+    if (currentItemIndex < 0) return;
+    const direction = e.key === 'ArrowDown' ? 1 : -1;
+    let targetItemIndex = currentItemIndex + direction;
+    while (items[targetItemIndex]?.kind === 'group') targetItemIndex += direction;
+    const targetItem = items[targetItemIndex];
+    if (!targetItem || targetItem.kind !== 'thread') return;
+    const targetId = targetItem.thread.id;
+    list.scrollToIndex(targetItemIndex, { align: 'auto', behavior: 'auto' });
+    void (async () => {
+      // The browser may still have a focus-induced scroll queued for the old edge row. Give both
+      // that native scroll and the virtual list's coalesced scroll render a frame to settle; the
+      // second pass covers a measurement update that mounts the exact target one frame later.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await list.updateComplete;
+        const targetRow = this.rowElements().find((row) => row.id === targetId);
+        if (!targetRow) continue;
+        this.optionEl(targetRow)?.focus();
+        return;
+      }
+    })();
   };
 
   private renderRowActions(thread: ChatThread): TemplateResult {
