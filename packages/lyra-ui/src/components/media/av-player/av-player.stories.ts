@@ -21,25 +21,27 @@ export default meta;
 type Story = StoryObj;
 
 const CUES: LyraAvCue[] = [
-  { id: 'c1', start: 0, end: 8, text: 'Welcome to the show.', speaker: 'Host' },
-  { id: 'c2', start: 8, end: 22, text: 'Today we discuss agentic UI.', speaker: 'Host' },
-  { id: 'c3', start: 22, end: 40, text: 'Thanks for having me.', speaker: 'Guest' },
+  { id: 'c1', start: 0, end: 0.6, text: 'Welcome to the show.', speaker: 'Host' },
+  { id: 'c2', start: 0.6, end: 1.4, text: 'Today we discuss agentic UI.', speaker: 'Host' },
+  { id: 'c3', start: 1.4, end: 2, text: 'Thanks for having me.', speaker: 'Guest' },
 ];
 const PEAKS = Array.from({ length: 120 }, (_v, i) => Math.abs(Math.sin(i / 6)) * 0.9 + 0.05);
+const AUDIO_SRC = '/fixtures/sample-video.mp4';
+const VIDEO_SRC = '/fixtures/sample-video.mp4';
 
 export const AudioWithTranscript: Story = {
   render: () => html`<lr-av-player
-    src="https://example.test/podcast.mp3"
-    mime-type="audio/mpeg"
+    src=${AUDIO_SRC}
+    mime-type="audio/mp4"
     name="Episode 1"
     .cues=${CUES}
     .peaks=${PEAKS}
-    .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 8, end: 22 }, label: 'Agentic UI segment' }]}
+    .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 0.6, end: 1.4 }, label: 'Agentic UI segment' }]}
   ></lr-av-player>`,
 };
 
 export const Video: Story = {
-  render: () => html`<lr-av-player src="https://example.test/clip.mp4" mime-type="video/mp4" name="Demo clip"></lr-av-player>`,
+  render: () => html`<lr-av-player src=${VIDEO_SRC} mime-type="video/mp4" name="Demo clip"></lr-av-player>`,
 };
 
 export const NoSrc: Story = {
@@ -48,7 +50,7 @@ export const NoSrc: Story = {
 
 export const Narrow320: Story = {
   render: () => html`<div style="max-inline-size:320px">
-    <lr-av-player src="https://example.test/podcast.mp3" mime-type="audio/mpeg" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lr-av-player>
+    <lr-av-player src=${AUDIO_SRC} mime-type="audio/mp4" name="Episode 1" .cues=${CUES} .peaks=${PEAKS}></lr-av-player>
   </div>`,
 };
 
@@ -65,12 +67,12 @@ export const ThemedActiveStates: Story = {
   render: () => html`
     <lr-av-player
       style="--lr-av-player-marker-active-color: ${storyColor('success')}; --lr-av-player-cue-current-bg: ${storyColor('warningQuiet')}; --lr-av-player-cue-active-match-color: ${storyColor('brand')};"
-      src="https://example.test/podcast.mp3"
-      mime-type="audio/mpeg"
+      src=${AUDIO_SRC}
+      mime-type="audio/mp4"
       name="Episode 1"
       .cues=${CUES}
       .peaks=${PEAKS}
-      .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 8, end: 22 }, label: 'Agentic UI segment' }]}
+      .highlights=${[{ id: 'h1', anchor: { kind: 'time-range', start: 0.6, end: 1.4 }, label: 'Agentic UI segment' }]}
       active-highlight-id="h1"
     ></lr-av-player>
   `,

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-label="Abstract mountain landscape">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#233c67"/>
+      <stop offset="1" stop-color="#8bb9c9"/>
+    </linearGradient>
+    <linearGradient id="river" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b8e2e8"/>
+      <stop offset="1" stop-color="#3f7f9b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <circle cx="915" cy="170" r="74" fill="#f7d994"/>
+  <path d="M0 520 270 190l175 205 155-250 330 375Z" fill="#283f52"/>
+  <path d="m270 190 75 88-55-18-58 45Z" fill="#e8f0ed"/>
+  <path d="m600 145 95 145-80-31-72 45Z" fill="#e8f0ed"/>
+  <path d="M0 515h1200v285H0Z" fill="#426c58"/>
+  <path d="M480 800c40-150 120-240 240-285 95-36 180-39 300-14-132 58-210 132-250 299Z" fill="url(#river)"/>
+  <path d="M0 640c175-73 333-79 474-20l-55 180H0Zm1200-12c-121-51-224-63-311-37l-67 209h378Z" fill="#345744"/>
+</svg>

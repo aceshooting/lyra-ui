@@ -195,6 +195,179 @@ async function waitForLocatorCount(locator, predicate, timeoutMs = 5000) {
   throw new Error(`timed out waiting for locator count (last seen: ${last})`);
 }
 
+async function auditComponentDocs(browser, baseUrl, entries) {
+  const matrices = [
+    { name: 'desktop', width: 980, height: 760, direction: 'ltr' },
+    { name: 'narrow', width: 390, height: 800, direction: 'ltr' },
+    { name: 'narrow-rtl', width: 390, height: 800, direction: 'rtl' },
+  ];
+  const work = matrices.flatMap((matrix) => entries.map((entry) => ({ entry, matrix })));
+  const failures = [];
+  let cursor = 0;
+
+  async function worker() {
+    const auditPage = await browser.newPage({ deviceScaleFactor: 1 });
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= work.length) break;
+
+      const { entry, matrix } = work[index];
+      const browserErrors = [];
+      const isExpectedRequestFailure = (url) => {
+        const parsed = new URL(url);
+        return (
+          parsed.hostname === 'tile.openstreetmap.org' ||
+          parsed.hostname === 'example.invalid' ||
+          (entry.id === 'animatedimage--docs' &&
+            parsed.pathname.endsWith('/does-not-exist-lr-animated-image.gif'))
+        );
+      };
+      const isIgnorableError = (text) =>
+        /tile\.openstreetmap\.org/.test(text) ||
+        (entry.id === 'map--docs' && /Failed to fetch/.test(text));
+      const onPageError = (error) => {
+        const text = String(error);
+        if (!isIgnorableError(text)) browserErrors.push(`pageerror: ${text}`);
+      };
+      const onConsole = (message) => {
+        if (
+          message.type() !== 'error' ||
+          isIgnorableError(message.text()) ||
+          /Failed to load resource: net::ERR_|Failed to load resource.*404/.test(message.text())
+        ) {
+          return;
+        }
+        browserErrors.push(`console: ${message.text()}`);
+      };
+      const onRequestFailed = (request) => {
+        if (isExpectedRequestFailure(request.url())) return;
+        browserErrors.push(
+          `request failed: ${request.url()} (${request.failure()?.errorText ?? 'unknown error'})`,
+        );
+      };
+      const onResponse = (response) => {
+        if (response.status() < 400 || isExpectedRequestFailure(response.url())) return;
+        browserErrors.push(`HTTP ${response.status()}: ${response.url()}`);
+      };
+      auditPage.on('pageerror', onPageError);
+      auditPage.on('console', onConsole);
+      auditPage.on('requestfailed', onRequestFailed);
+      auditPage.on('response', onResponse);
+
+      try {
+        await auditPage.setViewportSize({ width: matrix.width, height: matrix.height });
+        await auditPage.goto(
+          `${baseUrl}/iframe.html?id=${encodeURIComponent(entry.id)}&viewMode=docs&globals=theme:dark;direction:${matrix.direction};density:comfortable`,
+          { waitUntil: 'domcontentloaded', timeout: 20_000 },
+        );
+        await auditPage.waitForSelector('.sbdocs-wrapper', { timeout: 15_000 });
+        await auditPage.waitForTimeout(120);
+
+        const layout = await auditPage.evaluate(async () => {
+          const updatePromises = [...document.querySelectorAll('*')]
+            .filter(
+              (element) =>
+                element.localName.startsWith('lr-') &&
+                typeof element.updateComplete?.then === 'function',
+            )
+            .map((element) => element.updateComplete.catch(() => undefined));
+          await Promise.all(updatePromises);
+
+          const apiTables = [...document.querySelectorAll('table.docblock-argstable')].map((table) => {
+            const scroller = table.parentElement;
+            return {
+              tableWidth: Math.round(table.getBoundingClientRect().width),
+              scrollerClientWidth: scroller?.clientWidth ?? 0,
+              scrollerScrollWidth: scroller?.scrollWidth ?? 0,
+              scrollerOverflowX: scroller ? getComputedStyle(scroller).overflowX : '',
+            };
+          });
+          const openFrames = [...document.querySelectorAll('.docs-story [open]')]
+            .filter((element) => element.localName.startsWith('lr-'))
+            .map((element) => {
+              const canvas = element.closest('.docs-story');
+              const preview = element.closest('.sbdocs-preview');
+              const zoomWrapper = canvas?.querySelector(
+                ':scope > div:has(> .innerZoomElementWrapper)',
+              );
+              return {
+                tag: element.localName,
+                canvasOverflow: canvas ? getComputedStyle(canvas).overflow : '',
+                previewOverflow: preview ? getComputedStyle(preview).overflow : '',
+                zoomTransform: zoomWrapper ? getComputedStyle(zoomWrapper).transform : '',
+              };
+            });
+          const visibleErrors = [
+            ...document.querySelectorAll('.sb-errordisplay, [data-testid="storyError"]'),
+          ]
+            .filter((element) => {
+              const style = getComputedStyle(element);
+              const rect = element.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.height > 0;
+            })
+            .map((element) => element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 300) ?? '');
+
+          return {
+            documentClientWidth: document.documentElement.clientWidth,
+            documentScrollWidth: document.documentElement.scrollWidth,
+            apiTables,
+            openFrames,
+            visibleErrors,
+          };
+        });
+
+        const pageFailures = [];
+        if (layout.documentScrollWidth > layout.documentClientWidth + 1) {
+          pageFailures.push(
+            `document width ${layout.documentScrollWidth}px exceeds ${layout.documentClientWidth}px`,
+          );
+        }
+        for (const table of layout.apiTables) {
+          if (
+            table.tableWidth > table.scrollerClientWidth + 1 &&
+            (!['auto', 'scroll'].includes(table.scrollerOverflowX) ||
+              table.scrollerScrollWidth <= table.scrollerClientWidth)
+          ) {
+            pageFailures.push(`wide API table is not locally scrollable: ${JSON.stringify(table)}`);
+          }
+        }
+        for (const frame of layout.openFrames) {
+          if (
+            frame.canvasOverflow !== 'visible' ||
+            frame.previewOverflow !== 'visible' ||
+            frame.zoomTransform !== 'none'
+          ) {
+            pageFailures.push(`open ${frame.tag} is trapped by its Docs frame: ${JSON.stringify(frame)}`);
+          }
+        }
+        pageFailures.push(...layout.visibleErrors.map((error) => `Storybook error display: ${error}`));
+        pageFailures.push(...browserErrors);
+        if (pageFailures.length) {
+          failures.push(`${entry.id} [${matrix.name}]: ${pageFailures.join('; ')}`);
+        }
+      } catch (error) {
+        failures.push(`${entry.id} [${matrix.name}]: ${error instanceof Error ? error.message : error}`);
+      } finally {
+        auditPage.off('pageerror', onPageError);
+        auditPage.off('console', onConsole);
+        auditPage.off('requestfailed', onRequestFailed);
+        auditPage.off('response', onResponse);
+      }
+    }
+    await auditPage.close();
+  }
+
+  await Promise.all(Array.from({ length: 6 }, () => worker()));
+  if (failures.length) {
+    throw new Error(
+      `Docs layout audit failed on ${failures.length} of ${work.length} page/viewport checks:\n${failures.join('\n')}`,
+    );
+  }
+
+  return { pages: entries.length, checks: work.length };
+}
+
 async function main() {
   let index;
   try {
@@ -212,6 +385,7 @@ async function main() {
   const componentEntries = Object.values(index.entries ?? {}).filter((entry) =>
     entry.importPath?.includes('/src/components/'),
   );
+  const componentDocsEntries = componentEntries.filter((entry) => entry.type === 'docs');
   const ungroupedEntries = componentEntries.filter((entry) => !familyLabels.has(entry.title?.split('/')[0]));
   if (ungroupedEntries.length) {
     throw new Error(
@@ -347,6 +521,97 @@ async function main() {
       highContrastLanding.headingColor !== 'rgb(0, 0, 0)'
     ) {
       throw new Error(`Introduction did not render its high-contrast theme: ${JSON.stringify(highContrastLanding)}`);
+    }
+
+    const dropdownDocsFrame = await waitForDocs(page, baseUrl, 'overlay-dropdown--docs', 'dark');
+    const dropdownDocs = dropdownDocsFrame.locator('lr-dropdown').first();
+    await dropdownDocs.evaluate((element) => {
+      // A realistically tall action list proves both failure modes that a one-row popup can hide:
+      // the Docs canvas must not cap Floating UI's available height, and the opened surface must
+      // paint above the controls table that follows the story.
+      for (let index = 1; index <= 8; index += 1) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.role = 'menuitem';
+        item.textContent = `Additional menu action ${index}`;
+        item.style.display = 'block';
+        element.append(item);
+      }
+    });
+    await dropdownDocs.locator('button[slot="trigger"]').click();
+    await dropdownDocsFrame.waitForTimeout(150);
+    const dropdownDocsLayout = await dropdownDocs.evaluate((element) => {
+      const popup = element.shadowRoot?.querySelector('[part="popup"]');
+      const canvas = element.closest('.docs-story');
+      const preview = element.closest('.sbdocs-preview');
+      const zoomWrapper = canvas?.querySelector(':scope > div:has(> .innerZoomElementWrapper)');
+      if (!(popup instanceof HTMLElement) || !(canvas instanceof HTMLElement) || !(preview instanceof HTMLElement)) {
+        return { error: 'Dropdown Docs did not render its expected popup/canvas structure' };
+      }
+      const rect = popup.getBoundingClientRect();
+      const sampleYs = [rect.top + 4, rect.top + rect.height / 2, rect.bottom - 4];
+      const samplesBelongToDropdown = sampleYs.map((y) => {
+        const hit = document.elementFromPoint(rect.left + 8, y);
+        return hit === element || (hit instanceof Node && element.contains(hit));
+      });
+      return {
+        availableBlockSize: Number.parseFloat(
+          getComputedStyle(popup).getPropertyValue('--lr-positioner-available-block-size'),
+        ),
+        clientHeight: popup.clientHeight,
+        scrollHeight: popup.scrollHeight,
+        canvasOverflow: getComputedStyle(canvas).overflow,
+        previewOverflow: getComputedStyle(preview).overflow,
+        zoomTransform: zoomWrapper ? getComputedStyle(zoomWrapper).transform : '',
+        samplesBelongToDropdown,
+      };
+    });
+    if (
+      dropdownDocsLayout.error ||
+      dropdownDocsLayout.clientHeight !== dropdownDocsLayout.scrollHeight ||
+      dropdownDocsLayout.availableBlockSize < 200 ||
+      dropdownDocsLayout.canvasOverflow !== 'visible' ||
+      dropdownDocsLayout.previewOverflow !== 'visible' ||
+      dropdownDocsLayout.zoomTransform !== 'none' ||
+      !dropdownDocsLayout.samplesBelongToDropdown?.every(Boolean)
+    ) {
+      throw new Error(
+        `Dropdown is clipped or stacked below surrounding Docs content: ${JSON.stringify(dropdownDocsLayout)}`,
+      );
+    }
+
+    const narrowDocsPage = await browser.newPage({
+      viewport: { width: 390, height: 800 },
+      deviceScaleFactor: 1,
+    });
+    try {
+      await narrowDocsPage.goto(
+        `${baseUrl}/iframe.html?id=overlay-dropdown--docs&viewMode=docs&globals=theme:dark`,
+        { waitUntil: 'domcontentloaded', timeout: 20_000 },
+      );
+      await narrowDocsPage.waitForSelector('.docblock-argstable', { timeout: 15_000 });
+      const narrowArgsLayout = await narrowDocsPage.evaluate(() => {
+        const table = document.querySelector('.docblock-argstable');
+        const scroller = table?.parentElement;
+        return {
+          documentClientWidth: document.documentElement.clientWidth,
+          documentScrollWidth: document.documentElement.scrollWidth,
+          scrollerClientWidth: scroller?.clientWidth ?? 0,
+          scrollerScrollWidth: scroller?.scrollWidth ?? 0,
+          scrollerOverflowX: scroller ? getComputedStyle(scroller).overflowX : '',
+        };
+      });
+      if (
+        narrowArgsLayout.documentScrollWidth > narrowArgsLayout.documentClientWidth + 1 ||
+        narrowArgsLayout.scrollerScrollWidth <= narrowArgsLayout.scrollerClientWidth ||
+        !['auto', 'scroll'].includes(narrowArgsLayout.scrollerOverflowX)
+      ) {
+        throw new Error(
+          `Narrow Docs API table is not locally contained: ${JSON.stringify(narrowArgsLayout)}`,
+        );
+      }
+    } finally {
+      await narrowDocsPage.close();
     }
 
     for (const id of requiredStories) {
@@ -517,7 +782,13 @@ async function main() {
       );
     }
 
+    const docsAudit = await auditComponentDocs(browser, baseUrl, componentDocsEntries);
+
     if (browserErrors.length) throw new Error(`Storybook browser errors:\n${browserErrors.join('\n')}`);
+
+    console.log(
+      `Docs layout audit passed for ${docsAudit.pages} component pages across ${docsAudit.checks} desktop, narrow, and RTL checks.`,
+    );
   } finally {
     await page.close();
     await browser.close();

@@ -42,6 +42,7 @@ const config = {
   // nesting.
   staticDirs: [
     { from: './lyra-mark.svg', to: './lyra-mark.svg' },
+    { from: './story-image.svg', to: './fixtures/story-image.svg' },
     { from: '../packages/lyra-ui/src/components/viewers/pdf-viewer/fixtures/sample.pdf', to: './fixtures/sample.pdf' },
     // A synthetic (ffmpeg testsrc, no third-party content), silent 2s h264 clip -- MediaCard's
     // Video story used to point at an external MDN-hosted URL, which the release-time

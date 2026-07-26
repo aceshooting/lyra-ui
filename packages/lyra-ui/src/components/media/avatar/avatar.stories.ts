@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './avatar.js';
 
+const IMAGE_SRC = '/fixtures/story-image.svg';
+
 const meta: Meta = {
   title: 'Components/Avatar',
   component: 'lr-avatar',
@@ -54,7 +56,7 @@ export const WithImage: Story = {
   name: 'With an image',
   render: () => html`
     <lr-avatar
-      src="https://picsum.photos/id/64/128/128"
+      src=${IMAGE_SRC}
       alt="A. Bee"
       initials="AB"
     ></lr-avatar>
@@ -73,7 +75,7 @@ export const AccessibleNameOverride: Story = {
   },
   render: () => html`
     <lr-avatar
-      src="https://picsum.photos/id/64/128/128"
+      src=${IMAGE_SRC}
       alt="Profile photo"
       aria-label="Signed in as A. Bee"
       initials="AB"

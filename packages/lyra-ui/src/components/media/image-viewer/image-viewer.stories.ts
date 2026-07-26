@@ -12,7 +12,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-const SRC = 'https://picsum.photos/id/1015/1200/800';
+const SRC = '/fixtures/story-image.svg';
 
 export const Default: Story = {
   render: () => html`<lr-image-viewer src=${SRC} name="Mountain river"></lr-image-viewer>`,
