@@ -274,6 +274,28 @@ async function auditComponentDocs(browser, baseUrl, entries) {
             .map((element) => element.updateComplete.catch(() => undefined));
           await Promise.all(updatePromises);
 
+          // Storybook's Docs page applies some layout-affecting CSS -- notably the ArgsTable's
+          // horizontal-scroll wrapper -- asynchronously, after custom elements finish updating.
+          // A page whose ArgsTable is unusually wide relative to its scroller (little margin
+          // before that wrapper's overflow-x is actually applied) can get measured mid-reflow
+          // under CI's tighter CPU budget, producing a false "document width exceeds" failure
+          // even though the wrapper ends up correctly scoped a frame or two later. Wait for
+          // document.documentElement.scrollWidth to stop moving across consecutive animation
+          // frames instead of trusting a snapshot taken at a fixed, content-agnostic delay.
+          let lastScrollWidth = document.documentElement.scrollWidth;
+          let stableFrames = 0;
+          const settleDeadline = performance.now() + 1000;
+          while (stableFrames < 3 && performance.now() < settleDeadline) {
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+            const currentScrollWidth = document.documentElement.scrollWidth;
+            if (currentScrollWidth === lastScrollWidth) {
+              stableFrames += 1;
+            } else {
+              stableFrames = 0;
+              lastScrollWidth = currentScrollWidth;
+            }
+          }
+
           const apiTables = [...document.querySelectorAll('table.docblock-argstable')].map((table) => {
             const scroller = table.parentElement;
             return {
