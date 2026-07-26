@@ -8,6 +8,25 @@ it('gives the star row hover feedback matching the keyboard focus-visible cue', 
   expect(css).to.match(/\[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:/);
 });
 
+it('gates the pointer cursor and hover highlight behind readonly/disabled, not just disabled (regression)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:host\(:not\(\[readonly\]\):not\(\[disabled\]\)\) \[part='base'\]\s*\{[^}]*cursor:\s*pointer/);
+  expect(css).to.match(
+    /:host\(:not\(\[readonly\]\):not\(\[disabled\]\)\) \[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:/,
+  );
+  // The old disabled-only gate must be gone, not merely joined by the new readonly+disabled one.
+  expect(css).to.not.include(":host(:not([disabled])) [part='base']:hover [part='star']");
+});
+
+it('does not show a pointer cursor on a readonly rating (it is still focusable but not settable)', async () => {
+  const interactive = (await fixture(html`<lr-rating></lr-rating>`)) as LyraRating;
+  const readonly = (await fixture(html`<lr-rating readonly></lr-rating>`)) as LyraRating;
+  const interactiveBase = interactive.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const readonlyBase = readonly.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(interactiveBase).cursor).to.equal('pointer');
+  expect(getComputedStyle(readonlyBase).cursor).to.not.equal('pointer');
+});
+
 it('exposes a keyboard-accessible rating slider', async () => {
   const el = (await fixture(html`<lr-rating value="2"></lr-rating>`)) as LyraRating;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

@@ -5,10 +5,28 @@ import type {
   ResponsivePanelModeChangeDetail,
 } from "./responsive-panel.js";
 import { resolveEffectiveMode } from "./responsive-panel.js";
-import { styles } from "./responsive-panel.styles.js";
 
-it("uses a dynamic viewport fallback and safe-area padding for bottom sheets", () => {
-  expect(styles.cssText).to.include("var(--lr-safe-area-bottom)");
+it("pads an open bottom sheet with the --lr-safe-area-bottom token, not a hardcoded value", async () => {
+  // Reads the real rendered/computed padding instead of substring-matching the exported
+  // stylesheet source, which would still pass even if the declaration lived on a selector that
+  // never actually matched the rendered panel. `--lr-safe-area-bottom` is unconditionally
+  // re-declared (from env(safe-area-inset-bottom)) on this component's own :host in the shared
+  // tokens stylesheet, so an *ancestor* override can't reach it -- only a same-element inline
+  // style (higher priority than any shadow-DOM :host rule) can prove the panel genuinely consumes
+  // the token rather than a coincidental 0px from a broken/missing reference.
+  const el = (await fixture(html`
+    <lr-responsive-panel
+      mode="overlay"
+      variant="bottom-sheet"
+      open
+      label="Actions"
+      style="--lr-safe-area-bottom: 24px"
+      ><button>Share</button></lr-responsive-panel
+    >
+  `)) as LyraResponsivePanel;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  expect(getComputedStyle(panel).paddingBlockEnd).to.equal("24px");
 });
 
 it("caps an open bottom sheet at 85% of the dynamic viewport by default", async () => {

@@ -431,6 +431,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     const marksChanged = ['type', 'labels', 'datasets', 'skipZero'].some((name) => changed.has(name));
     if (!marksChanged) return;
     const active = this.shadowRoot?.activeElement ?? null;
@@ -458,6 +459,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (changed.has('height')) {
       this.style.setProperty('--lr-chart-height', this.height);
     }

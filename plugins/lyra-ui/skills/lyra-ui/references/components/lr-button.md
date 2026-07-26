@@ -88,18 +88,23 @@ loud fill token), `--lr-button-outlined-border` (default `--lr-color-border-stro
 `--lr-color-border`) — the `appearance="quiet"` foreground/border pair, also variant-independent,
 `--lr-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
 `--lr-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
-`prefers-reduced-motion`), `--lr-button-spinner-duration` (default `1s`, the `loading` spinner's
-rotation period; forced to `0.001ms` under `prefers-reduced-motion`),
+`prefers-reduced-motion`), `--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`, the `loading` spinner's rotation period; that token itself collapses to
+`0.001ms linear` under `prefers-reduced-motion`, so the spinner effectively stops),
 `--lr-button-outlined-fill` (default `transparent`, the `appearance="outlined"` background — also
 variant-independent; set it to tint an outlined button with, say, a faint surface wash behind the
 outline, without a `::part(base)` rule. Note that the `:hover` `filter: brightness()` applies to
 whatever fill is set, so a tinted outlined button visibly brightens on hover where a transparent
 one did not),
 and the per-`size`
-`min-block-size` floors `--lr-button-size-2xs` (`1.25rem`), `--lr-button-size-xs` (`1.5rem`),
-`--lr-button-size-s` (`1.75rem`), `--lr-button-size-m` (`2rem`), `--lr-button-size-l` (`2.5rem`),
-`--lr-button-size-xl` (`3rem`) — each read only by its own `size` tier, and all ignored by
-`appearance="link"`. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
+`min-block-size` floors `--lr-button-size-2xs` (`var(--lr-size-1-25rem)`, 1.25rem),
+`--lr-button-size-xs` (`var(--lr-size-1-5rem)`, 1.5rem), `--lr-button-size-s`
+(`var(--lr-size-1-875rem)`, 1.875rem), `--lr-button-size-m` (`var(--lr-size-2-5rem)`, 2.5rem),
+`--lr-button-size-l` (`var(--lr-size-3rem)`, 3rem), `--lr-button-size-xl`
+(`var(--lr-size-3-5rem)`, 3.5rem) — each read only by its own `size` tier, and all ignored by
+`appearance="link"`. The `s`/`m`/`l`/`xl` floors are deliberately at or above the
+`--lr-icon-button-size` (2.5rem) hit-area minimum from `m` upward; they resolve through shared
+`--lr-size-*` tokens rather than literal rem values, so a retheme moves them together. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
 and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
 both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
 by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).

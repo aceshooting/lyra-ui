@@ -345,3 +345,26 @@ describe('nav button hover specificity', () => {
     expect(internalRule).to.contain(':where(');
   });
 });
+
+describe('page-input invalid-state specificity (regression)', () => {
+  it('wraps the internal [aria-invalid] rule in :where() so a consumer ::part(page-input) border-color override wins', async () => {
+    const el = await pagination();
+    const internalRule = (el.shadowRoot!.adoptedStyleSheets ?? [])
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText.replace(/"/g, "'"))
+      .find((text) => text.includes("[part='page-input']") && text.includes("aria-invalid"));
+    expect(internalRule).to.contain(':where(');
+  });
+
+  it('lets a consumer retint the invalid page-input border via the scoped --lr-pagination-invalid-border cssprop (regression)', async () => {
+    const el = await pagination();
+    el.style.setProperty('--lr-pagination-invalid-border', 'rgb(1, 2, 3)');
+    const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
+    input.value = '0';
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(input.getAttribute('aria-invalid')).to.equal('true');
+    expect(getComputedStyle(input).borderTopColor).to.equal('rgb(1, 2, 3)');
+  });
+});

@@ -27,6 +27,10 @@ export const styles = css`
     border-inline-start-color: var(--lr-schema-viewer-warning-border, var(--lr-color-warning));
     background: var(--lr-schema-viewer-warning-bg, var(--lr-color-warning-quiet));
   }
+  [part='issue'][data-severity='info'] {
+    border-inline-start-color: var(--lr-schema-viewer-info-border, var(--lr-color-brand));
+    background: var(--lr-schema-viewer-info-bg, var(--lr-color-brand-quiet));
+  }
   [part='constraints'] { display: flex; flex-flow: row wrap; gap: var(--lr-space-xs); padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-family: var(--lr-font-mono); font-size: var(--lr-font-size-xs); }
   @container (max-inline-size: 319.98px) { ul { padding-inline-start: var(--lr-space-s); } [part='tree'] { padding-inline-start: 0; } }
 `;

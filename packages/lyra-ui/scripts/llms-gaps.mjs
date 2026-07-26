@@ -20,6 +20,24 @@ const SHARED_SURFACE = new Set([
 
 const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
+/**
+ * True when `name` appears in `text` as a genuine standalone token, not merely as a substring of an
+ * unrelated word or a different (usually longer, hyphenated) identifier. A plain `text.includes(n)`
+ * false-passes e.g. the `label`/`hint`/`error` CSS *parts* as "documented" purely because those exact
+ * words already occur elsewhere in the section as *property* names ("the `label` property"), and it
+ * false-passes a `change` *event* because it is a literal substring of the unrelated `lr-change`
+ * event and of prose like "since changed". Both identifier characters (`\w`) and `-` count as
+ * "still part of the token" on either side, so `min-hops` only matches itself whole (never the
+ * `min-hops` inside a longer run) and `label` inside `mislabeled` or preceded by `lr-` is correctly
+ * rejected. `name` is escaped before use since manifest names are treated as literal text, not
+ * pattern syntax (defensive -- current names are plain identifiers/`--lr-*` tokens with no regex
+ * metacharacters, but a future name might contain one).
+ */
+export function mentionsName(text, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?<![\\w-])${escaped}(?![\\w-])`).test(text);
+}
+
 /** Custom properties a component's own stylesheet reads but the manifest may not declare. */
 function stylesheetTokens(modulePath) {
   const dir = path.join(packageDir, path.dirname(modulePath));
@@ -60,7 +78,7 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
         const { decl, mod } = entry;
         const lines = section.text.split('\n').length;
         const miss = (kind, names) => {
-          const gone = [...new Set(names)].filter((n) => n && !section.text.includes(n));
+          const gone = [...new Set(names)].filter((n) => n && !mentionsName(section.text, n));
           if (gone.length) gaps.push({ family, tag, lines, kind, names: gone });
         };
         miss(
@@ -86,7 +104,7 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
               (n) =>
                 !SHARED_SURFACE.has(n) &&
                 !SHARED_SURFACE.has(camel(n)) &&
-                !section.text.includes(camel(n)),
+                !mentionsName(section.text, camel(n)),
             ),
         );
         miss('event', (decl.events ?? []).map((e) => e.name));

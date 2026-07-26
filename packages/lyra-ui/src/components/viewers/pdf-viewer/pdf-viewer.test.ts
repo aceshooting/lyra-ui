@@ -131,6 +131,20 @@ describe('lr-pdf-viewer', () => {
     } finally { restore(); }
   });
 
+  it('exposes the toolbar nav/zoom buttons as individually themeable parts (regression)', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(el.shadowRoot!.querySelector('[part="previous-button"]')).to.exist;
+      expect(el.shadowRoot!.querySelector('[part="next-button"]')).to.exist;
+      expect(el.shadowRoot!.querySelector('[part="zoom-out-button"]')).to.exist;
+      expect(el.shadowRoot!.querySelector('[part="zoom-in-button"]')).to.exist;
+    } finally { restore(); }
+  });
+
   it('emits render errors for failed fetches', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
     installFakeLoader(el, fakeDocument(1));

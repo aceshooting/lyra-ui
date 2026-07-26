@@ -36,9 +36,10 @@ the built-in glyph for the current `status` is used)
 `summary`), `category`, `name`, `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
-**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `1s linear` — running-icon
-animation duration/timing) and `--lr-transition-ambient` (default `1.8s ease-in-out` — pending-icon
-pulse duration/timing). `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and
+**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
+i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
+`prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
+(default `1.8s ease-in-out` — pending-icon pulse duration/timing). `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and
 `--lr-tool-call-chip-border` are internal per-status variables reassigned by this component's own
 `:host([status="…"])` rules (e.g. `pending` → `--lr-color-text-quiet`/`--lr-color-surface`/
 `--lr-color-border`; `running` → brand; `success` → success; `error` → danger; `denied` → warning),
@@ -337,7 +338,8 @@ tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`,
 0.5)` — the backdrop scrim color; component-specific since no shared overlay token exists),
 `--lr-tool-result-dialog-maximized-inset` (default `var(--lr-space-l)` — inset applied to the
 panel while `[maximized]`, overridable e.g. to leave a persistent app rail visible), and
-`--lr-tool-result-dialog-spin` (default `1s linear`, stopped under reduced motion), plus shared
+`--lr-tool-result-dialog-spin` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`,
+and effectively stopped under reduced motion because that token collapses to `0.001ms linear`), plus shared
 tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/
 -danger/-danger-quiet/-warning/-warning-quiet`, `--lr-space-*`, `--lr-radius`, `--lr-shadow`,
 `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-transition-base`.
@@ -871,7 +873,12 @@ set `valid: false` while `formError`, rather than a fabricated field key, carrie
 
 **Slots:** none.
 
-**CSS parts:** `base`, `field`, `label`, `description`, `error`, `unsupported`, `empty`
+**CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
+`control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
+shared part name across both the text and number inputs, and deliberately *not* present on the
+`'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches, which are
+composed components with their own part surfaces rather than raw natives. It is purely an additive
+external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
 **Themeable custom properties:** no component-specific custom properties; shared tokens only —
 `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,
@@ -986,8 +993,14 @@ whenever the slot has no assigned content), `body`.
 
 **Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
 `var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
-`--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) — `[part="body"]` padding
-while `compact`; plus shared tokens — `--lr-space-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
+`--lr-result-card-compact-header-gap` (default `var(--lr-space-xs)`) — gap between
+`[part="header"]`'s title and actions while `compact`, one step tighter than the uncompacted
+`--lr-space-s`; `--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) —
+`[part="body"]` padding while `compact`; `--lr-result-card-compact-body-gap` (default
+`var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
+than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
+not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
+Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
 `--lr-radius`.
 
 ### `lr-result-field`
@@ -1137,9 +1150,13 @@ indicator, only rendered when `collapsible`), `body` (the list of items, `hidden
 `item-detail`, and `item-children` (the nested `role="list"` wrapper around a top-level item's
 children).
 
-**Themeable custom properties:** `--lr-task-list-spin` (default `1s linear`) — running-status icon
-spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
+**Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
+icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
 `var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
+label/summary/toggle while `compact`, one step tighter than the header's uncompacted
+`--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.
@@ -1156,12 +1173,18 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds` is a readonly
-`['page', 'text-quote', 'region']` for the shared anchor-target contract.
+`['line-range']` — a scrollback buffer addresses positions by line number, so `line-range` is the
+only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
+viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
+is a plain readonly property rather than the `DocumentAnchorTarget` mixin's `override readonly` one.
 
 **Methods:** `write(text)` appends ANSI-parsed text to the buffer. `clear()` empties the buffer.
-`scrollToBottom()` and `scrollToAnchor(anchor)` control scroll position. `search(query)`,
-`searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search. `getPlainText()`
-returns the SGR-stripped plain text of the whole buffer.
+`scrollToBottom()` and `scrollToAnchor(anchor): Promise<boolean>` control scroll position.
+`search(query): Promise<number>` (resolves the match count after the resulting render),
+`searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search — matching is
+line-granular (a match identifies a whole line, not a character range) and capped, so `matchCount`
+stops climbing on a pathologically repetitive buffer. `getPlainText()` returns the SGR-stripped
+plain text of the whole buffer.
 
 **Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
@@ -1321,8 +1344,16 @@ when both are set.
 }`), and `lr-copy` (`detail: { text: string }`, the full hash was copied).
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
-`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-additions`,
-`file-deletions`, `copy-button`, and `actions`.
+`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
+`file-additions`, `file-deletions`, `copy-button`, and `actions`.
+
+`file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
+`[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
+a screen reader, so the element carries the localized expansion as its `aria-label` — "Modified",
+"Added", … — reusing `<lr-file-tree>`'s shared `gitStatusAdded`/`gitStatusModified`/
+`gitStatusDeleted`/`gitStatusRenamed`/`gitStatusUntracked`/`gitStatusConflicted`/`gitStatusIgnored`
+message keys, so one `registerLyraLocale()` registration (or one `.strings` override) translates the
+badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
 `[part="base"]` padding while `compact`.
@@ -1420,6 +1451,14 @@ and re-chromed entirely through five properties, all scoped to `[part="base"]` w
 They are inline `var()` fallbacks at their point of use rather than `:host` declarations, so any of
 them can be set on the element *or on any ancestor*, which is what makes "give every compact confirm
 bar in this panel a hairline border" a one-rule change on the panel.
+
+Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default
+`var(--lr-color-success)`) and `--lr-confirm-bar-denied-color` (default `var(--lr-color-danger)`) —
+`[part="status"]`'s text/icon color under `:host([decision='approved'])` and
+`:host([decision='denied'])` respectively. Same inline-`var()`-fallback shape as the compact set.
+They exist because `::part(status)[decision]` is invalid CSS, so recoloring just this component's
+decided state previously meant re-pointing the library-wide `--lr-color-success`/`-danger` tokens and
+repainting everything else that reads them.
 
 **Known gotchas:**
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
@@ -1521,9 +1560,13 @@ entry is the latest version. `activeVersionId: string | null = null` (attribute
 `aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
 motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
 copy button; empty hides the button. `downloadSrc: string = ''` (attribute `download-src`) — the
-download URL, sanitized through `safeMediaSrc()`; empty hides the button. `downloadName: string =
-''` (attribute `download-name`) — the suggested filename reported in the `lr-download` event
-detail.
+download URL, sanitized through `safeDownloadHref()` (`http:`/`https:`/`blob:` only — narrower than
+the media/resource allowlist, which also permits `data:`); an empty value hides the button. The
+sanitizer runs at click time, not render time, so a *non-empty but rejected* URL still renders the
+button and simply emits nothing when pressed. The component never navigates on its own: it emits
+`lr-download` with the sanitized `src` and leaves the actual download to the host.
+`downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
+`lr-download` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this
@@ -1624,8 +1667,9 @@ this component's own retry counter, reset when `run.id` changes).
 `reasoning`, `output`, `actions`, `cancel-button`, `retry-button`, `metric-label`, `metric-value`
 (carries `data-variant`), `empty`.
 
-**Themeable custom properties:** `--lr-agent-run-spin` (default `1s linear`) — the running-status
-spinner icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
+**Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
+current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
 padding, and the gap between its header and body, while `compact`; both are ignored while `compact`
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at
@@ -1958,7 +2002,12 @@ It never executes tools or persists decisions.
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
-`tool-name`, `request-id`, `status`, `empty`.
+`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
+carries both `data-selected` (the styling hook) and `aria-current="true"` (the semantic one), so the
+selection is announced, not merely painted. Following this library's convention for `aria-current` —
+and unlike `aria-pressed`/`aria-expanded`/`aria-selected`, which must render both states — an
+unselected row omits the attribute rather than writing `"false"`, because ARIA already defines
+`aria-current`'s own default as false.
 
 **Additional API surface:**
 
@@ -2063,6 +2112,18 @@ keywords. `SchemaValidationIssue = { path: string; message: string; severity?: '
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
 `description`, `constraints`, `issue`, `limit`, `empty`.
+
+`[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
+danger tokens, `warning` the warning tokens, and `info` its own pair —
+`--lr-schema-viewer-info-border` (default `var(--lr-color-brand)`) and `--lr-schema-viewer-info-bg`
+(default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
+library has no `--lr-color-info-*` token; before these existed an `info` issue rendered identically
+to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at their point of use,
+so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
+invalid CSS, so this is the only way to recolor one severity without touching the others.
+
+**Themeable custom properties:** `--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see
+above); otherwise shared tokens only.
 
 Rendering is capped at 500 schema nodes; `limit` reports truncation. Cycles stop at the repeated
 node rather than recursing. **Slots:** none. **Optional peer deps:** none.

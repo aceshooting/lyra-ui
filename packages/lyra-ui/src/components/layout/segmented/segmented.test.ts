@@ -280,11 +280,15 @@ describe("item icon", () => {
     );
   });
 
-  it("adds a static, themeable edge fade to the scroll container", () => {
-    const css = styles.cssText.replace(/\s+/g, " ");
-    expect(css).to.include("-webkit-mask-image: linear-gradient");
-    expect(css).to.include("mask-image: linear-gradient");
-    expect(css).to.include("var(--lr-scroll-fade-size)");
+  it("adds a static, themeable edge fade to the scroll container", async () => {
+    // Reads the real computed mask off the rendered [part="base"] instead of substring-matching
+    // the exported stylesheet source, which would still pass even if the selector never actually
+    // matched.
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).maskImage).to.contain("linear-gradient");
   });
 });
 

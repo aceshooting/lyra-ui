@@ -96,7 +96,15 @@ export interface LyraSelectEventMap {
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
  * @slot start - Adornment at the inline-start of the trigger row, before the selected-value label.
- * @slot end - Adornment after the selected-value label and before the expand icon.
+ *   Content should be non-focusable/non-interactive only: the trigger itself renders as a native
+ *   `<button>` (`[part="trigger"]`), so a slotted `<button>`/`<a>`/other focusable element here
+ *   nests inside it in the flattened (assigned-slot) tree -- invalid interactive-content nesting,
+ *   and unreachable by keyboard/AT regardless, since the outer button intercepts every
+ *   click/Enter/Space before it can reach a nested control. Note: axe-core does not currently
+ *   flag this specific shadow-DOM-composed nesting pattern as a violation (verified empirically
+ *   against axe-core 4.12.1) -- the hazard is real but not automatically detectable today.
+ * @slot end - Adornment after the selected-value label and before the expand icon. Same
+ *   non-focusable/non-interactive-content caveat as `start`.
  * @event change - The selection changed. Deliberately unprefixed, mirroring native `<select>`'s
  *   own event name -- contrast `<lr-slider>`, which uses `lr-input`/`lr-change` for its
  *   analogous value-change pair. Which form controls mirror native unprefixed DOM event names

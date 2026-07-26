@@ -95,6 +95,23 @@ describe('lr-graph-query-builder', () => {
     expect(el.value.maxHops).to.equal(3);
   });
 
+  it('keeps the max-hops picker in sync with a value.maxHops beyond the default hop-limit (regression)', async () => {
+    const el = (await fixture(html`<lr-graph-query-builder></lr-graph-query-builder>`)) as LyraGraphQueryBuilder;
+    // hop-limit defaults to 6, so a maxHops of 8 (still a valid GraphQuery -- see
+    // normalizeGraphQuery's [1, 20] clamp) has no corresponding <lr-option> unless hopOptions()
+    // widens itself to include it.
+    el.value = query({ maxHops: 8 });
+    await el.updateComplete;
+    const maxSelect = el.shadowRoot!.querySelector('[part="max-hops"]') as HTMLElement;
+    const options = [...maxSelect.querySelectorAll('lr-option')] as (HTMLElement & {
+      value: string;
+      selected: boolean;
+    })[];
+    const eight = options.find((o) => o.value === '8');
+    expect(eight, 'expected an <lr-option value="8"> even though hop-limit defaults to 6').to.exist;
+    expect(eight!.selected).to.be.true;
+  });
+
   it('adds a relationship type via the picker, renders it as a removable chip, and excludes it from the picker afterwards', async () => {
     const el = (await fixture(
       html`<lr-graph-query-builder .relationshipTypeOptions=${RELATIONSHIP_OPTIONS}></lr-graph-query-builder>`,

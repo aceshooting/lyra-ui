@@ -10,6 +10,11 @@ defineElement('docx-viewer', LyraDocxViewer);
 
 registerDocumentRenderer('application/vnd.openxmlformats-officedocument.wordprocessingml.document', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.docx'),
-  render: (file: DocumentFile) => html`<lr-docx-viewer src=${file.src} name=${file.name}></lr-docx-viewer>`,
+  render: (file: DocumentFile) => html`<lr-docx-viewer
+    src=${file.src}
+    name=${file.name}
+    .anchor=${file.anchor ?? null}
+    .highlights=${file.highlights ?? []}
+  ></lr-docx-viewer>`,
   capabilities: { anchors: ['fragment', 'text-quote'], search: true, textSelect: true },
 });

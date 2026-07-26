@@ -692,6 +692,30 @@ describe('lr-input', () => {
   });
 });
 
+it('dims the input-wrapper chrome via the :disabled pseudo-class when disabled directly or only through an ancestor fieldset', async () => {
+  // :host([disabled]) alone only ever matches a directly-set disabled attribute -- a form-
+  // associated custom element (FormAssociated mixin, `static formAssociated = true`) is also
+  // :disabled when an ancestor <fieldset disabled> cascades into it, and only :host(:disabled)
+  // tracks that. Mirrors lr-date-input's/lr-radio's identical fix.
+  const direct = (await fixture(html`<lr-input disabled></lr-input>`)) as LyraInput;
+  const directWrapper = direct.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  expect(getComputedStyle(directWrapper).opacity).to.equal(
+    getComputedStyle(directWrapper).getPropertyValue('--lr-opacity-disabled').trim(),
+  );
+  expect(getComputedStyle(directWrapper).cursor).to.equal('not-allowed');
+
+  const form = (await fixture(html`
+    <form><fieldset disabled><lr-input></lr-input></fieldset></form>
+  `)) as HTMLFormElement;
+  const el = form.querySelector('lr-input') as LyraInput;
+  const wrapper = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+  expect(el.hasAttribute('disabled'), 'the host attribute must not be mutated by fieldset cascading').to.be.false;
+  expect(getComputedStyle(wrapper).opacity).to.equal(
+    getComputedStyle(wrapper).getPropertyValue('--lr-opacity-disabled').trim(),
+  );
+  expect(getComputedStyle(wrapper).cursor).to.equal('not-allowed');
+});
+
 it('forwards host click to the native input and suppresses it while effectively disabled', async () => {
   const form = (await fixture(html`
     <form><fieldset><lr-input></lr-input></fieldset></form>

@@ -3,6 +3,9 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    /* Makes the host a query container so the @container rule below reacts to the frame's own
+       allocated width (a sidebar, a split pane, a dialog) instead of the viewport's. */
+    container-type: inline-size;
   }
   [part='base'] {
     display: flex;

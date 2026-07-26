@@ -259,6 +259,17 @@ it('keeps a plain popover (popupRole=dialog) named "Popover"', async () => {
   expect(popup.getAttribute('aria-label')).to.equal('Popover');
 });
 
+it('honors a .strings override for the popover key, provably reaching the rendered popup', async () => {
+  const el = await fixture(
+    html`<lr-popover .strings=${{ popover: 'Détails supplémentaires' }}
+      ><button slot="trigger">Open</button>
+      <p>Details</p></lr-popover
+    >`,
+  );
+  const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+  expect(popup.getAttribute('aria-label')).to.equal('Détails supplémentaires');
+});
+
 it('dismisses an open tooltip on Escape while the trigger keeps focus', async () => {
   const el = (await fixture(
     html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,

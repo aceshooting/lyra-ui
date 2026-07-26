@@ -9,6 +9,14 @@ export const styles = css`
        retheme it without a raw literal leaking into the public API (same
        rationale as lr-app-rail's --lr-app-rail-overlay-color). */
     --lr-split-overlay-color: var(--lr-color-overlay);
+    /* Per-side hit-slop for [part="divider"]'s ::before below: derived (not
+       a raw literal) from the shared --lr-icon-button-size floor (WCAG
+       2.5.8) minus the divider's own visible thickness, split evenly across
+       both sides. Negative, so it *extends* the ::before box's inset past
+       the divider's own edges. Recomputes automatically if either token is
+       retheme'd, so the hit-slop always exactly closes the gap up to the
+       floor regardless of the divider's authored width. */
+    --lr-split-divider-hit-slop: calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2);
   }
   [part='base'] {
     display: flex;
@@ -38,15 +46,18 @@ export const styles = css`
     content: '';
     position: absolute;
     inset-block: 0;
-    inset-inline: var(--lr-size-neg-6px);
+    inset-inline: var(--lr-split-divider-hit-slop);
   }
-  :host([orientation='vertical']) [part='divider'] {
+  /* :where() zeroes the [orientation='vertical'] qualifier's specificity contribution -- otherwise
+     this (0,3,0) rule would beat a consumer's own ::part(divider) inline-size/cursor override
+     whenever orientation="vertical" is set. */
+  :host(:where([orientation='vertical'])) [part='divider'] {
     inline-size: auto;
     block-size: var(--lr-size-3px);
     cursor: row-resize;
   }
-  :host([orientation='vertical']) [part='divider']::before {
-    inset-block: var(--lr-size-neg-6px);
+  :host(:where([orientation='vertical'])) [part='divider']::before {
+    inset-block: var(--lr-split-divider-hit-slop);
     inset-inline: 0;
   }
   /* orientationBreakpoint's live axis -- only present while that feature is opted into (see
@@ -58,23 +69,28 @@ export const styles = css`
   :host([data-effective-orientation='horizontal']) [part='base'] {
     flex-direction: row;
   }
-  :host([data-effective-orientation='vertical']) [part='divider'] {
+  /* Same :where() treatment as [orientation='vertical'] above, applied to both effective-axis
+     variants -- these are the higher-specificity rules orientationBreakpoint's live axis relies on
+     to override the authored orientation by source order (see the comment above), so without
+     :where() they'd beat a consumer's ::part(divider) override even more readily than the
+     authored-orientation rules do. */
+  :host(:where([data-effective-orientation='vertical'])) [part='divider'] {
     inline-size: auto;
     block-size: var(--lr-size-3px);
     cursor: row-resize;
   }
-  :host([data-effective-orientation='vertical']) [part='divider']::before {
-    inset-block: var(--lr-size-neg-6px);
+  :host(:where([data-effective-orientation='vertical'])) [part='divider']::before {
+    inset-block: var(--lr-split-divider-hit-slop);
     inset-inline: 0;
   }
-  :host([data-effective-orientation='horizontal']) [part='divider'] {
+  :host(:where([data-effective-orientation='horizontal'])) [part='divider'] {
     inline-size: var(--lr-size-3px);
     block-size: auto;
     cursor: col-resize;
   }
-  :host([data-effective-orientation='horizontal']) [part='divider']::before {
+  :host(:where([data-effective-orientation='horizontal'])) [part='divider']::before {
     inset-block: 0;
-    inset-inline: var(--lr-size-neg-6px);
+    inset-inline: var(--lr-split-divider-hit-slop);
   }
   [part='divider']:hover {
     background: var(--lr-color-brand);

@@ -172,13 +172,18 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 closes the legend row, present in both the gradient and the `legendStops` branch),
 `legend-annotation` (one per labeled `annotations` entry)
 
-**Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
-`--lr-heatmap-scale-hi` (default `#0969da`) — the sequential color-ramp endpoints (matrix mode) or
-quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each draw (any valid
-CSS color syntax — hex/rgb/hsl/oklch/named — works, resolved through a scratch canvas).
-`--lr-heatmap-no-data-fill` (default `rgba(128,128,128,0.25)` — the no-data cell fill, same
-resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default `10px sans-serif` — the
-canvas-drawn axis/month/weekday label font), `--lr-heatmap-focus-ring-color` (default
+**Themeable custom properties:** `--lr-heatmap-scale-lo` (default `var(--lr-color-brand-quiet)`),
+`--lr-heatmap-scale-hi` (default `var(--lr-color-brand)`) — the sequential color-ramp endpoints
+(matrix mode) or quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each
+draw (any valid CSS color syntax — hex/rgb/hsl/oklch/named — works, resolved through a scratch
+canvas). These defaults are declared on `:host`, so they follow the theme (including dark mode)
+rather than being pinned to a literal color; the hard-coded `#cde2fb`/`#0969da` pair in the source is
+only a last-resort constant for the case where the custom property resolves to an empty string (no
+stylesheet applied at all), not the shipped default.
+`--lr-heatmap-no-data-fill` (default `var(--lr-color-no-data)` — the no-data cell fill, same
+resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default
+`var(--lr-size-10px) var(--lr-font)` — the canvas-drawn axis/month/weekday label font),
+`--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
 `--lr-heatmap-color-steps-gradient` (default

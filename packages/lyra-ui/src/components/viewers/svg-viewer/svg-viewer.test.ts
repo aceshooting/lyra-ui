@@ -20,6 +20,14 @@ function fetchSvg(markup: string): () => void {
   };
 }
 
+/** Shrinks `DocumentAnchorTarget`'s retry loop so a permanently-unresolvable `scrollToAnchor()`
+ *  call resolves in milliseconds instead of waiting out the real 5s default timeout -- same
+ *  pattern as csv-viewer.test.ts/pdf-viewer.test.ts. */
+function shrinkAnchorRetry(el: LyraSvgViewer): void {
+  (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 200;
+  (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+}
+
 describe('lr-svg-viewer', () => {
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
@@ -422,6 +430,7 @@ describe('region highlights', () => {
 
   it('matches equal region anchors structurally and does not claim an unmatched anchor', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    shrinkAnchorRetry(el);
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
     try {
       el.src = 'https://example.test/icon.svg';
@@ -484,6 +493,80 @@ describe('region highlights', () => {
     } finally {
       restore();
     }
+  });
+});
+
+describe('anchor-target adoption', () => {
+  it('exposes anchorKinds and defaults highlights/activeHighlightId/anchor', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    expect(el.anchorKinds).to.deep.equal(['region']);
+    expect(el.highlights).to.deep.equal([]);
+    expect(el.activeHighlightId).to.be.null;
+    expect(el.anchor).to.be.null;
+  });
+
+  it('still parses the active-highlight-id content attribute after the move to DocumentAnchorTarget', async () => {
+    // `activeHighlightId` moved from a locally-declared @property into the shared mixin. `cem`
+    // cannot see mixin-declared reactive properties, so `active-highlight-id` disappeared from this
+    // tag's custom-elements.json `attributes` list (exactly as it is already absent for the two
+    // sibling adopters, lr-pdf-viewer and lr-csv-viewer). That is a manifest-analyzer blind spot,
+    // NOT a runtime removal -- pinned here so a real regression can't hide behind the same
+    // manifest shape.
+    const el = (await fixture(
+      html`<lr-svg-viewer active-highlight-id="h1"></lr-svg-viewer>`,
+    )) as LyraSvgViewer;
+    expect(el.activeHighlightId).to.equal('h1');
+    el.setAttribute('active-highlight-id', 'h2');
+    await el.updateComplete;
+    expect(el.activeHighlightId).to.equal('h2');
+  });
+
+  it('scrolls a declaratively-set anchor into view once the region has rendered, emitting lr-anchor-result', async () => {
+    // Regression test: before this fix LyraSvgViewer declared no `anchor` @property at all, so
+    // `element.anchor = ...` was inert -- no Lit reactivity, no scrollToAnchor() call, and
+    // lr-anchor-result never fired.
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    shrinkAnchorRetry(el);
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    let scrolledId: string | null = null;
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      scrolledId = this.dataset.id ?? null;
+    };
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.highlights = [{ id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } } }];
+      const eventPromise = oneEvent(el, 'lr-anchor-result');
+      el.anchor = { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } };
+      el.src = 'https://example.test/icon.svg';
+      const event = await eventPromise;
+      expect(event.detail).to.deep.equal({ found: true });
+      expect(scrolledId).to.equal('h1');
+      expect(el.shadowRoot!.querySelector('[part="region-highlight"][data-id="h1"]')).to.exist;
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+      restore();
+    }
+  });
+
+  it('resolves { found: false } via lr-anchor-result for a region anchor matching no highlight', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    shrinkAnchorRetry(el);
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      const eventPromise = oneEvent(el, 'lr-anchor-result');
+      el.anchor = { kind: 'region', rect: { x: 90, y: 90, width: 5, height: 5 } };
+      const event = await eventPromise;
+      expect(event.detail).to.deep.equal({ found: false });
+    } finally {
+      restore();
+    }
+  });
+
+  it('renders the anchor live region so an anchor jump is announced to assistive tech', async () => {
+    const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
+    expect(el.shadowRoot!.querySelector('[part="anchor-live-region"]')).to.exist;
   });
 });
 

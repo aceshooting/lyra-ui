@@ -73,8 +73,9 @@ this component's own retry counter, reset when `run.id` changes).
 `reasoning`, `output`, `actions`, `cancel-button`, `retry-button`, `metric-label`, `metric-value`
 (carries `data-variant`), `empty`.
 
-**Themeable custom properties:** `--lr-agent-run-spin` (default `1s linear`) — the running-status
-spinner icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
+**Themeable custom properties:** `--lr-agent-run-spin` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — the
+current-step icon's rotation duration/timing. `--lr-agent-run-compact-padding` (default
 `var(--lr-space-s)`) and `--lr-agent-run-compact-gap` (default `var(--lr-space-s)`) — `[part="base"]`'s
 padding, and the gap between its header and body, while `compact`; both are ignored while `compact`
 is unset. Like the other density/state properties in this family they are inline `var()` fallbacks at

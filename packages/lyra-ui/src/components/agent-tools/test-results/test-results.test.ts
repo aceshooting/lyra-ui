@@ -136,6 +136,46 @@ describe('lr-test-results', () => {
     expect(event.detail).to.deep.equal({ id: 't2', expanded: true });
   });
 
+  it('keys manualExpanded by test.id, not positional index, so inserting a test above a manually-collapsed one leaves it collapsed', async () => {
+    const initialSuites: TestSuiteResult[] = [
+      { id: 's1', name: 'suite', tests: [{ id: 't1', name: 'test one', status: 'failed', message: 'one failed' }] },
+    ];
+    const el = (await fixture(html`<lr-test-results .suites=${initialSuites}></lr-test-results>`)) as LyraTestResults;
+    await el.updateComplete;
+
+    // t1 auto-expands (it's failed); manually collapse it.
+    let toggle = el.shadowRoot!.querySelector('[part="test-expand-toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('true');
+    toggle.click();
+    await el.updateComplete;
+    toggle = el.shadowRoot!.querySelector('[part="test-expand-toggle"]') as HTMLButtonElement;
+    expect(toggle.getAttribute('aria-expanded')).to.equal('false');
+
+    // Insert a new failed test t0 above t1.
+    const updatedSuites: TestSuiteResult[] = [
+      {
+        id: 's1',
+        name: 'suite',
+        tests: [
+          { id: 't0', name: 'test zero', status: 'failed', message: 'zero failed' },
+          { id: 't1', name: 'test one', status: 'failed', message: 'one failed' },
+        ],
+      },
+    ];
+    el.suites = updatedSuites;
+    await el.updateComplete;
+
+    const toggles = [...el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]')] as HTMLButtonElement[];
+    expect(toggles.length).to.equal(2);
+    expect(toggles[0].getAttribute('aria-expanded'), 't0 has no manual override and should auto-expand').to.equal(
+      'true',
+    );
+    expect(
+      toggles[1].getAttribute('aria-expanded'),
+      "t1's manual collapse must follow test.id, not its now-shifted position",
+    ).to.equal('false');
+  });
+
   it('filter toggles mutate statusFilter and emit lr-filter-change', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;

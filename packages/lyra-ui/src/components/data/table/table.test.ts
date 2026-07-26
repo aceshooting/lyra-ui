@@ -87,6 +87,74 @@ it('resizes a resizable column through its native pointer handle and emits live 
   expect((el.shadowRoot!.querySelector('col') as HTMLElement).style.inlineSize).to.equal(`${detail!.width}px`);
 });
 
+it('fires exactly one cancelable lr-column-resize, at drag-end, for the committed width -- not per pixel', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    columns[1]!,
+  ];
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+
+  const cancelableCount = { value: 0 };
+  const nonCancelableCount = { value: 0 };
+  el.addEventListener('lr-column-resize', (event) => {
+    if ((event as CustomEvent).cancelable) cancelableCount.value += 1;
+    else nonCancelableCount.value += 1;
+  });
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 8, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 120 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 8, clientX: 140 }));
+  await el.updateComplete;
+  // Per-pixel move steps stay non-cancelable -- a refuted parallel proposal made these
+  // vetoable, which would make live drag feedback janky/inconsistent.
+  expect(nonCancelableCount.value, 'per-pixel pointermove steps are not cancelable').to.equal(2);
+  expect(cancelableCount.value, 'no commit yet -- drag still in progress').to.equal(0);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 8, clientX: 140 }));
+  await el.updateComplete;
+  expect(cancelableCount.value, 'exactly one cancelable commit, fired at drag-end').to.equal(1);
+});
+
+it('honors preventDefault() on the drag-end lr-column-resize commit by reverting the rendered width', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+    columns[1]!,
+  ];
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.releasePointerCapture = () => {};
+  el.addEventListener('lr-column-resize', (event) => {
+    const custom = event as CustomEvent<{ key: string; width: number }>;
+    if (custom.cancelable) custom.preventDefault();
+  });
+
+  const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
+  const originalWidth = col().style.inlineSize; // the declared '120px', pre-drag
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 9, clientX: 100 }));
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 9, clientX: 140 }));
+  await el.updateComplete;
+  // Mid-drag the (non-cancelable) live preview still applies, matching existing behavior.
+  expect(col().style.inlineSize).to.not.equal(originalWidth);
+
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 9, clientX: 140 }));
+  await el.updateComplete;
+  // The vetoed drag-end commit reverts the rendered width back to its pre-drag value.
+  expect(col().style.inlineSize).to.equal(originalWidth);
+});
+
 it('uses the themed minimum width when a resizable column has no explicit minimum', async () => {
   const el = (await fixture(
     html`<lr-table style="--lr-table-resize-min-width:90px"></lr-table>`,
@@ -192,6 +260,22 @@ it('exposes focusable separator state and resizes by keyboard without sorting th
   await press('Home');
   expect(handle.getAttribute('aria-valuenow')).to.equal('80');
   expect(widths).to.deep.equal([130, 80, 160, 80]);
+});
+
+it('honors preventDefault() on a keyboard resize commit, reverting to the pre-press width', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', width: '120px', minWidth: '80px', maxWidth: '160px', resizable: true, cell: (row) => row.name },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+
+  const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+  el.addEventListener('lr-column-resize', (event) => (event as CustomEvent).preventDefault());
+  handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+
+  expect(handle.getAttribute('aria-valuenow')).to.equal('120');
 });
 
 it('mirrors resize ArrowLeft/ArrowRight under RTL and passes axe populated', async () => {
@@ -2302,6 +2386,23 @@ describe('rowTotal / grandTotal', () => {
     expect(foot).to.exist;
     const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')];
     expect(footerCells[footerCells.length - 1].textContent!.trim()).to.equal('4'); // 3 + 1
+  });
+
+  it('aligns the grand-total footer cell with the end-aligned row-total column', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = totalsColumns;
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    el.rowTotal = (r) => r.score;
+    el.grandTotal = (rs) => rs.reduce((sum, r) => sum + r.score, 0);
+    await el.updateComplete;
+    const foot = el.shadowRoot!.querySelector('[part="foot"]');
+    const footerCells = [...foot!.querySelectorAll('[part="footer-cell"]')] as HTMLElement[];
+    const grandTotalCell = footerCells[footerCells.length - 1]!;
+    // `[part='row-total-cell']` is unconditionally end-aligned (table.styles.ts); its footer-row
+    // counterpart needs the matching `data-align="end"` or the grand total renders start-aligned,
+    // misaligned against every row's total above it.
+    expect(grandTotalCell.getAttribute('data-align')).to.equal('end');
   });
 
   it('renders no footer row at all when grandTotal is set but no column defines footer', async () => {

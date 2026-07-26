@@ -1726,7 +1726,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       </div>`;
     }
     const { nodeIndex, edgeIndex } = this.itemIndexMaps();
-    return html`<div part="base" role="region" aria-label=${this.localize('flowCanvasLabel')}>
+    return html`<div part="base" role="region" aria-label=${this.accessibleLabel || this.localize('flowCanvasLabel')}>
       <div
         part="viewport"
         role="group"

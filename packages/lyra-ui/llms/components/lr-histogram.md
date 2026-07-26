@@ -6,7 +6,7 @@
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 7 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -48,7 +48,8 @@ dependency fails to load — inherited from `LyraChart`, unaffected by the binni
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text` — inherited from `LyraChart`, identical in meaning.
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — inherited from `LyraChart`,
+identical in meaning.
 
 **Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
 

@@ -160,8 +160,8 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     return this.suites.reduce((n, suite) => n + suite.tests.filter((t) => t.status === status).length, 0);
   }
 
-  private isExpanded(testKey: string, test: TestCaseResult): boolean {
-    const manual = this.manualExpanded.get(testKey);
+  private isExpanded(test: TestCaseResult): boolean {
+    const manual = this.manualExpanded.get(test.id);
     if (manual !== undefined) return manual;
     return this.autoExpandFailures && test.status === 'failed';
   }
@@ -174,10 +174,10 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.emit('lr-filter-change', { statuses: next });
   }
 
-  private toggleExpanded(testKey: string, test: TestCaseResult): void {
-    const expanded = !this.isExpanded(testKey, test);
+  private toggleExpanded(test: TestCaseResult): void {
+    const expanded = !this.isExpanded(test);
     const next = new Map(this.manualExpanded);
-    next.set(testKey, expanded);
+    next.set(test.id, expanded);
     this.manualExpanded = next;
     this.emit('lr-toggle', { id: test.id, expanded });
   }
@@ -221,11 +221,16 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
   }
 
   private renderTest(suiteId: string, test: TestCaseResult, suiteIndex: number, testIndex: number): TemplateResult {
-    const testKey = `${suiteIndex}-${testIndex}`;
-    const expanded = this.isExpanded(testKey, test);
+    // `manualExpanded` looks up by test.id (stable identity), so a row's manual expand/collapse
+    // survives the suite's tests being reordered or having a new test inserted above it -- a
+    // positional key would silently reattach one test's override to whichever test now sits at
+    // that same index. DOM ids below stay positional (not test.id), since test.id can repeat
+    // across suites or contain characters that aren't valid in an HTML id.
+    const expanded = this.isExpanded(test);
     const canExpand = test.status === 'failed' || this.hasDetailSlot.has(test.id);
-    const failureId = `${this.idPrefix}-${testKey}-failure`;
-    const statusId = `${this.idPrefix}-${testKey}-status`;
+    const domKey = `${suiteIndex}-${testIndex}`;
+    const failureId = `${this.idPrefix}-${domKey}-failure`;
+    const statusId = `${this.idPrefix}-${domKey}-status`;
     return html`
       <div part="test" role="listitem" data-status=${test.status}>
         <span part="test-status" id=${statusId} data-status=${test.status}>
@@ -253,7 +258,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
               type="button"
               aria-expanded=${expanded ? 'true' : 'false'}
               aria-controls=${failureId}
-              @click=${() => this.toggleExpanded(testKey, test)}
+              @click=${() => this.toggleExpanded(test)}
             >
               ${expanded ? this.localize('collapse') : this.localize('expand')}
             </button>`

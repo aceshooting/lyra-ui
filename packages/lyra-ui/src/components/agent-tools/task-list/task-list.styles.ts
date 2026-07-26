@@ -22,6 +22,7 @@ export const styles = [
        padding) since that's where this component already puts it. */
     :host([compact]) [part='header'] {
       padding: var(--lr-task-list-compact-header-padding, var(--lr-space-2xs) var(--lr-space-s));
+      gap: var(--lr-task-list-compact-header-gap, var(--lr-space-2xs));
     }
     :host([compact]) [part='body'] {
       gap: var(--lr-task-list-compact-gap, var(--lr-space-2xs));

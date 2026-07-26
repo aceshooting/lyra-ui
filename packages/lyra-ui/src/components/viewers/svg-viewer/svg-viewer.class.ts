@@ -2,13 +2,14 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
-import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
 
 function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
   if (a.kind !== 'region' || b.kind !== 'region') return false;
@@ -27,17 +28,26 @@ type SvgFetchState =
   | { kind: 'loaded'; markup: string }
   | { kind: 'error'; message: string };
 
-export interface LyraSvgViewerEventMap {
+export interface LyraSvgViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
-  'lr-highlight-activate': CustomEvent<{ id: string }>;
 }
+
+class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
 
 /**
  * Fetches and safely renders an inline SVG document.
  *
+ * Adopts `DocumentAnchorTarget`: a `region` anchor addresses one `highlights` entry by reference
+ * or structural equality of its `rect` (and optional `page`) -- `scrollToAnchor()`/a declarative
+ * `anchor` assignment scrolls the matching `[part="region-highlight"]` into view and fires
+ * `lr-anchor-result`. No other anchor kind resolves here -- a sanitized SVG document has neither
+ * pages nor extractable text to quote.
+ *
  * @customElement lr-svg-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
  * @event lr-highlight-activate - A region highlight was activated. `detail: { id }`.
+ * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
+ *   call is applied. `detail: { found }`.
  * @csspart base - The root container.
  * @csspart body - The wrapper around the fetched-state content.
  * @csspart svg - The sanitized SVG document, once loaded.
@@ -65,7 +75,7 @@ export interface LyraSvgViewerEventMap {
  * @cssprop [--lr-svg-viewer-highlight-danger-color=var(--lr-color-danger)] - Danger highlight border and hover tint.
  * @cssprop [--lr-svg-viewer-highlight-neutral-color=var(--lr-color-neutral)] - Neutral highlight border and hover tint.
  */
-export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
+export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL to fetch and render as sanitized inline SVG. */
@@ -82,10 +92,9 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
    *  unexpectedly grow a focusable zoom-chrome viewport; an inspection surface opts in. */
   @property({ type: Boolean, reflect: true }) zoomable = false;
 
-  /** Display-only region highlights (see the class doc's Boundaries note -- no creation UI here). */
-  @property({ attribute: false }) highlights: LyraHighlight[] = [];
-  @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;
-  readonly anchorKinds: LyraAnchor['kind'][] = ['region'];
+  /** Anchor kinds this viewer resolves via `scrollToAnchor()`. `highlights`/`activeHighlightId`/
+   *  `anchor` are inherited from `DocumentAnchorTarget` -- display-only, no creation UI here. */
+  override readonly anchorKinds: readonly LyraAnchorKind[] = ['region'];
 
   @state() private fetchState: SvgFetchState = { kind: 'idle' };
   private generation = 0;
@@ -244,19 +253,17 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
     </div>`;
   }
 
-  /** Scrolls a `region` highlight into view (by id, or a `LyraAnchor` directly -- matched back to
-   *  its owning `LyraHighlight` by reference so `scrollToAnchor(highlight.anchor)` also resolves to
-   *  the right box). Returns whether a matching, currently-rendered region was found -- there's no
-   *  retry loop here (unlike the full `DocumentAnchorTarget` mixin) because this viewer's content
-   *  is either already loaded or isn't; a caller invoking this before `src` has resolved simply
-   *  gets `false`. */
-  async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-    const highlight =
-      typeof target === 'string'
-        ? this.highlights.find((h) => h.id === target)
-        : this.highlights.find((h) => h.anchor === target || sameRegionAnchor(h.anchor, target));
-    const anchor = highlight?.anchor;
-    if (!highlight || !anchor || anchor.kind !== 'region' || this.fetchState.kind !== 'loaded') return false;
+  /** Per-viewer hook for `DocumentAnchorTarget`: resolves a `region` anchor back to its owning
+   *  `highlights` entry (matched by reference first, so `scrollToAnchor(highlight.anchor)`
+   *  resolves directly, then by structural equality of `rect`/`page` so an equivalent
+   *  freshly-built anchor also resolves) and scrolls its rendered box into view. Declines (no
+   *  retry-worthy transient state of its own here) when nothing is loaded yet or no region
+   *  matches -- the mixin's own retry loop covers the case where `anchor`/`scrollToAnchor()` is
+   *  called before `src` has finished loading. */
+  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+    if (anchor.kind !== 'region' || this.fetchState.kind !== 'loaded') return false;
+    const highlight = this.highlights.find((h) => h.anchor === anchor || sameRegionAnchor(h.anchor, anchor));
+    if (!highlight) return false;
     await this.updateComplete;
     const region = this.renderRoot.querySelector(
       `[part="region-highlight"][data-id="${CSS.escape(highlight.id)}"]`,
@@ -270,6 +277,7 @@ export class LyraSvgViewer extends LyraElement<LyraSvgViewerEventMap> {
   override render(): TemplateResult {
     return html`<div part="base" style=${this.maxHeight ? `--lr-svg-viewer-max-height:${this.maxHeight}` : nothing}>
       <div part="body">${this.renderBody()}</div>
+      ${this.renderAnchorLiveRegion()}
     </div>`;
   }
 }

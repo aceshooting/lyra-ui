@@ -1,16 +1,12 @@
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
-import { chevronIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
 import {
   loadShikiHighlighter,
   loadShikiLanguage,
   loadShikiHighlighterCore,
   normalizeShikiLanguage,
-  SHIKI_THEMES,
   type ShikiHighlighter,
   type ShikiHighlighterCore,
   type ShikiLanguageInput,
@@ -18,20 +14,27 @@ import {
 import { styles } from './code-block.styles.js';
 import { resolveIsDarkTheme, watchDarkTheme } from './shiki-dark-theme.js';
 import {
-  codeBlockToggleLabel,
-  codeBlockCopyLabel,
-  codeBlockBodyLabel,
-  codeBlockLineTransformer,
-  addBoundedLineRange,
-  parseHighlightLines,
+  CODE_BLOCK_COPY_CONFIRM_MS,
+  applyCodeBlockAriaBusy,
+  clampCodeBlockFocusedLine,
+  codeBlockActiveHighlightLineSet,
+  codeBlockEventLine,
+  codeBlockLineCount,
+  codeBlockLineHighlightSet,
+  codeBlockLineKeyAction,
+  codeBlockNeedsHighlightResync,
+  codeBlockPreSuppliedGrammar,
+  codeBlockSelectionAnchor,
+  codeBlockShowsSkeleton,
   renderCodeBlockPlainCode,
+  renderCodeBlockShell,
+  scrollCodeBlockToAnchor,
+  tokenizeCodeBlock,
+  writeCodeBlockClipboard,
 } from './code-block-shared.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
-
-/** How long the copy button's confirmation state lasts before reverting. */
-const COPY_CONFIRM_MS = 1500;
 
 export interface LyraCodeBlockEventMap {
   'lr-copy': CustomEvent<{ text: string }>;
@@ -298,52 +301,26 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // on whether this render is taking the fine-grained `languages` path or
   // the default `loadShikiHighlighter()` one.
   private preSuppliedGrammar(): ShikiLanguageInput | undefined {
-    const language = normalizeShikiLanguage(this.language);
-    return this.languages?.[language] ?? this.languages?.[this.language];
+    return codeBlockPreSuppliedGrammar(this.languages, this.language);
   }
 
-  /** The merged set of one-based line numbers to emphasize: `highlightLines` plus the `line-range`
-   *  slice of `highlights`. Shared by both the shiki transformer options and the plain-text
-   *  fallback path so their emphasis is always identical. */
   private lineHighlightSet(): Set<number> {
-    const maxLine = this.lineCount();
-    const merged = parseHighlightLines(this.highlightLines, maxLine);
-    for (const highlight of this.highlights) {
-      if (highlight.anchor.kind !== 'line-range') continue;
-      const end = highlight.anchor.end ?? highlight.anchor.start;
-      addBoundedLineRange(merged, highlight.anchor.start, end, maxLine);
-    }
-    return merged;
+    return codeBlockLineHighlightSet(this.highlightLines, this.highlights, this.lineCount());
   }
 
-  /** The line numbers covered by the `highlights` entry matching `activeHighlightId`, if any. */
   private activeHighlightLineSet(): Set<number> {
-    const active = this.highlights.find((h) => h.id === this.activeHighlightId);
-    const result = new Set<number>();
-    if (!active || active.anchor.kind !== 'line-range') return result;
-    const end = active.anchor.end ?? active.anchor.start;
-    addBoundedLineRange(result, active.anchor.start, end, this.lineCount());
-    return result;
+    return codeBlockActiveHighlightLineSet(this.highlights, this.activeHighlightId, this.lineCount());
   }
 
   private lineCount(): number {
-    return this.code.split(/\r\n|\r|\n/).length;
+    return codeBlockLineCount(this.code);
   }
 
   /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
    *  its start line into view within `[part="body"]`. Resolves `false` when the anchor isn't a
    *  `line-range`, the id isn't found, or the start line is out of bounds. */
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-    const anchor = typeof target === 'string' ? this.highlights.find((h) => h.id === target)?.anchor : target;
-    if (!anchor || anchor.kind !== 'line-range') return false;
-    if (anchor.start < 1 || anchor.start > this.lineCount()) return false;
-    await this.updateComplete;
-    const body = this.renderRoot.querySelector('[part="body"]') as HTMLElement | null;
-    const lineEl = this.renderRoot.querySelector(`[data-line="${anchor.start}"]`) as HTMLElement | null;
-    if (!body || !lineEl) return false;
-    const offset = lineEl.offsetTop - body.clientHeight / 2;
-    body.scrollTo({ top: Math.max(0, offset), behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    return true;
+    return scrollCodeBlockToAnchor(this, target);
   }
 
   private onLineActivate(line: number): void {
@@ -361,77 +338,42 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   // Roving-tabindex keyboard navigation across the gutter's line buttons (only rendered by
   // renderPlainCode() while interactiveLines && lineNumbers are both set).
   private onLineKeyDown = (e: KeyboardEvent, line: number): void => {
-    const total = this.lineCount();
-    let next: number | null = null;
-    if (e.key === 'ArrowDown') next = Math.min(total, line + 1);
-    else if (e.key === 'ArrowUp') next = Math.max(1, line - 1);
-    else if (e.key === 'Home') next = 1;
-    else if (e.key === 'End') next = total;
-    else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
+    const action = codeBlockLineKeyAction(e.key, line, this.lineCount());
+    if (action === null) return;
+    e.preventDefault();
+    if (action.kind === 'activate') {
       this.onLineActivate(line);
       return;
     }
-    if (next === null || next === line) return;
-    e.preventDefault();
+    const next = action.line;
     this.setFocusedLine(next);
     this.updateComplete.then(() => {
       this.renderRoot.querySelector<HTMLElement>(`[data-line="${next}"]`)?.focus();
     });
   };
 
-  private eventLine(e: Event): number | null {
-    const target = e.composedPath()[0];
-    if (!(target instanceof Element)) return null;
-    const lineElement = target.closest<HTMLElement>('[data-line][part~="line-button"]');
-    const line = Number(lineElement?.dataset['line']);
-    return Number.isInteger(line) && line >= 1 ? line : null;
-  }
-
   private onBodyClick = (e: MouseEvent): void => {
     if ((e.composedPath()[0] as Element | undefined)?.closest?.('button.line')) return;
-    const line = this.eventLine(e);
+    const line = codeBlockEventLine(e);
     if (line !== null) this.onLineActivate(line);
   };
 
   private onBodyKeyDown = (e: KeyboardEvent): void => {
     if ((e.composedPath()[0] as Element | undefined)?.closest?.('button.line')) return;
-    const line = this.eventLine(e);
+    const line = codeBlockEventLine(e);
     if (line !== null) this.onLineKeyDown(e, line);
   };
 
   private onBodyFocusIn = (e: FocusEvent): void => {
-    const line = this.eventLine(e);
+    const line = codeBlockEventLine(e);
     if (line !== null) this.setFocusedLine(line);
   };
 
   /** Anchors a text selection ending inside `[part="body"]` to the `line-range` it spans, so a
    *  host can persist or otherwise act on it. Fires nothing when there's no active selection. */
   private onBodyMouseUp = (): void => {
-    // `ShadowRoot.getSelection` is a Chromium-only extension absent from the standard DOM lib
-    // types -- same shadow-scoped-selection precedent as <lr-terminal>'s own onViewportPointerUp.
-    const shadowSelection = (
-      this.shadowRoot as unknown as { getSelection?: () => Selection | null } | null
-    )?.getSelection?.();
-    const selection = shadowSelection ?? window.getSelection();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
-    const text = selection.toString();
-    if (!text.trim()) return;
-    const range = selection.getRangeAt(0);
-    const lineOf = (node: Node): number | null => {
-      const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
-      const lineEl = el?.closest('[data-line]');
-      const attr = lineEl?.getAttribute('data-line');
-      return attr === null || attr === undefined ? null : Number(attr);
-    };
-    const start = lineOf(range.startContainer);
-    const end = lineOf(range.endContainer);
-    if (start === null || end === null) return;
-    this.emit('lr-text-select', {
-      text,
-      anchor: { kind: 'line-range', start: Math.min(start, end), end: Math.max(start, end) },
-      rects: Array.from(range.getClientRects()),
-    });
+    const selection = codeBlockSelectionAnchor(this.shadowRoot);
+    if (selection) this.emit('lr-text-select', selection);
   };
 
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
@@ -443,25 +385,9 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // willUpdate() layered under this class must still run.
     if (changed.has('code')) {
-      this.focusedLine = Math.min(Math.max(1, this.focusedLine), this.lineCount());
+      this.focusedLine = clampCodeBlockFocusedLine(this.focusedLine, this.lineCount());
     }
-    // highlightLines/highlights/activeHighlightId/lineNumbers all feed codeBlockLineTransformer's
-    // options in tokenize() below -- any of them changing (even without code/language/languages
-    // changing) means the cached highlightedHtml needs recomputing to stay in sync.
-    if (
-      !(
-        changed.has('code') ||
-        changed.has('language') ||
-        changed.has('languages') ||
-        changed.has('highlightLines') ||
-        changed.has('highlights') ||
-        changed.has('activeHighlightId') ||
-        changed.has('lineNumbers') ||
-        changed.has('interactiveLines') ||
-        changed.has('languagesOnly')
-      )
-    )
-      return;
+    if (!codeBlockNeedsHighlightResync(changed)) return;
     if (changed.has('languagesOnly') && !this.languagesOnly) this.ensureDefaultHighlighter();
     // The default path still waits on `shikiReady` (the shared
     // `loadShikiHighlighter()` singleton), same as always. A `language`
@@ -477,12 +403,20 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
-    // `languagesOnly` skips the default loader entirely (see connectedCallback()), so
-    // `shikiReady` never becomes true for it -- treat that as "nothing to wait for" rather than
-    // "still loading", the same way a `preSuppliedGrammar()` match already does.
-    const showingSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
-    if (showingSkeleton) this.setAttribute('aria-busy', 'true');
-    else this.removeAttribute('aria-busy');
+    applyCodeBlockAriaBusy(this, this.showsSkeleton());
+  }
+
+  /** Whether this render shows the loading skeleton instead of the code. `languagesOnly` skips the
+   *  default loader entirely (see `ensureDefaultHighlighter()`), so `shikiReady` never becomes true
+   *  for it -- treat that as "nothing to wait for" rather than "still loading", the same way a
+   *  `preSuppliedGrammar()` match already does. Read by both `updated()` and `render()` so the
+   *  `aria-busy` host attribute can never disagree with what's on screen. */
+  private showsSkeleton(): boolean {
+    return codeBlockShowsSkeleton(
+      this.shikiReady,
+      this.language,
+      !this.languagesOnly && !this.preSuppliedGrammar(),
+    );
   }
 
   private syncHighlight(): void {
@@ -536,32 +470,16 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
   }
 
   private tokenize(hl: ShikiHighlighter | ShikiHighlighterCore, lang: string): string | null {
-    try {
-      return hl.codeToHtml(this.code, {
-        lang,
-        // shiki's generated per-token colors are theme-specific inline
-        // styles/CSS variables (from SHIKI_THEMES's github-light/github-dark
-        // theme data), not this library's --lr-* design tokens -- the one
-        // deliberate exception to every other color in this component being
-        // a --lr-* token. See the dark-mode override in
-        // code-block.styles.ts for how the dark half of this activates.
-        themes: SHIKI_THEMES,
-        transformers: [
-          codeBlockLineTransformer({
-            lineNumbers: this.lineNumbers,
-            interactiveLines: this.interactiveLines,
-            focusedLine: this.focusedLine,
-            highlightedLines: this.lineHighlightSet(),
-            activeLines: this.activeHighlightLineSet(),
-            lineDescription: (line) => this.localize('codeBlockLineLabel', undefined, { line }),
-          }),
-        ],
-      });
-    } catch {
-      // Malformed input for this grammar, or any other shiki-internal
-      // failure -- fall back to plain text rather than a blank code block.
-      return null;
-    }
+    return tokenizeCodeBlock(hl, {
+      code: this.code,
+      lang,
+      lineNumbers: this.lineNumbers,
+      interactiveLines: this.interactiveLines,
+      focusedLine: this.focusedLine,
+      highlightedLines: this.lineHighlightSet(),
+      activeLines: this.activeHighlightLineSet(),
+      lineDescription: (line) => this.localize('codeBlockLineLabel', undefined, { line }),
+    });
   }
 
   // Delegates to the shared renderCodeBlockPlainCode() in code-block-shared.ts -- previously a
@@ -582,27 +500,14 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     });
   }
 
-  private writeClipboard(text: string): void {
-    try {
-      // navigator.clipboard is absent in insecure contexts / older browsers,
-      // and some engines throw synchronously rather than rejecting -- either
-      // way this is best-effort; copy() below always emits lr-copy
-      // regardless of whether the OS clipboard was actually reached. Same
-      // precedent as <lr-json-viewer>'s own copy button.
-      void navigator.clipboard?.writeText(text)?.catch(() => {});
-    } catch {
-      // see above
-    }
-  }
-
   private copy = (): void => {
-    this.writeClipboard(this.code);
+    writeCodeBlockClipboard(this.code);
     this.emit('lr-copy', { text: this.code });
     this.justCopied = true;
     clearTimeout(this.copyTimeoutId);
     this.copyTimeoutId = setTimeout(() => {
       this.justCopied = false;
-    }, COPY_CONFIRM_MS);
+    }, CODE_BLOCK_COPY_CONFIRM_MS);
   };
 
   private toggleCollapsed = (): void => {
@@ -610,83 +515,34 @@ export class LyraCodeBlock extends LyraElement<LyraCodeBlockEventMap> {
     this.emit<{ collapsed: boolean }>('lr-toggle', { collapsed: this.collapsed });
   };
 
-  private renderHeader(): TemplateResult {
-    return html`
-      <div part="header">
-        ${this.collapsible
-          ? html`
-              <button
-                part="toggle"
-                type="button"
-                aria-expanded=${this.collapsed ? 'false' : 'true'}
-                aria-controls=${this.bodyId}
-                aria-label=${codeBlockToggleLabel(this.localize.bind(this), this.collapsed)}
-                @click=${this.toggleCollapsed}
-              >
-                <span class="chevron" aria-hidden="true">${chevronIcon()}</span>
-              </button>
-            `
-          : nothing}
-        ${this.filename ? html`<span part="filename">${this.filename}</span>` : nothing}
-        ${this.language ? html`<span part="language">${this.language}</span>` : nothing}
-        ${this.copyable
-          ? html`
-              <button
-                part="copy-button"
-                type="button"
-                aria-label=${codeBlockCopyLabel(this.localize.bind(this), this.justCopied)}
-                @click=${this.copy}
-              >
-                ${this.justCopied ? this.localize('copied') : this.localize('copy')}
-              </button>
-            `
-          : nothing}
-      </div>
-    `;
-  }
-
-  // `[part="body"]` is `tabindex="0"` because it's the scrollable region for
-  // arbitrarily-wide/tall code (max-height, plus horizontal overflow from
-  // long lines) -- a scrollable region with no other focusable content of
-  // its own is otherwise unreachable by keyboard, same reasoning
-  // lr-virtual-list's own `[part="base"]` documents for its identical
-  // tabindex. `role="group"` (rather than e.g. `region`, a page landmark
-  // role) plus `aria-label` gives it an accessible name without claiming
-  // landmark/navigation significance for what is, structurally, just one
-  // small piece of a larger document.
+  // The header row and the whole body/skeleton/`<pre>` shell come from
+  // renderCodeBlockShell() in code-block-shared.ts -- see that function's own
+  // doc for the `[part="body"]` tabindex/role rationale. Both were previously
+  // duplicated verbatim on <lr-code-block-core>.
   override render(): TemplateResult {
-    const hasHeader = !!this.filename || !!this.language || this.copyable || this.collapsible;
-    // See updated()'s identical condition for why languagesOnly is excluded here too.
-    const showSkeleton = !this.shikiReady && !this.languagesOnly && !!this.language && !this.preSuppliedGrammar();
-    const bodyHidden = this.collapsible && this.collapsed;
-    const bodyLabel =
-      this.accessibleLabel || codeBlockBodyLabel(this.localize.bind(this), this.filename, this.language);
-
-    return html`
-      <div part="base">
-        ${hasHeader ? this.renderHeader() : nothing}
-        <div
-          part="body"
-          id=${this.bodyId}
-          role="group"
-          aria-label=${bodyLabel}
-          tabindex="0"
-          ?hidden=${bodyHidden}
-          data-dark-theme=${this.isDarkTheme ? 'true' : nothing}
-          style=${this.maxHeight ? `--lr-code-block-max-height:${this.maxHeight}` : nothing}
-          @mouseup=${this.onBodyMouseUp}
-          @click=${this.onBodyClick}
-          @keydown=${this.onBodyKeyDown}
-          @focusin=${this.onBodyFocusIn}
-        >
-          ${showSkeleton
-            ? html`<lr-skeleton variant="rect"></lr-skeleton>`
-            : this.highlightedHtml !== null
-              ? unsafeHTML(this.highlightedHtml)
-              : html`<pre part="pre" class=${this.lineNumbers ? 'line-numbers' : nothing}>${this.renderPlainCode()}</pre>`}
-        </div>
-      </div>
-    `;
+    return renderCodeBlockShell({
+      filename: this.filename,
+      language: this.language,
+      copyable: this.copyable,
+      collapsible: this.collapsible,
+      collapsed: this.collapsed,
+      justCopied: this.justCopied,
+      bodyId: this.bodyId,
+      accessibleLabel: this.accessibleLabel,
+      maxHeight: this.maxHeight,
+      isDarkTheme: this.isDarkTheme,
+      showSkeleton: this.showsSkeleton(),
+      highlightedHtml: this.highlightedHtml,
+      lineNumbers: this.lineNumbers,
+      localize: this.localize.bind(this),
+      renderPlainCode: () => this.renderPlainCode(),
+      onToggle: this.toggleCollapsed,
+      onCopy: this.copy,
+      onBodyMouseUp: this.onBodyMouseUp,
+      onBodyClick: this.onBodyClick,
+      onBodyKeyDown: this.onBodyKeyDown,
+      onBodyFocusIn: this.onBodyFocusIn,
+    });
   }
 }
 

@@ -6,7 +6,7 @@
 - **Class** `LyraSplit`, also available unregistered from `@aceshooting/lyra-ui/components/layout/split/split.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 3 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -160,6 +160,14 @@ fired only when an enabled `orientationBreakpoint` actually changes `effectiveOr
 
 **Themeable custom properties:** `--lr-split-overlay-color` (default `var(--lr-color-overlay)`) —
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
+`--lr-split-divider-hit-slop` (default `calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)`,
+i.e. `-18.5px` at the shipped token values) — the per-side inset of `[part='divider']`'s invisible
+`::before` hit area along the resize axis. It is negative on purpose: the `::before` box extends past
+the divider's own edges so the *effective* pointer/touch target reaches the shared
+`--lr-icon-button-size` WCAG 2.5.8 floor (40px) while the divider anyone can see stays 3px. Unlike
+most properties here it is **declared on `:host`**, so an override has to target the element itself —
+an ancestor rule is shadowed. Overriding it directly is rarely the right move: retheme
+`--lr-size-3px` or `--lr-icon-button-size` and the slop recomputes to keep exactly closing the gap.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.

@@ -1,5 +1,6 @@
 import { fixture, expect, html, waitUntil, oneEvent, fixtureSync, aTimeout } from '@open-wc/testing';
 import './markdown-core.js';
+import './markdown.js';
 import type { LyraMarkdownCore, MarkdownHeadingItem } from './markdown-core.js';
 import { __setKatexForTesting } from './markdown-core.class.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
@@ -979,5 +980,99 @@ describe('tab width (--lr-code-block-tab-size)', () => {
       timeout: 4000,
     });
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('lean/full parity with <lr-markdown>', () => {
+  /** A document exercising every renderer override the two variants share -- headings (with the
+   *  slug/`heading-anchors` path), paragraphs, emphasis, ordered/unordered lists, inline code, a
+   *  GFM table, a blockquote, an internal and an external link, an image, and raw HTML. Fenced
+   *  code is deliberately absent: *which* shiki loader highlights it is the one axis the two
+   *  variants are supposed to differ on. */
+  const parityContent = `# Title
+
+Intro **bold**, _em_ and \`inline\` text.
+
+## Section "Two"
+
+1. first
+2. second
+
+- alpha
+- beta
+
+> quoted
+
+| a | b |
+| :--- | ---: |
+| 1 | 2 |
+
+[docs](/docs/start "Docs title") and [ext](https://example.com/x?a=1&b=2).
+
+![alt *text*](https://example.com/pic.png "Pic title")
+
+<span data-raw>raw</span>
+`;
+
+  async function renderedHtmlFor(tag: 'lr-markdown' | 'lr-markdown-core'): Promise<{
+    html: string;
+    headings: string;
+    ariaBusy: string | null;
+    contentAttributes: string;
+  }> {
+    const el = (await fixture(
+      html`<div>${tag === 'lr-markdown'
+        ? html`<lr-markdown heading-anchors internal-link-prefix="/docs/" .content=${parityContent}></lr-markdown>`
+        : html`<lr-markdown-core
+            heading-anchors
+            internal-link-prefix="/docs/"
+            .content=${parityContent}
+          ></lr-markdown-core>`}</div>`,
+    )) as HTMLElement;
+    const host = el.querySelector(tag) as LyraMarkdownCore;
+    await host.updateComplete;
+    await waitUntil(() => host.shadowRoot!.querySelector('[part="table"]') !== null, `${tag} never rendered`, {
+      timeout: 4000,
+    });
+    const content = host.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+    return {
+      html: content.innerHTML,
+      headings: JSON.stringify(host.getHeadingTree()),
+      ariaBusy: host.getAttribute('aria-busy'),
+      contentAttributes: [...content.attributes]
+        .map((attr) => `${attr.name}=${attr.value}`)
+        .sort()
+        .join('|'),
+    };
+  }
+
+  // The two class files duplicate roughly twenty methods verbatim. This pins the *observable*
+  // result of that duplication so routing both through `markdown-shared.ts` is verifiable rather
+  // than assumed -- every renderer override, the heading outline, the `aria-busy` contract and the
+  // `[part="content"]` attribute set have to keep matching exactly.
+  it('renders an identical document, heading outline and content wrapper', async () => {
+    const full = await renderedHtmlFor('lr-markdown');
+    const lean = await renderedHtmlFor('lr-markdown-core');
+    expect(lean.html).to.equal(full.html);
+    expect(lean.headings).to.equal(full.headings);
+    expect(lean.ariaBusy).to.equal(full.ariaBusy);
+    expect(lean.contentAttributes).to.equal(full.contentAttributes);
+  });
+
+  it('falls back to plain text identically for an empty document', async () => {
+    const both = await Promise.all(
+      (['lr-markdown', 'lr-markdown-core'] as const).map(async (tag) => {
+        const wrapper = (await fixture(
+          html`<div>${tag === 'lr-markdown'
+            ? html`<lr-markdown></lr-markdown>`
+            : html`<lr-markdown-core></lr-markdown-core>`}</div>`,
+        )) as HTMLElement;
+        const host = wrapper.querySelector(tag) as LyraMarkdownCore;
+        await host.updateComplete;
+        const content = host.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
+        return `${content.hasAttribute('data-fallback')}|${content.hasAttribute('tabindex')}|${host.getAttribute('aria-busy')}`;
+      }),
+    );
+    expect(both[1]).to.equal(both[0]);
   });
 });

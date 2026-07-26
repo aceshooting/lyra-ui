@@ -6,7 +6,7 @@
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 18 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -235,6 +235,10 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-picker-month-gap` — Gap between visible months. Default: `var(--lr-space-l)`.
 - `--lr-date-picker-header-gap` — Month-header child gap. Default: `var(--lr-space-s)`.
 - `--lr-date-picker-radius` — Calendar and control corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-picker-nav-hover-bg` — Hover background of the previous/next month-navigation buttons.
+  Default: `var(--lr-color-brand-quiet)`. An inline `var()` fallback rather than a `:host`
+  declaration, and the rule wraps its selector in `:where()` so a consumer's own
+  `::part(previous):hover` still wins without `!important`.
 - `--lr-date-input-placeholder-color` — Placeholder text color. Default: `var(--lr-color-text-quiet)`.
 - `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
 - `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.

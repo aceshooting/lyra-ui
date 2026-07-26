@@ -54,20 +54,46 @@ export interface CanvasRing {
   r: number;
 }
 
+/** A "+" expand badge to draw at a node's diagonally-upper-right edge -- `x`/`y`/`r` are the
+ *  owning node's own world-space center and radius, mirroring `graph.class.ts`'s SVG
+ *  `[part="expand-indicator"]` `<g transform="translate(x,y)">` placement so the badge lands at
+ *  the identical offset in either renderer. */
+export interface CanvasExpandIndicator {
+  x: number;
+  y: number;
+  r: number;
+}
+
 export interface CanvasScene {
   hulls: CanvasHull[];
   links: CanvasLink[];
   edgeLabels: CanvasEdgeLabel[];
   nodes: CanvasNode[];
   nodeLabels: CanvasNodeLabel[];
+  /** Optional -- absent/`undefined` (an older caller that predates the "+" badge, or any of this
+   *  module's own test-only scene literals) draws zero badges, the same backward-compatible
+   *  default `hullOpacity` already follows. */
+  expandIndicators?: CanvasExpandIndicator[];
   focusHalo?: CanvasRing;
   keyboardFocusRing?: CanvasRing;
   showNodeLabels: boolean;
   haloColor: string;
   selectedColor: string;
   dimmedOpacity?: number;
+  /** Hull fill+stroke opacity -- resolved from `--lr-graph-hull-opacity` by the caller (same
+   *  finite/clamp guard as `dimmedOpacity`); falls back to the SVG renderer's own CSS default
+   *  (`0.12`) when unset. */
+  hullOpacity?: number;
   labelColor: string;
   labelHaloColor: string;
+  /** `[part="expand-indicator"] circle`'s resolved `fill` (`--lr-color-surface`). Optional --
+   *  only read when `expandIndicators` is non-empty, so a caller with no badges to draw doesn't
+   *  need to supply it. */
+  expandBadgeFill?: string;
+  /** `[part="expand-indicator"] circle`'s resolved `stroke` (`--lr-color-border-strong`); the "+"
+   *  cross itself reuses `labelColor` (`--lr-color-text`), matching the SVG `path`'s stroke.
+   *  Optional for the same reason as `expandBadgeFill`. */
+  expandBadgeStroke?: string;
   font: string;
 }
 
@@ -76,6 +102,13 @@ export interface CanvasScene {
 const HULL_STROKE_WIDTH = 48;
 /** Matches the SVG renderer's edge/community label halo stroke width (`--lr-size-3px`). */
 const LABEL_HALO_WIDTH = 3;
+/** Matches `graph.class.ts`'s own `EXPAND_BADGE_R` (world px, the "+" badge circle radius) --
+ *  reimplemented locally so this module stays independent of `graph.class.ts` (same rationale as
+ *  this file's local shape-path math). */
+const EXPAND_BADGE_R = 5;
+/** Matches `graph.class.ts`'s own `EXPAND_BADGE_OFFSET` -- places the badge at the node's edge,
+ *  diagonally upper-right. */
+const EXPAND_BADGE_OFFSET = Math.SQRT1_2;
 
 function pathForShape(x: number, y: number, r: number, shape: CanvasNode['shape']): Path2D {
   const path = new Path2D();
@@ -139,9 +172,10 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
   ctx.save();
   ctx.transform(camera.k, 0, 0, camera.k, camera.x, camera.y);
 
+  const hullOpacity = scene.hullOpacity ?? 0.12;
   for (const hull of scene.hulls) {
     const path = new Path2D(hull.d);
-    ctx.globalAlpha = 0.12;
+    ctx.globalAlpha = hullOpacity;
     ctx.fillStyle = hull.fill;
     ctx.strokeStyle = hull.fill;
     ctx.lineWidth = HULL_STROKE_WIDTH;
@@ -202,6 +236,28 @@ export function drawGraphScene(ctx: CanvasRenderingContext2D, camera: CanvasCame
     ctx.textBaseline = 'middle';
     ctx.fillStyle = scene.labelColor;
     for (const label of scene.nodeLabels) ctx.fillText(label.text, label.x, label.y);
+  }
+
+  const expandIndicators = scene.expandIndicators ?? [];
+  if (expandIndicators.length) {
+    ctx.lineWidth = 1; // matches --lr-size-1px, the SVG expand-indicator's own stroke-width
+    for (const indicator of expandIndicators) {
+      const bx = indicator.x + indicator.r * EXPAND_BADGE_OFFSET;
+      const by = indicator.y - indicator.r * EXPAND_BADGE_OFFSET;
+      const path = new Path2D();
+      path.arc(bx, by, EXPAND_BADGE_R, 0, Math.PI * 2);
+      ctx.fillStyle = scene.expandBadgeFill ?? '';
+      ctx.fill(path);
+      ctx.strokeStyle = scene.expandBadgeStroke ?? '';
+      ctx.stroke(path);
+      ctx.strokeStyle = scene.labelColor;
+      ctx.beginPath();
+      ctx.moveTo(bx - EXPAND_BADGE_R / 2, by);
+      ctx.lineTo(bx + EXPAND_BADGE_R / 2, by);
+      ctx.moveTo(bx, by - EXPAND_BADGE_R / 2);
+      ctx.lineTo(bx, by + EXPAND_BADGE_R / 2);
+      ctx.stroke();
+    }
   }
 
   if (scene.focusHalo) drawRing(ctx, scene.focusHalo, scene.haloColor);

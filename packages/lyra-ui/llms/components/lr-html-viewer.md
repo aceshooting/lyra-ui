@@ -30,7 +30,10 @@ inside a bounded, scrollable body.
 **Themeable custom properties:** `--lr-html-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 
-**Optional peer dependency:** `dompurify`.
+**Optional peer dependency:** `dompurify`. The registry matches `text/html` and `.htm`/`.html`
+filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
+capabilities and forwarding `anchor`/`highlights` onto the created element, so a deep link opened
+through `<lr-document-viewer>` survives the registry hop.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.

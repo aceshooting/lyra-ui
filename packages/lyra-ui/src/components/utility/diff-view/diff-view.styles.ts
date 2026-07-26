@@ -50,6 +50,17 @@ export const styles = css`
     line-height: var(--lr-line-height-snug);
     white-space: pre-wrap;
   }
+  [part='line']:not([data-type='fold']) {
+    /* Diffed source code is read left-to-right regardless of the surrounding document direction --
+       same rationale (and matching fix shape) as code-block.styles.ts's [part='pre']: without this,
+       an ancestor dir="rtl" bidi-reorders each line and right-aligns the block, making valid code
+       look syntactically broken. isolate keeps any RTL run inside a string/comment from leaking out
+       and reordering the surrounding code. Excludes [data-type='fold'] -- that line renders a
+       localized message ("N unchanged lines"), not code, and must keep following the ambient
+       (possibly RTL) direction like ordinary UI text. */
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
   [part='line'][data-type='add'] {
     background: var(--lr-diff-view-add-background);
     color: var(--lr-diff-view-add-color);

@@ -35,8 +35,13 @@ export interface FormAssociatedInterface {
  * form-associated custom elements but do not implement `attachInternals()` yet.
  * Keeping the shape here means components remain constructible in SSR/test DOMs;
  * native browsers still use their real internals and form participation.
+ *
+ * Exported for the form-associated controls that manage `ElementInternals` directly instead of
+ * through this mixin (their value isn't a plain string, so the mixin's contract doesn't fit) --
+ * `<lr-voice-picker>` and friends call `attachInternalsSafely()` below rather than hand-maintaining
+ * a second copy of this shape.
  */
-function createFallbackInternals(): ElementInternals {
+export function createFallbackInternals(): ElementInternals {
   let flags: ValidityStateFlags = {};
   let message = '';
   const validity = {} as ValidityState;
@@ -79,6 +84,23 @@ function createFallbackInternals(): ElementInternals {
     checkValidity(): boolean { return validity.valid; },
     reportValidity(): boolean { return validity.valid; },
   } as unknown as ElementInternals;
+}
+
+/**
+ * `host.attachInternals()`, degrading to `createFallbackInternals()` rather than throwing when the
+ * host environment either has no such method at all (a DOM shim that stops short of
+ * `ElementInternals`) or has one that throws (already-attached internals, a partial polyfill).
+ * Both failure modes must be handled: `typeof` alone leaves the throwing case, and `try`/`catch`
+ * alone is fine in practice but reads as accidental. Constructing a control must never be the thing
+ * that breaks a downstream consumer's non-browser test suite.
+ */
+export function attachInternalsSafely(host: HTMLElement): ElementInternals {
+  if (typeof host.attachInternals !== 'function') return createFallbackInternals();
+  try {
+    return host.attachInternals() ?? createFallbackInternals();
+  } catch {
+    return createFallbackInternals();
+  }
 }
 
 /**
@@ -135,12 +157,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
 
     constructor(...args: any[]) {
       super(...args);
-      try {
-        const internals = this.attachInternals();
-        this.internals = internals ?? createFallbackInternals();
-      } catch {
-        this.internals = createFallbackInternals();
-      }
+      this.internals = attachInternalsSafely(this);
       this.validityController = new AnchoredValidityController(
         this,
         this.internals,

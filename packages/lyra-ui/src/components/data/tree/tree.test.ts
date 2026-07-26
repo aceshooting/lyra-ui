@@ -2,7 +2,6 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './tree.js';
 import type { LyraTree, TreeItem } from './tree.js';
 import type { LyraTreeNode } from './tree-node.js';
-import { styles as treeNodeStyles } from './tree-node.styles.js';
 
 const data = [
   {
@@ -71,10 +70,35 @@ it('bounds rendering of a valid extremely deep hierarchy', async () => {
   expect(renderedDepth).to.be.lessThan(5000);
 });
 
-it('mirrors the collapsed disclosure chevron under RTL while keeping expanded chevrons downward', () => {
-  const css = treeNodeStyles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(":host(:dir(rtl)) [part='toggle'] { transform: rotate(180deg);");
-  expect(css).to.include(":host([expanded]:dir(rtl)) [part='toggle'] { transform: rotate(90deg);");
+it('mirrors the collapsed disclosure chevron under RTL while keeping expanded chevrons downward', async () => {
+  // Reads real computed transforms off rendered nodes instead of substring-matching the exported
+  // stylesheet source, which would still pass even if a selector typo left the rule dead.
+  const branch: TreeItem = { id: 'branch', label: 'Branch', children: [{ id: 'leaf', label: 'Leaf' }] };
+
+  const ltrCollapsed = (await fixture(
+    html`<lr-tree-node .item=${branch}></lr-tree-node>`,
+  )) as LyraTreeNode;
+  const ltrExpanded = (await fixture(
+    html`<lr-tree-node expanded .item=${branch}></lr-tree-node>`,
+  )) as LyraTreeNode;
+  const rtlCollapsed = (await fixture(
+    html`<lr-tree-node dir="rtl" .item=${branch}></lr-tree-node>`,
+  )) as LyraTreeNode;
+  const rtlExpanded = (await fixture(
+    html`<lr-tree-node dir="rtl" expanded .item=${branch}></lr-tree-node>`,
+  )) as LyraTreeNode;
+
+  const toggleOf = (node: LyraTreeNode) =>
+    node.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+
+  expect(getComputedStyle(toggleOf(ltrCollapsed)).transform).to.equal('none');
+  const ltrExpandedTransform = getComputedStyle(toggleOf(ltrExpanded)).transform;
+  expect(ltrExpandedTransform).to.not.equal('none');
+  expect(getComputedStyle(toggleOf(rtlCollapsed)).transform).to.contain('matrix(-1');
+  // The more specific :host([expanded]:dir(rtl)) rule must win back to the same "downward"
+  // rotation as the plain expanded (non-RTL) state, rather than stacking with (or losing to) the
+  // plain :dir(rtl) 180deg rule.
+  expect(getComputedStyle(toggleOf(rtlExpanded)).transform).to.equal(ltrExpandedTransform);
 });
 
 it('never scrolls vertically -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {

@@ -58,6 +58,15 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   override connectedCallback(): void {
     if (!this.hasAttribute('value') && !this.value) this.value = '#000000';
     super.connectedCallback();
+    // Seed from the light-DOM children directly, before the first render -- the slots'
+    // @slotchange handler (onSlotChange below) only fires once the shadow DOM has committed its
+    // first <slot> elements, so relying on it alone rendered label/hint/error chrome `hidden` on
+    // the very first paint for a color picker mounted with declarative slotted content, only
+    // revealing it on the following render. Mirrors lr-checkbox-group's identical fix.
+    const hasSlot = (name: string) => Array.from(this.children).some((el) => el.getAttribute('slot') === name);
+    this.hasLabel = hasSlot('label');
+    this.hasHint = hasSlot('hint');
+    this.hasError = hasSlot('error');
   }
   override formResetCallback(): void {
     super.formResetCallback();

@@ -652,7 +652,10 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
                     part="chip"
                     ?removable=${!this.disabled}
                     value=${def.id}
-                    @lr-remove=${() => this.clearFilter(def.id)}
+                    @lr-remove=${(e: Event) => {
+                      e.stopPropagation();
+                      this.clearFilter(def.id);
+                    }}
                     >${def.label}: ${display}</lr-chip
                   >`
                 )}

@@ -41,6 +41,11 @@ export interface LyraRadioEventMap {
  * your own stylesheet) moves the label; because custom properties inherit down and not sideways, it
  * is *not* readable from a sibling node in your tree — align a sibling by computing the same formula
  * from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.
+ * @cssprop [--lr-radio-checked-border-color=var(--lr-color-brand)] - Border color of `[part='circle']`
+ * while `checked`. Retint just this control's checked ring without touching the shared
+ * `--lr-color-brand` token every other component also reads.
+ * @cssprop [--lr-radio-checked-dot-color=var(--lr-color-brand)] - Background of `[part='dot']`
+ * while `checked`.
  */
 export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   static override styles = [LyraElement.styles, styles];

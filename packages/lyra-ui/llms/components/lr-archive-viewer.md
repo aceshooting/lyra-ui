@@ -41,8 +41,12 @@ stylesheet.
 
 **Optional peer dependency:** install `jszip` with `pnpm add jszip`. The lazy registry registers
 `application/zip` and `application/x-zip-compressed`, with a `.zip` filename fallback, and imports
-the viewer only when a matching archive is opened. `.tar`, `.rar`, and other archive formats fall
-through to `<lr-document-preview>`'s generic download fallback.
+the viewer only when a matching archive is opened. Both registrations declare
+`capabilities: { anchors: ['text-quote', 'fragment'], search: true, textSelect: true }` — sibling to
+`load`, not inside it, so feature detection can read the capabilities without paying for the lazy
+import. Opening a `.zip` through `<lr-document-viewer>` forwards `anchor`/`highlights` to the mounted
+viewer, so a deep link into an entry name survives the registry hop. `.tar`, `.rar`, and other
+archive formats fall through to `<lr-document-preview>`'s generic download fallback.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the entry listing.

@@ -66,6 +66,20 @@ describe('lr-compare-panel', () => {
     expect(live.shadowRoot!.querySelector('[part="region"]')!.textContent).to.include('Original A');
   });
 
+  it('skips the vote write when a listener re-entrantly advances itemId mid-cast', async () => {
+    const el = (await fixture(html`<lr-compare-panel item-id="pair-1"></lr-compare-panel>`)) as LyraComparePanel;
+    el.addEventListener('lr-vote', () => {
+      el.itemId = 'pair-2';
+    });
+    (el.shadowRoot!.querySelector('[part="vote-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    // itemId's own setter already nulled the vote when it changed; the unconditional
+    // `this.vote = choice` write that used to follow the event would clobber that reset and
+    // stamp the *new* pair as voted before the user ever saw it.
+    expect(el.vote).to.equal(null);
+    expect(el.itemId).to.equal('pair-2');
+  });
+
   it('emits lr-vote for the B pane and marks the B button pressed', async () => {
     const el = (await fixture(html`<lr-compare-panel item-id="pair-2"></lr-compare-panel>`)) as LyraComparePanel;
     await el.updateComplete;

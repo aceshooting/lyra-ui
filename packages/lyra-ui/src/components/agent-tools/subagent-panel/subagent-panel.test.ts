@@ -68,6 +68,98 @@ it('iteratively bounds a deeply nested hierarchy without overflowing the stack',
   );
 });
 
+it('moves roving tabindex through a nested hierarchy with ArrowDown/ArrowUp/Home/End', async () => {
+  const nested: SubagentRun[] = [
+    { id: 'root', label: 'Root', status: 'running' },
+    { id: 'child', parentId: 'root', label: 'Child', status: 'running' },
+    { id: 'grandchild', parentId: 'child', label: 'Grandchild', status: 'done' },
+  ];
+  const el = (await fixture(html`<lr-subagent-panel .runs=${nested}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+  const root = el.shadowRoot!.querySelector('[data-run-id="root"]') as HTMLElement;
+  const child = el.shadowRoot!.querySelector('[data-run-id="child"]') as HTMLElement;
+  const grandchild = el.shadowRoot!.querySelector('[data-run-id="grandchild"]') as HTMLElement;
+  const tabbableCount = () =>
+    Array.from(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).filter(
+      (row) => row.getAttribute('tabindex') === '0',
+    ).length;
+
+  expect(root.getAttribute('tabindex')).to.equal('0');
+  expect(child.getAttribute('tabindex')).to.equal('-1');
+  expect(grandchild.getAttribute('tabindex')).to.equal('-1');
+  expect(tabbableCount()).to.equal(1);
+
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(root.getAttribute('tabindex')).to.equal('-1');
+  expect(child.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(child);
+  expect(tabbableCount()).to.equal(1);
+
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(grandchild.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(grandchild);
+  expect(tabbableCount()).to.equal(1);
+
+  // Already at the last row -- ArrowDown must clamp, not run off the end.
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(grandchild.getAttribute('tabindex')).to.equal('0');
+  expect(tabbableCount()).to.equal(1);
+
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(child.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(child);
+  expect(tabbableCount()).to.equal(1);
+
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(grandchild.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(grandchild);
+  expect(tabbableCount()).to.equal(1);
+
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(root.getAttribute('tabindex')).to.equal('0');
+  expect(el.shadowRoot!.activeElement).to.equal(root);
+  expect(tabbableCount()).to.equal(1);
+});
+
+it('re-points roving tabindex to a surviving row when the focused row disappears from a runs update (regression)', async () => {
+  const nested: SubagentRun[] = [
+    { id: 'root', label: 'Root', status: 'running' },
+    { id: 'child', parentId: 'root', label: 'Child', status: 'running' },
+    { id: 'grandchild', parentId: 'child', label: 'Grandchild', status: 'done' },
+  ];
+  const el = (await fixture(html`<lr-subagent-panel .runs=${nested}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  await el.updateComplete;
+  const list = el.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+
+  // Focus the grandchild -- the row about to disappear.
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  list.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[data-run-id="grandchild"]') as HTMLElement).getAttribute('tabindex')).to.equal(
+    '0',
+  );
+
+  // Data shrinks below the roving index: the focused row is removed by a `runs` update.
+  el.runs = nested.filter((run) => run.id !== 'grandchild');
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.querySelector('[data-run-id="grandchild"]')).to.not.exist;
+  const tabbable = Array.from(el.shadowRoot!.querySelectorAll('[role="treeitem"]')).filter(
+    (row) => row.getAttribute('tabindex') === '0',
+  );
+  // Exactly one stop remains tabbable -- never zero -- and it's a row that still exists.
+  expect(tabbable.length).to.equal(1);
+  expect((tabbable[0] as HTMLElement).getAttribute('data-run-id')).to.equal('root');
+});
+
 it('allows selected and progress states to be rethemed independently', async () => {
   const el = (await fixture(html`
     <lr-subagent-panel

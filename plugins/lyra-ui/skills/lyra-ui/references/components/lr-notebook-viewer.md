@@ -18,8 +18,10 @@ Execution is a hard non-goal. Markdown cells render through `lr-markdown`, code 
 `lr-code-block` (using the notebook's kernel language for syntax highlighting), and raw cells as
 plain preformatted text. A code cell's `execute_result`/`display_data` outputs prefer, in order,
 `image/png`, `image/jpeg`, `image/svg+xml` (sanitized), `text/html` (sanitized), `application/json`
-(via `lr-json-viewer`), then `text/plain`. Stream/error outputs render as plain preformatted text
-(tinted `danger` for stderr/tracebacks). Sanitizing raw HTML/SVG output markup lazy-loads the
+(via `lr-json-viewer`), then `text/plain`. Stream/error outputs render as preformatted text (tinted
+`danger` for stderr/tracebacks) with embedded ANSI SGR color/style escapes interpreted through the
+same shared `internal/ansi.ts` parser `lr-terminal` uses — a traceback keeps its coloring instead of
+showing raw `ESC[` sequences. Sanitizing raw HTML/SVG output markup lazy-loads the
 optional peer `dompurify`; without it, the output renders a localized notice instead of raw markup.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
 index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no

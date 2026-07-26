@@ -47,9 +47,13 @@ export const styles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
 
-  [part='tab'][aria-selected='true'] {
-    border-block-end-color: var(--lr-color-brand);
-    color: var(--lr-color-text);
+  /* :where() zeroes the [aria-selected='true'] qualifier's specificity contribution -- otherwise
+     this (0,2,0) rule would beat a consumer's own ::part(tab) color/border override on the active
+     tab. Colors route through scoped cssprops so a consumer can retint just the selected tab
+     without hijacking the shared --lr-color-brand/--lr-color-text tokens used everywhere else. */
+  [part='tab']:where([aria-selected='true']) {
+    border-block-end-color: var(--lr-knowledge-base-admin-tab-selected-border, var(--lr-color-brand));
+    color: var(--lr-knowledge-base-admin-tab-selected-color, var(--lr-color-text));
     font-weight: var(--lr-font-weight-semibold);
   }
 

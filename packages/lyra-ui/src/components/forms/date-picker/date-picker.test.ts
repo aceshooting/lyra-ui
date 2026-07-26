@@ -4,6 +4,34 @@ import './date-picker.js';
 import type { LyraDatePicker } from './date-picker.js';
 import { styles } from './date-picker.styles.js';
 import { weekdayLabels, monthTitle, resolveFirstDayOfWeek } from './calendar-core.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+
+it('gates the previous/next hover background behind :where() (regression)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/:where\(\[part='previous'\]\):hover,\s*:where\(\[part='next'\]\):hover/);
+  // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
+  expect(css).to.not.include("[part='previous']:hover,");
+});
+
+it('lets a consumer retint the previous/next hover background via the scoped --lr-date-picker-nav-hover-bg cssprop (regression)', async () => {
+  const el = (await fixture(html`
+    <lr-date-picker value="2026-07-15" style="--lr-date-picker-nav-hover-bg: rgb(1, 2, 3);"></lr-date-picker>
+  `)) as LyraDatePicker;
+  await el.updateComplete;
+  const next = el.shadowRoot!.querySelector('[part="next"]') as HTMLElement;
+  const before = getComputedStyle(next).backgroundColor;
+  const rect = next.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(next).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(next).backgroundColor).to.not.equal(before);
+  } finally {
+    await resetMouse();
+  }
+});
 
 it('scales day-cell size across every tier, floored at the 24px WCAG minimum', async () => {
   const expected: Record<string, string> = {

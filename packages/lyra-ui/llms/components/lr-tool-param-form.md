@@ -6,7 +6,7 @@
 - **Class** `LyraToolParamForm`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 7 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -73,7 +73,12 @@ set `valid: false` while `formError`, rather than a fabricated field key, carrie
 
 **Slots:** none.
 
-**CSS parts:** `base`, `field`, `label`, `description`, `error`, `unsupported`, `empty`
+**CSS parts:** `base`, `field`, `label`, `control`, `description`, `error`, `unsupported`, `empty`.
+`control` is the native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field — one
+shared part name across both the text and number inputs, and deliberately *not* present on the
+`'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches, which are
+composed components with their own part surfaces rather than raw natives. It is purely an additive
+external theming hook: the internal `.control` class the stylesheet targets is unchanged.
 
 **Themeable custom properties:** no component-specific custom properties; shared tokens only —
 `--lr-space-l/-xs/-s`, `--lr-color-border`, `--lr-radius`, `--lr-color-surface`,

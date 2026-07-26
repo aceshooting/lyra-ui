@@ -43,6 +43,28 @@ it('never lets the start handle pass the end handle', async () => {
   expect(el.start).to.equal(80);
 });
 
+it('forwards host focus()/blur() to the start handle', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === startHandle).to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('forwards host click() to the start handle', async () => {
+  const el = (await fixture(
+    html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,
+  )) as LyraTimeRange;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  let clicked = false;
+  startHandle.addEventListener('click', () => (clicked = true));
+  el.click();
+  expect(clicked).to.be.true;
+});
+
 it('is accessible', async () => {
   const el = (await fixture(
     html`<lr-time-range min="0" max="100" start="20" end="80"></lr-time-range>`,

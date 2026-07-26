@@ -15,20 +15,24 @@
 
 A compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an
 optional secondary per-cell marker. Pure CSS/flex — no chart.js, no SVG, no canvas — sized/named
-consistently with the sparkline/heatmap family, but a glanceable *aggregate* visualization
-(`role="img"`, one summarizing `aria-label`) rather than a `role="list"` of separately-operable
-items: there is no per-cell keyboard focus and no per-cell click event, matching `<lr-sparkline>`'s
-accessibility model rather than `<lr-heatmap>`'s heavier canvas-plus-keyboard-roving one. Hovering a
-cell (pointer only) shows `[part="tooltip"]` with that item's label. Setting `showLegend`
-additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
-mapping is readable without hovering each cell.
+consistently with the sparkline/heatmap family, and read as a glanceable aggregate. `[part="base"]`
+is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`, `aria-posinset`,
+`aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
+string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
+Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
+the same `[part="tooltip"]` detail that pointer hover does, wired through `aria-describedby`. Cells
+are inspectable, not actionable: there is no per-cell click/activation event, so unlike
+`<lr-heatmap>` there is nothing to fire on Enter/Space. Setting `showLegend` additionally renders a
+static `[part="legend"]` key below the strip, so the color-to-category mapping is readable without
+visiting each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
-  subagent-dispatched turn); `label` is per-item hover-tooltip text, falling back to the matching
-  category's own `label` (or its `key`) when unset — not read by the auto-generated `aria-label`,
-  which summarizes by category/count only
+  subagent-dispatched turn); `label` is per-item hover/focus tooltip text *and* that cell's own
+  `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
+  `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
+  summarizes by category/count only
 - `categories: SequenceStripCategory[] = []` (attribute: false) — `{ key, color, label? }`; `color`
   is the cell background for every item whose `category` matches `key` (an item whose `category`
   matches no entry renders `transparent`); `label` is used in the auto-generated `aria-label` summary
@@ -43,9 +47,9 @@ mapping is readable without hovering each cell.
   order. The key describes the *scheme*, not the current data: a category with no matching item
   still gets a row, and an item whose `category` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
-  filtering legend). Because it only repeats the category names `[part="base"]` already announces
-  through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
-  exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
+  filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
+  summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
+  once — and it wraps onto further rows in a narrow allocation rather than overflowing
 - `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` *means* (e.g.
   `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
@@ -57,9 +61,10 @@ mapping is readable without hovering each cell.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root strip, `role="img"`), `cell` (each item's cell, background-colored
-by its category), `marker` (the small bottom marker on a cell whose item sets `marker: true`),
-`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
+**CSS parts:** `base` (the root strip, `role="list"`), `cell` (each item's `role="listitem"` cell,
+background-colored by its category and carrying the roving `tabindex`), `marker` (the small bottom
+marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
+item's label, hidden until a cell is hovered or focused),
 `legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the

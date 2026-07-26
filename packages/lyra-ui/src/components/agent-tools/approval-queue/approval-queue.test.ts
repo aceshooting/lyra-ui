@@ -125,6 +125,18 @@ describe('lr-approval-queue', () => {
     expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Nothing requires review');
   });
 
+  it('marks the selected request row with aria-current, not just data-selected', async () => {
+    const el = (await fixture(html`
+      <lr-approval-queue selected-id="call-1" .requests=${requests}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    const request = el.shadowRoot!.querySelector('[part="request"]') as HTMLElement;
+    expect(request.getAttribute('aria-current')).to.equal('true');
+
+    const unselected = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
+    const unselectedRequest = unselected.shadowRoot!.querySelector('[part="request"]') as HTMLElement;
+    expect(unselectedRequest.hasAttribute('aria-current')).to.be.false;
+  });
+
   it('allows the selected request border to be rethemed independently', async () => {
     const el = (await fixture(html`
       <lr-approval-queue

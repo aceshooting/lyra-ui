@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './prompt-studio.styles.js';
@@ -139,20 +140,29 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
     return resolved;
   }
 
+  // Native focus/blur events don't bubble and don't cross the shadow boundary on their own, so
+  // the message textarea and variable inputs need an explicit bridge to make host-level
+  // `addEventListener('focus' | 'blur', ...)` observe real focus/blur at all.
+  private onFocus = (): void => { this.emit('focus'); };
+  private onBlur = (): void => { this.emit('blur'); };
+
   private renderMessage = (message: PromptStudioMessage): TemplateResult => html`
     <li part="message">
-      <select
-        part="message-role"
-        aria-label=${this.roleLabel(message.role)}
-        .value=${message.role}
-        ?disabled=${this.disabled}
-        @change=${(event: Event) =>
-          this.updateMessage(message.id, { role: (event.target as HTMLSelectElement).value as PromptStudioRole })}
-      >
-        ${(['system', 'user', 'assistant', 'tool'] as const).map(
-          (role) => html`<option value=${role}>${this.roleLabel(role)}</option>`,
-        )}
-      </select>
+      <span class="message-role-wrapper">
+        <select
+          part="message-role"
+          aria-label=${this.roleLabel(message.role)}
+          .value=${message.role}
+          ?disabled=${this.disabled}
+          @change=${(event: Event) =>
+            this.updateMessage(message.id, { role: (event.target as HTMLSelectElement).value as PromptStudioRole })}
+        >
+          ${(['system', 'user', 'assistant', 'tool'] as const).map(
+            (role) => html`<option value=${role}>${this.roleLabel(role)}</option>`,
+          )}
+        </select>
+        <span class="message-role-chevron" aria-hidden="true">${chevronIcon()}</span>
+      </span>
       <textarea
         part="message-content"
         aria-label=${this.roleLabel(message.role)}
@@ -160,6 +170,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
         ?disabled=${this.disabled}
         @input=${(event: Event) =>
           this.updateMessage(message.id, { content: (event.target as HTMLTextAreaElement).value })}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
       ></textarea>
       <button
         part="remove-message"
@@ -212,6 +224,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                           ?disabled=${this.disabled}
                           @input=${(event: Event) =>
                             this.updateVariable(index, { name: (event.target as HTMLInputElement).value })}
+                          @focus=${this.onFocus}
+                          @blur=${this.onBlur}
                         />
                         <input
                           aria-label=${this.localize('promptStudioVariableValue', undefined, { index: displayIndex })}
@@ -219,6 +233,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
                           ?disabled=${this.disabled}
                           @input=${(event: Event) =>
                             this.updateVariable(index, { value: (event.target as HTMLInputElement).value })}
+                          @focus=${this.onFocus}
+                          @blur=${this.onBlur}
                         />
                       </div>
                     `;

@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import './prompt-studio.js';
 import type { LyraPromptStudio, PromptStudioMessage, PromptStudioVersion } from './prompt-studio.js';
+import { styles } from './prompt-studio.styles.js';
 
 const messages: PromptStudioMessage[] = [
   { id: 'system', role: 'system', content: 'Answer for {{audience}}.' },
@@ -85,6 +86,59 @@ it('generates a unique message id even when the timestamp-based candidate alread
   } finally {
     Date.now = originalNow;
   }
+});
+
+it('bridges focus/blur from the message textarea and variable inputs to the host', async () => {
+  // Dispatch synthetic FocusEvents rather than calling .focus()/.blur(): a real focus change
+  // fires the UA's own focus-chain events on every shadow-including ancestor host regardless of
+  // this component's own wiring, which would mask a missing bridge. A manually dispatched
+  // FocusEvent is not bubbling and only reaches the host if the component explicitly re-emits it
+  // -- see file-input.test.ts's "bridges focus and blur from the dropzone" test for precedent.
+  const el = (await fixture(html`<lr-prompt-studio
+    .messages=${messages}
+    .variables=${[{ name: 'audience', value: 'developers' }]}
+  ></lr-prompt-studio>`)) as LyraPromptStudio;
+
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  let focusPending = oneEvent(el, 'focus');
+  textarea.dispatchEvent(new FocusEvent('focus'));
+  await focusPending;
+  let blurPending = oneEvent(el, 'blur');
+  textarea.dispatchEvent(new FocusEvent('blur'));
+  await blurPending;
+
+  const [nameInput, valueInput] = [
+    ...el.shadowRoot!.querySelectorAll('[part="variable"] input'),
+  ] as HTMLInputElement[];
+
+  focusPending = oneEvent(el, 'focus');
+  nameInput!.dispatchEvent(new FocusEvent('focus'));
+  await focusPending;
+  blurPending = oneEvent(el, 'blur');
+  nameInput!.dispatchEvent(new FocusEvent('blur'));
+  await blurPending;
+
+  focusPending = oneEvent(el, 'focus');
+  valueInput!.dispatchEvent(new FocusEvent('focus'));
+  await focusPending;
+  blurPending = oneEvent(el, 'blur');
+  valueInput!.dispatchEvent(new FocusEvent('blur'));
+  await blurPending;
+});
+
+it('resets native appearance on the message-role select, themes its option list, and adds a chevron', async () => {
+  const el = (await fixture(html`<lr-prompt-studio .messages=${messages}></lr-prompt-studio>`)) as LyraPromptStudio;
+  const select = el.shadowRoot!.querySelector('[part="message-role"]') as HTMLSelectElement;
+  expect(getComputedStyle(select).appearance).to.equal('none');
+  expect(getComputedStyle(select).cursor).to.equal('pointer');
+  const wrapper = select.closest('.message-role-wrapper');
+  expect(wrapper, 'the select must be wrapped so a decorative chevron can be positioned over it').to.exist;
+  expect(
+    wrapper!.querySelector('.message-role-chevron svg'),
+    'a decorative chevron must render since appearance:none removes the native one',
+  ).to.exist;
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='message-role'\] option[^{]*\{[^}]*background:/);
 });
 
 it('renders and exposes a component-scoped theme hook for the selected version', async () => {

@@ -24,7 +24,12 @@ It never executes tools or persists decisions.
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
-`tool-name`, `request-id`, `status`, `empty`.
+`tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
+carries both `data-selected` (the styling hook) and `aria-current="true"` (the semantic one), so the
+selection is announced, not merely painted. Following this library's convention for `aria-current` —
+and unlike `aria-pressed`/`aria-expanded`/`aria-selected`, which must render both states — an
+unselected row omits the attribute rather than writing `"false"`, because ARIA already defines
+`aria-current`'s own default as false.
 
 **Additional API surface:**
 

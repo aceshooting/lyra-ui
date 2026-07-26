@@ -64,6 +64,27 @@ describe('lr-swatch-picker', () => {
     expect(buttons[2]!.getAttribute('aria-checked')).to.equal('true');
   });
 
+  it('forwards host focus()/blur() to the tabbable swatch', async () => {
+    const el = (await fixture(
+      html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    const tabbable = swatches(el)[1]!;
+    el.focus();
+    expect(el.shadowRoot!.activeElement === tabbable).to.be.true;
+    el.blur();
+    expect(el.shadowRoot!.activeElement).to.equal(null);
+  });
+
+  it('forwards host click() to the tabbable swatch, selecting its option', async () => {
+    const el = (await fixture(html`<lr-swatch-picker .options=${options()}></lr-swatch-picker>`)) as LyraSwatchPicker;
+    expect(el.value).to.equal(null);
+    const event = oneEvent(el, 'lr-change');
+    el.click();
+    const result = await event;
+    expect(result.detail.value).to.equal('blue');
+    expect(el.value).to.equal('blue');
+  });
+
   it('does not emit lr-change when re-selecting the already-selected swatch', async () => {
     const el = (await fixture(
       html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,

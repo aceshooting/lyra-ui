@@ -28,4 +28,14 @@ container inline-size).
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes.
 
+**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` *and* declares
+`container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
+fire at all). Inline-size containment means the box's own content can no longer contribute to its
+width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
+`inline-flex`/`flex` parent, anywhere with no definite width — the group collapses to its
+`min-inline-size` floor of `var(--lr-icon-button-size)` (2.5rem) instead of growing to fit the
+slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
+or a grid track) whenever it isn't already in a layout that supplies one. The floor itself is the
+safeguard: without it the same shape rendered at literally `0px`.
+
 ---

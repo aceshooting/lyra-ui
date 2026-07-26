@@ -6,7 +6,7 @@
 - **Class** `LyraPdfViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/pdf-viewer/pdf-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
-- **Themeable via** 13 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -62,7 +62,10 @@ table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` wh
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
-**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `zoom-out-button`,
+`zoom-in-button` (the four toolbar controls — previously reachable only through `::part(toolbar)
+button`, which is invalid: a descendant combinator after `::part()` never matches, so each button now
+carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
 (the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's

@@ -26,9 +26,14 @@ Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-sele
 `error` CSS parts) — left unset, none of that chrome renders.
 
 **Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
-`groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
-EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches `name`
-and every `shortcodes` entry, case-insensitively. Empty (the default, before the auto-loader
+`groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, labelKey?,
+emojis: EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches
+`name` and every `shortcodes` entry, case-insensitively. `labelKey` is an optional `LyraMessageKey`
+naming `label`'s localized form — set only by the built-in `emoji-picker-element-data` adapter, whose
+headings come from emojibase's fixed group ids, so an auto-loaded emoji set's group headings follow
+`registerLyraLocale()`/`.strings` instead of staying English. A hand-authored group leaves it unset
+and its `label` renders verbatim, because a consumer-supplied heading is caller-owned content this
+library never translates. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
 the localized default grid label. `label: string = ''` — visible label rendered above the
@@ -100,7 +105,14 @@ windowed row are additionally capped at 20 regardless of available width.
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
-`console.warn` and simply leaves `groups` empty.
+`console.warn` and simply leaves `groups` empty. The adapter buckets the peer's flat entry list by
+its numeric `group` id and tags each bucket with both the English `label` and the matching
+`labelKey` — `emojiPickerGroupSmileysEmotion`, `emojiPickerGroupPeopleBody`,
+`emojiPickerGroupComponent`, `emojiPickerGroupAnimalsNature`, `emojiPickerGroupFoodDrink`,
+`emojiPickerGroupTravelPlaces`, `emojiPickerGroupActivities`, `emojiPickerGroupObjects`,
+`emojiPickerGroupSymbols`, `emojiPickerGroupFlags` (group ids 0–9, in that order). Override any of
+them through `registerLyraLocale()` or a `.strings` object to translate the headings. An unknown
+future group id gets no `labelKey` and falls back to a generated `Group {id}` label.
 
 **Additional API surface:**
 

@@ -60,10 +60,10 @@ export const styles = css`
     display: none;
   }
   :host([decision='approved']) [part='status'] {
-    color: var(--lr-color-success);
+    color: var(--lr-confirm-bar-approved-color, var(--lr-color-success));
   }
   :host([decision='denied']) [part='status'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-confirm-bar-denied-color, var(--lr-color-danger));
   }
   [part='status']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

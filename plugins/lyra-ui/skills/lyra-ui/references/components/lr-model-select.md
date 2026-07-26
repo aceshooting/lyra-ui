@@ -100,6 +100,9 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   from the listbox or committed in free-text mode; `inCatalog` reflects whether that value was
   actually present in `normalizedCatalog`, so a consumer can flag a freshly-typed custom value
   distinctly from a real catalog pick)
+- `change` (`Event`, no detail) — fired alongside `lr-change`, mirroring `<lr-select>`/
+  `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
+  handlers behave consistently across the picker family.
 - `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
   bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
   equivalent re-dispatch, matching `<lr-select>`'s own trigger.

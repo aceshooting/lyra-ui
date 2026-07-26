@@ -41,6 +41,8 @@ export interface LyraTreeNodeEventMap {
  * @cssprop [--lr-tree-depth=0] - Internal indent plumbing, not a retheming knob: this node's
  *   `depth`, written inline onto `[part="row"]` by the component and multiplied by
  *   `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
+ * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row.
+ * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row.
  */
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   static override styles = [LyraElement.styles, styles];

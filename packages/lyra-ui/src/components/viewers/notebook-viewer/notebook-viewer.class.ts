@@ -246,7 +246,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   override readonly anchorKinds: readonly LyraAnchorKind[] = ['node-path', 'fragment'];
 
   @state() private loadState: NotebookState = { kind: 'idle' };
-  @state() private expandedOutputs = new Set<number>();
+  /** Keyed by `${cellIndex}:${outputIndex}` (a colon-separated string, not a packed number) --
+   *  `cellIndex * 1000 + outputIndex` would collide once a cell holds >= 1000 outputs (e.g.
+   *  cell 0's output 1000 and cell 1's output 0 both reduced to 1000). */
+  @state() private expandedOutputs = new Set<string>();
   @state() private activeCellIndex: number | null = null;
   @state() private searchQuery = '';
   @state() private searchMatches: number[] = [];
@@ -456,7 +459,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     this.emit('lr-search-change', { query: this.searchQuery, matchCount: this.searchMatches.length, activeIndex: this.activeSearchIndex });
   }
 
-  private toggleOutput(index: number): void {
+  private toggleOutput(index: string): void {
     const next = new Set(this.expandedOutputs);
     if (next.has(index)) next.delete(index);
     else next.add(index);
@@ -485,7 +488,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     };
   }
 
-  private renderTextOutput(index: number, text: string, tone?: 'danger'): TemplateResult {
+  private renderTextOutput(index: string, text: string, tone?: 'danger'): TemplateResult {
     const lines = text.split('\n');
     const outputCollapseLines = this.effectiveOutputCollapseLines;
     const collapsible = outputCollapseLines > 0 && lines.length > outputCollapseLines;
@@ -505,7 +508,10 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   }
 
   private renderOutput(cellIndex: number, output: NotebookOutput, outputIndex: number): TemplateResult | typeof nothing {
-    const key = cellIndex * 1000 + outputIndex;
+    // A colon-separated string, not `cellIndex * 1000 + outputIndex` -- that packed-number scheme
+    // collides once a cell holds >= 1000 outputs (cell 0's output 1000 and cell 1's output 0 both
+    // reduce to the same numeric key).
+    const key = `${cellIndex}:${outputIndex}`;
     if (output.output_type === 'stream') {
       return this.renderTextOutput(key, joinText(output.text), output.name === 'stderr' ? 'danger' : undefined);
     }
@@ -587,7 +593,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
   private renderSanitized(
     raw: string,
     profile: SanitizeProfile,
-    outputKey: number,
+    outputKey: string,
     textFallback: string,
   ): TemplateResult {
     const cacheKey = `${profile}:${raw}`;

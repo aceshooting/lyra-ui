@@ -147,6 +147,14 @@ fired only when an enabled `orientationBreakpoint` actually changes `effectiveOr
 
 **Themeable custom properties:** `--lr-split-overlay-color` (default `var(--lr-color-overlay)`) —
 the `'floating'` drawer's `[part='backdrop']` scrim; scoped to `[part='base']`, not the viewport.
+`--lr-split-divider-hit-slop` (default `calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)`,
+i.e. `-18.5px` at the shipped token values) — the per-side inset of `[part='divider']`'s invisible
+`::before` hit area along the resize axis. It is negative on purpose: the `::before` box extends past
+the divider's own edges so the *effective* pointer/touch target reaches the shared
+`--lr-icon-button-size` WCAG 2.5.8 floor (40px) while the divider anyone can see stays 3px. Unlike
+most properties here it is **declared on `:host`**, so an override has to target the element itself —
+an ancestor rule is shadowed. Overriding it directly is rarely the right move: retheme
+`--lr-size-3px` or `--lr-icon-button-size` and the slop recomputes to keep exactly closing the gap.
 Otherwise shared tokens only.
 
 **Optional peer deps:** none.
@@ -307,6 +315,11 @@ override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, re
 element that reads them. Left unset, each falls back to exactly the token the rule used before, so
 rendering is unchanged.
 
+`--lr-widget-view-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-widget-view-toggle-hover-color` (default `var(--lr-color-text)`) are the same shape for the
+*hover* state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
+`::part(view-toggle):hover` override wins without `!important`.
+
 **Optional peer deps:** none.
 
 ```html
@@ -426,6 +439,16 @@ container inline-size).
 
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes.
+
+**Sizing gotcha — give it an explicit width.** `:host` is `display: inline-flex` *and* declares
+`container-type: inline-size` unconditionally (that is what makes the 20rem `@container` rule above
+fire at all). Inline-size containment means the box's own content can no longer contribute to its
+width, so in any context where the host would otherwise be shrink-to-fit — plain block flow, an
+`inline-flex`/`flex` parent, anywhere with no definite width — the group collapses to its
+`min-inline-size` floor of `var(--lr-icon-button-size)` (2.5rem) instead of growing to fit the
+slotted buttons. Give `<lr-button-group>` a definite width (`inline-size`, `width: 100%`, `flex: 1`,
+or a grid track) whenever it isn't already in a layout that supplies one. The floor itself is the
+safeguard: without it the same shape rendered at literally `0px`.
 
 ---
 
@@ -625,8 +648,10 @@ text color of the `current` step. `--lr-stepper-current-font-weight` (default
 `var(--lr-font-weight-semibold)`) — font weight of the `current` step's label.
 `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
 text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--lr-color-brand)`) and
-`--lr-stepper-current-index-color` (default `var(--lr-color-surface)`) — background and text color
-of the `current` step's numbered `step-index` chip. Each is an inline `var()` fallback at the point
+`--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
+of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
+foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
+colors, where surface and on-brand diverge. Each is an inline `var()` fallback at the point
 of use, never declared on `:host`, so it can be set on the element or on any ancestor; and each is
 scoped to its own `data-state`, so recoloring the current step leaves `pending`/`completed`/`error`
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
@@ -634,7 +659,7 @@ Parts forbids an attribute selector after `::part()` — so state-specific themi
 overriding a library-wide `--lr-color-*` token and repainting everything else that read it. Unset,
 each falls back to the token its rule used before. Otherwise shared tokens —
 `--lr-space-m`/`-xs`/`-2xs`,
-`--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-surface`, `--lr-radius`/`-pill`,
+`--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-on-brand`, `--lr-radius`/`-pill`,
 `--lr-font-size-xs`, `--lr-font-weight-semibold`, `--lr-opacity-disabled`,
 `--lr-focus-ring-*`.
 

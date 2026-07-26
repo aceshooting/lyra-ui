@@ -442,7 +442,10 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
             event.stopPropagation();
             this.onSort(event.detail.key as LibraryDocumentSortKey);
           }}
-          @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => this.openDocument(event.detail.row)}
+          @lr-row-click=${(event: CustomEvent<{ row: LibraryDocument }>) => {
+            event.stopPropagation();
+            this.openDocument(event.detail.row);
+          }}
         ></lr-table>
       </div>
     `;

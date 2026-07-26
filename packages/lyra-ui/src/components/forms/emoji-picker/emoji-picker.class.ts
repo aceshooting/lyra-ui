@@ -322,6 +322,13 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     this.requestUpdate();
   };
 
+  /** A group heading, localized when the group came from the built-in `emoji-picker-element-data`
+   *  adapter (which tags each emojibase group with a `labelKey`). A consumer-supplied group has no
+   *  `labelKey` and its `label` is caller-owned content, rendered verbatim. */
+  private groupLabel(group: EmojiPickerGroup): string {
+    return group.labelKey ? this.localize(group.labelKey) : group.label;
+  }
+
   private virtualRows(): VirtualEmojiRow[] {
     const columns = this.columnsPerRow();
     let index = 0;
@@ -329,7 +336,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     for (const group of this.filteredGroups) {
       for (let offset = 0; offset < group.emojis.length; offset += columns) {
         rows.push({
-          label: offset === 0 ? group.label : undefined,
+          label: offset === 0 ? this.groupLabel(group) : undefined,
           items: group.emojis.slice(offset, offset + columns).map((item) => ({ item, index: index++ })),
         });
       }
@@ -638,7 +645,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
                 ? this.renderVirtualRows()
                 : this.filteredGroups.map(
                   (group) => html`
-                    <div part="group-label">${group.label}</div>
+                    <div part="group-label">${this.groupLabel(group)}</div>
                     ${group.emojis.map((item) => {
                       index++;
                       return this.renderEmojiButton(item, index, items.length);

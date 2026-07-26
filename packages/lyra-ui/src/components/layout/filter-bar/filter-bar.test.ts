@@ -320,6 +320,29 @@ describe("active-filter chips", () => {
     expect(el.value).to.deep.equal({ status: "", created: "2026-02-01" });
   });
 
+  it("does not leak the composed chip's lr-remove event past the host under its own name", async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = { status: "open" };
+    await el.updateComplete;
+
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    let count = 0;
+    el.addEventListener("lr-remove", () => count++);
+
+    chip.dispatchEvent(
+      new CustomEvent("lr-remove", {
+        bubbles: true,
+        composed: true,
+        detail: {},
+      })
+    );
+    await el.updateComplete;
+
+    expect(count).to.equal(0);
+  });
+
   it("clears a multiple combobox filter to an empty array (not an empty string) when its chip is removed", async () => {
     const el = (await fixture(
       html`<lr-filter-bar .filters=${basicFilters}></lr-filter-bar>`

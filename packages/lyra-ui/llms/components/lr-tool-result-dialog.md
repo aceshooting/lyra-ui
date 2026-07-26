@@ -56,7 +56,8 @@ tool name/status/duration), `tool-name`, `status`, `duration`, `header-actions`,
 0.5)` — the backdrop scrim color; component-specific since no shared overlay token exists),
 `--lr-tool-result-dialog-maximized-inset` (default `var(--lr-space-l)` — inset applied to the
 panel while `[maximized]`, overridable e.g. to leave a persistent app rail visible), and
-`--lr-tool-result-dialog-spin` (default `1s linear`, stopped under reduced motion), plus shared
+`--lr-tool-result-dialog-spin` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`,
+and effectively stopped under reduced motion because that token collapses to `0.001ms linear`), plus shared
 tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-success-quiet/
 -danger/-danger-quiet/-warning/-warning-quiet`, `--lr-space-*`, `--lr-radius`, `--lr-shadow`,
 `--lr-icon-button-size`, `--lr-focus-ring-*`, `--lr-transition-base`.

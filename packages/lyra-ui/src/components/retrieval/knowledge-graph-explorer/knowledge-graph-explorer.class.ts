@@ -400,6 +400,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
 
   private onVisibilityChange = (event: CustomEvent<{ hiddenTypes: string[] }>): void => {
+    event.stopPropagation();
     this.hiddenTypes = event.detail.hiddenTypes;
   };
 
@@ -409,6 +410,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   };
 
   private onEntityActivate = (event: CustomEvent<{ id: string }>): void => {
+    event.stopPropagation();
     void this.activateEntity(event.detail.id);
   };
 
@@ -559,7 +561,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
               <div part="pinned">
                 <span part="pinned-heading">${this.localize('graphExplorerPinnedHeading')}</span>
                 ${this.pinnedNodeIds.map(
-                  (id) => html`<lr-chip removable @lr-remove=${() => this.togglePin(id)}>${this.nodeLabel(id)}</lr-chip>`,
+                  (id) => html`<lr-chip
+                    removable
+                    @lr-remove=${(event: Event) => {
+                      event.stopPropagation();
+                      this.togglePin(id);
+                    }}
+                    >${this.nodeLabel(id)}</lr-chip
+                  >`,
                 )}
                 ${this.pinnedNodeIds.length === 2
                   ? html`<lr-button size="s" @click=${() => this.requestPath()}>${this.localize('graphExplorerFindPath')}</lr-button>`

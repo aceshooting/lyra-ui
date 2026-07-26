@@ -251,6 +251,18 @@ describe('compact / appearance escape hatches', () => {
     expect(getComputedStyle(body).gap).to.equal('6px');
   });
 
+  it('tightens the header gap under compact too, not just its padding, via its own retunable cssprop', async () => {
+    const nonCompact = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+    const defaultHeaderGap = getComputedStyle(nonCompact.shadowRoot!.querySelector('[part="header"]')!).gap;
+
+    const el = (await fixture(html`<lr-task-list .items=${items} compact></lr-task-list>`)) as LyraTaskList;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    expect(getComputedStyle(header).gap).to.not.equal(defaultHeaderGap);
+
+    el.style.setProperty('--lr-task-list-compact-header-gap', '7px');
+    expect(getComputedStyle(header).gap).to.equal('7px');
+  });
+
   it('appearance="plain" removes [part="base"]\'s border and background', async () => {
     const cardEl = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
     const cardBase = cardEl.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

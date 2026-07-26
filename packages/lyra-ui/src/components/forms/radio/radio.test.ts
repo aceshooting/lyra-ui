@@ -57,6 +57,39 @@ it('moves selection and DOM focus when arrow navigation is used', async () => {
   await expect(group).to.be.accessible();
 });
 
+it('swaps ArrowLeft/ArrowRight under dir="rtl" so "forward" follows reading direction', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group label="Choice" dir="rtl">
+      <lr-radio value="a">A</lr-radio>
+      <lr-radio value="b">B</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+  const firstBase = radios[0].shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const secondBase = radios[1].shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  radios[0].checked = true;
+  firstBase.focus();
+
+  // ArrowLeft is "forward" under RTL -- the mirror image of ArrowRight's LTR meaning
+  // exercised above.
+  const forwardEvent = oneEvent(group, 'lr-change');
+  firstBase.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true }),
+  );
+  expect((await forwardEvent).detail.value).to.equal('b');
+  expect(radios[1].checked).to.be.true;
+  expect(radios[1].shadowRoot!.activeElement === secondBase).to.be.true;
+
+  // ArrowRight is "backward" under RTL, so it should return selection/focus to the first radio.
+  const backwardEvent = oneEvent(group, 'lr-change');
+  secondBase.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }),
+  );
+  expect((await backwardEvent).detail.value).to.equal('a');
+  expect(radios[0].checked).to.be.true;
+  expect(radios[0].shadowRoot!.activeElement === firstBase).to.be.true;
+});
+
 it('uses roving tabindex: only the checked (or first enabled) radio is a Tab stop', async () => {
   const group = (await fixture(html`
     <lr-radio-group label="Choice">
@@ -377,6 +410,47 @@ it('publishes --lr-radio-label-indent and drives the real label offset from it',
   // The published value and the rendered geometry cannot drift: retuning it moves the label.
   el.style.setProperty('--lr-radio-label-indent', '4rem');
   expect(label.getBoundingClientRect().left - base.getBoundingClientRect().left).to.be.closeTo(64, 0.5);
+});
+
+describe('checked-state cssprop escape hatch', () => {
+  // Same probe idiom as lr-checkbox's/lr-source-picker's identical checked-state cssprop test:
+  // resolve a raw declaration inside the same shadow root so the comparison format (rgb(...))
+  // always matches getComputedStyle's, rather than comparing a raw custom-property string
+  // against it.
+  function resolvedInShadow(el: LyraRadio, declaration: string, property: string): string {
+    const probe = document.createElement('span');
+    probe.setAttribute('style', declaration);
+    el.shadowRoot!.appendChild(probe);
+    const value = getComputedStyle(probe).getPropertyValue(property);
+    probe.remove();
+    return value;
+  }
+
+  it('renders byte-identical to --lr-color-brand when --lr-radio-checked-border-color/-dot-color are unset', async () => {
+    const el = (await fixture(html`<lr-radio checked>A</lr-radio>`)) as LyraRadio;
+    const circle = el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+    const dot = el.shadowRoot!.querySelector('[part="dot"]') as HTMLElement;
+    expect(getComputedStyle(circle).borderTopColor).to.equal(
+      resolvedInShadow(el, 'border-color: var(--lr-color-brand)', 'border-top-color'),
+    );
+    expect(getComputedStyle(dot).backgroundColor).to.equal(
+      resolvedInShadow(el, 'background: var(--lr-color-brand)', 'background-color'),
+    );
+  });
+
+  it('retints just the checked border/dot fill through --lr-radio-checked-border-color/-dot-color instead of the shared --lr-color-brand token', async () => {
+    const el = (await fixture(
+      html`<lr-radio
+        checked
+        style="--lr-radio-checked-border-color: rgb(4, 5, 6); --lr-radio-checked-dot-color: rgb(1, 2, 3);"
+        >A</lr-radio
+      >`,
+    )) as LyraRadio;
+    const circle = el.shadowRoot!.querySelector('[part="circle"]') as HTMLElement;
+    const dot = el.shadowRoot!.querySelector('[part="dot"]') as HTMLElement;
+    expect(getComputedStyle(circle).borderTopColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(dot).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
 });
 
 it('is accessible as a label-less radio named only by aria-label', async () => {

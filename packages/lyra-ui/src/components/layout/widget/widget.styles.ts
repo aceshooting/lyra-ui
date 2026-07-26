@@ -113,9 +113,15 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  [part="view-toggle"]:hover {
-    background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-text);
+  /* :where() zeroes the wrapped selector's specificity contribution, leaving only :hover itself,
+     mirroring lr-pagination's/lr-table's identical remediation for this exact selector shape --
+     a consumer's own ::part(view-toggle):hover can win without !important. Colors route through
+     scoped --lr-widget-view-toggle-hover-*, mirroring the [aria-pressed='true'] rule below, so a
+     consumer can retint just the hover state without hijacking the shared brand-quiet/text tokens
+     used everywhere else. */
+  :where([part="view-toggle"]):hover {
+    background: var(--lr-widget-view-toggle-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor without a :host declaration shadowing that. ::part(view-toggle)[aria-pressed='true'] is

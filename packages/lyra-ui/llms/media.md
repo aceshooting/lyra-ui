@@ -32,7 +32,8 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 **Slots:** none.
 
-**CSS parts:** `image`
+**CSS parts:** `image` (the underlying `<img>`, present only once a URL has resolved), `error`
+(the localized `role="alert"` rendered instead when the peer resolver is unavailable or rejects)
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
@@ -41,7 +42,7 @@ non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
 image when `country` or `language` is used. Import `components/flag/flag-peer.js` once to opt into
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
-installed, renders an empty template (see gotchas).
+installed, the component fails closed with a localized `[part="error"]` alert (see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -81,7 +82,7 @@ pronounces the endonym in its own language, and use `variant="compact"` at icon 
 ```
 
 ```js
-import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui';
+import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui/components/media/flag/language-map.js';
 
 const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
   tag,
@@ -110,9 +111,12 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   registers the component without importing the optional flag asset graph. Requires the optional
   peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
   `<lr-skeleton variant="rect">` placeholder (with `aria-busy="true"` on
-  the host) while resolving, then settles into an **empty template** plus a one-time `console.warn`
+  the host) while resolving, then **fails closed** into a localized `<span part="error" role="alert">`
+  (the `flagLoadError` message key, `"Flag unavailable"` by default) plus a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances).
+  page even with many `<lr-flag>` instances). An *empty* template is a different, non-error outcome:
+  the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
+  no `<img>`, no warning.
 - Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
   resolver call, so there's a brief loading-skeleton window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.
@@ -631,7 +635,7 @@ size renders nothing instead of `"NaN B"`.
 <lr-attachment-chip name="report.pdf" size="245000" mime-type="application/pdf" status="done"></lr-attachment-chip>
 <lr-attachment-chip id="att-2" status="uploading" progress="42"></lr-attachment-chip>
 <script type="module">
-  import { formatFileSize } from '@aceshooting/lyra-ui';
+  import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
 
   const chip = document.createElement('lr-attachment-chip');
   chip.file = pickedFile; // name/size/mime-type/thumbnail all derived from the File
@@ -642,11 +646,13 @@ size renders nothing instead of `"NaN B"`.
 </script>
 ```
 
-The image thumbnail for a real `File` is a lazily-created `URL.createObjectURL()` blob URL —
-created only from `render()`, i.e. only once a thumbnail is actually about to paint, never eagerly
-on `file` assignment — and revoked automatically once `file` changes to a different `File` (or to
-`undefined`) and on disconnect, so reassigning `file` several times before the next paint never
-leaks URLs that were created but never shown.
+The image thumbnail for a real `File` is a cached `URL.createObjectURL()` blob URL, allocated in
+`willUpdate()` — the update lifecycle, deliberately **never** from `render()`, so rendering stays a
+pure projection of already-prepared state and URL allocation never happens as a render side effect.
+It is created only when `file` is an image (or `previewable` is set), reused for as long as the same
+`File` object stays assigned, and revoked when `file` changes to a different `File`, to a non-image,
+or to `undefined`, and again on disconnect. Because the same pass that allocates also revokes the
+previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
 - `file` always wins over `name`/`size`/`mimeType` when both are set — assigning those props while
@@ -909,10 +915,12 @@ icon/glyph, only shown while the slot has assigned content), `image` (the `<img>
 while `src` is set, hasn't failed to load, and no icon is slotted), `initials` (the fallback
 initials text, rendered whenever neither `icon` nor `image` is).
 
-**Themeable custom properties:** `--lr-avatar-size` (default `2rem`, swapped to `1.5rem`/`2.5rem`
-per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default `var(--lr-color-surface-alt,
-var(--lr-color-border))`, swapped per `tone`), `--lr-avatar-color` (default
-`var(--lr-color-text)`, swapped per `tone`), `--lr-avatar-font-size` (default
+**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, swapped to
+`var(--lr-size-1-5rem)`/`var(--lr-size-2-5rem)` per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default
+`var(--lr-color-border)`, swapped per non-neutral `tone` to that tone's `-quiet` fill; there is no
+`--lr-color-surface-alt` token in this library, despite what older copies of this page claimed),
+`--lr-avatar-color` (default `var(--lr-color-text)`, swapped per non-neutral `tone` to that tone's
+loud color), `--lr-avatar-font-size` (default
 `var(--lr-font-size-sm)`) — the font size of the initials fallback, and of any `em`-sized slotted
 glyph. `size` swaps it per tier too (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
 `lg`), so the initials track the circle instead of staying one fixed size across every tier;

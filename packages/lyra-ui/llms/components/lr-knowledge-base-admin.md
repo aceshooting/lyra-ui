@@ -6,7 +6,7 @@
 - **Class** `LyraKnowledgeBaseAdmin`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-base-admin/knowledge-base-admin.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -28,3 +28,12 @@ correlated ids/details from their composed primitives).
 **Slots:** `settings` — host-owned KB configuration controls.
 
 **CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`.
+
+**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border` (default
+`var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
+`var(--lr-color-text)`) — the bottom-border and text color of the selected `[part="tab"]`. State
+hooks: inline `var()` fallbacks at the point of use rather than `:host` declarations, so either can
+be set on the element *or on any ancestor*, and the rule wraps its `[aria-selected='true']` qualifier
+in `:where()` so a consumer's own `::part(tab)` override still wins. They exist because
+`::part(tab)[aria-selected='true']` is invalid CSS — Shadow Parts forbids an attribute selector after
+`::part()`. Left unset, rendering is unchanged.

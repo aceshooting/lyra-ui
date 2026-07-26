@@ -1,5 +1,5 @@
-import { html, nothing, type TemplateResult } from 'lit';
-import { property } from 'lit/decorators.js';
+import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import type { AgentStatusKind } from '../../../ai/types.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -84,6 +84,9 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   @property({ attribute: 'selected-run-id' }) selectedRunId = '';
   @property() label = '';
 
+  /** Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex="0"`. */
+  @state() private focusedId: string | null = null;
+
   private statusLabel(status: AgentStatusKind): string {
     switch (status) {
       case 'idle': return this.localize('agentRunStatusIdle');
@@ -162,20 +165,73 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
     return { rows, truncated };
   }
 
-  private renderRun = ({ run, depth, posInSet, setSize }: SubagentRow): TemplateResult => {
+  protected override willUpdate(changed: PropertyValues): void {
+    if (changed.has('runs')) {
+      const rows = this.ordered().rows;
+      const ids = new Set(rows.map((row) => row.run.id));
+      // Concretize focusedId to a real row (defaulting to the first) whenever it's unset or its row
+      // was removed by a `runs` update -- onKeyDown indexes off it directly, so leaving it `null`
+      // makes `rows.findIndex(...)` return -1 and ArrowDown/Up land back on the same row instead of
+      // advancing.
+      if (this.focusedId == null || !ids.has(this.focusedId)) {
+        this.focusedId = rows[0]?.run.id ?? null;
+      }
+    }
+  }
+
+  private focusRow(row: SubagentRow | undefined): void {
+    if (!row) return;
+    this.focusedId = row.run.id;
+    void this.updateComplete.then(() => {
+      (this.renderRoot.querySelector(`[data-run-id="${CSS.escape(row.run.id)}"]`) as HTMLElement | null)?.focus();
+    });
+  }
+
+  private onKeyDown = (e: KeyboardEvent): void => {
+    const { rows } = this.ordered();
+    if (rows.length === 0) return;
+    const currentIndex = rows.findIndex((r) => r.run.id === this.focusedId);
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        this.focusRow(rows[Math.min(rows.length - 1, currentIndex + 1)]);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        this.focusRow(rows[Math.max(0, currentIndex - 1)]);
+        break;
+      case 'Home':
+        e.preventDefault();
+        this.focusRow(rows[0]);
+        break;
+      case 'End':
+        e.preventDefault();
+        this.focusRow(rows[rows.length - 1]);
+        break;
+      default:
+        return;
+    }
+  };
+
+  private renderRun = ({ run, depth, posInSet, setSize }: SubagentRow, firstId: string | undefined): TemplateResult => {
     const selected = run.id === this.selectedRunId;
     const progress = typeof run.progress === 'number' ? finiteRange(run.progress, 0, 0, 1) : null;
     const runPart = selected ? 'run run-selected' : 'run';
+    const tabbable = this.focusedId === run.id || (this.focusedId == null && run.id === firstId);
     return html`
       <li
         part=${runPart}
         data-run-id=${run.id}
         data-depth=${depth}
         role="treeitem"
+        tabindex=${tabbable ? '0' : '-1'}
         aria-level=${depth + 1}
         aria-posinset=${posInSet}
         aria-setsize=${setSize}
         style=${styleMap({ '--lr-subagent-depth': String(Math.min(depth, MAX_VISUAL_INDENT_DEPTH)) })}
+        @focus=${() => {
+          this.focusedId = run.id;
+        }}
       >
         <div part="run-row">
           <button
@@ -215,10 +271,13 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.label || this.localize('subagentPanelLabel');
     const ordered = this.ordered();
+    const firstId = ordered.rows[0]?.run.id;
     return html`
       <section part="base" aria-label=${label}>
         ${this.runs.length
-          ? html`<ul part="list" role="tree" aria-label=${label}>${ordered.rows.map(this.renderRun)}</ul>
+          ? html`<ul part="list" role="tree" aria-label=${label} @keydown=${this.onKeyDown}>${ordered.rows.map(
+              (row) => this.renderRun(row, firstId),
+            )}</ul>
               ${ordered.truncated
                 ? html`<p part="limit" role="status">${this.localize('subagentPanelLimit', undefined, {
                       count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_RUNS),

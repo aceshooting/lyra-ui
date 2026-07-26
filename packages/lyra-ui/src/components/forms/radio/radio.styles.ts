@@ -67,13 +67,16 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   :host([checked]) [part='circle'] {
-    border-color: var(--lr-color-brand);
+    /* Component-scoped indirection (mirrors lr-checkbox's identical --lr-checkbox-checked-bg/
+       -border pair) so a consumer can retint just this control's checked ring without hijacking
+       the shared --lr-color-brand token used across the rest of the library. */
+    border-color: var(--lr-radio-checked-border-color, var(--lr-color-brand));
   }
   [part='dot'] {
     inline-size: var(--lr-size-0-75rem);
     block-size: var(--lr-size-0-75rem);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-brand);
+    background: var(--lr-radio-checked-dot-color, var(--lr-color-brand));
   }
   [part='label'][hidden] {
     display: none;

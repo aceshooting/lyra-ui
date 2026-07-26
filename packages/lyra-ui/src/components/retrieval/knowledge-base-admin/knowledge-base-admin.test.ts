@@ -1,8 +1,31 @@
 import { fixture, expect, html } from '@open-wc/testing';
 import './knowledge-base-admin.js';
 import type { LyraKnowledgeBaseAdmin } from './knowledge-base-admin.class.js';
+import { styles } from './knowledge-base-admin.styles.js';
 
 describe('lr-knowledge-base-admin', () => {
+  it("wraps the internal [aria-selected='true'] tab rule in :where() so a consumer ::part(tab) override can win (regression)", () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='tab'\]:where\(\[aria-selected='true'\]\)/);
+    // The old, over-specific unwrapped shape must be gone, not merely joined by the new one.
+    expect(css).to.not.include("[part='tab'][aria-selected='true']");
+  });
+
+  it('lets a consumer retint the selected tab via scoped cssprops (regression)', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin
+        style="--lr-knowledge-base-admin-tab-selected-color: rgb(1, 2, 3); --lr-knowledge-base-admin-tab-selected-border: rgb(4, 5, 6);"
+      ></lr-knowledge-base-admin>`,
+    )) as LyraKnowledgeBaseAdmin;
+    await el.updateComplete;
+    const secondTab = el.shadowRoot!.querySelectorAll('[part="tab"]')[1] as HTMLButtonElement;
+    secondTab.click();
+    await el.updateComplete;
+    expect(secondTab.getAttribute('aria-selected')).to.equal('true');
+    expect(getComputedStyle(secondTab).color).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(secondTab).borderBottomColor).to.equal('rgb(4, 5, 6)');
+  });
+
   it('composes source and ingestion panels and switches tabs', async () => {
     const el = (await fixture(html`<lr-knowledge-base-admin .strings=${{ knowledgeBaseAdminLabel: 'KB admin' }}></lr-knowledge-base-admin>`)) as LyraKnowledgeBaseAdmin;
     await el.updateComplete;

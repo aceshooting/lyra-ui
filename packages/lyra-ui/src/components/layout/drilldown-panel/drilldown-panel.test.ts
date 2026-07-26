@@ -172,6 +172,29 @@ it('shows the Agent runs tab only once content is projected into the runs slot, 
   expect(el.querySelector('[slot="runs"]')!.textContent).to.equal('Run #42 — success');
 });
 
+it('detects a slot="runs" attribute toggled on an already-connected child, not just a newly appended one', async () => {
+  const el = (await fixture(html`<lr-drilldown-panel></lr-drilldown-panel>`)) as LyraDrilldownPanel;
+  el.path = [nodeWithEvidenceOnly];
+  await el.updateComplete;
+
+  const runContent = document.createElement('div');
+  runContent.textContent = 'Run #99 — success';
+  el.appendChild(runContent); // connected, but not slotted into "runs" yet
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('lr-tabs')).to.not.exist;
+
+  runContent.setAttribute('slot', 'runs'); // toggled on an already-connected child
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await el.updateComplete;
+
+  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  expect(tabs).to.exist;
+  await tabs.updateComplete;
+  const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
+  expect(labels).to.include('Agent runs');
+});
+
 it('forwards a host aria-label to the internal lr-tabs strip', async () => {
   const el = (await fixture(html`<lr-drilldown-panel aria-label="Related content"></lr-drilldown-panel>`)) as LyraDrilldownPanel;
   el.path = [nodeWithAllCategories];

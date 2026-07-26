@@ -80,6 +80,23 @@ export const styles = css`
   [part='input-wrapper']:focus-within {
     border-color: var(--lr-color-brand);
   }
+  /* :host(:disabled), not :host([disabled]) -- lr-input is form-associated
+     (FormAssociated mixin), so the UA computes its disabled state (and
+     therefore :disabled/:enabled matching) the same way it does for a
+     native form control: from its own disabled content attribute *or* an
+     ancestor <fieldset disabled>'s cascade. The attribute selector alone
+     only ever matched the first case; disabled purely via an ancestor
+     fieldset left the whole wrapper chrome (adornments, password-toggle/
+     clear buttons, border) at full opacity with a normal cursor. Dims the
+     wrapper as one unit rather than [part='input'] alone (the previous,
+     narrower rule this replaces): a per-element opacity compounds with an
+     ancestor's, so keeping both would have doubly faded the text relative
+     to the buttons/adornments beside it. Mirrors lr-date-input's/lr-radio's
+     identical fix. */
+  :host(:disabled) [part='input-wrapper'] {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
   [part='input'] {
     flex: 1 1 auto;
     min-inline-size: 0;
@@ -113,10 +130,6 @@ export const styles = css`
   [part='input'][type='time']::-webkit-calendar-picker-indicator {
     cursor: pointer;
     border-radius: var(--lr-radius-xs);
-  }
-  [part='input']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
   }
   [part='start'],
   [part='end'] {

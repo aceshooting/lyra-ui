@@ -1244,6 +1244,40 @@ describe('start/end adornment slots', () => {
     await el.updateComplete;
     expect(part(el, 'start').hasAttribute('hidden')).to.be.false;
   });
+
+  // Adversarial: the JSDoc above warns start/end should carry non-focusable content only, because
+  // [part="trigger"] renders as a real <button> -- a slotted focusable element lands inside it in
+  // the flattened tree (invalid interactive-content nesting) and is unreachable by keyboard/AT
+  // regardless, since the outer button intercepts every click/Enter/Space first. axe-core does not
+  // currently flag this shadow-DOM-composed pattern (verified empirically against axe-core 4.12.1
+  // -- it reports zero violations here), so these lock in the real, provable hazard structurally:
+  // the slotted focusable element is genuinely assigned into a slot that lives inside the outer
+  // interactive button in the flattened tree, not a hypothetical.
+  it('nests a slotted <button> inside the trigger button in the flattened tree when placed in start', async () => {
+    const el = (await fixture(html`
+      <lr-select aria-label="Choice">
+        <button slot="start" aria-label="Icon action">i</button>
+        <lr-option value="a">A</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const slottedButton = el.querySelector('button')!;
+    const startSlot = trigger(el).querySelector('slot[name="start"]') as HTMLSlotElement;
+    expect(startSlot.assignedElements()).to.include(slottedButton);
+  });
+
+  it('nests a slotted <a href> inside the trigger button in the flattened tree when placed in end', async () => {
+    const el = (await fixture(html`
+      <lr-select aria-label="Choice">
+        <a slot="end" href="/details">Details</a>
+        <lr-option value="a">A</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    await el.updateComplete;
+    const slottedAnchor = el.querySelector('a')!;
+    const endSlot = trigger(el).querySelector('slot[name="end"]') as HTMLSlotElement;
+    expect(endSlot.assignedElements()).to.include(slottedAnchor);
+  });
 });
 
 it('applies size="2xs" with a 20px trigger min-height', async () => {

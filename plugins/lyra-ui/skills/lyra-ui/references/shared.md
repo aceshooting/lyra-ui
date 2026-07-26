@@ -331,7 +331,7 @@ The side-effect-free `@aceshooting/lyra-ui/localization.js` entry exports
 `LYRA_DEFAULT_STRINGS`, and the types `LyraLocaleStrings` / `LyraMessageKey`. The package root
 continues to re-export the same surface for compatibility, but it also registers the non-peer-gated
 component graph; use the dedicated entry when the application only needs locale setup.
-**`LYRA_DEFAULT_STRINGS` is the authoritative key list** (1005 keys, matching the
+**`LYRA_DEFAULT_STRINGS` is the authoritative key list** (1170 keys, matching the
 `LyraMessageKey` union) — read it to find the key to override rather than guessing one. Lookup
 falls back exact locale → base language → English. Date, number, byte, relative-time and calendar
 output goes through `Intl`.

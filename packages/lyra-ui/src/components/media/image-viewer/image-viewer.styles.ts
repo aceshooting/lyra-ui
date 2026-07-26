@@ -24,6 +24,7 @@ export const styles = css`
   [part='fit-control'],
   [part='rotate-button'],
   [part='annotate-toggle'] {
+    min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);

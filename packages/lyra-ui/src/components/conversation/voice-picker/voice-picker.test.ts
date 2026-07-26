@@ -349,6 +349,33 @@ it('exposes form/labels/validity/validationMessage/willValidate by delegating to
   expect(el.willValidate).to.be.true;
 });
 
+// -- ElementInternals availability guard -----------------------------------
+//
+// `attachInternals()` itself is guarded by `typeof this.attachInternals === 'function'`
+// so construction doesn't throw in a DOM implementation that exposes form-associated
+// custom elements but not `attachInternals()` (e.g. a downstream Vitest + happy-dom
+// suite). wtr+Chromium always implements `attachInternals`, so deleting it from the
+// prototype simulates the *shape* of an unsupporting environment but cannot prove
+// which branch of the guard actually ran -- both the real and the fallback internals
+// report the same `form`/`checkValidity()` values for an unattached element. This test
+// documents the contract (construction never throws, the public surface stays usable)
+// rather than proving the guard fires.
+it('does not throw when constructed in an environment without attachInternals, and keeps checkValidity()/form usable', () => {
+  const original = HTMLElement.prototype.attachInternals;
+  // @ts-expect-error -- simulating an environment that lacks ElementInternals entirely
+  delete HTMLElement.prototype.attachInternals;
+  try {
+    let el: LyraVoicePicker | undefined;
+    expect(() => {
+      el = document.createElement('lr-voice-picker') as LyraVoicePicker;
+    }).to.not.throw();
+    expect(el!.checkValidity()).to.be.true;
+    expect(el!.form).to.equal(null);
+  } finally {
+    HTMLElement.prototype.attachInternals = original;
+  }
+});
+
 // -- value/name property edge cases ----------------------------------------
 
 it('the value setter falls back to an empty string for a nullish assignment', async () => {

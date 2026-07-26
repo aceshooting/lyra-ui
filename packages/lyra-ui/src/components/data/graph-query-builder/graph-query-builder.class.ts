@@ -492,7 +492,16 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
 
   private hopOptions(): number[] {
     const limit = finiteInteger(this.hopLimit, 6, 1, 20);
-    return Array.from({ length: limit }, (_, i) => i + 1);
+    const options = new Set<number>(Array.from({ length: limit }, (_, i) => i + 1));
+    // A caller-supplied value.minHops/maxHops outside [1, hopLimit] (e.g. a saved query loaded via
+    // loadSavedQuery()/the value setter, authored against a different hop-limit) is still a valid
+    // GraphQuery per normalizeGraphQuery's own [1, 20] clamp -- but without a matching <lr-option>,
+    // the hop <lr-select> can't mark anything selected (see select.class.ts's reflectSelected()),
+    // desyncing the picker from a value that render() itself is displaying as current. Widening the
+    // option set to always include the live value keeps the two in sync.
+    options.add(this._value.minHops);
+    options.add(this._value.maxHops);
+    return [...options].sort((a, b) => a - b);
   }
 
   private onChromeSlotChange = (event: Event): void => {

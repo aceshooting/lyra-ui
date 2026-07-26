@@ -116,6 +116,10 @@ function deniedIcon(): SVGTemplateResult {
  * (only visible once `--lr-confirm-bar-compact-border`/`-background` are set).
  * @cssprop [--lr-confirm-bar-compact-background=transparent] - Background of `[part='base']` while
  * `compact`.
+ * @cssprop [--lr-confirm-bar-approved-color=var(--lr-color-success)] - `[part='status']` text/icon
+ * color once `decision` is `'approved'`.
+ * @cssprop [--lr-confirm-bar-denied-color=var(--lr-color-danger)] - `[part='status']` text/icon
+ * color once `decision` is `'denied'`.
  */
 export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   static override styles = [LyraElement.styles, styles];

@@ -126,7 +126,13 @@ properties only cascade downward); `--lr-chart-grid-color` (default `var(--lr-co
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
-legend text, and tooltip background/text respectively; plus shared `--lr-space-xs`.
+legend text, and tooltip background/text respectively; plus
+`--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) — the width of
+`[part="canvas"]`'s own `:hover` outline. Unlike the tokens above, this one is a real CSS
+declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
+consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
+of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
+`--lr-border-width-thin` it always was. Plus shared `--lr-space-xs`.
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
 regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or
@@ -383,7 +389,9 @@ dependency fails to load — see `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`.
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — all inherited from `LyraChart`,
+identical in meaning and default (see `lr-chart` above); each of the eight variants below reads the
+same set, so one rule retunes them together.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
 `zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.
@@ -447,7 +455,8 @@ dependency fails to load — inherited from `LyraChart`, unaffected by the binni
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text` — inherited from `LyraChart`, identical in meaning.
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — inherited from `LyraChart`,
+identical in meaning.
 
 **Optional peer deps:** the same `chart.js` (+ `chartjs-plugin-zoom` when `zoom` is set) peers.
 

@@ -92,10 +92,14 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 - Auto-advance (typing a field's last digit moves to the next) and backspace-into-the-previous-field
   are this library's own additions, not Web Awesome parity. Auto-advance is purely digit-count
   based, never value based.
-- Each `<input>` shows exactly what was typed and is never reformatted or reverted; only the
-  composite `value` is zero-padded.
-- Non-digit keystrokes are rejected before reaching field state — locale-specific numerals
-  (e.g. Arabic-Indic digits) are not accepted as input.
+- Each `<input>` keeps exactly the digits that were typed — never zero-padded, range-clamped, or
+  reverted to a previous value; only the composite `value` is normalized to zero-padded ISO.
+- Non-digit characters are stripped in the `input` handler before they reach field state (the
+  native `<input>`'s own value is rewritten in the same tick). Locale-specific numerals *are*
+  accepted and transliterated to ASCII, not rejected: Arabic-Indic (`٠`–`٩`) and Extended
+  Arabic-Indic/Persian (`۰`–`۹`) digits are mapped unconditionally, and the digits of
+  `effectiveLocale`'s own numbering system are added on top via `Intl.NumberFormat`, so typing
+  `٢٠٢٦` into the year field commits `2026`.
 - ArrowLeft/ArrowRight cross fields at a field's text boundary, and the *physical* key meaning
   "next field" flips under an inherited `dir="rtl"`; the locale-derived field order itself does not.
 - A blank composite is `valueMissing` only when **all three** fields are blank; a partially typed

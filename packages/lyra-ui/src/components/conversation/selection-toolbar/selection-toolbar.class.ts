@@ -67,7 +67,15 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.open) this.overlay?.resume();
+    // A reconnect (e.g. a drag-and-drop reparent keeping this same element instance) fires
+    // disconnectedCallback then connectedCallback synchronously with no update in between, so
+    // updated()'s `changed.has('open')` branch never reruns to notice `open` is still true --
+    // resume the overlay registration *and* restart the positioning subscription
+    // disconnectedCallback tore down (mirrors lr-tooltip's identical reconnect handling).
+    if (this.hasUpdated && this.open) {
+      this.overlay?.resume();
+      this.startPositioning();
+    }
   }
 
   override disconnectedCallback(): void {

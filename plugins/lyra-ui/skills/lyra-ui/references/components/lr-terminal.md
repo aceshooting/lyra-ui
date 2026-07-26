@@ -23,12 +23,18 @@ codes. `maxScrollback: number = 5000` (attribute `max-scrollback`), `follow: boo
 string = 'terminal.log'`, `announceOutput: boolean = false` (attribute `announce-output`),
 `accessibleLabel: string = ''` (attribute `aria-label`), `highlights: LyraHighlight[] = []` (attribute:
 false), and `activeHighlightId: string | null = null` (attribute: false). `anchorKinds` is a readonly
-`['page', 'text-quote', 'region']` for the shared anchor-target contract.
+`['line-range']` — a scrollback buffer addresses positions by line number, so `line-range` is the
+only kind `scrollToAnchor()` resolves; `page`/`text-quote`/`region` belong to the paginated document
+viewers, not here. `<lr-terminal>` is not registered in the document-renderer registry, so this field
+is a plain readonly property rather than the `DocumentAnchorTarget` mixin's `override readonly` one.
 
 **Methods:** `write(text)` appends ANSI-parsed text to the buffer. `clear()` empties the buffer.
-`scrollToBottom()` and `scrollToAnchor(anchor)` control scroll position. `search(query)`,
-`searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search. `getPlainText()`
-returns the SGR-stripped plain text of the whole buffer.
+`scrollToBottom()` and `scrollToAnchor(anchor): Promise<boolean>` control scroll position.
+`search(query): Promise<number>` (resolves the match count after the resulting render),
+`searchNext()`, `searchPrevious()`, and `clearSearch()` drive in-buffer text search — matching is
+line-granular (a match identifies a whole line, not a character range) and capped, so `matchCount`
+stops climbing on a pathologically repetitive buffer. `getPlainText()` returns the SGR-stripped
+plain text of the whole buffer.
 
 **Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,

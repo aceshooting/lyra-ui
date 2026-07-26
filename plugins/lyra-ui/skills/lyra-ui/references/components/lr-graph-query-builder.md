@@ -21,11 +21,12 @@ relationship and node-type filters, hop limits, validation, and saved queries.
 `validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `formDisabledCallback`,
 `formResetCallback`, `formStateRestoreCallback`. **Events:** `lr-input`, `lr-validity-change`,
 `lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
-parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker`,
-`relationship-chips`, `node-type-picker`, `node-type-chips`, `direction`, `filter-group`,
-`min-hops`, `max-hops`, `footer`, `run-button`, `save-button`, `save-row`, `save-name-input`,
-`saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`, `saved-load-button`,
-`saved-delete-button`, `saved-empty`.
+parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
+form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,
+`end-input`, `relationship-picker`, `relationship-chips`, `node-type-picker`, `node-type-chips`,
+`direction`, `filter-group`, `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`,
+`save-row`, `save-name-input`, `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`,
+`saved-load-button`, `saved-delete-button`, `saved-empty`.
 
 **Additional API surface:**
 

@@ -133,8 +133,13 @@ export const styles = css`
     appearance: none;
     margin: 0;
   }
-  [part='page-input'][aria-invalid='true'] {
-    border-color: var(--lr-color-danger);
+  /* :where() zeroes the [aria-invalid='true'] qualifier's specificity contribution -- otherwise
+     this (0,2,0) rule would beat a consumer's own ::part(page-input) border-color override
+     whenever the typed page is out of range. The color routes through a scoped cssprop so a
+     consumer can retint just the invalid state without hijacking the shared --lr-color-danger
+     token used everywhere else. */
+  [part='page-input']:where([aria-invalid='true']) {
+    border-color: var(--lr-pagination-invalid-border, var(--lr-color-danger));
   }
   [part='live-region'].sr-only {
     position: absolute;

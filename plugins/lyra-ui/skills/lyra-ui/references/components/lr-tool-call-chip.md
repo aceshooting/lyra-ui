@@ -49,9 +49,10 @@ the built-in glyph for the current `status` is used)
 `summary`), `category`, `name`, `summary`, `meta` (wrapper around `status-text` and `duration`),
 `status-text`, `duration`, `tooltip` (the floating detail popup, only meaningful while open)
 
-**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `1s linear` — running-icon
-animation duration/timing) and `--lr-transition-ambient` (default `1.8s ease-in-out` — pending-icon
-pulse duration/timing). `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and
+**Themeable custom properties:** `--lr-tool-call-chip-spin` (default `var(--lr-transition-ambient)`,
+i.e. `1.8s ease-in-out` at the shipped token value and `0.001ms linear` under
+`prefers-reduced-motion` — running-icon animation duration/timing) and `--lr-transition-ambient`
+(default `1.8s ease-in-out` — pending-icon pulse duration/timing). `--lr-tool-call-chip-accent`, `--lr-tool-call-chip-bg`, and
 `--lr-tool-call-chip-border` are internal per-status variables reassigned by this component's own
 `:host([status="…"])` rules (e.g. `pending` → `--lr-color-text-quiet`/`--lr-color-surface`/
 `--lr-color-border`; `running` → brand; `success` → success; `error` → danger; `denied` → warning),

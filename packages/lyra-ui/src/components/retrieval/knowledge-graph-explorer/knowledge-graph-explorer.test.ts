@@ -727,6 +727,51 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(popover.open).to.be.true;
   });
 
+  it('does not leak the composed entity-card lr-entity-activate event through the host', async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'polonium';
+    await el.updateComplete;
+    const card = el.shadowRoot!.querySelector('[part="detail-card"]') as LyraEntityCard;
+    await card.updateComplete;
+    const focusButton = card.shadowRoot!.querySelector('[part="focus-button"]') as HTMLElement & { updateComplete: Promise<unknown> };
+    await focusButton.updateComplete;
+    let leaked = false;
+    el.addEventListener('lr-entity-activate', () => (leaked = true));
+    focusButton.click();
+    await waitUntil(() => (el.shadowRoot!.querySelector('[part="detail-popover"]') as LyraPopover).open, undefined, {
+      timeout: NODE_COUNT_TIMEOUT,
+    });
+    expect(leaked).to.be.false;
+  });
+
+  it('does not leak the composed lr-graph-legend lr-visibility-change event through the host', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer .nodes=${nodes} .links=${links} .nodeTypes=${nodeTypes}></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+    let leaked = false;
+    el.addEventListener('lr-visibility-change', () => (leaked = true));
+    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
+    const item = legend.shadowRoot!.querySelectorAll('[part~="item"]')[0] as HTMLButtonElement;
+    item.click();
+    await el.updateComplete;
+    expect(leaked).to.be.false;
+  });
+
+  it('does not leak a pinned chip\'s internal lr-remove event through the host', async () => {
+    const el = await settledFixture();
+    el.selectedNodeId = 'marie';
+    await el.updateComplete;
+    el.pinnedNodeIds = ['marie'];
+    await el.updateComplete;
+    let leaked = false;
+    el.addEventListener('lr-remove', () => (leaked = true));
+    const chip = el.shadowRoot!.querySelector('[part="pinned"] lr-chip') as HTMLElement;
+    (chip.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement).click();
+    await el.updateComplete;
+    expect(leaked).to.be.false;
+  });
+
   it('a search result with no label falls back to displaying the node id', async () => {
     const testNodes: GraphNode[] = [{ id: 'unlabeled-node' }];
     const el = (await fixture(html`

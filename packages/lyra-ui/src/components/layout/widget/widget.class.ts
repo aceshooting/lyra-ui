@@ -84,6 +84,10 @@ export interface LyraWidgetEventMap {
  *   pressed (`aria-pressed="true"`) view toggle. Declared as an inline `var()` fallback (never on
  *   `:host`), so setting it on the element or an ancestor recolors only the active toggle without
  *   hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-widget-view-toggle-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
+ *   `[part="view-toggle"]`.
+ * @cssprop [--lr-widget-view-toggle-hover-color=var(--lr-color-text)] - Text color of a hovered
+ *   `[part="view-toggle"]`.
  * @cssprop [--lr-widget-view-toggle-active-color=var(--lr-color-brand)] - Text color of the pressed
  *   view toggle.
  * @cssprop [--lr-widget-fullscreen-inset=max(var(--lr-space-l), var(--lr-safe-area-top)) max(var(--lr-space-l), var(--lr-safe-area-inline-end)) max(var(--lr-space-l), var(--lr-safe-area-bottom)) max(var(--lr-space-l), var(--lr-safe-area-inline-start))] - The `inset` applied to `[part="base"]` while `fullscreen`. Also set inline from the `fullscreen-inset` attribute.

@@ -98,7 +98,7 @@ size renders nothing instead of `"NaN B"`.
 <lr-attachment-chip name="report.pdf" size="245000" mime-type="application/pdf" status="done"></lr-attachment-chip>
 <lr-attachment-chip id="att-2" status="uploading" progress="42"></lr-attachment-chip>
 <script type="module">
-  import { formatFileSize } from '@aceshooting/lyra-ui';
+  import { formatFileSize } from '@aceshooting/lyra-ui/components/media/attachment-chip/file-size.js';
 
   const chip = document.createElement('lr-attachment-chip');
   chip.file = pickedFile; // name/size/mime-type/thumbnail all derived from the File
@@ -109,11 +109,13 @@ size renders nothing instead of `"NaN B"`.
 </script>
 ```
 
-The image thumbnail for a real `File` is a lazily-created `URL.createObjectURL()` blob URL —
-created only from `render()`, i.e. only once a thumbnail is actually about to paint, never eagerly
-on `file` assignment — and revoked automatically once `file` changes to a different `File` (or to
-`undefined`) and on disconnect, so reassigning `file` several times before the next paint never
-leaks URLs that were created but never shown.
+The image thumbnail for a real `File` is a cached `URL.createObjectURL()` blob URL, allocated in
+`willUpdate()` — the update lifecycle, deliberately **never** from `render()`, so rendering stays a
+pure projection of already-prepared state and URL allocation never happens as a render side effect.
+It is created only when `file` is an image (or `previewable` is set), reused for as long as the same
+`File` object stays assigned, and revoked when `file` changes to a different `File`, to a non-image,
+or to `undefined`, and again on disconnect. Because the same pass that allocates also revokes the
+previous entry, reassigning `file` several times before the next paint leaks nothing.
 
 **Known gotchas:**
 - `file` always wins over `name`/`size`/`mimeType` when both are set — assigning those props while

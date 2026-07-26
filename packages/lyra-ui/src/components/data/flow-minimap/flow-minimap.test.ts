@@ -10,6 +10,11 @@ const nodes: FlowNode[] = [
   { id: 'b', position: { x: 300, y: 200 } },
 ];
 
+it('gives the clickable map a hover treatment, matching its cursor: pointer affordance (regression)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='map'\]:hover\s*\{[^}]*background/);
+});
+
 it('defaults to an empty for/label', async () => {
   const el = (await fixture(html`<lr-flow-minimap></lr-flow-minimap>`)) as LyraFlowMinimap;
   expect(el.for).to.equal('');
@@ -437,5 +442,54 @@ describe('mouse-hover feedback on the viewport rectangle', () => {
   // stylesheet source instead of a rendered/computed effect.
   it("declares a [part='viewport']:hover rule, matching its :focus-visible affordance", () => {
     expect(styles.cssText).to.match(/\[part='viewport'\]:hover\s*\{/);
+  });
+});
+
+describe('.strings overrides (every localize() key)', () => {
+  // `<lr-flow-minimap>` calls this.localize() with 4 keys; each one is proven here to reach the
+  // rendered DOM through a `.strings` override, so `registerLyraLocale()` can translate it.
+  // Distinctive marker strings, not copies of the production English, so a regression that dropped
+  // the override and fell back to DEFAULT_STRINGS would still fail.
+  async function mountMinimap(strings: Record<string, string>): Promise<LyraFlowMinimap> {
+    const wrapper = (await fixture(html`
+      <lr-flow-canvas style="width:400px;height:300px">
+        <lr-flow-minimap slot="bottom-end" .strings=${strings}></lr-flow-minimap>
+      </lr-flow-canvas>
+    `)) as LyraFlowCanvas;
+    wrapper.nodes = nodes;
+    await wrapper.updateComplete;
+    await new Promise((r) => requestAnimationFrame(r));
+    const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+    await minimap.updateComplete;
+    return minimap;
+  }
+
+  it('routes flowMinimapLabel, flowMinimapViewport and flowMinimapInstructions to the rendered DOM', async () => {
+    const minimap = await mountMinimap({
+      flowMinimapLabel: 'MINIMAP-LABEL-MARKER',
+      flowMinimapViewport: 'VIEWPORT-MARKER',
+      flowMinimapInstructions: 'INSTRUCTIONS-MARKER',
+    });
+    expect(minimap.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'MINIMAP-LABEL-MARKER',
+    );
+    expect(minimap.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal(
+      'VIEWPORT-MARKER',
+    );
+    expect(minimap.shadowRoot!.querySelector('[part="instructions"]')!.textContent!.trim()).to.equal(
+      'INSTRUCTIONS-MARKER',
+    );
+  });
+
+  it('routes flowMinimapViewportChanged, including its {x}/{y}/{zoom} placeholders, into the live region', async () => {
+    const minimap = await mountMinimap({
+      flowMinimapViewportChanged: 'MOVED-MARKER x={x} y={y} z={zoom}',
+    });
+    const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await minimap.updateComplete;
+    const live = minimap.shadowRoot!.querySelector('[part="live-region"]')!.textContent!.trim();
+    expect(live).to.match(/^MOVED-MARKER x=\S+ y=\S+ z=\S+$/);
   });
 });

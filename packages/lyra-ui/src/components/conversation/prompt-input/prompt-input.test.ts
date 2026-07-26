@@ -4,6 +4,26 @@ import type { LyraChatComposer } from '../chat-composer/chat-composer.class.js';
 import type { LyraMentionPopover } from '../../utility/mention-popover/mention-popover.class.js';
 import './prompt-input.js';
 import type { LyraPromptInput, PromptInputAttachment } from './prompt-input.class.js';
+import { styles } from './prompt-input.styles.js';
+
+it('declares a fallback for --lr-control-width so an unset value never leaves the controls row sizing invalid (regression)', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/min-inline-size:\s*min\(100%,\s*var\(--lr-control-width,\s*[^)]+\)\)/);
+  expect(css).to.match(/flex:\s*1 1 var\(--lr-control-width,\s*[^)]+\)/);
+});
+
+it('keeps a definite flex-basis for controls even when --lr-control-width is never set (regression)', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-input .modelCatalog=${['fast', 'accurate']}></lr-prompt-input>`,
+  )) as LyraPromptInput;
+  await el.updateComplete;
+  const control = el.shadowRoot!.querySelector('[part="controls"] > *') as HTMLElement;
+  expect(control, 'expected at least one rendered control').to.exist;
+  // Without a fallback, an unset custom property makes `var(--lr-control-width)` invalid at
+  // computed-value time, which invalidates the whole `flex` shorthand declaration and falls the
+  // basis back to its initial `auto` -- a definite length here proves the fallback took effect.
+  expect(getComputedStyle(control).flexBasis).to.not.equal('auto');
+});
 
 it('composes attachments, model, voice, sources, queue, and the chat composer', async () => {
   const el = (await fixture(html`<lr-prompt-input

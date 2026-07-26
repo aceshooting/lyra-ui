@@ -51,6 +51,10 @@ pointerup for a drag, or on keyup for a keyboard step, so a single Arrow/Home/En
 fires both `lr-input` and `lr-change`, mirroring native `<input type=range>`'s own `change`-on-every-
 committed-step behavior)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal `[part="thumb"]`
+control — without them the host's own `focus()`/`blur()`/`click()` would be no-ops, because the
+`role="slider"` element they need to reach lives in the shadow root.
+
 **Slots:** none.
 
 **CSS parts:** `base` (row wrapping the track and optional value readout), `track`, `fill` (filled

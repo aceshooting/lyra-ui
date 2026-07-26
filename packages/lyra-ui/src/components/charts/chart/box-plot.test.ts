@@ -55,6 +55,32 @@ it('updates in place (same Chart instance) when only boxes/labels change', async
   expect((el as any).chart).to.equal(instance);
 });
 
+it('preserves a legend-toggled hidden dataset across an in-place boxes-only update', async () => {
+  // Mirrors chart.test.ts's identical box-shaped regression -- `LyraChart.draw()` already
+  // snapshots/restores Chart.js's per-dataset visibility metadata around a full `chart.data`
+  // reassignment; `LyraBoxPlot.draw()` must do the same, since it reassigns `chart.data` on every
+  // in-place `boxes` update exactly like `LyraChart` does.
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [
+    { label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+    { label: 'y', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.setDatasetVisibility(1, false); // simulate a user clicking the legend to hide dataset 1
+
+  el.boxes = [
+    { label: 'x', data: [{ min: 10, q1: 20, median: 30, q3: 40, max: 50 }] },
+    { label: 'y', data: [{ min: 20, q1: 30, median: 40, q3: 50, max: 60 }] },
+  ];
+  await el.updateComplete;
+
+  expect(chart.isDatasetVisible(0)).to.be.true;
+  expect(chart.isDatasetVisible(1)).to.be.false;
+});
+
 it('updates in place (same Chart instance) across a bare height change, instead of destroying and recreating the chart', async () => {
   const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
   el.boxes = [{ label: 'x', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];

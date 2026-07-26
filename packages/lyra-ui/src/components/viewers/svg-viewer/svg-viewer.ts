@@ -1,4 +1,5 @@
 export * from './svg-viewer.class.js';
+import { html } from 'lit';
 import { LyraSvgViewer } from './svg-viewer.class.js';
 import { defineElement } from '../../../internal/prefix.js';
 import '../../media/zoomable-frame/zoomable-frame.js';
@@ -8,11 +9,11 @@ defineElement('svg-viewer', LyraSvgViewer);
 
 registerDocumentRenderer('image/svg+xml', {
   matches: (file: DocumentFile) => file.name.toLowerCase().endsWith('.svg'),
-  render: (file) => {
-    const element = document.createElement('lr-svg-viewer');
-    element.src = file.src;
-    element.name = file.name;
-    return element;
-  },
+  render: (file: DocumentFile) => html`<lr-svg-viewer
+    src=${file.src}
+    name=${file.name}
+    .anchor=${file.anchor ?? null}
+    .highlights=${file.highlights ?? []}
+  ></lr-svg-viewer>`,
   capabilities: { anchors: ['region'], search: false, textSelect: false },
 });

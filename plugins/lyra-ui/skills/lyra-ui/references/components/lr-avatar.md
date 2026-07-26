@@ -47,10 +47,12 @@ icon/glyph, only shown while the slot has assigned content), `image` (the `<img>
 while `src` is set, hasn't failed to load, and no icon is slotted), `initials` (the fallback
 initials text, rendered whenever neither `icon` nor `image` is).
 
-**Themeable custom properties:** `--lr-avatar-size` (default `2rem`, swapped to `1.5rem`/`2.5rem`
-per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default `var(--lr-color-surface-alt,
-var(--lr-color-border))`, swapped per `tone`), `--lr-avatar-color` (default
-`var(--lr-color-text)`, swapped per `tone`), `--lr-avatar-font-size` (default
+**Themeable custom properties:** `--lr-avatar-size` (default `var(--lr-size-2rem)`, swapped to
+`var(--lr-size-1-5rem)`/`var(--lr-size-2-5rem)` per `size="sm"`/`"lg"`), `--lr-avatar-bg` (default
+`var(--lr-color-border)`, swapped per non-neutral `tone` to that tone's `-quiet` fill; there is no
+`--lr-color-surface-alt` token in this library, despite what older copies of this page claimed),
+`--lr-avatar-color` (default `var(--lr-color-text)`, swapped per non-neutral `tone` to that tone's
+loud color), `--lr-avatar-font-size` (default
 `var(--lr-font-size-sm)`) — the font size of the initials fallback, and of any `em`-sized slotted
 glyph. `size` swaps it per tier too (`var(--lr-font-size-xs)` at `sm`, `var(--lr-font-size-md)` at
 `lg`), so the initials track the circle instead of staying one fixed size across every tier;

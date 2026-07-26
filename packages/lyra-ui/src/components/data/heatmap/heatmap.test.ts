@@ -1612,6 +1612,29 @@ describe('cellInteractive predicate', () => {
     );
     expect(clicked).to.deep.equal({ row: 0, col: 0, value: 1 });
   });
+
+  it('drops a stale focused cell when a values refresh makes it non-interactive, so Enter emits nothing', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[3, 7]]}
+        .cellInteractive=${(_pos: MatrixCellPos | CalendarCellPos, value: number) => value !== 99}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); // focuses (0,0), value 3
+    await el.updateComplete;
+    // (0,0)'s value flips to 99, which the predicate above excludes -- the cell that was focused a
+    // moment ago is no longer interactive, even though the grid's shape didn't change.
+    el.values = [[99, 7]];
+    await el.updateComplete;
+    let clicked: unknown;
+    el.addEventListener('lr-cell-click', (e) => (clicked = (e as CustomEvent).detail));
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(clicked).to.be.undefined;
+  });
 });
 
 describe('colorSteps', () => {
@@ -3128,5 +3151,146 @@ describe('mouse-hover feedback (states-hover-missing-with-focus-visible)', () =>
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='cell'\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/);
     expect(css).to.match(/\[part='canvas'\]:hover\s*\{\s*outline:[^}]*--lr-heatmap-focus-ring-color/);
+  });
+});
+
+// `heatmapValueLabel` already has a .strings override regression in heatmap-i18n.test.ts. These
+// cover the remaining 8 localize() keys this component actually calls (heatmapCellSelectedSuffix
+// is declared in DEFAULT_STRINGS but never referenced from this component, so it's out of scope
+// here). Each override uses a distinctive, unambiguous marker string rather than reproducing the
+// exact default English wording, so these tests only ever assert "a consumer override reaches the
+// DOM" -- never a stale copy of the production copywriting.
+describe('.strings overrides (remaining localize() keys)', () => {
+  it('honors a heatmapNoDataValue override in the host aria-label when there is no data to range over', async () => {
+    const el = (await fixture(
+      html`<lr-heatmap .strings=${{ heatmapNoDataValue: 'ND-MARKER' }}></lr-heatmap>`,
+    )) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.contain('ND-MARKER');
+  });
+
+  it('honors a heatmapCalendarLabel override in the host aria-label in calendar mode', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        .days=${[{ date: '2026-03-01', value: 5 }]}
+        .strings=${{ heatmapCalendarLabel: 'CAL-LABEL-MARKER days={days}' }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.contain('CAL-LABEL-MARKER days=1');
+  });
+
+  it('honors a heatmapMatrixLabel override in the host aria-label in matrix mode', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x', 'y']}
+        .values=${[[1, 2]]}
+        .strings=${{ heatmapMatrixLabel: 'MATRIX-LABEL-MARKER rows={rows} cols={cols}' }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.contain('MATRIX-LABEL-MARKER rows=1 cols=2');
+  });
+
+  it('honors a heatmapSelectedCellLabel override, appended to the host aria-label for a persistently selected cell', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        .rowLabels=${['a']}
+        .colLabels=${['x']}
+        .values=${[[5]]}
+        .selectedCell=${{ row: 0, col: 0 }}
+        .strings=${{ heatmapSelectedCellLabel: 'SELECTED-MARKER: {cell}' }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.contain('SELECTED-MARKER:');
+  });
+
+  it('honors a heatmapDefaultRowLabel override in the hover tooltip when rowLabels omits an entry', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap cell-size="22" .colLabels=${['x']} .values=${[[5]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    // A length-1 sparse array (a real hole at index 0, not the empty array) so the grid still has
+    // exactly one row -- rowLabels.length drives hitTestMatrix()'s row count -- but
+    // rowLabels[0] is genuinely undefined, the exact condition matrixCellText() falls back on.
+    el.rowLabels = new Array(1);
+    el.strings = { heatmapDefaultRowLabel: 'ROWMARKER{n}' };
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // PAD_LEFT=60, PAD_TOP=20, cellSize=22 -- lands inside cell (0, 0).
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 65, clientY: rect.top + 25, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false); // sanity: the hover actually landed on the cell
+    expect(tooltip.textContent).to.contain('ROWMARKER1');
+  });
+
+  it('honors a heatmapDefaultColLabel override in the hover tooltip when colLabels omits an entry', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap cell-size="22" .rowLabels=${['a']} .values=${[[5]]}></lr-heatmap>
+    `)) as LyraHeatmap;
+    // Same "length-1 sparse array" technique as the row-label test above, mirrored for columns.
+    el.colLabels = new Array(1);
+    el.strings = { heatmapDefaultColLabel: 'COLMARKER{n}' };
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 65, clientY: rect.top + 25, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false);
+    expect(tooltip.textContent).to.contain('COLMARKER1');
+  });
+
+  it('honors a heatmapMatrixCellLabel override in the hover tooltip, provably reaching the composed row/col/value text', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        cell-size="22"
+        .rowLabels=${['a']}
+        .colLabels=${['x']}
+        .values=${[[5]]}
+        .strings=${{ heatmapMatrixCellLabel: 'CELLMARKER row={row} col={col} value={value}' }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 65, clientY: rect.top + 25, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false);
+    expect(tooltip.textContent!.trim()).to.equal('CELLMARKER row=a col=x value=5');
+  });
+
+  it('honors a heatmapCalendarCellLabel override in the hover tooltip in calendar mode', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        .strings=${{ heatmapCalendarCellLabel: 'DAYMARKER {date} => {value}' }}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    el.days = [{ date: '2026-03-01', value: 5 }];
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    // CAL_PAD_LEFT=28, CAL_LABEL_H=16, CAL_CELL=11 -- lands inside week 0, weekday 0 (the single
+    // day in `days`), matching the identical hover geometry already used elsewhere in this suite.
+    canvas.dispatchEvent(
+      new PointerEvent('pointermove', { clientX: rect.left + 32, clientY: rect.top + 20, bubbles: true }),
+    );
+    await el.updateComplete;
+    const tooltip = el.shadowRoot!.querySelector('[part="tooltip"]') as HTMLElement;
+    expect(tooltip.hidden).to.equal(false);
+    expect(tooltip.textContent).to.contain('DAYMARKER');
+    expect(tooltip.textContent).to.contain('=> 5');
   });
 });

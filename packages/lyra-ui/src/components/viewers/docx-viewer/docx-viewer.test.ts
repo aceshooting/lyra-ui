@@ -1,7 +1,9 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { render } from 'lit';
 import './docx-viewer.js';
 import type { LyraDocxViewer, DocxHeadingItem } from './docx-viewer.js';
-import { findDocumentRenderer } from '../document-viewer/registry.js';
+import { findDocumentRenderer, getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import type { LyraHighlight } from '../document-viewer/anchors.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
@@ -421,6 +423,33 @@ describe('DOCX registry', () => {
     expect(exact!.capabilities?.anchors).to.deep.equal(['fragment', 'text-quote']);
     expect(exact!.capabilities?.search).to.be.true;
     expect(exact!.capabilities?.textSelect).to.be.true;
+  });
+
+  it('forwards document anchors/highlights and advertises its text contracts', () => {
+    const definition = getDefaultDocumentRendererRegistry().get(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )!;
+    const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];
+    const anchor = { kind: 'fragment' as const, id: 'section-one' };
+    const host = document.createElement('div');
+    render(
+      definition.render!({
+        name: 'report.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        src: 'https://example.test/report.docx',
+        anchor,
+        highlights,
+      }) as never,
+      host,
+    );
+    const rendered = host.querySelector('lr-docx-viewer') as LyraDocxViewer;
+    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.highlights).to.equal(highlights);
+    expect(definition.capabilities).to.deep.equal({
+      anchors: ['fragment', 'text-quote'],
+      search: true,
+      textSelect: true,
+    });
   });
 });
 

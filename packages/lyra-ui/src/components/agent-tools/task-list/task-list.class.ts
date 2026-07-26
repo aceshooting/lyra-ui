@@ -139,6 +139,8 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *   animation duration/timing.
  * @cssprop [--lr-task-list-compact-header-padding=var(--lr-space-2xs) var(--lr-space-s)] -
  *   `[part="header"]` padding while `compact`.
+ * @cssprop [--lr-task-list-compact-header-gap=var(--lr-space-2xs)] - Gap between `[part="header"]`'s
+ *   toggle/label/summary while `compact`.
  * @cssprop [--lr-task-list-compact-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s item
  *   rows while `compact`.
  * @cssprop [--lr-task-list-compact-body-padding=var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)] -

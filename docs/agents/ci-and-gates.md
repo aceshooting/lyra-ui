@@ -71,10 +71,18 @@ against Firefox/WebKit on Node 20/22, as before.
 **`prepack`** (`build` → `manifest` → `generate-editor-data` → `llms`;
 `packages/lyra-ui/package.json`) determines tarball contents on `npm pack`/`npm publish`, run by
 npm itself rather than CI. `generate-editor-data` regenerates `vscode-html-data.json`,
-`vscode-css-data.json`, and `web-types.json` from `custom-elements.json`; unlike
-`custom-elements.json`, those three have NO CI freshness gate, so a manual edit to a component's
-JSDoc/attributes can leave them silently stale — regenerate and commit them together by hand
-whenever you touch the public surface.
+`vscode-css-data.json`, and `web-types.json` from `custom-elements.json`.
+
+All four **are** CI-gated: the `static-checks` job runs `pnpm manifest` →
+`git diff --exit-code -- packages/lyra-ui/custom-elements.json` →
+`pnpm --filter @aceshooting/lyra-ui run generate-editor-data` →
+`git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json`
+(`.github/workflows/ci.yml`, and that file remains the authority). Note the ordering dependency:
+the editor data is derived *from* `custom-elements.json`, so a stale manifest reddens the first
+`git diff` and the editor-data regeneration then runs against the fixed manifest. Locally, always
+regenerate in the same order — `manifest` → `generate-editor-data` → `llms` — and commit all four
+together whenever you touch the public surface (JSDoc, attributes, parts, cssprops); running only
+one of them leaves the others stale and reddens `static-checks`.
 
 ## Other package-local gates
 

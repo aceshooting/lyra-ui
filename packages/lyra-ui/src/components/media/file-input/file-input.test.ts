@@ -449,11 +449,32 @@ it('keeps the accessible name sourced from `label` even when slot content overri
   expect(base.getAttribute('aria-label')).to.equal('Upload files');
 });
 
-it('adds a :focus-visible outline to the dropzone base using the shared focus-ring tokens', () => {
-  const css = styles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include(
-    "[part='base']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }",
+it('adds a :focus-visible outline to the dropzone base using the shared focus-ring tokens', async () => {
+  // Reads a genuine rendered/computed result (real :focus-visible state + real CSSOM cascade)
+  // instead of substring-matching the exported stylesheet source, which would still pass even if
+  // the selector never actually matched the base part.
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  const probe = document.createElement('span');
+  probe.setAttribute(
+    'style',
+    'outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset)',
   );
+  el.shadowRoot!.appendChild(probe);
+  const probeStyle = getComputedStyle(probe);
+  const expectedWidth = probeStyle.outlineWidth;
+  const expectedColor = probeStyle.outlineColor;
+  const expectedOffset = probeStyle.outlineOffset;
+  probe.remove();
+
+  base.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(base);
+  const baseStyle = getComputedStyle(base);
+  expect(baseStyle.outlineStyle).to.equal('solid');
+  expect(baseStyle.outlineWidth).to.equal(expectedWidth);
+  expect(baseStyle.outlineColor).to.equal(expectedColor);
+  expect(baseStyle.outlineOffset).to.equal(expectedOffset);
 });
 
 it('gives the dropzone base a :hover treatment, so a mouse user gets feedback before clicking (regression)', () => {

@@ -408,6 +408,17 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(error.textContent).to.equal('Impossible de charger le drapeau.');
   });
 
+  it('renders a real English sentence, not the raw key name, when no locale is registered', async () => {
+    // Every other test here supplies `.strings`, which masked a missing DEFAULT_STRINGS entry:
+    // resolveLyraString() falls back to the key itself, so [part="error"] read "flagLoadError".
+    __setFlagUrlResolverForTesting(Promise.resolve(null));
+    const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'));
+    const text = el.shadowRoot!.querySelector('[part="error"]')!.textContent!.trim();
+    expect(text).to.not.equal('flagLoadError');
+    expect(text).to.equal('Flag unavailable');
+  });
+
   it('distinguishes a missing resolver from a valid resolver returning no flag', async () => {
     __setFlagUrlResolverForTesting(Promise.resolve(null));
     const missing = (await fixture(html`
@@ -495,5 +506,29 @@ it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wi
     expect(called).to.be.true;
   } finally {
     proto.willUpdate = original;
+  }
+});
+
+// Regression coverage for the lifecycle-super-call-omitted defect class -- no user-visible
+// symptom today, but a future shared updated() behavior on LyraElement would silently never run
+// for <lr-flag> if its own override shadows the base hook instead of calling it. Scoped by
+// tagName (not the fixture()-returned element reference): <lr-flag> renders an <lr-skeleton>
+// child in its shadow DOM while loading, which itself extends LyraElement directly and overrides
+// updated() on its own, so an unscoped check risks conflating a *different* element's own call.
+// Mirrors map.test.ts's identical "calls super.updated" test.
+it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in', async () => {
+  const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+  const original = proto.updated;
+  let calledOnSelf = false;
+  proto.updated = function (this: LyraElement, changed: PropertyValues): void {
+    if (this.tagName === 'LR-FLAG') calledOnSelf = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-flag country="fr"></lr-flag>`)) as LyraFlag;
+    await el.updateComplete;
+    expect(calledOnSelf).to.be.true;
+  } finally {
+    proto.updated = original;
   }
 });

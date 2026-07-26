@@ -84,7 +84,8 @@ shared-clamp note.
 ```
 
 Package-level CSV utilities (used internally, also exported for standalone use — `import {
-escapeCsvField, buildCsv, downloadBlob } from '@aceshooting/lyra-ui'`):
+escapeCsvField, buildCsv, downloadBlob } from
+'@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
 ```ts
 escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes formula-injection (=,+,@,tab,CR) with a leading apostrophe — a bare leading '-' is deliberately left alone (OWASP guidance: it's not itself formula syntax, and guarding it would mangle ordinary negative numbers)
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included

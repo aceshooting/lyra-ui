@@ -75,7 +75,7 @@ Register a renderer once during application setup. The definition may load a hea
 only when a matching document is opened:
 
 ```ts
-import { registerDocumentRenderer } from '@aceshooting/lyra-ui';
+import { registerDocumentRenderer } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';
 
 registerDocumentRenderer('application/x-example', {
   render: (file) => `Preview: ${file.name}`,

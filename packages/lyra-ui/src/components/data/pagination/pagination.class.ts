@@ -46,6 +46,8 @@ export interface LyraPaginationEventMap {
  * @cssprop [--lr-pagination-control-padding=var(--lr-space-xs)] - Inner padding of the nav buttons
  * and the page input. Uniform across every `size` (the control footprint is fixed by
  * `--lr-pagination-control-size`, so this only adjusts the icon/digit inset).
+ * @cssprop [--lr-pagination-invalid-border=var(--lr-color-danger)] - Border color of
+ *   `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`).
  */
 export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   static override styles = [LyraElement.styles, styles];

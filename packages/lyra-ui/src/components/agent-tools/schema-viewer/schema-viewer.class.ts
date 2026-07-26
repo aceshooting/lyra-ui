@@ -66,6 +66,8 @@ const MAX_SCHEMA_DEPTH = 100;
  * @cssprop [--lr-schema-viewer-error-bg=var(--lr-color-danger-quiet)] - Error issue background.
  * @cssprop [--lr-schema-viewer-warning-border=var(--lr-color-warning)] - Warning issue border.
  * @cssprop [--lr-schema-viewer-warning-bg=var(--lr-color-warning-quiet)] - Warning issue background.
+ * @cssprop [--lr-schema-viewer-info-border=var(--lr-color-brand)] - Info issue border.
+ * @cssprop [--lr-schema-viewer-info-bg=var(--lr-color-brand-quiet)] - Info issue background.
  */
 export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
   static override styles = [LyraElement.styles, styles];

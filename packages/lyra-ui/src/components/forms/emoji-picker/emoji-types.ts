@@ -13,6 +13,15 @@ export interface EmojiPickerItem {
 
 export interface EmojiPickerGroup {
   key: string;
+  /** The heading text. For a consumer-supplied group this is rendered verbatim (caller-owned
+   *  content is never translated by this library). For a group produced by the built-in
+   *  `emoji-picker-element-data` adapter it is the English default that `labelKey` resolves to when
+   *  no locale is registered. */
   label: string;
+  /** A `LyraMessageKey` naming `label`'s localized form. Set only by the built-in adapter (the
+   *  headings come from emojibase's fixed group ids, not from the consumer), so an auto-loaded emoji
+   *  set follows `registerLyraLocale()`/`.strings` instead of staying English. Leave it unset on a
+   *  hand-authored group and `label` is rendered as-is. */
+  labelKey?: string;
   emojis: EmojiPickerItem[];
 }

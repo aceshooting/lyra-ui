@@ -254,6 +254,24 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     window.removeEventListener('lostpointercapture', this.onPointerUp);
   }
 
+  /** Activates the start handle, mirroring `<lr-switch>`'s identical `override click()`. Without
+   *  this, `HTMLElement.prototype.click()` on the host is a no-op: no click handler is bound to
+   *  the host itself, only to the internal `[part="handle-start"]`/`[part="handle-end"]`
+   *  controls. Targets the start handle specifically, matching `focus()`/`blur()` below. */
+  override click(): void {
+    (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.click();
+  }
+
+  /** Moves focus to the start handle. */
+  override focus(options?: FocusOptions): void {
+    (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.focus(options);
+  }
+
+  /** Removes focus from the start handle. */
+  override blur(): void {
+    (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.blur();
+  }
+
   // Both percentOf() and clamp() key off this same lo/hi pair — willUpdate()
   // already normalizes a caller-supplied `min > max` domain this way, so
   // rendering and interactive dragging must agree with it instead of

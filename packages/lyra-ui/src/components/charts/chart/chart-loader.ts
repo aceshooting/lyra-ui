@@ -26,7 +26,7 @@ let registered = false;
  */
 export async function loadChartAndZoom(
   importChart: () => Promise<ChartJsModule> = () => import('chart.js') as Promise<ChartJsModule>,
-  importZoom: () => Promise<{ default: ZoomPlugin }> = () =>
+  importZoom: () => Promise<{ default: ZoomPlugin } | ZoomPlugin> = () =>
     import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>,
   needsZoom = false,
 ): Promise<{ mod: ChartJsModule; zoomPlugin: ZoomPlugin | undefined } | null> {
@@ -45,7 +45,13 @@ export async function loadChartAndZoom(
 
   let zoomPlugin: ZoomPlugin | undefined;
   try {
-    zoomPlugin = (await importZoom()).default;
+    // Reads `mod.default ?? mod`, mirroring `loadDataLabelsPlugin()` below — the plugin ships its
+    // registerable object as the ES-module default export, but a bare (non-ESM-interop) module
+    // shape has no `.default` at all, and reading `.default` unconditionally would silently drop
+    // the plugin (`zoomPlugin` staying `undefined`) instead of registering it.
+    const mod = await importZoom();
+    const plugin = (mod as { default?: ZoomPlugin }).default ?? (mod as ZoomPlugin);
+    zoomPlugin = plugin;
   } catch (err) {
     console.warn(
       '<lr-chart> zoom support needs the optional peer dependency `chartjs-plugin-zoom` — ' +
@@ -125,7 +131,7 @@ export function loadChartJs(): Promise<ChartJsModule | null> {
  * actually uninstall the package.
  */
 export function loadChartJsWithZoom(
-  importZoom: () => Promise<{ default: ZoomPlugin }> = () =>
+  importZoom: () => Promise<{ default: ZoomPlugin } | ZoomPlugin> = () =>
     import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>,
 ): Promise<ChartJsModule | null> {
   if (!zoomLoad) {

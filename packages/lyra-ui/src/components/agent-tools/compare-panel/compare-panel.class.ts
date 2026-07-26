@@ -161,7 +161,12 @@ export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
             : this.localize('compareVoteBothBad');
     const event = this.emit('lr-vote', { choice, itemId }, { cancelable: true });
     if (event.defaultPrevented) return;
-    this.vote = choice;
+    // A listener may re-entrantly advance itemId synchronously inside emit() above -- itemId's
+    // own setter already resets `vote` to null for the new pair, and this write must not clobber
+    // that reset by re-stamping `choice` onto the pair the user never actually saw vote on. The
+    // announcement still fires unconditionally: `label`/`itemId` were captured before the
+    // listener ran, so it correctly reports the vote against the *original* pair.
+    if (this.itemId === itemId) this.vote = choice;
     this.liveRegion?.announce(this.localize('compareVoteRecorded', undefined, { label }), { force: true });
   }
 

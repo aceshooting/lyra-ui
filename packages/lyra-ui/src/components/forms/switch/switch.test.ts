@@ -5,13 +5,18 @@ import type { LyraSwitch } from './switch.js';
 import { styles } from './switch.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
-it('exposes namespaced geometry custom properties', () => {
-  expect(styles.cssText).to.include('--lr-switch-track-inline-size');
-  expect(styles.cssText).to.include('--lr-switch-track-block-size');
-  expect(styles.cssText).to.include('--lr-switch-thumb-offset');
-  expect(styles.cssText).to.not.include('--track-inline-size');
-  expect(styles.cssText).to.not.include('--track-block-size');
-  expect(styles.cssText).to.not.include('--thumb-offset');
+it('exposes namespaced geometry custom properties', async () => {
+  // Reads the real computed custom-property cascade on a rendered instance instead of
+  // substring-matching the exported stylesheet source, which would still pass even if the
+  // declarations lived on a selector that never actually applied to the host.
+  const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+  const computed = getComputedStyle(el);
+  expect(computed.getPropertyValue('--lr-switch-track-inline-size').trim()).to.not.equal('');
+  expect(computed.getPropertyValue('--lr-switch-track-block-size').trim()).to.not.equal('');
+  expect(computed.getPropertyValue('--lr-switch-thumb-offset').trim()).to.not.equal('');
+  expect(computed.getPropertyValue('--track-inline-size').trim()).to.equal('');
+  expect(computed.getPropertyValue('--track-block-size').trim()).to.equal('');
+  expect(computed.getPropertyValue('--thumb-offset').trim()).to.equal('');
 });
 
 it('gives the switch control hover feedback matching the keyboard focus-visible cue', () => {
@@ -508,6 +513,15 @@ it('is accessible in the default (unchecked, unlabeled) state', async () => {
 it('is accessible in a checked, labeled, required state', async () => {
   const el = (await fixture(
     html`<lr-switch checked required>Enable notifications</lr-switch>`,
+  )) as LyraSwitch;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible with a populated hint/errorText (the parts never rendered by the cases above)', async () => {
+  const el = (await fixture(
+    html`<lr-switch hint="You can change this later" error-text="Required" required
+      >Enable notifications</lr-switch
+    >`,
   )) as LyraSwitch;
   await expect(el).to.be.accessible();
 });

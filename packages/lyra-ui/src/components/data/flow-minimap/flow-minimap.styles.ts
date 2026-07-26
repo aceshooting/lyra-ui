@@ -20,6 +20,12 @@ export const styles = css`
     block-size: 100%;
     cursor: pointer;
   }
+  /* Mouse-hover cue matching the cursor: pointer affordance above -- mirrors the reveal-button/
+     copy-button/sources-summary brand-quiet hover tint used across the library for a clickable
+     surface with no dedicated icon of its own. */
+  [part='map']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='node'] {
     fill: var(--lr-color-border-strong);
   }

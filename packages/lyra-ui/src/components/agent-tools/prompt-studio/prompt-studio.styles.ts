@@ -17,6 +17,27 @@ export const styles = css`
     font: inherit;
   }
   [part='message-content'] { min-block-size: var(--lr-size-6rem); padding: var(--lr-space-s); resize: vertical; }
+  .message-role-wrapper { position: relative; display: inline-flex; align-items: center; }
+  [part='message-role'] {
+    appearance: none;
+    padding-inline: var(--lr-space-s) var(--lr-space-l);
+    cursor: pointer;
+  }
+  /* The select's popup list is still painted by the browser from these options; without an
+     explicit surface/text pairing it falls back to UA colors (a white panel in dark themes). */
+  [part='message-role'] option { background: var(--lr-color-surface); color: var(--lr-color-text); }
+  /* appearance: none strips the native dropdown affordance, so this chevron -- matching
+     av-player's [part='rate-select'] / image-viewer's [part='fit-control'] pattern -- replaces
+     it; without one a visible, functional <select> would read as a plain bordered box. */
+  .message-role-chevron {
+    position: absolute;
+    inset-inline-end: var(--lr-space-xs);
+    display: inline-flex;
+    color: var(--lr-color-text-quiet);
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
+  }
+  .message-role-chevron svg { transform: rotate(90deg); }
   :where([part='message-role'], [part='message-content'], [part='variable'] input):hover:where(:not(:disabled)) {
     border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
   }
@@ -35,13 +56,13 @@ export const styles = css`
     font: inherit;
     cursor: pointer;
   }
-  [part='toolbar'] button:hover, [part='remove-message']:hover, [part='add-message']:hover, [part='version']:hover { background: var(--lr-color-surface-raised); }
+  :where([part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version']):hover { background: var(--lr-color-surface-raised); }
   [part='version'][aria-pressed='true'] {
     border-color: var(--lr-prompt-studio-version-selected-border, var(--lr-color-brand));
     background: var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet));
     color: var(--lr-prompt-studio-version-selected-color, var(--lr-color-text));
   }
-  [part='version'][aria-pressed='true']:hover {
+  :where([part='version'][aria-pressed='true']):hover {
     background: var(--lr-prompt-studio-version-selected-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='toolbar'] button:focus-visible, [part='remove-message']:focus-visible, [part='add-message']:focus-visible, [part='version']:focus-visible,

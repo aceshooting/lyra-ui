@@ -207,6 +207,19 @@ describe('localization', () => {
   });
 });
 
+describe('accessible name override', () => {
+  it('lets a host aria-label win over the localized dialog label', async () => {
+    const el = (await fixture(html`
+      <lr-document-viewer open name="report.pdf" aria-label="Custom label"></lr-document-viewer>
+    `)) as LyraDocumentViewer;
+    await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-dialog')!;
+    await (dialog as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+    const panel = dialog.shadowRoot!.querySelector('[part="panel"]')!;
+    expect(panel.getAttribute('aria-label')).to.equal('Custom label');
+  });
+});
+
 describe('anchor/highlights/alt widening', () => {
   afterEach(() => {
     clearDocumentRenderers();

@@ -651,6 +651,16 @@ export type LyraMessageKey =
   | 'emojiPickerSearchLabel'
   | 'emojiPickerGridLabel'
   | 'emojiPickerEmpty'
+  | 'emojiPickerGroupSmileysEmotion'
+  | 'emojiPickerGroupPeopleBody'
+  | 'emojiPickerGroupComponent'
+  | 'emojiPickerGroupAnimalsNature'
+  | 'emojiPickerGroupFoodDrink'
+  | 'emojiPickerGroupTravelPlaces'
+  | 'emojiPickerGroupActivities'
+  | 'emojiPickerGroupObjects'
+  | 'emojiPickerGroupSymbols'
+  | 'emojiPickerGroupFlags'
   | 'pushToTalkRequesting'
   | 'pushToTalkDenied'
   | 'pushToTalkError'
@@ -1160,6 +1170,7 @@ export type LyraMessageKey =
   | 'agentRunStatusCancelled'
   | 'localePickerLabel'
   | 'localePickerRequired'
+  | 'flagLoadError'
   | 'moveUp'
   | 'moveDown'
   | 'reorderItemMoved';
@@ -1815,6 +1826,19 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   emojiPickerSearchLabel: 'Search emoji',
   emojiPickerGridLabel: 'Emoji',
   emojiPickerEmpty: 'No emoji found',
+  // Emojibase's canonical group headings (group ids 0-9), used for the emoji set
+  // `<lr-emoji-picker>` auto-loads from `emoji-picker-element-data`. A consumer-supplied `groups`
+  // array carries its own already-authored `label` and never routes through these.
+  emojiPickerGroupSmileysEmotion: 'Smileys & Emotion',
+  emojiPickerGroupPeopleBody: 'People & Body',
+  emojiPickerGroupComponent: 'Component',
+  emojiPickerGroupAnimalsNature: 'Animals & Nature',
+  emojiPickerGroupFoodDrink: 'Food & Drink',
+  emojiPickerGroupTravelPlaces: 'Travel & Places',
+  emojiPickerGroupActivities: 'Activities',
+  emojiPickerGroupObjects: 'Objects',
+  emojiPickerGroupSymbols: 'Symbols',
+  emojiPickerGroupFlags: 'Flags',
   pushToTalkRequesting: 'Requesting microphone…',
   pushToTalkDenied: 'Microphone access denied',
   pushToTalkError: 'Recording failed',
@@ -2325,6 +2349,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   agentRunStatusCancelled: 'Cancelled',
   localePickerLabel: 'Language',
   localePickerRequired: 'Please choose a language.',
+  // `<lr-flag>`'s fail-closed `role="alert"` when the optional `@aceshooting/lyra-flags`
+  // resolver is absent or rejects. Deliberately generic: the cause (peer missing vs. network
+  // failure) is a developer concern surfaced through `console.warn`, not something to read out.
+  flagLoadError: 'Flag unavailable',
   moveUp: 'Move up',
   moveDown: 'Move down',
   reorderItemMoved: 'Moved to position {index} of {total}',

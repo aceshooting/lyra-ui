@@ -52,8 +52,14 @@ whenever the slot has no assigned content), `body`.
 
 **Themeable custom properties:** `--lr-result-card-compact-header-padding` (default
 `var(--lr-space-xs)`) — `[part="header"]` block/inline padding while `compact`;
-`--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) — `[part="body"]` padding
-while `compact`; plus shared tokens — `--lr-space-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
+`--lr-result-card-compact-header-gap` (default `var(--lr-space-xs)`) — gap between
+`[part="header"]`'s title and actions while `compact`, one step tighter than the uncompacted
+`--lr-space-s`; `--lr-result-card-compact-body-padding` (default `var(--lr-space-xs)`) —
+`[part="body"]` padding while `compact`; `--lr-result-card-compact-body-gap` (default
+`var(--lr-space-2xs)`) — gap between `[part="body"]`'s children while `compact`, one step tighter
+than the uncompacted `--lr-space-xs`. The two gap knobs mean `compact` now tightens interior spacing,
+not only the padding box — a compact card no longer keeps full-size gaps inside a shrunken frame.
+Plus shared tokens — `--lr-space-2xs`/`-xs`/`-s`, `--lr-color-border`/`-surface`/`-text`,
 `--lr-radius`.
 
 ### `lr-result-field`

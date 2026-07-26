@@ -190,7 +190,8 @@ own "consumer computes/renders" contract rather than assuming addition.
   via the retheme-able `--lr-table-heat-tint-lo`/`-hi` custom properties, matching `lr-heatmap`'s
   own ramp-token convention; `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
-  no per-cell style override (the default, unchanged output); `editable` enables inline editing —
+  no per-cell style override (the default, unchanged output);
+  `editable` enables inline editing —
   `true` opens a native editor on that cell's double-click (one cell at a time), `'always'` instead
   renders a persistent editor in every body cell of the column from first paint, for a
   settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
@@ -202,7 +203,16 @@ own "consumer computes/renders" contract rather than assuming addition.
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
-  exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes.
+  exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
+  *commit* is vetoable — see `lr-column-resize` under Events.
+- **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
+  inline style outranks any stylesheet rule in the cascade regardless of specificity, while the heat
+  tint is painted by a shadow-stylesheet rule. So a `cellStyle` returning
+  `background`/`backgroundColor` on a column that also defines `heatValue` silently and completely
+  erases that column's tint — no warning, and the cell still contributes to the shared domain, so the
+  *other* tinted columns' scale shifts around a cell that shows no tint at all. Define both on one
+  column only when that override is the intent; to tint *and* style, return only non-background
+  declarations (`color`, `fontWeight`, `textAlign`, …) from `cellStyle`.
 - `columns[].editable: boolean | 'always'` — a widening of the original `boolean`, non-breaking.
   `true` is unchanged: double-click a cell to open its editor, one at a time, Enter commits and
   closes, Escape cancels and closes, blur-after-change commits. `'always'` renders an editor in
@@ -363,7 +373,15 @@ own "consumer computes/renders" contract rather than assuming addition.
 `lr-selection-change` (`detail: { keys }`) when selection is enabled, `lr-filter-change`
 (`detail: { text }`), and `lr-page-change` (`detail: { page }`) from the controlled
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
-columns, and `lr-column-resize` (`detail: { key, width }`) on every pointer or keyboard resize step.
+columns, and `lr-column-resize` (`detail: { key, width }`, `width` in CSS pixels) on every pointer or
+keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
+pixel of movement as non-cancelable live feedback, then exactly once more — `cancelable: true` — for
+the width committed at drag-end (and only when that width actually differs from the pre-drag one).
+A keyboard step (Arrow/Shift+Arrow/Home/End) is already one discrete action, so it fires that single
+cancelable commit directly, with no live-feedback stream. Calling `preventDefault()` on a cancelable
+emission reverts the column to its pre-gesture width (or removes the override entirely if the column
+had never been resized); calling it on a mid-drag step does nothing, by design — a veto is a decision
+about the final width, not about every pixel the pointer passes through.
 The internal filter/cell-editor native inputs' `focus` and `blur` are also re-dispatched from the
 host as bubbling, composed events (the native ones are neither).
 
@@ -564,8 +582,11 @@ The internal page input's `focus` and `blur` are also bridged as bubbling, compo
 `--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-padding` (default
 `var(--lr-space-xs)`) — inner padding of the previous/next buttons and the page input, deliberately
 uniform across every `size` tier because the control's outer footprint is already fixed by
-`--lr-pagination-control-size`, so this only adjusts the icon/digit inset — plus shared color,
-spacing, border, radius, disabled-opacity, and focus-ring tokens.
+`--lr-pagination-control-size`, so this only adjusts the icon/digit inset —
+`--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
+`[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
+declared as an inline `var()` fallback, since `::part(page-input)[aria-invalid='true']` is invalid
+CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-ring tokens.
 
 **Optional peer deps:** none.
 
@@ -921,13 +942,18 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 closes the legend row, present in both the gradient and the `legendStops` branch),
 `legend-annotation` (one per labeled `annotations` entry)
 
-**Themeable custom properties:** `--lr-heatmap-scale-lo` (default `#cde2fb`),
-`--lr-heatmap-scale-hi` (default `#0969da`) — the sequential color-ramp endpoints (matrix mode) or
-quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each draw (any valid
-CSS color syntax — hex/rgb/hsl/oklch/named — works, resolved through a scratch canvas).
-`--lr-heatmap-no-data-fill` (default `rgba(128,128,128,0.25)` — the no-data cell fill, same
-resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default `10px sans-serif` — the
-canvas-drawn axis/month/weekday label font), `--lr-heatmap-focus-ring-color` (default
+**Themeable custom properties:** `--lr-heatmap-scale-lo` (default `var(--lr-color-brand-quiet)`),
+`--lr-heatmap-scale-hi` (default `var(--lr-color-brand)`) — the sequential color-ramp endpoints
+(matrix mode) or quartile-bucket ramp endpoints (calendar mode), resolved via `getComputedStyle` each
+draw (any valid CSS color syntax — hex/rgb/hsl/oklch/named — works, resolved through a scratch
+canvas). These defaults are declared on `:host`, so they follow the theme (including dark mode)
+rather than being pinned to a literal color; the hard-coded `#cde2fb`/`#0969da` pair in the source is
+only a last-resort constant for the case where the custom property resolves to an empty string (no
+stylesheet applied at all), not the shipped default.
+`--lr-heatmap-no-data-fill` (default `var(--lr-color-no-data)` — the no-data cell fill, same
+resolve-via-`getComputedStyle` pattern), `--lr-heatmap-label-font` (default
+`var(--lr-size-10px) var(--lr-font)` — the canvas-drawn axis/month/weekday label font),
+`--lr-heatmap-focus-ring-color` (default
 `var(--lr-focus-ring-color)` — the canvas-drawn ring stroked around the keyboard-focused cell;
 also reused by `[part="canvas"]`'s own `:focus-visible` outline so the two stay visually in sync),
 `--lr-heatmap-color-steps-gradient` (default
@@ -1011,20 +1037,24 @@ same color as `--lr-heatmap-focus-ring-color`).
 
 A compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an
 optional secondary per-cell marker. Pure CSS/flex — no chart.js, no SVG, no canvas — sized/named
-consistently with the sparkline/heatmap family, but a glanceable *aggregate* visualization
-(`role="img"`, one summarizing `aria-label`) rather than a `role="list"` of separately-operable
-items: there is no per-cell keyboard focus and no per-cell click event, matching `<lr-sparkline>`'s
-accessibility model rather than `<lr-heatmap>`'s heavier canvas-plus-keyboard-roving one. Hovering a
-cell (pointer only) shows `[part="tooltip"]` with that item's label. Setting `showLegend`
-additionally renders a static `[part="legend"]` key below the strip, so the color-to-category
-mapping is readable without hovering each cell.
+consistently with the sparkline/heatmap family, and read as a glanceable aggregate. `[part="base"]`
+is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`, `aria-posinset`,
+`aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
+string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
+Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
+the same `[part="tooltip"]` detail that pointer hover does, wired through `aria-describedby`. Cells
+are inspectable, not actionable: there is no per-cell click/activation event, so unlike
+`<lr-heatmap>` there is nothing to fire on Enter/Space. Setting `showLegend` additionally renders a
+static `[part="legend"]` key below the strip, so the color-to-category mapping is readable without
+visiting each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
   `marker` renders a small bottom marker on that cell independent of the category color (e.g. a
-  subagent-dispatched turn); `label` is per-item hover-tooltip text, falling back to the matching
-  category's own `label` (or its `key`) when unset — not read by the auto-generated `aria-label`,
-  which summarizes by category/count only
+  subagent-dispatched turn); `label` is per-item hover/focus tooltip text *and* that cell's own
+  `role="listitem"` accessible name, falling back to the matching category's own `label` (or its
+  `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
+  summarizes by category/count only
 - `categories: SequenceStripCategory[] = []` (attribute: false) — `{ key, color, label? }`; `color`
   is the cell background for every item whose `category` matches `key` (an item whose `category`
   matches no entry renders `transparent`); `label` is used in the auto-generated `aria-label` summary
@@ -1039,9 +1069,9 @@ mapping is readable without hovering each cell.
   order. The key describes the *scheme*, not the current data: a category with no matching item
   still gets a row, and an item whose `category` matches no entry adds none. Deliberately
   non-interactive — it toggles nothing and emits nothing (`lr-graph-legend` is the interactive,
-  filtering legend). Because it only repeats the category names `[part="base"]` already announces
-  through its `role="img"` summary, the legend is `aria-hidden` — visible on screen, announced
-  exactly once — and it wraps onto further rows in a narrow allocation rather than overflowing
+  filtering legend). Because it only repeats the category names `[part="base"]`'s own `aria-label`
+  summary already announces, the legend is `aria-hidden` — visible on screen, announced exactly
+  once — and it wraps onto further rows in a narrow allocation rather than overflowing
 - `markerLabel?: string` (attribute `marker-label`) — names what an item's `marker` *means* (e.g.
   `"Subagent"`). Setting it does two things: with `showLegend` on it adds one trailing
   `[part="legend-item"]`, whose `[part="legend-marker-swatch"]` reproduces the cell's own marker
@@ -1053,9 +1083,10 @@ mapping is readable without hovering each cell.
 
 **Slots:** none.
 
-**CSS parts:** `base` (the root strip, `role="img"`), `cell` (each item's cell, background-colored
-by its category), `marker` (the small bottom marker on a cell whose item sets `marker: true`),
-`tooltip` (the hover tooltip showing the hovered item's label, hidden until a cell is hovered),
+**CSS parts:** `base` (the root strip, `role="list"`), `cell` (each item's `role="listitem"` cell,
+background-colored by its category and carrying the roving `tabindex`), `marker` (the small bottom
+marker on a cell whose item sets `marker: true`), `tooltip` (the detail tooltip showing the active
+item's label, hidden until a cell is hovered or focused),
 `legend` (the static category key rendered below the strip when `showLegend` is set — `aria-hidden`,
 as it repeats the strip's own `aria-label`), `legend-item` (one swatch + label pair, one per
 `categories` entry, plus one trailing marker row when `markerLabel` is set), `legend-swatch` (the
@@ -1841,11 +1872,12 @@ relationship and node-type filters, hop limits, validation, and saved queries.
 `validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `formDisabledCallback`,
 `formResetCallback`, `formStateRestoreCallback`. **Events:** `lr-input`, `lr-validity-change`,
 `lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
-parts:** `base`, `path-fields`, `start-input`, `end-input`, `relationship-picker`,
-`relationship-chips`, `node-type-picker`, `node-type-chips`, `direction`, `filter-group`,
-`min-hops`, `max-hops`, `footer`, `run-button`, `save-button`, `save-row`, `save-name-input`,
-`saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`, `saved-load-button`,
-`saved-delete-button`, `saved-empty`.
+parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
+form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,
+`end-input`, `relationship-picker`, `relationship-chips`, `node-type-picker`, `node-type-chips`,
+`direction`, `filter-group`, `min-hops`, `max-hops`, `footer`, `run-button`, `save-button`,
+`save-row`, `save-name-input`, `saved-queries`, `saved-queries-label`, `saved-list`, `saved-item`,
+`saved-load-button`, `saved-delete-button`, `saved-empty`.
 
 **Additional API surface:**
 

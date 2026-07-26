@@ -178,6 +178,18 @@ describe('static rendering', () => {
     );
   });
 
+  it('forwards a host aria-label to the base region once nodes is non-empty, winning over the localized default', async () => {
+    const el = (await fixture(
+      html`<lr-flow-canvas aria-label="Ingestion pipeline"></lr-flow-canvas>`,
+    )) as LyraFlowCanvas;
+    el.nodes = nodes;
+    el.edges = edges;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal(
+      'Ingestion pipeline',
+    );
+  });
+
   it('reflects grid onto the background layer as --lr-flow-canvas-grid-size', async () => {
     const el = (await fixture(html`<lr-flow-canvas grid="16"></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = nodes;

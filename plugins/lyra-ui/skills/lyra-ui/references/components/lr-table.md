@@ -53,7 +53,8 @@ own "consumer computes/renders" contract rather than assuming addition.
   via the retheme-able `--lr-table-heat-tint-lo`/`-hi` custom properties, matching `lr-heatmap`'s
   own ramp-token convention; `cellStyle` is applied directly to the generated `<td>` via `styleMap` — e.g. a computed heat-tint
   background a `cell()`-returned inner element can't paint into the cell's own padding — omit it for
-  no per-cell style override (the default, unchanged output); `editable` enables inline editing —
+  no per-cell style override (the default, unchanged output);
+  `editable` enables inline editing —
   `true` opens a native editor on that cell's double-click (one cell at a time), `'always'` instead
   renders a persistent editor in every body cell of the column from first paint, for a
   settings/rate-style column meant to be typed straight into — while `editValue` supplies the editor
@@ -65,7 +66,16 @@ own "consumer computes/renders" contract rather than assuming addition.
   the live width in CSS pixels. Drag it, or use logical ArrowLeft/ArrowRight for 10px steps (mirrored
   under RTL), Shift+Arrow for 50px steps, Home for the minimum, and End for an explicit pixel
   `maxWidth`; explicit pixel `minWidth`/`maxWidth` values bound both input paths. The separator
-  exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes.
+  exposes its current/minimum/bounded-maximum pixel width through ARIA value attributes. Only the
+  *commit* is vetoable — see `lr-column-resize` under Events.
+- **`cellStyle` beats `heatValue`, always.** `styleMap` writes an inline `style=` attribute, and an
+  inline style outranks any stylesheet rule in the cascade regardless of specificity, while the heat
+  tint is painted by a shadow-stylesheet rule. So a `cellStyle` returning
+  `background`/`backgroundColor` on a column that also defines `heatValue` silently and completely
+  erases that column's tint — no warning, and the cell still contributes to the shared domain, so the
+  *other* tinted columns' scale shifts around a cell that shows no tint at all. Define both on one
+  column only when that override is the intent; to tint *and* style, return only non-background
+  declarations (`color`, `fontWeight`, `textAlign`, …) from `cellStyle`.
 - `columns[].editable: boolean | 'always'` — a widening of the original `boolean`, non-breaking.
   `true` is unchanged: double-click a cell to open its editor, one at a time, Enter commits and
   closes, Escape cancels and closes, blur-after-change commits. `'always'` renders an editor in
@@ -226,7 +236,15 @@ own "consumer computes/renders" contract rather than assuming addition.
 `lr-selection-change` (`detail: { keys }`) when selection is enabled, `lr-filter-change`
 (`detail: { text }`), and `lr-page-change` (`detail: { page }`) from the controlled
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, key, value }`) for editable
-columns, and `lr-column-resize` (`detail: { key, width }`) on every pointer or keyboard resize step.
+columns, and `lr-column-resize` (`detail: { key, width }`, `width` in CSS pixels) on every pointer or
+keyboard resize step. **Only the commit is cancelable.** A pointer drag fires the event once per
+pixel of movement as non-cancelable live feedback, then exactly once more — `cancelable: true` — for
+the width committed at drag-end (and only when that width actually differs from the pre-drag one).
+A keyboard step (Arrow/Shift+Arrow/Home/End) is already one discrete action, so it fires that single
+cancelable commit directly, with no live-feedback stream. Calling `preventDefault()` on a cancelable
+emission reverts the column to its pre-gesture width (or removes the override entirely if the column
+had never been resized); calling it on a mid-drag step does nothing, by design — a veto is a decision
+about the final width, not about every pixel the pointer passes through.
 The internal filter/cell-editor native inputs' `focus` and `blur` are also re-dispatched from the
 host as bubbling, composed events (the native ones are neither).
 

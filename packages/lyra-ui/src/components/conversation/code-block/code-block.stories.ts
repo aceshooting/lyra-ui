@@ -206,6 +206,20 @@ export const TabWidth: Story = {
   `,
 };
 
+export const Narrow320: Story = {
+  name: 'Narrow allocation (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-code-block
+        filename="greet.ts"
+        language="typescript"
+        line-numbers
+        .code=${tsSample}
+      ></lr-code-block>
+    </div>
+  `,
+};
+
 export const ActiveLineOutlineColor: Story = {
   name: 'Active-line outline color',
   parameters: {

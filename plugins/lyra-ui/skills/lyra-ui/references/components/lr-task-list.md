@@ -6,7 +6,7 @@
 - **Class** `LyraTaskList`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,9 +45,13 @@ indicator, only rendered when `collapsible`), `body` (the list of items, `hidden
 `item-detail`, and `item-children` (the nested `role="list"` wrapper around a top-level item's
 children).
 
-**Themeable custom properties:** `--lr-task-list-spin` (default `1s linear`) — running-status icon
-spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
+**Themeable custom properties:** `--lr-task-list-spin` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`, collapsing to `0.001ms linear` under `prefers-reduced-motion`) — running-status
+icon spin animation duration/timing; `--lr-task-list-compact-header-padding` (default
 `var(--lr-space-2xs) var(--lr-space-s)`) — `[part="header"]` padding while `compact`;
+`--lr-task-list-compact-header-gap` (default `var(--lr-space-2xs)`) — gap between `[part="header"]`'s
+label/summary/toggle while `compact`, one step tighter than the header's uncompacted
+`--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
 var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.

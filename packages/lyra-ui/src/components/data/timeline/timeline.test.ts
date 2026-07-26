@@ -72,11 +72,13 @@ it('never scrolls vertically in horizontal orientation -- overflow-x:auto alone 
   expect(getComputedStyle(base).overflowY).to.equal('hidden');
 });
 
-it('adds a static, themeable edge fade to the horizontal scroll strip', () => {
-  const css = timelineStyles.cssText.replace(/\s+/g, ' ');
-  expect(css).to.include('-webkit-mask-image: linear-gradient');
-  expect(css).to.include('mask-image: linear-gradient');
-  expect(css).to.include('var(--lr-scroll-fade-size)');
+it('adds a static, themeable edge fade to the horizontal scroll strip', async () => {
+  // Reads the real computed mask off the rendered [part="base"] instead of substring-matching
+  // the exported stylesheet source, which would still pass even if the rule's selector never
+  // actually matched (e.g. only applies once orientation="horizontal" is set).
+  const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).maskImage).to.contain('linear-gradient');
 });
 
 it('resolves the accessible name to the localized "Timeline" by default', async () => {

@@ -30,7 +30,7 @@ several Web Awesome **Pro** components plus original extras. Positioning, non-ne
 
 ## Monorepo layout
 
-pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.10.0`.
+pnpm workspace (`pnpm-workspace.yaml`: `packages/*`), Node ≥ 20, `pnpm@11.17.0`.
 
 ```
 lyra-ui/                          (repo root — this file lives here)

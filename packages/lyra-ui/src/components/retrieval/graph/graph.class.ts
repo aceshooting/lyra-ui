@@ -318,7 +318,8 @@ export interface LyraGraphEventMap {
  *   `lr-knowledge-graph-explorer`) sees the dimming take effect with no extra host styling.
  * @cssprop [--lr-graph-hull-fill=var(--lr-color-brand)] - Hull fill/stroke color.
  * @cssprop [--lr-graph-hull-opacity=0.12] - Hull element opacity (composites fill+stroke as one
- *   group, avoiding a double-opacity seam at the fill/stroke boundary).
+ *   group, avoiding a double-opacity seam at the fill/stroke boundary). Applies to both SVG and
+ *   canvas renderers.
  */
 export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -1118,6 +1119,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     const nodeLabels = this.simNodes
       .filter((n) => n.label)
       .map((n) => ({ x: (n.x ?? 0) + this.nodeRadius(n) + 2, y: n.y ?? 0, text: n.label! }));
+    const expandIndicators = this.simNodes
+      .filter((n) => n.expandable)
+      .map((n) => ({ x: n.x ?? 0, y: n.y ?? 0, r: this.nodeRadius(n) }));
     const focusNode = this.focusId != null ? this.simNodes.find((n) => n.id === this.focusId) : undefined;
     const activeNode =
       this.activeGraphItem >= 0 && this.activeGraphItem < this.simNodes.length
@@ -1129,6 +1133,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
       edgeLabels,
       nodes,
       nodeLabels,
+      expandIndicators,
       focusHalo: focusNode
         ? { x: focusNode.x ?? 0, y: focusNode.y ?? 0, r: this.nodeRadius(focusNode) + FOCUS_HALO_PADDING }
         : undefined,
@@ -1144,9 +1149,15 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         const value = Number(cs.getPropertyValue('--lr-graph-dimmed-opacity').trim());
         return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.35;
       })(),
+      hullOpacity: (() => {
+        const value = Number(cs.getPropertyValue('--lr-graph-hull-opacity').trim());
+        return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0.12;
+      })(),
       labelColor: cs.getPropertyValue('--lr-color-text').trim(),
       labelHaloColor:
         cs.getPropertyValue('--lr-graph-edge-label-halo').trim() || cs.getPropertyValue('--lr-color-surface').trim(),
+      expandBadgeFill: cs.getPropertyValue('--lr-color-surface').trim(),
+      expandBadgeStroke: cs.getPropertyValue('--lr-color-border-strong').trim(),
       font: `${this.edgeLabelFontPx()}px ${cs.getPropertyValue('--lr-font').trim() || 'sans-serif'}`,
     };
   }

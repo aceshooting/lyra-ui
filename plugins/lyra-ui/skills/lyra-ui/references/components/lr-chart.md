@@ -6,7 +6,7 @@
 - **Class** `LyraChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 7 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -139,7 +139,13 @@ properties only cascade downward); `--lr-chart-grid-color` (default `var(--lr-co
 `getComputedStyle` on every draw (Chart.js renders to canvas, not the DOM, so it can't consume CSS
 `var()` directly), driving the grid lines, tick labels **and axis titles** (`xLabel`/`yLabel`/
 `y2Label` title text reuses `--lr-chart-tick-color` too — there's no separate title-color token),
-legend text, and tooltip background/text respectively; plus shared `--lr-space-xs`.
+legend text, and tooltip background/text respectively; plus
+`--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) — the width of
+`[part="canvas"]`'s own `:hover` outline. Unlike the tokens above, this one is a real CSS
+declaration on a DOM element (the outline is painted by the stylesheet, not by Chart.js), so it is
+consumed directly with no `getComputedStyle` bridging; it is an inline `var()` fallback at the point
+of use, so it can be set on the element or any ancestor, and left unset the outline is exactly the
+`--lr-border-width-thin` it always was. Plus shared `--lr-space-xs`.
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
 regardless of `zoom`), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoom` is — or

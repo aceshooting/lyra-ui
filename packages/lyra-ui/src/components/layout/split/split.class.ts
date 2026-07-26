@@ -166,6 +166,14 @@ export interface LyraSplitEventMap {
  * @csspart divider - Each divider between two panels; carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed (`'rail'`/`'floating'`).
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  * @cssprop [--lr-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
+ * @cssprop [--lr-split-divider-hit-slop=calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)] -
+ *   Per-side inset of `[part="divider"]`'s invisible `::before` hit area, along the resize axis.
+ *   Negative, so the `::before` box extends past the divider's own edges; derived from the shared
+ *   `--lr-icon-button-size` WCAG 2.5.8 floor minus the divider's visible thickness, split evenly
+ *   across both sides, so the effective target reaches the floor without widening the 3px divider
+ *   anyone can see. Declared on `:host`, so an override must target the element itself (not an
+ *   ancestor). Setting it by hand is rarely right -- retheme `--lr-size-3px`/`--lr-icon-button-size`
+ *   instead and the slop recomputes.
  */
 export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   static override styles = [LyraElement.styles, styles];

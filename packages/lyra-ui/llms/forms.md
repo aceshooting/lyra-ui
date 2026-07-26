@@ -637,6 +637,10 @@ and `dateTimeFormat(locale, options)`.
 - `--lr-date-picker-month-gap` — Gap between visible months. Default: `var(--lr-space-l)`.
 - `--lr-date-picker-header-gap` — Month-header child gap. Default: `var(--lr-space-s)`.
 - `--lr-date-picker-radius` — Calendar and control corner radius. Default: `var(--lr-radius)`.
+- `--lr-date-picker-nav-hover-bg` — Hover background of the previous/next month-navigation buttons.
+  Default: `var(--lr-color-brand-quiet)`. An inline `var()` fallback rather than a `:host`
+  declaration, and the rule wraps its selector in `:where()` so a consumer's own
+  `::part(previous):hover` still wins without `!important`.
 - `--lr-date-input-placeholder-color` — Placeholder text color. Default: `var(--lr-color-text-quiet)`.
 - `--lr-date-input-gap` — Gap between input-row children. Default: `var(--lr-space-xs)`.
 - `--lr-date-input-radius` — Input-row corner radius. Default: `var(--lr-radius)`.
@@ -846,18 +850,23 @@ loud fill token), `--lr-button-outlined-border` (default `--lr-color-border-stro
 `--lr-color-border`) — the `appearance="quiet"` foreground/border pair, also variant-independent,
 `--lr-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
 `--lr-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
-`prefers-reduced-motion`), `--lr-button-spinner-duration` (default `1s`, the `loading` spinner's
-rotation period; forced to `0.001ms` under `prefers-reduced-motion`),
+`prefers-reduced-motion`), `--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e.
+`1.8s ease-in-out`, the `loading` spinner's rotation period; that token itself collapses to
+`0.001ms linear` under `prefers-reduced-motion`, so the spinner effectively stops),
 `--lr-button-outlined-fill` (default `transparent`, the `appearance="outlined"` background — also
 variant-independent; set it to tint an outlined button with, say, a faint surface wash behind the
 outline, without a `::part(base)` rule. Note that the `:hover` `filter: brightness()` applies to
 whatever fill is set, so a tinted outlined button visibly brightens on hover where a transparent
 one did not),
 and the per-`size`
-`min-block-size` floors `--lr-button-size-2xs` (`1.25rem`), `--lr-button-size-xs` (`1.5rem`),
-`--lr-button-size-s` (`1.75rem`), `--lr-button-size-m` (`2rem`), `--lr-button-size-l` (`2.5rem`),
-`--lr-button-size-xl` (`3rem`) — each read only by its own `size` tier, and all ignored by
-`appearance="link"`. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
+`min-block-size` floors `--lr-button-size-2xs` (`var(--lr-size-1-25rem)`, 1.25rem),
+`--lr-button-size-xs` (`var(--lr-size-1-5rem)`, 1.5rem), `--lr-button-size-s`
+(`var(--lr-size-1-875rem)`, 1.875rem), `--lr-button-size-m` (`var(--lr-size-2-5rem)`, 2.5rem),
+`--lr-button-size-l` (`var(--lr-size-3rem)`, 3rem), `--lr-button-size-xl`
+(`var(--lr-size-3-5rem)`, 3.5rem) — each read only by its own `size` tier, and all ignored by
+`appearance="link"`. The `s`/`m`/`l`/`xl` floors are deliberately at or above the
+`--lr-icon-button-size` (2.5rem) hit-area minimum from `m` upward; they resolve through shared
+`--lr-size-*` tokens rather than literal rem values, so a retheme moves them together. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
 and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
 both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
 by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
@@ -1444,6 +1453,12 @@ consumer-facing `disabled` property/attribute itself.
 PageDown key press, `detail: { start, end }`), `lr-change` (fired on pointer release /
 key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to `[part="handle-start"]`. A
+two-handle control has no single canonical target, so the start handle is the one they address —
+call `.focus()` on `::part(handle-end)` yourself if you need the other. Without these overrides the
+host's own `focus()`/`blur()`/`click()` are no-ops, because the real control lives in the shadow
+root.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`
@@ -1860,6 +1875,10 @@ pointerup for a drag, or on keyup for a keyboard step, so a single Arrow/Home/En
 fires both `lr-input` and `lr-change`, mirroring native `<input type=range>`'s own `change`-on-every-
 committed-step behavior)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal `[part="thumb"]`
+control — without them the host's own `focus()`/`blur()`/`click()` would be no-ops, because the
+`role="slider"` element they need to reach lives in the shadow root.
+
 **Slots:** none.
 
 **CSS parts:** `base` (row wrapping the track and optional value readout), `track`, `fill` (filled
@@ -1931,6 +1950,12 @@ gap is derived from it, so the advertised value and the real offset cannot drift
 element (or on `lr-radio` in your own stylesheet) moves the label. Exactly the same knob, defaults,
 purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` — see `lr-checkbox` above
 for the formula to align a sibling hint element.
+
+`--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
+(default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
+while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
+`--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
+ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 
 ```html
 <lr-radio name="format" value="json">JSON</lr-radio>
@@ -2156,9 +2181,14 @@ Ships the same opt-in `label`/`hint`/`errorText` form-control chrome as `lr-sele
 `error` CSS parts) — left unset, none of that chrome renders.
 
 **Properties:** the shared form properties `name`, `value`, `disabled`, and `required`, plus
-`groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, emojis:
-EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches `name`
-and every `shortcodes` entry, case-insensitively. Empty (the default, before the auto-loader
+`groups: EmojiPickerGroup[] = []` (attribute: false) — `EmojiPickerGroup { key, label, labelKey?,
+emojis: EmojiPickerItem[] }`, `EmojiPickerItem { emoji, name, shortcodes? }`; the search field matches
+`name` and every `shortcodes` entry, case-insensitively. `labelKey` is an optional `LyraMessageKey`
+naming `label`'s localized form — set only by the built-in `emoji-picker-element-data` adapter, whose
+headings come from emojibase's fixed group ids, so an auto-loaded emoji set's group headings follow
+`registerLyraLocale()`/`.strings` instead of staying English. A hand-authored group leaves it unset
+and its `label` renders verbatim, because a consumer-supplied heading is caller-owned content this
+library never translates. Empty (the default, before the auto-loader
 resolves) renders just the search input and the empty state. `accessibleLabel` (`aria-label`)
 forwards a host-supplied accessible name to the internal `role="listbox"` grid; empty falls back to
 the localized default grid label. `label: string = ''` — visible label rendered above the
@@ -2230,7 +2260,14 @@ windowed row are additionally capped at 20 regardless of available width.
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; a missing or failed peer logs one
-`console.warn` and simply leaves `groups` empty.
+`console.warn` and simply leaves `groups` empty. The adapter buckets the peer's flat entry list by
+its numeric `group` id and tags each bucket with both the English `label` and the matching
+`labelKey` — `emojiPickerGroupSmileysEmotion`, `emojiPickerGroupPeopleBody`,
+`emojiPickerGroupComponent`, `emojiPickerGroupAnimalsNature`, `emojiPickerGroupFoodDrink`,
+`emojiPickerGroupTravelPlaces`, `emojiPickerGroupActivities`, `emojiPickerGroupObjects`,
+`emojiPickerGroupSymbols`, `emojiPickerGroupFlags` (group ids 0–9, in that order). Override any of
+them through `registerLyraLocale()` or a `.strings` object to translate the headings. An unknown
+future group id gets no `labelKey` and falls back to a generated `Group {id}` label.
 
 **Additional API surface:**
 
@@ -2335,7 +2372,7 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 ```html
 <lr-locale-picker label="Language"></lr-locale-picker>
 <script type="module">
-  import { registerLyraLocale } from '@aceshooting/lyra-ui';
+  import { registerLyraLocale } from '@aceshooting/lyra-ui/localization.js';
   registerLyraLocale('fr', { close: 'Fermer' });
   document
     .querySelector('lr-locale-picker')

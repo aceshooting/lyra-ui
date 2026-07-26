@@ -6,7 +6,7 @@
 - **Class** `LyraChipGroup`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/chip/chip-group.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 2 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-chip` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -137,7 +137,14 @@ usage)
 `overflow-indicator` (the "+N" / "Show less" toggle button; only rendered while `max-visible` is
 actively causing an overflow — a locally-styled pill, not an instantiated real `<lr-chip>`)
 
-**Themeable custom properties:** shared tokens only (`--lr-space-xs`, `--lr-space-s`,
+**Themeable custom properties:** `--lr-chip-group-overflow-expanded-color` (default
+`var(--lr-color-text)`) — text color of `[part="overflow-indicator"]` while expanded
+(`aria-expanded="true"`). A state hook: an inline `var()` fallback at the point of use, never a
+`:host` declaration, so it can be set on the element *or on any ancestor*. It exists because
+`::part(overflow-indicator)[aria-expanded='true']` is invalid CSS — Shadow Parts forbids an attribute
+selector after `::part()` — so retinting only the expanded state otherwise meant re-pointing the
+library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherwise shared tokens
+(`--lr-space-xs`, `--lr-space-s`,
 `--lr-color-border`, `--lr-color-surface`, `--lr-color-text-quiet`, `--lr-color-text`,
 `--lr-color-brand`, `--lr-focus-ring-width`, `--lr-focus-ring-color`,
 `--lr-focus-ring-offset`, `--lr-transition-fast`).

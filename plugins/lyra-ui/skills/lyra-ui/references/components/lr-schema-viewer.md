@@ -6,7 +6,7 @@
 - **Class** `LyraSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -30,6 +30,18 @@ keywords. `SchemaValidationIssue = { path: string; message: string; severity?: '
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
 `description`, `constraints`, `issue`, `limit`, `empty`.
+
+`[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
+danger tokens, `warning` the warning tokens, and `info` its own pair —
+`--lr-schema-viewer-info-border` (default `var(--lr-color-brand)`) and `--lr-schema-viewer-info-bg`
+(default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
+library has no `--lr-color-info-*` token; before these existed an `info` issue rendered identically
+to an `error`, which read as a false alarm. Both are inline `var()` fallbacks at their point of use,
+so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
+invalid CSS, so this is the only way to recolor one severity without touching the others.
+
+**Themeable custom properties:** `--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see
+above); otherwise shared tokens only.
 
 Rendering is capped at 500 schema nodes; `limit` reports truncation. Cycles stop at the repeated
 node rather than recursing. **Slots:** none. **Optional peer deps:** none.

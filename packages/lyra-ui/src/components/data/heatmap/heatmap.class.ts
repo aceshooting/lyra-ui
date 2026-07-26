@@ -795,7 +795,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       changed.has('colLabels') ||
       changed.has('days') ||
       changed.has('firstDayOfWeek') ||
-      changed.has('cellInteractive')
+      changed.has('cellInteractive') ||
+      changed.has('values')
     ) {
       // The previous focus/hover cursor may no longer address a real cell
       // once the grid's shape (or mode) changes out from under it —
@@ -805,7 +806,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       // willUpdate() (not updated()), which folds them into this same
       // render rather than scheduling a whole extra update pass. A
       // `firstDayOfWeek` change reshuffles every cell's week/weekday the same
-      // way a `days` change does, so it resets the cursor too.
+      // way a `days` change does, so it resets the cursor too. A `values`
+      // refresh doesn't move any cell, but `cellInteractive` is called with
+      // the new value at that position (see `isCellInteractive()`), so the
+      // still-focused cell can silently flip from interactive to excluded —
+      // dropping the cursor here (rather than leaving Enter/Space to emit
+      // for a cell the pointer path would now refuse to hit-test) keeps both
+      // input paths agreeing on what's interactive.
       this.focusedCell = null;
       this.hoverCell = null;
       this.liveText = '';
@@ -1890,6 +1897,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   private emitCellClick(pos: CellPos): void {
+    // Pointer clicks are filtered through `isCellInteractive()` at hit-test time (see
+    // `hitTestMatrix()`/`hitTestCalendar()`), but the Enter/Space handlers in `onMatrixKeyDown()`/
+    // `onCalendarKeyDown()` call here with the stored `focusedCell` directly, with no hit-test in
+    // between -- re-checking here keeps keyboard activation from firing for a cell that's since
+    // become non-interactive (e.g. a `values` refresh flips what `cellInteractive` returns for the
+    // still-focused position) even if some future caller forgets to reset the cursor first.
+    if (!this.isCellInteractive(pos)) return;
     if ('week' in pos) {
       const { date, value } = this.calendarCellAt(pos);
       this.emit('lr-cell-click', { date, value });

@@ -44,6 +44,11 @@ export const styles = css`
   [part='copy-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
+  [part='reveal-button']:focus-visible,
+  [part='copy-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
   [part='reveal-button'][aria-pressed='true'] {
     background: var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet));
     border-color: var(--lr-env-list-reveal-active-border, var(--lr-color-brand));

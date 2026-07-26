@@ -110,8 +110,10 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
                       .index=${this.citations.indexOf(citation) + 1}
                       .sourceId=${citation.sourceId ?? ''}
                       .label=${citation.label ?? ''}
-                      @lr-citation-activate=${() =>
-                        this.emit<CitationSelectEventDetail>('lr-citation-select', { citation })}
+                      @lr-citation-activate=${(event: Event) => {
+                        event.stopPropagation();
+                        this.emit<CitationSelectEventDetail>('lr-citation-select', { citation });
+                      }}
                     ></lr-citation-badge>
                     ${citation.quote ? html`<q>${citation.quote}</q>` : nothing}
                   `,

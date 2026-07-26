@@ -6,7 +6,7 @@
 - **Class** `LyraWidget`, also available unregistered from `@aceshooting/lyra-ui/components/layout/widget/widget.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 16 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,6 +88,11 @@ selector after `::part()` — so before these hooks the only way to recolor an a
 override the library-wide `--lr-color-brand-quiet`/`--lr-color-brand` tokens, repainting every other
 element that reads them. Left unset, each falls back to exactly the token the rule used before, so
 rendering is unchanged.
+
+`--lr-widget-view-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`) and
+`--lr-widget-view-toggle-hover-color` (default `var(--lr-color-text)`) are the same shape for the
+*hover* state, and the `:hover` rule wraps its selector in `:where()` so a consumer's own
+`::part(view-toggle):hover` override wins without `!important`.
 
 **Optional peer deps:** none.
 

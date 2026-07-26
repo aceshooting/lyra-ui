@@ -241,6 +241,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         ?open=${this.open}
         heading=${this.name || nothing}
         label=${this.localize('documentViewerLabel')}
+        aria-label=${this.getAttribute('aria-label') || nothing}
         closable
         @lr-dialog-close=${this.onDialogClose}
       >

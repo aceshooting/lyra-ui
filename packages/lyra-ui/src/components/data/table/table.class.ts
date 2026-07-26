@@ -116,7 +116,8 @@ export interface TableColumn<T> {
    *  and keyboard resizing; other CSS lengths still constrain the rendered column. */
   maxWidth?: string;
   /** Enables pointer and keyboard resizing from this column's header. The table keeps the live
-   *  width internally and emits `lr-column-resize` on every resize step. */
+   *  width internally and emits `lr-column-resize` on every resize step; only the final,
+   *  drag-end/keypress-committed emission is cancelable (see the event's own doc). */
   resizable?: boolean;
   sortable?: boolean;
   /** Backs client-mode sorting (`sortMode: 'client'`, the default) for this column. Returns the
@@ -438,7 +439,11 @@ export interface LyraTableEventMap<T = unknown> {
  * @event lr-page-change - A pagination control requested a page. `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, key, value }`.
  * @event lr-column-resize - A resizable column changed width by pointer or keyboard. `detail:
- *   { key, width }`, where `width` is in CSS pixels.
+ *   { key, width }`, where `width` is in CSS pixels. A pointer drag fires this once per pixel of
+ *   movement as non-cancelable live feedback, then once more, **cancelable**, for the final
+ *   width committed at drag-end; a keyboard step (Home/End/Arrow) is already a single discrete
+ *   action and fires that one cancelable commit directly. `preventDefault()` on a cancelable
+ *   emission reverts the column to its pre-gesture width.
  * @event focus - Re-dispatched from the internal filter/cell-editor native inputs' own `focus` —
  *   bubbling and composed (unlike the native event, which is neither).
  * @event blur - Re-dispatched from the internal filter/cell-editor native inputs' own `blur`, for
@@ -755,6 +760,10 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     minWidth: number;
     maxWidth: number;
     handle: HTMLElement;
+    /** `resizedColumnWidths.get(key)` as it stood before this drag started -- `undefined` when the
+     *  column hadn't been drag/keyboard-resized yet (still on its declared `width`/intrinsic size).
+     *  Restored verbatim if the drag-end commit below is vetoed. */
+    previousWidth: number | undefined;
   };
 
   private rowsByKey = new Map<string, { row: T; index: number }>();
@@ -825,9 +834,18 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const minWidth = this.minimumResizeWidth(column);
     const maxWidth = this.maximumResizeWidth(column, minWidth);
     const width = Math.min(maxWidth, Math.max(minWidth, requestedWidth));
-    if (this.resizedColumnWidths.get(column.key) === width) return;
+    const previousWidth = this.resizedColumnWidths.get(column.key);
+    if (previousWidth === width) return;
     this.resizedColumnWidths = new Map(this.resizedColumnWidths).set(column.key, width);
-    this.emit('lr-column-resize', { key: column.key, width });
+    // Unlike a pointer drag's per-pixel `onResizePointerMove` stream, every keyboard step here is
+    // already a single, final, deliberately-committed width change -- exactly the kind of
+    // "committed width" this event is scoped to be vetoable for.
+    const event = this.emit('lr-column-resize', { key: column.key, width }, { cancelable: true });
+    if (!event.defaultPrevented) return;
+    const reverted = new Map(this.resizedColumnWidths);
+    if (previousWidth === undefined) reverted.delete(column.key);
+    else reverted.set(column.key, previousWidth);
+    this.resizedColumnWidths = reverted;
   }
 
   private renderedColumnWidth(column: TableColumn<T>): string | undefined {
@@ -850,6 +868,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
       minWidth,
       maxWidth: this.maximumResizeWidth(column, minWidth),
       handle,
+      previousWidth: this.resizedColumnWidths.get(key),
     };
     event.preventDefault();
     event.stopPropagation();
@@ -928,12 +947,26 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   }
 
   private onResizePointerEnd = (event: PointerEvent): void => {
-    if (!this.resizeState || event.pointerId !== this.resizeState.pointerId) return;
-    this.resizeState.handle.releasePointerCapture?.(event.pointerId);
+    const state = this.resizeState;
+    if (!state || event.pointerId !== state.pointerId) return;
+    state.handle.releasePointerCapture?.(event.pointerId);
     this.resizeState = undefined;
     window.removeEventListener('pointermove', this.onResizePointerMove);
     window.removeEventListener('pointerup', this.onResizePointerEnd);
     window.removeEventListener('pointercancel', this.onResizePointerEnd);
+
+    // The drag's committed final width -- the one and only point in the gesture that's vetoable.
+    // `onResizePointerMove` above fires the same event once per pixel purely as live drag
+    // feedback; making those intermediate steps cancelable was considered and refuted (it would
+    // make the live preview jank on every vetoed frame), so they stay non-cancelable.
+    const committedWidth = this.resizedColumnWidths.get(state.key);
+    if (committedWidth === undefined || committedWidth === state.previousWidth) return;
+    const commitEvent = this.emit('lr-column-resize', { key: state.key, width: committedWidth }, { cancelable: true });
+    if (!commitEvent.defaultPrevented) return;
+    const reverted = new Map(this.resizedColumnWidths);
+    if (state.previousWidth === undefined) reverted.delete(state.key);
+    else reverted.set(state.key, state.previousWidth);
+    this.resizedColumnWidths = reverted;
   };
 
   /** Coalesces however many `resizeObserver` callback ticks land in one animation frame (an
@@ -2196,7 +2229,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                       >${col.footer?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`,
                     )}
                     ${hasRowTotal
-                      ? html`<td part="footer-cell">${this.grandTotal?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`
+                      ? html`<td part="footer-cell" data-align="end">${this.grandTotal?.(matchingEntries.map((entry) => entry.row)) ?? ''}</td>`
                       : nothing}
                   </tr>
                 </tfoot>`

@@ -29,9 +29,13 @@ entry is the latest version. `activeVersionId: string | null = null` (attribute
 `aria-busy` on the body and shows a text indicator (not animated, so it stays legible under reduced
 motion). `copyText: string = ''` (attribute `copy-text`) — the text copied to the clipboard by the
 copy button; empty hides the button. `downloadSrc: string = ''` (attribute `download-src`) — the
-download URL, sanitized through `safeMediaSrc()`; empty hides the button. `downloadName: string =
-''` (attribute `download-name`) — the suggested filename reported in the `lr-download` event
-detail.
+download URL, sanitized through `safeDownloadHref()` (`http:`/`https:`/`blob:` only — narrower than
+the media/resource allowlist, which also permits `data:`); an empty value hides the button. The
+sanitizer runs at click time, not render time, so a *non-empty but rejected* URL still renders the
+button and simply emits nothing when pressed. The component never navigates on its own: it emits
+`lr-download` with the sanitized `src` and leaves the actual download to the host.
+`downloadName: string = ''` (attribute `download-name`) — the suggested filename reported in the
+`lr-download` event detail.
 
 **Slots:** default — preview-view content (markdown/html-viewer/browser-frame/image). `code` —
 code-view content (typically a `lr-code-block`); the preview/code toggle only renders once this

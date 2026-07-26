@@ -448,6 +448,24 @@ it('ignores click and keydown activation while disabled, and is not focusable', 
   expect(el.valueAsNumber).to.equal(20);
 });
 
+it('forwards host focus()/blur() to the internal thumb control', async () => {
+  const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  el.focus();
+  expect(el.shadowRoot!.activeElement === thumb).to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.equal(null);
+});
+
+it('forwards host click() to the internal thumb control', async () => {
+  const el = (await fixture(html`<lr-slider></lr-slider>`)) as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  let clicked = false;
+  thumb.addEventListener('click', () => (clicked = true));
+  el.click();
+  expect(clicked).to.be.true;
+});
+
 it('re-clamps value into a narrower domain when min/max change after mount', async () => {
   const el = (await fixture(
     html`<lr-slider min="0" max="100" value="80"></lr-slider>`,

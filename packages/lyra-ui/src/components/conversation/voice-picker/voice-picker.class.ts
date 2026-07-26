@@ -5,6 +5,7 @@ import { AnchoredPopoverController } from '../../../internal/anchored-popover-co
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
+import { attachInternalsSafely } from '../../../internal/form-associated.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
@@ -165,7 +166,10 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
 
   constructor() {
     super();
-    this.internals = this.attachInternals();
+    // `<lr-voice-picker>` manages ElementInternals directly (its value is a catalog id, not the
+    // plain string the `FormAssociated` mixin's contract assumes), but shares the mixin's
+    // attach-or-degrade helper so both paths handle a missing *and* a throwing `attachInternals()`.
+    this.internals = attachInternalsSafely(this);
     this.validityController = new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]());
     this.internals.setFormValue('');
   }

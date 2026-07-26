@@ -10,6 +10,13 @@ registerDocumentRenderer('text/html', {
     const element = document.createElement('lr-html-viewer');
     element.src = file.src;
     element.name = file.name;
+    element.anchor = file.anchor ?? null;
+    element.highlights = file.highlights ?? [];
     return element;
+  },
+  capabilities: {
+    anchors: ['text-quote', 'fragment'],
+    search: true,
+    textSelect: true,
   },
 });

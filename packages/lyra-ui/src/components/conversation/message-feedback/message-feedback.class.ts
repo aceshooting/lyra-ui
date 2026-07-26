@@ -277,7 +277,10 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
                                 toggleable
                                 ?selected=${this.selectedReasonIds.includes(reason.id)}
                                 .disabled=${this.disabled}
-                                @lr-chip-select=${() => this.toggleReason(reason.id)}
+                                @lr-chip-select=${(event: Event) => {
+                                  event.stopPropagation();
+                                  this.toggleReason(reason.id);
+                                }}
                                 >${reason.label}</lr-chip
                               >
                             `,

@@ -34,7 +34,9 @@ and `lr-render-error` with `detail.error`.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
-filenames.
+filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
+capabilities and forwarding `anchor`/`highlights` to the mounted viewer, so a deep link opened
+through `<lr-document-viewer>` survives the registry hop.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the presentation.

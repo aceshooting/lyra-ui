@@ -87,6 +87,21 @@ describe('lr-browser-frame', () => {
     expect(toolbar.scrollWidth).to.be.at.most(toolbar.clientWidth);
   });
 
+  it('makes the url part go full-width once the host itself is narrow, via a container query', async () => {
+    // The @container rule can only ever fire if :host establishes a query container -- pin the
+    // host's own allocation (not the viewport) to <=20rem and assert the container query, not a
+    // viewport media query, is what's driving the layout.
+    const wrap = await fixture(html`
+      <div style="inline-size: 20rem">
+        <lr-browser-frame url="https://example.com/path"></lr-browser-frame>
+      </div>
+    `);
+    const el = wrap.querySelector('lr-browser-frame') as LyraBrowserFrame;
+    await el.updateComplete;
+    const urlEl = el.shadowRoot!.querySelector('[part="url"]') as HTMLElement;
+    expect(getComputedStyle(urlEl).flexBasis).to.equal('100%');
+  });
+
   it('take-over button emits lr-take-over with controller "user", and hand-back with "agent"', async () => {
     const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
     await el.updateComplete;

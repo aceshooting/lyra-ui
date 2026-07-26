@@ -288,7 +288,8 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
     if (name === 'value') this._defaultValue = this._value;
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');
       this.hasErrorSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'error');
@@ -419,6 +420,7 @@ export class LyraLocalePicker extends LyraElement<LyraLocalePickerEventMap> {
   };
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     const reposition =
       changed.has('open') || (this.open && (changed.has('locales') || changed.has('registryTick')));
     if (reposition) {

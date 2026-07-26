@@ -70,6 +70,26 @@ it('draws directed-edge arrows as aria-hidden, logical (inline-end unless revers
   expect(arrow.textContent).to.equal('→');
 });
 
+it('mirrors the directed-edge arrow glyph and swaps ArrowLeft/ArrowRight semantics under dir="rtl"', async () => {
+  const el = (await fixture(html`<lr-path-strip dir="rtl" .path=${path}></lr-path-strip>`)) as LyraPathStrip;
+  await el.updateComplete;
+
+  const arrow = el.shadowRoot!.querySelector('[part="arrow"]')!;
+  expect(arrow.textContent).to.equal('←');
+
+  const controls = () => [...el.shadowRoot!.querySelectorAll('[part="node"], [part="relation"]')] as HTMLElement[];
+  expect(controls().map((c) => c.tabIndex)).to.deep.equal([0, -1, -1]);
+
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true, cancelable: true }));
+  await el.updateComplete;
+  expect(controls().map((c) => c.tabIndex)).to.deep.equal([-1, 0, -1]);
+
+  base.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
+  await el.updateComplete;
+  expect(controls().map((c) => c.tabIndex)).to.deep.equal([0, -1, -1]);
+});
+
 it('shows an empty message when path is empty', async () => {
   const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   await el.updateComplete;

@@ -144,6 +144,32 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     button?.focus();
   }
 
+  /** The single `role="radio"` swatch that is currently in the roving tab sequence -- the
+   *  selected one, or the first swatch when nothing is selected yet. Mirrors the identical
+   *  `tabbableIndex` fallback in `render()`. */
+  private tabbableSwatch(): HTMLElement | null {
+    const selectedIndex = this.resolveSelectedIndex();
+    const tabbableIndex = selectedIndex !== -1 ? selectedIndex : 0;
+    return this.renderRoot?.querySelector(`[part="swatch"][data-index="${tabbableIndex}"]`) ?? null;
+  }
+
+  /** Activates the tabbable swatch, mirroring `<lr-switch>`'s identical `override click()`.
+   *  Without this, `HTMLElement.prototype.click()` on the host is a no-op: no click handler is
+   *  bound to the host itself, only to the individual `[part="swatch"]` buttons. */
+  override click(): void {
+    this.tabbableSwatch()?.click();
+  }
+
+  /** Moves focus to the tabbable swatch. */
+  override focus(options?: FocusOptions): void {
+    this.tabbableSwatch()?.focus(options);
+  }
+
+  /** Removes focus from the tabbable swatch. */
+  override blur(): void {
+    this.tabbableSwatch()?.blur();
+  }
+
   private onKeyDown = (e: KeyboardEvent): void => {
     const navigable = this.options;
     if (navigable.length === 0) return;

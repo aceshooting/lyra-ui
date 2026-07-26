@@ -6,7 +6,7 @@
 - **Class** `LyraRadio`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -34,6 +34,12 @@ gap is derived from it, so the advertised value and the real offset cannot drift
 element (or on `lr-radio` in your own stylesheet) moves the label. Exactly the same knob, defaults,
 purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` — see `lr-checkbox` above
 for the formula to align a sibling hint element.
+
+`--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
+(default `var(--lr-color-brand)`) recolor `[part='circle']`'s border and `[part='dot']`'s background
+while `checked` — a component-scoped indirection (the same pattern `lr-checkbox`'s own
+`--lr-checkbox-checked-bg`/`-border` pair uses) so a consumer can retint just this control's checked
+ring/dot without hijacking the shared `--lr-color-brand` token everything else reads.
 
 ```html
 <lr-radio name="format" value="json">JSON</lr-radio>

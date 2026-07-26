@@ -198,6 +198,13 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible with a populated label/hint/errorText (the parts never rendered by the bare-placeholder case above)', async () => {
+  const el = (await fixture(
+    html`<lr-textarea label="Notes" hint="Keep it short" error-text="Required" required></lr-textarea>`,
+  )) as LyraTextarea;
+  await expect(el).to.be.accessible();
+});
+
 describe('label/hint/error chrome', () => {
   it('renders no chrome when label/hint/errorText are unset (today\'s exact bare output)', async () => {
     const el = (await fixture(html`<lr-textarea></lr-textarea>`)) as LyraTextarea;

@@ -61,3 +61,7 @@ and it repainted every other danger surface with it.
 
 - `blur()` — Forwards host blur to the internal push-to-talk control.
 - `focus()` — Forwards host focus to the internal push-to-talk control.
+- `click()` — Programmatically starts or stops a take, mirroring a real pointer/keyboard
+  activation: in `mode="toggle"` it forwards to the trigger's native `click()`; otherwise it calls
+  `stop()` while `state` is `recording` or `start()` otherwise. A no-op while `disabled` or
+  unsupported.

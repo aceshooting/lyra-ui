@@ -73,7 +73,7 @@ peer warning duplication; `lr-flag` itself already logs one) when the optional
 ```html
 <lr-locale-picker label="Language"></lr-locale-picker>
 <script type="module">
-  import { registerLyraLocale } from '@aceshooting/lyra-ui';
+  import { registerLyraLocale } from '@aceshooting/lyra-ui/localization.js';
   registerLyraLocale('fr', { close: 'Fermer' });
   document
     .querySelector('lr-locale-picker')

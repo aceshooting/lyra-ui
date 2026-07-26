@@ -269,6 +269,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   };
 
   private onVirtualListRangeChanged = (e: CustomEvent<VirtualListRange>): void => {
+    e.stopPropagation();
     if (this.mode !== 'live') return;
     const atBottom = this.entries.length > 0 && e.detail.end >= this.entries.length - 1;
     if (atBottom !== this.follow) this.follow = atBottom;

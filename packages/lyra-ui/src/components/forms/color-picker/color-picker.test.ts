@@ -153,6 +153,28 @@ it('forwards host click/focus/blur and suppresses click when effectively disable
   expect(clicks).to.equal(1);
 });
 
+it('shows slotted hint/label/error content on the very first render, not only after a later slotchange', async () => {
+  // hasLabel/hasHint/hasError previously seeded only from the slots' own @slotchange handler,
+  // which fires after the shadow DOM's first commit -- a color picker mounted with declarative
+  // slotted content (rather than the `hint`/`label`/`error-text` string properties) rendered its
+  // chrome `hidden` on the very first paint and only revealed it on the following render. Mirrors
+  // lr-checkbox-group's identical connectedCallback-seeding fix.
+  const el = document.createElement('lr-color-picker') as LyraColorPicker;
+  el.innerHTML =
+    '<span slot="label">Accent</span><span slot="hint">Pick a color</span><span slot="error">Required</span>';
+  document.body.append(el);
+  await el.updateComplete;
+
+  const label = el.shadowRoot!.querySelector('[part~="form-control-label"]') as HTMLElement;
+  const hint = el.shadowRoot!.querySelector('[part="hint"]') as HTMLElement;
+  const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+  expect(label.hidden, 'label').to.be.false;
+  expect(hint.hidden, 'hint').to.be.false;
+  expect(error.hidden, 'error').to.be.false;
+
+  el.remove();
+});
+
 it('visually marks direct and fieldset-cascaded disabled state', async () => {
   const form = (await fixture(html`
     <form><fieldset disabled><lr-color-picker></lr-color-picker></fieldset></form>

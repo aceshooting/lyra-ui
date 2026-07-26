@@ -279,6 +279,22 @@ it('disables reason chips and ignores their events while the whole control is di
   expect(chip.selected).to.be.false;
 });
 
+it('stops the internal lr-chip-select event from leaking past the host in the reason-chip handler', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  const down = el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement;
+  down.click();
+  await el.updateComplete;
+
+  let leaked = false;
+  el.addEventListener('lr-chip-select', () => (leaked = true));
+  const chip = el.shadowRoot!.querySelector('[part="reasons"] lr-chip') as HTMLElement;
+  chip.dispatchEvent(new CustomEvent('lr-chip-select', { detail: { selected: true }, bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(leaked).to.be.false;
+});
+
 it('keeps the comment hover rule low-specificity for consumer part overrides', () => {
   expect(styles.cssText.replace(/\s+/g, ' ')).to.match(
     /:where\(\[part='comment'\]\):hover:where\(:not\(:disabled\)\)/,
@@ -390,6 +406,16 @@ it('is accessible in every configuration', async () => {
     html`<lr-message-feedback value="down" .reasons=${reasons} commentable></lr-message-feedback>`,
   )) as LyraMessageFeedback;
   await expect(withPanel).to.be.accessible();
+});
+
+it('is accessible with the detail panel genuinely open, not just present with unopened content', async () => {
+  const el = (await fixture(
+    html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+  )) as LyraMessageFeedback;
+  (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
+  await expect(el).to.be.accessible();
 });
 
 // `::part(up-button)[aria-pressed='true']` is invalid CSS -- Shadow Parts forbids an attribute

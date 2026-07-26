@@ -45,7 +45,8 @@ Country/language flag image. Flag artwork ships in a **separate, optional peer p
 
 **Slots:** none.
 
-**CSS parts:** `image`
+**CSS parts:** `image` (the underlying `<img>`, present only once a URL has resolved), `error`
+(the localized `role="alert"` rendered instead when the peer resolver is unavailable or rejects)
 
 **Themeable custom properties:** `--lr-flag-radius` (default `calc(var(--lr-radius) * 0.33)` —
 non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
@@ -54,7 +55,7 @@ non-`round` corner radius), `--lr-flag-aspect-ratio` (default `4 / 3`), and
 **Optional peer deps:** `@aceshooting/lyra-flags` — required for the component to actually render an
 image when `country` or `language` is used. Import `components/flag/flag-peer.js` once to opt into
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
-installed, renders an empty template (see gotchas).
+installed, the component fails closed with a localized `[part="error"]` alert (see gotchas).
 
 Also exported from the package root:
 `languageToCountry(language: string): string | undefined` and the `LANGUAGE_TO_COUNTRY` lookup
@@ -94,7 +95,7 @@ pronounces the endonym in its own language, and use `variant="compact"` at icon 
 ```
 
 ```js
-import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui';
+import { localeNativeName, languageToCountry } from '@aceshooting/lyra-ui/components/media/flag/language-map.js';
 
 const rows = ['en', 'fr', 'de', 'pt-BR', 'ja', 'ar'].map((tag) => ({
   tag,
@@ -123,9 +124,12 @@ import '@aceshooting/lyra-ui/components/media/flag/flag-peer.js';
   registers the component without importing the optional flag asset graph. Requires the optional
   peer `@aceshooting/lyra-flags` to actually render an image; without it the component still shows a
   `<lr-skeleton variant="rect">` placeholder (with `aria-busy="true"` on
-  the host) while resolving, then settles into an **empty template** plus a one-time `console.warn`
+  the host) while resolving, then **fails closed** into a localized `<span part="error" role="alert">`
+  (the `flagLoadError` message key, `"Flag unavailable"` by default) plus a one-time `console.warn`
   once the resolver rejects (lazy `import()`, cached module-wide so the warning fires only once per
-  page even with many `<lr-flag>` instances).
+  page even with many `<lr-flag>` instances). An *empty* template is a different, non-error outcome:
+  the peer resolved fine but returned no URL for that code (e.g. `country="zz"`) — no `[part="error"]`,
+  no `<img>`, no warning.
 - Rendering is async even when the peer *is* installed: `src` resolves after an `import()` +
   resolver call, so there's a brief loading-skeleton window on first paint/attribute change — don't
   assume the `<img>` exists synchronously right after setting `country`/`language`.

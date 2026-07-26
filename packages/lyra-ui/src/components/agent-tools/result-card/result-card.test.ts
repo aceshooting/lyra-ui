@@ -175,6 +175,28 @@ it('lets a consumer retune the compact values through --lr-result-card-compact-*
   expect(body.paddingTop).to.equal('5px');
 });
 
+it('tightens the header/body gap under compact too, not just padding', async () => {
+  const normal = (await fixture(
+    html`<lr-result-card title="x"><button slot="actions">Copy</button>body</lr-result-card>`,
+  )) as LyraResultCard;
+  const normalHeaderGap = getComputedStyle(normal.shadowRoot!.querySelector('[part="header"]') as HTMLElement).gap;
+  const normalBodyGap = getComputedStyle(normal.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap;
+
+  const el = (await fixture(
+    html`<lr-result-card compact title="x"><button slot="actions">Copy</button>body</lr-result-card>`,
+  )) as LyraResultCard;
+  const compactHeaderGap = getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).gap;
+  const compactBodyGap = getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap;
+  expect(compactHeaderGap).to.not.equal(normalHeaderGap);
+  expect(compactBodyGap).to.not.equal(normalBodyGap);
+
+  el.style.setProperty('--lr-result-card-compact-header-gap', '7px');
+  el.style.setProperty('--lr-result-card-compact-body-gap', '9px');
+  await el.updateComplete;
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="header"]') as HTMLElement).gap).to.equal('7px');
+  expect(getComputedStyle(el.shadowRoot!.querySelector('[part="body"]') as HTMLElement).gap).to.equal('9px');
+});
+
 it('drops the border, background, and radius under appearance="plain", without doubling the actions/body padding', async () => {
   const el = (await fixture(
     html`<lr-result-card appearance="plain" title="x">body</lr-result-card>`,

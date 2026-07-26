@@ -28,6 +28,20 @@ const GIT_STATUS_LETTER: Partial<Record<GitStatus, string>> = {
   ignored: '!',
 };
 
+/** The letters above are terse visual shorthand with no meaning to a screen reader, so each one
+ *  also carries a localized expansion as its accessible name. Reuses `<lr-file-tree>`'s shared
+ *  `gitStatus*` keys (the same `GitStatus` vocabulary) rather than minting commit-card-specific
+ *  ones, so one `registerLyraLocale()` registration covers both components. */
+const GIT_STATUS_KEY: Record<GitStatus, string> = {
+  added: 'gitStatusAdded',
+  modified: 'gitStatusModified',
+  deleted: 'gitStatusDeleted',
+  renamed: 'gitStatusRenamed',
+  untracked: 'gitStatusUntracked',
+  conflicted: 'gitStatusConflicted',
+  ignored: 'gitStatusIgnored',
+};
+
 export interface LyraCommitCardEventMap {
   'lr-file-select': CustomEvent<{ path: string }>;
   'lr-toggle': CustomEvent<{ collapsed: boolean }>;
@@ -59,6 +73,9 @@ export interface LyraCommitCardEventMap {
  * @csspart files-toggle - The file-list fold toggle.
  * @csspart file - A file row; carries `data-status`.
  * @csspart file-path - A file row's path text.
+ * @csspart file-status - The one-letter git-status badge inside `[part="file-path"]`, present only
+ *   when that file has a `status`. Carries the localized expansion (`Modified`, `Added`, ...) as its
+ *   accessible name, so the bare letter never reaches assistive tech on its own.
  * @csspart file-additions - A file row's additions count.
  * @csspart file-deletions - A file row's deletions count.
  * @csspart copy-button - The hash copy button.
@@ -212,7 +229,11 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                         @click=${() => this.emit('lr-file-select', { path: f.path })}
                       >
                         <span part="file-path" dir="ltr"
-                          >${f.status ? `${GIT_STATUS_LETTER[f.status]} ` : ''}${f.path}</span
+                          >${f.status
+                            ? html`<span part="file-status" aria-label=${this.localize(GIT_STATUS_KEY[f.status])}
+                                  >${GIT_STATUS_LETTER[f.status]}</span
+                                > `
+                            : ''}${f.path}</span
                         >
                         <span>
                           <span part="file-additions">+${f.additions}</span>

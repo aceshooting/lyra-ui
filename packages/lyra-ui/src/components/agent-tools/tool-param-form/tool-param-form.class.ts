@@ -165,6 +165,9 @@ export interface LyraToolParamFormEventMap {
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
+ * @csspart control - The native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'`
+ * field. Shared part on both the text and number inputs; not present on the `'boolean'`
+ * (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches.
  * @csspart description - A field's helper text, from `schema.description`.
  * @csspart error - A field-level or form-level validation message.
  * @csspart unsupported - The fallback note rendered in place of a control for
@@ -666,6 +669,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     if (prop.type === 'string') {
       return html`<input
         class="control"
+        part="control"
         type="text"
         id=${fieldId}
         aria-describedby=${describedBy || nothing}
@@ -688,6 +692,7 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       const numValue = typeof effective === 'number' && !Number.isNaN(effective) ? String(effective) : '';
       return html`<input
         class="control"
+        part="control"
         type="number"
         id=${fieldId}
         step=${prop.type === 'integer' ? '1' : 'any'}

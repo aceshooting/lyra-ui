@@ -47,6 +47,12 @@ consumer-facing `disabled` property/attribute itself.
 PageDown key press, `detail: { start, end }`), `lr-change` (fired on pointer release /
 key-up-commit, or when a preset button is clicked, `detail: { start, end }`)
 
+**Methods:** `focus(options?)`, `blur()`, and `click()` forward to `[part="handle-start"]`. A
+two-handle control has no single canonical target, so the start handle is the one they address —
+call `.focus()` on `::part(handle-end)` yourself if you need the other. Without these overrides the
+host's own `focus()`/`blur()`/`click()` are no-ops, because the real control lives in the shadow
+root.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `track`, `range`, `handle-start`, `handle-end`, `presets`, `preset-button`

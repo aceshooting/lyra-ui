@@ -320,6 +320,26 @@ describe('follow contract (virtualized)', () => {
     expect(el.shadowRoot!.querySelector('lr-virtual-list')!.getAttribute('aria-label')).to.equal('Steps');
   });
 
+  it('does not leak the internal lr-virtual-list lr-visible-range-changed event past the host under its own name', async () => {
+    const el = (await fixture(
+      html`<lr-activity-feed expanded virtualize-threshold="1" .entries=${makeEntries(5)}></lr-activity-feed>`,
+    )) as LyraActivityFeed;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement;
+    let count = 0;
+    el.addEventListener('lr-visible-range-changed', () => count++);
+
+    list.dispatchEvent(
+      new CustomEvent('lr-visible-range-changed', {
+        detail: { start: 0, end: 1 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    expect(count).to.equal(0);
+  });
+
   it('stays below virtualizeThreshold using a plain keyed list', async () => {
     const el = (await fixture(
       html`<lr-activity-feed expanded virtualize-threshold="5" .entries=${makeEntries(4)}></lr-activity-feed>`,

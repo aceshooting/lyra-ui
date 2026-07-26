@@ -100,6 +100,31 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('is accessible with a populated month view (selection + multiple events per day)', async () => {
+  const el = (await fixture(
+    html`<lr-calendar aria-label="Schedule" view-date="2026-07-01" value="2026-07-15"></lr-calendar>`,
+  )) as LyraCalendar;
+  el.events = [
+    { date: '2026-07-15', title: 'Standup', color: '#0969da' },
+    { date: '2026-07-15', title: 'Review' },
+    { date: '2026-07-20', title: 'Deadline' },
+  ];
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
+it('is accessible with a populated agenda view', async () => {
+  const el = (await fixture(
+    html`<lr-calendar aria-label="Schedule" view="agenda" view-date="2026-07-01"></lr-calendar>`,
+  )) as LyraCalendar;
+  el.events = [
+    { date: '2026-07-15', title: 'Standup', color: '#0969da' },
+    { date: '2026-07-20', title: 'Deadline' },
+  ];
+  await el.updateComplete;
+  await expect(el).to.be.accessible();
+});
+
 it('exposes month-grid day cells as gridcells with per-day selection state and a full-date accessible name', async () => {
   const el = (await fixture(
     html`<lr-calendar view-date="2026-07-01" value="2026-07-15" locale="en-US"></lr-calendar>`,

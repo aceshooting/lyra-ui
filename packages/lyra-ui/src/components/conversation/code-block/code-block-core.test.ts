@@ -4,6 +4,7 @@ import './code-block-core.js';
 import type { LyraCodeBlockCore } from './code-block-core.js';
 import { loadShikiHighlighterCore } from './code-loader.js';
 import { styles } from './code-block.styles.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 
 async function el2Ready(el: LyraCodeBlockCore): Promise<void> {
   await el.updateComplete;
@@ -604,5 +605,44 @@ describe('shiki dark-theme signal', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='body'\]\[data-dark-theme='true'\] \[part='pre'\][^{,]*\{[^}]*--shiki-dark/);
     expect(css).to.not.match(/@media \(prefers-color-scheme: dark\)[^{]*\{[^}]*--shiki-dark/);
+  });
+});
+
+describe('lean/full parity with <lr-code-block>', () => {
+  // <lr-code-block>'s own willUpdate()/updated() both chain to super with the changed map, with a
+  // comment stating why (a future mixin layered under the class must still run). Its lean sibling
+  // silently dropped both chain-ups, which is exactly the kind of drift `code-block-shared.ts`
+  // exists to end -- these assertions pin the chain-up on the lean variant too.
+  it('chains willUpdate()/updated() to the base class with the changed map', async () => {
+    const proto = LyraElement.prototype as unknown as Record<string, unknown>;
+    const hadWillUpdate = Object.prototype.hasOwnProperty.call(proto, 'willUpdate');
+    const hadUpdated = Object.prototype.hasOwnProperty.call(proto, 'updated');
+    const originalWillUpdate = proto['willUpdate'];
+    const originalUpdated = proto['updated'];
+    const willUpdateArgs: unknown[] = [];
+    const updatedArgs: unknown[] = [];
+    proto['willUpdate'] = function (changed: unknown): void {
+      willUpdateArgs.push(changed);
+    };
+    proto['updated'] = function (changed: unknown): void {
+      updatedArgs.push(changed);
+    };
+    try {
+      const el = (await fixture(
+        html`<lr-code-block-core .code=${'const answer = 42;'}></lr-code-block-core>`,
+      )) as LyraCodeBlockCore;
+      el.code = 'const answer = 43;';
+      await el.updateComplete;
+      // Compare counts/shapes only -- never a DOM node as chai's actual/expected.
+      expect(willUpdateArgs.length, 'super.willUpdate() was never reached').to.be.greaterThan(0);
+      expect(updatedArgs.length, 'super.updated() was never reached').to.be.greaterThan(0);
+      expect(willUpdateArgs.every((arg) => arg instanceof Map)).to.be.true;
+      expect(updatedArgs.every((arg) => arg instanceof Map)).to.be.true;
+    } finally {
+      if (hadWillUpdate) proto['willUpdate'] = originalWillUpdate;
+      else delete proto['willUpdate'];
+      if (hadUpdated) proto['updated'] = originalUpdated;
+      else delete proto['updated'];
+    }
   });
 });

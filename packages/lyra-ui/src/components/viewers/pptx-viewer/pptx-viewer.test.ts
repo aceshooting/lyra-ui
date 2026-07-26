@@ -1,9 +1,11 @@
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
-import { LitElement, type PropertyValues } from 'lit';
+import { LitElement, render, type PropertyValues } from 'lit';
 import './pptx-viewer.js';
 import type { LyraPptxViewer } from './pptx-viewer.js';
 import type { PptxRendererModule } from './pptx-loader.js';
 import { styles } from './pptx-viewer.styles.js';
+import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function response(ok = true): Response {
   return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(new ArrayBuffer(1)) } as unknown as Response;
@@ -420,5 +422,34 @@ describe('styling', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='previous-button'\]:hover/);
     expect(css).to.match(/\[part='next-button'\]:hover/);
+  });
+});
+
+describe('PPTX registry', () => {
+  it('forwards document anchors/highlights and advertises its text contracts', () => {
+    const definition = getDefaultDocumentRendererRegistry().get(
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    )!;
+    const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];
+    const anchor = { kind: 'fragment' as const, id: 'section-one' };
+    const host = document.createElement('div');
+    render(
+      definition.render!({
+        name: 'deck.pptx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        src: 'https://example.test/deck.pptx',
+        anchor,
+        highlights,
+      }) as never,
+      host,
+    );
+    const rendered = host.querySelector('lr-pptx-viewer') as LyraPptxViewer;
+    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.highlights).to.equal(highlights);
+    expect(definition.capabilities).to.deep.equal({
+      anchors: ['text-quote', 'fragment'],
+      search: true,
+      textSelect: true,
+    });
   });
 });

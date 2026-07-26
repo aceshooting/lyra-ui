@@ -55,7 +55,7 @@ function stubFetch(): () => void {
 function fakeBookWithFeatures(spineTexts: Record<string, string>) {
   const relocatedHandlers: ((loc: unknown) => void)[] = [];
   const selectedHandlers: ((cfiRange: string, contents: unknown) => void)[] = [];
-  const highlightCalls: { cfi: string; className: string }[] = [];
+  const highlightCalls: { cfi: string; className: string; styles: Record<string, string> }[] = [];
   const removeCalls: string[] = [];
   const displayedCfis: string[] = [];
   const spineItems = Object.entries(spineTexts).map(([href, text]) => ({
@@ -79,8 +79,8 @@ function fakeBookWithFeatures(spineTexts: Record<string, string>) {
       if (event === 'selected') selectedHandlers.push(handler as (cfiRange: string, contents: unknown) => void);
     },
     annotations: {
-      highlight: (cfi: string, _data: unknown, _cb: unknown, className: string) => {
-        highlightCalls.push({ cfi, className });
+      highlight: (cfi: string, _data: unknown, _cb: unknown, className: string, styles: Record<string, string> = {}) => {
+        highlightCalls.push({ cfi, className, styles });
       },
       remove: (cfi: string) => { removeCalls.push(cfi); },
     },
@@ -1051,6 +1051,43 @@ describe('scrollToAnchor (ebook)', () => {
       await aTimeout(20);
       expect(fake.highlightCalls.some((call) => call.cfi === 'epubcfi(/6/6!)')).to.be.true;
       otherContainer.remove();
+    } finally {
+      restore();
+    }
+  });
+
+  it('passes a resolved fill color as the 5th styles arg so tone actually differentiates highlight color', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.highlights = [
+        { id: 'h1', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/6!)' }, tone: 'success' },
+        { id: 'h2', anchor: { kind: 'cfi', cfi: 'epubcfi(/6/8!)' }, tone: 'danger' },
+      ];
+      await el.updateComplete;
+      const successCall = fake.highlightCalls.find((call) => call.cfi === 'epubcfi(/6/6!)');
+      const dangerCall = fake.highlightCalls.find((call) => call.cfi === 'epubcfi(/6/8!)');
+      expect(successCall?.styles?.fill).to.be.a('string').and.not.equal('');
+      expect(dangerCall?.styles?.fill).to.be.a('string').and.not.equal('');
+      expect(successCall?.styles?.fill).to.not.equal(dangerCall?.styles?.fill);
+    } finally {
+      restore();
+    }
+  });
+
+  it('paints the active search match with a resolved fill color via the 5th styles arg', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello world' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      await el.search('world');
+      const searchCall = fake.highlightCalls.find((call) => call.className === 'lr-ebook-search');
+      expect(searchCall?.styles?.fill).to.be.a('string').and.not.equal('');
     } finally {
       restore();
     }

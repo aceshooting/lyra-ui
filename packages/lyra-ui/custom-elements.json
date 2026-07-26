@@ -5019,6 +5019,10 @@
               "name": "file-path"
             },
             {
+              "description": "The one-letter git-status badge inside `[part=\"file-path\"]`, present only when that file has a `status`. Carries the localized expansion (`Modified`, `Added`, ...) as its accessible name, so the bare letter never reaches assistive tech on its own.",
+              "name": "file-status"
+            },
+            {
               "description": "The file-list fold toggle.",
               "name": "files-toggle"
             },
@@ -6392,6 +6396,16 @@
               "description": "Background of `[part='base']` while `compact`.",
               "name": "--lr-confirm-bar-compact-background",
               "default": "transparent"
+            },
+            {
+              "description": "`[part='status']` text/icon color once `decision` is `'approved'`.",
+              "name": "--lr-confirm-bar-approved-color",
+              "default": "var(--lr-color-success)"
+            },
+            {
+              "description": "`[part='status']` text/icon color once `decision` is `'denied'`.",
+              "name": "--lr-confirm-bar-denied-color",
+              "default": "var(--lr-color-danger)"
             }
           ],
           "cssParts": [
@@ -11437,6 +11451,16 @@
             },
             {
               "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "pendingLoadController",
               "type": {
                 "text": "AbortController | undefined"
@@ -11971,9 +11995,19 @@
               "default": "var(--lr-space-xs)"
             },
             {
+              "description": "Gap between `[part=\"header\"]`'s title and actions while `compact`.",
+              "name": "--lr-result-card-compact-header-gap",
+              "default": "var(--lr-space-xs)"
+            },
+            {
               "description": "`[part=\"body\"]` padding while `compact`.",
               "name": "--lr-result-card-compact-body-padding",
               "default": "var(--lr-space-xs)"
+            },
+            {
+              "description": "Gap between `[part=\"body\"]`'s children while `compact`.",
+              "name": "--lr-result-card-compact-body-gap",
+              "default": "var(--lr-space-2xs)"
             }
           ],
           "cssParts": [
@@ -12940,6 +12974,16 @@
               "description": "Warning issue background.",
               "name": "--lr-schema-viewer-warning-bg",
               "default": "var(--lr-color-warning-quiet)"
+            },
+            {
+              "description": "Info issue border.",
+              "name": "--lr-schema-viewer-info-border",
+              "default": "var(--lr-color-brand)"
+            },
+            {
+              "description": "Info issue background.",
+              "name": "--lr-schema-viewer-info-bg",
+              "default": "var(--lr-color-brand-quiet)"
             }
           ],
           "cssParts": [
@@ -15167,6 +15211,16 @@
             },
             {
               "kind": "field",
+              "name": "focusedId",
+              "type": {
+                "text": "string | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "description": "Roving-tabindex focus target. `null` defaults the first rendered row to `tabindex=\"0\"`."
+            },
+            {
+              "kind": "field",
               "name": "inheritedContextObserver",
               "type": {
                 "text": "MutationObserver | undefined"
@@ -15213,6 +15267,11 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "onKeyDown",
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -15358,6 +15417,24 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focusRow",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "row",
+                  "type": {
+                    "text": "SubagentRow | undefined"
+                  }
+                }
+              ]
             },
             {
               "kind": "method",
@@ -15601,6 +15678,11 @@
               "description": "`[part=\"header\"]` padding while `compact`.",
               "name": "--lr-task-list-compact-header-padding",
               "default": "var(--lr-space-2xs) var(--lr-space-s)"
+            },
+            {
+              "description": "Gap between `[part=\"header\"]`'s toggle/label/summary while `compact`.",
+              "name": "--lr-task-list-compact-header-gap",
+              "default": "var(--lr-space-2xs)"
             },
             {
               "description": "Gap between `[part=\"body\"]`'s item rows while `compact`.",
@@ -17791,12 +17873,6 @@
               },
               "parameters": [
                 {
-                  "name": "testKey",
-                  "type": {
-                    "text": "string"
-                  }
-                },
-                {
                   "name": "test",
                   "type": {
                     "text": "TestCaseResult"
@@ -18016,12 +18092,6 @@
                 }
               },
               "parameters": [
-                {
-                  "name": "testKey",
-                  "type": {
-                    "text": "string"
-                  }
-                },
                 {
                   "name": "test",
                   "type": {
@@ -20324,6 +20394,10 @@
             {
               "description": "The outer wrapper around all fields.",
               "name": "base"
+            },
+            {
+              "description": "The native `<input>` for a `'string'` (non-enum) or `'number'`/`'integer'` field. Shared part on both the text and number inputs; not present on the `'boolean'` (`<lr-checkbox>`), enum (`<lr-select>`), or unsupported-type fallback branches.",
+              "name": "control"
             },
             {
               "description": "A field's helper text, from `schema.description`.",
@@ -25740,6 +25814,30 @@
             },
             {
               "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "legend",
               "type": {
                 "text": "boolean"
@@ -27264,6 +27362,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "attributes": [
@@ -28652,6 +28759,30 @@
                 "text": "string[]"
               },
               "default": "[]",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -30183,6 +30314,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "attributes": [
@@ -30595,7 +30735,7 @@
               "name": "importZoom",
               "default": "() =>\n    import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>",
               "type": {
-                "text": "() => Promise<{ default: ZoomPlugin }>"
+                "text": "() => Promise<{ default: ZoomPlugin } | ZoomPlugin>"
               }
             },
             {
@@ -30647,7 +30787,7 @@
               "name": "importZoom",
               "default": "() =>\n    import('chartjs-plugin-zoom') as Promise<{ default: ZoomPlugin }>",
               "type": {
-                "text": "() => Promise<{ default: ZoomPlugin }>"
+                "text": "() => Promise<{ default: ZoomPlugin } | ZoomPlugin>"
               }
             }
           ],
@@ -30754,6 +30894,11 @@
               "description": "Tooltip text color. Resolved via `getComputedStyle` on every draw.",
               "name": "--lr-chart-tooltip-text",
               "default": "var(--lr-color-text)"
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)"
             }
           ],
           "cssParts": [
@@ -31051,6 +31196,22 @@
                 "text": "string[]"
               },
               "default": "[]"
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private"
             },
             {
               "kind": "field",
@@ -32818,6 +32979,30 @@
             },
             {
               "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "legend",
               "type": {
                 "text": "boolean"
@@ -34342,6 +34527,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "attributes": [
@@ -35088,6 +35282,30 @@
                 "text": "string[]"
               },
               "default": "[]",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -36871,6 +37089,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "events": [
@@ -37307,6 +37534,30 @@
                 "text": "string[]"
               },
               "default": "[]",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -38834,6 +39085,15 @@
               "description": "Tooltip text color. Resolved via `getComputedStyle` on every draw.",
               "name": "--lr-chart-tooltip-text",
               "default": "var(--lr-color-text)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -40972,6 +41232,30 @@
             },
             {
               "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "legend",
               "type": {
                 "text": "boolean"
@@ -42496,6 +42780,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "attributes": [
@@ -43134,6 +43427,30 @@
                 "text": "string[]"
               },
               "default": "[]",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -44665,6 +44982,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "attributes": [
@@ -45303,6 +45629,30 @@
                 "text": "string[]"
               },
               "default": "[]",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -46834,6 +47184,15 @@
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
               }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
             }
           ],
           "attributes": [
@@ -47472,6 +47831,30 @@
                 "text": "string[]"
               },
               "default": "[]",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnDirection",
+              "type": {
+                "text": "'ltr' | 'rtl' | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "lastDrawnLocale",
+              "type": {
+                "text": "string | undefined"
+              },
+              "privacy": "private",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -48999,6 +49382,15 @@
               "description": "Tooltip text color. Resolved via `getComputedStyle` on every draw.",
               "name": "--lr-chart-tooltip-text",
               "default": "var(--lr-color-text)",
+              "inheritedFrom": {
+                "name": "LyraChart",
+                "module": "src/components/charts/chart/chart.class.ts"
+              }
+            },
+            {
+              "description": "Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).",
+              "name": "--lr-chart-canvas-hover-outline-width",
+              "default": "var(--lr-border-width-thin)",
               "inheritedFrom": {
                 "name": "LyraChart",
                 "module": "src/components/charts/chart/chart.class.ts"
@@ -55838,8 +56230,7 @@
                 "type": {
                   "text": "Set<number>"
                 }
-              },
-              "description": "The line numbers covered by the `highlights` entry matching `activeHighlightId`, if any."
+              }
             },
             {
               "kind": "method",
@@ -55929,24 +56320,6 @@
             },
             {
               "kind": "method",
-              "name": "eventLine",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "number | null"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "e",
-                  "type": {
-                    "text": "Event"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
               "name": "lineCount",
               "privacy": "private",
               "return": {
@@ -55963,8 +56336,7 @@
                 "type": {
                   "text": "Set<number>"
                 }
-              },
-              "description": "The merged set of one-based line numbers to emphasize: `highlightLines` plus the `line-range`\nslice of `highlights`. Shared by both the shiki transformer options and the plain-text\nfallback path so their emphasis is always identical."
+              }
             },
             {
               "kind": "method",
@@ -56081,16 +56453,6 @@
             },
             {
               "kind": "method",
-              "name": "renderHeader",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "TemplateResult"
-                }
-              }
-            },
-            {
-              "kind": "method",
               "name": "renderPlainCode",
               "privacy": "private",
               "return": {
@@ -56160,6 +56522,17 @@
             },
             {
               "kind": "method",
+              "name": "showsSkeleton",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "Whether this render shows the loading skeleton instead of the code. Unlike `<lr-code-block>`,\nthe only highlighter this variant ever waits on is the fine-grained one seeded from\n`languages` -- so a `language` absent from that map has nothing pending and never shows the\nskeleton. Read by both `updated()` and `render()` so the `aria-busy` host attribute can never\ndisagree with what's on screen."
+            },
+            {
+              "kind": "method",
               "name": "syncHighlight",
               "privacy": "private",
               "return": {
@@ -56186,24 +56559,6 @@
                 },
                 {
                   "name": "lang",
-                  "type": {
-                    "text": "string"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
-              "name": "writeClipboard",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "text",
                   "type": {
                     "text": "string"
                   }
@@ -56436,6 +56791,84 @@
         },
         {
           "kind": "function",
+          "name": "applyCodeBlockAriaBusy",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "parameters": [
+            {
+              "name": "host",
+              "type": {
+                "text": "Element"
+              }
+            },
+            {
+              "name": "showingSkeleton",
+              "type": {
+                "text": "boolean"
+              }
+            }
+          ],
+          "description": "Mirrors the skeleton state onto the host as `aria-busy`, so assistive tech knows the code\nregion is still resolving."
+        },
+        {
+          "kind": "function",
+          "name": "clampCodeBlockFocusedLine",
+          "return": {
+            "type": {
+              "text": "number"
+            }
+          },
+          "parameters": [
+            {
+              "name": "focusedLine",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "name": "lineCount",
+              "type": {
+                "text": "number"
+              }
+            }
+          ],
+          "description": "Keeps the roving-tabindex gutter's focused line inside `[1, lineCount]` after a `code` change\nshrinks the document out from under it."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockActiveHighlightLineSet",
+          "return": {
+            "type": {
+              "text": "Set<number>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "highlights",
+              "type": {
+                "text": "readonly LyraHighlight[]"
+              }
+            },
+            {
+              "name": "activeHighlightId",
+              "type": {
+                "text": "string | null"
+              }
+            },
+            {
+              "name": "maxLine",
+              "type": {
+                "text": "number"
+              }
+            }
+          ],
+          "description": "The line numbers covered by the `highlights` entry matching `activeHighlightId`, if any."
+        },
+        {
+          "kind": "function",
           "name": "codeBlockBodyLabel",
           "return": {
             "type": {
@@ -56490,6 +56923,102 @@
         },
         {
           "kind": "function",
+          "name": "codeBlockEventLine",
+          "return": {
+            "type": {
+              "text": "number | null"
+            }
+          },
+          "parameters": [
+            {
+              "name": "e",
+              "type": {
+                "text": "Event"
+              }
+            }
+          ],
+          "description": "The one-based gutter line an event originated in, or `null` when it didn't come from a line\nbutton at all."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockLineCount",
+          "return": {
+            "type": {
+              "text": "number"
+            }
+          },
+          "parameters": [
+            {
+              "name": "code",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "One-based line count of `code`, the upper bound every line-addressing helper below clamps to.\nA trailing newline still yields the (empty) line after it, matching the rendered line count."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockLineHighlightSet",
+          "return": {
+            "type": {
+              "text": "Set<number>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "highlightLines",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "highlights",
+              "type": {
+                "text": "readonly LyraHighlight[]"
+              }
+            },
+            {
+              "name": "maxLine",
+              "type": {
+                "text": "number"
+              }
+            }
+          ],
+          "description": "The merged set of one-based line numbers to emphasize: the `highlight-lines` spec plus the\n`line-range` slice of `highlights`. Shared by both the shiki transformer options and the\nplain-text fallback path so their emphasis is always identical."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockLineKeyAction",
+          "return": {
+            "type": {
+              "text": "CodeBlockLineKeyAction"
+            }
+          },
+          "parameters": [
+            {
+              "name": "key",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "line",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "name": "total",
+              "type": {
+                "text": "number"
+              }
+            }
+          ],
+          "description": "The roving-tabindex keyboard contract for the (`line-numbers`-gated) gutter."
+        },
+        {
+          "kind": "function",
           "name": "codeBlockLineTransformer",
           "return": {
             "type": {
@@ -56505,6 +57034,96 @@
             }
           ],
           "description": "A shiki transformer shared by `<lr-code-block>` and `<lr-code-block-core>` — rewrites\nshiki's generated `<pre>`/`<code>`/per-line hast nodes so the highlighted output carries this\nlibrary's own `part=\"pre\"`/`part=\"code\"` hooks plus, per line, `data-line`, and (only for a\nhighlighted/active line) `data-highlighted`/`data-active` and `part=\"line-highlight\"`. Also\nstrips shiki's own default `tabindex=\"0\"` from `<pre>` — each component's own `[part=\"body\"]`\nwrapper is the single scrollable/focusable region."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockNeedsHighlightResync",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "changed",
+              "type": {
+                "text": "PropertyValues"
+              }
+            }
+          ],
+          "description": "Every property whose change invalidates the cached `highlightedHtml`. `code`/`language`/\n`languages`/`languagesOnly` change *what* is tokenized; `highlightLines`/`highlights`/\n`activeHighlightId`/`lineNumbers`/`interactiveLines` all feed `codeBlockLineTransformer()`'s\noptions, so a change to any of them needs a re-tokenize to stay in sync even when the code\nitself is untouched. `languagesOnly` is listed for `<lr-code-block>`; `<lr-code-block-core>` has\nno such property, so it simply never appears in that component's changed map."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockPreSuppliedGrammar",
+          "return": {
+            "type": {
+              "text": "ShikiLanguageInput | undefined"
+            }
+          },
+          "parameters": [
+            {
+              "name": "languages",
+              "type": {
+                "text": "Record<string, ShikiLanguageInput> | undefined"
+              }
+            },
+            {
+              "name": "language",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "The `languages` entry for the *current* `language`, if any -- looked up under both the\nshiki-normalized id and the raw property value, so `willUpdate()`/`updated()`/`render()`/\n`syncHighlight()` on either component all agree on whether the fine-grained path applies."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockSelectionAnchor",
+          "return": {
+            "type": {
+              "text": "CodeBlockSelection | null"
+            }
+          },
+          "parameters": [
+            {
+              "name": "shadowRoot",
+              "type": {
+                "text": "ShadowRoot | null"
+              }
+            }
+          ],
+          "description": "Anchors the current selection to the `line-range` it spans. `null` whenever there's nothing to\nreport: no selection, a collapsed/whitespace-only one, or endpoints outside any `[data-line]`."
+        },
+        {
+          "kind": "function",
+          "name": "codeBlockShowsSkeleton",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "shikiReady",
+              "type": {
+                "text": "boolean"
+              }
+            },
+            {
+              "name": "language",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "name": "loaderPending",
+              "type": {
+                "text": "boolean"
+              }
+            }
+          ],
+          "description": "Whether the `<lr-skeleton>` placeholder stands in for the code this render. Both components gate\nit on \"a highlighter this instance is actually waiting for hasn't settled yet, and there's a\n`language` worth highlighting\" -- they differ only in *which* loader that is, which is what\n`loaderPending` carries: `<lr-code-block>` passes `!languagesOnly && !preSuppliedGrammar` (it is\nwaiting on the shared full-table singleton), `<lr-code-block-core>` passes `!!preSuppliedGrammar`\n(it is waiting on the fine-grained `languages` highlighter, its only one). Called from both\n`updated()` and `render()` on each class so the `aria-busy` host attribute can never disagree\nwith what is actually on screen."
         },
         {
           "kind": "function",
@@ -56553,6 +57172,24 @@
         },
         {
           "kind": "function",
+          "name": "renderCodeBlockHeader",
+          "return": {
+            "type": {
+              "text": "TemplateResult"
+            }
+          },
+          "parameters": [
+            {
+              "name": "options",
+              "type": {
+                "text": "CodeBlockHeaderOptions"
+              }
+            }
+          ],
+          "description": "The header row above the code (filename/language/copy/toggle) shared by `<lr-code-block>` and\n`<lr-code-block-core>`. `aria-expanded` renders both `\"true\"` and `\"false\"` rather than being\nconditionally omitted -- the collapse toggle's state is meaningless to assistive tech otherwise."
+        },
+        {
+          "kind": "function",
           "name": "renderCodeBlockPlainCode",
           "return": {
             "type": {
@@ -56568,14 +57205,139 @@
             }
           ],
           "description": "The plain-text (non-shiki) fallback `<code>` rendering shared by `<lr-code-block>` and\n`<lr-code-block-core>` -- previously a byte-for-byte-duplicated private method on both classes,\nmoved here for the same drift-prevention reason as `codeBlockLineTransformer` above. Always\nsplits into per-line spans/buttons (not just while `lineNumbers` is set) -- the per-line wrapper\nis what `highlight-lines`/`highlights`/`interactive-lines` attach to. `.split()` consumes each\nnewline character, so a literal `'\\n'` text node is re-inserted between lines to keep the\nnon-line-numbered case's visual output (relying on `[part='pre']`'s `white-space: pre`) identical\nto a single-text-node rendering -- the line-numbered case's `.line` elements are already\n`display: block` (`code-block.styles.ts`) so that text node is inert there. `interactiveLines`\nonly takes effect alongside `lineNumbers` -- the shiki-highlighted path doesn't render gutter\nbuttons (see each component's own class doc), only `data-line`/`data-highlighted`/`data-active`/\n`part=\"line-highlight\"` from `codeBlockLineTransformer` above."
+        },
+        {
+          "kind": "function",
+          "name": "renderCodeBlockShell",
+          "return": {
+            "type": {
+              "text": "TemplateResult"
+            }
+          },
+          "parameters": [
+            {
+              "name": "options",
+              "type": {
+                "text": "CodeBlockShellOptions"
+              }
+            }
+          ],
+          "description": "The whole rendered tree for both components: the header (only when there's anything to put in\nit) plus the scrollable code body.\n\n`[part=\"body\"]` is `tabindex=\"0\"` because it's the scrollable region for arbitrarily-wide/tall\ncode (`max-height`, plus horizontal overflow from long lines) -- a scrollable region with no\nother focusable content of its own is otherwise unreachable by keyboard, the same reasoning\n`<lr-virtual-list>`'s own `[part=\"base\"]` documents for its identical tabindex. `role=\"group\"`\n(rather than e.g. `region`, a page landmark role) plus `aria-label` gives it an accessible name\nwithout claiming landmark/navigation significance for what is, structurally, just one small piece\nof a larger document."
+        },
+        {
+          "kind": "function",
+          "name": "scrollCodeBlockToAnchor",
+          "return": {
+            "type": {
+              "text": "Promise<boolean>"
+            }
+          },
+          "parameters": [
+            {
+              "name": "host",
+              "type": {
+                "text": "CodeBlockAnchorHost"
+              }
+            },
+            {
+              "name": "target",
+              "type": {
+                "text": "LyraAnchor | string"
+              }
+            }
+          ],
+          "description": "Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling its\nstart line into view within `[part=\"body\"]`. Resolves `false` when the anchor isn't a\n`line-range`, the id isn't found, or the start line is out of bounds."
+        },
+        {
+          "kind": "function",
+          "name": "tokenizeCodeBlock",
+          "return": {
+            "type": {
+              "text": "string | null"
+            }
+          },
+          "parameters": [
+            {
+              "name": "hl",
+              "type": {
+                "text": "ShikiHighlighterCore"
+              }
+            },
+            {
+              "name": "options",
+              "type": {
+                "text": "CodeBlockTokenizeOptions"
+              }
+            }
+          ],
+          "description": "The `codeToHtml()` call both components make once their own loader has produced a highlighter.\n`hl` is deliberately typed as the fine-grained `ShikiHighlighterCore` -- it and\n`ShikiHighlighter` are the same structural type (see `code-loader.ts`), and naming the\nfine-grained one keeps this module free of any reference to the full-table half.\n\nshiki's generated per-token colors are theme-specific inline styles/CSS variables (from\n`SHIKI_THEMES`'s github-light/github-dark theme data), not this library's `--lr-*` design tokens\n-- the one deliberate exception to every other color in these components being a `--lr-*` token.\nSee the dark-mode override in `code-block.styles.ts` for how the dark half of this activates.\nReturns `null` on malformed input for the grammar or any other shiki-internal failure, so the\ncaller falls back to plain text rather than a blank code block."
+        },
+        {
+          "kind": "function",
+          "name": "writeCodeBlockClipboard",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "parameters": [
+            {
+              "name": "text",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "Best-effort clipboard write. `navigator.clipboard` is absent in insecure contexts / older\nbrowsers, and some engines throw synchronously rather than rejecting -- either way the caller\nstill emits `lr-copy` regardless of whether the OS clipboard was actually reached, the same\nconvention `<lr-json-viewer>`'s own copy button follows."
+        },
+        {
+          "kind": "variable",
+          "name": "CODE_BLOCK_COPY_CONFIRM_MS",
+          "type": {
+            "text": "number"
+          },
+          "default": "1500",
+          "description": "How long the copy button's confirmation state lasts before reverting."
         }
       ],
       "exports": [
         {
           "kind": "js",
+          "name": "CODE_BLOCK_COPY_CONFIRM_MS",
+          "declaration": {
+            "name": "CODE_BLOCK_COPY_CONFIRM_MS",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "addBoundedLineRange",
           "declaration": {
             "name": "addBoundedLineRange",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "applyCodeBlockAriaBusy",
+          "declaration": {
+            "name": "applyCodeBlockAriaBusy",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "clampCodeBlockFocusedLine",
+          "declaration": {
+            "name": "clampCodeBlockFocusedLine",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockActiveHighlightLineSet",
+          "declaration": {
+            "name": "codeBlockActiveHighlightLineSet",
             "module": "src/components/conversation/code-block/code-block-shared.ts"
           }
         },
@@ -56597,9 +57359,73 @@
         },
         {
           "kind": "js",
+          "name": "codeBlockEventLine",
+          "declaration": {
+            "name": "codeBlockEventLine",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockLineCount",
+          "declaration": {
+            "name": "codeBlockLineCount",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockLineHighlightSet",
+          "declaration": {
+            "name": "codeBlockLineHighlightSet",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockLineKeyAction",
+          "declaration": {
+            "name": "codeBlockLineKeyAction",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "codeBlockLineTransformer",
           "declaration": {
             "name": "codeBlockLineTransformer",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockNeedsHighlightResync",
+          "declaration": {
+            "name": "codeBlockNeedsHighlightResync",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockPreSuppliedGrammar",
+          "declaration": {
+            "name": "codeBlockPreSuppliedGrammar",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockSelectionAnchor",
+          "declaration": {
+            "name": "codeBlockSelectionAnchor",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "codeBlockShowsSkeleton",
+          "declaration": {
+            "name": "codeBlockShowsSkeleton",
             "module": "src/components/conversation/code-block/code-block-shared.ts"
           }
         },
@@ -56621,9 +57447,49 @@
         },
         {
           "kind": "js",
+          "name": "renderCodeBlockHeader",
+          "declaration": {
+            "name": "renderCodeBlockHeader",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "renderCodeBlockPlainCode",
           "declaration": {
             "name": "renderCodeBlockPlainCode",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "renderCodeBlockShell",
+          "declaration": {
+            "name": "renderCodeBlockShell",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "scrollCodeBlockToAnchor",
+          "declaration": {
+            "name": "scrollCodeBlockToAnchor",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "tokenizeCodeBlock",
+          "declaration": {
+            "name": "tokenizeCodeBlock",
+            "module": "src/components/conversation/code-block/code-block-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "writeCodeBlockClipboard",
+          "declaration": {
+            "name": "writeCodeBlockClipboard",
             "module": "src/components/conversation/code-block/code-block-shared.ts"
           }
         }
@@ -57121,8 +57987,7 @@
                 "type": {
                   "text": "Set<number>"
                 }
-              },
-              "description": "The line numbers covered by the `highlights` entry matching `activeHighlightId`, if any."
+              }
             },
             {
               "kind": "method",
@@ -57222,24 +58087,6 @@
             },
             {
               "kind": "method",
-              "name": "eventLine",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "number | null"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "e",
-                  "type": {
-                    "text": "Event"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
               "name": "lineCount",
               "privacy": "private",
               "return": {
@@ -57256,8 +58103,7 @@
                 "type": {
                   "text": "Set<number>"
                 }
-              },
-              "description": "The merged set of one-based line numbers to emphasize: `highlightLines` plus the `line-range`\nslice of `highlights`. Shared by both the shiki transformer options and the plain-text\nfallback path so their emphasis is always identical."
+              }
             },
             {
               "kind": "method",
@@ -57374,16 +58220,6 @@
             },
             {
               "kind": "method",
-              "name": "renderHeader",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "TemplateResult"
-                }
-              }
-            },
-            {
-              "kind": "method",
               "name": "renderPlainCode",
               "privacy": "private",
               "return": {
@@ -57453,6 +58289,17 @@
             },
             {
               "kind": "method",
+              "name": "showsSkeleton",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "boolean"
+                }
+              },
+              "description": "Whether this render shows the loading skeleton instead of the code. `languagesOnly` skips the\ndefault loader entirely (see `ensureDefaultHighlighter()`), so `shikiReady` never becomes true\nfor it -- treat that as \"nothing to wait for\" rather than \"still loading\", the same way a\n`preSuppliedGrammar()` match already does. Read by both `updated()` and `render()` so the\n`aria-busy` host attribute can never disagree with what's on screen."
+            },
+            {
+              "kind": "method",
               "name": "syncHighlight",
               "privacy": "private",
               "return": {
@@ -57479,24 +58326,6 @@
                 },
                 {
                   "name": "lang",
-                  "type": {
-                    "text": "string"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
-              "name": "writeClipboard",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "void"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "text",
                   "type": {
                     "text": "string"
                   }
@@ -60650,7 +61479,7 @@
               "kind": "field",
               "name": "resolvedHighlightRanges",
               "type": {
-                "text": "{ id: string; range: Range }[]"
+                "text": "ResolvedHighlightRange[]"
               },
               "privacy": "private",
               "default": "[]",
@@ -60783,54 +61612,6 @@
             },
             {
               "kind": "method",
-              "name": "applyFragmentAnchor",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "boolean"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "root",
-                  "type": {
-                    "text": "Element"
-                  }
-                },
-                {
-                  "name": "anchor",
-                  "type": {
-                    "text": "Extract<LyraAnchor, { kind: 'fragment' }>"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
-              "name": "applyTextQuoteAnchor",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "boolean"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "root",
-                  "type": {
-                    "text": "Element"
-                  }
-                },
-                {
-                  "name": "anchor",
-                  "type": {
-                    "text": "Extract<LyraAnchor, { kind: 'text-quote' }>"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
               "name": "beginAbortableLoad",
               "privacy": "protected",
               "return": {
@@ -60922,31 +61703,6 @@
             },
             {
               "kind": "method",
-              "name": "findHeadingByComputedId",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "Element | null"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "root",
-                  "type": {
-                    "text": "Element"
-                  }
-                },
-                {
-                  "name": "id",
-                  "type": {
-                    "text": "string"
-                  }
-                }
-              ],
-              "description": "`headingAnchors` may be off, so a target heading might carry no `id` attribute in the DOM --\nre-derives the same slug order `getHeadingTree()` was built in and matches by position\ninstead of by attribute."
-            },
-            {
-              "kind": "method",
               "name": "getCachedHighlight",
               "privacy": "private",
               "return": {
@@ -61002,31 +61758,6 @@
                 }
               ],
               "description": "Loads whatever shiki grammars `pendingKeys` need, tokenizes each pending block concurrently,\npopulates `highlightCache` with the results, then triggers one more `renderMarkdown()` pass so\nthe newly-cached entries actually reach the screen. A pending key whose language isn't a key in\n`languages`, or otherwise fails to tokenize, is recorded in `failedHighlightKeys` -- it stays\nuncached, so `code()` keeps emitting its plain fallback for it on every future render, and\n`code()` also stops re-discovering it as pending (see `failedHighlightKeys`'s own doc for why\nthat matters: without it, the `renderMarkdown()` call at the end of this method would\nrediscover the same permanently-uncacheable key as pending on every pass, forever). Does not\nblock or delay any other pending key -- each is tried independently via `Promise.all`."
-            },
-            {
-              "kind": "method",
-              "name": "hitTestHighlightAt",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "string | null"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "x",
-                  "type": {
-                    "text": "number"
-                  }
-                },
-                {
-                  "name": "y",
-                  "type": {
-                    "text": "number"
-                  }
-                }
-              ],
-              "description": "Hit-tests a click point against every currently-resolved highlight's `getClientRects()`,\ntopmost (last-resolved) first. The CSS Custom Highlight API paints ranges without creating any\nDOM element to attach a click listener to, so this is the only activation path that works\nidentically on both paint paths -- mirrors `<lr-pdf-viewer>`'s own coordinate-based\n`onPageClick()` hit-test for the same reason (its own painted highlights sit under a text\nlayer that intercepts most pointer events)."
             },
             {
               "kind": "method",
@@ -61093,7 +61824,7 @@
                   "text": "void"
                 }
               },
-              "description": "Kicks off the shared `katex` load the first time `math` needs it and no attempt is already\nin flight (module-scoped, so every `<lr-markdown>` instance on the page shares one load --\nmirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under\n`__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never\nrace a real, unmocked `import('katex')` settling underneath it."
+              "description": "Kicks off this variant's `katex` load the first time `math` needs it and no attempt is\nalready in flight (module-scoped, so every `<lr-markdown-core>` instance on the page shares\none load -- mirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under\n`__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never\nrace a real, unmocked `import('katex')` settling underneath it."
             },
             {
               "kind": "method",
@@ -61182,7 +61913,8 @@
                 "type": {
                   "text": "void"
                 }
-              }
+              },
+              "description": "Runs the shared parse/sanitize/fallback pipeline (see `renderMarkdownDocument()`) and applies\nits outcome to this instance's own state -- every `@state` assignment and every emitted event\nstays here so the shared half remains a pure function of its inputs."
             },
             {
               "kind": "method",
@@ -61193,7 +61925,7 @@
                   "text": "void"
                 }
               },
-              "description": "Re-resolves every `text-quote` highlight against the current rendered content and repaints\nvia `acquireHighlightHandle()` -- resolution is always by quote text, never by node identity,\nso a highlight set before its quote exists in `content` yet (e.g. mid-`streaming`) simply\npaints nothing until a later render's text actually contains it. `fragment` highlights aren't\npainted (there is no literal span of text to wrap/underline for a whole section)."
+              "description": "Re-resolves and repaints every `text-quote` highlight -- see\n`repaintMarkdownHighlights()` for the resolution contract."
             },
             {
               "kind": "method",
@@ -61204,7 +61936,7 @@
                   "text": "void"
                 }
               },
-              "description": "Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called\nonly once `renderMarkdown()` has confirmed the peer is actually missing (`katexOverride` or\nthe resolved module is `null`) -- a math token rendering its literal fallback while the load\nis merely still in flight (the same one-microtask transient window every other optional peer\nin this component has) never reports an error on its own."
+              "description": "Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called\nonly once `renderMarkdown()` has confirmed the peer is actually missing (the test override or\nthe resolved module is `null`) -- a math token rendering its literal fallback while the load\nis merely still in flight (the same one-microtask transient window every other optional peer\nin this component has) never reports an error on its own."
             },
             {
               "kind": "method",
@@ -61541,6 +62273,108 @@
       "declarations": [
         {
           "kind": "function",
+          "name": "applyMarkdownAriaBusy",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "parameters": [
+            {
+              "name": "host",
+              "type": {
+                "text": "Element"
+              }
+            },
+            {
+              "name": "busy",
+              "type": {
+                "text": "boolean"
+              }
+            }
+          ],
+          "description": "Mirrors \"the document is not final\" onto the host as `aria-busy`, so assistive technology knows\nthe rendered output is still resolving (peers loading, or `streaming` still on)."
+        },
+        {
+          "kind": "function",
+          "name": "applyMarkdownFragmentAnchor",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "root",
+              "type": {
+                "text": "Element"
+              }
+            },
+            {
+              "name": "anchor",
+              "type": {
+                "text": "Extract<LyraAnchor, { kind: 'fragment' }>"
+              }
+            },
+            {
+              "name": "headingTree",
+              "type": {
+                "text": "readonly MarkdownHeadingItem[]"
+              }
+            }
+          ],
+          "description": "Scrolls a `fragment` anchor's heading into view. `headingAnchors` may be off, so the target\nheading might carry no `id` attribute in the DOM at all -- and even with it on, DOMPurify's\nDOM-clobbering protection strips a slug colliding with a real `document` property name. Both\ncases fall back to re-deriving the same slug order `getHeadingTree()` was built in and matching\nby position instead of by attribute."
+        },
+        {
+          "kind": "function",
+          "name": "applyMarkdownTextQuoteAnchor",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "root",
+              "type": {
+                "text": "Element"
+              }
+            },
+            {
+              "name": "anchor",
+              "type": {
+                "text": "Extract<LyraAnchor, { kind: 'text-quote' }>"
+              }
+            }
+          ],
+          "description": "Scrolls a `text-quote` anchor's resolved range into view, centered."
+        },
+        {
+          "kind": "function",
+          "name": "beginMarkdownDepsLoad",
+          "return": {
+            "type": {
+              "text": "void"
+            }
+          },
+          "parameters": [
+            {
+              "name": "host",
+              "type": {
+                "text": "{ readonly eagerLoad: boolean; readonly isConnected: boolean }"
+              }
+            },
+            {
+              "name": "apply",
+              "type": {
+                "text": "(deps: MarkdownDeps) => void"
+              }
+            }
+          ],
+          "description": "`connectedCallback()`'s optional-peer load for both variants. `eagerLoad` only takes the\nsynchronous path when the shared `marked`/`dompurify` module cache has *already* settled (see\n`getMarkdownDepsIfLoaded()`'s doc) -- otherwise it falls through to the same async path as the\ndefault, since a dynamic `import()` can't be made synchronous from scratch.\n\nThe (module-cached, page-lifetime) `loadMarkdownDeps()` promise can resolve after the instance\nwas removed from the DOM -- e.g. a markdown viewer inside a conditionally-rendered chat message\nor a virtualized list. Without the `isConnected` guard, a detached instance would still have its\ndeps applied and a render scheduled that no one will ever see. Mirrors `chart.ts`'s own\n`connectedCallback()` guard for the identical race."
+        },
+        {
+          "kind": "function",
           "name": "cleanHref",
           "return": {
             "type": {
@@ -61556,6 +62390,15 @@
             }
           ],
           "description": "Mirrors marked's own default `link()` renderer's `cleanUrl()`: a malformed\npercent-escape or lone UTF-16 surrogate in the raw href throws inside\n`encodeURI`, and marked's default renderer responds by dropping the anchor\n(rendering the link text alone) rather than emitting a broken `href` —\nreturning `null` here lets the caller do the same. The\n`.replace(/%25/g, '%')` compensates for `encodeURI` re-escaping the `%` of\nan href that was already percent-encoded (the common case for a real\nmarkdown link) — without it, every existing `%XX` escape would become\n`%25XX`, double-encoding it."
+        },
+        {
+          "kind": "function",
+          "name": "createMarkdownKatexState",
+          "return": {
+            "type": {
+              "text": "MarkdownKatexState"
+            }
+          }
         },
         {
           "kind": "function",
@@ -61600,6 +62443,145 @@
         },
         {
           "kind": "function",
+          "name": "hitTestHighlightRanges",
+          "return": {
+            "type": {
+              "text": "string | null"
+            }
+          },
+          "parameters": [
+            {
+              "name": "ranges",
+              "type": {
+                "text": "readonly ResolvedHighlightRange[]"
+              }
+            },
+            {
+              "name": "x",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "name": "y",
+              "type": {
+                "text": "number"
+              }
+            }
+          ],
+          "description": "Hit-tests a click point against every currently-resolved highlight's `getClientRects()`, topmost\n(last-resolved) first. The CSS Custom Highlight API paints ranges without creating any DOM element\nto attach a click listener to, so this is the only activation path that works identically on both\npaint paths -- mirrors `<lr-pdf-viewer>`'s own coordinate-based `onPageClick()` hit-test for the\nsame reason (its own painted highlights sit under a text layer that intercepts most pointer\nevents)."
+        },
+        {
+          "kind": "function",
+          "name": "internalLinkHrefFrom",
+          "return": {
+            "type": {
+              "text": "string | null"
+            }
+          },
+          "parameters": [
+            {
+              "name": "e",
+              "type": {
+                "text": "MouseEvent"
+              }
+            },
+            {
+              "name": "prefix",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "The `href` of the rendered link a click landed on, when `internal-link-prefix` claims it --\n`null` for every other click, including one on an ordinary external link.\n\nCompared against the raw `href` *attribute*, not the `.href` IDL property: the property is\nalways browser-resolved to an absolute URL (e.g. \"https://example.com/docs\") even for a\nrelative/prefixed path, which would never match a relative `internal-link-prefix`."
+        },
+        {
+          "kind": "function",
+          "name": "markdownCodeTransformer",
+          "parameters": [
+            {
+              "name": "lang",
+              "type": {
+                "text": "string"
+              }
+            }
+          ],
+          "description": "Rewrites shiki's generated `<pre>`/`<code>` hast nodes so the highlighted output keeps the\nmarkdown viewers' own `part=\"code-block\"` hook and a `language-${lang}` class on `<code>` --\nmatching the plain-render output shape exactly, so existing consumer CSS targeting either keeps\nworking whether or not a given block ended up highlighted. A separate, purpose-built function\nfrom `code-block-shared.ts`'s own `codeBlockLineTransformer` -- that one targets\n`<lr-code-block>`'s `part=\"pre\"`/`part=\"code\"`/line-numbers contract, which doesn't apply here."
+        },
+        {
+          "kind": "function",
+          "name": "markdownHighlightConfigChanged",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "changed",
+              "type": {
+                "text": "Map<PropertyKey, unknown>"
+              }
+            }
+          ],
+          "description": "Whether the *highlighting* configuration changed, invalidating in-flight work and the\npermanently-failed key set."
+        },
+        {
+          "kind": "function",
+          "name": "markdownLanguageSetChanged",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "changed",
+              "type": {
+                "text": "Map<PropertyKey, unknown>"
+              }
+            }
+          ],
+          "description": "Whether the *grammar set* changed, additionally invalidating already-highlighted output."
+        },
+        {
+          "kind": "function",
+          "name": "markdownMathPeerError",
+          "return": {
+            "type": {
+              "text": "Error"
+            }
+          },
+          "parameters": [
+            {
+              "name": "tag",
+              "type": {
+                "text": "'lr-markdown' | 'lr-markdown-core'"
+              }
+            }
+          ],
+          "description": "The `lr-render-error` payload for a permanently-missing `katex` peer while `math` is set."
+        },
+        {
+          "kind": "function",
+          "name": "markdownNeedsReparse",
+          "return": {
+            "type": {
+              "text": "boolean"
+            }
+          },
+          "parameters": [
+            {
+              "name": "changed",
+              "type": {
+                "text": "Map<PropertyKey, unknown>"
+              }
+            }
+          ],
+          "description": "Every property whose change means the document has to be reparsed. `languagesOnly` is listed\nfor `<lr-markdown>`; `<lr-markdown-core>` has no such property, so it simply never appears in\nthat component's changed map."
+        },
+        {
+          "kind": "function",
           "name": "parseMarkdownDocument",
           "return": {
             "type": {
@@ -61615,6 +62597,60 @@
             }
           ],
           "description": "Parses `options.content` into sanitizer-ready HTML via a fresh `marked` renderer, mirroring\n`<lr-markdown>`'s original `parseMarkdown()` (now shared verbatim with `<lr-markdown-core>`).\nEvery `part=\"...\"` injected into the output, the `heading-offset`/`link-target`/\n`internal-link-prefix`-driven behavior, and the math-token extension are documented on\n`LyraMarkdown`'s own class doc -- this function's contract is exactly that doc."
+        },
+        {
+          "kind": "function",
+          "name": "renderMarkdownContent",
+          "return": {
+            "type": {
+              "text": "TemplateResult"
+            }
+          },
+          "parameters": [
+            {
+              "name": "options",
+              "type": {
+                "text": "MarkdownContentOptions"
+              }
+            }
+          ],
+          "description": "The rendered tree both variants produce: one `[part=\"content\"]` wrapper plus the anchor-target\nlive region. Only non-empty content is focusable -- an empty document is not a scrollable region\nworth a tab stop."
+        },
+        {
+          "kind": "function",
+          "name": "renderMarkdownDocument",
+          "return": {
+            "type": {
+              "text": "MarkdownRenderOutcome"
+            }
+          },
+          "parameters": [
+            {
+              "name": "options",
+              "type": {
+                "text": "RenderMarkdownOptions"
+              }
+            }
+          ],
+          "description": "The optional-peer load / parse / sanitize / fallback pipeline both variants run, returning what\nchanged rather than mutating the instance -- the caller owns every `@state` assignment and every\nevent, so this stays a pure function of its inputs.\n\nRendering never ships unsanitized or broken markup silently: a missing/throwing `marked`, or a\nmissing `dompurify` while `sanitize` is on, both fall back to plain text plus `lr-render-error`;\nan explicit `sanitize=\"false\"` renders marked's raw output regardless of whether `dompurify` is\ninstalled, because the consumer opted out."
+        },
+        {
+          "kind": "function",
+          "name": "repaintMarkdownHighlights",
+          "return": {
+            "type": {
+              "text": "ResolvedHighlightRange[]"
+            }
+          },
+          "parameters": [
+            {
+              "name": "options",
+              "type": {
+                "text": "{\n  root: Element;\n  handle: HighlightHandle;\n  highlights: readonly LyraHighlight[];\n  activeHighlightId: string | null;\n}"
+              }
+            }
+          ],
+          "description": "Re-resolves every `text-quote` highlight against the current rendered content and repaints via\nthe caller's `acquireHighlightHandle()` handle -- resolution is always by quote text, never by\nnode identity, so a highlight set before its quote exists in `content` yet (e.g. mid-`streaming`)\nsimply paints nothing until a later render's text actually contains it. `fragment` highlights\naren't painted (there is no literal span of text to wrap/underline for a whole section).\nReturns the resolved ranges for `hitTestHighlightRanges()` to activate against."
         },
         {
           "kind": "function",
@@ -61653,6 +62689,30 @@
           ]
         },
         {
+          "kind": "function",
+          "name": "tokenizeMarkdownHighlight",
+          "return": {
+            "type": {
+              "text": "string | null"
+            }
+          },
+          "parameters": [
+            {
+              "name": "hl",
+              "type": {
+                "text": "OptionalPeerApi"
+              }
+            },
+            {
+              "name": "pending",
+              "type": {
+                "text": "PendingHighlight"
+              }
+            }
+          ],
+          "description": "Tokenizes one pending fenced block with an already-resolved highlighter and returns the exact\nstring to cache (trailing newline included, matching the plain `code()` renderer's own output).\n`null` means \"leave this key uncached\" -- the caller records it in `failedHighlightKeys` so the\nblock keeps its plain fallback permanently rather than being rediscovered as pending forever.\nShared by both variants' `highlightPending()`; only the *loading* half above it differs."
+        },
+        {
           "kind": "variable",
           "name": "HIGHLIGHT_CACHE_MAX",
           "type": {
@@ -61673,9 +62733,49 @@
         },
         {
           "kind": "js",
+          "name": "applyMarkdownAriaBusy",
+          "declaration": {
+            "name": "applyMarkdownAriaBusy",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "applyMarkdownFragmentAnchor",
+          "declaration": {
+            "name": "applyMarkdownFragmentAnchor",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "applyMarkdownTextQuoteAnchor",
+          "declaration": {
+            "name": "applyMarkdownTextQuoteAnchor",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "beginMarkdownDepsLoad",
+          "declaration": {
+            "name": "beginMarkdownDepsLoad",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "cleanHref",
           "declaration": {
             "name": "cleanHref",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "createMarkdownKatexState",
+          "declaration": {
+            "name": "createMarkdownKatexState",
             "module": "src/components/conversation/markdown/markdown-shared.ts"
           }
         },
@@ -61697,6 +62797,62 @@
         },
         {
           "kind": "js",
+          "name": "hitTestHighlightRanges",
+          "declaration": {
+            "name": "hitTestHighlightRanges",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "internalLinkHrefFrom",
+          "declaration": {
+            "name": "internalLinkHrefFrom",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "markdownCodeTransformer",
+          "declaration": {
+            "name": "markdownCodeTransformer",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "markdownHighlightConfigChanged",
+          "declaration": {
+            "name": "markdownHighlightConfigChanged",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "markdownLanguageSetChanged",
+          "declaration": {
+            "name": "markdownLanguageSetChanged",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "markdownMathPeerError",
+          "declaration": {
+            "name": "markdownMathPeerError",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "markdownNeedsReparse",
+          "declaration": {
+            "name": "markdownNeedsReparse",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "parseMarkdownDocument",
           "declaration": {
             "name": "parseMarkdownDocument",
@@ -61705,9 +62861,41 @@
         },
         {
           "kind": "js",
+          "name": "renderMarkdownContent",
+          "declaration": {
+            "name": "renderMarkdownContent",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "renderMarkdownDocument",
+          "declaration": {
+            "name": "renderMarkdownDocument",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "repaintMarkdownHighlights",
+          "declaration": {
+            "name": "repaintMarkdownHighlights",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
           "name": "setCachedHighlight",
           "declaration": {
             "name": "setCachedHighlight",
+            "module": "src/components/conversation/markdown/markdown-shared.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "tokenizeMarkdownHighlight",
+          "declaration": {
+            "name": "tokenizeMarkdownHighlight",
             "module": "src/components/conversation/markdown/markdown-shared.ts"
           }
         }
@@ -62114,7 +63302,7 @@
               "kind": "field",
               "name": "resolvedHighlightRanges",
               "type": {
-                "text": "{ id: string; range: Range }[]"
+                "text": "ResolvedHighlightRange[]"
               },
               "privacy": "private",
               "default": "[]",
@@ -62247,54 +63435,6 @@
             },
             {
               "kind": "method",
-              "name": "applyFragmentAnchor",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "boolean"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "root",
-                  "type": {
-                    "text": "Element"
-                  }
-                },
-                {
-                  "name": "anchor",
-                  "type": {
-                    "text": "Extract<LyraAnchor, { kind: 'fragment' }>"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
-              "name": "applyTextQuoteAnchor",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "boolean"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "root",
-                  "type": {
-                    "text": "Element"
-                  }
-                },
-                {
-                  "name": "anchor",
-                  "type": {
-                    "text": "Extract<LyraAnchor, { kind: 'text-quote' }>"
-                  }
-                }
-              ]
-            },
-            {
-              "kind": "method",
               "name": "beginAbortableLoad",
               "privacy": "protected",
               "return": {
@@ -62386,31 +63526,6 @@
             },
             {
               "kind": "method",
-              "name": "findHeadingByComputedId",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "Element | null"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "root",
-                  "type": {
-                    "text": "Element"
-                  }
-                },
-                {
-                  "name": "id",
-                  "type": {
-                    "text": "string"
-                  }
-                }
-              ],
-              "description": "`headingAnchors` may be off, so a target heading might carry no `id` attribute in the DOM --\nre-derives the same slug order `getHeadingTree()` was built in and matches by position\ninstead of by attribute."
-            },
-            {
-              "kind": "method",
               "name": "getCachedHighlight",
               "privacy": "private",
               "return": {
@@ -62466,31 +63581,6 @@
                 }
               ],
               "description": "Loads whatever shiki grammars `pendingKeys` need, tokenizes each pending block concurrently,\npopulates `highlightCache` with the results, then triggers one more `renderMarkdown()` pass so\nthe newly-cached entries actually reach the screen. A pending key whose language fails to load\nis recorded in `failedHighlightKeys` (per `loadShikiLanguage()`'s existing \"unrecognized\ngrammar\" contract -- resolves `false`, never throws) -- it stays uncached, so `code()` keeps\nemitting its plain fallback for it on every future render, and `code()` also stops\nre-discovering it as pending (see `failedHighlightKeys`'s own doc for why that matters: without\nit, the `renderMarkdown()` call at the end of this method would rediscover the same\npermanently-uncacheable key as pending on every pass, forever). Does not block or delay any\nother pending key -- each is tried independently via `Promise.all`."
-            },
-            {
-              "kind": "method",
-              "name": "hitTestHighlightAt",
-              "privacy": "private",
-              "return": {
-                "type": {
-                  "text": "string | null"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "x",
-                  "type": {
-                    "text": "number"
-                  }
-                },
-                {
-                  "name": "y",
-                  "type": {
-                    "text": "number"
-                  }
-                }
-              ],
-              "description": "Hit-tests a click point against every currently-resolved highlight's `getClientRects()`,\ntopmost (last-resolved) first. The CSS Custom Highlight API paints ranges without creating any\nDOM element to attach a click listener to, so this is the only activation path that works\nidentically on both paint paths -- mirrors `<lr-pdf-viewer>`'s own coordinate-based\n`onPageClick()` hit-test for the same reason (its own painted highlights sit under a text\nlayer that intercepts most pointer events)."
             },
             {
               "kind": "method",
@@ -62557,7 +63647,7 @@
                   "text": "void"
                 }
               },
-              "description": "Kicks off the shared `katex` load the first time `math` needs it and no attempt is already\nin flight (module-scoped, so every `<lr-markdown>` instance on the page shares one load --\nmirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under\n`__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never\nrace a real, unmocked `import('katex')` settling underneath it."
+              "description": "Kicks off this variant's `katex` load the first time `math` needs it and no attempt is\nalready in flight (module-scoped, so every `<lr-markdown>` instance on the page shares one\nload -- mirrors `markdown-loader.ts`'s own warm-cache shape). Skipped entirely under\n`__setKatexForTesting()` -- that seam controls math-rendering behavior directly and must never\nrace a real, unmocked `import('katex')` settling underneath it."
             },
             {
               "kind": "method",
@@ -62646,7 +63736,8 @@
                 "type": {
                   "text": "void"
                 }
-              }
+              },
+              "description": "Runs the shared parse/sanitize/fallback pipeline (see `renderMarkdownDocument()`) and applies\nits outcome to this instance's own state -- every `@state` assignment and every emitted event\nstays here so the shared half remains a pure function of its inputs."
             },
             {
               "kind": "method",
@@ -62657,7 +63748,7 @@
                   "text": "void"
                 }
               },
-              "description": "Re-resolves every `text-quote` highlight against the current rendered content and repaints\nvia `acquireHighlightHandle()` -- resolution is always by quote text, never by node identity,\nso a highlight set before its quote exists in `content` yet (e.g. mid-`streaming`) simply\npaints nothing until a later render's text actually contains it. `fragment` highlights aren't\npainted (there is no literal span of text to wrap/underline for a whole section)."
+              "description": "Re-resolves and repaints every `text-quote` highlight -- see\n`repaintMarkdownHighlights()` for the resolution contract."
             },
             {
               "kind": "method",
@@ -62668,7 +63759,7 @@
                   "text": "void"
                 }
               },
-              "description": "Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called\nonly once `renderMarkdown()` has confirmed the peer is actually missing (`katexOverride` or\nthe resolved module is `null`) -- a math token rendering its literal fallback while the load\nis merely still in flight (the same one-microtask transient window every other optional peer\nin this component has) never reports an error on its own."
+              "description": "Fires `lr-render-error` once per instance for a permanently-missing `katex` peer. Called\nonly once `renderMarkdown()` has confirmed the peer is actually missing (the test override or\nthe resolved module is `null`) -- a math token rendering its literal fallback while the load\nis merely still in flight (the same one-microtask transient window every other optional peer\nin this component has) never reports an error on its own."
             },
             {
               "kind": "method",
@@ -91362,6 +92453,11 @@
               "description": "Inner padding of the nav buttons and the page input. Uniform across every `size` (the control footprint is fixed by `--lr-pagination-control-size`, so this only adjusts the icon/digit inset).",
               "name": "--lr-pagination-control-padding",
               "default": "var(--lr-space-xs)"
+            },
+            {
+              "description": "Border color of `[part=\"page-input\"]` while the typed page is out of range (`aria-invalid=\"true\"`).",
+              "name": "--lr-pagination-invalid-border",
+              "default": "var(--lr-color-danger)"
             }
           ],
           "cssParts": [
@@ -96031,7 +97127,7 @@
               "kind": "field",
               "name": "resizeState",
               "type": {
-                "text": "{\n    key: string;\n    pointerId: number;\n    startX: number;\n    startWidth: number;\n    minWidth: number;\n    maxWidth: number;\n    handle: HTMLElement;\n  } | undefined"
+                "text": "{\n    key: string;\n    pointerId: number;\n    startX: number;\n    startWidth: number;\n    minWidth: number;\n    maxWidth: number;\n    handle: HTMLElement;\n    /** `resizedColumnWidths.get(key)` as it stood before this drag started -- `undefined` when the\n     *  column hadn't been drag/keyboard-resized yet (still on its declared `width`/intrinsic size).\n     *  Restored verbatim if the drag-end commit below is vetoed. */\n    previousWidth: number | undefined;\n  } | undefined"
               },
               "privacy": "private"
             },
@@ -97133,7 +98229,7 @@
               "name": "lr-cell-edit"
             },
             {
-              "description": "A resizable column changed width by pointer or keyboard. `detail: { key, width }`, where `width` is in CSS pixels.",
+              "description": "A resizable column changed width by pointer or keyboard. `detail: { key, width }`, where `width` is in CSS pixels. A pointer drag fires this once per pixel of movement as non-cancelable live feedback, then once more, **cancelable**, for the final width committed at drag-end; a keyboard step (Home/End/Arrow) is already a single discrete action and fires that one cancelable commit directly. `preventDefault()` on a cancelable emission reverts the column to its pre-gesture width.",
               "name": "lr-column-resize"
             },
             {
@@ -98602,6 +99698,16 @@
               "description": "Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.",
               "name": "--lr-tree-depth",
               "default": "0"
+            },
+            {
+              "description": "Background of the selected row.",
+              "name": "--lr-tree-selected-bg",
+              "default": "var(--lr-color-brand-quiet)"
+            },
+            {
+              "description": "Text color of the selected row.",
+              "name": "--lr-tree-selected-color",
+              "default": "var(--lr-color-brand)"
             }
           ],
           "cssParts": [
@@ -110244,6 +111350,11 @@
               "description": "Calendar and control corner radius.",
               "name": "--lr-date-picker-radius",
               "default": "var(--lr-radius)"
+            },
+            {
+              "description": "Hover background of the `[part=\"previous\"]`/`[part=\"next\"]` month-navigation buttons.",
+              "name": "--lr-date-picker-nav-hover-bg",
+              "default": "var(--lr-color-brand-quiet)"
             }
           ],
           "cssParts": [
@@ -112225,6 +113336,25 @@
                 }
               },
               "description": "The windowed layout's pixel geometry. `getComputedStyle(host).getPropertyValue('--x')` hands\nback a custom property's *computed token stream* (`2.5rem`, `calc(2.5rem + 1rem)`) and never a\npixel length, so parsing it reads a `rem` value's leading number as pixels and cannot read a\n`calc()` at all. Measuring the probe boxes the stylesheet sizes from those same tokens makes\nthe browser do the unit math instead, for every unit `calc()` included.\n\nMeasured at most once per geometry change, not per frame: the result is cached, and the probe\nboxes themselves are the invalidation signal (see `observeGeometryProbe`)."
+            },
+            {
+              "kind": "method",
+              "name": "groupLabel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "group",
+                  "type": {
+                    "text": "EmojiPickerGroup"
+                  }
+                }
+              ],
+              "description": "A group heading, localized when the group came from the built-in `emoji-picker-element-data`\nadapter (which tags each emojibase group with a `labelKey`). A consumer-supplied group has no\n`labelKey` and its `label` is caller-owned content, rendered verbatim."
             },
             {
               "kind": "method",
@@ -121219,6 +122349,16 @@
               "description": "The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.",
               "name": "--lr-radio-label-indent",
               "default": "calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))"
+            },
+            {
+              "description": "Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads.",
+              "name": "--lr-radio-checked-border-color",
+              "default": "var(--lr-color-brand)"
+            },
+            {
+              "description": "Background of `[part='dot']` while `checked`.",
+              "name": "--lr-radio-checked-dot-color",
+              "default": "var(--lr-color-brand)"
             }
           ],
           "cssParts": [
@@ -123279,7 +124419,7 @@
               "name": ""
             },
             {
-              "description": "Adornment after the selected-value label and before the expand icon.",
+              "description": "Adornment after the selected-value label and before the expand icon. Same non-focusable/non-interactive-content caveat as `start`.",
               "name": "end"
             },
             {
@@ -123295,7 +124435,7 @@
               "name": "label"
             },
             {
-              "description": "Adornment at the inline-start of the trigger row, before the selected-value label.",
+              "description": "Adornment at the inline-start of the trigger row, before the selected-value label. Content should be non-focusable/non-interactive only: the trigger itself renders as a native `<button>` (`[part=\"trigger\"]`), so a slotted `<button>`/`<a>`/other focusable element here nests inside it in the flattened (assigned-slot) tree -- invalid interactive-content nesting, and unreachable by keyboard/AT regardless, since the outer button intercepts every click/Enter/Space before it can reach a nested control. Note: axe-core does not currently flag this specific shadow-DOM-composed nesting pattern as a violation (verified empirically against axe-core 4.12.1) -- the hazard is real but not automatically detectable today.",
               "name": "start"
             }
           ],
@@ -124933,6 +126073,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Removes focus from the internal thumb control."
+            },
+            {
+              "kind": "method",
               "name": "clampValue",
               "privacy": "private",
               "return": {
@@ -124948,6 +126098,16 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Activates the internal thumb control, mirroring `<lr-switch>`'s identical `override\nclick()`. Without this, `HTMLElement.prototype.click()` on the host is a no-op: no click\nhandler is bound to the host itself, only to `[part=\"base\"]`/`[part=\"thumb\"]`."
             },
             {
               "kind": "method",
@@ -125041,6 +126201,25 @@
                 }
               },
               "description": "If `value` is still unset, seed it with the sanitized default — the\nmidpoint of `[min, max]`, snapped to `step` — so `value`/`valueAsNumber`\nand rendering never have to treat \"\" as a real, distinct state."
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Moves focus to the internal thumb control."
             },
             {
               "kind": "method",
@@ -125655,6 +126834,26 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Removes focus from the tabbable swatch."
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Activates the tabbable swatch, mirroring `<lr-switch>`'s identical `override click()`.\nWithout this, `HTMLElement.prototype.click()` on the host is a no-op: no click handler is\nbound to the host itself, only to the individual `[part=\"swatch\"]` buttons."
+            },
+            {
+              "kind": "method",
               "name": "emit",
               "privacy": "protected",
               "return": {
@@ -125689,6 +126888,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Moves focus to the tabbable swatch."
             },
             {
               "kind": "method",
@@ -125849,6 +127067,17 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "tabbableSwatch",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "HTMLElement | null"
+                }
+              },
+              "description": "The single `role=\"radio\"` swatch that is currently in the roving tab sequence -- the\nselected one, or the first swatch when nothing is selected yet. Mirrors the identical\n`tabbableIndex` fallback in `render()`."
             }
           ],
           "events": [
@@ -128487,6 +129716,16 @@
             },
             {
               "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Removes focus from the start handle."
+            },
+            {
+              "kind": "method",
               "name": "clamp",
               "privacy": "private",
               "return": {
@@ -128508,6 +129747,16 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Activates the start handle, mirroring `<lr-switch>`'s identical `override click()`. Without\nthis, `HTMLElement.prototype.click()` on the host is a no-op: no click handler is bound to\nthe host itself, only to the internal `[part=\"handle-start\"]`/`[part=\"handle-end\"]`\ncontrols. Targets the start handle specifically, matching `focus()`/`blur()` below."
             },
             {
               "kind": "method",
@@ -128580,6 +129829,25 @@
                 }
               ],
               "description": "Stop the drag owned by `pointerId`, optionally committing a final lr-change."
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "description": "Moves focus to the start handle."
             },
             {
               "kind": "method",
@@ -146723,6 +147991,11 @@
               "description": "The `'floating'` drawer scrim's color, applied to `[part=\"backdrop\"]`.",
               "name": "--lr-split-overlay-color",
               "default": "var(--lr-color-overlay)"
+            },
+            {
+              "description": "Per-side inset of `[part=\"divider\"]`'s invisible `::before` hit area, along the resize axis. Negative, so the `::before` box extends past the divider's own edges; derived from the shared `--lr-icon-button-size` WCAG 2.5.8 floor minus the divider's visible thickness, split evenly across both sides, so the effective target reaches the floor without widening the 3px divider anyone can see. Declared on `:host`, so an override must target the element itself (not an ancestor). Setting it by hand is rarely right -- retheme `--lr-size-3px`/`--lr-icon-button-size` instead and the slop recomputes.",
+              "name": "--lr-split-divider-hit-slop",
+              "default": "calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)"
             }
           ],
           "cssParts": [
@@ -150751,6 +152024,16 @@
               "description": "Background of the pressed (`aria-pressed=\"true\"`) view toggle. Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an ancestor recolors only the active toggle without hijacking the library-wide `--lr-color-brand-quiet` token.",
               "name": "--lr-widget-view-toggle-active-bg",
               "default": "var(--lr-color-brand-quiet)"
+            },
+            {
+              "description": "Background of a hovered `[part=\"view-toggle\"]`.",
+              "name": "--lr-widget-view-toggle-hover-bg",
+              "default": "var(--lr-color-brand-quiet)"
+            },
+            {
+              "description": "Text color of a hovered `[part=\"view-toggle\"]`.",
+              "name": "--lr-widget-view-toggle-hover-color",
+              "default": "var(--lr-color-text)"
             },
             {
               "description": "Text color of the pressed view toggle.",
@@ -167414,6 +168697,13 @@
           "kind": "class",
           "description": "`<lr-chip-group>` — a flex-wrap container for a set of `<lr-chip>`\nchildren (plain light-DOM composition — direct children are the chips,\nthe same shape `<lr-split>`'s panels / `<lr-source-list>`'s cards\ntake — no `.items` array prop).\n\n`max-visible` is entirely optional. When unset, every child is always\nshown and this component does nothing beyond flex-wrap layout. When set\nand the group has more chip children than that, the excess children are\nhidden (via their own `hidden` property — CSS alone can't parameterize\n`:nth-child` on a runtime prop, so this reaches into the light DOM the\nsame way `<lr-split>` sets each panel's inline `flex`/`order`) and a\n\"+N\" overflow-indicator pill takes their place. Clicking it is a toggle:\nit reveals the rest (and relabels itself \"Show less\"); clicking again\nre-collapses back to `max-visible`. `lr-overflow-toggle` fires only from\nthat click — i.e. only when `max-visible` is actually causing an overflow\nstate — never as a side effect of `max-visible`/children changing on\ntheir own.",
           "name": "LyraChipGroup",
+          "cssProperties": [
+            {
+              "description": "Text color of `[part=\"overflow-indicator\"]` while expanded (`aria-expanded=\"true\"`). `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to retint the expanded state without re-pointing the shared `--lr-color-text` token.",
+              "name": "--lr-chip-group-overflow-expanded-color",
+              "default": "var(--lr-color-text)"
+            }
+          ],
           "cssParts": [
             {
               "description": "The flex-wrap container (holds both the slot and the overflow indicator).",
@@ -183682,7 +184972,7 @@
               "default": "var(--lr-color-brand)"
             },
             {
-              "description": "Hull element opacity (composites fill+stroke as one group, avoiding a double-opacity seam at the fill/stroke boundary).",
+              "description": "Hull element opacity (composites fill+stroke as one group, avoiding a double-opacity seam at the fill/stroke boundary). Applies to both SVG and canvas renderers.",
               "name": "--lr-graph-hull-opacity",
               "default": "0.12"
             }
@@ -187864,6 +189154,18 @@
           "kind": "class",
           "description": "`<lr-knowledge-base-admin>` — a responsive operations shell composing the existing controlled\nsource inventory and ingestion queue into one tabbed knowledge-base view. It forwards every\nsource/ingestion action under a namespaced event and never creates connectors, uploads files, or\nchanges indexing configuration itself. Put configuration controls in the `settings` slot.",
           "name": "LyraKnowledgeBaseAdmin",
+          "cssProperties": [
+            {
+              "description": "Bottom border color of the selected `[part=\"tab\"]`.",
+              "name": "--lr-knowledge-base-admin-tab-selected-border",
+              "default": "var(--lr-color-brand)"
+            },
+            {
+              "description": "Text color of the selected `[part=\"tab\"]`. `::part(tab)[aria-selected='true']` is invalid CSS, so this pair is the only way to restyle the active tab without re-pointing the shared brand/text tokens.",
+              "name": "--lr-knowledge-base-admin-tab-selected-color",
+              "default": "var(--lr-color-text)"
+            }
+          ],
           "cssParts": [
             {
               "description": "The root admin wrapper.",
@@ -220994,7 +222296,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "Renders an EPUB with the optional `epubjs` peer. The mount element is kept\nstable because epub.js imperatively owns it and renders chapters in iframes.\n\nAdopts `DocumentAnchorTarget`: a `cfi` anchor displays directly via epub.js's own\n`rendition.display()`; a `text-quote` anchor resolves by scanning the book's spine sections\nwith epub.js's own `item.find()`, since chapter content lives inside epub.js-owned iframes\nrather than this component's own shadow DOM (a native `Range`/`Selection` inside one of those\niframes is invisible to this component's own document, so selection handling below is bridged\nthrough epub.js's own `selected` event instead of the mixin's default DOM-selection binding).\n`highlights` (kind `cfi`) paint via `rendition.annotations.highlight()` and are re-applied\nwhenever the rendition is recreated (a `src` change, or a reconnect remount) -- epub.js doesn't\npersist annotations across a fresh `renderTo()`. `getToc()` reads the EPUB's own navigation\ndocument into a flat, document-ordered outline once `book.ready` resolves. `location` (a CFI or\nspine href) is recorded before the book is ready and applied once loading finishes, or applied\nimmediately once it already has; epub.js's own `relocated` event keeps it in sync with user\nnavigation without re-triggering a `display()` call for a change that originated from that same\nevent. `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` scan the spine sequentially\nvia epub.js's own `item.find()`, aborting a superseded scan when a newer search or a `src`\nchange supersedes it.",
+          "description": "Renders an EPUB with the optional `epubjs` peer. The mount element is kept\nstable because epub.js imperatively owns it and renders chapters in iframes.\n\nAdopts `DocumentAnchorTarget`: a `cfi` anchor displays directly via epub.js's own\n`rendition.display()`; a `text-quote` anchor resolves by scanning the book's spine sections\nwith epub.js's own `item.find()`, since chapter content lives inside epub.js-owned iframes\nrather than this component's own shadow DOM (a native `Range`/`Selection` inside one of those\niframes is invisible to this component's own document, so selection handling below is bridged\nthrough epub.js's own `selected` event instead of the mixin's default DOM-selection binding).\n`highlights` (kind `cfi`) paint via `rendition.annotations.highlight()`, resolving each `tone`\nto a concrete `fill` color (its `styles` 5th arg) so highlights actually differentiate by tone,\nand are re-applied whenever the rendition is recreated (a `src` change, or a reconnect remount)\n-- epub.js doesn't persist annotations across a fresh `renderTo()`. `getToc()` reads the EPUB's\nown navigation document into a flat, document-ordered outline once `book.ready` resolves.\n`location` (a CFI or\nspine href) is recorded before the book is ready and applied once loading finishes, or applied\nimmediately once it already has; epub.js's own `relocated` event keeps it in sync with user\nnavigation without re-triggering a `display()` call for a change that originated from that same\nevent. `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` scan the spine sequentially\nvia epub.js's own `item.find()`, aborting a superseded scan when a newer search or a `src`\nchange supersedes it.",
           "name": "LyraEbookViewer",
           "cssParts": [
             {
@@ -221639,6 +222941,25 @@
                 }
               },
               "description": "Re-applies every `cfi` highlight via `rendition.annotations.highlight()`, clearing whatever\nthis instance previously painted first -- epub.js doesn't persist annotations across a fresh\n`renderTo()`, so this also runs once right after a (re)load finishes. Highlights whose anchor\nisn't `cfi` aren't paintable against epub.js's own annotation API and are skipped."
+            },
+            {
+              "kind": "method",
+              "name": "resolveHighlightFill",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "{ fill: string }"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "{ token, fallback }",
+                  "type": {
+                    "text": "{ token: string; fallback: string }"
+                  }
+                }
+              ],
+              "description": "Resolves a `{ token, fallback }` pair to the mark's `fill` `styles` arg, reading the token's\nlive concrete value off this instance via `getComputedStyle` (falling back to its\nlight-theme default when unresolved, e.g. before this element's own stylesheet is attached)."
             },
             {
               "kind": "method",
@@ -225664,7 +226985,8 @@
               "kind": "field",
               "name": "expandedOutputs",
               "privacy": "private",
-              "default": "new Set<number>()"
+              "default": "new Set<string>()",
+              "description": "Keyed by `${cellIndex}:${outputIndex}` (a colon-separated string, not a packed number) --\n`cellIndex * 1000 + outputIndex` would collide once a cell holds >= 1000 outputs (e.g.\ncell 0's output 1000 and cell 1's output 0 both reduced to 1000)."
             },
             {
               "kind": "field",
@@ -226227,7 +227549,7 @@
                 {
                   "name": "outputKey",
                   "type": {
-                    "text": "number"
+                    "text": "string"
                   }
                 },
                 {
@@ -226251,7 +227573,7 @@
                 {
                   "name": "index",
                   "type": {
-                    "text": "number"
+                    "text": "string"
                   }
                 },
                 {
@@ -226401,7 +227723,7 @@
                 {
                   "name": "index",
                   "type": {
-                    "text": "number"
+                    "text": "string"
                   }
                 }
               ]
@@ -227459,6 +228781,10 @@
               "name": "error"
             },
             {
+              "description": "The next-page button.",
+              "name": "next-button"
+            },
+            {
               "description": "One rendered page wrapper.",
               "name": "page"
             },
@@ -227473,6 +228799,10 @@
             {
               "description": "The virtualized page list.",
               "name": "pages"
+            },
+            {
+              "description": "The previous-page button.",
+              "name": "previous-button"
             },
             {
               "description": "A painted in-document search match.",
@@ -227499,8 +228829,16 @@
               "name": "toolbar"
             },
             {
+              "description": "The zoom-in button.",
+              "name": "zoom-in-button"
+            },
+            {
               "description": "The current zoom percentage.",
               "name": "zoom-indicator"
+            },
+            {
+              "description": "The zoom-out button.",
+              "name": "zoom-out-button"
             }
           ],
           "members": [
@@ -230970,7 +232308,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "Fetches and safely renders an inline SVG document.",
+          "description": "Fetches and safely renders an inline SVG document.\n\nAdopts `DocumentAnchorTarget`: a `region` anchor addresses one `highlights` entry by reference\nor structural equality of its `rect` (and optional `page`) -- `scrollToAnchor()`/a declarative\n`anchor` assignment scrolls the matching `[part=\"region-highlight\"]` into view and fires\n`lr-anchor-result`. No other anchor kind resolves here -- a sanitized SVG document has neither\npages nor extractable text to quote.",
           "name": "LyraSvgViewer",
           "cssProperties": [
             {
@@ -231078,21 +232416,13 @@
           "members": [
             {
               "kind": "field",
-              "name": "activeHighlightId",
-              "type": {
-                "text": "string | null"
-              },
-              "default": "null",
-              "attribute": "active-highlight-id"
-            },
-            {
-              "kind": "field",
               "name": "anchorKinds",
               "type": {
-                "text": "LyraAnchor['kind'][]"
+                "text": "readonly LyraAnchorKind[]"
               },
               "readonly": true,
-              "default": "['region']"
+              "default": "['region']",
+              "description": "Anchor kinds this viewer resolves via `scrollToAnchor()`. `highlights`/`activeHighlightId`/\n`anchor` are inherited from `DocumentAnchorTarget` -- display-only, no creation UI here."
             },
             {
               "kind": "field",
@@ -231151,15 +232481,6 @@
               },
               "privacy": "private",
               "default": "0"
-            },
-            {
-              "kind": "field",
-              "name": "highlights",
-              "type": {
-                "text": "LyraHighlight[]"
-              },
-              "default": "[]",
-              "description": "Display-only region highlights (see the class doc's Boundaries note -- no creation UI here)."
             },
             {
               "kind": "field",
@@ -231312,6 +232633,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "applyAnchor",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "Promise<boolean>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "anchor",
+                  "type": {
+                    "text": "LyraAnchor"
+                  }
+                }
+              ],
+              "description": "Per-viewer hook for `DocumentAnchorTarget`: resolves a `region` anchor back to its owning\n`highlights` entry (matched by reference first, so `scrollToAnchor(highlight.anchor)`\nresolves directly, then by structural equality of `rect`/`page` so an equivalent\nfreshly-built anchor also resolves) and scrolls its rendered box into view. Declines (no\nretry-worthy transient state of its own here) when nothing is loaded yet or no region\nmatches -- the mixin's own retry loop covers the case where `anchor`/`scrollToAnchor()` is\ncalled before `src` has finished loading."
             },
             {
               "kind": "method",
@@ -231566,24 +232906,6 @@
             },
             {
               "kind": "method",
-              "name": "scrollToAnchor",
-              "return": {
-                "type": {
-                  "text": "Promise<boolean>"
-                }
-              },
-              "parameters": [
-                {
-                  "name": "target",
-                  "type": {
-                    "text": "LyraAnchor | string"
-                  }
-                }
-              ],
-              "description": "Scrolls a `region` highlight into view (by id, or a `LyraAnchor` directly -- matched back to\nits owning `LyraHighlight` by reference so `scrollToAnchor(highlight.anchor)` also resolves to\nthe right box). Returns whether a matching, currently-rendered region was found -- there's no\nretry loop here (unlike the full `DocumentAnchorTarget` mixin) because this viewer's content\nis either already loaded or isn't; a caller invoking this before `src` has resolved simply\ngets `false`."
-            },
-            {
-              "kind": "method",
               "name": "stopZoomableFrameEvent",
               "privacy": "private",
               "return": {
@@ -231603,6 +232925,10 @@
           ],
           "events": [
             {
+              "description": "Fired after an `anchor` property assignment or a `scrollToAnchor()` call is applied. `detail: { found }`.",
+              "name": "lr-anchor-result"
+            },
+            {
               "description": "A region highlight was activated. `detail: { id }`.",
               "name": "lr-highlight-activate"
             },
@@ -231612,14 +232938,6 @@
             }
           ],
           "attributes": [
-            {
-              "name": "active-highlight-id",
-              "type": {
-                "text": "string | null"
-              },
-              "default": "null",
-              "fieldName": "activeHighlightId"
-            },
             {
               "name": "locale",
               "type": {
@@ -231670,9 +232988,15 @@
               "fieldName": "zoomable"
             }
           ],
+          "mixins": [
+            {
+              "name": "DocumentAnchorTarget",
+              "module": "/src/internal/anchor-target.js"
+            }
+          ],
           "superclass": {
-            "name": "LyraElement",
-            "module": "/src/internal/lyra-element.js"
+            "name": "LyraSvgViewerBase",
+            "module": "src/components/viewers/svg-viewer/svg-viewer.class.ts"
           },
           "tagName": "lr-svg-viewer",
           "customElement": true

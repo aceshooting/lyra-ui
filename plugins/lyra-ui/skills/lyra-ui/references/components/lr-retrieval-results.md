@@ -22,19 +22,24 @@ Large sets window through an internal `lr-virtual-list`.
 **Properties:**
 - `chunks: RetrievalChunk[] = []` (attribute: false) — **`RetrievalChunk`, imported from
   `@aceshooting/lyra-ui/ai`** (`src/ai/types.ts`): `{ id: string; text: string; score: number;
-  source: DocumentRef; metadata?: Record<string, unknown> }`. The raw, un-deduplicated/unsorted/
-  ungrouped result set; host-owned. Internally mapped to `lr-chunk-inspector`'s flatter `LyraChunk`
-  via `source.id → sourceId`, `source.name → title` (no `page`/`anchor` — `RetrievalChunk` carries
-  neither, and they're left unset rather than guessed from `metadata`)
+  source: DocumentRef; metadata?: Record<string, unknown>; rank?: number; locator?: DocumentLocator;
+  queryId?: string; stage?: string; traceId?: string; scores?: RetrievalScoreBreakdown }`. The raw,
+  un-deduplicated/unsorted/ungrouped result set; host-owned. Internally mapped to
+  `lr-chunk-inspector`'s flatter `LyraChunk` via `source.id → sourceId`, `source.name → title`, and
+  `locator → anchor`; a `page`-kind `locator` additionally supplies the inspector's visible `page`.
+  Nothing is ever guessed from `metadata` — a chunk with no `locator` simply leaves `anchor`/`page`
+  unset
 - `selectedIds: string[] = []` (attribute: false) — controlled selection by chunk `id`. The component
   updates its own copy on toggle *then* emits `lr-select`; reassign to control. An id with no
   matching chunk is harmless
 - `selectable: boolean = true` (reflected) — shows a per-row `lr-checkbox`
 - `dedupe: boolean = true` (reflected) — drops duplicate `id`s, keeping the higher `score`
 - `sort: 'score' | 'none' = 'score'` — `'score'` sorts descending; `'none'` preserves given order
-- `grouping: 'source' | 'none' = 'none'` — `'source'` buckets rows under a header per `source.id`,
-  each bucket ordered by its own best-scoring chunk, and **always** virtualizes regardless of
-  `virtualizeAt`
+- `grouping: 'source' | 'none' = 'none'` — `'source'` buckets rows under a header per `source.id`
+  (the header text is that source's `name`, or a localized "untitled source" when it has none).
+  Buckets appear in order of first appearance in the already-`sort`ed list, so with the default
+  `sort="score"` that is best-scoring-chunk order, and with `sort="none"` it is the order the chunks
+  arrived in. Grouping **always** virtualizes, regardless of `virtualizeAt`
 - `presentation: 'compact' | 'expanded' = 'expanded'` — `'expanded'` shows each chunk's full row
   (score bar, text preview with its own toggle) plus any `metadata`; `'compact'` shows title + score
   bar only and omits `metadata` entirely

@@ -6,7 +6,7 @@
 - **Class** `LyraConfirmBar`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/confirm-bar/confirm-bar.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 19 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -66,6 +66,14 @@ and re-chromed entirely through five properties, all scoped to `[part="base"]` w
 They are inline `var()` fallbacks at their point of use rather than `:host` declarations, so any of
 them can be set on the element *or on any ancestor*, which is what makes "give every compact confirm
 bar in this panel a hairline border" a one-rule change on the panel.
+
+Two further properties recolor the decided state: `--lr-confirm-bar-approved-color` (default
+`var(--lr-color-success)`) and `--lr-confirm-bar-denied-color` (default `var(--lr-color-danger)`) —
+`[part="status"]`'s text/icon color under `:host([decision='approved'])` and
+`:host([decision='denied'])` respectively. Same inline-`var()`-fallback shape as the compact set.
+They exist because `::part(status)[decision]` is invalid CSS, so recoloring just this component's
+decided state previously meant re-pointing the library-wide `--lr-color-success`/`-danger` tokens and
+repainting everything else that reads them.
 
 **Known gotchas:**
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus

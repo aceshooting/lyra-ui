@@ -16,7 +16,7 @@ import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
-import type { LyraAnchor, HighlightActivateDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraHighlightTone, HighlightActivateDetail, TextSelectDetail } from '../document-viewer/anchors.js';
 import { getEpubJs, type EpubBook, type EpubRendition } from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
@@ -42,6 +42,24 @@ interface EbookSearchMatch {
 const MAX_TOC_ITEMS = 10_000;
 const MAX_TOC_DEPTH = 100;
 
+/** Tone -> the token (and its light-theme fallback) a painted `cfi` highlight resolves its `fill`
+ *  from, mirroring `highlight-layer`'s own tone mapping. epub.js's `annotations.highlight()`
+ *  applies its `styles` argument as raw SVG presentation attributes on the mark it paints (see
+ *  `marks-pane`'s `Highlight.bind()`), not as a stylesheet declaration -- an unresolved `var(...)`
+ *  string left in that attribute isn't guaranteed to repaint on a later theme change, so the
+ *  concrete value is read via `getComputedStyle` at paint time instead. */
+const TONE_FILL_TOKEN: Record<LyraHighlightTone, { token: string; fallback: string }> = {
+  accent: { token: '--lr-color-brand-quiet', fallback: '#ddf4ff' },
+  success: { token: '--lr-color-success-quiet', fallback: '#dafbe1' },
+  warning: { token: '--lr-color-warning-quiet', fallback: '#fff8c5' },
+  danger: { token: '--lr-color-danger-quiet', fallback: '#ffebe9' },
+  neutral: { token: '--lr-color-surface-raised', fallback: '#f6f8fa' },
+};
+
+/** The active search match's own fill token/fallback -- mirrors `docx-viewer`'s
+ *  `search-match-active` treatment (`--lr-color-warning`) rather than any highlight tone. */
+const SEARCH_MATCH_FILL_TOKEN = { token: '--lr-color-warning', fallback: '#9a6700' };
+
 export interface LyraEbookViewerEventMap extends LyraAnchorTargetEventMap {
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-location-change': CustomEvent<{ cfi: string; href: string }>;
@@ -60,10 +78,12 @@ class LyraEbookViewerBase extends LyraElement<LyraEbookViewerEventMap> {}
  * rather than this component's own shadow DOM (a native `Range`/`Selection` inside one of those
  * iframes is invisible to this component's own document, so selection handling below is bridged
  * through epub.js's own `selected` event instead of the mixin's default DOM-selection binding).
- * `highlights` (kind `cfi`) paint via `rendition.annotations.highlight()` and are re-applied
- * whenever the rendition is recreated (a `src` change, or a reconnect remount) -- epub.js doesn't
- * persist annotations across a fresh `renderTo()`. `getToc()` reads the EPUB's own navigation
- * document into a flat, document-ordered outline once `book.ready` resolves. `location` (a CFI or
+ * `highlights` (kind `cfi`) paint via `rendition.annotations.highlight()`, resolving each `tone`
+ * to a concrete `fill` color (its `styles` 5th arg) so highlights actually differentiate by tone,
+ * and are re-applied whenever the rendition is recreated (a `src` change, or a reconnect remount)
+ * -- epub.js doesn't persist annotations across a fresh `renderTo()`. `getToc()` reads the EPUB's
+ * own navigation document into a flat, document-ordered outline once `book.ready` resolves.
+ * `location` (a CFI or
  * spine href) is recorded before the book is ready and applied once loading finishes, or applied
  * immediately once it already has; epub.js's own `relocated` event keeps it in sync with user
  * navigation without re-triggering a `display()` call for a change that originated from that same
@@ -380,6 +400,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         { id: highlight.id },
         () => this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlight.id }),
         `lr-hl-${tone}`,
+        this.resolveHighlightFill(TONE_FILL_TOKEN[tone]),
       );
       this.paintedHighlightCfis.push(cfi);
     }
@@ -470,7 +491,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     if (!match || !this.rendition) return;
     this.clearSearchAnnotation();
     await this.rendition.display(match.cfi);
-    this.rendition.annotations.highlight(match.cfi, {}, undefined, 'lr-ebook-search');
+    this.rendition.annotations.highlight(match.cfi, {}, undefined, 'lr-ebook-search', this.resolveHighlightFill(SEARCH_MATCH_FILL_TOKEN));
     this.searchAnnotationCfi = match.cfi;
   }
 
@@ -496,6 +517,14 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
       this.searchMatches.length,
       this.searchActiveIndex,
     );
+  }
+
+  /** Resolves a `{ token, fallback }` pair to the mark's `fill` `styles` arg, reading the token's
+   *  live concrete value off this instance via `getComputedStyle` (falling back to its
+   *  light-theme default when unresolved, e.g. before this element's own stylesheet is attached). */
+  private resolveHighlightFill({ token, fallback }: { token: string; fallback: string }): { fill: string } {
+    const value = typeof getComputedStyle === 'function' ? getComputedStyle(this).getPropertyValue(token).trim() : '';
+    return { fill: value || fallback };
   }
 
   private announceViaLiveRegion(text: string): void {

@@ -108,6 +108,38 @@ it('maintains one roving toolbar stop and moves it from the directly focused act
   expect(actions[3]!.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
 });
 
+it('restarts positioning after a disconnect/reconnect while open', async () => {
+  const rect = new DOMRect(20, 30, 100, 20);
+  const el = (await fixture(html`<lr-selection-toolbar
+    open
+    text="selected"
+    .rect=${rect}
+  ></lr-selection-toolbar>`)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+
+  // Simulate a same-instance reparent (e.g. drag-and-drop), which fires
+  // disconnectedCallback then connectedCallback synchronously with no Lit
+  // update in between -- `updated()`'s `changed.has('open')` branch never
+  // reruns to notice `open` is still true.
+  const parent = el.parentElement!;
+  el.remove();
+  parent.append(el);
+
+  // Clear the previously stamped position so a stale value can't pass this
+  // assertion by accident -- only a live resize-listener re-running
+  // updateToolbarPosition() can restore it.
+  toolbar.removeAttribute('data-positioned');
+  toolbar.style.removeProperty('--lr-selection-toolbar-inline-start');
+  toolbar.style.removeProperty('--lr-selection-toolbar-block-start');
+
+  window.dispatchEvent(new Event('resize'));
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+
+  expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-inline-start')).to.equal('70px');
+  expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-block-start')).to.equal('30px');
+});
+
 it('snapshots selection detail before awaiting clipboard writes', async () => {
   const originalWriteText = navigator.clipboard.writeText;
   let release: (() => void) | undefined;

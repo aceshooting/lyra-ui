@@ -141,6 +141,26 @@ it('emits one host lr-sort event for one bubbling table lr-sort event', async ()
   expect(count).to.equal(1);
 });
 
+it('does not leak the composed lr-table lr-row-click event past the host under its own name', async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs}></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement;
+  let count = 0;
+  el.addEventListener('lr-row-click', () => count++);
+
+  table.dispatchEvent(
+    new CustomEvent('lr-row-click', {
+      detail: { row: docs[0] },
+      bubbles: true,
+      composed: true,
+    }),
+  );
+  await el.updateComplete;
+
+  expect(count).to.equal(0);
+});
+
 it('sorts numerically-aware by version (v2 before v10)', async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs} sort-key="version"></lr-document-library>`,

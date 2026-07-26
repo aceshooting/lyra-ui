@@ -2,6 +2,8 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import './html-viewer.js';
 import type { LyraHtmlViewer } from './html-viewer.js';
 import { __setHtmlSanitizerForTesting } from './dompurify-loader.js';
+import { getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
+import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response; }
 
@@ -117,5 +119,27 @@ describe('lr-html-viewer', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="html"] h1') !== null);
       await expect(el).to.be.accessible();
     } finally { window.fetch = original; }
+  });
+});
+
+describe('HTML registry', () => {
+  it('forwards document anchors/highlights and advertises its text contracts', () => {
+    const definition = getDefaultDocumentRendererRegistry().get('text/html')!;
+    const highlights: LyraHighlight[] = [{ id: 'h1', anchor: { kind: 'text-quote', quote: 'Ada' } }];
+    const anchor = { kind: 'fragment' as const, id: 'section-one' };
+    const rendered = definition.render!({
+      name: 'report.html',
+      mimeType: 'text/html',
+      src: 'https://example.test/report.html',
+      anchor,
+      highlights,
+    }) as LyraHtmlViewer;
+    expect(rendered.anchor).to.equal(anchor);
+    expect(rendered.highlights).to.equal(highlights);
+    expect(definition.capabilities).to.deep.equal({
+      anchors: ['text-quote', 'fragment'],
+      search: true,
+      textSelect: true,
+    });
   });
 });

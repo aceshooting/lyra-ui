@@ -3,6 +3,7 @@ import { LitElement, html as litHtml } from 'lit';
 import './chip-group.js';
 import './chip.js';
 import type { LyraChipGroup } from './chip-group.js';
+import { styles } from './chip-group.styles.js';
 
 // A minimal host that re-projects its own light-DOM children into a
 // `<lr-chip-group>` living in its shadow DOM via a forwarding `<slot>` --
@@ -31,6 +32,25 @@ function fiveChips() {
     </lr-chip-group>
   `;
 }
+
+it("wraps the internal [aria-expanded='true'] rule in :where() so a consumer ::part(overflow-indicator) override can win (regression)", () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(/\[part='overflow-indicator'\]:where\(\[aria-expanded='true'\]\)/);
+  // The old, over-specific unwrapped shape must be gone, not merely joined by the new one.
+  expect(css).to.not.include("[part='overflow-indicator'][aria-expanded='true']");
+});
+
+it('lets a consumer retint the expanded overflow-indicator via the scoped --lr-chip-group-overflow-expanded-color cssprop (regression)', async () => {
+  const el = (await fixture(fiveChips())) as LyraChipGroup;
+  el.maxVisible = 3;
+  el.style.setProperty('--lr-chip-group-overflow-expanded-color', 'rgb(1, 2, 3)');
+  await el.updateComplete;
+  const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
+  indicator.click();
+  await el.updateComplete;
+  expect(indicator.getAttribute('aria-expanded')).to.equal('true');
+  expect(getComputedStyle(indicator).color).to.equal('rgb(1, 2, 3)');
+});
 
 it('defaults max-visible to unset, showing every child and no overflow indicator', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;

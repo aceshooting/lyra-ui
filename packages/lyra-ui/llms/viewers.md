@@ -247,7 +247,7 @@ Register a renderer once during application setup. The definition may load a hea
 only when a matching document is opened:
 
 ```ts
-import { registerDocumentRenderer } from '@aceshooting/lyra-ui';
+import { registerDocumentRenderer } from '@aceshooting/lyra-ui/components/viewers/document-viewer/registry.js';
 
 registerDocumentRenderer('application/x-example', {
   render: (file) => `Preview: ${file.name}`,
@@ -422,8 +422,12 @@ stylesheet.
 
 **Optional peer dependency:** install `jszip` with `pnpm add jszip`. The lazy registry registers
 `application/zip` and `application/x-zip-compressed`, with a `.zip` filename fallback, and imports
-the viewer only when a matching archive is opened. `.tar`, `.rar`, and other archive formats fall
-through to `<lr-document-preview>`'s generic download fallback.
+the viewer only when a matching archive is opened. Both registrations declare
+`capabilities: { anchors: ['text-quote', 'fragment'], search: true, textSelect: true }` — sibling to
+`load`, not inside it, so feature detection can read the capabilities without paying for the lazy
+import. Opening a `.zip` through `<lr-document-viewer>` forwards `anchor`/`highlights` to the mounted
+viewer, so a deep link into an entry name survives the registry hop. `.tar`, `.rar`, and other
+archive formats fall through to `<lr-document-preview>`'s generic download fallback.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the entry listing.
@@ -504,7 +508,9 @@ and `lr-render-error` with `detail.error`.
 
 **Optional peer dependency:** install `@aiden0z/pptx-renderer` with
 `pnpm add @aiden0z/pptx-renderer`. The registry matches the official PPTX MIME type and `.pptx`
-filenames.
+filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
+capabilities and forwarding `anchor`/`highlights` to the mounted viewer, so a deep link opened
+through `<lr-document-viewer>` survives the registry hop.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the presentation.
@@ -513,26 +519,42 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 
+Adopts `DocumentAnchorTarget` (the same shared mixin `lr-pdf-viewer`/`lr-csv-viewer` use): a `region`
+anchor addresses one `highlights` entry, matched by reference or by structural equality of its `rect`
+(and optional `page`). Assigning `anchor` or calling `scrollToAnchor()` scrolls the matching
+`[part="region-highlight"]` into view and fires `lr-anchor-result`. No other anchor kind resolves
+here — a sanitized SVG document has neither pages nor extractable text to quote, which is also why
+its registry entry declares `capabilities: { anchors: ['region'], search: false, textSelect: false }`.
+
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
 the scrollable body. `zoomable: boolean = false` (reflected) — wraps the rendered content in an
 internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
-an inspection surface opts in. `highlights: LyraHighlight[] = []` (attribute: false) — display-only
-`region` highlights painted over the rendered SVG. `activeHighlightId: string | null = null`
+an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
+declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
+calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
+scroll, it is not reference-gated. `highlights: LyraHighlight[] = []` (attribute: false) —
+display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
+from `DocumentAnchorTarget` rather than declared locally. `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
 (`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
 supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
-**Methods:** `scrollToAnchor(target)` — scrolls a `region` highlight (by id, or a `LyraAnchor` matched
-back to its owning `LyraHighlight` by reference) into view; resolves `false` when nothing matches, the
-anchor isn't `region`, or the document isn't loaded yet (no retry loop — a caller invoking this before
-`src` resolves simply gets `false`).
+**Methods:** `scrollToAnchor(target): Promise<boolean>` — scrolls the `highlights` entry matching
+`target` (a `region`-kind `LyraAnchor`, matched by reference or by structural equality of
+`rect`/`page`; or a `highlights[].id` string) into view, honoring `prefers-reduced-motion`. Resolves
+`true` when a match was found and scrolled, `false` otherwise, and always fires `lr-anchor-result`
+carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
+timers) rather than failing immediately.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { id }`) — a region highlight was clicked or activated via
-Enter/Space.
+Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
+or a `scrollToAnchor()` call is applied, whether or not a match was found.
 
-**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `highlight-layer` (wrapper around every
+**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `anchor-live-region` (the visually-hidden
+`role="status"` element announcing anchor-jump results to assistive tech),
+`highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
 `region-highlight-target` (transparent activation geometry with an independent minimum hit area),
 `highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`
@@ -579,7 +601,10 @@ inside a bounded, scrollable body.
 **Themeable custom properties:** `--lr-html-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
 
-**Optional peer dependency:** `dompurify`.
+**Optional peer dependency:** `dompurify`. The registry matches `text/html` and `.htm`/`.html`
+filenames, declaring `{ anchors: ['text-quote', 'fragment'], search: true, textSelect: true }`
+capabilities and forwarding `anchor`/`highlights` onto the created element, so a deep link opened
+through `<lr-document-viewer>` survives the registry hop.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the document.
@@ -715,7 +740,10 @@ table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` wh
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
 
-**CSS parts:** `base`, `toolbar`, `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
+**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `zoom-out-button`,
+`zoom-in-button` (the four toolbar controls — previously reachable only through `::part(toolbar)
+button`, which is invalid: a descendant combinator after `::part()` never matches, so each button now
+carries its own part name), `page-indicator`, `zoom-indicator`, `pages`, `page`, `page-canvas`
 (the canvas one page's content is painted onto), `text-layer`, `text-span` (one generated text run
 inside a page's text layer — PDF.js creates these imperatively, and they carry the part so a rule can
 reach them without a descendant combinator), `search-match` (a `<mark>` painted into a mounted page's
@@ -973,8 +1001,10 @@ Execution is a hard non-goal. Markdown cells render through `lr-markdown`, code 
 `lr-code-block` (using the notebook's kernel language for syntax highlighting), and raw cells as
 plain preformatted text. A code cell's `execute_result`/`display_data` outputs prefer, in order,
 `image/png`, `image/jpeg`, `image/svg+xml` (sanitized), `text/html` (sanitized), `application/json`
-(via `lr-json-viewer`), then `text/plain`. Stream/error outputs render as plain preformatted text
-(tinted `danger` for stderr/tracebacks). Sanitizing raw HTML/SVG output markup lazy-loads the
+(via `lr-json-viewer`), then `text/plain`. Stream/error outputs render as preformatted text (tinted
+`danger` for stderr/tracebacks) with embedded ANSI SGR color/style escapes interpreted through the
+same shared `internal/ansi.ts` parser `lr-terminal` uses — a traceback keeps its coloring instead of
+showing raw `ESC[` sequences. Sanitizing raw HTML/SVG output markup lazy-loads the
 optional peer `dompurify`; without it, the output renders a localized notice instead of raw markup.
 Cells are virtualized through `lr-virtual-list`. `node-path` anchors resolve `path[0]` as a cell
 index; `fragment` anchors resolve a cell's own `id`. No execution, no kernels, no editing, no

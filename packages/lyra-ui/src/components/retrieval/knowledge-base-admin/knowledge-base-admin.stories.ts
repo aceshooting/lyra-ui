@@ -13,3 +13,12 @@ const ingestionItems: IngestionQueueItem[] = [{ id: 'doc-1', document: { id: 'do
 
 export const Sources: Story = { render: () => html`<lr-knowledge-base-admin .sources=${sources} .ingestionItems=${ingestionItems}></lr-knowledge-base-admin>` };
 export const Ingestion: Story = { render: () => html`<lr-knowledge-base-admin active-tab="ingestion" .sources=${sources} .ingestionItems=${ingestionItems}></lr-knowledge-base-admin>` };
+
+export const Narrow320: Story = {
+  name: 'Narrow allocation (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-knowledge-base-admin .sources=${sources} .ingestionItems=${ingestionItems}></lr-knowledge-base-admin>
+    </div>
+  `,
+};

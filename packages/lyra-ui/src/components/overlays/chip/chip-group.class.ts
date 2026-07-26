@@ -38,6 +38,10 @@ export interface LyraChipGroupEventMap {
  * revealing or re-collapsing the excess children. `detail: { expanded }`.
  * @csspart base - The flex-wrap container (holds both the slot and the overflow indicator).
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
+ * @cssprop [--lr-chip-group-overflow-expanded-color=var(--lr-color-text)] - Text color of
+ *   `[part="overflow-indicator"]` while expanded (`aria-expanded="true"`).
+ *   `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to
+ *   retint the expanded state without re-pointing the shared `--lr-color-text` token.
  */
 export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   static override styles = [LyraElement.styles, styles];

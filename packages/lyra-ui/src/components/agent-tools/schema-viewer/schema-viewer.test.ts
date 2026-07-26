@@ -74,6 +74,25 @@ it('clamps a hostile maxDepth request so deeply nested schemas stay stack-safe',
   expect(el.shadowRoot!.querySelectorAll('[part~="node"]').length).to.equal(101);
 });
 
+it('renders an info-severity issue with its own styling, distinct from the danger default', async () => {
+  const el = (await fixture(html`
+    <lr-schema-viewer
+      .schema=${schema}
+      .issues=${[
+        { path: '/properties/query', message: 'Defaults to the account locale', severity: 'info' },
+        { path: '/properties/options', message: 'Query is required' },
+      ]}
+    ></lr-schema-viewer>
+  `)) as LyraSchemaViewer;
+  const infoIssue = el.shadowRoot!.querySelector('[part="issue"][data-severity="info"]') as HTMLElement;
+  const errorIssue = el.shadowRoot!.querySelector('[part="issue"][data-severity="error"]') as HTMLElement;
+  expect(infoIssue).to.exist;
+  expect(errorIssue).to.exist;
+  expect(getComputedStyle(infoIssue).borderInlineStartColor).to.not.equal(
+    getComputedStyle(errorIssue).borderInlineStartColor,
+  );
+});
+
 it('allows selected and issue states to be rethemed independently', async () => {
   const el = (await fixture(html`
     <lr-schema-viewer

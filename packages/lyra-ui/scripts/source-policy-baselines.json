@@ -6,8 +6,6 @@
     "src/components/overlays/dialog/dialog.class.ts",
     "src/components/data/env-list/env-list.class.ts",
     "src/components/data/file-tree/file-tree.class.ts",
-    "src/components/data/flow-minimap/flow-minimap.class.ts",
-    "src/components/data/heatmap/heatmap.class.ts",
     "src/components/overlays/progress/progress-bar.class.ts",
     "src/components/overlays/progress/progress-ring.class.ts",
     "src/components/overlays/rating/rating.class.ts",

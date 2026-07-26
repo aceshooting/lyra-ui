@@ -43,6 +43,16 @@ it('emits controlled claim and citation selection events with complete records',
   expect((await citationEvent).detail).to.deep.equal({ citation: citations[0] });
 });
 
+it('stops the internal lr-citation-badge lr-citation-activate event before re-emitting lr-citation-select', async () => {
+  const el = (await fixture(html`<lr-claim-evidence .claims=${claims} .citations=${citations}></lr-claim-evidence>`)) as LyraClaimEvidence;
+  let leaked = false;
+  el.addEventListener('lr-citation-activate', () => (leaked = true));
+  const citationEvent = oneEvent(el, 'lr-citation-select');
+  (el.shadowRoot!.querySelector('lr-citation-badge')!.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+  await citationEvent;
+  expect(leaked).to.be.false;
+});
+
 it('applies per-instance strings to claim status', async () => {
   const el = (await fixture(
     html`<lr-claim-evidence

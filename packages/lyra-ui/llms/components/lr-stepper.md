@@ -91,8 +91,10 @@ text color of the `current` step. `--lr-stepper-current-font-weight` (default
 `var(--lr-font-weight-semibold)`) — font weight of the `current` step's label.
 `--lr-stepper-error-color` (default `var(--lr-color-danger)`) —
 text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--lr-color-brand)`) and
-`--lr-stepper-current-index-color` (default `var(--lr-color-surface)`) — background and text color
-of the `current` step's numbered `step-index` chip. Each is an inline `var()` fallback at the point
+`--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
+of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
+foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
+colors, where surface and on-brand diverge. Each is an inline `var()` fallback at the point
 of use, never declared on `:host`, so it can be set on the element or on any ancestor; and each is
 scoped to its own `data-state`, so recoloring the current step leaves `pending`/`completed`/`error`
 steps alone. The hooks exist because `::part(step)[data-state='current']` is invalid CSS — Shadow
@@ -100,7 +102,7 @@ Parts forbids an attribute selector after `::part()` — so state-specific themi
 overriding a library-wide `--lr-color-*` token and repainting everything else that read it. Unset,
 each falls back to the token its rule used before. Otherwise shared tokens —
 `--lr-space-m`/`-xs`/`-2xs`,
-`--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-surface`, `--lr-radius`/`-pill`,
+`--lr-color-text-quiet`/`-text`/`-danger`/`-brand`/`-on-brand`, `--lr-radius`/`-pill`,
 `--lr-font-size-xs`, `--lr-font-weight-semibold`, `--lr-opacity-disabled`,
 `--lr-focus-ring-*`.
 

@@ -120,6 +120,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
       part="request"
       type="button"
       data-selected=${request.id === this.selectedId ? 'true' : 'false'}
+      aria-current=${request.id === this.selectedId ? 'true' : nothing}
       aria-label=${this.localize('approvalQueueOpen', undefined, { tool: request.toolName })}
       @click=${() => this.select(request)}
     >

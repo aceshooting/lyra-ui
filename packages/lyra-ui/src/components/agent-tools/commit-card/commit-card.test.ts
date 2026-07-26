@@ -165,6 +165,38 @@ describe('lr-commit-card', () => {
     );
   });
 
+  it('expands a bare git-status letter into a localized accessible name, reusing the shared gitStatus* keys', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        files-collapsed="false"
+        .files=${[{ path: 'a.ts', additions: 1, deletions: 0, status: 'modified' }]}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    await el.updateComplete;
+    const status = el.shadowRoot!.querySelector('[part="file-status"]')!;
+    // The glyph stays the terse letter sighted users expect; the accessible name is the expansion.
+    expect(status.textContent!.trim()).to.equal('M');
+    expect(status.getAttribute('aria-label')).to.equal('Modified');
+  });
+
+  it('routes the git-status expansion through .strings, so registerLyraLocale() can translate it', async () => {
+    const el = (await fixture(html`
+      <lr-commit-card
+        files-collapsed="false"
+        .files=${[
+          { path: 'a.ts', additions: 1, deletions: 0, status: 'modified' },
+          { path: 'b.ts', additions: 2, deletions: 0, status: 'added' },
+        ]}
+        .strings=${{ gitStatusModified: 'Modifié', gitStatusAdded: 'Ajouté' }}
+      ></lr-commit-card>
+    `)) as LyraCommitCard;
+    await el.updateComplete;
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="file-status"]')].map((s) =>
+      s.getAttribute('aria-label'),
+    );
+    expect(labels).to.deep.equal(['Modifié', 'Ajouté']);
+  });
+
   it('defaults to compact=false and appearance="card", keeping the pre-existing border/padding', async () => {
     const el = (await fixture(html`<lr-commit-card></lr-commit-card>`)) as LyraCommitCard;
     await el.updateComplete;

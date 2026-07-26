@@ -441,6 +441,38 @@ it('localizes the search label, grid label, and empty-state message via .strings
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.equal('Aucun emoji trouvé');
 });
 
+it('localizes an auto-loaded group heading through its labelKey, so registerLyraLocale()/.strings reach it', async () => {
+  const el = await connectEmojiPicker(() =>
+    Promise.resolve([
+      { key: '0', label: 'Smileys & Emotion', labelKey: 'emojiPickerGroupSmileysEmotion', emojis: [{ emoji: '😀', name: 'grinning face' }] },
+      { key: '9', label: 'Flags', labelKey: 'emojiPickerGroupFlags', emojis: [{ emoji: '🏳️', name: 'white flag' }] },
+    ]),
+  );
+  await waitUntil(() => el.groups.length === 2, 'auto-loaded groups never arrived');
+  await el.updateComplete;
+  expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
+    'Smileys & Emotion',
+    'Flags',
+  ]);
+  el.strings = { emojiPickerGroupSmileysEmotion: 'Émotions', emojiPickerGroupFlags: 'Drapeaux' };
+  await el.updateComplete;
+  expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
+    'Émotions',
+    'Drapeaux',
+  ]);
+});
+
+it('keeps rendering a consumer-supplied group label verbatim when no labelKey is present', async () => {
+  const el = await connectEmojiPicker();
+  el.groups = groups;
+  el.strings = { emojiPickerGroupSmileysEmotion: 'Émotions' };
+  await el.updateComplete;
+  expect([...el.shadowRoot!.querySelectorAll('[part="group-label"]')].map((h) => h.textContent!.trim())).to.deep.equal([
+    'Smileys',
+    'Animals',
+  ]);
+});
+
 describe('disabled', () => {
   it('gates both the search input and every emoji button', async () => {
     const el = await connectEmojiPicker();

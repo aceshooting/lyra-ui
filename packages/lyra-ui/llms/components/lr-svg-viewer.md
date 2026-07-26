@@ -15,26 +15,42 @@
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 
+Adopts `DocumentAnchorTarget` (the same shared mixin `lr-pdf-viewer`/`lr-csv-viewer` use): a `region`
+anchor addresses one `highlights` entry, matched by reference or by structural equality of its `rect`
+(and optional `page`). Assigning `anchor` or calling `scrollToAnchor()` scrolls the matching
+`[part="region-highlight"]` into view and fires `lr-anchor-result`. No other anchor kind resolves
+here — a sanitized SVG document has neither pages nor extractable text to quote, which is also why
+its registry entry declares `capabilities: { anchors: ['region'], search: false, textSelect: false }`.
+
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
 the scrollable body. `zoomable: boolean = false` (reflected) — wraps the rendered content in an
 internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
-an inspection surface opts in. `highlights: LyraHighlight[] = []` (attribute: false) — display-only
-`region` highlights painted over the rendered SVG. `activeHighlightId: string | null = null`
+an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
+declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry's `id`). Assigning it
+calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
+scroll, it is not reference-gated. `highlights: LyraHighlight[] = []` (attribute: false) —
+display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
+from `DocumentAnchorTarget` rather than declared locally. `activeHighlightId: string | null = null`
 (attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
 (`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
 supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
-**Methods:** `scrollToAnchor(target)` — scrolls a `region` highlight (by id, or a `LyraAnchor` matched
-back to its owning `LyraHighlight` by reference) into view; resolves `false` when nothing matches, the
-anchor isn't `region`, or the document isn't loaded yet (no retry loop — a caller invoking this before
-`src` resolves simply gets `false`).
+**Methods:** `scrollToAnchor(target): Promise<boolean>` — scrolls the `highlights` entry matching
+`target` (a `region`-kind `LyraAnchor`, matched by reference or by structural equality of
+`rect`/`page`; or a `highlights[].id` string) into view, honoring `prefers-reduced-motion`. Resolves
+`true` when a match was found and scrolled, `false` otherwise, and always fires `lr-anchor-result`
+carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
+timers) rather than failing immediately.
 
 **Events:** `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { id }`) — a region highlight was clicked or activated via
-Enter/Space.
+Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
+or a `scrollToAnchor()` call is applied, whether or not a match was found.
 
-**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `highlight-layer` (wrapper around every
+**CSS parts:** `base`, `body`, `svg`, `spinner`, `error`, `anchor-live-region` (the visually-hidden
+`role="status"` element announcing anchor-jump results to assistive tech),
+`highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
 `region-highlight-target` (transparent activation geometry with an independent minimum hit area),
 `highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`

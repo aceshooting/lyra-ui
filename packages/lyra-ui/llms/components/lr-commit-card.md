@@ -6,7 +6,7 @@
 - **Class** `LyraCommitCard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/commit-card/commit-card.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -37,8 +37,16 @@ when both are set.
 }`), and `lr-copy` (`detail: { text: string }`, the full hash was copied).
 
 **CSS parts:** `base`, `subject`, `body`, `hash`, `meta`, `author`, `time`, `diffstat`, `additions`,
-`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-additions`,
-`file-deletions`, `copy-button`, and `actions`.
+`deletions`, `files-toggle`, `file` (carries `data-status`), `file-path`, `file-status`,
+`file-additions`, `file-deletions`, `copy-button`, and `actions`.
+
+`file-status` is the one-letter git-status badge (`A`/`M`/`D`/`R`/`U`/`C`/`!`) rendered inside
+`[part="file-path"]`, present only for a file that has a `status`. The letter alone is meaningless to
+a screen reader, so the element carries the localized expansion as its `aria-label` — "Modified",
+"Added", … — reusing `<lr-file-tree>`'s shared `gitStatusAdded`/`gitStatusModified`/
+`gitStatusDeleted`/`gitStatusRenamed`/`gitStatusUntracked`/`gitStatusConflicted`/`gitStatusIgnored`
+message keys, so one `registerLyraLocale()` registration (or one `.strings` override) translates the
+badge in both components at once.
 
 **Themeable custom properties:** `--lr-commit-card-compact-padding` (default `var(--lr-space-s)`) —
 `[part="base"]` padding while `compact`.

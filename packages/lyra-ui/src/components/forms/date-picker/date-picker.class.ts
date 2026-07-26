@@ -86,6 +86,8 @@ export interface LyraDatePickerEventMap {
  * @cssprop [--lr-date-picker-month-gap=var(--lr-space-l)] - Gap between visible months.
  * @cssprop [--lr-date-picker-header-gap=var(--lr-space-s)] - Month-header child gap.
  * @cssprop [--lr-date-picker-radius=var(--lr-radius)] - Calendar and control corner radius.
+ * @cssprop [--lr-date-picker-nav-hover-bg=var(--lr-color-brand-quiet)] - Hover background of the
+ *   `[part="previous"]`/`[part="next"]` month-navigation buttons.
  */
 export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   static override styles = [LyraElement.styles, styles];

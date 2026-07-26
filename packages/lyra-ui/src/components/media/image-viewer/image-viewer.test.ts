@@ -539,6 +539,16 @@ describe('accessibility', () => {
     expect(parseFloat(style.minBlockSize)).to.be.at.least(40);
   });
 
+  it('gives the toolbar fit/rotate/annotate controls the shared minimum hit-area on both axes', async () => {
+    const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
+    for (const part of ['fit-control', 'rotate-button', 'annotate-toggle']) {
+      const control = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      const style = getComputedStyle(control);
+      expect(parseFloat(style.minInlineSize), `${part} minInlineSize`).to.be.at.least(40);
+      expect(parseFloat(style.minBlockSize), `${part} minBlockSize`).to.be.at.least(40);
+    }
+  });
+
   it('is accessible with highlights and annotation on', async () => {
     const el = await fixture(html`<lr-image-viewer src=${PNG_SRC} name="Chart" annotatable .highlights=${[
       { id: 'h1', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 20, height: 15 } }, label: 'Zone A' },

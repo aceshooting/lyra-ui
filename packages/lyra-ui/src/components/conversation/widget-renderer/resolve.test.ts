@@ -166,4 +166,54 @@ describe('resolveTree (security-critical allowlist enforcement)', () => {
     expect(resolved!.children[0].key).to.equal('stable-1');
     expect(resolved!.children[1].key).to.equal('0.1');
   });
+
+  // `readPointer` (private to resolve.ts, exercised only through a $bind prop on the built-in
+  // `text` type) already guards __proto__/prototype/constructor segments -- these cases prove
+  // that guard, they don't add one.
+  describe('$bind path resolution (readPointer prototype-pollution guard)', () => {
+    it('blocks a top-level __proto__ segment, falling back instead of resolving Object.prototype', () => {
+      const node: WidgetNode = {
+        type: 'text',
+        props: { value: { $bind: '/__proto__/polluted', fallback: 'safe' } },
+      };
+      const resolved = resolveTree(node, { ...ctx(new Map()), state: {} });
+      expect(resolved!.props).to.deep.equal({ value: 'safe' });
+    });
+
+    it('blocks a "constructor" segment, refusing to walk toward Function via the constructor chain', () => {
+      const node: WidgetNode = {
+        type: 'text',
+        props: { value: { $bind: '/constructor/prototype', fallback: 'safe' } },
+      };
+      const resolved = resolveTree(node, { ...ctx(new Map()), state: {} });
+      expect(resolved!.props).to.deep.equal({ value: 'safe' });
+    });
+
+    it('blocks a "prototype" segment nested mid-path, not just at the root', () => {
+      const node: WidgetNode = {
+        type: 'text',
+        props: { value: { $bind: '/nested/prototype/polluted', fallback: 'safe' } },
+      };
+      const resolved = resolveTree(node, { ...ctx(new Map()), state: { nested: {} } });
+      expect(resolved!.props).to.deep.equal({ value: 'safe' });
+    });
+
+    it('does not resolve a value at all (undefined, not just blocked) when no fallback is declared', () => {
+      const node: WidgetNode = {
+        type: 'text',
+        props: { value: { $bind: '/__proto__/polluted' } },
+      };
+      const resolved = resolveTree(node, { ...ctx(new Map()), state: {} });
+      expect(resolved!.props).to.deep.equal({});
+    });
+
+    it('never mutates Object.prototype as a side effect of resolving a malicious $bind path', () => {
+      const node: WidgetNode = {
+        type: 'text',
+        props: { value: { $bind: '/__proto__/polluted', fallback: 'safe' } },
+      };
+      resolveTree(node, { ...ctx(new Map()), state: {} });
+      expect(({} as Record<string, unknown>)['polluted']).to.be.undefined;
+    });
+  });
 });

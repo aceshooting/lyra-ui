@@ -146,6 +146,26 @@ it('a host-set decision renders identically but emits nothing itself', async () 
   expect(denyFired).to.be.false;
 });
 
+it('routes the decided-state status color through --lr-confirm-bar-approved-color/-denied-color', async () => {
+  const approved = (await fixture(
+    html`<lr-confirm-bar style="--lr-confirm-bar-approved-color: rgb(1, 2, 3)"></lr-confirm-bar>`,
+  )) as LyraConfirmBar;
+  (approved.shadowRoot!.querySelector('[part="approve-button"]') as LyraButton).click();
+  await approved.updateComplete;
+  expect(getComputedStyle(approved.shadowRoot!.querySelector('[part="status"]') as HTMLElement).color).to.equal(
+    'rgb(1, 2, 3)',
+  );
+
+  const denied = (await fixture(
+    html`<lr-confirm-bar style="--lr-confirm-bar-denied-color: rgb(4, 5, 6)"></lr-confirm-bar>`,
+  )) as LyraConfirmBar;
+  (denied.shadowRoot!.querySelector('[part="deny-button"]') as LyraButton).click();
+  await denied.updateComplete;
+  expect(getComputedStyle(denied.shadowRoot!.querySelector('[part="status"]') as HTMLElement).color).to.equal(
+    'rgb(4, 5, 6)',
+  );
+});
+
 it('reflects tone to a host attribute', async () => {
   const el = (await fixture(html`<lr-confirm-bar tone="danger"></lr-confirm-bar>`)) as LyraConfirmBar;
   expect(el.getAttribute('tone')).to.equal('danger');

@@ -62,7 +62,8 @@ while it matches `search`, and `data-active` while it is the current cursor posi
 present for row alignment on leaf/empty nodes),
 `copy-button` (a copy-to-clipboard button — the top-level one in `toolbar` (aria-label "Copy JSON to
 clipboard") or a per-node one (aria-label `Copy ${key/type}`, e.g. "Copy age"); only rendered when
-`copyable`)
+`copyable`), `limit` (the localized notice rendered below the tree when the depth/node traversal
+budget truncates rendering or search — absent entirely for any document within budget)
 
 **Themeable custom properties:** `--lr-json-viewer-max-height` (default `none` — grows with content
 until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono)`),

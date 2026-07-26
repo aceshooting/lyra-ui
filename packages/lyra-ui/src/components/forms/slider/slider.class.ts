@@ -219,6 +219,23 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.value = String(this.valueAsNumber);
   }
 
+  /** Activates the internal thumb control, mirroring `<lr-switch>`'s identical `override
+   *  click()`. Without this, `HTMLElement.prototype.click()` on the host is a no-op: no click
+   *  handler is bound to the host itself, only to `[part="base"]`/`[part="thumb"]`. */
+  override click(): void {
+    (this.renderRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.click();
+  }
+
+  /** Moves focus to the internal thumb control. */
+  override focus(options?: FocusOptions): void {
+    (this.renderRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.focus(options);
+  }
+
+  /** Removes focus from the internal thumb control. */
+  override blur(): void {
+    (this.renderRoot?.querySelector('[part="thumb"]') as HTMLElement | null)?.blur();
+  }
+
   /** If `value` is still unset, seed it with the sanitized default — the
    *  midpoint of `[min, max]`, snapped to `step` — so `value`/`valueAsNumber`
    *  and rendering never have to treat "" as a real, distinct state. */

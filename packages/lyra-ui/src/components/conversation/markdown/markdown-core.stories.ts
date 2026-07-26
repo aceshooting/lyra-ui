@@ -54,6 +54,15 @@ export const LanguageNotInMap: Story = {
   `,
 };
 
+export const Narrow320: Story = {
+  name: 'Narrow allocation (320px)',
+  render: () => html`
+    <div style="inline-size: 320px; max-inline-size: 100%;">
+      <lr-markdown-core .languages=${{ typescript: tsGrammar }} content=${sample}></lr-markdown-core>
+    </div>
+  `,
+};
+
 export const TabWidth: Story = {
   name: 'Tab width (--lr-code-block-tab-size)',
   parameters: {

@@ -1,6 +1,8 @@
 import { fixture, expect, oneEvent, html, aTimeout } from '@open-wc/testing';
+import type { PropertyValues } from 'lit';
 import './locale-picker.js';
 import type { LyraLocalePicker } from './locale-picker.js';
+import { LyraElement } from '../../../internal/lyra-element.js';
 import { getRegisteredLyraLocales, registerLyraLocale, setLyraLocale, getLyraLocale } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 
@@ -668,4 +670,42 @@ it('reflects aria-invalid=true on the trigger once a required field is touched a
   trigger(el).dispatchEvent(new FocusEvent('blur'));
   await el.updateComplete;
   expect(trigger(el).getAttribute('aria-invalid')).to.equal('true');
+});
+
+// Regression coverage for the lifecycle-super-call-omitted defect class. Scoped by tagName rather
+// than the fixture()-returned reference: <lr-locale-picker> renders <lr-flag> children in its
+// shadow DOM, and those extend LyraElement and override the same hooks on their own, so an
+// unscoped flag would be satisfied by a *different* element's call. Mirrors flag.test.ts's pair.
+it('calls super.willUpdate so a future LyraElement/mixin lifecycle hook stays wired in (regression)', async () => {
+  const proto = LyraElement.prototype as unknown as { willUpdate: (changed: PropertyValues) => void };
+  const original = proto.willUpdate;
+  let calledOnSelf = false;
+  proto.willUpdate = function (this: LyraElement, changed: PropertyValues): void {
+    if (this.tagName === 'LR-LOCALE-PICKER') calledOnSelf = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`)) as LyraLocalePicker;
+    await el.updateComplete;
+    expect(calledOnSelf).to.be.true;
+  } finally {
+    proto.willUpdate = original;
+  }
+});
+
+it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired in (regression)', async () => {
+  const proto = LyraElement.prototype as unknown as { updated: (changed: PropertyValues) => void };
+  const original = proto.updated;
+  let calledOnSelf = false;
+  proto.updated = function (this: LyraElement, changed: PropertyValues): void {
+    if (this.tagName === 'LR-LOCALE-PICKER') calledOnSelf = true;
+    original.call(this, changed);
+  };
+  try {
+    const el = (await fixture(html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`)) as LyraLocalePicker;
+    await el.updateComplete;
+    expect(calledOnSelf).to.be.true;
+  } finally {
+    proto.updated = original;
+  }
 });

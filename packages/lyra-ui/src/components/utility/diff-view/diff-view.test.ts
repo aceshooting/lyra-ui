@@ -458,6 +458,27 @@ describe('contextLines', () => {
   });
 });
 
+describe('RTL / bidi isolation', () => {
+  const old8 = ['a', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'ctx6', 'z'].join('\n');
+  const new8 = ['A', 'ctx1', 'ctx2', 'ctx3', 'ctx4', 'ctx5', 'ctx6', 'Z'].join('\n');
+
+  it('locks a code line to ltr under an RTL ancestor, but leaves the localized fold marker following ambient direction', async () => {
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-diff-view .oldText=${old8} .newText=${new8} .contextLines=${2}></lr-diff-view>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-diff-view') as LyraDiffView;
+    await el.updateComplete;
+
+    const codeLine = el.shadowRoot!.querySelector('[part="line"][data-type="equal"]') as HTMLElement;
+    expect(getComputedStyle(codeLine).direction).to.equal('ltr');
+
+    const foldLine = el.shadowRoot!.querySelector('[part="line"][data-type="fold"]') as HTMLElement;
+    expect(getComputedStyle(foldLine).direction).to.equal('rtl');
+  });
+});
+
 describe('back-compat', () => {
   it('default (unified, no language) output is byte-identical to today', async () => {
     const el = (await fixture(html`<lr-diff-view .oldText=${'a\nb'} .newText=${'a\nc'}></lr-diff-view>`)) as LyraDiffView;

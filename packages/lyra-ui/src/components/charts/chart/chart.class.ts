@@ -242,6 +242,8 @@ interface ChartDatum {
  *   via `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-tooltip-text=var(--lr-color-text)] - Tooltip text color. Resolved via
  *   `getComputedStyle` on every draw.
+ * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the
+ *   `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above).
  * @slot data-table - An optional consumer-provided accessible table alternative.
  * @slot center - Optional overlay content positioned at the chart area's center. Useful for
  *   doughnut and pie totals.
@@ -416,6 +418,17 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private datumStatusId = nextId('chart-datum-status');
   private keyboardDatumIndex = 0;
   @state() private keyboardDatumAnnouncement = '';
+  // `effectiveDirection`/`effectiveLocale` can change without any tracked reactive property
+  // changing: `dir`/`lang` are plain host/ancestor attributes (not Lit `@property`s), so a
+  // `LyraElement`'s inherited-context `MutationObserver` turns an ancestor's `dir`/`lang` flip
+  // into a bare `requestUpdate()` -- `updated()`'s `changed` map carries no entry for either,
+  // so `contentChanged` below must independently compare against the *last drawn* direction/
+  // locale, or a live axis-position/locale-formatted redraw is missed entirely. `undefined`
+  // until the first post-load `updated()` pass; `buildConfig()`'s already-correct RTL axis
+  // placement means an initial mismatch is harmless -- `loading` flips in that same pass and
+  // already forces the first `draw()` regardless.
+  private lastDrawnDirection?: 'ltr' | 'rtl';
+  private lastDrawnLocale?: string;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -513,7 +526,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * in progress. Same rationale as `toast-item.ts`'s `willUpdate()`-vs-
    * `updated()` split.
    */
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!this.zoomed) return;
     if (this.effectiveType() !== this.builtType) {
       this.zoomed = false;
@@ -521,6 +535,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     // Disconnected between the property change that scheduled this update
     // and Lit's (microtask-deferred) processing of it — e.g. a property
     // changes and the element is removed in the same synchronous tick, so
@@ -606,7 +621,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       'strings',
       'loading',
     ].some((name) => changed.has(name));
-    if (!contentChanged) return;
+    // `this.locale`/`this.strings` above only catch an explicit property write on this element
+    // itself -- an inherited `dir`/`lang` flip on an ancestor changes `effectiveDirection()`/
+    // `effectiveLocale()` (which `buildScales()`/`buildConfig()` read directly) without touching
+    // any tracked property here, so it has to be detected by comparing against what was actually
+    // last drawn instead.
+    const effectiveDirection = this.effectiveDirection;
+    const effectiveLocale = this.effectiveLocale;
+    const contextChanged =
+      (this.lastDrawnDirection !== undefined && this.lastDrawnDirection !== effectiveDirection) ||
+      (this.lastDrawnLocale !== undefined && this.lastDrawnLocale !== effectiveLocale);
+    this.lastDrawnDirection = effectiveDirection;
+    this.lastDrawnLocale = effectiveLocale;
+    if (!contentChanged && !contextChanged) return;
     if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
     this.draw();
   }

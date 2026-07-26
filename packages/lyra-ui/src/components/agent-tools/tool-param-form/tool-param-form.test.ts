@@ -79,6 +79,14 @@ it('renders one control per property, in schema key order, matched to its type',
   expect(field(el, 'notify').querySelector('lr-checkbox')).to.exist;
 });
 
+it('exposes the string and number/integer native inputs as [part="control"] for external theming', async () => {
+  const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const textInput = field(el, 'city').querySelector('input[type="text"]') as HTMLInputElement;
+  const numberInput = field(el, 'days').querySelector('input[type="number"]') as HTMLInputElement;
+  expect(textInput.getAttribute('part')).to.equal('control');
+  expect(numberInput.getAttribute('part')).to.equal('control');
+});
+
 it('uses schema.title as the label, falling back to the property key', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
   expect(field(el, 'city').querySelector('[part="label"]')!.textContent).to.equal('City');

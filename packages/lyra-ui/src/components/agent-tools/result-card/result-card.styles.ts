@@ -20,9 +20,11 @@ export const styles = css`
      card renders unchanged. */
   :host([compact]) [part='header'] {
     padding: var(--lr-result-card-compact-header-padding, var(--lr-space-xs));
+    gap: var(--lr-result-card-compact-header-gap, var(--lr-space-xs));
   }
   :host([compact]) [part='body'] {
     padding: var(--lr-result-card-compact-body-padding, var(--lr-space-xs));
+    gap: var(--lr-result-card-compact-body-gap, var(--lr-space-2xs));
   }
   /* 'plain' removes the chrome entirely rather than just tightening it -- see the class doc for
      why it wins over compact when both are set. */

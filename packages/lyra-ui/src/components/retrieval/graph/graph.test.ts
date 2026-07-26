@@ -1953,6 +1953,55 @@ describe('canvas renderer — static draw', () => {
     expect(scene.nodes.some((n) => !n.dimmed)).to.be.true;
     expect(scene.dimmedOpacity).to.equal(0);
   });
+
+  // Canvas counterpart of "renders a '+' expand-indicator only for nodes with expandable: true"
+  // (J3, SVG-only today) -- renderer="canvas" has no per-node DOM to query [part="expand-indicator"]
+  // against, so this asserts the same expandable-only gating via the drawn canvasScene instead.
+  it('feeds only expandable: true nodes into the drawn canvas scene as expand indicators', async () => {
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = [
+      { id: 'a', label: 'A', expandable: true },
+      { id: 'b', label: 'B' },
+    ];
+    el.links = [];
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
+    type Internals = { canvasScene?: { expandIndicators: { x: number; y: number; r: number }[] } };
+    await waitUntil(() => !!(el as unknown as Internals).canvasScene, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const scene = (el as unknown as Internals).canvasScene!;
+    expect(scene.expandIndicators.length).to.equal(1);
+  });
+
+  // Canvas counterpart of "existing graph usage unaffected: no expandable set ... renders no
+  // indicator" (J3, SVG-only today).
+  it('existing canvas usage unaffected: no expandable nodes draw zero expand indicators', async () => {
+    const el = await mountCanvas();
+    (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
+    type Internals = { canvasScene?: { expandIndicators: unknown[] } };
+    await waitUntil(() => !!(el as unknown as Internals).canvasScene, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const scene = (el as unknown as Internals).canvasScene!;
+    expect(scene.expandIndicators.length).to.equal(0);
+  });
+
+  it('resolves --lr-graph-hull-opacity into the drawn canvas scene instead of a hardcoded value', async () => {
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    el.communities = [{ id: 'c1', memberIds: ['a', 'b'] }];
+    el.style.setProperty('--lr-graph-hull-opacity', '0.5');
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+    (el as unknown as { simulation?: { stop: () => void } }).simulation?.stop();
+    type Internals = { canvasScene?: { hullOpacity?: number } };
+    await waitUntil(() => !!(el as unknown as Internals).canvasScene, undefined, { timeout: NODE_COUNT_TIMEOUT });
+    const scene = (el as unknown as Internals).canvasScene!;
+    expect(scene.hullOpacity).to.equal(0.5);
+  });
 });
 
 describe('canvas renderer — interaction and a11y', () => {

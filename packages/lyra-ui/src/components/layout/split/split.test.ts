@@ -583,6 +583,20 @@ it("switches the resize axis from its own inline-size breakpoint and reports the
   }
 });
 
+it("wraps the internal orientation-conditional [part='divider'] rules in :where() so a consumer ::part(divider) override can win without !important (regression)", () => {
+  const css = styles.cssText.replace(/\s+/g, " ");
+  expect(css).to.match(/:host\(:where\(\[orientation='vertical'\]\)\) \[part='divider'\]/);
+  expect(css).to.match(/:host\(:where\(\[orientation='vertical'\]\)\) \[part='divider'\]::before/);
+  expect(css).to.match(/:host\(:where\(\[data-effective-orientation='vertical'\]\)\) \[part='divider'\]/);
+  expect(css).to.match(/:host\(:where\(\[data-effective-orientation='vertical'\]\)\) \[part='divider'\]::before/);
+  expect(css).to.match(/:host\(:where\(\[data-effective-orientation='horizontal'\]\)\) \[part='divider'\]/);
+  expect(css).to.match(/:host\(:where\(\[data-effective-orientation='horizontal'\]\)\) \[part='divider'\]::before/);
+  // The old, over-specific unwrapped shapes must be gone, not merely joined by the new ones.
+  expect(css).to.not.include(":host([orientation='vertical']) [part='divider']");
+  expect(css).to.not.include(":host([data-effective-orientation='vertical']) [part='divider']");
+  expect(css).to.not.include(":host([data-effective-orientation='horizontal']) [part='divider']");
+});
+
 it("keeps the authored orientation and no effective marker when no breakpoint is configured", async () => {
   const el = (await fixture(
     html`<lr-split orientation="vertical"
@@ -825,6 +839,9 @@ it("widens the horizontal divider hit area with a ::before without changing its 
   // ...but the cross axis (block, i.e. top/bottom) is left flush, matching the divider's own box
   expect(before.top).to.equal("0px");
   expect(before.bottom).to.equal("0px");
+  // ...and the resulting hit-slop box reaches the shared 40px (--lr-icon-button-size) floor
+  // (WCAG 2.5.8), even though the visible divider itself stays 3px wide.
+  expect(parseFloat(before.width)).to.be.at.least(40);
 });
 
 it("widens the vertical divider hit area along the block axis instead", async () => {
@@ -847,6 +864,8 @@ it("widens the vertical divider hit area along the block axis instead", async ()
   expect(parseFloat(before.bottom)).to.be.lessThan(0);
   expect(before.left).to.equal("0px");
   expect(before.right).to.equal("0px");
+  // Same 40px (--lr-icon-button-size) hit-slop floor along the block axis.
+  expect(parseFloat(before.height)).to.be.at.least(40);
 });
 
 it("reconciles panelCount and sizes when a panel is added after connect (slotchange)", async () => {

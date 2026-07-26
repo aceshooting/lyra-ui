@@ -365,6 +365,13 @@ it('resets the roving-focus cursor when words changes', async () => {
   expect(el.shadowRoot!.querySelector('[part="focus-ring"]')).to.not.exist;
 });
 
+it('does not render a legend when show-legend is left at its default (unset regression)', async () => {
+  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
+  await el.updateComplete;
+  expect(el.showLegend).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="legend"]')).to.not.exist;
+});
+
 it('colors words sharing a group the same, and differently from an ungrouped word', async () => {
   const el = (await fixture(
     html`<lr-word-cloud

@@ -44,8 +44,12 @@ export type ResultCardAppearance = 'card' | 'plain';
  * @csspart body - The wrapper around the default slot.
  * @cssprop [--lr-result-card-compact-header-padding=var(--lr-space-xs)] - `[part="header"]`
  *   block/inline padding while `compact`.
+ * @cssprop [--lr-result-card-compact-header-gap=var(--lr-space-xs)] - Gap between `[part="header"]`'s
+ *   title and actions while `compact`.
  * @cssprop [--lr-result-card-compact-body-padding=var(--lr-space-xs)] - `[part="body"]` padding
  *   while `compact`.
+ * @cssprop [--lr-result-card-compact-body-gap=var(--lr-space-2xs)] - Gap between `[part="body"]`'s
+ *   children while `compact`.
  */
 export class LyraResultCard extends StripHostTitleAttribute(LyraResultCardBase) {
   static override styles = [LyraElement.styles, styles];

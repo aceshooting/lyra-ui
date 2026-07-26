@@ -236,6 +236,10 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   matchCount, activeIndex }`.
  * @csspart base - The root viewer container.
  * @csspart toolbar - Pagination and zoom controls.
+ * @csspart previous-button - The previous-page button.
+ * @csspart next-button - The next-page button.
+ * @csspart zoom-out-button - The zoom-out button.
+ * @csspart zoom-in-button - The zoom-in button.
  * @csspart page-indicator - The current page text.
  * @csspart zoom-indicator - The current zoom percentage.
  * @csspart pages - The virtualized page list.
@@ -1124,15 +1128,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     const formattedZoom = numberFormat.format(Math.round(this.zoom * 100));
     return html`<div part="toolbar">
-      <button type="button" data-action="previous" ?disabled=${this.page <= 1} aria-label=${this.localize('pdfViewerPreviousPage')} @click=${this.previousPage}>${this.localize('pdfViewerPreviousPage')}</button>
+      <button type="button" part="previous-button" data-action="previous" ?disabled=${this.page <= 1} aria-label=${this.localize('pdfViewerPreviousPage')} @click=${this.previousPage}>${this.localize('pdfViewerPreviousPage')}</button>
       <span part="page-indicator">${this.localize('pdfViewerPageOf', undefined, {
         page: numberFormat.format(this.page),
         total: numberFormat.format(pageCount),
       })}</span>
-      <button type="button" data-action="next" ?disabled=${this.page >= pageCount} aria-label=${this.localize('pdfViewerNextPage')} @click=${this.nextPage}>${this.localize('pdfViewerNextPage')}</button>
-      <button type="button" data-action="zoom-out" ?disabled=${this.zoom <= MIN_ZOOM} aria-label=${this.localize('pdfViewerZoomOut')} @click=${this.zoomOut}>${this.localize('pdfViewerZoomOut')}</button>
+      <button type="button" part="next-button" data-action="next" ?disabled=${this.page >= pageCount} aria-label=${this.localize('pdfViewerNextPage')} @click=${this.nextPage}>${this.localize('pdfViewerNextPage')}</button>
+      <button type="button" part="zoom-out-button" data-action="zoom-out" ?disabled=${this.zoom <= MIN_ZOOM} aria-label=${this.localize('pdfViewerZoomOut')} @click=${this.zoomOut}>${this.localize('pdfViewerZoomOut')}</button>
       <span part="zoom-indicator" aria-label=${this.localize('pdfViewerCurrentZoom', undefined, { percent: formattedZoom })}>${this.localize('pdfViewerCurrentZoom', undefined, { percent: formattedZoom })}</span>
-      <button type="button" data-action="zoom-in" ?disabled=${this.zoom >= MAX_ZOOM} aria-label=${this.localize('pdfViewerZoomIn')} @click=${this.zoomIn}>${this.localize('pdfViewerZoomIn')}</button>
+      <button type="button" part="zoom-in-button" data-action="zoom-in" ?disabled=${this.zoom >= MAX_ZOOM} aria-label=${this.localize('pdfViewerZoomIn')} @click=${this.zoomIn}>${this.localize('pdfViewerZoomIn')}</button>
     </div>`;
   }
 

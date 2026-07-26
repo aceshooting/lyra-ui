@@ -3,6 +3,7 @@ import "./widget.js";
 import type { LyraWidget } from "./widget.js";
 import { styles } from "./widget.styles.js";
 import { registerLyraLocale } from "../../../internal/localization.js";
+import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 
 // A stand-in for a slotted component (e.g. lr-combobox) whose real
 // focusable target lives inside its own shadow root rather than the host
@@ -1167,9 +1168,45 @@ it("disables the collapse/fullscreen icon rotate transition under reduced motion
   );
 });
 
-it("gives view-toggle's resting state a hover, without changing the pressed state's own styling", () => {
+it("gives view-toggle's resting state a hover, gated via :where() so a consumer ::part(view-toggle):hover can win, without changing the pressed state's own styling", () => {
   const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
-  expect(css).to.match(/\[part='view-toggle'\]:hover(?!\[)/);
+  expect(css).to.match(/:where\(\[part='view-toggle'\]\):hover(?!\[)/);
+  // The old over-specific, unwrapped shape must be gone, not merely joined by the new one.
+  expect(css).to.not.include("[part='view-toggle']:hover {");
+});
+
+it('lets a consumer retint the view-toggle hover state via the scoped --lr-widget-view-toggle-hover-* cssprops (regression)', async () => {
+  const el = (await fixture(html`
+    <lr-widget
+      label="Usage"
+      style="--lr-widget-view-toggle-hover-bg: rgb(0, 51, 102); --lr-widget-view-toggle-hover-color: rgb(255, 255, 255);"
+      .views=${[
+        { id: 'chart', label: 'Chart' },
+        { id: 'table', label: 'Table' },
+      ]}
+    >
+      <div slot="view-chart">chart</div>
+      <div slot="view-table">table</div>
+    </lr-widget>
+  `)) as LyraWidget;
+  await el.updateComplete;
+  // The resting (unpressed) toggle -- isolates the hover cssprop from the sibling
+  // [aria-pressed='true'] rule's own, differently-scoped cssprops.
+  const toggle = el.shadowRoot!.querySelector('[part="view-toggle"][aria-pressed="false"]') as HTMLElement;
+  expect(toggle, 'expected an unpressed view-toggle').to.exist;
+  const before = getComputedStyle(toggle).backgroundColor;
+  const rect = toggle.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(0, 51, 102)');
+    expect(getComputedStyle(toggle).backgroundColor).to.not.equal(before);
+    expect(getComputedStyle(toggle).color).to.equal('rgb(255, 255, 255)');
+  } finally {
+    await resetMouse();
+  }
 });
 
 it("applies a custom fullscreen-inset while fullscreen", async () => {

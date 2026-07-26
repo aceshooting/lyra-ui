@@ -10,6 +10,19 @@ describe('lr-env-list', () => {
     expect(el.copyable).to.be.true;
   });
 
+  it('gives the reveal and copy buttons a :focus-visible outline (regression)', async () => {
+    const el = (await fixture(
+      html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}></lr-env-list>`,
+    )) as LyraEnvList;
+    await el.updateComplete;
+    const reveal = el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLElement;
+    reveal.focus();
+    expect(getComputedStyle(reveal).outlineStyle).to.equal('solid');
+    const copy = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLElement;
+    copy.focus();
+    expect(getComputedStyle(copy).outlineStyle).to.equal('solid');
+  });
+
   it('masks a value with a fixed eight-bullet run regardless of value length', async () => {
     const el = (await fixture(
       html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'x', secret: true }, { name: 'TOKEN', value: 'a-much-longer-secret-value', secret: true }]}></lr-env-list>`,

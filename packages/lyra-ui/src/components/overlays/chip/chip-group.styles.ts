@@ -45,9 +45,14 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='overflow-indicator'][aria-expanded='true'] {
+  /* :where() zeroes the [aria-expanded='true'] qualifier's specificity contribution -- otherwise
+     this (0,2,0) rule would beat a consumer's own ::part(overflow-indicator) color override
+     whenever the picker is open. color routes through a scoped cssprop (mirroring lr-widget's
+     [aria-pressed='true'] treatment) so a consumer can retint just the expanded state without
+     hijacking the shared --lr-color-text token used everywhere else. */
+  [part='overflow-indicator']:where([aria-expanded='true']) {
     border-style: solid;
-    color: var(--lr-color-text);
+    color: var(--lr-chip-group-overflow-expanded-color, var(--lr-color-text));
   }
 
   @media (prefers-reduced-motion: reduce) {

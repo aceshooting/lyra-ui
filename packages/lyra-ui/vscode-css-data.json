@@ -772,6 +772,13 @@
       }
     },
     {
+      "name": "--lr-chart-canvas-hover-outline-width",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-border-width-thin)`) — Width of the `[part='canvas']` hover-state outline (its color is `--lr-chart-grid-color`, above)."
+      }
+    },
+    {
       "name": "--lr-chart-grid-color",
       "description": {
         "kind": "markdown",
@@ -1007,6 +1014,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chip>`** (default: `var(--lr-space-xs)`) — Gap between the icon, label, and remove button. Each `size` sets it to that step's gap."
+      }
+    },
+    {
+      "name": "--lr-chip-group-overflow-expanded-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-chip-group>`** (default: `var(--lr-color-text)`) — Text color of `[part=\"overflow-indicator\"]` while expanded (`aria-expanded=\"true\"`). `::part(overflow-indicator)[aria-expanded='true']` is invalid CSS, so this is the only way to retint the expanded state without re-pointing the shared `--lr-color-text` token."
       }
     },
     {
@@ -1346,6 +1360,13 @@
       }
     },
     {
+      "name": "--lr-confirm-bar-approved-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `var(--lr-color-success)`) — `[part='status']` text/icon color once `decision` is `'approved'`."
+      }
+    },
+    {
       "name": "--lr-confirm-bar-compact-background",
       "description": {
         "kind": "markdown",
@@ -1378,6 +1399,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-confirm-bar>`** (default: `0`) — Border radius of `[part='base']` while `compact` (only visible once `--lr-confirm-bar-compact-border`/`-background` are set)."
+      }
+    },
+    {
+      "name": "--lr-confirm-bar-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-confirm-bar>`** (default: `var(--lr-color-danger)`) — `[part='status']` text/icon color once `decision` is `'denied'`."
       }
     },
     {
@@ -1588,6 +1616,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-date-picker>`** (default: `var(--lr-space-l)`) — Gap between visible months."
+      }
+    },
+    {
+      "name": "--lr-date-picker-nav-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-date-picker>`** (default: `var(--lr-color-brand-quiet)`) — Hover background of the `[part=\"previous\"]`/`[part=\"next\"]` month-navigation buttons."
       }
     },
     {
@@ -2252,7 +2287,7 @@
       "name": "--lr-graph-hull-opacity",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-graph>`** (default: `0.12`) — Hull element opacity (composites fill+stroke as one group, avoiding a double-opacity seam at the fill/stroke boundary)."
+        "value": "**`<lr-graph>`** (default: `0.12`) — Hull element opacity (composites fill+stroke as one group, avoiding a double-opacity seam at the fill/stroke boundary). Applies to both SVG and canvas renderers."
       }
     },
     {
@@ -2687,6 +2722,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-success)`) — String value color."
+      }
+    },
+    {
+      "name": "--lr-knowledge-base-admin-tab-selected-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-knowledge-base-admin>`** (default: `var(--lr-color-brand)`) — Bottom border color of the selected `[part=\"tab\"]`."
+      }
+    },
+    {
+      "name": "--lr-knowledge-base-admin-tab-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-knowledge-base-admin>`** (default: `var(--lr-color-text)`) — Text color of the selected `[part=\"tab\"]`. `::part(tab)[aria-selected='true']` is invalid CSS, so this pair is the only way to restyle the active tab without re-pointing the shared brand/text tokens."
       }
     },
     {
@@ -3159,6 +3208,13 @@
       }
     },
     {
+      "name": "--lr-pagination-invalid-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pagination>`** (default: `var(--lr-color-danger)`) — Border color of `[part=\"page-input\"]` while the typed page is out of range (`aria-invalid=\"true\"`)."
+      }
+    },
+    {
       "name": "--lr-pdf-viewer-height",
       "description": {
         "kind": "markdown",
@@ -3362,6 +3418,20 @@
       }
     },
     {
+      "name": "--lr-radio-checked-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`** (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads."
+      }
+    },
+    {
+      "name": "--lr-radio-checked-dot-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-radio>`** (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
+      }
+    },
+    {
       "name": "--lr-radio-label-indent",
       "description": {
         "kind": "markdown",
@@ -3439,10 +3509,24 @@
       }
     },
     {
+      "name": "--lr-result-card-compact-body-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-result-card>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"body\"]`'s children while `compact`."
+      }
+    },
+    {
       "name": "--lr-result-card-compact-body-padding",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — `[part=\"body\"]` padding while `compact`."
+      }
+    },
+    {
+      "name": "--lr-result-card-compact-header-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-result-card>`** (default: `var(--lr-space-xs)`) — Gap between `[part=\"header\"]`'s title and actions while `compact`."
       }
     },
     {
@@ -3478,6 +3562,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-danger)`) — Error issue border."
+      }
+    },
+    {
+      "name": "--lr-schema-viewer-info-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Info issue background."
+      }
+    },
+    {
+      "name": "--lr-schema-viewer-info-border",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-schema-viewer>`** (default: `var(--lr-color-brand)`) — Info issue border."
       }
     },
     {
@@ -3849,6 +3947,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-spinner>`** (default: `var(--lr-border-width-medium)`) — Thickness of the ring track."
+      }
+    },
+    {
+      "name": "--lr-split-divider-hit-slop",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-split>`** (default: `calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)`) — Per-side inset of `[part=\"divider\"]`'s invisible `::before` hit area, along the resize axis. Negative, so the `::before` box extends past the divider's own edges; derived from the shared `--lr-icon-button-size` WCAG 2.5.8 floor minus the divider's visible thickness, split evenly across both sides, so the effective target reaches the floor without widening the 3px divider anyone can see. Declared on `:host`, so an override must target the element itself (not an ancestor). Setting it by hand is rarely right -- retheme `--lr-size-3px`/`--lr-icon-button-size` instead and the slop recomputes."
       }
     },
     {
@@ -4241,6 +4346,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-task-list>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"body\"]`'s item rows while `compact`."
+      }
+    },
+    {
+      "name": "--lr-task-list-compact-header-gap",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-space-2xs)`) — Gap between `[part=\"header\"]`'s toggle/label/summary while `compact`."
       }
     },
     {
@@ -5028,6 +5140,20 @@
       }
     },
     {
+      "name": "--lr-tree-selected-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row."
+      }
+    },
+    {
+      "name": "--lr-tree-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand)`) — Text color of the selected row."
+      }
+    },
+    {
       "name": "--lr-typing-dot-stagger-1",
       "description": {
         "kind": "markdown",
@@ -5158,6 +5284,20 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-widget>`** (default: `var(--lr-color-brand)`) — Text color of the pressed view toggle."
+      }
+    },
+    {
+      "name": "--lr-widget-view-toggle-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `var(--lr-color-brand-quiet)`) — Background of a hovered `[part=\"view-toggle\"]`."
+      }
+    },
+    {
+      "name": "--lr-widget-view-toggle-hover-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-widget>`** (default: `var(--lr-color-text)`) — Text color of a hovered `[part=\"view-toggle\"]`."
       }
     },
     {

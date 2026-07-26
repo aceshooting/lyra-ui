@@ -6,7 +6,7 @@
 - **Class** `LyraRadarChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/radar-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 7 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -46,7 +46,9 @@ dependency fails to load — see `llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
-`--lr-chart-tooltip-text`.
+`--lr-chart-tooltip-text`, `--lr-chart-canvas-hover-outline-width` — all inherited from `LyraChart`,
+identical in meaning and default (see `lr-chart` above); each of the eight variants below reads the
+same set, so one rule retunes them together.
 
 **Optional peer deps:** same as `lr-chart` — `chart.js`, plus `chartjs-plugin-zoom` only once
 `zoom` is set, and `chartjs-plugin-datalabels` only once `data-labels`/`stack-totals` is set.

@@ -689,6 +689,39 @@ describe('output collapsing', () => {
     expect(rowRoot(el).querySelector('[part="output-toggle"]')).to.exist;
   });
 
+  it('does not collide expand state across cells sharing a cellIndex*1000+outputIndex product', async () => {
+    // cellIndex 0 / outputIndex 1000 and cellIndex 1 / outputIndex 0 both reduce to the numeric
+    // key 1000 under a `cellIndex * 1000 + outputIndex` scheme -- expanding the first must not
+    // also expand the second.
+    const longText = (label: string) => Array.from({ length: 60 }, (_v, i) => `${label} line ${i}`).join('\n');
+    const fillerOutputs = Array.from({ length: 1000 }, () => ({ output_type: 'stream', name: 'stdout', text: '' }));
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 5,
+      cells: [
+        {
+          cell_type: 'code', id: 'c0', source: 'x', execution_count: 1, metadata: {},
+          outputs: [...fillerOutputs, { output_type: 'execute_result', data: { 'text/plain': longText('cell0-out1000') } }],
+        },
+        {
+          cell_type: 'code', id: 'c1', source: 'y', execution_count: 2, metadata: {},
+          outputs: [{ output_type: 'execute_result', data: { 'text/plain': longText('cell1-out0') } }],
+        },
+      ],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    await waitUntil(() => rowRoot(el).querySelectorAll('[part="output-toggle"]').length >= 2);
+    const toggles = [...rowRoot(el).querySelectorAll('[part="output-toggle"]')] as HTMLButtonElement[];
+    expect(toggles.length).to.equal(2);
+    toggles[0].click();
+    await el.updateComplete;
+    expect(toggles[0].getAttribute('aria-expanded'), 'cell 0 / output 1000 expands').to.equal('true');
+    expect(
+      toggles[1].getAttribute('aria-expanded'),
+      'cell 1 / output 0 shares the colliding numeric key and must stay collapsed',
+    ).to.equal('false');
+  });
+
   it('re-collapses the output on a second toggle click and reflects aria-expanded both ways', async () => {
     const longText = Array.from({ length: 60 }, (_v, i) => `line ${i}`).join('\n');
     const notebook = {

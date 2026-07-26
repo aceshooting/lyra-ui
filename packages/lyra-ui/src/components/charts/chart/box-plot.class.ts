@@ -182,6 +182,7 @@ export class LyraBoxPlot extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
     if (!this.isConnected) return;
     if (this.loading) this.setAttribute('aria-busy', 'true');
     else this.removeAttribute('aria-busy');
@@ -279,9 +280,37 @@ export class LyraBoxPlot extends LyraElement {
     if (!this.chartJsModule || !this.canvasEl) return;
     const config = this.buildConfig();
     if (this.chart) {
+      // Mirrors `LyraChart.draw()`'s identical priorVisibility snapshot/restore: Chart.js tracks
+      // per-dataset legend-toggled visibility by dataset INDEX against its own internal metadata,
+      // separate from `chart.data.datasets` itself -- a full reassignment of `chart.data` on every
+      // in-place `boxes` update would otherwise silently reset every hidden series back to visible.
+      // Only snapshot indices the chart already has metadata for -- `this.boxes` reflects the *new*
+      // series count, so mapping over it (instead of the chart's own prior dataset count) would
+      // query isDatasetVisible() for a not-yet-existing index, get back its "not explicitly
+      // visible" default, and then setDatasetVisibility(i, false) below would enforce that default
+      // as a real hidden state -- permanently hiding a series the moment it's added.
+      const priorDatasetCount = this.chart.data.datasets?.length ?? 0;
+      const priorVisibility = Array.from({ length: priorDatasetCount }, (_, i) => this.chart!.isDatasetVisible(i));
       this.chart.data = config.data;
       this.chart.options = config.options ?? {};
       this.chart.update('none');
+      // The mirror-image guard of the one above: a shrinking update can leave `priorVisibility`
+      // longer than the new dataset list, and Chart.js fabricates metadata for an out-of-range index
+      // instead of throwing -- skip any index the shrunk list no longer has instead of polluting
+      // internal per-dataset state for a series that's gone.
+      const currentDatasetCount = this.chart.data.datasets?.length ?? 0;
+      let restoredHiddenState = false;
+      priorVisibility.forEach((visible, i) => {
+        if (i >= currentDatasetCount) return;
+        if (!visible) {
+          this.chart!.setDatasetVisibility(i, false);
+          restoredHiddenState = true;
+        }
+      });
+      // setDatasetVisibility() only flips internal metadata -- it does not repaint on its own (unlike
+      // hide()/show()) -- so without a follow-up update() the canvas would keep showing the series as
+      // visible until some unrelated future draw() call happens to run.
+      if (restoredHiddenState) this.chart.update('none');
       return;
     }
     this.chart = new this.chartJsModule.Chart(this.canvasEl, config);

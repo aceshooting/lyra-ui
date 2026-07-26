@@ -38,7 +38,11 @@ export const styles = css`
     min-block-size: var(--lr-icon-button-size);
   }
   [part='canvas']:hover {
-    outline: var(--lr-border-width-thin) solid var(--lr-chart-grid-color);
+    /* Scoped so a consumer can retint/resize just this hover outline (e.g. to make it more
+       prominent) without also affecting every other --lr-border-width-thin consumer on the page
+       -- the same indirection rationale as the --lr-chart-grid-color/-tick-color/etc. block
+       above, applied to a state-specific rule instead of a :host-level default. */
+    outline: var(--lr-chart-canvas-hover-outline-width, var(--lr-border-width-thin)) solid var(--lr-chart-grid-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='canvas']:focus-visible {

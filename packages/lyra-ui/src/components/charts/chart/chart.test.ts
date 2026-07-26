@@ -3,6 +3,7 @@ import './chart.js';
 import './doughnut-chart.js';
 import { seriesPalette, type LyraChart } from './chart.js';
 import { styles } from './chart.styles.js';
+import { loadChartAndZoom } from './chart-loader.js';
 
 it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to the canvas', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
@@ -460,6 +461,23 @@ it('gives reset-zoom-button a hover state', () => {
   expect(css).to.match(/\[part='reset-zoom-button'\]:hover/);
 });
 
+it("routes [part='canvas']:hover's outline width through a scoped --lr-chart-canvas-hover-outline-width token, defaulting to today's --lr-border-width-thin value", () => {
+  // Only the pseudo-class assertion belongs here as cssText -- :hover can't be synthesized on a
+  // real fixture, mirroring the reset-zoom-button hover-state test above. Before this token
+  // existed, the rule referenced the shared `--lr-border-width-thin` design token directly, so a
+  // consumer overriding it to retint just this hover outline would also resize every other
+  // `--lr-border-width-thin` consumer across the whole page -- an unrelated ripple, the same
+  // failure mode `--lr-chart-grid-color`/`-tick-color`/etc.'s own indirection (documented at the
+  // top of chart.styles.ts) already avoids.
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  const hoverBlock = /\[part='canvas'\]:hover\s*\{([^}]*)\}/.exec(css);
+  expect(hoverBlock, "expected a [part='canvas']:hover rule").to.not.equal(null);
+  const body = hoverBlock![1]!;
+  expect(body).to.match(
+    /outline:\s*var\(--lr-chart-canvas-hover-outline-width,\s*var\(--lr-border-width-thin\)\)/,
+  );
+});
+
 it('actually inherits the surrounding font on a rendered reset-zoom-button, not just in the stylesheet source', async () => {
   const el = (await fixture(
     html`<lr-chart zoom style="--lr-theme-font-family-body: 'Custom Zoom Font', monospace;"></lr-chart>`,
@@ -642,6 +660,54 @@ it('places primary and secondary y axes at logical start/end in RTL', async () =
   expect(config.options.scales.y2.position).to.equal('left');
 });
 
+it('redraws the live Chart.js instance (swapping the y2 axis side) after a live `dir` flip on an ancestor, with no other property changing', async () => {
+  // Stubbed to a no-op for the duration of this test: `<lr-chart>`'s own `ResizeObserver` callback
+  // (wired in `connectedCallback()`) calls `this.draw()` unconditionally on any observed size
+  // change, with no gate at all -- and empirically, setting `dir` on the ancestor can itself
+  // perturb layout enough to refire it in a real browser. Without this stub, the assertions below
+  // pass regardless of whether `updated()`'s own direction-comparison fix exists, which is exactly
+  // how this test shipped green with zero source changes the first time (a confounded, non-
+  // discriminating "trust me" test caught in review). Stubbing the observer forces `draw()` to be
+  // reachable ONLY through `updated()`'s `contextChanged` gate, so a regression there can no longer
+  // hide behind resize-driven noise.
+  const OriginalResizeObserver = window.ResizeObserver;
+  class NoopResizeObserver {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  }
+  (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+    NoopResizeObserver as unknown as typeof ResizeObserver;
+  try {
+    const wrapper = await fixture(html`<div dir="ltr"><lr-chart></lr-chart></div>`);
+    const el = wrapper.querySelector('lr-chart') as LyraChart;
+    el.datasets = [
+      { label: 'primary', data: [1, 2] },
+      { label: 'secondary', data: [10, 20], axis: 'y2' },
+    ];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    expect((el as any).chart.options.scales.y.position).to.equal('left');
+    expect((el as any).chart.options.scales.y2.position).to.equal('right');
+
+    // `dir` is a plain host/ancestor attribute, not a Lit `@property` -- `LyraElement`'s inherited-
+    // context observer turns this into a `requestUpdate()`, but nothing else about the chart changed,
+    // so `updated()`'s own `contentChanged`/`contextChanged` gate must independently notice the
+    // direction flip and still call `draw()`, or the live Chart.js instance keeps the stale LTR axis
+    // positions forever. With the `ResizeObserver` stubbed above, this redraw can only come from
+    // that gate.
+    wrapper.setAttribute('dir', 'rtl');
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect((el as any).chart.options.scales.y.position).to.equal('right');
+    expect((el as any).chart.options.scales.y2.position).to.equal('left');
+  } finally {
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      OriginalResizeObserver;
+  }
+});
+
 it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'line';
@@ -651,6 +717,23 @@ it('omits the y2 scale entirely when no dataset uses `axis: "y2"`', async () => 
   await waitUntil(() => (el as any).chart != null);
   const config = (el as any).buildConfig();
   expect(config.options.scales.y2).to.not.exist;
+});
+
+it('registers the zoom plugin from a bare module with no `default` export, mirroring `loadDataLabelsPlugin`', async () => {
+  // The reviewer's original patch for this read `.default` unconditionally
+  // off whatever `importZoom()` resolved to -- a bare (non-ESM-interop)
+  // module shape with no `.default` at all would silently resolve
+  // `zoomPlugin` to `undefined`, leaving `zoom` inert instead of registering
+  // it. `loadDataLabelsPlugin()` already handles this correctly via
+  // `mod.default ?? mod`; `loadChartAndZoom()` must do the same.
+  const fakeChart = await import('chart.js');
+  const bareZoomPlugin = { id: 'bare-zoom-plugin' };
+  const result = await loadChartAndZoom(
+    () => Promise.resolve(fakeChart),
+    () => Promise.resolve(bareZoomPlugin),
+    true,
+  );
+  expect(result?.zoomPlugin).to.equal(bareZoomPlugin);
 });
 
 it('configures the zoom plugin only when `zoom` is true', async () => {

@@ -161,7 +161,11 @@ export class LyraDrilldownPanel extends LyraElement<LyraDrilldownPanelEventMap> 
     super.connectedCallback();
     this.syncRunsSlot();
     this.mutationObserver = new MutationObserver(this.syncRunsSlot);
-    this.mutationObserver.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'] });
+    // `subtree: true` is required even though `runs` is only ever a *direct* child: without it,
+    // `attributes: true` only watches the target node (`this`) itself, not its children -- a
+    // `slot="runs"` attribute toggled on an already-connected child would silently never be
+    // observed, only a brand-new child arriving via `childList` (which doesn't need subtree).
+    this.mutationObserver.observe(this, { childList: true, attributes: true, attributeFilter: ['slot'], subtree: true });
   }
 
   override disconnectedCallback(): void {
