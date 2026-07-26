@@ -1,5 +1,7 @@
 import { fixture, expect, html, oneEvent, aTimeout } from "@open-wc/testing";
 import "./filter-bar.js";
+import "../../forms/checkbox/checkbox.js";
+import "../../forms/time-range/time-range.js";
 import type {
   LyraFilterBar,
   FilterBarFilterDefinition,
@@ -80,6 +82,143 @@ it("renders one composed control per filter, matched to its declared type", asyn
   expect(
     (control(el, "range") as HTMLElement & { mode: string }).mode
   ).to.equal("range");
+});
+
+describe("custom filters", () => {
+  it("renders an existing control with controlled value, disabled, required, and error state", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "archived",
+        label: "Include archived",
+        type: "custom",
+        required: true,
+        custom: {
+          adapter: {
+            valueFromEvent: (event) =>
+              (event as CustomEvent<{ checked: boolean }>).detail.checked,
+            emptyValue: false,
+            formatValue: (value) => (value === true ? "Enabled" : "Disabled"),
+          },
+          render: (context) => html`
+            <lr-checkbox
+              aria-label=${context.label}
+              ?checked=${context.value === true}
+              ?disabled=${context.disabled}
+              ?required=${context.required}
+              .errorText=${context.errorText}
+              @lr-change=${context.onValueChange}
+              @focusout=${context.onFocusout}
+            ></lr-checkbox>
+          `,
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    const wrapper = control(el, "archived");
+    const checkbox = wrapper.querySelector("lr-checkbox") as HTMLElement & {
+      checked: boolean;
+      errorText: string;
+    };
+
+    expect(checkbox.checked).to.be.false;
+    expect(checkbox.errorText).to.equal("");
+    expect(el.invalidFilterIds).to.deep.equal(["archived"]);
+
+    const inputPromise = oneEvent(el, "lr-input");
+    checkbox.click();
+    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    expect(input.detail.value).to.deep.equal({ archived: true });
+    expect(el.value).to.deep.equal({ archived: true });
+    expect(el.shadowRoot!.querySelector('[part="chip"]')!.textContent!.trim()).to.equal(
+      "Include archived: Enabled"
+    );
+
+    el.value = { archived: false };
+    await el.updateComplete;
+    expect(checkbox.checked).to.be.false;
+    expect(el.hasActiveFilters).to.be.false;
+
+    el.reportValidity();
+    await el.updateComplete;
+    expect(checkbox.errorText).to.equal("This field is required.");
+    expect(el.checkValidity()).to.be.false;
+
+    el.disabled = true;
+    await el.updateComplete;
+    expect(checkbox.hasAttribute("disabled")).to.be.true;
+    el.disabled = false;
+    el.value = { archived: true };
+    await el.updateComplete;
+    el.reset();
+    expect(el.value).to.deep.equal({});
+  });
+
+  it("adapts a two-handle lr-time-range and clears it through its active chip", async () => {
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: "window",
+        label: "Time window",
+        type: "custom",
+        custom: {
+          adapter: {
+            valueFromEvent: (event) => {
+              const { start, end } = (
+                event as CustomEvent<{ start: number; end: number }>
+              ).detail;
+              return `${start}/${end}`;
+            },
+            emptyValue: "",
+          },
+          render: (context) => {
+            const [start, end] =
+              typeof context.value === "string" && context.value.includes("/")
+                ? context.value.split("/").map(Number)
+                : [20, 80];
+            return html`
+              <lr-time-range
+                aria-label=${context.label}
+                min="0"
+                max="100"
+                .start=${Number.isFinite(start) ? start : 20}
+                .end=${Number.isFinite(end) ? end : 80}
+                ?disabled=${context.disabled}
+                @lr-change=${context.onChange}
+                @focusout=${context.onFocusout}
+              ></lr-time-range>
+            `;
+          },
+        },
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${filters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    const range = control(el, "window").querySelector("lr-time-range") as HTMLElement & {
+      start: number;
+      end: number;
+    };
+    await (range as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+
+    const handle = range.shadowRoot!.querySelector(
+      '[part="handle-start"]'
+    ) as HTMLElement;
+    const inputPromise = oneEvent(el, "lr-input");
+    handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    handle.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
+    const input = (await inputPromise) as CustomEvent<FilterBarInputDetail>;
+    expect(input.detail.value.window).to.equal("21/80");
+    expect(el.value.window).to.equal("21/80");
+
+    const chip = el.shadowRoot!.querySelector('[part="chip"]') as HTMLElement;
+    chip.dispatchEvent(
+      new CustomEvent("lr-remove", { bubbles: true, composed: true, detail: {} })
+    );
+    await el.updateComplete;
+    expect(el.value.window).to.equal("");
+    expect(el.hasActiveFilters).to.be.false;
+  });
 });
 
 it("forwards each filter definition's label to its composed control's own label prop", async () => {

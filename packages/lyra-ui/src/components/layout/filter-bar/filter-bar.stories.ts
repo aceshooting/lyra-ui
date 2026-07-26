@@ -1,7 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './filter-bar.js';
-import type { LyraFilterBar, FilterBarFilterDefinition } from './filter-bar.js';
+import '../../forms/checkbox/checkbox.js';
+import '../../forms/time-range/time-range.js';
+import type { ComboboxSource } from '../../forms/combobox/combobox.class.js';
+import type {
+  LyraFilterBar,
+  FilterBarCustomControlAdapter,
+  FilterBarFilterDefinition,
+} from './filter-bar.js';
 
 const meta: Meta = {
   title: 'FilterBar',
@@ -178,6 +185,113 @@ export const FreeTextSearch: Story = {
         <lr-filter-bar .filters=${filters} .value=${{ q: 'GET /api/v1' }} @lr-input=${onInput}></lr-filter-bar>
         <pre class="log" style="font-size: 0.75rem; white-space: pre-wrap; word-break: break-all"></pre>
       </div>
+    `;
+  },
+};
+
+/** Custom renderers let an existing Lyra control join the filter bar's value, active-chip,
+ * reset, disabled, and validation contract. This example uses a two-handle time brush, a native
+ * checkbox, and an async-backed combobox source without adding any control-specific branches to
+ * `<lr-filter-bar>`. */
+export const CustomControls: Story = {
+  render: () => {
+    const checkboxAdapter: FilterBarCustomControlAdapter = {
+      valueFromEvent: (event) =>
+        (event as CustomEvent<{ checked: boolean }>).detail.checked,
+      emptyValue: false,
+      formatValue: (value) => (value === true ? 'Enabled' : 'Disabled'),
+    };
+    const rangeAdapter: FilterBarCustomControlAdapter = {
+      valueFromEvent: (event) => {
+        const { start, end } = (event as CustomEvent<{ start: number; end: number }>).detail;
+        return `${start}/${end}`;
+      },
+      emptyValue: '',
+      formatValue: (value) => (typeof value === 'string' ? value : ''),
+    };
+    const ownerSource: ComboboxSource = async (query) => {
+      const owners = [
+        { value: 'ada', label: 'Ada Lovelace' },
+        { value: 'grace', label: 'Grace Hopper' },
+        { value: 'alan', label: 'Alan Turing' },
+      ];
+      return owners.filter((owner) => owner.label.toLowerCase().includes(query.toLowerCase()));
+    };
+    const filters: FilterBarFilterDefinition[] = [
+      {
+        id: 'window',
+        label: 'Time window',
+        type: 'custom',
+        custom: {
+          adapter: rangeAdapter,
+          render: (context) => {
+            const [start, end] =
+              typeof context.value === 'string' && context.value.includes('/')
+                ? context.value.split('/').map(Number)
+                : [20, 80];
+            return html`
+              <lr-time-range
+                aria-label=${context.label}
+                min="0"
+                max="100"
+                .start=${Number.isFinite(start) ? start : 20}
+                .end=${Number.isFinite(end) ? end : 80}
+                ?disabled=${context.disabled}
+                @lr-change=${context.onChange}
+                @focusout=${context.onFocusout}
+              ></lr-time-range>
+            `;
+          },
+        },
+      },
+      {
+        id: 'archived',
+        label: 'Include archived',
+        type: 'custom',
+        custom: {
+          adapter: checkboxAdapter,
+          render: (context) => html`
+            <lr-checkbox
+              ?checked=${context.value === true}
+              ?disabled=${context.disabled}
+              ?required=${context.required}
+              .errorText=${context.errorText}
+              @lr-change=${context.onValueChange}
+              @focusout=${context.onFocusout}
+            >${context.label}</lr-checkbox>
+          `,
+        },
+      },
+      {
+        id: 'owner',
+        label: 'Owner',
+        type: 'custom',
+        custom: {
+          adapter: {
+            valueFromEvent: (event) =>
+              (event.target as HTMLElement & { value: string }).value,
+            emptyValue: '',
+          },
+          render: (context) => html`
+            <lr-combobox
+              .label=${context.label}
+              .source=${ownerSource}
+              .value=${typeof context.value === 'string' ? context.value : ''}
+              ?disabled=${context.disabled}
+              @change=${context.onChange}
+              @focusout=${context.onFocusout}
+            ></lr-combobox>
+          `,
+        },
+      },
+    ];
+    return html`
+      <lr-filter-bar
+        style="max-width: 58rem"
+        label="Dashboard filters"
+        .filters=${filters}
+        .value=${{ window: '20/80', archived: true }}
+      ></lr-filter-bar>
     `;
   },
 };

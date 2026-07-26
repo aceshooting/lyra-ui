@@ -141987,7 +141987,7 @@
               "name": "controls"
             },
             {
-              "description": "One filter's composed `<lr-select>`/`<lr-combobox>`/`<lr-date-input>`/`<lr-input>`.",
+              "description": "One filter's composed built-in control, or the wrapper around a custom renderer's control.",
               "name": "filter-control"
             },
             {
@@ -142183,6 +142183,11 @@
             {
               "kind": "field",
               "name": "onControlChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onCustomControlChange",
               "privacy": "private"
             },
             {
@@ -142735,6 +142740,19 @@
           },
           "tagName": "lr-filter-bar",
           "customElement": true
+        },
+        {
+          "kind": "function",
+          "name": "onFocusout"
+        },
+        {
+          "kind": "variable",
+          "name": "errorText"
+        },
+        {
+          "kind": "variable",
+          "name": "value",
+          "default": "this._value[def.id]"
         }
       ],
       "exports": [

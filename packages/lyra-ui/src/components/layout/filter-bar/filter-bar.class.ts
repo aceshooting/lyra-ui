@@ -23,18 +23,69 @@ import "../../overlays/spinner/spinner.class.js";
  *  `'text'` -- an open-ended free-text query rather than a closed choice set -- maps to
  *  `<lr-input>`, composed exactly like the rest (its own label/hint/error chrome, its own
  *  `required`), with this component adding only the optional `debounce` every free-text filter
- *  otherwise hand-rolls at the call site. */
+ *  otherwise hand-rolls at the call site. `'custom'` delegates rendering and event-to-value
+ *  conversion to the definition's `custom` adapter, so an existing Lyra control can participate
+ *  without this component growing a branch for every control family. */
 export type FilterBarControlType =
   | "select"
   | "combobox"
   | "date"
   | "date-range"
-  | "text";
+  | "text"
+  | "custom";
 
 /** One closed-set choice for a `'select'`/`'combobox'` filter. */
 export interface FilterBarOption {
   value: string;
   label: string;
+}
+
+/** One filter's current value. Built-in controls use strings/string arrays; custom controls may
+ * also use a boolean (for example, an `lr-checkbox` filter). */
+export type FilterBarFieldValue = string | string[] | boolean | undefined;
+
+/** Value/label bridge for a custom filter control. The renderer wires one of the context's event
+ * handlers to the control's committed-change event; the adapter turns that event into the plain
+ * value stored by `lr-filter-bar`. */
+export interface FilterBarCustomControlAdapter {
+  /** Reads the new filter value from the custom control's event. `event.currentTarget` is the
+   * rendered control when the handler is attached directly to it. */
+  valueFromEvent: (event: Event) => FilterBarFieldValue;
+  /** Value used when a custom filter's chip is removed. Defaults to `''` when omitted. */
+  emptyValue?: FilterBarFieldValue;
+  /** Formats the stored value for the active-filter chip. When omitted, strings and arrays use
+   * the same list formatting as built-in choice filters and booleans render as `true`/`false`. */
+  formatValue?: (value: FilterBarFieldValue) => string;
+}
+
+/** Context supplied to a custom filter renderer. The renderer owns the custom control's markup
+ * and should bind `value`, `disabled`, `required`, and `errorText` as appropriate for that
+ * control, then attach `onValueChange` (or the more specific `onInput`/`onChange`) to its
+ * committed-value event and `onFocusout` to its blur/focusout event. */
+export interface FilterBarCustomControlContext {
+  id: string;
+  label: string;
+  definition: FilterBarFilterDefinition;
+  value: FilterBarFieldValue;
+  disabled: boolean;
+  required: boolean;
+  errorText: string;
+  /** Directly commits a value, useful for a custom control whose event has no DOM event payload. */
+  setValue: (value: FilterBarFieldValue) => void;
+  /** Reads the adapter value and commits it; stopPropagation is handled by the filter bar. */
+  onValueChange: (event: Event) => void;
+  /** Aliases for consumers whose custom control uses native-style input/change naming. */
+  onInput: (event: Event) => void;
+  onChange: (event: Event) => void;
+  /** Marks the custom filter touched so required validation becomes visible. */
+  onFocusout: () => void;
+}
+
+/** Renderer and adapter for a `type: "custom"` filter definition. The returned control is placed
+ * inside the filter bar's `filter-control` part and is re-rendered with the current value. */
+export interface FilterBarCustomControl {
+  render: (context: FilterBarCustomControlContext) => TemplateResult;
+  adapter: FilterBarCustomControlAdapter;
 }
 
 /**
@@ -51,7 +102,7 @@ export interface FilterBarFilterDefinition {
   label: string;
   type: FilterBarControlType;
   /** Closed choice set. Required (and meaningful) only for `'select'`/`'combobox'`; ignored for
-   *  `'date'`/`'date-range'`/`'text'`. */
+   *  `'date'`/`'date-range'`/`'text'`/`'custom'`. */
   options?: FilterBarOption[];
   placeholder?: string;
   /** `'text'` only -- how long (ms) to wait after the last keystroke before committing the typed
@@ -68,19 +119,15 @@ export interface FilterBarFilterDefinition {
   required?: boolean;
   /** What `reset()` restores this filter to. A filter with no `defaultValue` resets to unset
    *  (absent from the post-reset `value`) rather than to some invented empty placeholder. */
-  defaultValue?: string | string[];
+  defaultValue?: string | string[] | boolean;
   /** ISO `YYYY-MM-DD` lower bound, forwarded to `<lr-date-input>`'s own `min`. `'date'`/`'date-range'` only. */
   min?: string;
   /** ISO `YYYY-MM-DD` upper bound, forwarded to `<lr-date-input>`'s own `max`. `'date'`/`'date-range'` only. */
   max?: string;
+  /** Required for `type: 'custom'`: the renderer and adapter for the existing Lyra control the
+   *  host wants to compose. Ignored for built-in filter types. */
+  custom?: FilterBarCustomControl;
 }
-
-/** One filter's current value: a single string (`'select'`, `'date'`, `'text'`, a non-multiple
- *  `'combobox'`), a string array (a `multiple` `'combobox'`), or `undefined`/`''`/`[]` for
- *  "unset". `'date-range'` uses `<lr-date-input>`'s own single-string range shape
- *  (`"YYYY-MM-DD/YYYY-MM-DD"`), not a two-element array. A `'text'` filter's value is the raw
- *  query string, verbatim. */
-export type FilterBarFieldValue = string | string[] | undefined;
 
 /**
  * The whole filter bar's current state: a plain, JSON-serializable object keyed by
@@ -121,6 +168,7 @@ const EMPTY_VALUE: FilterBarValue = {};
  *  satisfying `required`) once it's neither absent, `''`, nor `[]`. */
 function isSet(value: FilterBarFieldValue): boolean {
   if (value == null) return false;
+  if (typeof value === "boolean") return value;
   return Array.isArray(value) ? value.length > 0 : value !== "";
 }
 
@@ -170,7 +218,8 @@ function isSet(value: FilterBarFieldValue): boolean {
  * @event lr-reset - `reset()` ran (via the reset button or a direct call). `detail: { value }`.
  * @csspart base - The root `role="group"` wrapper.
  * @csspart controls - The row holding every filter control, the reset button, and the loading status.
- * @csspart filter-control - One filter's composed `<lr-select>`/`<lr-combobox>`/`<lr-date-input>`/`<lr-input>`.
+ * @csspart filter-control - One filter's composed built-in control, or the wrapper around a
+ *   custom renderer's control.
  * @csspart reset-button - The reset `<lr-button>`.
  * @csspart status - The loading `<lr-spinner>`, only rendered while `loading`.
  * @csspart active-filters - The `role="group"` wrapper around the active-filter chip row, only rendered while any filter is set.
@@ -333,6 +382,16 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     );
   };
 
+  private onCustomControlChange = (
+    def: FilterBarFilterDefinition,
+    e: Event,
+  ): void => {
+    e.stopPropagation();
+    const adapter = def.custom?.adapter;
+    if (!adapter) return;
+    this.setFilterValue(def.id, adapter.valueFromEvent(e));
+  };
+
   /** A `'text'` filter's keystroke: commits immediately, or (with a positive `debounce`) parks the
    *  value until the user pauses. Non-finite/zero/negative delays mean "no debounce" rather than
    *  scheduling a timer that would never behave sensibly. */
@@ -391,7 +450,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     this.cancelDebounce(id);
     const def = this._filters.find((f) => f.id === id);
     const empty: FilterBarFieldValue =
-      def?.type === "combobox" && def.multiple ? [] : "";
+      def?.type === "custom"
+        ? def.custom?.adapter.emptyValue ?? ""
+        : def?.type === "combobox" && def.multiple
+        ? []
+        : "";
     this.setFilterValue(id, empty);
   }
 
@@ -399,8 +462,23 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     def: FilterBarFilterDefinition,
     value: FilterBarFieldValue
   ): string {
+    if (def.type === "custom") {
+      const formatted = def.custom?.adapter.formatValue?.(value);
+      if (formatted !== undefined) return formatted;
+      if (Array.isArray(value)) {
+        return getListFormat(this.effectiveLocale, {
+          style: "long",
+          type: "conjunction",
+        }).format(value);
+      }
+      return value === undefined ? "" : String(value);
+    }
     if (def.type === "select" || def.type === "combobox") {
-      const values = Array.isArray(value) ? value : value ? [value] : [];
+      const values = Array.isArray(value)
+        ? value.filter((entry): entry is string => typeof entry === "string")
+        : typeof value === "string"
+        ? [value]
+        : [];
       // Show each option's own label, not its raw value, when it's a known choice -- falls back
       // to the raw value verbatim for a value that no longer matches any declared option.
       const labels = values.map(
@@ -519,6 +597,31 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
         : "";
     const onChange = (e: Event) => this.onControlChange(def.id, e);
     const onFocusout = () => this.markTouched(def.id);
+
+    if (def.type === "custom" && def.custom) {
+      const custom = def.custom;
+      const onCustomValueChange = (e: Event) => this.onCustomControlChange(def, e);
+      const context: FilterBarCustomControlContext = {
+        id: def.id,
+        label: def.label,
+        definition: def,
+        value,
+        disabled: this.disabled,
+        required: Boolean(def.required),
+        errorText,
+        setValue: (next) => this.setFilterValue(def.id, next),
+        onValueChange: onCustomValueChange,
+        onInput: onCustomValueChange,
+        onChange: onCustomValueChange,
+        onFocusout,
+      };
+      return html`<div
+        part="filter-control"
+        data-filter-id=${def.id}
+        @lr-input=${(event: Event) => event.stopPropagation()}
+        @lr-change=${(event: Event) => event.stopPropagation()}
+      >${custom.render(context)}</div>`;
+    }
 
     if (def.type === "combobox") {
       const multiple = Boolean(def.multiple);
