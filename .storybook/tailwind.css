@@ -78,11 +78,15 @@ body {
 }
 
 /*
- * Story prose frequently includes long API literals and custom-property names.
- * Storybook renders inline code as an inline-block, so those otherwise
- * unbreakable tokens widen the whole Docs document on narrow screens.
+ * Story prose frequently includes long API literals, custom-property names, and
+ * (autolinked) URLs pointing at an upstream component's own docs page for
+ * comparison (see chart.class.ts's "API mirror note"). Storybook renders both
+ * inline code and links as an inline-block, so those otherwise-unbreakable
+ * tokens widen the whole Docs document on narrow screens -- found via
+ * charts-chart--docs [narrow]/[narrow-rtl], the one description in 270 pages
+ * with a bare URL long enough to exceed a 390px viewport as a single run.
  */
-.sbdocs-content :where(p, li) > code {
+.sbdocs-content :where(p, li) > :where(code, a) {
   display: inline-block;
   max-inline-size: 100%;
   overflow-wrap: anywhere;
