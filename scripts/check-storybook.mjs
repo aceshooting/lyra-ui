@@ -341,8 +341,51 @@ async function auditComponentDocs(browser, baseUrl, entries) {
 
         const pageFailures = [];
         if (layout.documentScrollWidth > layout.documentClientWidth + 1) {
+          // TEMP DIAGNOSTIC (remove before merge): CI reproduces this overflow deterministically
+          // while local sandboxes do not, so find the actual offending element(s) and their
+          // resolved fonts directly from the CI runner instead of guessing further.
+          const diagnostics = await auditPage.evaluate(() => {
+            const docWidth = document.documentElement.clientWidth;
+            const isClipped = (element) => {
+              let node = element.parentElement;
+              while (node) {
+                const style = getComputedStyle(node);
+                if (
+                  ['auto', 'scroll'].includes(style.overflowX) &&
+                  node.scrollWidth > node.clientWidth + 1
+                ) {
+                  return true;
+                }
+                node = node.parentElement;
+              }
+              return false;
+            };
+            const offenders = [];
+            for (const element of document.querySelectorAll('*')) {
+              const rect = element.getBoundingClientRect();
+              if (rect.right > docWidth + 1 && !isClipped(element)) {
+                offenders.push({
+                  tag: element.tagName,
+                  cls: typeof element.className === 'string' ? element.className.slice(0, 100) : '',
+                  part: element.getAttribute?.('part') ?? '',
+                  width: Math.round(rect.width),
+                  right: Math.round(rect.right),
+                  fontFamily: getComputedStyle(element).fontFamily,
+                  text: (element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 100),
+                });
+              }
+            }
+            offenders.sort((a, b) => b.right - a.right);
+            return {
+              userAgent: navigator.userAgent,
+              devicePixelRatio: window.devicePixelRatio,
+              scrollHeight: document.documentElement.scrollHeight,
+              clientHeight: document.documentElement.clientHeight,
+              offenders: offenders.slice(0, 8),
+            };
+          });
           pageFailures.push(
-            `document width ${layout.documentScrollWidth}px exceeds ${layout.documentClientWidth}px`,
+            `document width ${layout.documentScrollWidth}px exceeds ${layout.documentClientWidth}px DIAGNOSTICS: ${JSON.stringify(diagnostics)}`,
           );
         }
         for (const table of layout.apiTables) {
