@@ -4129,3 +4129,145 @@ describe('lr-table client-side sorting with groupBy', () => {
     expect(nameText(el)).to.deep.equal(['Bravo', 'Alpha', 'Dana', 'Cody']);
   });
 });
+
+// -- Grid roving-focus edges, skeleton column parity, grouped totals ---------
+
+describe('grid keyboard navigation edges', () => {
+  const grid = async (dir = 'ltr'): Promise<LyraTable<Row>> => {
+    const wrapper = (await fixture(html`
+      <div dir=${dir}>
+        <lr-table accessible-label="Scores" .columns=${columns} .rows=${rows}></lr-table>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-table') as LyraTable<Row>;
+    await el.updateComplete;
+    return el;
+  };
+  const headers = (el: LyraTable<Row>): HTMLElement[] => [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('th[data-col-key]'),
+  ];
+  const bodyRows = (el: LyraTable<Row>): HTMLElement[] => [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-row-key]'),
+  ];
+  const key = async (el: LyraTable<Row>, target: HTMLElement, k: string): Promise<KeyboardEvent> => {
+    const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    await el.updateComplete;
+    return event;
+  };
+
+  it('clamps header ArrowLeft at the first column and ArrowRight at the last', async () => {
+    const el = await grid();
+    const th = headers(el);
+    await key(el, th[0]!, 'ArrowLeft');
+    expect(th[0]!.getAttribute('tabindex'), 'ArrowLeft on the first header stays put').to.equal('0');
+    await key(el, th[th.length - 1]!, 'ArrowRight');
+    expect(th[th.length - 1]!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('clamps mirrored header arrows under dir="rtl"', async () => {
+    const el = await grid('rtl');
+    const th = headers(el);
+    await key(el, th[th.length - 1]!, 'ArrowLeft');
+    expect(th[th.length - 1]!.getAttribute('tabindex')).to.equal('0');
+    await key(el, th[0]!, 'ArrowRight');
+    expect(th[0]!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('ArrowDown from a header enters the body and ArrowUp from the first row returns to it', async () => {
+    const el = await grid();
+    const th = headers(el);
+    const down = await key(el, th[0]!, 'ArrowDown');
+    expect(down.defaultPrevented).to.be.true;
+    expect(bodyRows(el)[0]!.getAttribute('tabindex')).to.equal('0');
+
+    const up = await key(el, bodyRows(el)[0]!, 'ArrowUp');
+    expect(up.defaultPrevented).to.be.true;
+    expect(headers(el)[0]!.getAttribute('tabindex'), 'ArrowUp from row 0 lands back on a header').to.equal('0');
+  });
+
+  it('walks rows with ArrowDown/ArrowUp and clamps at both ends', async () => {
+    const el = await grid();
+    const rowEls = bodyRows(el);
+    await key(el, rowEls[0]!, 'ArrowDown');
+    expect(bodyRows(el)[1]!.getAttribute('tabindex')).to.equal('0');
+    await key(el, bodyRows(el)[1]!, 'ArrowDown');
+    expect(bodyRows(el)[1]!.getAttribute('tabindex'), 'clamps on the last row').to.equal('0');
+    await key(el, bodyRows(el)[1]!, 'ArrowUp');
+    expect(bodyRows(el)[0]!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('Home and End jump to the first and last row and header', async () => {
+    const el = await grid();
+    await key(el, bodyRows(el)[0]!, 'End');
+    expect(bodyRows(el).at(-1)!.getAttribute('tabindex')).to.equal('0');
+    await key(el, bodyRows(el).at(-1)!, 'Home');
+    expect(bodyRows(el)[0]!.getAttribute('tabindex')).to.equal('0');
+
+    await key(el, headers(el)[0]!, 'End');
+    expect(headers(el).at(-1)!.getAttribute('tabindex')).to.equal('0');
+    await key(el, headers(el).at(-1)!, 'Home');
+    expect(headers(el)[0]!.getAttribute('tabindex')).to.equal('0');
+  });
+
+  it('ignores an unhandled key on both a header and a row', async () => {
+    const el = await grid();
+    const onHeader = await key(el, headers(el)[0]!, 'PageDown');
+    const onRow = await key(el, bodyRows(el)[0]!, 'PageDown');
+    expect(onHeader.defaultPrevented).to.be.false;
+    expect(onRow.defaultPrevented).to.be.false;
+  });
+
+  it('ignores keys on a header or row that is no longer part of the rendered grid', async () => {
+    const el = await grid();
+    const detachedHeader = headers(el)[0]!;
+    const detachedRow = bodyRows(el)[0]!;
+    el.columns = [];
+    el.rows = [];
+    await el.updateComplete;
+    const h = await key(el, detachedHeader, 'ArrowRight');
+    const r = await key(el, detachedRow, 'ArrowDown');
+    expect(h.defaultPrevented, 'a detached header is inert').to.be.false;
+    expect(r.defaultPrevented, 'a detached row is inert').to.be.false;
+  });
+});
+
+it('skeleton rows keep column parity with expand toggles and row totals', async () => {
+  const el = (await fixture(html`
+    <lr-table
+      accessible-label="Scores"
+      .columns=${columns}
+      .rows=${rows}
+      .expandedContent=${(row: Row) => html`<span>${row.name}</span>`}
+      .rowTotal=${(row: Row) => row.score}
+      loading
+      loading-appearance="skeleton"
+      skeleton-rows="3"
+    ></lr-table>
+  `)) as LyraTable<Row>;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="expand-toggle-cell"]').length).to.equal(3);
+  expect(el.shadowRoot!.querySelectorAll('[part="row-total-cell"]').length).to.equal(3);
+});
+
+it('renders grouped rows with per-group and grand totals', async () => {
+  const el = (await fixture(html`
+    <lr-table
+      accessible-label="Scores"
+      .columns=${[
+        { key: 'name', label: 'Name', cell: (r: Row) => r.name, footer: (all: Row[]) => `${all.length} rows` },
+        { key: 'score', label: 'Score', align: 'end', cell: (r: Row) => r.score },
+      ]}
+      .rows=${[...rows, { id: 'c', name: 'Gamma', score: 5 }]}
+      .groupBy=${(row: Row) => (row.score > 2 ? 'high' : 'low')}
+      .groupLabel=${(groupKey: string | number) => `Group ${groupKey}`}
+      .rowTotal=${(row: Row) => row.score}
+      .grandTotal=${(all: unknown[]) => all.length}
+    ></lr-table>
+  `)) as LyraTable<Row>;
+  await el.updateComplete;
+  const text = el.shadowRoot!.textContent ?? '';
+  expect(text).to.include('Group high');
+  expect(text).to.include('Group low');
+  expect(el.shadowRoot!.querySelectorAll('[part="footer-cell"]').length).to.be.greaterThan(0);
+});

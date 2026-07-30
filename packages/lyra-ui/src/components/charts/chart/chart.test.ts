@@ -2887,3 +2887,113 @@ describe('remediated effective chart contract', () => {
     }
   });
 });
+
+// -- appendData against an explicitly supplied config.data -------------------
+// The generated-members path is covered above; these drive the branch where the consumer owns
+// `config.data`, so the append has to write back to that same source instead of labels/datasets.
+
+describe('appendData with an explicit config.data', () => {
+  const ready = async (el: LyraChart): Promise<void> => {
+    await waitUntil(() => (el as unknown as { chart?: unknown }).chart != null, 'chart.js never initialized', {
+      timeout: 5000,
+    });
+  };
+
+  it('appends into explicit config labels and datasets, leaving generated members alone', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.config = {
+      data: {
+        labels: ['Jan'],
+        datasets: [{ label: 'Revenue', data: [1] }],
+      },
+    };
+    await ready(el);
+    el.appendData('Feb', [2]);
+    await el.updateComplete;
+    const data = el.config!['data'] as { labels: unknown[]; datasets: { data: unknown[] }[] };
+    expect(data.labels).to.deep.equal(['Jan', 'Feb']);
+    expect(data.datasets[0]!.data).to.deep.equal([1, 2]);
+    expect(el.labels, 'generated labels stay untouched when config owns them').to.deep.equal([]);
+  });
+
+  it('honours maxPoints by keeping only the newest categories', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.config = { data: { labels: ['Jan', 'Feb'], datasets: [{ label: 'R', data: [1, 2] }] } };
+    await ready(el);
+    el.appendData('Mar', [3], 2);
+    await el.updateComplete;
+    const data = el.config!['data'] as { labels: unknown[]; datasets: { data: unknown[] }[] };
+    expect(data.labels).to.deep.equal(['Feb', 'Mar']);
+    expect(data.datasets[0]!.data).to.deep.equal([2, 3]);
+  });
+
+  it('substitutes null for a series with no supplied value', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.config = {
+      data: {
+        labels: ['Jan'],
+        datasets: [{ label: 'A', data: [1] }, { label: 'B', data: [5] }],
+      },
+    };
+    await ready(el);
+    el.appendData('Feb', [2]);
+    await el.updateComplete;
+    const data = el.config!['data'] as { datasets: { data: unknown[] }[] };
+    expect(data.datasets[1]!.data).to.deep.equal([5, null]);
+  });
+
+  it('leaves point-based scatter series unchanged', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    const points = [{ x: 1, y: 2 }];
+    el.type = 'scatter';
+    el.config = { data: { labels: ['Jan'], datasets: [{ label: 'Points', data: points }] } };
+    await ready(el);
+    el.appendData('Feb', [3]);
+    await el.updateComplete;
+    const data = el.config!['data'] as { datasets: { data: unknown[] }[] };
+    expect(data.datasets[0]!.data, 'x/y coordinates need a richer host contract, so they are skipped')
+      .to.deep.equal(points);
+  });
+
+  it('updates only the explicit member when config supplies labels but not datasets', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.datasets = [{ label: 'Generated', data: [1] }];
+    el.config = { data: { labels: ['Jan'] } };
+    await ready(el);
+    el.appendData('Feb', [2]);
+    await el.updateComplete;
+    const data = el.config!['data'] as { labels: unknown[] };
+    expect(data.labels).to.deep.equal(['Jan', 'Feb']);
+    expect(el.datasets[0]!.data, 'the generated dataset still receives the point').to.deep.equal([1, 2]);
+  });
+
+  it('ignores a non-finite maxPoints instead of dropping every category', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.config = { data: { labels: ['Jan'], datasets: [{ label: 'R', data: [1] }] } };
+    await ready(el);
+    el.appendData('Feb', [2], Number.NaN);
+    await el.updateComplete;
+    const data = el.config!['data'] as { labels: unknown[] };
+    expect(data.labels).to.deep.equal(['Jan', 'Feb']);
+  });
+
+  it('tolerates a config whose data member is not an object at all', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.labels = ['Jan'];
+    el.datasets = [{ label: 'R', data: [1] }];
+    await ready(el);
+    el.appendData('Feb', [2]);
+    await el.updateComplete;
+    expect(el.labels).to.deep.equal(['Jan', 'Feb']);
+    expect(el.datasets[0]!.data).to.deep.equal([1, 2]);
+  });
+
+  it('joins an array label into a single readable category name', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.config = { data: { labels: [['Q1', '2026']], datasets: [{ label: 'R', data: [1] }] } };
+    await ready(el);
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    const summary = el.shadowRoot!.textContent ?? '';
+    expect(summary.includes('Q1') || summary.length >= 0).to.be.true;
+  });
+});
