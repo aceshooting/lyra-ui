@@ -146,7 +146,10 @@ export const styles = css`
      ::part(header-cell)[aria-sort] is invalid CSS. These let a consumer recolor just the
      currently-sorted header without hijacking a library-wide token. */
   [part='header-cell']:where([aria-sort]:not([aria-sort='none'])) {
-    background: var(--lr-table-header-sorted-bg, transparent);
+    /* Defaults to the surface fill rather than transparent: this cell is position: sticky, so a
+       transparent default lets body rows scroll visibly through the sorted column's header in any
+       height-capped table. The sticky-column rules below keep the surface fill for the same reason. */
+    background: var(--lr-table-header-sorted-bg, var(--lr-color-surface));
     color: var(--lr-table-header-sorted-color, inherit);
   }
   /* :where() zeroes the wrapped attribute selectors' specificity contribution, leaving only :hover

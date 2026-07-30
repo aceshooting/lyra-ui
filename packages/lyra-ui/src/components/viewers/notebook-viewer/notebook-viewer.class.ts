@@ -620,10 +620,12 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     }
     if (cached === null) {
       // A failed optional peer must fail closed *visibly*: docs/agents/peers-and-remote-content.md
-      // requires a localized role="alert", which every sibling viewer already renders.
+      // requires a localized role="alert". No `part` here on purpose -- these per-output notices
+      // render inside <lr-virtual-list>'s shadow root, so the document-level `error` part name
+      // would both collide and be unreachable from this component's own stylesheet.
       return textFallback
         ? this.renderTextOutput(outputKey, textFallback)
-        : html`<p part="error" role="alert">${this.localize('documentViewerMissingSanitizer')}</p>`;
+        : html`<p role="alert">${this.localize('documentViewerMissingSanitizer')}</p>`;
     }
     return profile === 'svg' ? html`${unsafeSVG(cached)}` : html`${unsafeHTML(cached)}`;
   }

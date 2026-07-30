@@ -37,7 +37,7 @@ tokens); the visible strip itself is prop-driven only.
 segment or the default slot has content), `tokens-in`, `tokens-out`, `cost`, `latency`, `tooltip`.
 
 ```html
-<lr-chat-message role="assistant" status="sent">
+<lr-chat-message data-role="assistant" status="sent">
   <lr-usage-badge slot="badges" tokens-in="1204" tokens-out="386"
     cost-text="$0.012" latency-ms="2350"></lr-usage-badge>
   <lr-markdown .content=${answer}></lr-markdown>

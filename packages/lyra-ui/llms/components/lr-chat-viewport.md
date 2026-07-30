@@ -74,8 +74,8 @@ inline style) still wins over the built-in one.
 
 ```html
 <lr-chat-viewport unread-start-index="12" @lr-follow-change=${(e) => console.log(e.detail.following)}>
-  <lr-chat-message role="user">…</lr-chat-message>
-  <lr-chat-message role="assistant" status="streaming">
+  <lr-chat-message data-role="user">…</lr-chat-message>
+  <lr-chat-message data-role="assistant" status="streaming">
     <lr-streaming-text streaming .content=${partial}></lr-streaming-text>
   </lr-chat-message>
 </lr-chat-viewport>

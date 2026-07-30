@@ -3739,14 +3739,21 @@ describe('lr-table sorted-header theming and specificity', () => {
     expect(getComputedStyle(nameHeader).backgroundColor).to.not.equal('rgb(7, 8, 9)');
   });
 
-  it('leaves the sorted header transparent when the token is unset (regression)', async () => {
+  it('keeps the sorted header opaque so sticky rows cannot scroll through it (regression)', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = columns;
     el.rows = rows;
     el.sortKey = 'score';
     await el.updateComplete;
     const scoreHeader = el.shadowRoot!.querySelectorAll('[part="header-cell"]')[1] as HTMLElement;
-    expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    // This cell is position: sticky. A transparent default let body rows scroll visibly through
+    // the sorted column's header in any height-capped table; the untinted default must still be
+    // an opaque surface fill.
+    expect(getComputedStyle(scoreHeader).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+
+    el.style.setProperty('--lr-table-header-sorted-bg', 'rgb(1, 2, 3)');
+    await el.updateComplete;
+    expect(getComputedStyle(scoreHeader).backgroundColor).to.equal('rgb(1, 2, 3)');
   });
 
   it('lets a consumer ::part(header-cell) cursor override win over the internal sort/cursor rule', async () => {

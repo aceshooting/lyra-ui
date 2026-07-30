@@ -2193,3 +2193,20 @@ describe('virtualized page part styling', () => {
     }
   });
 });
+
+it('gives toolbar buttons a hover fill that actually differs from the toolbar behind them', async () => {
+  const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+  await el.updateComplete;
+  const probe = document.createElement('div');
+  el.shadowRoot!.appendChild(probe);
+  const resolve = (value: string): string => {
+    probe.style.background = value;
+    return getComputedStyle(probe).backgroundColor;
+  };
+  // A :hover rule that resolves to the toolbar's own opaque fill is a rule with no visual effect --
+  // present, so every grep-shaped check passes, but hovering changes nothing on screen.
+  const toolbarFill = resolve('var(--lr-color-brand-quiet)');
+  const hoverFill = resolve('var(--lr-pdf-viewer-toolbar-button-hover-bg, var(--lr-color-surface))');
+  probe.remove();
+  expect(hoverFill, 'hover must not resolve to the toolbar background').to.not.equal(toolbarFill);
+});
