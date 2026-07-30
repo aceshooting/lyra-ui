@@ -6,7 +6,7 @@
 - **Class** `LyraEmbeddingExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/embedding-explorer/embedding-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +17,9 @@ Dependency-free accessible 2D embedding projection viewer. Coordinates are proje
 the component only normalizes them into SVG, colors optional clusters, and emits selection events.
 
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
-y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
+y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'` (any CSS length valid for `block-size`,
+including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
+`--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
 `accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
 omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
 keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
@@ -27,4 +29,7 @@ keeps at least a 24×24 CSS px pointer target at narrow allocations without enla
 **CSS parts:** `base`, `plot`, `point`, `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
-`var(--lr-color-brand)`) — stroke color of the selected point. Plus shared tokens.
+`var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
+(default `360px`) — the `block-size` of `[part="plot"]`, set on the host from `height`. A consumer's
+own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
+`min-block-size` floor still raises it. Plus shared tokens.

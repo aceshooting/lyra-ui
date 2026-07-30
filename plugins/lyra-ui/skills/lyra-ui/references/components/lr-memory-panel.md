@@ -6,7 +6,7 @@
 - **Class** `LyraMemoryPanel`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/memory-panel/memory-panel.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 17 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,16 @@ heading text), `section-empty`, `list` (`role="list"`, omitted while that sectio
 somewhere to land after a confirmation resolves), `item-row`, `item-text`, `confidence` (carries
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
-`remove-button`, `forget-all-button`.
+`remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
+`forget-all-button` while the bulk confirmation is pending).
+
+**Keyboard/focus contract:** activating an action from the keyboard replaces that control with an
+`lr-confirm-bar`, and focus moves into the bar (landing on Deny, the safe action) rather than
+falling to `<body>` when the control unmounts. Cancelling — Escape or Deny — returns focus to the
+control the confirmation replaced: the row's own action for a per-item confirmation, and
+`forget-all-button` for the bulk one. This holds through a controlled `shortTerm`/`longTerm`
+replacement that closes an open confirmation. Escape only stops propagating when it actually closed
+a confirmation, so it never blocks an enclosing dialog for nothing.
 
 **Themeable custom properties:** `--lr-memory-panel-confidence-success-color` (default
 `var(--lr-color-success)`), `--lr-memory-panel-confidence-warning-color` (default

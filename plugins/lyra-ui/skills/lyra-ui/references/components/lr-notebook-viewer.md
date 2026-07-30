@@ -41,7 +41,10 @@ anchor-target contract).
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
 `searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and marking the
-target cell with the persistent active-cell paint; `clearSearch()` clears the query and matches.
+target cell with the persistent active-cell paint, and each resolves `true` once the active match
+moved or `false` when there are none — the same `Promise<boolean>` every other searchable viewer
+resolves, so one find-in-page host can drive them all; `clearSearch()` clears the query and
+matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
