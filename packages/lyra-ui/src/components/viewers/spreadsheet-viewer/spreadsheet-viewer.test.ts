@@ -808,3 +808,28 @@ describe('lr-spreadsheet-viewer', () => {
     });
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers the same renderer under both spreadsheet MIME types', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const registry = getDefaultDocumentRendererRegistry();
+  const xlsx = registry.get('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  const xls = registry.get('application/vnd.ms-excel');
+  expect(xlsx, 'importing spreadsheet-viewer.js registers the renderer').to.exist;
+  expect(xls, 'both MIME types share one definition').to.equal(xlsx);
+
+  expect(xlsx!.matches!({ name: 'Budget.XLSX', src: 'https://example.test/a.xlsx' })).to.be.true;
+  expect(xlsx!.matches!({ name: 'legacy.xls', src: 'https://example.test/a.xls' })).to.be.true;
+  expect(xlsx!.matches!({ name: 'notes.csv', src: 'https://example.test/a.csv' })).to.be.false;
+  expect(xlsx!.capabilities).to.deep.equal({ anchors: ['cell-range'], search: true, textSelect: false });
+
+  const host = (await fixture(
+    html`<div>${xlsx!.render({ name: 'a.xlsx', src: 'https://example.test/a.xlsx' })}</div>`,
+  )) as HTMLElement;
+  const viewer = host.querySelector('lr-spreadsheet-viewer') as LyraSpreadsheetViewer;
+  expect(viewer).to.exist;
+  expect(viewer.name).to.equal('a.xlsx');
+  expect(viewer.anchor).to.be.null;
+  expect(viewer.highlights).to.deep.equal([]);
+});

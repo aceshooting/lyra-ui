@@ -686,3 +686,23 @@ describe('active-region cssprop escape hatch', () => {
     }
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers an image/svg+xml renderer that matches .svg files and renders the viewer', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('image/svg+xml');
+  expect(def, 'importing svg-viewer.js registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'Diagram.SVG', src: 'https://example.test/a.svg' })).to.be.true;
+  expect(def!.matches!({ name: 'diagram.png', src: 'https://example.test/a.png' })).to.be.false;
+  expect(def!.capabilities).to.deep.equal({ anchors: ['region'], search: false, textSelect: false });
+
+  const host = (await fixture(
+    html`<div>${def!.render({ name: 'a.svg', src: 'https://example.test/a.svg' })}</div>`,
+  )) as HTMLElement;
+  const viewer = host.querySelector('lr-svg-viewer') as LyraSvgViewer;
+  expect(viewer).to.exist;
+  expect(viewer.name).to.equal('a.svg');
+  expect(viewer.anchor).to.be.null;
+  expect(viewer.highlights).to.deep.equal([]);
+});

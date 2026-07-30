@@ -185,3 +185,75 @@ it('keeps rich tooltip content non-interactive', async () => {
   )) as LyraEntityChip;
   expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).inert).to.be.true;
 });
+
+// -- Hover/focus preview lifecycle ------------------------------------------
+// The preview is shared by pointer and keyboard: leaving only schedules the hide, so a chip that
+// is still focused (or still hovered) keeps it open until both are released.
+
+describe('preview show/hide across pointer and focus', () => {
+  const chip = (): Promise<LyraEntityChip> =>
+    fixture(
+      html`<lr-entity-chip label="Marie Curie">Physicist, 1867-1934</lr-entity-chip>`,
+    ) as Promise<LyraEntityChip>;
+  const hidden = (el: LyraEntityChip): boolean =>
+    (el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).hasAttribute('hidden');
+  const wrapper = (el: LyraEntityChip): HTMLElement => el.shadowRoot!.querySelector('.wrapper') as HTMLElement;
+
+  it('pointerleave schedules the hide rather than closing immediately', async () => {
+    const el = await chip();
+    wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el)).to.be.false;
+
+    wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el), 'still open during the grace delay').to.be.false;
+
+    await aTimeout(320);
+    await el.updateComplete;
+    expect(hidden(el), 'closes once the delay elapses').to.be.true;
+  });
+
+  it('focusin opens the preview and focusout closes it when not hovered', async () => {
+    const el = await chip();
+    wrapper(el).dispatchEvent(new Event('focusin', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el)).to.be.false;
+
+    wrapper(el).dispatchEvent(new Event('focusout', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el), 'focusout with no hover closes immediately').to.be.true;
+  });
+
+  it('keeps the preview open on focusout while the pointer is still over the chip', async () => {
+    const el = await chip();
+    wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    wrapper(el).dispatchEvent(new Event('focusin', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el)).to.be.false;
+
+    wrapper(el).dispatchEvent(new Event('focusout', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el), 'hover still holds it open').to.be.false;
+  });
+
+  it('keeps the preview open on pointerleave while the chip still has focus', async () => {
+    const el = await chip();
+    wrapper(el).dispatchEvent(new Event('focusin', { bubbles: true }));
+    wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    await el.updateComplete;
+    wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
+    await aTimeout(320);
+    await el.updateComplete;
+    expect(hidden(el), 'focus still holds it open past the hide delay').to.be.false;
+  });
+
+  it('does nothing on pointerleave when there is no preview content at all', async () => {
+    const el = (await fixture(html`<lr-entity-chip label="Marie Curie"></lr-entity-chip>`)) as LyraEntityChip;
+    await el.updateComplete;
+    wrapper(el).dispatchEvent(new Event('pointerenter', { bubbles: true }));
+    wrapper(el).dispatchEvent(new Event('pointerleave', { bubbles: true }));
+    await el.updateComplete;
+    expect(hidden(el)).to.be.true;
+  });
+});
