@@ -880,7 +880,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     let label: string;
     if (this.mode === 'calendar') {
       label = this.localize('heatmapCalendarLabel', undefined, {
-        days: this.days.length,
+        days: this.formatCount(this.days.length),
         label: valueLabel,
         range,
       });
@@ -1846,9 +1846,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   private matrixCellText(pos: MatrixCellPos): string {
     const rowLabel =
-      this.rowLabels[pos.row] ?? this.localize('heatmapDefaultRowLabel', undefined, { n: pos.row + 1 });
+      this.rowLabels[pos.row] ?? this.localize('heatmapDefaultRowLabel', undefined, { n: this.formatCount(pos.row + 1) });
     const colLabel =
-      this.colLabels[pos.col] ?? this.localize('heatmapDefaultColLabel', undefined, { n: pos.col + 1 });
+      this.colLabels[pos.col] ?? this.localize('heatmapDefaultColLabel', undefined, { n: this.formatCount(pos.col + 1) });
     const v = this.values[pos.row]?.[pos.col];
     const valueText =
       v == null || v < 0 || !Number.isFinite(v)
@@ -2260,6 +2260,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       </div>
     `;
   }
+  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
+   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
+   *  sentence. Route every user-facing number through the effective locale instead. */
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
 }
 
 
@@ -2267,4 +2273,5 @@ declare global {
   interface HTMLElementTagNameMap {
     'lr-heatmap': LyraHeatmap;
   }
+
 }

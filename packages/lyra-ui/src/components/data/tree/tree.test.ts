@@ -1335,6 +1335,24 @@ describe('reorderable', () => {
     await el.expandAll();
     await expect(el).to.be.accessible();
   });
+  it('formats reorder-announcement numbers with the effective locale', async () => {
+    // `localize()` interpolates with a bare `String(value)` -- it does no number formatting. A raw
+    // `index + 1` therefore renders Western digits inside an otherwise fully-translated sentence,
+    // so under a locale with its own numbering system the announcement mixes two digit sets.
+    const el = (await fixture(html`<lr-tree reorderable lang="ar-u-nu-arab"></lr-tree>`)) as LyraTree;
+    el.data = clone();
+    await el.updateComplete;
+    const child = await focusNestedChild(el, '1.2');
+
+    modArrow(child as unknown as Element, 'ArrowUp', 'metaKey');
+    await el.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+
+    const live = el.shadowRoot!.querySelector('lr-live-region') as HTMLElement | null;
+    const announced = (live?.shadowRoot?.textContent ?? '') + (live?.textContent ?? '');
+    expect(announced.trim(), 'an announcement was made').to.not.equal('');
+    expect(announced, 'announcement should use Arabic-Indic digits').to.match(/[\u0660-\u0669]/);
+  });
 });
 
 it("survives keyboard navigation over slotted tree-nodes that carry no item", async () => {

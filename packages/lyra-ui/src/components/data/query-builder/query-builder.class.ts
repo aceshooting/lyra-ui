@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { nextId } from '../../../internal/a11y.js';
 import '../../forms/select/select.class.js';
 import '../../forms/combobox/option.class.js';
@@ -509,7 +510,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
         <lr-icon-button
           part="remove-button"
           icon="trash"
-          aria-label=${this.localize('queryBuilderRemoveCondition', undefined, { index: index + 1 })}
+          aria-label=${this.localize('queryBuilderRemoveCondition', undefined, { index: this.formatCount(index + 1) })}
           ?disabled=${this.disabled}
           @click=${() => this.removeCondition(condition.id)}
         ></lr-icon-button>
@@ -542,10 +543,17 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
       </div>
     `;
   }
+  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
+   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
+   *  sentence. Route every user-facing number through the effective locale instead. */
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     'lr-query-builder': LyraQueryBuilder;
   }
+
 }

@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { tag } from '../../../internal/prefix.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
@@ -373,8 +374,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     this.liveRegion?.announce(
       this.localize('treeNodeMoved', undefined, {
         label: node.item.accessibleLabel || node.item.label,
-        index: toIndex + 1,
-        total: siblings.length,
+        index: this.formatCount(toIndex + 1),
+        total: this.formatCount(siblings.length),
       }),
       // A discrete, user-initiated action: never coalesce it behind the
       // announcer's throttle window the way streaming status text is.
@@ -527,6 +528,12 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       ${this.reorderable ? html`<lr-live-region></lr-live-region>` : nothing}
     `;
   }
+  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
+   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
+   *  sentence. Route every user-facing number through the effective locale instead. */
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
 }
 
 
@@ -534,4 +541,5 @@ declare global {
   interface HTMLElementTagNameMap {
     'lr-tree': LyraTree;
   }
+
 }

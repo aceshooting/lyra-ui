@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { styles } from './commit-card.styles.js';
 import type { GitStatus } from '../../data/file-tree/file-tree.class.js';
@@ -199,7 +200,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 aria-label=${this.localize('commitCardDiffSummary', undefined, {
                   additions,
                   deletions,
-                  files: this.files.length,
+                  files: this.formatCount(this.files.length),
                 })}
               >
                 <span part="additions">+${additions}</span> <span part="deletions">-${deletions}</span>
@@ -226,8 +227,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 @click=${this.toggleFiles}
               >
                 ${this.filesCollapsed
-                  ? this.localize('commitCardShowFiles', undefined, { count: this.files.length })
-                  : this.localize('commitCardHideFiles', undefined, { count: this.files.length })}
+                  ? this.localize('commitCardShowFiles', undefined, { count: this.formatCount(this.files.length) })
+                  : this.localize('commitCardHideFiles', undefined, { count: this.formatCount(this.files.length) })}
               </button>
               ${!this.filesCollapsed
                 ? this.files.map(
@@ -258,10 +259,17 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
       </div>
     `;
   }
+  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
+   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
+   *  sentence. Route every user-facing number through the effective locale instead. */
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     'lr-commit-card': LyraCommitCard;
   }
+
 }

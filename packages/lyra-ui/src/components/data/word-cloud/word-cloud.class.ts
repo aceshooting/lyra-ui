@@ -199,7 +199,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.relayout();
     }
     const generatedAriaLabel = this.localize('wordCloud', undefined, {
-      count: this.cachedLayout.placed.length,
+      count: this.formatCount(this.cachedLayout.placed.length),
       word: this.localize(this.cachedLayout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
     });
     this.syncingGeneratedSemantics = true;
@@ -404,6 +404,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       </div>
     `;
   }
+  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
+   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
+   *  sentence. Route every user-facing number through the effective locale instead. */
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
 }
 
 
@@ -411,4 +417,5 @@ declare global {
   interface HTMLElementTagNameMap {
     'lr-word-cloud': LyraWordCloud;
   }
+
 }

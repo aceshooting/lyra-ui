@@ -333,7 +333,11 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   private renderThumbnail(): TemplateResult {
     if (this.file) {
       return this.effectiveMimeType.startsWith('image/')
-        ? html`<img src=${this.objectUrl ?? ''} alt="" />`
+        // `nothing`, never `''`: an empty `src` is a valid URL that resolves against the
+        // document, so the browser would re-request the page itself as an image. The
+        // object URL is always populated before this renders, so this is a guard rather
+        // than a live path -- but `''` is the wrong guard to leave in place.
+        ? html`<img src=${this.objectUrl ?? nothing} alt="" />`
         : html`${fileIcon()}`;
     }
     // No `file`: `thumbnail-src` is used whenever present, regardless of

@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { styles } from './artifact-panel.styles.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
@@ -134,8 +135,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     this.emit('lr-version-change', { versionId: version.id });
     (this.renderRoot.querySelector('lr-live-region') as LyraLiveRegion | null)?.announce(
       this.localize('artifactPanelVersionPosition', undefined, {
-        index: index + 1,
-        count: this.versions.length,
+        index: this.formatCount(index + 1),
+        count: this.formatCount(this.versions.length),
       }),
     );
   }
@@ -206,8 +207,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
                   </button>
                   <span part="version-position"
                     >${this.localize('artifactPanelVersionPosition', undefined, {
-                      index: index + 1,
-                      count: this.versions.length,
+                      index: this.formatCount(index + 1),
+                      count: this.formatCount(this.versions.length),
                     })}</span
                   >
                   <button
@@ -257,10 +258,17 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
       </div>
     `;
   }
+  /** `localize()` interpolates with a bare `String(value)`, so a number handed to it renders in
+   *  ASCII digits no matter the locale -- mixing two numbering systems inside one translated
+   *  sentence. Route every user-facing number through the effective locale instead. */
+  private formatCount(value: number): string {
+    return getNumberFormat(this.effectiveLocale).format(value);
+  }
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     'lr-artifact-panel': LyraArtifactPanel;
   }
+
 }
