@@ -45,7 +45,8 @@ declare global {
 
 type Internals = {
   searchActiveIndex: number;
-  searchRanges: Range[];
+  searchMatches: { start: number; end: number }[];
+  activeSearchRange(): Range | null;
   searchQuery: string;
   selectionRoot: Element | null;
   selectionCleanup?: () => void;
@@ -123,8 +124,9 @@ describe('TextViewerTarget mixin', () => {
     await Promise.resolve();
     await el.updateComplete;
 
-    expect(internals(el).searchRanges).to.have.length(1);
-    expect(internals(el).searchRanges[0]!.toString()).to.equal('İzmir');
+    expect(internals(el).searchMatches).to.have.length(1);
+    // The mixin retains offsets, not Ranges; materialize the active one to read its text.
+    expect(internals(el).activeSearchRange()!.toString()).to.equal('İzmir');
     expect(internals(el).searchActiveIndex).to.equal(0);
     expect(localeChangeDetail).to.deep.equal({ query: 'izmir', matchCount: 1, activeIndex: 0 });
   });
@@ -146,7 +148,7 @@ describe('TextViewerTarget mixin', () => {
     await el.updateComplete;
 
     expect(el.scheduledLoadCount - loadsBeforeChange).to.equal(1);
-    expect(internals(el).searchRanges).to.have.length(1);
+    expect(internals(el).searchMatches).to.have.length(1);
   });
 
   it('does not emit a search-change event when only host highlights change', async () => {
@@ -203,14 +205,14 @@ describe('TextViewerTarget mixin', () => {
   it('clearSearch() resets query/ranges/index and emits lr-search-change with matchCount 0', async () => {
     const el = await stubFixture();
     await el.search('fox');
-    expect(internals(el).searchRanges.length).to.equal(2);
+    expect(internals(el).searchMatches.length).to.equal(2);
 
     const eventPromise = oneEvent(el, 'lr-search-change');
     el.clearSearch();
     const { detail } = await eventPromise;
     expect(detail).to.deep.equal({ query: '', matchCount: 0, activeIndex: -1 });
     expect(internals(el).searchQuery).to.equal('');
-    expect(internals(el).searchRanges).to.deep.equal([]);
+    expect(internals(el).searchMatches).to.deep.equal([]);
     expect(internals(el).searchActiveIndex).to.equal(-1);
     // ranges are really gone, not just index reset
     expect(await el.searchNext()).to.be.false;
@@ -348,7 +350,7 @@ describe('TextViewerTarget mixin', () => {
       expect(internals(el).selectionRoot?.getAttribute('part')).to.equal('body');
       expect(internals(el).searchHandle !== undefined).to.be.true;
       expect(internals(el).searchHandle === originalHandle).to.be.false;
-      expect(internals(el).searchRanges).to.have.length(2);
+      expect(internals(el).searchMatches).to.have.length(2);
     });
 
     it('does not reacquire a highlight handle when an in-flight search resumes detached', async () => {
@@ -372,7 +374,7 @@ describe('TextViewerTarget mixin', () => {
       expect(await pendingSearch).to.equal(2);
       await el.updateComplete;
       expect(internals(el).searchQuery).to.equal('fox');
-      expect(internals(el).searchRanges).to.have.length(2);
+      expect(internals(el).searchMatches).to.have.length(2);
       expect(internals(el).searchHandle).to.not.be.undefined;
     });
   });

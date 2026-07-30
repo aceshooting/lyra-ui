@@ -199,10 +199,15 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         this.listResizeObserver?.unobserve(this.observedList);
       this.observedList = list ?? undefined;
       if (list) {
-        // Measure up front too: the observer's first callback lands a frame later, and the very
-        // first paint already positions rows at whatever pitch is current.
-        this.measureRowPitch();
         this.listResizeObserver?.observe(list);
+        // Measure up front as a fast path for browsers that delay the first ResizeObserver
+        // callback. Queued, not synchronous: this runs inside Lit's updated() lifecycle, and a
+        // reactive write from there logs "scheduled an update after an update completed" (the
+        // same reason <lr-virtual-list> defers its own initial container measurement). The
+        // observer stays responsible for every later measurement.
+        queueMicrotask(() => {
+          if (this.isConnected && this.observedList === list) this.measureRowPitch();
+        });
       }
     }
   }

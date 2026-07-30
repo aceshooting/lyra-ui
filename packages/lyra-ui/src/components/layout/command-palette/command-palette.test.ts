@@ -691,3 +691,37 @@ it("derives the virtual row pitch from the row-height tokens, not a hardcoded pi
   expect((el as unknown as { rowPitch: number }).rowPitch).to.equal(60);
   expect((el as unknown as { groupPitch: number }).groupPitch).to.equal(40);
 });
+
+it("does not schedule a Lit update from the initial row-pitch measurement", async () => {
+  // `measureRowPitch()` writes reactive state. Called synchronously from the observer-attach path
+  // -- which runs inside Lit's `updated()` -- that write logs "scheduled an update after an update
+  // completed" for every consumer with Lit's dev build. Same precedent as `<lr-virtual-list>`'s
+  // initial container measurement: queue the read out of the lifecycle callback.
+  const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> }).litIssuedWarnings;
+  globalWarnings?.forEach((warning) => {
+    if (warning.includes("scheduled an update")) globalWarnings.delete(warning);
+  });
+  const originalWarn = console.warn;
+  const calls: unknown[][] = [];
+  console.warn = (...args: unknown[]) => calls.push(args);
+  try {
+    // The tokens must resolve to something *other* than the 48/32 fallbacks, or `measureRowPitch()`
+    // changes no state and schedules no update either way -- the test would pass vacuously.
+    const el = (await fixture(
+      html`<lr-command-palette
+        style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"
+      ></lr-command-palette>`
+    )) as LyraCommandPalette;
+    el.commands = Array.from({ length: 20 }, (_, i) => ({ id: `c${i}`, label: `Command ${i}` }));
+    el.openPalette();
+    await el.updateComplete;
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    await el.updateComplete;
+  } finally {
+    console.warn = originalWarn;
+  }
+  const scheduled = calls.filter((args) =>
+    args.some((a) => typeof a === "string" && a.includes("scheduled an update"))
+  );
+  expect(scheduled, JSON.stringify(scheduled)).to.have.length(0);
+});
