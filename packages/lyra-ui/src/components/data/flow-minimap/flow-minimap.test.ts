@@ -143,6 +143,49 @@ it('node rects inherit decoration status tones', async () => {
   expect(rect.getAttribute('data-status')).to.equal('running');
 });
 
+it('lets each node status color be rethemed without changing shared semantic tokens', async () => {
+  const statusNodes: FlowNode[] = [
+    { id: 'pending', position: { x: 0, y: 0 } },
+    { id: 'running', position: { x: 100, y: 0 } },
+    { id: 'success', position: { x: 200, y: 0 } },
+    { id: 'error', position: { x: 300, y: 0 } },
+    { id: 'denied', position: { x: 400, y: 0 } },
+  ];
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-minimap
+        slot="bottom-end"
+        style="
+          --lr-flow-minimap-node-pending-color: rgb(1, 2, 3);
+          --lr-flow-minimap-node-running-color: rgb(4, 5, 6);
+          --lr-flow-minimap-node-success-color: rgb(7, 8, 9);
+          --lr-flow-minimap-node-error-color: rgb(10, 11, 12);
+          --lr-flow-minimap-node-denied-color: rgb(13, 14, 15);
+        "
+      ></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = statusNodes;
+  wrapper.decorations = Object.fromEntries(
+    statusNodes.map((node) => [node.id, { status: node.id }]),
+  ) as LyraFlowCanvas['decorations'];
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+
+  const expected = new Map([
+    ['pending', 'rgb(1, 2, 3)'],
+    ['running', 'rgb(4, 5, 6)'],
+    ['success', 'rgb(7, 8, 9)'],
+    ['error', 'rgb(10, 11, 12)'],
+    ['denied', 'rgb(13, 14, 15)'],
+  ]);
+  for (const rect of minimap.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')) {
+    expect(getComputedStyle(rect).fill).to.equal(expected.get(rect.dataset.status));
+  }
+});
+
 it('clicking the map centers the canvas viewport there (calls setViewport)', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">
@@ -275,6 +318,26 @@ it('arrow keys pan the canvas viewport in each physical direction', async () => 
 
   rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
   expect(wrapper.viewport.y).to.be.greaterThan(0);
+});
+
+it('cannot pan the canvas through minimap keyboard controls while locked', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const rect = minimap.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+  wrapper.locked = true;
+  const before = { ...wrapper.viewport };
+
+  rect.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+
+  expect(wrapper.viewport).to.deep.equal(before);
 });
 
 it('pointercancel ends a viewport drag so a later pointermove no longer pans the canvas', async () => {

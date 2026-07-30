@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { assertTableSize, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
@@ -17,6 +18,7 @@ import {
   parseDelimitedGrid,
 } from '../../../internal/delimited-data.js';
 import { LatestTask } from '../../../internal/latest-task.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 type CsvState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; rows: unknown[][] } | { kind: 'error'; message: string };
 const MAX_SEARCH_MATCHES = 1_000;
@@ -92,6 +94,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   /** Whether the first parsed row is rendered as a sticky header. */
   @property({ attribute: 'has-header-row', converter: trueDefaultBooleanConverter }) hasHeaderRow = true;
   /** CSS length that caps the scrollable body. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
@@ -207,6 +210,10 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     if (!colHighlights.length) return html`<div part="cell" role=${role}>${cell(value)}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
+    const text = cell(value);
+    const accessibleLabel = this.localize('highlightWithLabel', undefined, {
+      label: primary.highlight.label ? `${text} — ${primary.highlight.label}` : text,
+    });
     const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     return html`<div
       part="cell cell-highlight"
@@ -216,9 +223,9 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     ><button
       part="cell-highlight-action"
       type="button"
-      aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
+      aria-label=${accessibleLabel}
       @click=${activate}
-    >${cell(value)}</button></div>`;
+    >${text}</button></div>`;
   }
 
   private renderRow(row: unknown[], count: number, part: 'header-row' | 'data-row', rawRow: number): TemplateResult {
@@ -360,7 +367,8 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
     } else if (this.fetchState.kind === 'loading') content = html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
     else if (this.fetchState.kind === 'error') content = html`<div part="error" role="alert">${this.fetchState.message}</div>`;
     else content = html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
-    return html`<div part="base" role="region" style=${this.maxHeight ? `--lr-csv-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('csvViewerLabel')}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-csv-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('csvViewerLabel')}><div part="body">${content}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

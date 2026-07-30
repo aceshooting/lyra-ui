@@ -113,6 +113,15 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (
+      this.hasUpdated &&
+      (changed.has('oldText') || changed.has('newText')) &&
+      this.justCopied
+    ) {
+      clearTimeout(this.copyTimeoutId);
+      this.copyTimeoutId = undefined;
+      this.justCopied = false;
+    }
     if (changed.has('oldText') || changed.has('newText') || changed.has('maxLines')) {
       const oldLines = splitLines(this.oldText);
       const newLines = splitLines(this.newText);

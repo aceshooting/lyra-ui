@@ -29,6 +29,9 @@ import { styles } from "./app-rail-item.styles.js";
  */
 export class LyraAppRailItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];
+  static override get observedAttributes(): string[] {
+    return [...super.observedAttributes, "icon-only"];
+  }
 
   /** Optional destination. Without `href`, the item renders as a button. */
   @property() href = "";
@@ -82,26 +85,44 @@ export class LyraAppRailItem extends LyraElement {
     this.showTooltip = false;
   };
 
+  override attributeChangedCallback(
+    name: string,
+    oldValue: string | null,
+    newValue: string | null
+  ): void {
+    super.attributeChangedCallback(name, oldValue, newValue);
+    if (name !== "icon-only" || oldValue === newValue) return;
+    if (newValue === null) this.showTooltip = false;
+    this.requestUpdate();
+  }
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has("tooltip") && !this.tooltip) this.showTooltip = false;
+  }
+
   protected override updated(changed: PropertyValues): void {
-    if (changed.has("showTooltip")) {
+    super.updated(changed);
+    const popup = this.renderRoot.querySelector(
+      '[part="tooltip"]'
+    ) as HTMLElement | null;
+    if (!popup) {
       this.stopPositioning?.();
       this.stopPositioning = undefined;
-      if (this.showTooltip) {
-        const anchor = this.renderRoot.querySelector(
-          '[part="base"]'
-        ) as HTMLElement;
-        const popup = this.renderRoot.querySelector(
-          '[part="tooltip"]'
-        ) as HTMLElement | null;
-        // 'right' is a physical Floating UI placement -- resolve it through the
-        // shared RTL helper (mirrors lr-menu's identical resolution) so the
-        // flyout still anchors to the rail item's trailing edge (away from the
-        // rail) rather than staying pinned to the physical right under RTL.
-        if (anchor && popup)
-          this.stopPositioning = place(anchor, popup, {
-            placement: rtlAwarePlacement("right", this),
-          });
-      }
+      return;
+    }
+    if (changed.has("showTooltip") || !this.stopPositioning) {
+      this.stopPositioning?.();
+      const anchor = this.renderRoot.querySelector(
+        '[part="base"]'
+      ) as HTMLElement;
+      // 'right' is a physical Floating UI placement -- resolve it through the
+      // shared RTL helper (mirrors lr-menu's identical resolution) so the
+      // flyout still anchors to the rail item's trailing edge (away from the
+      // rail) rather than staying pinned to the physical right under RTL.
+      this.stopPositioning = place(anchor, popup, {
+        placement: rtlAwarePlacement("right", this),
+      });
     }
   }
 
@@ -118,7 +139,7 @@ export class LyraAppRailItem extends LyraElement {
     const content = html`
       <span part="icon" aria-hidden="true"><slot name="icon"></slot></span>
       <span part="label"><slot></slot></span>
-      ${this.showTooltip
+      ${this.showTooltip && this.tooltip && this.hasAttribute("icon-only")
         ? html`<span part="tooltip" role="tooltip">${this.tooltipText}</span>`
         : nothing}
     `;
@@ -129,6 +150,7 @@ export class LyraAppRailItem extends LyraElement {
         target=${this.target || nothing}
         rel=${this.target ? "noopener noreferrer" : nothing}
         aria-label=${label || nothing}
+        aria-disabled="false"
         aria-current=${this.active ? "page" : nothing}
         @mouseenter=${this.onFocusShow}
         @mouseleave=${this.onBlurHide}
@@ -141,7 +163,7 @@ export class LyraAppRailItem extends LyraElement {
       part="base"
       type="button"
       ?disabled=${this.disabled}
-      aria-disabled=${this.disabled ? "true" : nothing}
+      aria-disabled=${this.disabled ? "true" : "false"}
       aria-label=${label || nothing}
       aria-current=${this.active ? "page" : nothing}
       @mouseenter=${this.onFocusShow}

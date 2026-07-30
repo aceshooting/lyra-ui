@@ -180,6 +180,27 @@ it('releases the scroll lock on disconnect while open', async () => {
   expect(document.documentElement.style.overflow).to.equal('');
 });
 
+it('does not acquire scroll lock or Escape ownership when opened while detached', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+  const parent = el.parentElement!;
+  el.remove();
+  el.open = true;
+  await el.updateComplete;
+
+  expect(document.documentElement.style.overflow).to.equal('');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await el.updateComplete;
+  expect(el.open, 'a detached dialog must not own global Escape').to.be.true;
+
+  parent.append(el);
+  await el.updateComplete;
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(document.documentElement.style.overflow).to.equal('');
+});
+
 it('restores the scroll lock and keydown trap when reparented while still open', async () => {
   const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
   await el.updateComplete;
@@ -411,7 +432,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
     expect(el.shadowRoot!.querySelector('[part="label"]')).to.not.exist;
   });
 
-  it('wins over the heading prop, including its visible header chrome', async () => {
+  it('wins over the heading prop for naming without suppressing its visible header chrome', async () => {
     const el = (await fixture(
       html`<lr-dialog heading="Title" aria-label="Custom name">body</lr-dialog>`,
     )) as LyraDialog;
@@ -420,7 +441,7 @@ describe('aria-label host attribute (ARIA-name forwarding)', () => {
 
     expect(panel.getAttribute('aria-label')).to.equal('Custom name');
     expect(panel.hasAttribute('aria-labelledby')).to.be.false;
-    expect(el.shadowRoot!.querySelector('[part="heading"]')).to.not.exist;
+    expect(el.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Title');
   });
 
   it('wins even over a slotted heading', async () => {

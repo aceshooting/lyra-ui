@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Run the CI gate locally, mirroring .github/workflows/ci.yml's build-test job
-# step-for-step (same commands, same order). The workflow file remains the
-# authoritative gate list -- when it changes, change this script to match.
+# Run the blocking CI gates locally, following the commands in
+# .github/workflows/ci.yml. The workflow file remains the authoritative gate
+# list -- when it changes, change this script to match.
 #
 # Usage:
-#   ./scripts/ci.sh                 # full build-test gate
+#   ./scripts/ci.sh                 # full local CI gate
 #   CI_SH_SKIP_INSTALL=1 ./scripts/ci.sh   # skip install + browser download (deps already present)
 #   ./scripts/ci.sh --platform      # ALSO run the platform-contracts suite locally
 #                                   # (firefox + webkit; browsers are downloaded on demand)
 #   ./scripts/ci.sh --platform-matrix # run the CI platform matrix (Node 20/22 x Firefox/WebKit)
 #                                   # requires Node 20/22 and pnpm 10/11 locally
-#   ./scripts/ci.sh --all           # full build-test gate plus the platform matrix
+#   ./scripts/ci.sh --all           # full local CI gate plus the platform matrix
 #
 # The platform matrix can use non-default executable names/paths when needed:
 #   CI_SH_NODE20_BIN=/path/to/node20 CI_SH_PNPM20_BIN=/path/to/pnpm10 \
@@ -166,14 +166,10 @@ pnpm storybook:check
 step "storybook:check-theme"
 pnpm storybook:check-theme
 
-# Informational/non-blocking, mirroring CI: the visual baselines have not yet
-# been human-confirmed (see packages/lyra-ui/visual-baselines/README). A
-# mismatch prints a warning but does not fail the gate until the baselines are
-# promoted deliberately.
-step "visual regression (informational, non-blocking)"
-if ! pnpm --filter @aceshooting/lyra-ui test:visual; then
-  printf '\033[33mWARNING: visual regression reported differences (non-blocking; diffs in packages/lyra-ui/.visual-diff-output)\033[0m\n'
-fi
+# This is a blocking CI job. Keep the local aggregate gate equally strict so a
+# screenshot mismatch cannot pass here and fail only after the push.
+step "visual regression"
+pnpm --filter @aceshooting/lyra-ui test:visual
 
 step "verify published tarball contents"
 out="$(pnpm --filter @aceshooting/lyra-ui pack --dry-run 2>&1)"

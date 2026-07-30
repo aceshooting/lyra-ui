@@ -7,9 +7,20 @@ import { fileIcon, folderIcon } from '../../../internal/icons.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraResourceLimitError, readResponseArrayBuffer } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import {
+  buildQuoteAnchor,
+  normalizeQuoteText,
+  resolveTextQuote,
+  scopeFromElement,
+} from '../../../internal/text-quote.js';
 import { FILE_SIZE_UNIT_KEYS, formatFileSize } from '../../media/attachment-chip/attachment-chip.class.js';
+import type {
+  LyraAnchor,
+  TextSelectDetail,
+} from '../document-viewer/anchors.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { loadArchiveLibraryCached, type ArchiveLibraryApi } from './archive-loader.js';
-import { styles } from './archive-viewer.styles.js';
+import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
 interface ArchiveStream {
@@ -31,6 +42,7 @@ export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap 
 const MAX_ARCHIVE_ENTRIES = 10_000;
 const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 100 * 1024 * 1024;
 class LyraArchiveViewerBase extends LyraElement<LyraArchiveViewerEventMap> {}
+const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase);
 
 /** Measures one JSZip entry incrementally. Failing closed when the public stream API is absent is
  * intentional: `file.async('uint8array')` would allocate the entire unknown-size entry before the
@@ -82,12 +94,57 @@ function measureArchiveEntry(
   });
 }
 
+function archiveSelectionRange(viewer: LyraElement, contentRoot: Element): Range | null {
+  const document = viewer.ownerDocument;
+  const view = document.defaultView;
+  const nestedRoot = contentRoot.getRootNode();
+  const outerRoot = viewer.shadowRoot;
+  const ShadowRootCtor = view?.ShadowRoot;
+  const shadowRoots = [outerRoot, nestedRoot].filter(
+    (root, index, roots): root is ShadowRoot => (
+      ShadowRootCtor !== undefined
+      && root instanceof ShadowRootCtor
+      && roots.indexOf(root) === index
+    ),
+  );
+  const globalSelection = view?.getSelection() as
+    | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
+    | null
+    | undefined;
+  if (globalSelection?.getComposedRanges) {
+    const [composed] = globalSelection.getComposedRanges({ shadowRoots });
+    if (composed && (
+      composed.startContainer !== composed.endContainer
+      || composed.startOffset !== composed.endOffset
+    )) {
+      const range = document.createRange();
+      range.setStart(composed.startContainer, composed.startOffset);
+      range.setEnd(composed.endContainer, composed.endOffset);
+      return range;
+    }
+  }
+  const nestedSelection = (
+    nestedRoot as { getSelection?: () => Selection | null }
+  ).getSelection?.();
+  const selection = nestedSelection ?? globalSelection ?? null;
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+  return selection.getRangeAt(0);
+}
+
 /** Lists names and uncompressed sizes in a ZIP archive without rendering entry contents. Sizes use
  * archive metadata when available; file entries without size metadata are inflated sequentially
  * once for measurement. The combined declared and measured uncompressed size is capped at 100 MB.
+ * Fragment anchors use the exact ZIP entry path as their `id`; text-quote anchors resolve against
+ * each complete entry path before the matching virtual row is scrolled into view. Text selections
+ * and painted highlights are likewise scoped to entry paths rendered in the nested virtual list.
  *
  * @customElement lr-archive-viewer
  * @event lr-render-error - Fired when fetching or parsing the archive fails.
+ * @event lr-search-change - Fired when archive-path search state or its active match changes.
+ * @event lr-text-select - Fired after a selection within one entry path. `detail: { text, anchor,
+ *   rects }`; `anchor` is an entry-scoped text quote, or `null` when it cannot be anchored.
+ * @event lr-anchor-result - Fired after an `anchor` assignment or `scrollToAnchor()` call is
+ *   applied. `detail: { found }`.
  * @csspart base - The root container.
  * @csspart body - The archive listing body.
  * @csspart entry - An archive entry row.
@@ -95,34 +152,141 @@ function measureArchiveEntry(
  * @csspart entry-name - The entry path.
  * @csspart entry-name-dir - The entry path of a directory row (also carries `entry-name`).
  * @csspart entry-size - The human-readable file size.
+ * @csspart highlight - A painted entry-path highlight (`<mark>` fallback path only).
  * @csspart spinner - The loading region.
  * @csspart error - The error region.
+ * @cssprop --lr-archive-viewer-highlight-accent-background - Accent highlight background.
+ * @cssprop --lr-archive-viewer-highlight-success-background - Success highlight background.
+ * @cssprop --lr-archive-viewer-highlight-warning-background - Warning highlight background.
+ * @cssprop --lr-archive-viewer-highlight-danger-background - Danger highlight background.
+ * @cssprop --lr-archive-viewer-highlight-neutral-background - Neutral highlight background.
+ * @cssprop --lr-archive-viewer-highlight-active-background - Active highlight background.
+ * @cssprop --lr-archive-viewer-highlight-active-outline - Active fallback-highlight outline.
  */
-export class LyraArchiveViewer extends TextViewerTarget(LyraArchiveViewerBase) {
+export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
   static override styles = [LyraElement.styles, styles, srOnly];
   /** URL to fetch and parse as a ZIP archive. */
   @property() src = '';
   /** Display name used as the archive listing's accessible label. */
   @property() name = '';
 
-  /** Case-insensitive text search with next/previous navigation, plus text-quote/fragment anchors
-   *  and highlights supplied by the shared text-viewer target contract. */
-  override async search(query: string): Promise<number> { return super.search(query); }
-  override async searchNext(): Promise<boolean> { return super.searchNext(); }
-  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
-  override clearSearch(): void { super.clearSearch(); }
+  /** Case-insensitive search over loaded entry paths, with next/previous navigation that scrolls
+   * the active virtualized row into view. */
+  override async search(query: string): Promise<number> {
+    this.archiveSearchQuery = query;
+    this.recomputeArchiveSearch();
+    await this.updateComplete;
+    this.scrollActiveArchiveMatch();
+    return this.archiveSearchMatches.length;
+  }
+
+  override async searchNext(): Promise<boolean> {
+    if (!this.archiveSearchMatches.length) return false;
+    this.archiveSearchActiveIndex =
+      (this.archiveSearchActiveIndex + 1) % this.archiveSearchMatches.length;
+    this.emitArchiveSearchChange();
+    await this.updateComplete;
+    this.scrollActiveArchiveMatch();
+    return true;
+  }
+
+  override async searchPrevious(): Promise<boolean> {
+    if (!this.archiveSearchMatches.length) return false;
+    this.archiveSearchActiveIndex =
+      (this.archiveSearchActiveIndex - 1 + this.archiveSearchMatches.length)
+      % this.archiveSearchMatches.length;
+    this.emitArchiveSearchChange();
+    await this.updateComplete;
+    this.scrollActiveArchiveMatch();
+    return true;
+  }
+
+  override clearSearch(): void {
+    this.archiveSearchQuery = '';
+    this.archiveSearchMatches = [];
+    this.archiveSearchActiveIndex = -1;
+    this.emitArchiveSearchChange();
+  }
+
   @state() private fetchState: ArchiveState = { kind: 'idle' };
+  @state() private archiveSearchMatches: ArchiveEntry[] = [];
+  @state() private archiveSearchActiveIndex = -1;
   private generation = 0;
+  private archiveSearchQuery = '';
   private loadLibrary: () => Promise<ArchiveLibraryApi | null> = loadArchiveLibraryCached;
+  private archiveSelectionRoot: Element | null = null;
+  private archiveSelectionCleanup?: () => void;
+  private styledVirtualListRoot: ShadowRoot | null = null;
+  private archiveNestedUpdatePending = false;
+  private readonly archiveEntryKey = (item: unknown): string => (item as ArchiveEntry).name;
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncArchiveNestedRoot();
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
+
+  override disconnectedCallback(): void {
+    this.generation++;
+    this.archiveSelectionCleanup?.();
+    this.archiveSelectionCleanup = undefined;
+    this.archiveSelectionRoot = null;
+    super.disconnectedCallback();
+  }
+
+  /** The rows' real DOM lives inside the embedded virtual list, not the archive viewer's own body. */
+  protected textContentRoot(): Element | null {
+    return this.archiveVirtualList()?.shadowRoot?.querySelector('[part="spacer"]') ?? null;
+  }
+
+  protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
+    if (this.fetchState.kind !== 'loaded') return false;
+    let index = -1;
+    if (anchor.kind === 'fragment') {
+      index = this.fetchState.entries.findIndex((entry) => entry.name === anchor.id);
+    } else if (anchor.kind === 'text-quote') {
+      const probe = this.ownerDocument.createElement('span');
+      index = this.fetchState.entries.findIndex((entry) => {
+        probe.textContent = entry.name;
+        return resolveTextQuote(scopeFromElement(probe), anchor, this.effectiveLocale) !== null;
+      });
+    }
+    if (index < 0) return false;
+    const list = this.archiveVirtualList();
+    if (!list) return false;
+    list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
+    if (!await this.waitForArchiveRow(list, index)) return false;
+    this.requestUpdate();
+    await this.updateComplete;
+    // TextViewerTarget's deliberately narrowed exported mixin type omits its protected hooks, so
+    // TypeScript cannot spell `super.applyAnchor(anchor)` here even though that method is the real
+    // immediate-base implementation at runtime. Referencing the named base prototype directly
+    // preserves the same delegation without walking this class's prototype chain.
+    const applyTextAnchor = (
+      ArchiveTextViewerTargetBase.prototype as unknown as {
+        applyAnchor(target: LyraAnchor): Promise<boolean>;
+      }
+    ).applyAnchor;
+    return applyTextAnchor.call(this, anchor);
+  }
+
+  /** A quote emitted from selection is scoped to one entry path; a cross-row selection is not a
+   * stable archive anchor because either endpoint may be unmounted by virtualization. */
+  protected computeSelectionAnchor(range: Range): LyraAnchor | null {
+    const entryName = (node: Node): Element | null => {
+      const elementNode = this.ownerDocument.defaultView?.Node.ELEMENT_NODE ?? 1;
+      const element = node.nodeType === elementNode ? node as Element : node.parentElement;
+      return element?.closest('[part~="entry-name"]') ?? null;
+    };
+    const start = entryName(range.startContainer);
+    const end = entryName(range.endContainer);
+    if (!start || start !== end) return null;
+    return buildQuoteAnchor(range, scopeFromElement(start));
   }
 
   private async load(): Promise<void> {
@@ -182,6 +346,7 @@ export class LyraArchiveViewer extends TextViewerTarget(LyraArchiveViewerBase) {
         if (totalUncompressed > MAX_ARCHIVE_UNCOMPRESSED_BYTES) throw new LyraResourceLimitError();
       }
       this.fetchState = { kind: 'loaded', entries };
+      if (this.archiveSearchQuery) this.recomputeArchiveSearch();
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return;
       this.fetchState = { kind: 'error', message: this.localize(isResourceLimitError(error) ? 'documentPreviewResourceTooLarge' : 'documentPreviewFailedToLoad') };
@@ -192,7 +357,7 @@ export class LyraArchiveViewer extends TextViewerTarget(LyraArchiveViewerBase) {
   private renderEntry = (item: unknown): TemplateResult => {
     const entry = item as ArchiveEntry;
     const kind = this.localize(entry.dir ? 'archiveViewerFolder' : 'archiveViewerFile');
-    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
+    return html`<div part="entry" data-dir=${entry.dir ? 'true' : 'false'}><span part="entry-icon">${entry.dir ? folderIcon() : fileIcon()}</span><span class="sr-only">${kind}</span><span id=${entry.name} part=${entry.dir ? 'entry-name entry-name-dir' : 'entry-name'} dir="auto" title=${entry.name}>${entry.name}</span>${entry.dir ? nothing : html`<span part="entry-size" dir="auto">${formatFileSize(
       entry.size,
       (unit) => this.localize(FILE_SIZE_UNIT_KEYS[unit]),
       (value, fractionDigits) => getNumberFormat(this.effectiveLocale, {
@@ -204,11 +369,110 @@ export class LyraArchiveViewer extends TextViewerTarget(LyraArchiveViewerBase) {
 
   private stopVirtualListEvent(event: Event): void {
     event.stopPropagation();
+    if (this.archiveNestedUpdatePending) return;
+    this.archiveNestedUpdatePending = true;
+    queueMicrotask(() => {
+      this.archiveNestedUpdatePending = false;
+      if (this.isConnected) this.requestUpdate();
+    });
+  }
+
+  private archiveVirtualList(): LyraVirtualList | null {
+    return this.renderRoot.querySelector('lr-virtual-list') as LyraVirtualList | null;
+  }
+
+  private async waitForArchiveRow(list: LyraVirtualList, index: number): Promise<boolean> {
+    const view = this.ownerDocument.defaultView;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await list.updateComplete;
+      if (list.shadowRoot?.querySelector(`[data-row-index="${index}"]`)) return true;
+      if (!view) return false;
+      await new Promise<void>((resolve) => view.requestAnimationFrame(() => resolve()));
+    }
+    return false;
+  }
+
+  /** Replaces TextViewerTarget's outer-shadow selection binding with one that includes the nested
+   * virtual-list ShadowRoot in composed-range lookup. Highlight painting still uses the mixin, but
+   * its content root is redirected to the same nested spacer above. */
+  private syncArchiveNestedRoot(): void {
+    const root = this.textContentRoot();
+    if (root !== this.archiveSelectionRoot) {
+      (this as unknown as { unbindTextSelection(): void }).unbindTextSelection();
+      this.archiveSelectionCleanup?.();
+      this.archiveSelectionCleanup = undefined;
+      this.archiveSelectionRoot = root;
+      if (root) {
+        const emitSelection = (): void => {
+          const range = archiveSelectionRange(this, root);
+          if (!range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+          const text = normalizeQuoteText(range.toString());
+          if (!text) return;
+          const anchor = this.computeSelectionAnchor(range);
+          const rects = Array.from(range.getClientRects());
+          this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
+        };
+        root.addEventListener('pointerup', emitSelection);
+        root.addEventListener('keyup', emitSelection);
+        this.archiveSelectionCleanup = () => {
+          root.removeEventListener('pointerup', emitSelection);
+          root.removeEventListener('keyup', emitSelection);
+        };
+      }
+    }
+
+    const listRoot = this.archiveVirtualList()?.shadowRoot ?? null;
+    if (listRoot && listRoot !== this.styledVirtualListRoot) {
+      const existing = listRoot.querySelector('style[data-lr-archive-highlight-styles]');
+      if (existing) {
+        this.styledVirtualListRoot = listRoot;
+      } else {
+        const style = this.ownerDocument.createElement('style');
+        style.dataset['lrArchiveHighlightStyles'] = '';
+        style.textContent = virtualListHighlightStyles.cssText;
+        listRoot.append(style);
+        this.styledVirtualListRoot = listRoot;
+      }
+    }
+    if (root) {
+      for (const mark of root.querySelectorAll('mark[data-lr-highlight-tone]')) {
+        if (!mark.hasAttribute('part')) mark.setAttribute('part', 'highlight');
+      }
+    }
+  }
+
+  private recomputeArchiveSearch(): void {
+    const entries = this.fetchState.kind === 'loaded' ? this.fetchState.entries : [];
+    const query = this.archiveSearchQuery.trim().toLocaleLowerCase(this.effectiveLocale);
+    this.archiveSearchMatches = query
+      ? entries.filter((entry) => entry.name.toLocaleLowerCase(this.effectiveLocale).includes(query))
+      : [];
+    this.archiveSearchActiveIndex = this.archiveSearchMatches.length > 0 ? 0 : -1;
+    this.emitArchiveSearchChange();
+  }
+
+  private emitArchiveSearchChange(): void {
+    this.emit('lr-search-change', {
+      query: this.archiveSearchQuery,
+      matchCount: this.archiveSearchMatches.length,
+      activeIndex: this.archiveSearchActiveIndex,
+    });
+  }
+
+  private scrollActiveArchiveMatch(): void {
+    if (this.fetchState.kind !== 'loaded') return;
+    const match = this.archiveSearchMatches[this.archiveSearchActiveIndex];
+    if (!match) return;
+    const index = this.fetchState.entries.indexOf(match);
+    const list = this.renderRoot.querySelector('lr-virtual-list') as
+      | { scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void }
+      | null;
+    if (index >= 0) list?.scrollToIndex(index, { behavior: 'auto' });
   }
 
   private renderBody(): TemplateResult {
     switch (this.fetchState.kind) {
-      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${(item: unknown) => (item as ArchiveEntry).name} @lr-visible-range-changed=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
+      case 'loaded': return this.fetchState.entries.length ? html`<lr-virtual-list exportparts="entry:entry, entry-icon:entry-icon, entry-name:entry-name, entry-name-dir:entry-name-dir, entry-size:entry-size, highlight:highlight" .items=${this.fetchState.entries} .renderItem=${this.renderEntry} .keyFunction=${this.archiveEntryKey} .activeId=${this.archiveSearchMatches[this.archiveSearchActiveIndex]?.name ?? ''} @lr-visible-range-changed=${this.stopVirtualListEvent} @lr-scroll=${this.stopVirtualListEvent}></lr-virtual-list>` : html`<p class="empty-note">${this.localize('archiveViewerEmpty')}</p>`;
       case 'loading': return html`<div part="spinner" role="status"><span class="sr-only">${this.localize('loadingDocument')}</span></div>`;
       case 'error': return html`<div part="error" role="alert">${this.fetchState.message}</div>`;
       case 'idle': default: return html`<p class="empty-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;

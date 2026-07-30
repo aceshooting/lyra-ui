@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteDuration } from '../../../internal/numbers.js';
+import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
 import { styles } from './toast-item.styles.js';
 
 export type ToastVariant = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -27,7 +28,10 @@ export interface LyraToastItemEventMap {
   'lr-after-hide': CustomEvent<undefined>;
 }
 /**
- * `<lr-toast-item>` — a single toast notification.
+ * `<lr-toast-item>` — a single toast notification. Contextual close names include rich
+ * non-interactive message markup and update with its text. When a focused toast finishes hiding,
+ * focus moves to an adjacent toast or back to the pre-toast control. A hide interrupted by
+ * disconnect resumes to one terminal completion if the same item reconnects.
  * Mirrors the Web Awesome `<wa-toast-item>` API under the `lr-` prefix.
  *
  * @customElement lr-toast-item
@@ -78,6 +82,11 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   private cancelHideAnimation?: () => void;
   private hovering = false;
   private focused = false;
+  private focusReturnTarget?: HTMLElement;
+  private messageObserver?: MutationObserver;
+  private hideCompletionRunning = false;
+  private hideGeneration = 0;
+  private afterHideEmitted = false;
   @state() private hiding = false;
 
   /** `duration` normalized to a finite, non-negative delay -- *or* `Infinity` verbatim.
@@ -130,7 +139,13 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (!this.hasUpdated || this.hiding) return;
+    this.messageObserver ??= new MutationObserver(() => this.requestUpdate());
+    this.messageObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    if (!this.hasUpdated) return;
+    if (this.hiding) {
+      void this.completeHide();
+      return;
+    }
     if (!this.hasAttribute('data-visible')) {
       this.scheduleShow();
     } else if (this.timerStarted && !this.hovering && !this.focused) {
@@ -157,6 +172,8 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.messageObserver?.disconnect();
+    if (this.hiding && !this.afterHideEmitted) this.hideGeneration++;
     if (this.showRafId !== undefined) {
       cancelAnimationFrame(this.showRafId);
       this.showRafId = undefined;
@@ -269,17 +286,25 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
 
   private onPointerLeave = (): void => {
     this.hovering = false;
-    if (!this.focused) this.resumeTimer();
+    if (!this.focused && !this.hiding) this.resumeTimer();
   };
 
-  private onFocusIn = (): void => {
+  private onFocusIn = (event: FocusEvent): void => {
+    const previous = event.relatedTarget;
+    if (
+      previous instanceof HTMLElement &&
+      !composedContains(this, previous) &&
+      previous.isConnected
+    ) {
+      this.focusReturnTarget = previous;
+    }
     this.focused = true;
     this.pauseTimer();
   };
 
   private onFocusOut = (): void => {
     this.focused = false;
-    if (!this.hovering) this.resumeTimer();
+    if (!this.hovering && !this.hiding) this.resumeTimer();
   };
 
   // A stack of several simultaneously-open toasts otherwise gives every
@@ -288,16 +313,28 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   // activating it. Deriving the label from the toast's own message content
   // mirrors combobox's per-item "Remove X" labeling for the same reason.
   //
-  // Only direct Text-node children are considered -- the message is always
-  // assigned as plain text (`create()` sets `textContent`), whereas anything
-  // else appended to the host (an action `<button>`, a `slot="icon"` element
-  // and its own descendant text) is a sibling *element*, not a top-level text
-  // node, so it's excluded without needing to know about those features here.
+  // Rich, non-interactive default-slot markup is part of the message. Named-slot content and
+  // actionable descendants are excluded so an icon or appended Undo button cannot contaminate
+  // the close control's contextual name.
   private get closeLabel(): string {
+    const collectText = (node: Node): string => {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? '';
+      if (!(node instanceof Element)) return '';
+      const slotName = node.getAttribute('slot');
+      if (slotName !== null && slotName !== '') return '';
+      if (
+        node.matches(
+          'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),' +
+          '[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"],[role="menuitem"]',
+        )
+      ) {
+        return '';
+      }
+      return Array.from(node.childNodes).map(collectText).join(' ');
+    };
     const text = Array.from(this.childNodes)
-      .filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
-      .map((node) => node.textContent ?? '')
-      .join('')
+      .map(collectText)
+      .join(' ')
       .trim()
       .replace(/\s+/g, ' ');
     if (!text) return this.localize('close');
@@ -315,13 +352,50 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
     this.emit('lr-hide');
     this.removeAttribute('data-visible');
     this.setAttribute('data-hiding', '');
+    await this.completeHide();
+  }
+
+  private async completeHide(): Promise<void> {
+    if (this.hideCompletionRunning || this.afterHideEmitted) return;
+    this.hideCompletionRunning = true;
+    const generation = this.hideGeneration;
     await this.waitForVisualCompletion('hide');
-    // A disconnect cancels the visual wait, but it does so without this
-    // reaching its normal completion -- guard against emitting a finished
-    // event or redundantly removing a node already torn down elsewhere.
-    if (!this.isConnected) return;
+    this.hideCompletionRunning = false;
+    // Disconnect cancels the visual wait. A reconnect must start a fresh wait against the newly
+    // rendered surface rather than treating that cancellation as successful completion.
+    if (generation !== this.hideGeneration || !this.isConnected) {
+      if (this.isConnected) await this.completeHide();
+      return;
+    }
+    if (this.afterHideEmitted) return;
+    this.repairFocusBeforeRemoval();
+    this.afterHideEmitted = true;
     this.emit('lr-after-hide');
     this.remove();
+  }
+
+  private repairFocusBeforeRemoval(): void {
+    const active = deepActiveElement(this.ownerDocument);
+    if (!composedContains(this, active)) return;
+
+    const adjacent = [this.nextElementSibling, this.previousElementSibling].find(
+      (element): element is LyraToastItem =>
+        element?.localName === 'lr-toast-item' &&
+        !element.hasAttribute('data-hiding') &&
+        element.isConnected,
+    );
+    const adjacentClose =
+      adjacent?.shadowRoot?.querySelector<HTMLButtonElement>('[part="close-button"]') ?? null;
+    if (adjacentClose) {
+      adjacentClose.focus();
+      return;
+    }
+    if (
+      this.focusReturnTarget?.isConnected &&
+      !composedContains(this, this.focusReturnTarget)
+    ) {
+      this.focusReturnTarget.focus();
+    }
   }
 
   override render(): TemplateResult {

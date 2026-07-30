@@ -18,11 +18,13 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 
 **Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
-`size`, scaling the input-wrapper's row height and text size across six tiers; the remove button's
-hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-duplicates`, default
-`false`), `editable` (reflected, default `false` — see below), and `delimiter: string | null` (default
-`','` — see below).
+input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
+(attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
+and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
+same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
+tiers; the remove button's hit area stays fixed at `40px` across all sizes), `allowDuplicates`
+(`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
+`delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
 `focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),

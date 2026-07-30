@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -8,6 +9,7 @@ import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/a
 import { styles } from './select.styles.js';
 import { LyraOption } from '../combobox/option.class.js';
 import '../combobox/option.class.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -765,7 +767,12 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
           aria-disabled=${o.disabled ? 'true' : 'false'}
           ?data-active=${id === activeId}
         >
-          ${o.dotColor ? html`<span part="option-dot" style=${`background:${o.dotColor}`}></span>` : ''}
+          ${o.dotColor
+            ? html`<span
+                part="option-dot"
+                style=${styleMap({ background: sanitizeCssColor(o.dotColor) ?? 'transparent' })}
+              ></span>`
+            : ''}
           <span part="option-label">
             <span>${o.label}</span>
             ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}

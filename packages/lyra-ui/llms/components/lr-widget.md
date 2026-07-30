@@ -25,14 +25,16 @@ position) survives the transition.
 - `collapsed: boolean = false` (reflected)
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
 - `fullscreen: boolean = false` (reflected)
-- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — raw CSS `inset` shorthand applied to
+- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — CSS `inset` shorthand applied to
   `[part="base"]` and `[part="backdrop"]` while fullscreen instead of the default per-side
   `max(var(--lr-space-l), <safe-area inset>)`, e.g. `"0 0 0 240px"` to leave a 240px persistent
-  sidebar/toolbar visible during fullscreen
+  sidebar/toolbar visible during fullscreen. Invalid values, declaration-breaking input, and
+  `url()` are ignored.
 - `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
   `lr-empty`'s `compact`
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
-  CSS `inset` independently from `fullscreenInset`; when empty, it follows `fullscreenInset`
+  CSS `inset` independently from `fullscreenInset`; when empty or invalid, it follows a valid
+  `fullscreenInset`
 - `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
   chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
   TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button

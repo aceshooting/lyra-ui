@@ -105,6 +105,18 @@ describe('lr-test-results', () => {
     expect(failed.textContent).to.include('1');
   });
 
+  it('formats status counts and durations with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-test-results lang="ar-EG" .suites=${suites}></lr-test-results>`,
+    )) as LyraTestResults;
+    const number = new Intl.NumberFormat('ar-EG');
+    expect(el.shadowRoot!.querySelector('[part="count"][data-status="passed"]')!.textContent)
+      .to.include(number.format(1));
+    expect(el.shadowRoot!
+      .querySelector('[part="test"][data-status="passed"] [part="test-duration"]')!
+      .textContent).to.include(number.format(5));
+  });
+
   it('emits lr-test-select when a test row name is activated', async () => {
     const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
     await el.updateComplete;
@@ -174,6 +186,153 @@ describe('lr-test-results', () => {
       toggles[1].getAttribute('aria-expanded'),
       "t1's manual collapse must follow test.id, not its now-shifted position",
     ).to.equal('false');
+  });
+
+  it('keeps duplicate test ids suite-scoped across expansion, names, slots, and toggle event detail', async () => {
+    const duplicateSuites: TestSuiteResult[] = [
+      {
+        id: 'unit',
+        name: 'Unit suite',
+        tests: [{ id: 'same', name: 'shared name', status: 'failed', message: 'unit failed' }],
+      },
+      {
+        id: 'integration',
+        name: 'Integration suite',
+        tests: [{ id: 'same', name: 'shared name', status: 'failed', message: 'integration failed' }],
+      },
+    ];
+    const el = (await fixture(html`
+      <lr-test-results .suites=${duplicateSuites} .autoExpandFailures=${false}>
+        <div slot="detail-unit-same">unit detail</div>
+        <div slot="detail-integration-same">integration detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    const toggles = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')];
+    expect(toggles.length).to.equal(2);
+    expect(toggles[0]!.getAttribute('aria-label') ?? '').to.contain('Unit suite');
+    expect(toggles[1]!.getAttribute('aria-label') ?? '').to.contain('Integration suite');
+
+    const eventPromise = oneEvent(el, 'lr-toggle');
+    toggles[0]!.click();
+    const event = (await eventPromise) as CustomEvent<{ id: string; suiteId?: string; expanded: boolean }>;
+    await el.updateComplete;
+    expect(event.detail).to.deep.equal({ id: 'same', suiteId: 'unit', expanded: true });
+
+    const nextToggles = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')];
+    expect(nextToggles[0]!.getAttribute('aria-expanded')).to.equal('true');
+    expect(nextToggles[1]!.getAttribute('aria-expanded')).to.equal('false');
+    const failures = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="failure"]')];
+    const firstSlot = failures[0]!.querySelector<HTMLSlotElement>('slot[name="detail-unit-same"]')!;
+    expect(firstSlot.assignedElements().length).to.equal(1);
+    expect(firstSlot.assignedElements()[0]!.textContent).to.equal('unit detail');
+    expect(failures[0]!.querySelectorAll('slot[name="detail-integration-same"]').length).to.equal(0);
+  });
+
+  it('routes collision-prone suite/test ids through distinct canonical detail slots', async () => {
+    const collisionSuites: TestSuiteResult[] = [
+      {
+        id: 'a-b',
+        name: 'First suite',
+        tests: [{ id: 'c', name: 'First test', status: 'passed' }],
+      },
+      {
+        id: 'a',
+        name: 'Second suite',
+        tests: [{ id: 'b-c', name: 'Second test', status: 'passed' }],
+      },
+    ];
+    const firstSlot = `detail-${encodeURIComponent('a-b')}:${encodeURIComponent('c')}`;
+    const secondSlot = `detail-${encodeURIComponent('a')}:${encodeURIComponent('b-c')}`;
+    const el = (await fixture(html`
+      <lr-test-results .suites=${collisionSuites}>
+        <div slot=${firstSlot}>first detail</div>
+        <div slot=${secondSlot}>second detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+
+    const toggles = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="test-expand-toggle"]')];
+    expect(toggles).to.have.lengthOf(2);
+    toggles.forEach((toggle) => toggle.click());
+    await el.updateComplete;
+
+    const first = el.shadowRoot!.querySelector<HTMLSlotElement>(`slot[name="${firstSlot}"]`);
+    const second = el.shadowRoot!.querySelector<HTMLSlotElement>(`slot[name="${secondSlot}"]`);
+    expect(first?.assignedElements().map((node) => node.textContent)).to.deep.equal(['first detail']);
+    expect(second?.assignedElements().map((node) => node.textContent)).to.deep.equal(['second detail']);
+  });
+
+  it('preserves detail-{testId} as the fallback slot when the test id is globally unique', async () => {
+    const el = (await fixture(html`
+      <lr-test-results .suites=${suites}>
+        <div slot="detail-t2">legacy detail</div>
+      </lr-test-results>
+    `)) as LyraTestResults;
+    await el.updateComplete;
+    const slot = el.shadowRoot!.querySelector<HTMLSlotElement>('slot[name="detail-t2"]');
+    expect(slot?.assignedElements().length ?? 0).to.equal(1);
+    expect(slot?.assignedElements()[0]?.textContent).to.equal('legacy detail');
+  });
+
+  it('discovers detail content appended after mount for a previously non-expandable test', async () => {
+    const passing: TestSuiteResult[] = [
+      { id: 'unit', name: 'Unit suite', tests: [{ id: 'late', name: 'late detail', status: 'passed' }] },
+    ];
+    const el = (await fixture(html`<lr-test-results .suites=${passing}></lr-test-results>`)) as LyraTestResults;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]').length).to.equal(0);
+
+    const detail = document.createElement('div');
+    detail.slot = 'detail-unit-late';
+    detail.textContent = 'appended detail';
+    el.append(detail);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="test-expand-toggle"]').length).to.equal(1);
+  });
+
+  it('omits invalid and negative public durations instead of rendering corrupt text', async () => {
+    const invalid: TestSuiteResult[] = [
+      {
+        id: 'invalid',
+        name: 'Invalid durations',
+        tests: [
+          { id: 'negative', name: 'negative', status: 'passed', durationMs: -1 },
+          { id: 'nan', name: 'not a number', status: 'passed', durationMs: Number.NaN },
+          { id: 'infinite', name: 'infinite', status: 'passed', durationMs: Number.POSITIVE_INFINITY },
+          { id: 'valid', name: 'valid', status: 'passed', durationMs: 0 },
+        ],
+      },
+    ];
+    const el = (await fixture(html`<lr-test-results .suites=${invalid}></lr-test-results>`)) as LyraTestResults;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="test-duration"]').length).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="test-duration"]')!.textContent).to.contain('0');
+    expect(el.shadowRoot!.textContent).not.to.contain('NaN');
+    expect(el.shadowRoot!.textContent).not.to.contain('Infinity');
+  });
+
+  it('contains an unbroken public test name in a 256px allocation', async () => {
+    const longSuites: TestSuiteResult[] = [
+      {
+        id: 'long',
+        name: 'Long suite',
+        tests: [{ id: 'long-test', name: `test-${'identifier'.repeat(200)}`, status: 'passed' }],
+      },
+    ];
+    const el = (await fixture(html`
+      <div style="inline-size:256px;max-inline-size:256px">
+        <lr-test-results style="max-inline-size:100%" .suites=${longSuites}></lr-test-results>
+      </div>
+    `)).querySelector('lr-test-results') as LyraTestResults;
+    await el.updateComplete;
+    const name = el.shadowRoot!.querySelector<HTMLElement>('[part="test-name"]')!;
+    expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(256);
+    expect(name.scrollWidth).to.be.at.most(Math.ceil(name.getBoundingClientRect().width) + 1);
   });
 
   it('filter toggles mutate statusFilter and emit lr-filter-change', async () => {
@@ -276,6 +435,21 @@ describe('lr-test-results', () => {
       const el = await pressedFixture();
       await expect(el).to.be.accessible();
     });
+  });
+
+  it('exposes component-scoped state colors for counts, row statuses, and failure messages', async () => {
+    const el = (await fixture(html`<lr-test-results .suites=${suites}></lr-test-results>`)) as LyraTestResults;
+    el.style.setProperty('--lr-test-results-passed-color', 'rgb(10, 20, 30)');
+    el.style.setProperty('--lr-test-results-failed-color', 'rgb(40, 50, 60)');
+    await el.updateComplete;
+    const passed = el.shadowRoot!.querySelector<HTMLElement>('[part="count"][data-status="passed"]')!;
+    const failedStatus = el.shadowRoot!.querySelector<HTMLElement>(
+      '[part="test"][data-status="failed"] [part="test-status"]',
+    )!;
+    const failure = el.shadowRoot!.querySelector<HTMLElement>('[part="failure-message"]')!;
+    expect(getComputedStyle(passed).color).to.equal('rgb(10, 20, 30)');
+    expect(getComputedStyle(failedStatus).color).to.equal('rgb(40, 50, 60)');
+    expect(getComputedStyle(failure).color).to.equal('rgb(40, 50, 60)');
   });
 
   it('gives filter-toggle, test-name, and test-expand-toggle a hover state', () => {

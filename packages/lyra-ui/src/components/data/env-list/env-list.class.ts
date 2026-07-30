@@ -125,7 +125,10 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
             <dd part="value-cell">
               <span part="value" data-masked=${masked ? 'true' : 'false'}>
                 ${masked
-                  ? html`<span aria-label=${this.localize('envListValueHidden')}>${MASK}</span>`
+                  ? html`
+                      <span class="sr-only">${this.localize('envListValueHidden')}</span>
+                      <span aria-hidden="true">${MASK}</span>
+                    `
                   : entry.value}
               </span>
               ${this.revealable && secret

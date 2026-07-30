@@ -69,9 +69,9 @@ class LyraIncludeBase extends LyraElement<LyraIncludeEventMap> {}
  * No implicit ARIA role and no computed accessible name are applied around
  * the transcluded content — the fragment's own semantics (headings,
  * landmarks, its own `role`/`aria-*` attributes) surface directly and
- * unmodified, exactly as they would in a native include. `aria-busy="true"`
- * is set on the host while a fetch is in flight and removed once it settles,
- * whether it succeeds or fails.
+ * unmodified, exactly as they would in a native include. The host carries an
+ * explicit `aria-busy` state: `"true"` while a fetch is in flight and
+ * `"false"` otherwise.
  *
  * @customElement lr-include
  * @slot - Fallback content shown until (or unless) a fetch succeeds; overwritten with the sanitized fragment once one does.
@@ -122,26 +122,27 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.setAttribute('aria-busy', 'false');
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
     this.generation++;
     this.beginAbortableLoad();
-    this.removeAttribute('aria-busy');
+    this.setAttribute('aria-busy', 'false');
     super.disconnectedCallback();
   }
 
   private async load(): Promise<void> {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
-    // Unconditionally clear first: a superseded generation's in-flight fetch
+    // Unconditionally reset first: a superseded generation's in-flight fetch
     // may still be settling (as an aborted/rejected promise) after this new
     // generation starts, and none of its own early-return paths below touch
     // aria-busy, so a stale "true" from that generation must not survive
     // into this one. Re-set to 'true' just below if this generation actually
     // reaches the fetch.
-    this.removeAttribute('aria-busy');
+    this.setAttribute('aria-busy', 'false');
     if (!this.src) return; // idle no-op: no fetch, no events, content untouched
 
     const url = safeFetchUrl(this.src);
@@ -170,7 +171,11 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       const markup = sanitizer.sanitize(raw);
       if (generation !== this.generation || !this.isConnected) return; // superseded/detached — silent
       this.innerHTML = markup;
-      this.removeAttribute('aria-busy');
+      // `innerHTML` is imperative light-DOM work and does not schedule a Lit update. The shared
+      // text-viewer target observes loaded text during `updated()`, so explicitly invalidate it
+      // to recompute any active search against the replacement fragment.
+      this.requestUpdate();
+      this.setAttribute('aria-busy', 'false');
       this.emit('lr-load', { src: this.src });
     } catch (error) {
       if (isAbortError(error) || !this.isConnected || generation !== this.generation) return; // silent
@@ -179,7 +184,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   }
 
   private fail(status: number, reason: LyraIncludeErrorReason, error?: unknown): void {
-    this.removeAttribute('aria-busy');
+    this.setAttribute('aria-busy', 'false');
     this.emit('lr-include-error', { status, reason, error });
   }
 

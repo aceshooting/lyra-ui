@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
 import '../../overlays/badge/badge.class.js';
 import '../../layout/details/details.class.js';
@@ -140,8 +141,9 @@ export class LyraPolicySummary extends LyraElement {
         <div part="summary">
           ${STATES.map((state) => {
             const count = this.countOf(state);
+            const formattedCount = getNumberFormat(this.effectiveLocale).format(count);
             return html`<span part="count" data-state=${state}
-              >${this.localize(STATE_COUNT_KEY[state], undefined, { count })}</span
+              >${this.localize(STATE_COUNT_KEY[state], undefined, { count: formattedCount })}</span
             >`;
           })}
         </div>

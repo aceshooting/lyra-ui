@@ -11,6 +11,9 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     /* The body font, not a monospace stack — unlike lr-code-block's own
        local --lr-code-block-font token, a key cap's content is mostly
        single characters and modifier glyphs (⌘⇧⌥), which read more legibly
@@ -28,6 +31,8 @@ export const styles = css`
     justify-content: center;
     box-sizing: border-box;
     min-inline-size: var(--lr-size-1-5em);
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     padding: var(--lr-size-0-0625rem) var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: calc(var(--lr-radius) * 0.6);
@@ -48,6 +53,9 @@ export const styles = css`
   }
 
   ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     vertical-align: middle;
   }
 `;

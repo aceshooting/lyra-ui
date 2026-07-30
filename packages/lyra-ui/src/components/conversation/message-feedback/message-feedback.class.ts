@@ -1,4 +1,4 @@
-import { html, nothing, svg, type SVGTemplateResult, type TemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -122,6 +122,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   @state() private panelOpen = false;
   @state() private selectedReasonIds: string[] = [];
   @state() private commentDraft = '';
+  private pendingInternalValue: { value: MessageFeedbackValue } | undefined;
 
   @query('[part="up-button"]') private upButtonEl?: HTMLButtonElement;
   @query('[part="down-button"]') private downButtonEl?: HTMLButtonElement;
@@ -155,11 +156,43 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     return this.detailFor === 'both' || direction === 'down';
   }
 
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    if (changed.has('value')) {
+      const internal = this.pendingInternalValue?.value === this.value;
+      this.pendingInternalValue = undefined;
+      if (!internal) {
+        this.panelOpen = false;
+        this.selectedReasonIds = [];
+        this.commentDraft = '';
+      }
+    }
+    if (changed.has('reasons')) {
+      const validIds = new Set(this.reasons.map((reason) => reason.id));
+      this.selectedReasonIds = this.selectedReasonIds.filter((id) => validIds.has(id));
+    }
+    if (changed.has('commentable') && !this.commentable) this.commentDraft = '';
+    if (
+      this.panelOpen &&
+      (!this.value || !this.detailApplies(this.value) || !this.hasDetailContent)
+    ) {
+      this.panelOpen = false;
+      if (changed.has('detailFor')) {
+        this.selectedReasonIds = [];
+        this.commentDraft = '';
+      }
+    }
+  }
+
+  private setValueFromActivation(value: MessageFeedbackValue): void {
+    this.pendingInternalValue = { value };
+    this.value = value;
+  }
+
   private activateThumb(next: MessageFeedbackRating): void {
     if (this.disabled) return;
     if (this.value === next) {
       if (this.panelOpen) {
-        this.value = null;
+        this.setValueFromActivation(null);
         this.panelOpen = false;
         this.selectedReasonIds = [];
         this.commentDraft = '';
@@ -172,13 +205,13 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
         this.panelOpen = true;
         return;
       }
-      this.value = null;
+      this.setValueFromActivation(null);
       this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: null });
       return;
     }
     this.selectedReasonIds = [];
     this.commentDraft = '';
-    this.value = next;
+    this.setValueFromActivation(next);
     this.panelOpen = this.detailApplies(next) && this.hasDetailContent;
     this.emit<{ value: MessageFeedbackValue }>('lr-change', { value: next });
   }
@@ -223,11 +256,12 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
   };
 
   private onSubmit = (): void => {
-    if (!this.value) return;
+    if (this.disabled || !this.value || !this.panelOpen) return;
+    const validReasonIds = new Set(this.reasons.map((reason) => reason.id));
     this.emit<{ value: MessageFeedbackRating; reasonIds: string[]; comment: string }>('lr-submit', {
       value: this.value,
-      reasonIds: [...this.selectedReasonIds],
-      comment: this.commentDraft.trim(),
+      reasonIds: this.selectedReasonIds.filter((id) => validReasonIds.has(id)),
+      comment: this.commentable ? this.commentDraft.trim() : '',
     });
     this.panelOpen = false;
     this.liveRegion?.announce(this.localize('feedbackSubmitted'), { force: true });

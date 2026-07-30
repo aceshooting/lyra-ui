@@ -3,6 +3,7 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: inline-block;
+    max-inline-size: 100%;
     /* The 'm' defaults exactly reproduce the original fixed badge treatment -- mirrors
        <lr-chip>'s identical --lr-chip-font-size/-padding-inline/-min-height trio so a consumer
        moving between the two sibling components finds the same size vocabulary. */
@@ -13,7 +14,7 @@ export const styles = css`
        :host([size='…']) block -- mirrors lr-button's identical --lr-button-radius. */
     --lr-badge-radius: var(--lr-radius-pill);
   }
-  [part='base'] { display: inline-flex; align-items: center; min-block-size: var(--lr-badge-min-height); padding-inline: var(--lr-badge-padding-inline); border: var(--lr-border-width-thin) solid var(--lr-badge-border, var(--lr-color-border)); border-radius: var(--lr-badge-radius); background: var(--lr-badge-background, var(--lr-color-surface)); color: var(--lr-badge-color, var(--lr-color-text)); font-size: var(--lr-badge-font-size); font-weight: var(--lr-font-weight-medium); line-height: var(--lr-line-height-compact); white-space: nowrap; }
+  [part='base'] { display: inline-flex; align-items: center; max-inline-size: 100%; min-block-size: var(--lr-badge-min-height); box-sizing: border-box; overflow: hidden; padding-inline: var(--lr-badge-padding-inline); border: var(--lr-border-width-thin) solid var(--lr-badge-border, var(--lr-color-border)); border-radius: var(--lr-badge-radius); background: var(--lr-badge-background, var(--lr-color-surface)); color: var(--lr-badge-color, var(--lr-color-text)); font-size: var(--lr-badge-font-size); font-weight: var(--lr-font-weight-medium); line-height: var(--lr-line-height-compact); text-overflow: ellipsis; white-space: nowrap; }
   :host([variant='brand']) { --lr-badge-background: var(--lr-color-brand-quiet); --lr-badge-color: var(--lr-color-brand); --lr-badge-border: var(--lr-color-brand); }
   :host([variant='success']) { --lr-badge-background: var(--lr-color-success-quiet); --lr-badge-color: var(--lr-color-success); --lr-badge-border: var(--lr-color-success); }
   :host([variant='warning']) { --lr-badge-background: var(--lr-color-warning-quiet); --lr-badge-color: var(--lr-color-warning); --lr-badge-border: var(--lr-color-warning); }

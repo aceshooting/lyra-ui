@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { getListFormat } from '../../../internal/intl-cache.js';
+import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import '../../layout/virtual-list/virtual-list.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './chunk-inspector.styles.js';
@@ -160,6 +160,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
     const tier = this.tier(chunk.score);
     const tone = this.tierTone(tier);
     const percent = Math.round(this.safeScore(chunk.score) * 100);
+    const formattedPercent = getNumberFormat(this.effectiveLocale).format(percent);
     const titleText = chunk.title || this.localize('untitledSource');
     const titleWithPage =
       chunk.page == null || chunk.page === '' ? titleText : this.localize('sourcePageSuffix', undefined, { base: titleText, page: chunk.page });
@@ -172,7 +173,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
         aria-current=${current ? 'true' : 'false'}
       >
         <div part=${current ? 'score score-current' : 'score'}>
-          <span>${this.localize('chunkScore', undefined, { percent })}</span>
+          <span>${this.localize('chunkScore', undefined, { percent: formattedPercent })}</span>
           <span part="score-bar" aria-hidden="true"
             ><span part="score-fill score-fill-${tone}" data-tone=${tone} style=${styleMap({ inlineSize: `${percent}%` })}></span
           ></span>
@@ -207,7 +208,8 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
 
   override render(): TemplateResult {
     const sorted = this.sortedChunks();
-    const label = this.label || this.localize('chunkInspectorLabel');
+    const label =
+      this.getAttribute('aria-label') || this.label || this.localize('chunkInspectorLabel');
     if (sorted.length === 0) {
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute
       // most other components use) so `[part="empty"]`'s `.textContent` -- a plain DOM accessor,

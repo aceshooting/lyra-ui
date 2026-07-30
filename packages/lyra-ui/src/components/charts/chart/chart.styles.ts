@@ -6,7 +6,9 @@ export const styles = css`
     position: relative;
     inline-size: 100%;
     min-inline-size: 0;
-    block-size: var(--lr-chart-height, var(--lr-size-280px));
+    min-block-size: var(--lr-chart-height, var(--lr-size-280px));
+    block-size: auto;
+    container-type: inline-size;
     /* Chart.js renders to canvas, not the DOM, so it can't consume CSS
        var() directly — chart.ts's themeColors() resolves these once per
        draw() via getComputedStyle, same pattern as heatmap.ts's scale-lo/-hi.
@@ -23,11 +25,103 @@ export const styles = css`
   [part='base'] {
     position: relative;
     inline-size: 100%;
-    block-size: 100%;
+    min-inline-size: 0;
+    display: grid;
+    grid-template-areas:
+      'plot'
+      'legend'
+      'table';
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+  [part='plot'] {
+    grid-area: plot;
+    position: relative;
+    inline-size: 100%;
+    block-size: var(--lr-chart-height, var(--lr-size-280px));
+    min-inline-size: 0;
+  }
+  [part='data-table'] {
+    grid-area: table;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  [part='data-table'] table {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  [part='legend'] {
+    grid-area: legend;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    padding-block: var(--lr-space-xs);
+  }
+  [part='legend-item'] {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+    border: 0;
+    border-radius: var(--lr-radius);
+    padding: var(--lr-space-2xs);
+    gap: var(--lr-space-2xs);
+    background: transparent;
+    color: var(--lr-chart-legend-color);
+    font: inherit;
+    text-align: start;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  [part='legend-item']:where(:hover) {
+    background: var(--lr-color-brand-quiet);
+  }
+  [part='legend-item']:where(:focus-visible) {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='legend-swatch'] {
+    inline-size: var(--lr-space-s);
+    block-size: var(--lr-space-s);
+    flex: 0 0 auto;
+    border-radius: var(--lr-radius-xs);
+  }
+  [part='base']:where([data-legend-position='top']) {
+    grid-template-areas:
+      'legend'
+      'plot'
+      'table';
+  }
+  [part='base']:where([data-legend-position='left']) {
+    grid-template-areas:
+      'legend plot'
+      'table table';
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  }
+  [part='base']:where([data-legend-position='right']) {
+    grid-template-areas:
+      'plot legend'
+      'table table';
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  }
+  @container (max-width: 479px) {
+    [part='base']:where([data-legend-position='left']),
+    [part='base']:where([data-legend-position='right']) {
+      grid-template-areas:
+        'plot'
+        'legend'
+        'table';
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
   lr-skeleton {
     --lr-skeleton-w: 100%;
-    --lr-skeleton-h: 100%;
+    --lr-skeleton-h: var(--lr-chart-height, var(--lr-size-280px));
   }
   canvas {
     inline-size: 100% !important;
@@ -82,6 +176,9 @@ export const styles = css`
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
+    max-inline-size: calc(100% - var(--lr-space-xs) - var(--lr-space-xs));
+    white-space: normal;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
   [part='reset-zoom-button']:hover {
@@ -99,5 +196,7 @@ export const styles = css`
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-md-sm);
     text-align: center;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 `;

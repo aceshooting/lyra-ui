@@ -99,4 +99,20 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
   }
+
+  [part='base'],
+  [part='field'],
+  [part='scale'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  [part='label'],
+  [part='description'],
+  [part='error'],
+  [part='empty'],
+  [part='unsupported'],
+  .option-description {
+    overflow-wrap: anywhere;
+  }
 `;

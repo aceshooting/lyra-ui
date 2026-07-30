@@ -11,7 +11,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
-import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
+import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
 import { getCollator } from '../../../internal/intl-cache.js';
 import { readPersistedState, writePersistedState } from '../../../internal/persisted-state.js';
 import { styles } from './table.styles.js';
@@ -876,6 +876,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     window.addEventListener('pointermove', this.onResizePointerMove);
     window.addEventListener('pointerup', this.onResizePointerEnd);
     window.addEventListener('pointercancel', this.onResizePointerEnd);
+    window.addEventListener('lostpointercapture', this.onResizePointerEnd);
   };
 
   private onResizePointerMove = (event: PointerEvent): void => {
@@ -949,16 +950,31 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
   private onResizePointerEnd = (event: PointerEvent): void => {
     const state = this.resizeState;
     if (!state || event.pointerId !== state.pointerId) return;
-    state.handle.releasePointerCapture?.(event.pointerId);
+    if (event.type === 'pointerup') {
+      try {
+        state.handle.releasePointerCapture?.(event.pointerId);
+      } catch {
+        // Native capture may already have been released.
+      }
+    }
     this.resizeState = undefined;
     window.removeEventListener('pointermove', this.onResizePointerMove);
     window.removeEventListener('pointerup', this.onResizePointerEnd);
     window.removeEventListener('pointercancel', this.onResizePointerEnd);
+    window.removeEventListener('lostpointercapture', this.onResizePointerEnd);
+
+    if (event.type !== 'pointerup') {
+      const reverted = new Map(this.resizedColumnWidths);
+      if (state.previousWidth === undefined) reverted.delete(state.key);
+      else reverted.set(state.key, state.previousWidth);
+      this.resizedColumnWidths = reverted;
+      return;
+    }
 
     // The drag's committed final width -- the one and only point in the gesture that's vetoable.
     // `onResizePointerMove` above fires the same event once per pixel purely as live drag
-    // feedback; making those intermediate steps cancelable was considered and refuted (it would
-    // make the live preview jank on every vetoed frame), so they stay non-cancelable.
+    // feedback. Those intermediate steps stay non-cancelable so the preview cannot be vetoed
+    // frame by frame.
     const committedWidth = this.resizedColumnWidths.get(state.key);
     if (committedWidth === undefined || committedWidth === state.previousWidth) return;
     const commitEvent = this.emit('lr-column-resize', { key: state.key, width: committedWidth }, { cancelable: true });
@@ -1029,6 +1045,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     window.removeEventListener('pointermove', this.onResizePointerMove);
     window.removeEventListener('pointerup', this.onResizePointerEnd);
     window.removeEventListener('pointercancel', this.onResizePointerEnd);
+    window.removeEventListener('lostpointercapture', this.onResizePointerEnd);
     this.resizeState = undefined;
     this.resizeObserver?.disconnect();
     if (this.layoutRafId !== undefined) {
@@ -1420,6 +1437,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
         ]),
       );
     }
+    if (this.editingCell !== null) {
+      const column = this.columnsByKey.get(this.editingCell.columnKey);
+      if (
+        !this.rowsByKey.has(this.editingCell.rowKey) ||
+        editTrigger(column?.editable) !== 'double-click'
+      ) {
+        this.editingCell = null;
+      }
+    }
     // Read *before* render() gets to move the node out from under the focus it currently holds --
     // by the time updated() runs, "the editor was focused a moment ago" and "the user clicked away
     // a while ago" are indistinguishable from the DOM alone.
@@ -1498,8 +1524,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const v = col.heatValue(row);
     if (v == null || !Number.isFinite(v)) return null;
     const [lo, hi] = domain;
-    const span = hi - lo || 1;
-    const t = Math.min(1, Math.max(0, (v - lo) / span));
+    const t = finiteRatio(v, lo, hi);
     return `${(t * 100).toFixed(2)}%`;
   }
 
@@ -1628,10 +1653,15 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const input = event.currentTarget as HTMLInputElement;
     const entry = this.rowsByKey.get(rowKey);
     const column = this.columnsByKey.get(columnKey);
-    if (!entry || !column || editTrigger(column.editable) === undefined) return;
+    const isTransient =
+      this.editingCell?.rowKey === rowKey && this.editingCell.columnKey === columnKey;
+    if (!entry || !column || editTrigger(column.editable) === undefined) {
+      if (isTransient) this.editingCell = null;
+      return;
+    }
     const value = column.editType === 'number' && input.value !== '' ? Number(input.value) : input.value;
     this.emit('lr-cell-edit', { row: entry.row, key: columnKey, value });
-    this.editingCell = null;
+    if (isTransient) this.editingCell = null;
   }
 
   /** The `[part='cell-editor']` rendered in one specific body cell, or `null` when that row/column
@@ -2179,7 +2209,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
                         const alwaysOn = editTrigger(col.editable) === 'always';
                         const editing =
                           alwaysOn ||
-                          (this.editingCell?.rowKey === encodeKey(key) && this.editingCell.columnKey === col.key);
+                          (editTrigger(col.editable) === 'double-click' &&
+                            this.editingCell?.rowKey === encodeKey(key) &&
+                            this.editingCell.columnKey === col.key);
                         // `|| nothing`, not `?? nothing`: an empty `title=""` is not "no tooltip",
                         // it actively suppresses an ancestor's tooltip, so an empty return omits
                         // the attribute the same way `undefined` does (mirroring `lr-stat`'s

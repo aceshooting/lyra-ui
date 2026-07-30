@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -8,6 +9,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './json-viewer.styles.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 type JsonPathSegment = string | number;
 
@@ -129,6 +131,7 @@ export interface LyraJsonViewerEventMap {
  * @csspart base - The root scroll container; respects `max-height`.
  * @csspart toolbar - The wrapper around the top-level copy button (only rendered when `copyable`).
  * @csspart tree - The wrapper around the rendered node tree.
+ * @csspart row - A single structural JSON row (opening/value rows and closing-delimiter rows).
  * @csspart key - An object property key or array index label.
  * @csspart value - A primitive value's text -- carries `data-type` (`string`/`number`/`boolean`/`null`/`undefined`, or `circular` for a self-reference marker in place of a re-visited container's subtree) for per-type coloring, `data-match` while it matches `search`, and `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position.
  * @csspart bracket - A `{`, `}`, `[`, or `]` delimiter.
@@ -140,6 +143,8 @@ export interface LyraJsonViewerEventMap {
  * @cssprop [--lr-json-viewer-font=var(--lr-font-mono)] - Font family used for the rendered tree.
  * @cssprop [--lr-json-viewer-match-bg=var(--lr-color-warning-quiet)] - Background (and
  *   surrounding box-shadow) of a key/value that currently matches `search`.
+ * @cssprop [--lr-json-viewer-row-hover-bg=var(--lr-color-brand-quiet)] - Hover background for a
+ *   structural row.
  * @cssprop [--lr-json-viewer-active-outline=var(--lr-focus-ring-color)] - Outline color for the
  *   current imperative search match.
  * @cssprop [--lr-json-viewer-string-color=var(--lr-color-success)] - String value color.
@@ -155,7 +160,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   @property({ attribute: false }) data: unknown;
   /** Nodes at or beyond this nesting depth (root = 0) start collapsed. Omit/undefined: nothing auto-collapses. */
   @property({ type: Number, attribute: 'collapsed-depth' }) collapsedDepth?: number;
-  /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height instead of growing the page. */
+  /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
+   * instead of growing the page. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shows copy-to-clipboard affordances: one for the whole value, plus one per node. */
   @property({ type: Boolean, reflect: true }) copyable = false;
@@ -252,7 +258,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private stringifyForClipboard(value: unknown): string {
     const circularMarker = this.localize('circularReference');
     const stack: unknown[] = [];
-    return JSON.stringify(
+    const serialized = JSON.stringify(
       value,
       function (this: unknown, _key: string, v: unknown) {
         if (typeof v === 'bigint') return v.toString();
@@ -265,6 +271,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
       },
       2,
     );
+    return serialized ?? formatPrimitive(value, valueType(value));
   }
 
   /**
@@ -435,7 +442,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     }
 
     const headRow = html`
-      <div class="row" style=${indentStyle}>
+      <div class="row" part="row" style=${indentStyle}>
         <button
           part="toggle"
           type="button"
@@ -514,7 +521,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
                   (_entry, i) => childRows[i],
                 )}
               </div>
-              <div class="row" style=${indentStyle}>
+              <div class="row" part="row" style=${indentStyle}>
                 <span class="toggle-space" aria-hidden="true"></span>
                 <span part="bracket">${closeBracket}</span>
               </div>
@@ -649,7 +656,12 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const tree = this.renderNode(this.data, [], undefined, 0, this.searchState, new WeakSet(), budget);
     const limited = budget.truncated || this.searchState.truncated;
     return html`
-      <div part="base" style=${this.maxHeight ? `--lr-json-viewer-max-height:${this.maxHeight}` : nothing}>
+      <div
+        part="base"
+        style=${sanitizeCssLength(this.maxHeight)
+          ? styleMap({ '--lr-json-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+          : nothing}
+      >
         ${this.copyable
           ? html`<div part="toolbar">
               <button
@@ -662,7 +674,11 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
               </button>
             </div>`
           : nothing}
-        <div part="tree" role="list">
+        <div
+          part="tree"
+          role="list"
+          aria-label=${this.getAttribute('aria-label') || nothing}
+        >
           ${tree}
         </div>
         ${limited

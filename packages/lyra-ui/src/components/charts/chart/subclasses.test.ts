@@ -42,7 +42,7 @@ for (const [tag, expectedType] of TAGS_WITH_TYPE) {
     await waitUntil(() => el.chart != null, `${tag} never initialized`, { timeout: 2000 });
     const canvas = el.shadowRoot.querySelector('canvas');
     expect(canvas.getAttribute('aria-label')).to.equal(`${tag} accessible name`);
-    expect(canvas.getAttribute('role')).to.equal('img');
+    expect(canvas.getAttribute('role')).to.equal('application');
     expect(el.getAttribute('role')).to.equal(null);
     expect(el.shadowRoot.querySelectorAll('[role]')).to.have.length(1);
     await expect(el).to.be.accessible();

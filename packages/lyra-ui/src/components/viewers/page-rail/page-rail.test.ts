@@ -2,6 +2,7 @@ import { aTimeout, fixture, expect, html, oneEvent, waitUntil } from '@open-wc/t
 import { LitElement, type PropertyValues } from 'lit';
 import './page-rail.js';
 import type { LyraPageRail, PageThumbnailSource } from './page-rail.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.js';
 import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
@@ -262,6 +263,21 @@ describe('lr-page-rail', () => {
     expect(el.page).to.equal(7);
   });
 
+  it('does not combine digits typed before and after a disconnect', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="20"></lr-page-rail>`);
+    const parent = el.parentElement!;
+    let base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true, composed: true }));
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.page).to.equal(2);
+  });
+
   it('typing a digit in wired mode updates the viewer and emits the normal selection event', async () => {
     const viewer = new StubViewer();
     const el = await fixture<LyraPageRail>(html`<lr-page-rail .viewer=${viewer}></lr-page-rail>`);
@@ -282,6 +298,92 @@ describe('lr-page-rail', () => {
     base.dispatchEvent(new KeyboardEvent('keydown', { key: '9', bubbles: true, composed: true }));
     await el.updateComplete;
     expect(el.page).to.equal(1);
+  });
+
+  it('moves focus to the nearest surviving page when the focused tail is removed', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="5"></lr-page-rail>`);
+    await waitUntil(
+      () => el.shadowRoot!.querySelector('lr-virtual-list')?.shadowRoot?.querySelectorAll('[part~="page"]').length === 5,
+    );
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const fifth = list.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="page"]')[4]!;
+    fifth.focus();
+    el.pageCount = 3;
+    await waitUntil(() => list.shadowRoot!.querySelectorAll('[part~="page"]').length === 3);
+    const focused = list.shadowRoot!.activeElement as HTMLButtonElement | null;
+    expect(focused?.getAttribute('aria-label')).to.equal('Page 3');
+  });
+
+  it('repairs focus by absolute page after a virtualized tail is removed', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="100"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await waitUntil(() => list.renderedRows.length > 0);
+
+    list.scrollToIndex(90, { align: 'start', behavior: 'auto' });
+    list.scrollContainer!.dispatchEvent(new Event('scroll'));
+    await waitUntil(
+      () => Number(list.renderedRows[0]?.dataset.rowIndex) > 50,
+      'virtual list never materialized a high page window',
+    );
+    const focusedRow = list.renderedRows.at(-1)!;
+    const focusedPage = Number(focusedRow.dataset.rowIndex) + 1;
+    expect(focusedPage).to.be.greaterThan(50);
+    focusedRow.querySelector<HTMLButtonElement>('[part~="page"]')!.focus();
+
+    el.pageCount = 50;
+    await waitUntil(
+      () => (list.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label') === 'Page 50',
+      'focus was not repaired to absolute page 50',
+    );
+    expect((list.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label')).to.equal('Page 50');
+  });
+
+  it('supersedes a stale focus repair when the page count shrinks again before materialization', async () => {
+    const el = await fixture<LyraPageRail>(html`<lr-page-rail page-count="100"></lr-page-rail>`);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    await waitUntil(() => list.renderedRows.length > 0);
+    list.scrollToIndex(90, { align: 'start', behavior: 'auto' });
+    list.scrollContainer!.dispatchEvent(new Event('scroll'));
+    await waitUntil(
+      () => Number(list.renderedRows[0]?.dataset.rowIndex) > 50,
+      'virtual list never materialized a high page window',
+    );
+    list.renderedRows.at(-1)!.querySelector<HTMLButtonElement>('[part~="page"]')!.focus();
+
+    const repairGate = deferred<void>();
+    let updateCompleteReads = 0;
+    Object.defineProperty(list, 'updateComplete', {
+      configurable: true,
+      get: () => {
+        updateCompleteReads++;
+        return repairGate.promise;
+      },
+    });
+
+    el.pageCount = 50;
+    await el.updateComplete;
+    await waitUntil(() => updateCompleteReads > 0, 'first focus repair never reached its deferred materialization');
+    await waitUntil(
+      () => list.renderedRows.length > 0
+        && list.renderedRows.every((row) => Number(row.dataset.rowIndex) < 50)
+        && list.shadowRoot!.activeElement === null,
+      'first shrink did not remove the focused high row',
+    );
+
+    el.pageCount = 40;
+    await el.updateComplete;
+    await waitUntil(
+      () => list.renderedRows.length > 0
+        && list.renderedRows.every((row) => Number(row.dataset.rowIndex) < 40),
+      'second shrink did not reach the virtual list',
+    );
+    repairGate.resolve(undefined);
+
+    await waitUntil(
+      () => (list.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label') === 'Page 40',
+      'the stale page-50 repair was not superseded by page 40',
+    );
+    expect((list.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('aria-label')).to.equal('Page 40');
   });
 
   it('registers lr-virtual-list, lr-skeleton, and lr-file-icon as a side effect of importing page-rail.js (regression)', async () => {

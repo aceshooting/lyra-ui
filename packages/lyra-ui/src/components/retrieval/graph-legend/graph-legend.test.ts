@@ -44,6 +44,21 @@ it("uses a type's own color for its swatch when set, and a palette fallback othe
   expect(personFill).to.equal('#8250df');
 });
 
+it('rejects url paint servers and falls back to the categorical palette', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend></lr-graph-legend>`);
+  el.types = [
+    {
+      id: 'unsafe',
+      label: 'Unsafe',
+      color: 'url("data:image/svg+xml,<svg/>")',
+    },
+  ];
+  await el.updateComplete;
+  const swatch = el.shadowRoot!.querySelector('[part~="swatch"]')!;
+  const fill = swatch.getAttribute('fill') ?? swatch.querySelector('[fill]')?.getAttribute('fill');
+  expect(fill).to.equal('#8250df');
+});
+
 it('toggles hiddenTypes and emits lr-visibility-change with the full updated array on click', async () => {
   const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
   el.types = types;
@@ -149,4 +164,42 @@ it('declares a --lr-graph-legend-hidden-color cssprop indirection layer for a hi
 
   el.style.setProperty('--lr-graph-legend-hidden-color', 'var(--lr-color-text-quiet)');
   expect(getComputedStyle(label).color).to.equal(unset);
+});
+
+it('contains an unbroken public type label within a 320px allocation', async () => {
+  const wrapper = await fixture(html`
+    <div style="box-sizing:border-box; inline-size:320px; overflow:auto;">
+      <lr-graph-legend></lr-graph-legend>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-graph-legend') as LyraGraphLegend;
+  el.types = [{ id: 'long', label: `entity-${'classification'.repeat(32)}` }];
+  await el.updateComplete;
+  const item = el.shadowRoot!.querySelector('[part~="item"]') as HTMLElement;
+  const label = item.querySelector('[part="label"]') as HTMLElement;
+
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+  expect(item.getBoundingClientRect().width).to.be.at.most(el.getBoundingClientRect().width);
+  expect(label.getBoundingClientRect().width).to.be.at.most(item.getBoundingClientRect().width);
+});
+
+it('exposes the hidden swatch opacity through a component-scoped theme token', async () => {
+  const el = (await fixture(html`<lr-graph-legend></lr-graph-legend>`)) as LyraGraphLegend;
+  el.types = types;
+  el.hiddenTypes = ['person'];
+  await el.updateComplete;
+  const swatch = el.shadowRoot!.querySelector('[part~="item"][data-hidden] [part="swatch"]') as SVGElement;
+
+  expect(getComputedStyle(swatch).opacity).to.equal('0.5');
+  el.style.setProperty('--lr-graph-legend-hidden-swatch-opacity', '0.23');
+  expect(getComputedStyle(swatch).opacity).to.equal('0.23');
+});
+
+it('formats visible counts with the effective locale', async () => {
+  const el = (await fixture(html`<lr-graph-legend lang="ar-EG"></lr-graph-legend>`)) as LyraGraphLegend;
+  el.types = types;
+  el.counts = { person: 1234 };
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="count"]')!.textContent)
+    .to.equal(new Intl.NumberFormat('ar-EG').format(1234));
 });

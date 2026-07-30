@@ -61,6 +61,14 @@ describe('lr-policy-summary', () => {
     expect(review.textContent).to.include('1');
   });
 
+  it('formats visible state counts with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-policy-summary lang="ar-EG" .decisions=${decisions}></lr-policy-summary>`,
+    )) as LyraPolicySummary;
+    const deny = el.shadowRoot!.querySelector('[part="count"][data-state="deny"]')!;
+    expect(deny.textContent).to.include(new Intl.NumberFormat('ar-EG').format(2));
+  });
+
   it('renders one listitem per decision inside a role="list" wrapper', async () => {
     const el = (await fixture(
       html`<lr-policy-summary .decisions=${decisions}></lr-policy-summary>`,

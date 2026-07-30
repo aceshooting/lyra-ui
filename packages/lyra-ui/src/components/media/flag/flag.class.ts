@@ -278,8 +278,7 @@ export class LyraFlag extends LyraElement {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.loading) this.setAttribute('aria-busy', 'true');
-    else this.removeAttribute('aria-busy');
+    this.setAttribute('aria-busy', String(this.loading));
   }
 
   override render(): TemplateResult {

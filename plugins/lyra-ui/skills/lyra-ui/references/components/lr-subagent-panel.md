@@ -29,7 +29,10 @@ Record<string, unknown> }`.
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
 
 At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
-the logical depth. Progress is finite and clamped. **Slots:** none. **Optional peer deps:** none.
+the logical depth. The roving treeitem accepts Enter/Space as well as pointer activation for
+`lr-run-select`; cancel/retry action names include the run label so repeated row actions remain
+distinguishable to assistive technology. Progress is finite and clamped. **Slots:** none.
+**Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';

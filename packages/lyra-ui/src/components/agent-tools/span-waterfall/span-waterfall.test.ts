@@ -112,12 +112,31 @@ describe('lr-span-waterfall', () => {
     await el.updateComplete;
     const bar = el.shadowRoot!.querySelector('[data-id="llm"]') as HTMLElement;
     expect(bar.getAttribute('aria-current')).to.equal('true');
+    const inactive = el.shadowRoot!.querySelector('[data-id="root"]') as HTMLElement;
+    expect(inactive.getAttribute('aria-current')).to.equal('false');
   });
 
   it('hides the axis when hide-axis is set', async () => {
     const el = (await fixture(html`<lr-span-waterfall .spans=${SPANS} hide-axis></lr-span-waterfall>`)) as LyraSpanWaterfall;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="axis"]')).to.not.exist;
+  });
+
+  it('keeps the terminal axis label inside a 256px allocation', async () => {
+    const container = document.createElement('div');
+    container.style.inlineSize = '256px';
+    const el = (await fixture(
+      html`<lr-span-waterfall .spans=${SPANS}></lr-span-waterfall>`,
+      { parentNode: container },
+    )) as LyraSpanWaterfall;
+    await el.updateComplete;
+    const axis = el.shadowRoot!.querySelector<HTMLElement>('[part="axis"]')!;
+    const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="tick-label"]')];
+    const terminal = labels[labels.length - 1]!;
+    const axisRect = axis.getBoundingClientRect();
+    const labelRect = terminal.getBoundingClientRect();
+    expect(labelRect.right).to.be.at.most(axisRect.right + 1);
+    expect(labelRect.left).to.be.at.least(axisRect.left - 1);
   });
 
   it('renders lr-empty when spans is empty', async () => {
@@ -197,6 +216,32 @@ describe('lr-span-waterfall', () => {
       await expect(el).to.be.accessible();
     });
   });
+
+  it('exposes component-scoped hooks for every status bar tone', async () => {
+    const statusSpans: LyraSpan[] = [
+      { id: 'ok', name: 'ok', kind: 'tool', status: 'success', startMs: 0, endMs: 1 },
+      { id: 'bad', name: 'bad', kind: 'tool', status: 'error', startMs: 1, endMs: 2 },
+      { id: 'deny', name: 'deny', kind: 'tool', status: 'denied', startMs: 2, endMs: 3 },
+      { id: 'wait', name: 'wait', kind: 'tool', status: 'pending', startMs: 3, endMs: 4 },
+    ];
+    const el = (await fixture(html`
+      <lr-span-waterfall
+        style="
+          --lr-span-waterfall-success-color: rgb(1, 2, 3);
+          --lr-span-waterfall-error-color: rgb(4, 5, 6);
+          --lr-span-waterfall-denied-color: rgb(7, 8, 9);
+          --lr-span-waterfall-pending-border-color: rgb(10, 11, 12);
+        "
+        .spans=${statusSpans}
+      ></lr-span-waterfall>
+    `)) as LyraSpanWaterfall;
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[data-id="ok"]')!).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[data-id="bad"]')!).backgroundColor).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[data-id="deny"]')!).backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[data-id="wait"]' )!).borderTopColor).to.equal(
+      'rgb(10, 11, 12)',
+    );
+  });
 });
 
 it('drops invalid span timestamps before they can poison otherwise valid geometry', async () => {
@@ -221,6 +266,20 @@ it('keeps a tabbable row when activeSpanId is dangling', async () => {
     ></lr-span-waterfall>
   `)) as LyraSpanWaterfall;
   expect(el.shadowRoot!.querySelectorAll('[part="bar"][tabindex="0"]').length).to.equal(1);
+});
+
+it('keeps a rendered bar tabbable when activeSpanId names a raw span filtered out by invalid geometry', async () => {
+  const el = (await fixture(html`
+    <lr-span-waterfall
+      active-span-id="invalid"
+      .spans=${[
+        { id: 'invalid', name: 'Invalid', kind: 'tool', status: 'error', startMs: Number.NaN },
+        { id: 'valid', name: 'Valid', kind: 'tool', status: 'success', startMs: 0, endMs: 10 },
+      ]}
+    ></lr-span-waterfall>
+  `)) as LyraSpanWaterfall;
+  expect(el.shadowRoot!.querySelectorAll('[part="bar"][tabindex="0"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelector('[part="bar"][tabindex="0"]')!.getAttribute('data-id')).to.equal('valid');
 });
 
 it('formats durations with the effective locale', async () => {

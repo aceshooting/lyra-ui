@@ -100,6 +100,12 @@ export interface CanvasScene {
 /** Matches the SVG renderer's community-hull stroke width (`2 * --lr-size-24px`, i.e. 2x a 24
  *  world-px padding) so a hull reads identically thick in either renderer. */
 const HULL_STROKE_WIDTH = 48;
+/** WCAG 2.5.8 minimum target size in physical canvas pixels. Picking geometry is authored in
+ *  world coordinates, so `drawPickingScene()` divides this by the live camera scale. */
+const MIN_PICK_TARGET_PX = 24;
+/** Exact-color picking deliberately rejects anti-aliased edge pixels. One physical pixel on each
+ *  side keeps the full 24px interior decodable instead of rounding its outermost color to zero. */
+const PICK_RASTER_GUARD_PX = 2;
 /** Matches the SVG renderer's edge/community label halo stroke width (`--lr-size-3px`). */
 const LABEL_HALO_WIDTH = 3;
 /** Matches `graph.class.ts`'s own `EXPAND_BADGE_R` (world px, the "+" badge circle radius) --
@@ -313,14 +319,24 @@ export function drawPickingScene(
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.save();
   ctx.transform(camera.k, 0, 0, camera.k, camera.x, camera.y);
+  const cameraScale = Number.isFinite(camera.k) && Math.abs(camera.k) > 0 ? Math.abs(camera.k) : 1;
+  const minimumWorldStroke = (MIN_PICK_TARGET_PX + PICK_RASTER_GUARD_PX) / cameraScale;
   let idx = 0;
   for (const hull of scene.hulls) {
-    ctx.fillStyle = indexToPickColor(idx++);
-    ctx.fill(new Path2D(hull.d));
+    const color = indexToPickColor(idx++);
+    const path = new Path2D(hull.d);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(HULL_STROKE_WIDTH, minimumWorldStroke);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.fill(path);
+    ctx.stroke(path);
   }
   for (const link of scene.links) {
     ctx.strokeStyle = indexToPickColor(idx++);
-    ctx.lineWidth = Math.max(link.width + 6, 8);
+    ctx.lineWidth = Math.max(link.width + 6, 8, minimumWorldStroke);
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(link.x1, link.y1);
     ctx.lineTo(link.x2, link.y2);
@@ -328,7 +344,7 @@ export function drawPickingScene(
   }
   for (const node of scene.nodes) {
     ctx.fillStyle = indexToPickColor(idx++);
-    ctx.fill(pathForShape(node.x, node.y, node.r, node.shape));
+    ctx.fill(pathForShape(node.x, node.y, Math.max(node.r, minimumWorldStroke / 2), node.shape));
   }
   ctx.restore();
 }

@@ -26,7 +26,8 @@ name is localized too. Text-only host — no CSS parts, events, or own tokens; l
 
 The unit ladder is fixed at `byte`, `kilobyte`, `megabyte`, `gigabyte`, `terabyte`, `petabyte` and
 saturates at the top; the index is `floor(log|value| / log(unitStep))`, and `0` always formats as
-bytes. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
+bytes. Magnitudes below one byte, including negative values, stay in the `byte` unit rather than
+forming a negative unit index. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
 `log(1) === 0`) falling back to `1024`; `decimals` is clamped to `[0, 10]` — an out-of-range value
 would otherwise throw a `RangeError` from `maximumFractionDigits`. Note that `unitStep: 1024` still
 prints the SI-named `kB`/`MB` units, not `KiB`/`MiB` — `Intl` has no binary unit names.

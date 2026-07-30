@@ -1,4 +1,4 @@
-import { html, type TemplateResult } from "lit";
+import { html, type PropertyValues, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { tag } from "../../../internal/prefix.js";
@@ -63,6 +63,22 @@ export class LyraAccordion extends LyraElement {
     }
     this.panels.clear();
     for (const panel of next) this.panels.add(panel);
+    this.reconcileOpenPanels();
+  }
+
+  private reconcileOpenPanels(): void {
+    if (this.multiple) return;
+    let foundOpen = false;
+    for (const panel of this.panels) {
+      if (!panel.open) continue;
+      if (!foundOpen) foundOpen = true;
+      else panel.open = false;
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (changed.has("multiple")) this.reconcileOpenPanels();
   }
 
   private onPanelToggle = (event: Event): void => {

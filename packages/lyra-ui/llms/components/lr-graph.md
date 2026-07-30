@@ -38,8 +38,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
-  can override the spoken name and tooltip independently. A link whose `source` id doesn't resolve
-  to a real node is still dropped entirely
+  can override the spoken name and tooltip independently. `width` is normalized before reaching
+  SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
+  value uses `1.5`. A link whose `source` id doesn't resolve to a real node is still dropped entirely
   (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
@@ -82,7 +83,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per node/link/hull.
+  button per node/link/hull. In both renderers, node, link, and community-hull picking keeps at
+  least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
+  only, not the visible marks.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -95,7 +98,9 @@ id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), 
 `lr-link-enter`/`lr-link-leave` (`detail: { source, target, id? }`, same hover contract),
 `lr-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), `lr-community-click`
-(`detail: { id }`, a hull was activated)
+(`detail: { id }`, a hull was activated), `lr-selection-change`
+(`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
 
 **Slots:** none.
 
@@ -131,8 +136,10 @@ Under `renderer="canvas"` these five are read from computed style at paint time 
 per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
-together; lazy-`import()`ed once per page, `console.warn` once and renders empty if missing —
-install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
+together; lazy-`import()`ed once per page). Each loaded module is validated for the named callable
+capabilities the graph uses; a missing package or malformed module fails closed through the
+localized `part="error"` alert. Install with
+`pnpm add d3-force d3-drag d3-zoom d3-selection`.
 
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
@@ -174,12 +181,11 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
   `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
   example, because they are not installed), the graph fails closed with a localized
   `part="error"` / `role="alert"` message instead of leaving an empty SVG.
-- `GraphNode.color` is sanitized (rejects `;`/`{`/`}`) before being written into the
-  `--lr-node-fill` inline custom property, so an untrusted color string can't break out of that
-  CSS declaration.
-- `GraphLink.color` applies the same declaration-delimiter sanitization. `GraphLink.dash` is used
-  only when every entry is finite and non-negative; an empty or invalid array falls back to a solid
-  line rather than partially applying malformed SVG stroke data.
+- `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
+  when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
+  ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every
+  entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
+  than partially applying malformed SVG stroke data.
 - a structural `nodes`/`links` change now carries over each already-settled node's position (and any
   in-progress drag) by id when rebuilding the simulation, instead of discarding every node's (x, y)
   and re-running the whole ~300-tick random-start settle from scratch — only genuinely new ids get a
@@ -188,6 +194,8 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 - under `prefers-reduced-motion: reduce`, or whenever `seed` is set, the simulation converges
   synchronously (ticked in a loop down to `alphaMin` before first paint) instead of animating over
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
+- in canvas mode, `pointercancel`, lost pointer capture, and disconnect all release a live node's
+  force pin and reset the simulation target; a canceled drag never leaves the node pinned.
 - the `<svg part="svg">` now carries `role="group"` and an `aria-label` summarizing the node/link
   counts (e.g. "Node-link diagram with 5 nodes and 4 links"), and node `<text part="label">`s are
   `aria-hidden="true"` (their content is already covered by each node's own `aria-label`).

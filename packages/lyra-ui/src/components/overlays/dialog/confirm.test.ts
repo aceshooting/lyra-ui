@@ -154,6 +154,29 @@ it('does not resolve a second time when both buttons are somehow activated', asy
   expect(await promise).to.be.true;
 });
 
+it('waits for capture-phase close vetoes before settling or removing the dialog', async () => {
+  const promise = confirm({ title: 'Proceed?' });
+  const dialog = getMountedDialog();
+  let settled = false;
+  void promise.then(() => { settled = true; });
+  const veto = (event: Event): void => event.preventDefault();
+  document.addEventListener('lr-dialog-close', veto, { capture: true });
+  try {
+    footerButtons(dialog)[1].click();
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    expect(settled).to.be.false;
+    expect(dialog.isConnected).to.be.true;
+    expect(dialog.open).to.be.true;
+  } finally {
+    document.removeEventListener('lr-dialog-close', veto, { capture: true });
+  }
+
+  footerButtons(dialog)[1].click();
+  expect(await promise).to.be.true;
+  expect(dialog.isConnected).to.be.false;
+});
+
 it('resolves false instead of hanging when the dialog is removed from the DOM by something other than a button', async () => {
   const promise = confirm({ title: 'Proceed?' });
   const dialog = getMountedDialog();

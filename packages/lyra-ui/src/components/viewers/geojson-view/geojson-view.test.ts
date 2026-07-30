@@ -19,6 +19,40 @@ const EMPTY_MAP_STYLE = { version: 8, sources: {}, layers: [] };
 const OriginalIntersectionObserver = window.IntersectionObserver;
 const testObservers = new WeakMap<Element, TestIntersectionObserver>();
 
+class DeferredStyleMap {
+  readonly canvas: HTMLCanvasElement;
+  readonly listeners = new Map<string, Array<(event?: unknown) => void>>();
+
+  constructor(options: {
+    container: HTMLElement;
+    locale?: Record<string, string>;
+  }) {
+    this.canvas = options.container.ownerDocument.createElement('canvas');
+    this.canvas.setAttribute('role', 'region');
+    this.canvas.setAttribute('aria-label', options.locale?.['Map.Title'] ?? 'Map');
+    options.container.append(this.canvas);
+  }
+
+  on(type: string, listener: (event?: unknown) => void): this {
+    const listeners = this.listeners.get(type) ?? [];
+    listeners.push(listener);
+    this.listeners.set(type, listeners);
+    return this;
+  }
+
+  getCanvas(): HTMLCanvasElement {
+    return this.canvas;
+  }
+
+  getLayer(): undefined {
+    return undefined;
+  }
+
+  remove(): void {
+    this.canvas.remove();
+  }
+}
+
 class TestIntersectionObserver {
   constructor(private readonly callback: IntersectionObserverCallback) {}
 
@@ -56,12 +90,46 @@ async function useDeterministicMapStyle(el: LyraGeojsonView): Promise<void> {
   await waitUntil(() => map.map != null, 'map never initialized with the deterministic test style', { timeout: 2000 });
 }
 
+async function constructMapBeforeStyleLoad(el: LyraGeojsonView): Promise<{
+  map: HTMLElement & { map?: DeferredStyleMap };
+  instance: DeferredStyleMap;
+}> {
+  const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+    _connectGeneration: number;
+    _maplibreModule?: unknown;
+    loading: boolean;
+    visible: boolean;
+    map?: DeferredStyleMap;
+    updateComplete: Promise<unknown>;
+    tryConstructMap(): void;
+  };
+  map._connectGeneration++;
+  map._maplibreModule = { Map: DeferredStyleMap };
+  map.loading = false;
+  map.visible = true;
+  await map.updateComplete;
+  map.tryConstructMap();
+  const instance = map.map!;
+  expect(instance).to.exist;
+  return { map, instance };
+}
+
 function stubFetch(body: unknown, ok = true): void {
   (globalThis as { fetch: typeof fetch }).fetch = (() =>
     Promise.resolve(new Response(JSON.stringify(body), { status: ok ? 200 : 500 }))) as typeof fetch;
 }
 
 describe('fetching and parsing', () => {
+  it('lets the skeleton own loading status without nesting it in another status', async () => {
+    const el = await fixture<LyraGeojsonView>(html`<lr-geojson-view></lr-geojson-view>`);
+    (el as unknown as { loadState: unknown }).loadState = { kind: 'loading' };
+    el.requestUpdate();
+    await el.updateComplete;
+    const spinner = el.shadowRoot!.querySelector('[part="spinner"]')!;
+    expect(spinner.getAttribute('role')).to.equal(null);
+    expect(spinner.querySelectorAll('lr-skeleton').length).to.equal(1);
+  });
+
   it('fetches, parses, and computes a feature count for a FeatureCollection', async () => {
     stubFetch(FEATURE_COLLECTION);
     const el = (await fixture(html`<lr-geojson-view src=${GEOJSON_URL}></lr-geojson-view>`)) as LyraGeojsonView;
@@ -143,6 +211,21 @@ describe('missing maplibre-gl peer', () => {
     child.dispatchEvent(new CustomEvent('lr-search-change', { bubbles: true, composed: true }));
     expect(leaked).to.deep.equal([]);
   });
+
+  it('searches nested GeoJSON metadata exposed by the fallback', async () => {
+    stubFetch({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [10, 20] },
+      properties: { owner: { displayName: 'Ada Lovelace' } },
+    });
+    const el = await fixture<LyraGeojsonView>(html`<lr-geojson-view></lr-geojson-view>`);
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    el.src = GEOJSON_URL;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-json-viewer') !== null);
+
+    expect(await el.search('Ada Lovelace')).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="metadata"]')?.textContent).to.contain('Ada Lovelace');
+  });
 });
 
 describe('document renderer contract', () => {
@@ -208,6 +291,70 @@ describe('aria-label forwarding', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null, 'map branch never rendered', { timeout: 2000 });
     expect(el.shadowRoot!.querySelector('lr-map')!.getAttribute('label')).to.equal('Host zones');
   });
+
+  it('keeps the outer region until the lazy map is ready, then makes its canvas the sole named region', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = (await fixture(
+      html`<lr-geojson-view name="Named zones" aria-label="Host zones" src=${GEOJSON_URL}></lr-geojson-view>`,
+    )) as LyraGeojsonView;
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null, 'map branch never rendered', { timeout: 2000 });
+
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const map = el.shadowRoot!.querySelector('lr-map') as HTMLElement & {
+      map?: { getCanvas(): HTMLCanvasElement };
+    };
+    expect(map.map).to.equal(undefined);
+    expect(base.getAttribute('role')).to.equal('region');
+    expect(base.getAttribute('aria-label')).to.equal('Host zones');
+
+    const mapLoad = oneEvent(map, 'lr-map-load');
+    await useDeterministicMapStyle(el);
+    await mapLoad;
+    await el.updateComplete;
+
+    expect(base.getAttribute('role')).to.equal(null);
+    expect(base.getAttribute('aria-label')).to.equal(null);
+    expect(map.map!.getCanvas().getAttribute('role')).to.equal('region');
+    expect(map.map!.getCanvas().getAttribute('aria-label')).to.equal('Host zones');
+  });
+
+  it('hands landmark ownership to the canvas at construction, before the map style loads', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view name="Named zones" src=${GEOJSON_URL}></lr-geojson-view>`,
+    );
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('region');
+
+    let mapLoadCount = 0;
+    el.shadowRoot!.querySelector('lr-map')!.addEventListener('lr-map-load', () => mapLoadCount++);
+    const { instance } = await constructMapBeforeStyleLoad(el);
+    await el.updateComplete;
+
+    expect(mapLoadCount).to.equal(0);
+    expect(base.getAttribute('role')).to.equal(null);
+    expect(base.getAttribute('aria-label')).to.equal(null);
+    expect(instance.canvas.getAttribute('role')).to.equal('region');
+    expect(instance.canvas.getAttribute('aria-label')).to.equal('Named zones');
+  });
+
+  it('ignores a stale canvas construction and map-load event after src is replaced', async () => {
+    stubFetch(FEATURE_COLLECTION);
+    const el = await fixture<LyraGeojsonView>(
+      html`<lr-geojson-view name="Named zones" src=${GEOJSON_URL}></lr-geojson-view>`,
+    );
+    await waitUntil(() => el.shadowRoot!.querySelector('lr-map') !== null);
+    const map = el.shadowRoot!.querySelector('lr-map')!;
+
+    el.src = 'https://example.test/replacement.geojson';
+    map.dispatchEvent(new CustomEvent('lr-map-load', { bubbles: true, composed: true }));
+    expect((el as unknown as { mapReady: boolean }).mapReady).to.equal(false);
+
+    await constructMapBeforeStyleLoad(el);
+    expect((el as unknown as { mapReady: boolean }).mapReady).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('region');
+  });
 });
 
 describe('accessibility', () => {
@@ -223,6 +370,29 @@ describe('accessibility', () => {
     );
     await useDeterministicMapStyle(el);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('responsive metadata', () => {
+  it('contains long unbroken metadata at a 320px allocation', async () => {
+    stubFetch({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [10, 20] },
+      properties: { publicMetadata: 'x'.repeat(2_000) },
+    });
+    const wrapper = await fixture<HTMLElement>(
+      html`<div style="inline-size: 320px">
+        <lr-geojson-view></lr-geojson-view>
+      </div>`,
+    );
+    const el = wrapper.querySelector('lr-geojson-view') as LyraGeojsonView;
+    (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
+    el.src = GEOJSON_URL;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);
+
+    const metadata = el.shadowRoot!.querySelector('[part="metadata"]') as HTMLElement;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+    expect(getComputedStyle(metadata).overflowX).to.equal('auto');
   });
 });
 

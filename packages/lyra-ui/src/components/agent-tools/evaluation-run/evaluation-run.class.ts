@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { AgentStatus, AgentStatusKind, Citation, GroundingAssessment } from '../../../ai/types.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
@@ -197,7 +198,9 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
   }
 
   private exampleLabel(example: EvaluationExampleResult, index: number): string {
-    return example.label || this.localize('evaluationRunExampleLabel', undefined, { index: index + 1 });
+    return example.label || this.localize('evaluationRunExampleLabel', undefined, {
+      index: getNumberFormat(this.effectiveLocale).format(index + 1),
+    });
   }
 
   private statusLabel(kind: AgentStatusKind): string {
@@ -367,6 +370,7 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
     const counts = this.statusCounts();
     const completed = this.examples.filter((example) => isTerminal(example.status.kind)).length;
     const headerLabel = this.getAttribute('aria-label') || this.label || this.localize('evaluationRunLabel');
+    const number = getNumberFormat(this.effectiveLocale);
 
     return html`
       <div part="base" role="region" aria-label=${headerLabel}>
@@ -381,19 +385,20 @@ export class LyraEvaluationRun extends LyraElement<LyraEvaluationRunEventMap> {
           ></lr-progress-bar>
           <span part="summary"
             >${this.localize('evaluationRunProgressSummary', undefined, {
-              completed,
-              total: resolvedTotal,
+              completed: number.format(completed),
+              total: number.format(resolvedTotal),
             })}</span
           >
           <span part="counts">
             ${RUNNING_ERROR_KINDS.map((kind: CountKind) => {
               const count = counts[kind] ?? 0;
               if (count === 0) return nothing;
+              const formattedCount = number.format(count);
               const badgeVariant: BadgeVariant = kind === 'running' ? 'brand' : 'danger';
               const text =
                 kind === 'running'
-                  ? this.localize('evaluationRunRunningCount', undefined, { count })
-                  : this.localize('evaluationRunFailedCount', undefined, { count });
+                  ? this.localize('evaluationRunRunningCount', undefined, { count: formattedCount })
+                  : this.localize('evaluationRunFailedCount', undefined, { count: formattedCount });
               return html`<lr-badge part="count" data-kind=${kind} variant=${badgeVariant}>${text}</lr-badge>`;
             })}
           </span>

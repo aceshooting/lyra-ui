@@ -37,6 +37,33 @@ describe('lr-rubric-form', () => {
     expect(el.shadowRoot!.querySelector('[data-key="score"] lr-segmented')).to.not.exist;
   });
 
+  it('enumerates a single-point extreme score domain without a non-advancing loop', async () => {
+    const key: RubricKey = {
+      key: 'score',
+      type: 'score',
+      min: Number.MAX_VALUE,
+      max: Number.MAX_VALUE,
+      step: 1,
+    };
+    const detached = document.createElement('lr-rubric-form') as LyraRubricForm;
+    const values = (
+      detached as unknown as {
+        scoreValues(candidate: RubricKey): number[];
+      }
+    ).scoreValues(key);
+    expect(values).to.deep.equal([Number.MAX_VALUE]);
+
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${[key]}></lr-rubric-form>`,
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const segmented = el.shadowRoot!.querySelector('[data-key="score"] lr-segmented') as
+      | (HTMLElement & { items: Array<{ value: string }> })
+      | null;
+    expect(segmented !== null).to.be.true;
+    expect(segmented!.items.map((item) => item.value)).to.deep.equal([String(Number.MAX_VALUE)]);
+  });
+
   it('renders a multiple category field as lr-checkbox-group with slotted lr-checkbox options', async () => {
     const keys: RubricKey[] = [
       { key: 'tags', type: 'category', multiple: true, options: [{ value: 'a' }, { value: 'b' }] },

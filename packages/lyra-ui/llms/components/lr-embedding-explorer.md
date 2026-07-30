@@ -19,7 +19,8 @@ the component only normalizes them into SVG, colors optional clusters, and emits
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
 `accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
-omitted.
+omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
+keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 

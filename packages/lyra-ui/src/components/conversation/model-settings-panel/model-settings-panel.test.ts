@@ -194,6 +194,22 @@ it('normalizes direct out-of-range and non-finite temperature assignments to the
   expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('0');
 });
 
+it('does not derive NaN from a finite subnormal temperature step', async () => {
+  const el = (await fixture(html`
+    <lr-model-settings-panel
+      .temperature=${1}
+      .temperatureMin=${0}
+      .temperatureMax=${2}
+      .temperatureStep=${Number.MIN_VALUE}
+    ></lr-model-settings-panel>
+  `)) as LyraModelSettingsPanel;
+
+  expect(Number.isFinite(el.temperature)).to.be.true;
+  expect(el.temperature).to.equal(1);
+  expect(Number.isFinite(slider(el).valueAsNumber)).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part="temperature-value"]')!.textContent).to.equal('1');
+});
+
 it('contains a long localized temperature label in a 320px allocation', async () => {
   const container = document.createElement('div');
   container.style.inlineSize = '320px';

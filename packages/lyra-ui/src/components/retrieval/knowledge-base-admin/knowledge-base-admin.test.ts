@@ -36,6 +36,21 @@ describe('lr-knowledge-base-admin', () => {
     expect(el.shadowRoot!.querySelector('lr-ingestion-queue')).to.exist;
   });
 
+  it('lets a host aria-label name the semantic owners without replacing the visible heading', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin
+        label="Visible knowledge base"
+        aria-label="Author admin region"
+      ></lr-knowledge-base-admin>`,
+    )) as LyraKnowledgeBaseAdmin;
+    const section = el.shadowRoot!.querySelector('[part="base"]')!;
+    const tablist = el.shadowRoot!.querySelector('[role="tablist"]')!;
+    const heading = el.shadowRoot!.querySelector('[part="heading"]')!;
+    expect(section.getAttribute('aria-label')).to.equal('Author admin region');
+    expect(tablist.getAttribute('aria-label')).to.equal('Author admin region');
+    expect(heading.textContent).to.equal('Visible knowledge base');
+  });
+
   it('forwards source actions under namespaced events', async () => {
     const el = (await fixture(html`<lr-knowledge-base-admin></lr-knowledge-base-admin>`)) as LyraKnowledgeBaseAdmin;
     await el.updateComplete;
@@ -70,5 +85,27 @@ describe('lr-knowledge-base-admin', () => {
     expect(el.activeTab).to.equal('ingestion');
     expect(nextTabs.map((tab) => tab.tabIndex)).to.deep.equal([-1, 0]);
     expect(el.shadowRoot!.activeElement?.id).to.equal(nextTabs[1]!.id);
+  });
+
+  it('normalizes an unavailable active ingestion tab through lr-tab-change and repairs focus', async () => {
+    const el = (await fixture(
+      html`<lr-knowledge-base-admin active-tab="ingestion"></lr-knowledge-base-admin>`,
+    )) as LyraKnowledgeBaseAdmin;
+    const ingestionTab = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1]!;
+    ingestionTab.focus();
+    expect(el.shadowRoot!.activeElement?.id).to.equal(ingestionTab.id);
+
+    const details: Array<{ tab: string }> = [];
+    el.addEventListener('lr-tab-change', (event) => details.push(event.detail));
+    el.hideIngestion = true;
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const survivingTab = el.shadowRoot!.querySelector<HTMLButtonElement>('[role="tab"]')!;
+    expect(el.activeTab).to.equal('sources');
+    expect(el.getAttribute('active-tab')).to.equal('sources');
+    expect(details).to.deep.equal([{ tab: 'sources' }]);
+    expect(el.shadowRoot!.querySelectorAll('[role="tab"]').length).to.equal(1);
+    expect(el.shadowRoot!.activeElement?.id).to.equal(survivingTab.id);
   });
 });

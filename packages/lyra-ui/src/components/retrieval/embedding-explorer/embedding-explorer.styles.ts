@@ -27,6 +27,15 @@ export const styles = css`
     outline: none;
   }
 
+  .point-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: var(--lr-size-24px);
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: stroke;
+  }
+
   [part='point']:hover,
   [part='point']:focus-visible {
     outline: none;

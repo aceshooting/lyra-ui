@@ -168,11 +168,7 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.drag = null;
-    window.removeEventListener("pointermove", this.onPointerMove);
-    window.removeEventListener("pointerup", this.onPointerUp);
-    window.removeEventListener("pointercancel", this.onPointerUp);
-    window.removeEventListener("lostpointercapture", this.onPointerUp);
+    this.endDrag();
     this.containerResizeObserver?.disconnect();
   }
 
@@ -197,6 +193,12 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   // read back the size from one update cycle ago.
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (
+      (changed.has("resizable") || changed.has("collapsed")) &&
+      (!this.resizable || this.collapsed)
+    ) {
+      this.endDrag();
+    }
     if (
       changed.has("size") ||
       changed.has("collapsed") ||
@@ -304,6 +306,10 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
   private onPointerMove = (e: PointerEvent): void => {
     const drag = this.drag;
     if (!drag || e.pointerId !== drag.pointerId) return;
+    if (!this.resizable || this.collapsed) {
+      this.endDrag();
+      return;
+    }
     const pos = this.axis === "inline" ? e.clientX : e.clientY;
     const delta = this.growSign * (pos - drag.startPos);
     this.applySize(drag.startSizePx + delta);
@@ -311,12 +317,16 @@ export class LyraDockPanel extends LyraElement<LyraDockPanelEventMap> {
 
   private onPointerUp = (e: PointerEvent): void => {
     if (!this.drag || e.pointerId !== this.drag.pointerId) return;
+    this.endDrag();
+  };
+
+  private endDrag(): void {
     this.drag = null;
     window.removeEventListener("pointermove", this.onPointerMove);
     window.removeEventListener("pointerup", this.onPointerUp);
     window.removeEventListener("pointercancel", this.onPointerUp);
     window.removeEventListener("lostpointercapture", this.onPointerUp);
-  };
+  }
 
   private onHandleKeyDown = (e: KeyboardEvent): void => {
     if (!this.resizable || this.collapsed) return;

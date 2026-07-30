@@ -83,7 +83,7 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   };
   override render(): TemplateResult {
     if (!this.open) return html``;
-    const label = this.accessibleLabel || this.getAttribute('aria-label') || undefined;
+    const label = this.getAttribute('aria-label') || this.accessibleLabel || undefined;
     return html`<div part="base" role="${this.variant === 'danger' ? 'alert' : 'status'}"
       aria-live=${this.liveActive ? (this.variant === 'danger' ? 'assertive' : 'polite') : 'off'}
       aria-label=${label || nothing}>

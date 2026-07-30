@@ -79,3 +79,18 @@ export const RetintedActiveRow: Story = {
       .activeSpanId=${'llm'}
     ></lr-span-waterfall>`,
 };
+
+export const RetintedStatuses: Story = {
+  name: 'Retinted status bars',
+  render: () => html`
+    <lr-span-waterfall
+      style="
+        max-width: 40rem;
+        --lr-span-waterfall-success-color: rebeccapurple;
+        --lr-span-waterfall-running-color: darkorange;
+        --lr-span-waterfall-running-stripe-color: papayawhip;
+      "
+      .spans=${spans}
+    ></lr-span-waterfall>
+  `,
+};

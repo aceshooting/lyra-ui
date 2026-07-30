@@ -411,6 +411,18 @@ describe('lr-docx-viewer', () => {
   });
 });
 
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-docx-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-docx-viewer-max-height')).to.equal('calc(10rem + 2px)');
+});
+
 describe('DOCX registry', () => {
   it('registers the OOXML DOCX MIME type and extension fallback', () => {
     expect(findDocumentRenderer({ name: 'report.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', src: 'x' })).to.exist;
@@ -652,6 +664,213 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('renders a native keyboard action for each resolved text-quote highlight', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.highlights = [{
+        id: 'ada',
+        label: 'Ada passage',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      const action = el.shadowRoot!.querySelector('[part="highlight-action"]') as HTMLButtonElement | null;
+      expect(action?.localName).to.equal('button');
+      expect(action?.getAttribute('aria-label')).to.equal('Highlight: Ada passage');
+      const eventPromise = oneEvent(el, 'lr-highlight-activate');
+      action!.click();
+      expect((await eventPromise).detail).to.deep.equal({ id: 'ada' });
+    } finally {
+      restore();
+    }
+  });
+
+  it('renders native actions only for text-quote highlights that resolve in the current document', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.highlights = [
+        {
+          id: 'missing',
+          label: 'Missing passage',
+          anchor: { kind: 'text-quote', quote: 'This passage is absent' },
+        },
+        {
+          id: 'ada',
+          label: 'Ada passage',
+          anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+        },
+      ];
+      await el.updateComplete;
+      await aTimeout(0);
+      await el.updateComplete;
+      const actions = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight-action"]');
+      expect(actions).to.have.lengthOf(1);
+      expect(actions[0]!.textContent).to.equal('Ada passage');
+      const eventPromise = oneEvent(el, 'lr-highlight-activate');
+      actions[0]!.click();
+      expect((await eventPromise).detail).to.deep.equal({ id: 'ada' });
+    } finally {
+      restore();
+    }
+  });
+
+  it('synchronously drops a same-id action when its replacement anchor no longer resolves', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.highlights = [{
+        id: 'same',
+        label: 'Present passage',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+
+      el.highlights = [{
+        id: 'same',
+        label: 'Missing passage',
+        anchor: { kind: 'text-quote', quote: 'This text is absent' },
+      }];
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('does not expose an unresolved duplicate-id highlight through a resolved sibling', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.highlights = [
+        {
+          id: 'duplicate',
+          label: 'Present passage',
+          anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+        },
+        {
+          id: 'duplicate',
+          label: 'Missing passage',
+          anchor: { kind: 'text-quote', quote: 'This text is absent' },
+        },
+      ];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      const actions = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="highlight-action"]');
+      expect(actions).to.have.lengthOf(1);
+      expect(actions[0]!.textContent).to.equal('Present passage');
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps highlight actions absent while the first document is loading, then exposes resolved ones', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    let finishConversion: ((value: { value: string; messages: unknown[] }) => void) | undefined;
+    useLibrary(el, {
+      mammoth: {
+        convertToHtml: () => new Promise<{ value: string; messages: unknown[] }>((resolve) => {
+          finishConversion = resolve;
+        }),
+      },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(BUFFER);
+    try {
+      el.highlights = [{
+        id: 'ada',
+        label: 'Ada passage',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      expect(el.shadowRoot!.querySelector('[part="highlight-action"]')).to.not.exist;
+      await waitUntil(() => finishConversion !== undefined);
+      finishConversion!({ value: '<p>Ada wrote the first program.</p>', messages: [] });
+      await waitUntil(
+        () => el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length === 1,
+      );
+      expect(el.shadowRoot!.querySelector('[part="highlight-action"]')!.textContent).to.equal('Ada passage');
+    } finally {
+      restore();
+    }
+  });
+
+  it('never renders a stale resolved highlight action while src starts loading a replacement', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    let finishConversion: ((value: { value: string; messages: unknown[] }) => void) | undefined;
+    let sawStaleLoadingAction = false;
+    const observer = new MutationObserver(() => {
+      if (
+        el.shadowRoot!.querySelector('[part="spinner"]')
+        && el.shadowRoot!.querySelector('[part="highlight-action"]')
+      ) {
+        sawStaleLoadingAction = true;
+      }
+    });
+    observer.observe(el.shadowRoot!, { childList: true, subtree: true });
+    try {
+      el.highlights = [{
+        id: 'ada',
+        label: 'Ada passage',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      useLibrary(el, {
+        mammoth: {
+          convertToHtml: () => new Promise<{ value: string; messages: unknown[] }>((resolve) => {
+            finishConversion = resolve;
+          }),
+        },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      el.src = 'https://example.test/replacement.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      await aTimeout(0);
+      expect(sawStaleLoadingAction).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+      await waitUntil(() => finishConversion !== undefined);
+      finishConversion!({ value: '<p>A replacement document.</p>', messages: [] });
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]')?.textContent?.includes('replacement') === true);
+    } finally {
+      observer.disconnect();
+      finishConversion?.({ value: '<p>A replacement document.</p>', messages: [] });
+      restore();
+    }
+  });
+
+  it('does not retain a resolved highlight action across disconnect and reconnect loading', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    const reconnectHost = document.createElement('div');
+    document.body.append(reconnectHost);
+    let finishConversion: ((value: { value: string; messages: unknown[] }) => void) | undefined;
+    try {
+      el.highlights = [{
+        id: 'ada',
+        label: 'Ada passage',
+        anchor: { kind: 'text-quote', quote: 'Ada wrote' },
+      }];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      useLibrary(el, {
+        mammoth: {
+          convertToHtml: () => new Promise<{ value: string; messages: unknown[] }>((resolve) => {
+            finishConversion = resolve;
+          }),
+        },
+        DOMPurify: { sanitize: (value: string) => value },
+      });
+      el.remove();
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+      reconnectHost.append(el);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="spinner"]') !== null);
+      expect(el.shadowRoot!.querySelectorAll('[part="highlight-action"]').length).to.equal(0);
+      await waitUntil(() => finishConversion !== undefined);
+      finishConversion!({ value: '<p>A replacement document.</p>', messages: [] });
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"]')?.textContent?.includes('replacement') === true);
+    } finally {
+      finishConversion?.({ value: '<p>A replacement document.</p>', messages: [] });
+      reconnectHost.remove();
+      restore();
+    }
+  });
+
   it('emits lr-text-select with a text-quote anchor on selection', async () => {
     const { el, restore } = await loadWithMarkup('<p>The quick brown fox jumps over the lazy dog.</p>');
     try {
@@ -669,6 +888,63 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
       expect(event.detail.text).to.equal('brown');
       selection.removeAllRanges();
     } finally {
+      restore();
+    }
+  });
+
+  it('reads selection and binds selectionchange in its owner document after cross-realm adoption', async () => {
+    const el = await fixture<LyraDocxViewer>(html`<lr-docx-viewer></lr-docx-viewer>`);
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    const frameDocument = iframe.contentDocument!;
+    const frameWindow = iframe.contentWindow!;
+    useLibrary(el, {
+      mammoth: {
+        convertToHtml: () => Promise.resolve({
+          value: '<p>The quick brown fox.</p>',
+          messages: [],
+        }),
+      },
+      DOMPurify: { sanitize: (value: string) => value },
+    });
+    const restore = stubFetch(BUFFER);
+    frameDocument.body.append(el);
+    try {
+      el.src = 'https://example.test/report.docx';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="content"] p') !== null);
+      const paragraph = el.shadowRoot!.querySelector('[part="content"] p')!;
+      const text = paragraph.firstChild!;
+      const range = frameDocument.createRange();
+      range.setStart(text, 10);
+      range.setEnd(text, 15);
+      const originalGetSelection = frameWindow.getSelection;
+      frameWindow.getSelection = (() => ({
+        getComposedRanges: () => [{
+          startContainer: range.startContainer,
+          startOffset: range.startOffset,
+          endContainer: range.endContainer,
+          endOffset: range.endOffset,
+        }],
+        getRangeAt: () => range,
+        isCollapsed: false,
+        rangeCount: 1,
+      })) as typeof frameWindow.getSelection;
+      const events: CustomEvent[] = [];
+      el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+      try {
+        paragraph.dispatchEvent(new MouseEvent('pointerup', {
+          bubbles: true,
+          composed: true,
+        }));
+        await aTimeout(30);
+        expect(events).to.have.lengthOf(1);
+        expect(events[0]!.detail.text).to.equal('brown');
+      } finally {
+        frameWindow.getSelection = originalGetSelection;
+      }
+    } finally {
+      el.remove();
+      iframe.remove();
       restore();
     }
   });

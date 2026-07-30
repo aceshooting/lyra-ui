@@ -82,6 +82,19 @@ it('accounts for a nonzero min when computing the fill ratio', async () => {
   expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength, 0.001);
 });
 
+it('renders the midpoint of the full finite number range at half fill', async () => {
+  const el = (await fixture(html`
+    <lr-gauge
+      value="0"
+      min=${-Number.MAX_VALUE}
+      max=${Number.MAX_VALUE}
+    ></lr-gauge>
+  `)) as LyraGauge;
+  const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
+  const arcLength = (270 / 360) * 2 * Math.PI * 40;
+  expect(Number(fill.getAttribute('stroke-dashoffset'))).to.be.closeTo(arcLength * 0.5, 0.001);
+});
+
 it('guards against a degenerate min===max range instead of a NaN/Infinity dashoffset', async () => {
   const el = (await fixture(html`<lr-gauge value="50" min="50" max="50"></lr-gauge>`)) as LyraGauge;
   const fill = el.shadowRoot!.querySelector('[part="fill"]') as SVGPathElement;
@@ -357,3 +370,24 @@ it('keeps the linear label/value text inside the 0..100 x range under RTL instea
   expect(valueBox.x).to.be.at.least(-1);
   expect(valueBox.x + valueBox.width).to.be.at.most(101);
 });
+
+for (const type of ['radial', 'ring', 'linear'] as const) {
+  it(`fits long unbroken visible label/value text inside the ${type} SVG viewBox`, async () => {
+    const token = `GAUGE_${'IDENTIFIER'.repeat(40)}`;
+    const el = (await fixture(html`
+      <lr-gauge
+        type=${type}
+        label=${token}
+        value="50"
+        .valueLabel=${token}
+      ></lr-gauge>
+    `)) as LyraGauge;
+    await el.updateComplete;
+    for (const part of ['label', 'value']) {
+      const text = el.shadowRoot!.querySelector(`[part="${part}"]`) as unknown as SVGTextElement;
+      const box = text.getBBox();
+      expect(box.x, part).to.be.at.least(-1);
+      expect(box.x + box.width, part).to.be.at.most(101);
+    }
+  });
+}

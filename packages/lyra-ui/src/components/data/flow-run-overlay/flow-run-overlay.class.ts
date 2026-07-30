@@ -32,6 +32,14 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart summary - The "{done} of {total} steps complete" line.
  * @csspart count - One per status present (text + tone dot, never color-only).
  * @csspart live-region - The step-transition announcement.
+ * @cssprop [--lr-flow-run-overlay-status-color=var(--lr-color-border-strong)] - Count-dot color
+ *   when no execution status is set.
+ * @cssprop [--lr-flow-run-overlay-status-pending-color=var(--lr-color-border-strong)] - Pending
+ *   count-dot color.
+ * @cssprop [--lr-flow-run-overlay-status-running-color=var(--lr-color-brand)] - Running count-dot color.
+ * @cssprop [--lr-flow-run-overlay-status-success-color=var(--lr-color-success)] - Success count-dot color.
+ * @cssprop [--lr-flow-run-overlay-status-error-color=var(--lr-color-danger)] - Error count-dot color.
+ * @cssprop [--lr-flow-run-overlay-status-denied-color=var(--lr-color-warning)] - Denied count-dot color.
  */
 export class LyraFlowRunOverlay extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

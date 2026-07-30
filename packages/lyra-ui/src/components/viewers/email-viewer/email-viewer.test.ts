@@ -88,6 +88,15 @@ const GMAIL_QUOTE_EML = [
   '',
 ].join('\r\n');
 
+const FIXED_HTML_EML = [
+  'From: Ada <ada@example.test>',
+  'Subject: Containment',
+  'Content-Type: text/html; charset=utf-8',
+  '',
+  '<span data-fixed style="position:fixed;inset:0;z-index:2147483647">Overlay</span><p>Ordinary <strong data-inline>inline text</strong>.</p>',
+  '',
+].join('\r\n');
+
 function response(body: string, ok = true): Response {
   const bytes = new TextEncoder().encode(body);
   return { ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(bytes.buffer) } as Response;
@@ -142,6 +151,31 @@ describe('lr-email-viewer', () => {
       expect(body.querySelector('script')).to.not.exist;
       expect(body.querySelector('p')!.getAttribute('onclick')).to.be.null;
     } finally { restore(); }
+  });
+
+  it('contains fixed-position sanitized HTML without changing ordinary inline formatting', async () => {
+    const restore = stubFetch(FIXED_HTML_EML);
+    try {
+      const el = await fixture<LyraEmailViewer>(html`
+        <lr-email-viewer
+          style="inline-size:240px"
+          src="https://example.test/message.eml"
+        ></lr-email-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[data-fixed]') !== null);
+      const surface = el.shadowRoot!.querySelector('[part="body-html"]') as HTMLElement;
+      const fixed = surface.querySelector('[data-fixed]') as HTMLElement;
+      const inline = surface.querySelector('[data-inline]') as HTMLElement;
+      const surfaceRect = surface.getBoundingClientRect();
+      const fixedRect = fixed.getBoundingClientRect();
+
+      expect(getComputedStyle(surface).contain).to.equal('paint');
+      expect(fixedRect.left).to.be.at.least(surfaceRect.left);
+      expect(fixedRect.right).to.be.at.most(surfaceRect.right);
+      expect(getComputedStyle(inline).display).to.equal('inline');
+    } finally {
+      restore();
+    }
   });
 
   it('falls back to plain text', async () => {
@@ -610,6 +644,21 @@ describe('lr-email-viewer', () => {
       }
     });
 
+    it('reveals a folded plain-text quote containing the active search match', async () => {
+      const restore = stubFetch(QUOTED_TEXT_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(
+          html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`,
+        );
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quoted"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.true;
+        expect(await el.search('bring the report')).to.equal(1);
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.false;
+      } finally {
+        restore();
+      }
+    });
+
     it('does not fold a short (< 3 line) quote-looking tail', async () => {
       const restore = stubFetch(SHORT_QUOTE_EML);
       const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`);
@@ -631,6 +680,21 @@ describe('lr-email-viewer', () => {
         const quoted = el.shadowRoot!.querySelector('[part="quoted"]') as HTMLElement;
         expect(quoted.hasAttribute('hidden')).to.be.true;
         expect(quoted.textContent).to.contain('Let us meet at noon');
+      } finally {
+        restore();
+      }
+    });
+
+    it('reveals a folded HTML quote containing the active search match', async () => {
+      const restore = stubFetch(GMAIL_QUOTE_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(
+          html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`,
+        );
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quoted"]') !== null);
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.true;
+        expect(await el.search('meet at noon')).to.equal(1);
+        expect(el.shadowRoot!.querySelector('[part="quoted"]')!.hasAttribute('hidden')).to.be.false;
       } finally {
         restore();
       }
@@ -665,6 +729,24 @@ describe('lr-email-viewer', () => {
         expect(quoted.hasAttribute('hidden')).to.be.true;
         expect(toggle.getAttribute('aria-expanded')).to.equal('false');
         expect(toggle.textContent).to.equal('Show quoted text');
+      } finally {
+        restore();
+      }
+    });
+
+    it('restores focus to the replacement HTML quote toggle after expansion', async () => {
+      const restore = stubFetch(GMAIL_QUOTE_EML);
+      try {
+        const el = await fixture<LyraEmailViewer>(
+          html`<lr-email-viewer fold-quotes src="https://example.test/message.eml"></lr-email-viewer>`,
+        );
+        await waitUntil(() => el.shadowRoot!.querySelector('[part="quote-toggle"]') !== null);
+        const toggle = el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement;
+        toggle.focus();
+        toggle.click();
+        await el.updateComplete;
+        const replacement = el.shadowRoot!.querySelector('[part="quote-toggle"]') as HTMLButtonElement;
+        expect(el.shadowRoot!.activeElement === replacement).to.be.true;
       } finally {
         restore();
       }
@@ -712,6 +794,18 @@ describe('lr-email-viewer', () => {
       }
     });
   });
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraEmailViewer>(html`<lr-email-viewer></lr-email-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-email-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-email-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });
 
 describe('styling', () => {

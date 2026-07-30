@@ -153,7 +153,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     e.stopPropagation();
     const { id } = (e as CustomEvent<{ id: string }>).detail;
     const node = this.nodesByPath.get(id);
-    if (!node || id.includes(' loading')) return;
+    if (!node) return;
     const wasSelected = this.selectedPath === id;
     this.selectedPath = id;
     this.emit('lr-file-select', { path: id, node });

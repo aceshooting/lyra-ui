@@ -76,3 +76,47 @@ it('moves focus to the replacement connection action when state changes', async 
   await el.updateComplete;
   expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('disconnect');
 });
+
+it('moves focus from a disappearing connected-session action to the error-state connect action', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  (el.shadowRoot!.querySelector('[part="mute"]') as HTMLButtonElement).focus();
+
+  el.state = 'error';
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('connect');
+});
+
+it('moves focus from a nested capture control when the connected controls are replaced', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  const capture = el.shadowRoot!.querySelector('lr-push-to-talk') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await capture.updateComplete;
+  (capture.shadowRoot!.querySelector('button') as HTMLButtonElement).focus();
+
+  el.state = 'error';
+  await el.updateComplete;
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('connect');
+});
+
+it('uses only the assertive error owner when transitioning to error', async () => {
+  const el = (await fixture(
+    html`<lr-realtime-session state="connected"></lr-realtime-session>`,
+  )) as LyraRealtimeSession;
+  const region = el.shadowRoot!
+    .querySelector('lr-live-region')!
+    .shadowRoot!.querySelector('[part="region"]')!;
+
+  el.state = 'error';
+  await el.updateComplete;
+  await aTimeout(0);
+
+  expect(el.shadowRoot!.querySelector('[part="error"]')!.getAttribute('role')).to.equal('alert');
+  expect(region.textContent).to.equal('');
+});

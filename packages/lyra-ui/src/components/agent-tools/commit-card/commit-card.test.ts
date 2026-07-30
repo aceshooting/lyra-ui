@@ -50,6 +50,36 @@ describe('lr-commit-card', () => {
     expect(event.detail.text).to.equal('abcdef1234567890');
   });
 
+  it('updates the copy button accessible name together with its visible copied state', async () => {
+    const el = (await fixture(
+      html`<lr-commit-card hash="abcdef1234567890"></lr-commit-card>`,
+    )) as LyraCommitCard;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).to.equal('Copy commit hash');
+    button.click();
+    await el.updateComplete;
+    const copiedText = button.textContent?.trim();
+    expect(copiedText).to.equal('Copied!');
+    expect(button.getAttribute('aria-label')).to.equal(copiedText);
+  });
+
+  it('resets copied feedback when disconnected so reconnecting starts in the resting state', async () => {
+    const host = (await fixture(html`
+      <div><lr-commit-card hash="abcdef1234567890"></lr-commit-card></div>
+    `)) as HTMLElement;
+    const el = host.querySelector('lr-commit-card') as LyraCommitCard;
+    (el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent?.trim()).to.equal('Copied!');
+
+    el.remove();
+    host.append(el);
+    await el.updateComplete;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    expect(button.textContent?.trim()).to.equal('Copy');
+    expect(button.getAttribute('aria-label')).to.equal('Copy commit hash');
+  });
+
   it('splits message into subject (first line) and body (remaining lines)', async () => {
     const el = (await fixture(
       html`<lr-commit-card message="Fix bug\n\nDetails about the fix"></lr-commit-card>`,
@@ -127,6 +157,14 @@ describe('lr-commit-card', () => {
     const time = negative.shadowRoot!.querySelector('[part="time"] time')!;
     expect(time).to.exist;
     expect(time.getAttribute('datetime')).to.equal(new Date(0).toISOString());
+  });
+
+  it('omits finite timestamps outside the ECMAScript TimeClip range without throwing', async () => {
+    const el = (await fixture(
+      html`<lr-commit-card .timestamp=${Number.MAX_VALUE}></lr-commit-card>`,
+    )) as LyraCommitCard;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="time"]')).to.not.exist;
   });
 
   it('is accessible with hash, message, author, timestamp, and files', async () => {
@@ -264,5 +302,27 @@ describe('lr-commit-card', () => {
     expect(css).to.match(/\[part='files-toggle'\]:hover/);
     expect(css).to.match(/\[part='file'\]:hover/);
     expect(css).to.match(/\[part='copy-button'\]:hover/);
+  });
+
+  it('contains a long unbroken file path and keeps its stats visible at 320px', async () => {
+    const path = `src/${'IDENTIFIER'.repeat(100)}.ts`;
+    const wrapper = (await fixture(html`
+      <div style="inline-size:320px; max-inline-size:320px;">
+        <lr-commit-card
+          files-collapsed="false"
+          .files=${[{ path, additions: 123, deletions: 45 }]}
+        ></lr-commit-card>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-commit-card') as LyraCommitCard;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const row = el.shadowRoot!.querySelector('[part="file"]') as HTMLElement;
+    const filePath = el.shadowRoot!.querySelector('[part="file-path"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    expect(row.scrollWidth).to.be.at.most(Math.ceil(row.getBoundingClientRect().width) + 1);
+    expect(filePath.scrollWidth).to.be.at.most(Math.ceil(filePath.getBoundingClientRect().width) + 1);
+    expect(el.shadowRoot!.querySelector('[part="file-additions"]')!.textContent).to.equal('+123');
+    expect(el.shadowRoot!.querySelector('[part="file-deletions"]')!.textContent).to.equal('-45');
   });
 });

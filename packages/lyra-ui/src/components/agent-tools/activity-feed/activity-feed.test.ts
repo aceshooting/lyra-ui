@@ -47,6 +47,27 @@ it('clips the cross axis instead of creating a phantom horizontal scrollbar for 
   expect(body.scrollWidth).to.equal(body.clientWidth);
 });
 
+it('keeps a long public label contained without collapsing the live summary at 320px', async () => {
+  const wrapper = await fixture(html`
+    <div style="inline-size:320px">
+      <lr-activity-feed
+        label=${`activity-${'unbroken'.repeat(40)}`}
+        .entries=${[{ id: 'latest', text: 'Latest step remains visible' }]}
+      ></lr-activity-feed>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-activity-feed') as LyraActivityFeed;
+  const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+  const headerRect = header.getBoundingClientRect();
+  const labelRect = label.getBoundingClientRect();
+  const summaryRect = summary.getBoundingClientRect();
+  expect(labelRect.right).to.be.at.most(Math.ceil(headerRect.right));
+  expect(summaryRect.width).to.be.greaterThan(24);
+  expect(summary.textContent!.trim()).to.equal('Latest step remains visible');
+});
+
 it('renders a literal icon hint when set, a tone dot otherwise', async () => {
   const el = (await fixture(
     html`<lr-activity-feed expanded .entries=${[
@@ -348,6 +369,52 @@ describe('follow contract (virtualized)', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="entry"]').length).to.equal(4);
   });
 
+  it('keeps following the tail when virtualizeThreshold switches either rendering path', async () => {
+    const VirtualList = customElements.get('lr-virtual-list') as
+      | (CustomElementConstructor & {
+          prototype: {
+            scrollToIndex(index: number, options?: { align?: 'start' | 'end' }): void;
+          };
+        })
+      | undefined;
+    expect(VirtualList).to.exist;
+    const originalScrollToIndex = VirtualList!.prototype.scrollToIndex;
+    const calls: Array<
+      [number, { align?: 'start' | 'end'; behavior?: 'auto' | 'smooth' } | undefined]
+    > = [];
+    VirtualList!.prototype.scrollToIndex = function (index, options): void {
+      calls.push([index, options]);
+      originalScrollToIndex.call(this, index, options);
+    };
+    try {
+      const el = (await fixture(html`
+        <lr-activity-feed
+          expanded
+          mode="live"
+          style="--lr-activity-feed-max-height:48px"
+          virtualize-threshold="99"
+          .entries=${makeEntries(20)}
+        ></lr-activity-feed>
+      `)) as LyraActivityFeed;
+      await twoFrames();
+
+      el.virtualizeThreshold = 1;
+      await el.updateComplete;
+      await twoFrames();
+      expect(calls.at(-1)).to.deep.equal([19, { align: 'end', behavior: 'auto' }]);
+      expect(el.follow, 'programmatic path switch must not release follow').to.be.true;
+
+      el.virtualizeThreshold = 99;
+      await el.updateComplete;
+      await twoFrames();
+      const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+      expect(body.scrollHeight - body.scrollTop - body.clientHeight).to.be.lessThan(2);
+      expect(el.follow).to.be.true;
+    } finally {
+      VirtualList!.prototype.scrollToIndex = originalScrollToIndex;
+    }
+  });
+
   it('calls scrollToIndex on the virtual-list to follow the latest entry in live mode', async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({
@@ -371,12 +438,14 @@ describe('follow contract (virtualized)', () => {
       const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
         scrollToIndex: (index: number, options?: { align?: 'start' | 'end' }) => void;
       };
-      let called: [number, { align?: 'start' | 'end' } | undefined] | undefined;
+      let called:
+        | [number, { align?: 'start' | 'end'; behavior?: 'auto' | 'smooth' } | undefined]
+        | undefined;
       list.scrollToIndex = (index, options) => (called = [index, options]);
       el.entries = [...el.entries, { id: 'new', text: 'Newest entry' }];
       await el.updateComplete;
       await twoFrames();
-      expect(called).to.deep.equal([5, { align: 'end' }]);
+      expect(called).to.deep.equal([5, { align: 'end', behavior: 'auto' }]);
     } finally {
       window.matchMedia = originalMatchMedia;
     }

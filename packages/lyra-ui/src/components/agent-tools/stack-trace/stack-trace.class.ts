@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './stack-trace.styles.js';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type StackGroup } from './stack-trace-parse.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
@@ -44,6 +45,8 @@ export interface LyraStackTraceEventMap {
  *   attribute sets this token.
  * @cssprop [--lr-stack-trace-font=var(--lr-font-mono)] - Font family for the parsed frames and the
  *   verbatim raw fallback.
+ * @cssprop [--lr-stack-trace-internal-frame-color=var(--lr-color-text-quiet)] - Internal frame foreground.
+ * @cssprop [--lr-stack-trace-interactive-color=var(--lr-color-brand)] - Interactive frame/toggle accent.
  */
 export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -143,7 +146,7 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
       if (run.length === 1) {
         rendered.push(this.renderFrame(run[0]!));
       } else {
-        const count = run.length;
+        const count = getNumberFormat(this.effectiveLocale).format(run.length);
         rendered.push(html`
           <button
             part="internal-toggle"

@@ -1,4 +1,4 @@
-import { html, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
@@ -12,8 +12,13 @@ import {
 } from '../../../internal/resource-loader.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from '../../media/map/map-loader.js';
-import type { GeoJsonDataLayer } from '../../media/map/map.class.js';
+import {
+  type GeoJsonDataLayer,
+  type LyraMap,
+} from '../../media/map/map.class.js';
+import { styles } from './geojson-view.styles.js';
 
 /** The three structural container tags accepted by the GeoJSON bridge. */
 export type GeoJsonTypeTag = 'Feature' | 'FeatureCollection' | 'GeometryCollection';
@@ -250,26 +255,34 @@ class LyraGeojsonViewBase extends LyraElement<LyraGeojsonViewEventMap> {}
  *
  * @customElement lr-geojson-view
  * @event lr-render-error - Fetch, parse, or shape-validation failure. `detail: { error }`.
- * @csspart base - The root container.
+ * @csspart base - The root container. It owns the named region in non-map states, the missing-peer
+ *   fallback, and while a lazy map initializes; the loaded map canvas then owns that landmark.
  * @csspart status - The feature-count status line.
+ * @csspart metadata - Searchable, selectable serialized GeoJSON metadata; scrolls inline rather
+ *   than widening a narrow allocation.
  * @csspart missing-library - The missing-maplibre-gl callout shown alongside the json-viewer fallback.
  * @csspart error - The error region.
  * @csspart spinner - The loading status region.
  */
 export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
-  static override styles = [LyraElement.styles, srOnly];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   @property() src = '';
+  /** Accessible-name fallback for the current region owner: the root in non-map states, or the
+   * loaded map canvas when the optional peer is available. */
   @property() name = '';
-  /** Shared search/anchor surface for rendered feature metadata and status text. */
+  /** Shared search/anchor surface for the ordinary-DOM serialized feature metadata and status
+   * text, independent of whether the optional map peer is available. */
   override async search(query: string): Promise<number> { return super.search(query); }
   override async searchNext(): Promise<boolean> { return super.searchNext(); }
   override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
   override clearSearch(): void { super.clearSearch(); }
 
   @state() private loadState: GeojsonViewState = { kind: 'idle' };
+  @state() private mapReady = false;
   private generation = 0;
   private lastLoadSrc = '';
+  private registeredMap: LyraMap | null = null;
 
   /** @internal test-only hook forcing the missing-peer fallback path without needing to actually
    *  uninstall `maplibre-gl` in this test environment. */
@@ -283,6 +296,34 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     event.stopPropagation();
   }
 
+  private onMapCanvasReady(map: LyraMap, _canvas: HTMLCanvasElement): void {
+    if (
+      !this.isConnected
+      || map !== this.registeredMap
+      || this.shadowRoot?.querySelector('lr-map') !== map
+      || this.loadState.kind !== 'loaded'
+      || !this.loadState.peerAvailable
+      || this.src !== this.lastLoadSrc
+    ) return;
+    this.mapReady = true;
+    // The callback runs in the same stack that constructs MapLibre's already-semantic canvas.
+    // Remove the outer landmark synchronously so no observer can see two named regions before Lit's
+    // state-driven render commits the same ownership change.
+    const base = this.shadowRoot?.querySelector('[part="base"]');
+    base?.removeAttribute('role');
+    base?.removeAttribute('aria-label');
+  }
+
+  private syncMapCanvasReadyCallback(): void {
+    const next = this.shadowRoot?.querySelector('lr-map') as LyraMap | null;
+    if (next === this.registeredMap) return;
+    if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
+    this.registeredMap = next;
+    if (next) {
+      setMapCanvasReadyCallback(next, (canvas) => this.onMapCanvasReady(next, canvas));
+    }
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc) {
@@ -292,12 +333,16 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
 
   override disconnectedCallback(): void {
     this.generation++;
+    if (this.registeredMap) setMapCanvasReadyCallback(this.registeredMap, null);
+    this.registeredMap = null;
     this.loadState = { kind: 'idle' };
+    this.mapReady = false;
     super.disconnectedCallback();
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncMapCanvasReadyCallback();
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
@@ -305,6 +350,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     const generation = ++this.generation;
     const signal = this.beginAbortableLoad();
     this.lastLoadSrc = this.src;
+    this.mapReady = false;
     if (!this.src) { this.loadState = { kind: 'idle' }; return; }
     const url = safeFetchUrl(this.src);
     if (!url) {
@@ -351,10 +397,15 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
     this.emit('lr-render-error', { error });
   }
 
+  private get effectiveLabel(): string {
+    return this.getAttribute('aria-label') || this.name || this.localize('geojsonViewLabel');
+  }
+
   private renderBody(): TemplateResult {
     switch (this.loadState.kind) {
       case 'loaded': {
         const { value, featureCount, center, zoom, peerAvailable } = this.loadState;
+        const metadata = JSON.stringify(value, null, 2);
         const statusText = this.localize(
           featureCount === 1 ? 'geojsonViewFeatureCount' : 'geojsonViewFeatureCountPlural',
           undefined,
@@ -363,6 +414,7 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
         if (!peerAvailable) {
           return html`
             <p part="missing-library">${this.localize('geojsonViewMissingMapLibrary')}</p>
+            <pre part="metadata">${metadata}</pre>
             <lr-json-viewer
               .data=${value}
               collapsed-depth="2"
@@ -372,21 +424,21 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
           `;
         }
         const dataLayers: GeoJsonDataLayer[] = [{ sourceId: 'lr-geojson', geojson: value as never }];
-        const label = this.getAttribute('aria-label') || this.name || this.localize('geojsonViewLabel');
         return html`
           <div part="status" role="status">${statusText}</div>
+          <pre part="metadata">${metadata}</pre>
           <lr-map
             .center=${center}
             .zoom=${zoom}
             .dataLayers=${dataLayers}
-            label=${label}
+            label=${this.effectiveLabel}
             @lr-map-load=${this.stopChildEvent}
             @lr-map-click=${this.stopChildEvent}
           ></lr-map>
         `;
       }
       case 'loading':
-        return html`<div part="spinner" role="status"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
+        return html`<div part="spinner"><lr-skeleton variant="rect" label=${this.localize('loadingDocument')}></lr-skeleton></div>`;
       case 'error':
         return html`<div part="error" role="alert">${this.loadState.message}</div>`;
       case 'idle':
@@ -396,7 +448,14 @@ export class LyraGeojsonView extends TextViewerTarget(LyraGeojsonViewBase) {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" role="region" aria-label=${this.getAttribute('aria-label') || this.name || this.localize('geojsonViewLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
+    const mapOwnsLandmark = this.loadState.kind === 'loaded'
+      && this.loadState.peerAvailable
+      && this.mapReady;
+    return html`<div
+      part="base"
+      role=${mapOwnsLandmark ? nothing : 'region'}
+      aria-label=${mapOwnsLandmark ? nothing : this.effectiveLabel}
+    >${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

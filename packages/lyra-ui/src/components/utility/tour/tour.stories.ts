@@ -11,7 +11,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A spotlight-and-step guided walkthrough for first-run onboarding: a sequence of steps, each anchored to a target element elsewhere in the page, shown against a dimmed backdrop with a cutout highlighting the current target, plus Next/Previous/Skip controls and a step-progress indicator. `steps` is fully controlled -- this component never mutates it.',
+          'A spotlight-and-step guided walkthrough for first-run onboarding: a sequence of steps, each anchored to a target element elsewhere in the page, shown against a dimmed backdrop with a cutout highlighting the current target, plus Next/Previous/Skip controls and a step-progress indicator. Default steps are modal and trap focus in the panel; an `interactiveTarget` step is nonmodal and adds a two-way Tab route between the panel and the live target. `steps` is fully controlled -- this component never mutates it.',
       },
     },
   },

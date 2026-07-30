@@ -10,6 +10,7 @@ it('renders a link with design-token color and no default UA underline', async (
   // Browser default unvisited-link color is rgb(0, 0, 238); a token-styled link must not fall back to it.
   expect(style.color).to.not.equal('rgb(0, 0, 238)');
   expect(style.textDecorationLine).to.equal('none');
+  expect(base.getAttribute('aria-current')).to.equal('false');
 });
 
 it('shows a focus ring on the link via :focus-visible', async () => {
@@ -28,6 +29,7 @@ it('gives the current-page span a distinct font-weight from a plain link', async
   const linkBase = link.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const currentBase = current.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(getComputedStyle(currentBase).fontWeight).to.not.equal(getComputedStyle(linkBase).fontWeight);
+  expect(currentBase.getAttribute('aria-current')).to.equal('page');
 });
 
 it('is accessible', async () => {

@@ -72,9 +72,6 @@ export const styles = css`
   [part='disclosure']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
-  [part='disclosure']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-  }
   [part='item']:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }

@@ -458,6 +458,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       aria-disabled=${command.disabled ? "true" : "false"}
       aria-setsize=${total}
       aria-posinset=${row.index + 1}
+      tabindex="-1"
       ?disabled=${command.disabled}
       @mouseenter=${() => {
         if (!command.disabled) this.setActiveIndex(this.filtered, row.index);

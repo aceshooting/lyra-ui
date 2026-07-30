@@ -2,7 +2,14 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { finiteNumber, finiteRange, isSliderKey, decimalPlaces } from '../../../internal/numbers.js';
+import {
+  decimalPlaces,
+  finiteInterpolate,
+  finiteNumber,
+  finiteRange,
+  finiteRatio,
+  isSliderKey,
+} from '../../../internal/numbers.js';
 import { styles } from './time-range.styles.js';
 
 export type TimeRangeHandle = 'start' | 'end';
@@ -296,11 +303,7 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // recovery. 0% is at least a stable, well-defined position.
     const { lo, hi } = this.domain();
     const safeValue = finiteRange(value, lo, lo, hi);
-    const span = hi - lo;
-    const ratio = Number.isFinite(span) && span !== 0
-      ? (safeValue - lo) / span
-      : (safeValue / 2 - lo / 2) / (hi / 2 - lo / 2 || 1);
-    return Math.min(1, Math.max(0, finiteNumber(ratio, 0))) * 100;
+    return finiteRatio(safeValue, lo, hi) * 100;
   }
 
   /** Each handle's actual reachable sub-range, bounded by its sibling
@@ -488,12 +491,12 @@ export class LyraTimeRange extends LyraElement<LyraTimeRangeEventMap> {
     // rightward drag would move the handle the wrong way.
     const ratio = Math.min(1, Math.max(0, drag.rtl ? 1 - raw : raw));
     const { lo, hi } = this.domain();
-    const value = lo + ratio * (hi - lo);
+    const value = finiteInterpolate(lo, hi, ratio);
     drag.changed = this.setValue(drag.handle, value, false) || drag.changed;
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    this.endDrag(e.pointerId, true);
+    this.endDrag(e.pointerId, e.type === 'pointerup');
   };
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */

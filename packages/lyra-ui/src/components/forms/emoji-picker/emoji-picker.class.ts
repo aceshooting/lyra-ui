@@ -134,10 +134,23 @@ class EmojiPickerBase extends LyraElement<LyraEmojiPickerEventMap> {}
 export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
   static override styles = [LyraElement.styles, styles];
 
+  private _groups: EmojiPickerGroup[] = [];
+  private groupsWereSet = false;
+
   /** The full, ungrouped data set to search/render. Consumer-supplied — this component ships no
-   *  emoji data of its own. Empty (the default) renders no groups/emojis at all, just the search
-   *  input and an empty state. See `emoji-data-loader.ts` for an optional convenience loader. */
-  @property({ attribute: false }) groups: EmojiPickerGroup[] = [];
+   *  emoji data of its own. Leaving the property unset allows the optional convenience loader to
+   *  provide defaults; explicitly assigning `[]` opts out and renders only the search input and
+   *  empty state. See `emoji-data-loader.ts` for the loader contract. */
+  @property({ attribute: false })
+  get groups(): EmojiPickerGroup[] {
+    return this._groups;
+  }
+  set groups(value: EmojiPickerGroup[]) {
+    const old = this._groups;
+    this.groupsWereSet = true;
+    this._groups = Array.isArray(value) ? value : [];
+    this.requestUpdate('groups', old);
+  }
 
   /** Accessible name forwarded from the host to the internal emoji listbox. Empty falls back to
    *  the localized default grid label. */
@@ -180,9 +193,9 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     // `groups` (even an empty array set intentionally) always wins, matching the "consumer-supplied
     // data takes precedence over any built-in default" convention this library uses elsewhere (e.g.
     // <lr-lite-chart>'s pointText falling back to a built-in template only when unset).
-    if (this.groups.length > 0) return;
+    if (this.groupsWereSet) return;
     void this.loadGroups().then((loaded) => {
-      if (!this.isConnected || !loaded || this.groups.length > 0) return;
+      if (!this.isConnected || !loaded || this.groupsWereSet) return;
       this.groups = loaded;
     });
   }

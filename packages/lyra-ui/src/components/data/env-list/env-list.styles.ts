@@ -3,20 +3,28 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
+    box-sizing: border-box;
     display: grid;
-    grid-template-columns: max-content 1fr;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr);
     gap: var(--lr-space-xs) var(--lr-space-s);
     align-items: baseline;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin: 0;
   }
   [part='base'][data-empty] {
     display: block;
   }
   [part='name'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     font-family: var(--lr-font-mono, ui-monospace, monospace);
     font-weight: var(--lr-font-weight-semibold);
+    overflow-wrap: anywhere;
     margin: 0;
   }
   [part='value-cell'] {
@@ -24,9 +32,13 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin: 0;
   }
   [part='value'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     font-family: var(--lr-font-mono, ui-monospace, monospace);
     overflow-wrap: anywhere;
   }
@@ -38,6 +50,9 @@ export const styles = css`
     border: var(--lr-size-1px) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     padding: var(--lr-space-2xs) var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
   [part='reveal-button']:hover,

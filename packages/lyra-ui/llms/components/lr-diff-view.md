@@ -87,6 +87,7 @@ consumer can compute or unit-test the same alignment without instantiating the e
   explicit performance-risk opt-out.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
+- Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.
 
 **Additional API surface:**
 

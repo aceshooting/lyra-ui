@@ -533,7 +533,7 @@ describe('rendering non-text outputs', () => {
     expect(imgs[0].getAttribute('src')).to.equal('data:image/png;base64,AAAA');
     expect(imgs[1].getAttribute('src')).to.equal('data:image/jpeg;base64,BBBB');
     expect(imgs[0].getAttribute('alt')).to.equal('Chart showing revenue');
-    expect(imgs[1].getAttribute('alt')).to.equal('');
+    expect(imgs[1].getAttribute('alt')).to.equal('Code cell 2');
   });
 
   it('lazily sanitizes and renders an image/svg+xml output, stripping unsafe markup', async () => {
@@ -549,6 +549,8 @@ describe('rendering non-text outputs', () => {
     const output = rowRoot(el).querySelector('[part~="output"]')!;
     expect(output.querySelector('script')).to.not.exist;
     expect(output.querySelector('circle')).to.exist;
+    expect(output.getAttribute('role')).to.equal('img');
+    expect(output.getAttribute('aria-label')).to.equal('Code cell 1');
   });
 
   it('lazily sanitizes and renders a text/html output, stripping unsafe markup', async () => {
@@ -1042,4 +1044,16 @@ it('gives the output-toggle hover/focus-visible', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/lr-virtual-list::part\(output-toggle\):hover/);
   expect(css).to.match(/lr-virtual-list::part\(output-toggle\):focus-visible[^{]*\{[^}]*outline:/);
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer></lr-notebook-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-notebook-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-notebook-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });

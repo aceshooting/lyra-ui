@@ -121,6 +121,20 @@ describe('lr-copy-button', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Copy');
   });
 
+  it('clears copied feedback immediately when the source value changes', async () => {
+    const el = (await fixture(html`
+      <lr-copy-button value="old" feedback-duration="10000"></lr-copy-button>
+    `)) as LyraCopyButton;
+    const button = el.shadowRoot!.querySelector('[part="base"]') as HTMLButtonElement;
+    button.click();
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copied!');
+
+    el.value = 'new';
+    await el.updateComplete;
+    expect(button.getAttribute('aria-label')).to.equal('Copy');
+  });
+
   it('uses string overrides for both resting and confirmation labels', async () => {
     const el = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     el.strings = { copy: 'Copier', copied: 'Copié' };

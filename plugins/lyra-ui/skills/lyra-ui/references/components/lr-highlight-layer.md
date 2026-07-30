@@ -20,7 +20,8 @@ positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), `activeId: string | null =
 null` (attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
-activation.
+activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
+dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation.
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
 re-click of the same source citation).

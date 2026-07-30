@@ -85,6 +85,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   private nextOpaqueId = 0;
   private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
   private mutationObserver?: MutationObserver;
+  private rehomeTabFocus = false;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -146,10 +147,23 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
 
   /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tabs-change`): this corrects *invalid* state rather than responding to a user picking a different tab. */
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     if (!changed.has('tabs') && !changed.has('active')) return;
     const current = this.tabs.find((t) => t.slotName === this.active);
     if (current && !current.disabled) return;
+    this.rehomeTabFocus =
+      (this.renderRoot as ShadowRoot).activeElement?.getAttribute('part') ===
+      'tab';
     this.active = this.tabs.find((t) => !t.disabled)?.slotName ?? '';
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!this.rehomeTabFocus) return;
+    this.rehomeTabFocus = false;
+    this.renderRoot
+      .querySelector<HTMLElement>('[part="tab"][tabindex="0"]')
+      ?.focus();
   }
 
   /** Activates `tab` (no-op for a disabled tab or one that's already active) and emits `lr-tabs-change`. */

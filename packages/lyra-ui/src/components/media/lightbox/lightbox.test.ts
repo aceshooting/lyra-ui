@@ -346,8 +346,25 @@ describe('showCounter', () => {
     )) as LyraLightbox;
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="counter"]')).to.equal(null);
+    expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('Image 1 of 2');
     el.open = false;
   });
+});
+
+it('treats non-finite goTo() indexes as no-ops and emits no terminal index event', async () => {
+  const el = (await fixture(html`
+    <lr-lightbox .images=${[image, { ...image, caption: 'Second' }]}></lr-lightbox>
+  `)) as LyraLightbox;
+  let changes = 0;
+  el.addEventListener('lr-index-change', () => changes++);
+
+  el.goTo(Number.NaN);
+  el.goTo(Number.POSITIVE_INFINITY);
+  el.goTo(Number.NEGATIVE_INFINITY);
+  await el.updateComplete;
+
+  expect(el.index).to.equal(0);
+  expect(changes).to.equal(0);
 });
 
 // Regression coverage for the shadow-part-selector-specificity defect class -- a consumer's

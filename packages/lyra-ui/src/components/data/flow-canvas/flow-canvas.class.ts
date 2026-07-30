@@ -350,6 +350,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.connectState = undefined;
     this.connecting = false;
     this.connectInvalidNodeId = null;
+    this.keyboardConnectSourceId = null;
+    this.keyboardConnectTargetIndex = 0;
     window.removeEventListener('pointermove', this.onConnectPointerMove);
     window.removeEventListener('pointerup', this.onConnectPointerUp);
     window.removeEventListener('pointercancel', this.onConnectPointerCancel);
@@ -381,8 +383,14 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('nodes')) {
+      this.keyboardConnectSourceId = null;
+      this.keyboardConnectTargetIndex = 0;
       this.pruneNodeCaches();
       this.syncDefaultCards();
+    }
+    if ((changed.has('connectable') && !this.connectable) || (changed.has('locked') && this.locked)) {
+      this.keyboardConnectSourceId = null;
+      this.keyboardConnectTargetIndex = 0;
     }
     if (changed.has('nodes') || changed.has('selectedNodeIds') || changed.has('decorations')) {
       this.pushCardPropsAll(changed);
@@ -698,6 +706,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
 
   setViewport(next: { x: number; y: number; zoom: number }): void {
+    if (this.locked) return;
     this.panX = finiteNumber(next.x, this.panX);
     this.panY = finiteNumber(next.y, this.panY);
     this.zoomLevel = this.clampZoom(next.zoom);
@@ -721,7 +730,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   };
 
   fit(options?: { padding?: number }): void {
-    if (this.nodes.length === 0) return;
+    if (this.locked || this.nodes.length === 0) return;
     const padding = finiteRange(options?.padding ?? DEFAULT_FIT_PADDING, DEFAULT_FIT_PADDING, 0);
     let minX = Infinity;
     let minY = Infinity;
@@ -1330,14 +1339,13 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const drag = this.nodeDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
     this.nodeDrag = undefined;
-    this.dragEdgeRefs = undefined;
     window.removeEventListener('pointermove', this.onNodePointerMove);
     window.removeEventListener('pointerup', this.onNodePointerUp);
     window.removeEventListener('pointercancel', this.onNodePointerUp);
     window.removeEventListener('lostpointercapture', this.onNodePointerUp);
     const previous = { x: drag.startX, y: drag.startY };
     const position = { x: drag.currentX ?? drag.startX, y: drag.currentY ?? drag.startY };
-    if (position.x !== previous.x || position.y !== previous.y) {
+    if (e.type === 'pointerup' && (position.x !== previous.x || position.y !== previous.y)) {
       this.emit('lr-node-move', { id: drag.nodeId, position, previous });
     }
     // `requestUpdate()` alone cannot snap the wrapper back when the host doesn't apply the move
@@ -1351,6 +1359,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     const resetNode = this.nodes.find((n) => n.id === drag.nodeId);
     const resetPos = resetNode ? this.nodePosition(resetNode) : previous;
     drag.wrapper.style.transform = `translate(${resetPos.x}px, ${resetPos.y}px)`;
+    this.updateIncidentEdges(drag.nodeId, resetPos.x, resetPos.y);
+    this.dragEdgeRefs = undefined;
     this.requestUpdate();
   };
 

@@ -3,17 +3,23 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-l);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='field'] {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='label'] {
     display: block;
@@ -30,8 +36,11 @@ export const styles = css`
   }
 
   [part='field'] > lr-select,
+  [part='field'] > lr-checkbox,
   [part='field'] > input.control {
     inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 
   input.control {
@@ -72,6 +81,15 @@ export const styles = css`
     margin: 0;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
+  }
+  [part='label'],
+  [part='description'],
+  [part='error'],
+  [part='unsupported'],
+  [part='empty'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='error'] {
     margin: 0;

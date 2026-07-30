@@ -28,6 +28,8 @@ const GIT_STATUS_LETTER: Partial<Record<GitStatus, string>> = {
   ignored: '!',
 };
 
+const MAX_DATE_EPOCH_MS = 8_640_000_000_000_000;
+
 /** The letters above are terse visual shorthand with no meaning to a screen reader, so each one
  *  also carries a localized expansion as its accessible name. Reuses `<lr-file-tree>`'s shared
  *  `gitStatus*` keys (the same `GitStatus` vocabulary) rather than minting commit-card-specific
@@ -114,6 +116,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
+    this.copyTimeoutId = undefined;
+    this.justCopied = false;
   }
 
   private get subject(): string {
@@ -130,7 +134,13 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
    *  non-finite here matters because `new Date(NaN).toISOString()` *throws* (not just an "Invalid
    *  Date" render) inside the `<time datetime>` binding below. */
   private get validTimestamp(): number | undefined {
-    if (this.timestamp == null || !Number.isFinite(this.timestamp)) return undefined;
+    if (
+      this.timestamp == null ||
+      !Number.isFinite(this.timestamp) ||
+      this.timestamp > MAX_DATE_EPOCH_MS
+    ) {
+      return undefined;
+    }
     return finiteRange(this.timestamp, this.timestamp, 0);
   }
 
@@ -199,7 +209,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
             ? html`<button
                 part="copy-button"
                 type="button"
-                aria-label=${this.localize('commitCardCopyHash')}
+                aria-label=${this.justCopied ? this.localize('copied') : this.localize('commitCardCopyHash')}
                 @click=${this.onCopy}
               >
                 ${this.justCopied ? this.localize('copied') : this.localize('copy')}
@@ -235,7 +245,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                                 > `
                             : ''}${f.path}</span
                         >
-                        <span>
+                        <span class="file-stats">
                           <span part="file-additions">+${f.additions}</span>
                           <span part="file-deletions">-${f.deletions}</span>
                         </span>

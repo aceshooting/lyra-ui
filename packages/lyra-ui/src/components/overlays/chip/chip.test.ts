@@ -176,6 +176,15 @@ describe('remove affordance', () => {
     expect(btn.getAttribute('aria-label')).to.equal('Remove research');
   });
 
+  it('lets a host aria-label override the computed remove-button label', async () => {
+    const el = (await fixture(
+      html`<lr-chip removable aria-label="Delete research filter">research</lr-chip>`,
+    )) as LyraChip;
+    const btn = el.shadowRoot!.querySelector('[part="remove-button"]') as HTMLElement;
+    expect(btn.getAttribute('aria-label')).to.equal('Delete research filter');
+    expect(el.textContent!.trim()).to.equal('research');
+  });
+
   it('excludes icon-slot text from the computed remove-button label', async () => {
     const el = (await fixture(
       html`<lr-chip removable><span slot="icon">●</span>research</lr-chip>`,
@@ -250,6 +259,19 @@ it('is accessible in a populated removable state with an icon and a non-neutral 
 });
 
 describe('selected', () => {
+  it('latches toggle mode at assignment time across a same-task true-to-false update', async () => {
+    const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
+
+    el.selected = true;
+    el.selected = false;
+    await el.updateComplete;
+
+    expect(el.toggleable).to.be.true;
+    const button = el.shadowRoot!.querySelector('[part="toggle-button"]') as HTMLButtonElement;
+    expect(button).to.exist;
+    expect(button.getAttribute('aria-pressed')).to.equal('false');
+  });
+
   it('is not interactive by default (no role/tabindex on [part=base])', async () => {
     const el = (await fixture(html`<lr-chip>Tag</lr-chip>`)) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

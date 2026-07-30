@@ -69,6 +69,8 @@ type DisplayEntry = DisplayCatalogEntry<LyraModelCatalogEntry>;
 
 export interface LyraModelSelectEventMap {
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  input: Event;
+  change: Event;
   blur: CustomEvent<undefined>;
   focus: CustomEvent<undefined>;
 }
@@ -279,10 +281,24 @@ export class LyraModelSelect extends LyraElement<LyraModelSelectEventMap> {
     this.updateValidity();
   }
 
-  protected override willUpdate(): void {
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    let modeChanged = false;
     if (this.hasUpdated) {
       const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
-      this.suppressControlBlur = renderedClosedMode !== this.closedMode;
+      modeChanged = renderedClosedMode !== this.closedMode;
+      this.suppressControlBlur = modeChanged;
+    }
+    if (
+      this.open &&
+      (changed.has('catalog') || changed.has('value') || changed.has('allowCustom'))
+    ) {
+      this.activeIndex = -1;
+      // A live catalog refresh changes the suggestions underneath the current draft, not the
+      // draft itself. Rebase only for controlled-value changes or a structural mode switch;
+      // otherwise a provider polling its model list would erase what the user is typing.
+      if (changed.has('value') || changed.has('allowCustom') || modeChanged) {
+        this.query = this.labelFor(this._value);
+      }
     }
     if (!this.hasUpdated) {
       this.hasHintSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'hint');

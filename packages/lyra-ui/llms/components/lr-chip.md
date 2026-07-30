@@ -168,7 +168,9 @@ library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherw
 Since CSS alone can't parameterize `:nth-child` on a runtime prop, `<lr-chip-group>` reaches
 directly into the light DOM and sets each excess child's own `hidden` property once `max-visible` is
 exceeded — the same approach `<lr-split>` uses to set each panel's inline `flex`/`order`, rather
-than a stylesheet-only solution.
+than a stylesheet-only solution. It observes live author changes to each managed child's `hidden`
+state and restores the latest author-owned value when ownership ends or the group disconnects;
+reconnecting reapplies the current collapsed state.
 
 **Known gotchas:**
 - `<lr-chip>`'s accessible remove-button label ("Remove {text}") is computed only from the default

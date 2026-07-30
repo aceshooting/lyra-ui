@@ -24,7 +24,7 @@ it('shows a loading skeleton and aria-busy while maplibre-gl loads, then swaps t
 
   await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
 
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="container"]')).to.exist;
 });
@@ -119,7 +119,7 @@ it('renders a visible, accessible error state instead of a blank container when 
     const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(errorEl.getAttribute('role')).to.equal('alert');
     expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
-    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.map).to.be.undefined;
     expect(el.shadowRoot!.querySelectorAll('[part="container"]').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
@@ -319,37 +319,39 @@ it('renders the legend panel once entries are set, and removes it again once cle
 describe('aria-label forwarding', () => {
   it('falls back to the localized default when neither label nor a host aria-label is set', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('role')).to.equal('group');
-    expect(base.getAttribute('aria-label')).to.equal('Map');
+    expect(base.getAttribute('role')).to.equal(null);
+    expect(base.getAttribute('aria-label')).to.equal(null);
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Map');
   });
 
   it('uses a .strings override for the localized default when neither label nor a host aria-label is set', async () => {
     const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
     el.strings = { map: 'Carte' };
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Carte');
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Carte');
   });
 
   it('uses the label prop when set', async () => {
     const el = (await fixture(html`<lr-map label="Delivery regions"></lr-map>`)) as LyraMap;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Delivery regions');
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Delivery regions');
   });
 
-  it('forwards a host aria-label attribute onto [part="base"] when label is unset', async () => {
+  it('forwards a host aria-label attribute onto the MapLibre canvas when label is unset', async () => {
     const el = (await fixture(html`<lr-map aria-label="Forwarded label"></lr-map>`)) as LyraMap;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Forwarded label');
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
   });
 
   it('prefers the forwarded host aria-label over the label prop when both are set', async () => {
     const el = (await fixture(
       html`<lr-map label="Delivery regions" aria-label="Forwarded label"></lr-map>`,
     )) as LyraMap;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Forwarded label');
+    await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+    expect(el.map!.getCanvas().getAttribute('aria-label')).to.equal('Forwarded label');
   });
 });
 
@@ -1075,6 +1077,114 @@ it('renders a colored marker and an html popup', async () => {
   expect(popupContent.textContent).to.contain('Station A');
 });
 
+it('puts the host-first localized map name and effective locale on the real MapLibre focus owner', async () => {
+  const el = (await fixture(html`
+    <lr-map
+      aria-label="Delivery map"
+      lang="fr-FR"
+      .strings=${{ map: 'Carte', close: 'Fermer' }}
+    ></lr-map>
+  `)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+
+  const canvas = el.map!.getCanvas() as HTMLCanvasElement;
+  const container = el.shadowRoot!.querySelector('[part="container"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(canvas.getAttribute('aria-label')).to.equal('Delivery map');
+  expect(container.getAttribute('lang')).to.equal('fr-FR');
+  expect(base.getAttribute('role')).to.equal(null);
+  expect(base.getAttribute('aria-label')).to.equal(null);
+
+  el.setAttribute('aria-label', 'Carte des livraisons');
+  await el.updateComplete;
+  expect(canvas.getAttribute('aria-label')).to.equal('Carte des livraisons');
+});
+
+it('synchronizes popup-capable marker disclosure semantics and localized popup ownership', async () => {
+  const el = (await fixture(html`
+    <lr-map lang="fr-FR" .strings=${{ close: 'Fermer' }}></lr-map>
+  `)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+  el.markers = [{ id: 'station', lngLat: [10, 20], label: 'Gare centrale' }];
+  await el.updateComplete;
+
+  const marker = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  const popupId = marker.getAttribute('aria-controls');
+  expect(marker.getAttribute('aria-expanded')).to.equal('false');
+  expect(popupId).to.be.a('string').and.not.equal('');
+
+  marker.click();
+  await waitUntil(() => el.shadowRoot!.querySelector('.maplibregl-popup') != null, 'popup never opened');
+  const popup = el.shadowRoot!.querySelector('.maplibregl-popup') as HTMLElement;
+  expect(popup.id).to.equal(popupId);
+  expect(popup.getAttribute('role')).to.equal('dialog');
+  expect(popup.closest('[lang="fr-FR"]')).to.exist;
+  expect(marker.getAttribute('aria-expanded')).to.equal('true');
+  expect(
+    (popup.querySelector('.maplibregl-popup-close-button') as HTMLButtonElement).getAttribute('aria-label'),
+  ).to.equal('Fermer');
+
+  marker.click();
+  await waitUntil(() => marker.getAttribute('aria-expanded') === 'false', 'marker never collapsed');
+});
+
+it('skips malformed/non-finite markers without aborting valid marker reconciliation', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { id: 'missing', lngLat: undefined },
+    { id: 'infinite', lngLat: [Number.POSITIVE_INFINITY, 20] },
+    { id: 'bad-latitude', lngLat: [10, 91] },
+    { id: 'valid', lngLat: [11, 21], label: 'Valid' },
+  ] as unknown as typeof el.markers;
+  await el.updateComplete;
+
+  const markers = [...el.shadowRoot!.querySelectorAll('.maplibregl-marker')];
+  expect(markers.length).to.equal(1);
+  expect(markers[0]!.getAttribute('aria-label')).to.equal('Valid');
+});
+
+it('keeps explicit marker ids separate from synthesized idless-coordinate identities', async () => {
+  const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+
+  el.markers = [
+    { id: '0,0#0', lngLat: [10, 20], label: 'Explicit' },
+    { lngLat: [0, 0], label: 'Idless' },
+  ];
+  await el.updateComplete;
+
+  const labels = [...el.shadowRoot!.querySelectorAll('.maplibregl-marker')].map(
+    (marker) => marker.getAttribute('aria-label'),
+  );
+  expect(labels).to.have.members(['Explicit', 'Idless']);
+  expect(labels.length).to.equal(2);
+});
+
+it('contains an unbroken legend label inside a 280px allocation', async () => {
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 280px">
+      <lr-map
+        style="block-size: 200px"
+        .legend=${[{ color: '#f00', label: 'Legend'.repeat(250) }]}
+      ></lr-map>
+    </div>
+  `)) as HTMLElement;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+});
+
 it('does not throw or leave a dangling marker when the element disconnects while applyMarkers is running', async () => {
   const el = (await fixture(html`<lr-map></lr-map>`)) as LyraMap;
   el.mapStyle = RASTER_STYLE;
@@ -1115,14 +1225,32 @@ it("updates an existing marker's color when it changes", async () => {
   // Confirm the marker was actually constructed with the original color first,
   // so the assertion below is verifying an in-place update rather than
   // coincidentally matching a marker that was only ever created once.
-  expect(instances.get('a')!.getElement().innerHTML).to.include('ff0000');
+  expect([...instances.values()][0]!.getElement().innerHTML).to.include('ff0000');
 
   el.markers = [{ id: 'a', lngLat: [0, 0], color: '#00ff00' }];
   await el.updateComplete;
-  const marker = instances.get('a')!;
+  const marker = [...instances.values()][0]!;
   // maplibre-gl's default marker SVG carries the fill on its path -- assert the
   // instance was told about the new color rather than left at construction-time red.
   expect(marker.getElement().innerHTML).to.include('00ff00');
+});
+
+it('rejects url paint servers from marker colors', async () => {
+  const el = await fixture<LyraMap>(html`<lr-map></lr-map>`);
+  el.mapStyle = RASTER_STYLE;
+  await el.updateComplete;
+  await waitUntil(() => el.map != null, 'map never initialized', { timeout: 2000 });
+  el.map!.fire('load');
+  el.markers = [
+    {
+      id: 'unsafe',
+      lngLat: [0, 0],
+      color: 'url("data:image/svg+xml,<svg/>")',
+    },
+  ];
+  await el.updateComplete;
+  const marker = el.shadowRoot!.querySelector('.maplibregl-marker') as HTMLElement;
+  expect(marker.innerHTML.toLowerCase()).to.not.contain('url(');
 });
 
 it('does not collide two id-less markers placed at the same coordinates', async () => {

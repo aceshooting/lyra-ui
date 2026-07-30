@@ -98,7 +98,20 @@ export interface LyraBrowserFrameEventMap {
 export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  @property({ attribute: 'frame-src' }) frameSrc = '';
+  private _frameSrc = '';
+
+  @property({ attribute: 'frame-src' })
+  get frameSrc(): string {
+    return this._frameSrc;
+  }
+  set frameSrc(next: string) {
+    const old = this._frameSrc;
+    this._frameSrc = next ?? '';
+    if (old === this._frameSrc) return;
+    this.contentRect = null;
+    this.requestUpdate('frameSrc', old);
+  }
+
   @property() url = '';
   @property({ reflect: true }) status: BrowserFrameStatus = 'idle';
   @property({ reflect: true }) controller: BrowserFrameController = 'agent';
@@ -170,6 +183,10 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     this.recomputeContentRect();
   };
 
+  private onFrameError = (): void => {
+    this.contentRect = null;
+  };
+
   private onTakeOver = (): void => {
     const requested = this.controller === 'agent' ? 'user' : 'agent';
     this.emit('lr-take-over', { controller: requested });
@@ -210,6 +227,7 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
                 src=${safeSrc}
                 alt=${this.localize('browserFrameViewOf', undefined, { url: this.url })}
                 @load=${this.onFrameLoad}
+                @error=${this.onFrameError}
               />`
             : nothing}
           ${this.pings.map(

@@ -6,7 +6,7 @@
 - **Class** `LyraSchemaViewer`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,7 +29,9 @@ keywords. `SchemaValidationIssue = { path: string; message: string; severity?: '
 **Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
-`description`, `constraints`, `issue`, `limit`, `empty`.
+`description`, `constraints`, `issue`, `limit`, `issue-limit`, `empty`. `issue-limit` is the
+localized resource-ceiling status shown when caller-supplied validation issues exceed the rendered
+issue cap.
 
 `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
@@ -43,8 +45,10 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 **Themeable custom properties:** `--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see
 above); otherwise shared tokens only.
 
-Rendering is capped at 500 schema nodes; `limit` reports truncation. Cycles stop at the repeated
-node rather than recursing. **Slots:** none. **Optional peer deps:** none.
+Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
+`issue-limit` report their respective truncation. Issues are indexed by path once before recursive
+rendering instead of rescanning the full input for every node. Cycles stop at the repeated node
+rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
@@ -53,6 +57,7 @@ import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
+- `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
 - `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
 - `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.

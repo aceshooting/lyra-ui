@@ -167,6 +167,21 @@ it("clamps a NaN, negative, or oversized index to a valid slide instead of NaN/o
   ).to.equal("true");
 });
 
+it("ignores non-finite goTo() requests without emitting or corrupting the active index", async () => {
+  const el = await carousel();
+  let changes = 0;
+  el.addEventListener("lr-slide-change", () => (changes += 1));
+
+  el.goTo(Number.NaN);
+  el.goTo(Number.POSITIVE_INFINITY);
+  el.goTo(Number.NEGATIVE_INFINITY);
+  await el.updateComplete;
+
+  expect(el.index).to.equal(0);
+  expect(changes).to.equal(0);
+  expect(([...el.children] as HTMLElement[])[0]!.hidden).to.be.false;
+});
+
 it("clamps invalid indices in the current update without scheduling a follow-up update", async () => {
   const globalWarnings = (globalThis as { litIssuedWarnings?: Set<string> })
     .litIssuedWarnings;
@@ -335,6 +350,29 @@ it("restores wrapper-owned visibility and slide metadata when slides are removed
   expect(first.hidden).to.be.false;
   expect(first.getAttribute("aria-label")).to.equal("Author label");
   parent.append(el);
+});
+
+it("reapplies slide visibility after disconnect and reconnect", async () => {
+  const el = await carousel(html`
+    <lr-carousel>
+      <lr-carousel-item>One</lr-carousel-item>
+      <lr-carousel-item>Two</lr-carousel-item>
+    </lr-carousel>
+  `);
+  const [first, second] = [...el.children] as HTMLElement[];
+  const parent = el.parentElement!;
+  expect(second.hidden).to.be.true;
+
+  el.remove();
+  expect(first.hidden).to.be.false;
+  expect(second.hidden).to.be.false;
+  parent.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  expect(first.hidden).to.be.false;
+  expect(second.hidden).to.be.true;
+  expect(second.getAttribute("aria-hidden")).to.equal("true");
 });
 
 it("refreshes generated carousel-item metadata after a live strings change", async () => {

@@ -757,16 +757,16 @@ describe("localization", () => {
 });
 
 describe("label forwarding", () => {
-  it("prefers the label prop over a forwarded host aria-label, matching <lr-control-group>", async () => {
+  it("lets a forwarded host aria-label override the label prop on the internal group", async () => {
     const el = (await fixture(
       html`<lr-filter-bar
         label="Report filters"
-        aria-label="Ignored"
+        aria-label="Author filters"
         .filters=${basicFilters}
       ></lr-filter-bar>`
     )) as LyraFilterBar;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute("aria-label")).to.equal("Report filters");
+    expect(base.getAttribute("aria-label")).to.equal("Author filters");
   });
 
   it("falls back to a forwarded host aria-label when label is unset", async () => {
@@ -1013,6 +1013,26 @@ describe("'text' free-text filters", () => {
     await aTimeout(300);
     expect(fired).to.be.false;
     expect(el.value).to.deep.equal({});
+  });
+
+  it("cancels and visually reverts a pending debounce when disabled mid-edit", async () => {
+    const el = (await fixture(
+      html`<lr-filter-bar .filters=${debouncedFilters}></lr-filter-bar>`
+    )) as LyraFilterBar;
+    el.value = { q: "authoritative" };
+    await el.updateComplete;
+    let inputs = 0;
+    el.addEventListener("lr-input", () => (inputs += 1));
+
+    await typeInto(el, "q", "uncommitted draft");
+    el.disabled = true;
+    await el.updateComplete;
+    const native = await nativeInput(el, "q");
+
+    expect(native.value).to.equal("authoritative");
+    await aTimeout(300);
+    expect(el.value).to.deep.equal({ q: "authoritative" });
+    expect(inputs).to.equal(0);
   });
 
   it("cancels a pending debounce when the filter schema is removed or replaced", async () => {

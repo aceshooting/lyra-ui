@@ -43,6 +43,16 @@ export interface LyraTreeNodeEventMap {
  *   `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.
  * @cssprop [--lr-tree-selected-bg=var(--lr-color-brand-quiet)] - Background of the selected row.
  * @cssprop [--lr-tree-selected-color=var(--lr-color-brand)] - Text color of the selected row.
+ * @cssprop [--lr-tree-badge-neutral-color=var(--lr-color-text-quiet)] - Neutral badge text color.
+ * @cssprop [--lr-tree-badge-neutral-bg=var(--lr-color-surface)] - Neutral badge background.
+ * @cssprop [--lr-tree-badge-brand-color=var(--lr-color-brand)] - Brand badge text color.
+ * @cssprop [--lr-tree-badge-brand-bg=var(--lr-color-brand-quiet)] - Brand badge background.
+ * @cssprop [--lr-tree-badge-success-color=var(--lr-color-success)] - Success badge text color.
+ * @cssprop [--lr-tree-badge-success-bg=var(--lr-color-success-quiet)] - Success badge background.
+ * @cssprop [--lr-tree-badge-warning-color=var(--lr-color-warning)] - Warning badge text color.
+ * @cssprop [--lr-tree-badge-warning-bg=var(--lr-color-warning-quiet)] - Warning badge background.
+ * @cssprop [--lr-tree-badge-danger-color=var(--lr-color-danger)] - Danger badge text color.
+ * @cssprop [--lr-tree-badge-danger-bg=var(--lr-color-danger-quiet)] - Danger badge background.
  */
 export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -114,6 +124,11 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    // A same-id data refresh deliberately reuses this element and its disclosure state. Once the
+    // refreshed item becomes disabled, though, the owning tree removes this entire subtree from
+    // keyboard navigation. Collapse immediately so enabled descendants cannot remain visibly
+    // stranded outside that navigation walk.
+    if (changed.has('item') && this.item?.disabled && this.expanded) this.expanded = false;
     this.setAttribute('role', 'treeitem');
     this.setAttribute('aria-level', String(this.depth + 1));
     this.setAttribute('aria-setsize', String(this.setSize));
@@ -127,8 +142,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
     } else {
       this.removeAttribute('aria-selected');
     }
-    if (this.item?.disabled) this.setAttribute('aria-disabled', 'true');
-    else this.removeAttribute('aria-disabled');
+    this.setAttribute('aria-disabled', String(Boolean(this.item?.disabled)));
     this.tabIndex = !this.item?.disabled && this.item?.id === this.activeId ? 0 : -1;
   }
 
@@ -183,6 +197,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
    */
   private onToggleMouseDown = (e: MouseEvent): void => {
     e.preventDefault();
+    if (this.item?.disabled) return;
     this.focus();
   };
 
@@ -197,6 +212,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
           type="button"
           tabindex="-1"
           aria-hidden="true"
+          ?disabled=${Boolean(this.item.disabled)}
           ?hidden=${!this.hasChildren}
           @mousedown=${this.onToggleMouseDown}
           @click=${(e: Event) => {

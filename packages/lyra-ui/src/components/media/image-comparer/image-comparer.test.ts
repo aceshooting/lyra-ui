@@ -120,3 +120,20 @@ it('is accessible', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('bridges native focus and blur from the range handle as bubbling composed host events', async () => {
+  const el = (await fixture(html`<lr-image-comparer></lr-image-comparer>`)) as LyraImageComparer;
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLInputElement;
+
+  const focusEvent = oneEvent(el, 'focus');
+  handle.dispatchEvent(new FocusEvent('focus'));
+  const focus = await focusEvent;
+  expect(focus.bubbles).to.be.true;
+  expect(focus.composed).to.be.true;
+
+  const blurEvent = oneEvent(el, 'blur');
+  handle.dispatchEvent(new FocusEvent('blur'));
+  const blur = await blurEvent;
+  expect(blur.bubbles).to.be.true;
+  expect(blur.composed).to.be.true;
+});

@@ -132,16 +132,17 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
-  than 2 entries) keeps today's 2-endpoint interpolation exactly.
+  than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
+  fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
   color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
-  `color` is optional: omit it (or pass an empty string) for a **caption-only** stop, which renders
-  its `[part="legend-stop-label"]` alone with no `[part="legend-swatch"]` element in the DOM at all —
-  so a leading "0" or trailing "more" caption around a run of colored stops doesn't leave an empty
-  swatch box in the row.
+  `color` is optional: omit it, pass an empty string, or pass an invalid CSS color for a
+  **caption-only** stop, which renders its `[part="legend-stop-label"]` alone with no
+  `[part="legend-swatch"]` element in the DOM at all — so a leading "0" or trailing "more" caption
+  around a run of colored stops doesn't leave an empty swatch box in the row.
   A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
   explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
   for the consumer who supplies `cellColor`: because that callback overrides a cell's color
@@ -228,6 +229,8 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```
 
 **Known gotchas:**
+- The legend is a wrapping flex row. Long unbroken stop labels, the trailing `valueLabel`, and
+  annotation labels wrap within the host instead of forcing the heatmap wider than its allocation.
 - `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
   `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
   those parts silently stops applying. It is also presentation-only — it never feeds back into the

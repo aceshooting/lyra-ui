@@ -8,6 +8,13 @@ it('gives the star row hover feedback matching the keyboard focus-visible cue', 
   expect(css).to.match(/\[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:/);
 });
 
+it('keeps --lr-rating-empty-color reachable while the editable rating is hovered', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(
+    /\[part='base'\]:hover \[part='star'\]\s*\{[^}]*color:\s*var\(--lr-rating-empty-color,/,
+  );
+});
+
 it('gates the pointer cursor and hover highlight behind readonly/disabled, not just disabled (regression)', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/:host\(:not\(\[readonly\]\):not\(\[disabled\]\)\) \[part='base'\]\s*\{[^}]*cursor:\s*pointer/);
@@ -120,4 +127,29 @@ it('renders a distinct partial fill for a fractional value under a fractional pr
   expect(fifthFill.style.inlineSize, 'empty star').to.equal('0%');
   expect(stars[2].hasAttribute('data-filled')).to.be.true;
   expect(stars[3].hasAttribute('data-filled')).to.be.false;
+});
+
+it('selects the pointer segment within a star using fractional precision', async () => {
+  const el = (await fixture(
+    html`<lr-rating value="0" precision="0.5" max="5"></lr-rating>`,
+  )) as LyraRating;
+  const thirdStar = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="star"]')[2]!;
+  thirdStar.getBoundingClientRect = () =>
+    ({ left: 100, right: 140, top: 0, bottom: 40, width: 40, height: 40, x: 100, y: 0, toJSON() {} }) as DOMRect;
+
+  thirdStar.dispatchEvent(
+    new MouseEvent('click', { clientX: 110, clientY: 20, bubbles: true }),
+  );
+
+  expect(el.value).to.equal(2.5);
+});
+
+it('keeps the slider base at least 40px in both axes when max is zero or one', async () => {
+  for (const max of [0, 1]) {
+    const el = (await fixture(html`<lr-rating max=${max}></lr-rating>`)) as LyraRating;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const rect = base.getBoundingClientRect();
+    expect(rect.width, `max=${max}`).to.be.at.least(40);
+    expect(rect.height, `max=${max}`).to.be.at.least(40);
+  }
 });

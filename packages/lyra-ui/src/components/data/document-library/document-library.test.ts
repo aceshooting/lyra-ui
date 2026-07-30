@@ -97,6 +97,21 @@ it('does not render the tag filter combobox when no document declares a tag', as
   expect(el.shadowRoot!.querySelector('lr-combobox')).to.not.exist;
 });
 
+it('prunes a self-managed tag filter when its tag disappears so results remain clearable', async () => {
+  const el = (await fixture(
+    html`<lr-document-library .documents=${docs} .tagFilter=${['ops']}></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  await el.updateComplete;
+  expect(el.tagFilter).to.deep.equal(['ops']);
+
+  el.documents = [{ id: 'plain', name: 'Plain.txt' }];
+  await el.updateComplete;
+
+  expect(el.tagFilter).to.deep.equal([]);
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement;
+  expect(table.shadowRoot!.querySelectorAll('[data-row-key]').length).to.equal(1);
+});
+
 it('toggles sort direction on a repeated header activation and re-sorts rows (unsorted input)', async () => {
   const el = (await fixture(
     html`<lr-document-library .documents=${docs}></lr-document-library>`,

@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './avatar.styles.js';
@@ -71,11 +71,20 @@ export class LyraAvatar extends LyraElement {
   // in JS instead.
   @state() private hasIcon = false;
 
-  protected override willUpdate(): void {
+  private hasDefaultSlotContent(nodes: Iterable<Node>): boolean {
+    return Array.from(nodes).some((node) => {
+      if (node instanceof Element) return !node.hasAttribute('slot');
+      return node.nodeType === Node.TEXT_NODE && (node.textContent?.trim().length ?? 0) > 0;
+    });
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (changed.has('src')) this.failedSrc = undefined;
     // Set from light-DOM children before the first render so the initial paint already reflects
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
     if (!this.hasUpdated) {
-      this.hasIcon = Array.from(this.children).some((el) => !el.hasAttribute('slot'));
+      this.hasIcon = this.hasDefaultSlotContent(this.childNodes);
     }
   }
 
@@ -86,7 +95,9 @@ export class LyraAvatar extends LyraElement {
   };
 
   private onIconSlotChange = (e: Event): void => {
-    this.hasIcon = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    this.hasIcon = this.hasDefaultSlotContent(
+      (e.target as HTMLSlotElement).assignedNodes({ flatten: true }),
+    );
   };
 
   override render(): TemplateResult {

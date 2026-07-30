@@ -206,6 +206,65 @@ describe('detail panel (reasons + commentable, detailFor "down")', () => {
     await el.updateComplete;
     expect((el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement).value).to.equal('');
   });
+
+  it('prunes selected draft reasons when the controlled reasons collection changes', async () => {
+    const el = (await fixture(
+      html`<lr-message-feedback .reasons=${reasons}></lr-message-feedback>`,
+    )) as LyraMessageFeedback;
+    (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('lr-chip') as HTMLElement).dispatchEvent(
+      new CustomEvent('lr-chip-select', {
+        detail: { selected: true },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    el.reasons = [{ id: 'new', label: 'New reason' }];
+    await el.updateComplete;
+    const submitted = oneEvent(el, 'lr-submit');
+    (el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
+
+    expect((await submitted).detail.reasonIds).to.deep.equal([]);
+  });
+
+  it('clears a hidden comment draft when commentable is revoked', async () => {
+    const el = (await fixture(
+      html`<lr-message-feedback .reasons=${reasons} commentable></lr-message-feedback>`,
+    )) as LyraMessageFeedback;
+    (el.shadowRoot!.querySelector('[part="down-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const textarea = el.shadowRoot!.querySelector('[part="comment"]') as HTMLTextAreaElement;
+    textarea.value = 'must not leak';
+    textarea.dispatchEvent(new Event('input'));
+
+    el.commentable = false;
+    await el.updateComplete;
+    const submitted = oneEvent(el, 'lr-submit');
+    (el.shadowRoot!.querySelector('[part="submit-button"]') as HTMLButtonElement).click();
+
+    expect((await submitted).detail.comment).to.equal('');
+  });
+
+  it('closes and clears an open draft when value or detail ownership changes externally', async () => {
+    const el = (await fixture(
+      html`<lr-message-feedback .reasons=${reasons} commentable detail-for="both"></lr-message-feedback>`,
+    )) as LyraMessageFeedback;
+    (el.shadowRoot!.querySelector('[part="up-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.true;
+
+    el.detailFor = 'down';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.false;
+
+    el.detailFor = 'both';
+    el.value = 'down';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="panel"]')!.hasAttribute('data-open')).to.be.false;
+  });
 });
 
 it('respects a host-set disabled value as a read-only display', async () => {

@@ -94,6 +94,26 @@ describe('lr-file-tree', () => {
     expect(event.detail.path).to.equal('README.md');
   });
 
+  it('selects a legitimate file whose id contains the text " loading"', async () => {
+    const el = (await fixture(html`<lr-file-tree></lr-file-tree>`)) as LyraFileTree;
+    el.nodes = [{ path: 'src/file loading states.ts' }];
+    await el.updateComplete;
+    let selectedPath: string | undefined;
+    el.addEventListener('lr-file-select', (event) => {
+      selectedPath = event.detail.path;
+    });
+
+    el.shadowRoot!.querySelector('lr-tree')!.dispatchEvent(
+      new CustomEvent('lr-node-select', {
+        detail: { id: 'src/file loading states.ts' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(selectedPath).to.equal('src/file loading states.ts');
+  });
+
   it('consumes the internal tree selection event before emitting the wrapper event', async () => {
     const wrapper = await fixture(html`<div><lr-file-tree></lr-file-tree></div>`);
     const el = wrapper.querySelector('lr-file-tree') as LyraFileTree;

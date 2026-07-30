@@ -122,10 +122,12 @@ transparent)`) — text/background of `[part="trend"]` when its polarity (per `g
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
-which keeps reading the shared `--lr-color-success`/`--lr-color-danger` tokens directly — retinting
-the trend pill doesn't also recolor the value, and vice versa. Otherwise shared tokens only
-(`--lr-color-success/-warning/-danger` drive the `variant`-colored value text; `--lr-color-brand`
-drives `emphasis`'s accent edge and value tint).
+so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-success-color` (default `var(--lr-color-success)`),
+`--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
+`--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
+value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
+value tint.
 
 **Optional peer deps:** none.
 
@@ -657,6 +659,10 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 ```
 
 **Known gotchas:**
+- SVG text cannot wrap. When a caller-supplied visible `label` or `valueLabel` exceeds the
+  single-line capacity, the component applies SVG `textLength` fitting so the complete string stays
+  inside the fixed radial/ring viewBox or its half of the linear viewBox; the host's accessible
+  label and `aria-valuetext` retain the original text.
 - setting `valueLabel` (e.g. `"72°F"`) now also sets `aria-valuetext` on the host (in addition to
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are
@@ -694,8 +700,9 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
   string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
   `0` for sizing purposes only — the original value is still echoed verbatim in `lr-word-click`'s
-  `detail`), `color` overrides the palette for that word, `group` shares one palette color across
-  every word with the same `group` value
+  `detail`), a valid CSS `color` overrides the palette for that word (invalid values,
+  declaration-breaking input, and `url()` fall back to the palette), and `group` shares one palette
+  color across every word with the same `group` value
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
@@ -705,10 +712,12 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
 - `orientations: 'horizontal'|'mixed' = 'horizontal'` — `mixed` lets ~25% of words render rotated
   90° for denser packing
 - `palette?: string[]` (attribute: false) — custom categorical colors, cycled by word index (or by
-  `group`); defaults to the `--lr-word-cloud-color-1..8` tokens
+  `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
+  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens
 - `legend: WordCloudLegendItem[] = []` (attribute: false) — optional named `{ label, color }`
   entries for explaining explicit `words[].color`/group color overrides; when omitted, the
-  component derives entries from grouped and explicitly colored words
+  component derives entries from grouped and explicitly colored words. An invalid legend color
+  renders a transparent swatch.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection
@@ -902,16 +911,17 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
-  than 2 entries) keeps today's 2-endpoint interpolation exactly.
+  than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
+  fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
   color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
-  `color` is optional: omit it (or pass an empty string) for a **caption-only** stop, which renders
-  its `[part="legend-stop-label"]` alone with no `[part="legend-swatch"]` element in the DOM at all —
-  so a leading "0" or trailing "more" caption around a run of colored stops doesn't leave an empty
-  swatch box in the row.
+  `color` is optional: omit it, pass an empty string, or pass an invalid CSS color for a
+  **caption-only** stop, which renders its `[part="legend-stop-label"]` alone with no
+  `[part="legend-swatch"]` element in the DOM at all — so a leading "0" or trailing "more" caption
+  around a run of colored stops doesn't leave an empty swatch box in the row.
   A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
   explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
   for the consumer who supplies `cellColor`: because that callback overrides a cell's color
@@ -998,6 +1008,8 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```
 
 **Known gotchas:**
+- The legend is a wrapping flex row. Long unbroken stop labels, the trailing `valueLabel`, and
+  annotation labels wrap within the host instead of forcing the heatmap wider than its allocation.
 - `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
   `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
   those parts silently stops applying. It is also presentation-only — it never feeds back into the
@@ -1042,11 +1054,12 @@ is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does, wired through `aria-describedby`. Cells
-are inspectable, not actionable: there is no per-cell click/activation event, so unlike
-`<lr-heatmap>` there is nothing to fire on Enter/Space. Setting `showLegend` additionally renders a
-static `[part="legend"]` key below the strip, so the color-to-category mapping is readable without
-visiting each cell.
+the same `[part="tooltip"]` detail that pointer hover does. The tooltip is visual only and is not
+wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
+text and describing it again would duplicate the announcement. Cells are inspectable, not
+actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>` there is nothing
+to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
+below the strip, so the color-to-category mapping is readable without visiting each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
@@ -1056,9 +1069,10 @@ visiting each cell.
   `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: SequenceStripCategory[] = []` (attribute: false) — `{ key, color, label? }`; `color`
-  is the cell background for every item whose `category` matches `key` (an item whose `category`
-  matches no entry renders `transparent`); `label` is used in the auto-generated `aria-label` summary
-  and as the hover-tooltip fallback text, falling back to `key` itself when unset
+  is the cell background for every item whose `category` matches `key`; invalid CSS colors,
+  declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
+  used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
+  back to `key` itself when unset
 - `orientation: 'horizontal' = 'horizontal'` (reflected) — only `'horizontal'` is supported today;
   vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
@@ -1173,6 +1187,8 @@ moves focus to its parent. Home/End jump to the first/last visible node. Enter/S
 node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
 browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
 binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
+If a same-id data refresh disables an expanded branch, that reused branch collapses immediately;
+enabled descendants are never left visibly stranded outside this navigation walk.
 
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
@@ -1238,8 +1254,15 @@ is applied to the legacy singular badge and to every `badges` chip; additive chi
 groups the primary label and optional wrapping secondary description while preserving one
 interactive treeitem per row.
 
-**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for
-indentation), plus the shared tokens listed above.
+**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
+`--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
+`--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
+`--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
+badge property falls back to its corresponding shared semantic token. The expanded names are
+`--lr-tree-badge-neutral-color`, `--lr-tree-badge-neutral-bg`, `--lr-tree-badge-brand-color`,
+`--lr-tree-badge-brand-bg`, `--lr-tree-badge-success-color`, `--lr-tree-badge-success-bg`,
+`--lr-tree-badge-warning-color`, `--lr-tree-badge-warning-bg`, `--lr-tree-badge-danger-color`,
+and `--lr-tree-badge-danger-bg`.
 
 **Optional peer deps:** none.
 
@@ -1459,7 +1482,13 @@ hijacking the library-wide `--lr-color-brand` token and repainting everything el
 `status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
 of the two states without the other following along — and `--lr-flow-node-running-glow` (default
 `var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
-the pulse keyframes' peak color.
+the pulse keyframes' peak color. The status dot has independent
+`--lr-flow-node-status-{pending|running|success|error|denied}-color` hooks, defaulting respectively
+to the shared border-strong, brand, success, danger, and warning tokens;
+`--lr-flow-node-status-color` controls the no-status fallback. The expanded status names are
+`--lr-flow-node-status-pending-color`, `--lr-flow-node-status-running-color`,
+`--lr-flow-node-status-success-color`, `--lr-flow-node-status-error-color`, and
+`--lr-flow-node-status-denied-color`.
 
 **Optional peer deps:** none.
 
@@ -1502,7 +1531,13 @@ disagree.
 draggable, focusable view rectangle).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`).
+`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-node-color` for a node without
+an execution status, and `--lr-flow-minimap-node-{pending|running|success|error|denied}-color` for
+each status-specific rectangle. The status hooks default to the shared border-strong, brand,
+success, danger, and warning colors respectively. Their expanded names are
+`--lr-flow-minimap-node-pending-color`, `--lr-flow-minimap-node-running-color`,
+`--lr-flow-minimap-node-success-color`, `--lr-flow-minimap-node-error-color`, and
+`--lr-flow-minimap-node-denied-color`.
 
 **Optional peer deps:** none.
 
@@ -1577,7 +1612,8 @@ hit area, unchanged by `appearance`), `--lr-shadow`, `--lr-color-surface`, `--lr
 
 Execution-state presentation for a `lr-flow-canvas`: pushes a `FlowRunDecorations` map into the
 resolved canvas (the canvas itself renders the node/edge paint) and renders a compact run-summary
-strip. Does not execute, poll, or time anything — pure pushed state; `durationMs` is host-computed.
+strip. Summary/count text and slotted host chrome wrap within narrow allocations. Does not execute,
+poll, or time anything — pure pushed state; `durationMs` is host-computed.
 
 **Properties:**
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
@@ -1599,7 +1635,13 @@ badge).
 **CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
 status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-flow-run-overlay-status-color` controls a count dot without
+an execution status. `--lr-flow-run-overlay-status-{pending|running|success|error|denied}-color`
+independently retints each status count, defaulting respectively to the shared border-strong,
+brand, success, danger, and warning tokens. Their expanded names are
+`--lr-flow-run-overlay-status-pending-color`, `--lr-flow-run-overlay-status-running-color`,
+`--lr-flow-run-overlay-status-success-color`, `--lr-flow-run-overlay-status-error-color`, and
+`--lr-flow-run-overlay-status-denied-color`.
 
 **Optional peer deps:** none.
 
@@ -1751,10 +1793,10 @@ a selected (`data-selected="true"`) day cell. Component-scoped indirection over 
 without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
 token directly for a visually distinct purpose (transient hover feedback).
 
-**Gotcha:** month-view `[part='event']` markers are a mouse-only quick-select affordance — they sit
-inside the day `<button>`, which may not contain focusable descendants. Agenda view renders each
-event as a real `<button part="agenda-event">` and is the keyboard-accessible path to
-`lr-event-select`.
+Month-view `[part='event']` markers are real keyboard-focusable buttons inside a non-interactive
+`role="gridcell"` day container; Enter/Space activates the same `lr-event-select` path as a pointer.
+Their target stays at least 24×24 CSS px even in the narrow month layout. Agenda view likewise
+renders each event as a `<button part="agenda-event">`.
 
 ## `lr-timeline` and `lr-timeline-item`
 
@@ -1770,7 +1812,8 @@ design (an item's `title`/`description` routinely hold focusable content, so wra
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
 `accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
-`itemCount: number` is the live default-slot child count.
+`itemCount: number` is the live count of direct default-slot `<lr-timeline-item>` children;
+unrelated slotted elements and text nodes are ignored.
 
 **`lr-timeline-item` properties:** `timestamp?: Date | string | number` (attribute: false — `Date`
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),
@@ -1831,7 +1874,8 @@ git-status/diff-count badges, lazy directory loading, and select/open events.
 
 A masked key/value list for environment variables and secrets, with per-row reveal and copy.
 Masking is presentational, not a security boundary: the real value sits in a DOM property
-regardless of mask state.
+regardless of mask state. Names, revealed values, and localized action text wrap within narrow
+allocations; the name track uses at most 40% of the available inline size.
 
 **Properties:** `entries: EnvEntry[] = []` (attribute: false), `revealable: boolean = true`
 (reflected), `copyable: boolean = true` (reflected), and `label: string = ''`.

@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -11,6 +12,7 @@ import { LyraOption } from './option.class.js';
 import './option.class.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 
 /** A no-op stand-in for `ElementInternals`, used only when the host environment has no real
  *  implementation of it (e.g. a downstream consumer's Vitest + happy-dom test suite) --
@@ -1184,7 +1186,12 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
           ?data-active=${id === activeId}
         >
           ${o.icon ? html`<span part="option-icon" aria-hidden="true">${o.icon}</span>` : ''}
-          ${o.dotColor ? html`<span part="option-dot" style=${`background:${o.dotColor}`}></span>` : ''}
+          ${o.dotColor
+            ? html`<span
+                part="option-dot"
+                style=${styleMap({ background: sanitizeCssColor(o.dotColor) ?? 'transparent' })}
+              ></span>`
+            : ''}
           <span part="option-label">
             <span>${o.label}</span>
             ${o.sub ? html`<span part="option-sub">${o.sub}</span>` : ''}
@@ -1311,7 +1318,9 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
               ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true">${this.localize('noMatches', this.emptyText || undefined)}</div>`
               : html`${this.renderRows(rows, activeId)}
                   ${overflow > 0
-                    ? html`<div part="option-overflow">${this.localize('comboboxOverflow', this.overflowText || undefined, { n: overflow })}</div>`
+                    ? html`<div part="option-overflow">${this.localize('comboboxOverflow', this.overflowText || undefined, {
+                        n: getNumberFormat(this.effectiveLocale).format(overflow),
+                      })}</div>`
                     : ''}`}
         </div>
         <div id="combobox-error" part="error" ?hidden=${!hasError}>

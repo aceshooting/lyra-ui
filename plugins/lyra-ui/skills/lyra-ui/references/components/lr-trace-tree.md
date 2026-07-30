@@ -24,6 +24,9 @@ as a root rather than being dropped. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `label: string = ''`, `showTokens: boolean = false` (attribute
 `show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+Token counts render only when finite and non-negative; invalid metrics are omitted rather than
+reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
+as its name/status/metrics, and updates when the supplied span data changes.
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
 

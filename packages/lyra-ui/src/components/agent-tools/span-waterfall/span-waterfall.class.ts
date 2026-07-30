@@ -93,6 +93,12 @@ export interface LyraSpanWaterfallEventMap {
  * @cssprop [--lr-span-waterfall-row-active-bg=var(--lr-color-brand-quiet)] - Background of the active
  *   (`activeSpanId`) row. Shadow Parts forbids an attribute selector after `::part()`, so the active
  *   row could otherwise only be restyled by hijacking the library-wide `--lr-color-brand-quiet` token.
+ * @cssprop [--lr-span-waterfall-success-color=var(--lr-color-success)] - Success bar fill.
+ * @cssprop [--lr-span-waterfall-error-color=var(--lr-color-danger)] - Error bar fill.
+ * @cssprop [--lr-span-waterfall-denied-color=var(--lr-color-warning)] - Denied bar fill.
+ * @cssprop [--lr-span-waterfall-running-color=var(--lr-color-brand)] - Running stripe foreground.
+ * @cssprop [--lr-span-waterfall-running-stripe-color=var(--lr-color-brand-quiet)] - Running stripe background.
+ * @cssprop [--lr-span-waterfall-pending-border-color=var(--lr-color-border-strong)] - Pending bar border.
  */
 export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -239,9 +245,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('spans')) {
       this.sortedSource = undefined;
-      const ids = new Set(this.spans.map((s) => s.id));
+      const ids = new Set(this.sortedSpans().map((span) => span.id));
       if (this.focusedId == null || !ids.has(this.focusedId)) {
-        this.focusedId = this.activeSpanId && ids.has(this.activeSpanId) ? this.activeSpanId : (this.sortedSpans()[0]?.id ?? null);
+        this.focusedId =
+          this.activeSpanId && ids.has(this.activeSpanId)
+            ? this.activeSpanId
+            : (this.sortedSpans()[0]?.id ?? null);
       }
     }
     if (changed.has('activeSpanId') && this.activeSpanId) {
@@ -265,7 +274,10 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
         ${ticks.map((t) => {
           const pct = ((t - view.start) / span) * 100;
           if (pct < 0 || pct > 100) return nothing;
-          return html`<span part="tick" style=${`inset-inline-start:${pct}%`}
+          return html`<span
+            part="tick"
+            data-edge=${pct > 95 ? 'end' : nothing}
+            style=${`inset-inline-start:${pct}%`}
             ><span part="tick-label">${this.formatDuration(t)}</span></span
           >`;
         })}
@@ -301,7 +313,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
             data-tone=${STATUS_TONE[span.status]}
             data-status=${span.status}
             tabindex=${tabbable ? '0' : '-1'}
-            aria-current=${isActive ? 'true' : nothing}
+            aria-current=${isActive ? 'true' : 'false'}
             aria-label=${fragments.join(this.localize('accessibleLabelSeparator'))}
             style=${`inset-inline-start:${startPct}%;inline-size:${widthPct}%`}
             @click=${() => this.selectRow(span.id)}

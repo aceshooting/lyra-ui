@@ -73,6 +73,8 @@ number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: str
 boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
 visual, `badge` as trailing metadata, `accessibleLabel` can provide richer spoken text than the
 visible label, and `data` is retained without being rendered for retrieval through `selectedRows`.
+`dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
+render a transparent dot.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
 internal row model.
 
@@ -95,7 +97,6 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
@@ -198,8 +199,11 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
 - `dotColor: string = ''` (attribute `dot-color` — optional CSS color for a small leading status
-  dot, any valid CSS color)
+  dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
 - `label` is a **read-only getter**: explicit `label` attribute wins, else trimmed `textContent`.
+
+**Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
+its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
 
 ```html
 <lr-combobox id="cb" label="Country" placeholder="Search…" with-clear>
@@ -665,7 +669,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | --- | --- | --- | --- | --- |
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
-| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). |
+| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
@@ -1563,10 +1567,12 @@ named colors, the shape apps otherwise hand-roll as a row of round accent-color 
 
 **Properties:**
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
-  label: string; icon?: unknown; gemstone?: GemstoneKey }`; `color` is any CSS color string used as
-  the swatch fill, `label` is each swatch's accessible name and `title`. `icon` is an optional
-  custom shape rendered *instead of* the plain filled circle; `gemstone` selects the canonical
-  faceted glyph when `mode="gemstone"`. An explicit `icon` wins over `gemstone`.
+  label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+  swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
+  never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
+  `icon` is an optional custom shape rendered *instead of* the plain filled circle; `gemstone`
+  selects the canonical faceted glyph when `mode="gemstone"`. An explicit `icon` wins over
+  `gemstone`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
@@ -1790,7 +1796,8 @@ control's visible, clickable label (same as `<lr-checkbox>`).
   slotted `error` content). Unset: no error chrome renders.
 
 **Events:** `lr-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
-Space/Enter); not fired for a programmatic `.checked` assignment.
+Space/Enter); not fired for a programmatic `.checked` assignment. The internal control's native
+`focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
 
@@ -1938,11 +1945,15 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
+An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
 `blur()`, and `click()` forward to the internal radio control.
 
-**Events:** native-style composed `input` and `change`, plus `lr-change` with
-`{ checked, value }`.
+**Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
+with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
+the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
+differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
+bubbling, composed host events.
 
 **Slots:** default label content.
 
@@ -1974,7 +1985,10 @@ focus; arrow navigation selects the next enabled radio.
 **Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`, and
 `aria-label` (through `accessibleLabel`).
 
-**Events:** `lr-change` with `{ value, radio }`.
+**Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
+including keyboard activation. The selected child does not emit its standalone alias. Ownership is
+resolved synchronously, so immediate removal restores standalone behavior and immediate reparenting
+routes the event to the new group without waiting for a mutation-observer turn.
 
 **Slots:** default radios, `label`, `hint`, `error`.
 
@@ -2019,11 +2033,13 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 
 **Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
-`size`, scaling the input-wrapper's row height and text size across six tiers; the remove button's
-hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-duplicates`, default
-`false`), `editable` (reflected, default `false` — see below), and `delimiter: string | null` (default
-`','` — see below).
+input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
+(attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
+and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
+same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
+tiers; the remove button's hit area stays fixed at `40px` across all sizes), `allowDuplicates`
+(`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
+`delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
 `focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),
@@ -2099,7 +2115,7 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
 - `resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both'` — written as the textarea's inline
-  `resize`
+  `resize`; an invalid runtime value falls back to `'both'`
 - `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
   the `editor` part the single horizontal scroll viewport
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter

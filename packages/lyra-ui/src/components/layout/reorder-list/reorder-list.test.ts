@@ -26,6 +26,16 @@ describe("<lr-reorder-list>", () => {
     expect(base.getAttribute("aria-label")).to.equal("Steps");
   });
 
+  it("lets a host aria-label override the label prop on the internal list", async () => {
+    const el = await fixture<LyraReorderList>(html`
+      <lr-reorder-list label="Visible steps" aria-label="Author steps">
+        <lr-reorder-item>Row</lr-reorder-item>
+      </lr-reorder-list>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute("aria-label")).to.equal("Author steps");
+  });
+
   it("marks the first item atStart and the last item atEnd after initial slotchange", async () => {
     const el = await fixture<LyraReorderList>(threeItems);
     const items = itemsOf(el);
@@ -507,4 +517,27 @@ describe("<lr-reorder-list>", () => {
     const el = wrapper.querySelector("lr-reorder-list") as LyraReorderList;
     await expect(el).to.be.accessible();
   });
+});
+
+it("formats move positions with the effective locale", async () => {
+  const el = await fixture<LyraReorderList>(html`
+    <lr-reorder-list lang="ar-EG">
+      <lr-reorder-item value="a">Row A</lr-reorder-item>
+      <lr-reorder-item value="b">Row B</lr-reorder-item>
+      <lr-reorder-item value="c">Row C</lr-reorder-item>
+    </lr-reorder-list>
+  `);
+  const region = el.shadowRoot!.querySelector("lr-live-region") as HTMLElement & {
+    updateComplete: Promise<boolean>;
+  };
+  await region.updateComplete;
+  const upButton = el.querySelectorAll('lr-reorder-item')[1]!.shadowRoot!.querySelector(
+    '[part="move-up-button"]'
+  ) as HTMLButtonElement;
+  upButton.click();
+  await el.updateComplete;
+  const text = region.shadowRoot!.querySelector('[part="region"]')!.textContent ?? "";
+  const number = new Intl.NumberFormat("ar-EG");
+  expect(text).to.include(number.format(1));
+  expect(text).to.include(number.format(3));
 });

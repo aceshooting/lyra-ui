@@ -133,7 +133,8 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
    *  unresolvable, mirroring `<lr-handoff-divider>`'s own "from is optional" contract. */
   private handoffFromAgent(span: LyraSpan): string {
     if (!span.parentId) return '';
-    return this.spans.find((s) => s.id === span.parentId)?.name ?? '';
+    const parent = this.spans.find((s) => s.id === span.parentId);
+    return parent?.kind === 'agent' ? parent.name : '';
   }
 
   /** Same computation `<lr-handoff-divider>` performs internally for its own `aria-label`, reused
@@ -165,13 +166,10 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
     const kinds = this.presentKinds();
     if (kinds.length === 0) return nothing;
     const types: LyraGraphLegendType[] = kinds.map((k) => ({ id: k, label: this.localize(KIND_LABEL_KEY[k]) }));
-    // <lr-graph-legend> keeps its own default accessible name (its localized "Graph legend"
-    // string) rather than a component-specific override here -- every visible label a user
-    // actually reads (each item's own kind name) is already correct and localized via `types`
-    // above; only the outer group's landmark name is generic.
     return html`
       <lr-graph-legend
         part="filter"
+        .label=${this.localize('agentTraceFilterLabel')}
         .types=${types}
         .hiddenTypes=${this.hiddenKinds}
         @lr-visibility-change=${this.onVisibilityChange}
@@ -187,7 +185,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
         part="handoff"
         type="button"
         aria-label=${this.handoffAccessibleLabel(span, fromAgent)}
-        aria-current=${isActive ? 'true' : nothing}
+        aria-current=${isActive ? 'true' : 'false'}
         ?data-active=${isActive}
         @click=${() => this.selectSpan(span.id)}
       >

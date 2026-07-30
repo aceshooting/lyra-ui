@@ -63,6 +63,36 @@ describe('defaults', () => {
   });
 });
 
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraDocumentPreview>(html`<lr-document-preview></lr-document-preview>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-document-preview-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-document-preview-max-height')).to.equal('calc(10rem + 2px)');
+});
+
+it('filters invalid public region rectangles before rendering highlight geometry', async () => {
+  const el = await fixture<LyraDocumentPreview>(html`<lr-document-preview></lr-document-preview>`);
+  el.highlights = [
+    {
+      id: 'unsafe',
+      anchor: { kind: 'region', rect: { x: Number.NaN, y: 0, width: 10, height: 10 } },
+    },
+    {
+      id: 'safe',
+      anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } },
+    },
+  ];
+  const highlights = (
+    el as unknown as { regionHighlights(): Array<{ id: string }> }
+  ).regionHighlights();
+  expect(highlights.map((highlight) => highlight.id)).to.deep.equal(['safe']);
+});
+
 describe('text/* and application/json dispatch', () => {
   it('fetches src as text and renders it in a scrollable <pre>', async () => {
     const unstub = stubFetch(() => Promise.resolve(textResponse('line one\nline two')));
@@ -944,6 +974,20 @@ describe('region highlights (image format)', () => {
     const eventPromise = oneEvent(el, 'lr-highlight-activate');
     actions[1]!.click();
     expect((await eventPromise).detail).to.deep.equal({ id: 'b' });
+  });
+
+  it('gives unlabeled dense highlight actions distinct ordinal names', async () => {
+    const el = await fixture<LyraDocumentPreview>(
+      html`<lr-document-preview mime-type="image/png" src=${IMAGE_DATA_URI}></lr-document-preview>`,
+    );
+    el.highlights = [
+      { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 2, height: 2 } } },
+      { id: 'b', anchor: { kind: 'region', rect: { x: 20, y: 20, width: 2, height: 2 } } },
+    ];
+    await el.updateComplete;
+    const names = [...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]')]
+      .map((action) => action.getAttribute('aria-label'));
+    expect(names).to.deep.equal(['Highlight 1 of 2', 'Highlight 2 of 2']);
   });
 
   it('positions region highlights with physical left/top under dir="rtl" so they stay over the non-mirroring image', async () => {

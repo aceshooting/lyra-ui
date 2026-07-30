@@ -200,6 +200,24 @@ it('renders month events as valid focusable controls that keyboard users can act
   expect((await selected).detail.event).to.equal(event);
 });
 
+it('keeps month-event buttons at least 24px in both axes in a narrow allocation', async () => {
+  const wrapper = await fixture(html`
+    <div style="inline-size: 320px">
+      <lr-calendar
+        view-date="2026-07-01"
+        .events=${[{ date: '2026-07-15', title: 'I' }]}
+      ></lr-calendar>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-calendar') as LyraCalendar;
+  const marker = el.shadowRoot!.querySelector(
+    '[data-date="2026-07-15"] [part="event"]',
+  ) as HTMLButtonElement;
+  const rect = marker.getBoundingClientRect();
+  expect(rect.width).to.be.at.least(24);
+  expect(rect.height).to.be.at.least(24);
+});
+
 it('locale-formats visible month day numbers and agenda dates', async () => {
   const event = { date: '2026-07-15', title: 'Localized date' };
   const month = (await fixture(

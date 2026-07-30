@@ -28,7 +28,7 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
 - `resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both'` — written as the textarea's inline
-  `resize`
+  `resize`; an invalid runtime value falls back to `'both'`
 - `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
   the `editor` part the single horizontal scroll viewport
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter

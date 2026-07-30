@@ -87,6 +87,8 @@ number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: str
 boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
 visual, `badge` as trailing metadata, `accessibleLabel` can provide richer spoken text than the
 visible label, and `data` is retained without being rendered for retrieval through `selectedRows`.
+`dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
+render a transparent dot.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
 internal row model.
 
@@ -109,7 +111,6 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
@@ -212,8 +213,11 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
 - `dotColor: string = ''` (attribute `dot-color` — optional CSS color for a small leading status
-  dot, any valid CSS color)
+  dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
 - `label` is a **read-only getter**: explicit `label` attribute wins, else trimmed `textContent`.
+
+**Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
+its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
 
 ```html
 <lr-combobox id="cb" label="Country" placeholder="Search…" with-clear>

@@ -181,7 +181,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           .rows=${this.runs}
           .rowKey=${(row: EvalRunResult) => row.id}
           .selectedKey=${this.effectiveSelectedRunId}
-          aria-label=${this.getAttribute('aria-label') || nothing}
+          aria-label=${this.getAttribute('aria-label') || this.localize('evaluationDashboardRunsLabel')}
           @lr-row-click=${(e: CustomEvent<{ row: EvalRunResult }>) => {
             e.stopPropagation();
             this.emit('lr-run-select', { runId: e.detail.row.id });

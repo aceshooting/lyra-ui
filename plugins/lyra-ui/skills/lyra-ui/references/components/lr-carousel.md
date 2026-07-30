@@ -29,6 +29,8 @@ navigation.
 **Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
 `lr-slide-change` (`detail: { index }`).
 
+**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes.
+
 **CSS parts:** `base` (the `role="region"` landmark), `viewport` (the keyboard-focusable slide
 viewport), `track`, `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
 chevron inside each, mirrored under RTL), `indicators`, `indicator` (one indicator's hit target,

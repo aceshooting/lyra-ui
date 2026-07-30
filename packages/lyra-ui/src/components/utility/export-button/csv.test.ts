@@ -20,7 +20,14 @@ it('coerces null/undefined to an empty, unquoted field', () => {
 it('guards against CSV formula injection', () => {
   expect(escapeCsvField('=SUM(A1:A2)')).to.equal("'=SUM(A1:A2)");
   expect(escapeCsvField('+1')).to.equal("'+1");
+  expect(escapeCsvField('-1+2')).to.equal("'-1+2");
   expect(escapeCsvField('@cmd')).to.equal("'@cmd");
+});
+
+it('guards fullwidth formula prefixes used by spreadsheet parsers', () => {
+  for (const value of ['＝SUM(A1:A2)', '＋1', '－1+2', '＠cmd']) {
+    expect(escapeCsvField(value)).to.equal(`'${value}`);
+  }
 });
 
 it('guards against a leading tab or CR being read as formula syntax by some spreadsheet parsers', () => {
@@ -30,10 +37,10 @@ it('guards against a leading tab or CR being read as formula syntax by some spre
   expect(escapeCsvField('\rcmd')).to.equal('"\'\rcmd"');
 });
 
-it('does not guard a bare leading "-": negative numbers/currency are not formula syntax', () => {
-  expect(escapeCsvField('-5')).to.equal('-5');
-  expect(escapeCsvField('-$5.00')).to.equal('-$5.00');
-  expect(escapeCsvField(-5)).to.equal('-5');
+it('guards leading minus after coercion, including numeric values', () => {
+  expect(escapeCsvField('-5')).to.equal("'-5");
+  expect(escapeCsvField('-$5.00')).to.equal("'-$5.00");
+  expect(escapeCsvField(-5)).to.equal("'-5");
 });
 
 it('prefixes a leading line-feed the same as a leading carriage-return', () => {

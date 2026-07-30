@@ -110,12 +110,18 @@ at another, since `placement` is a per-call option rather than a single global r
 - the close button's accessible name is derived from the toast's own message text (`"Close: <first
   40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
-  switch-access user needs to tell their close buttons apart without activating one first.
+  switch-access user needs to tell their close buttons apart without activating one first. Rich
+  non-interactive message markup contributes its text, named-slot/icon and actionable content do
+  not, and live message text mutations update the name.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
   gets `aria-disabled="true"` once hiding starts, so a stray extra click/Enter during the hide
-  animation can't re-enter it.
+  animation can't re-enter it. A disconnect during that animation pauses completion; reconnecting
+  the same item resumes it and emits/removes exactly once.
+- When the focused close/action control's toast finishes hiding, focus moves to an adjacent toast's
+  close control, or back to the connected element that held focus before the toast when no adjacent
+  item remains.
 - Prefer the `toast()` helper over manually creating `<lr-toast>`/`<lr-toast-item>` — it already
   handles the singleton-region and remount-if-removed logic.
 

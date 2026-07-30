@@ -48,6 +48,13 @@ const DEFAULT_OUTPUTS: FlowHandle[] = [{ id: 'out' }];
  *   just one of the two states without the other following along.
  * @cssprop [--lr-flow-node-running-glow=var(--lr-color-brand-quiet)] - Box-shadow color of the
  *   running-state ring around the card, and the pulse keyframes' peak color.
+ * @cssprop [--lr-flow-node-status-color=var(--lr-color-border-strong)] - Status-dot color when no
+ *   execution status is set.
+ * @cssprop [--lr-flow-node-status-pending-color=var(--lr-color-border-strong)] - Pending status-dot color.
+ * @cssprop [--lr-flow-node-status-running-color=var(--lr-color-brand)] - Running status-dot color.
+ * @cssprop [--lr-flow-node-status-success-color=var(--lr-color-success)] - Success status-dot color.
+ * @cssprop [--lr-flow-node-status-error-color=var(--lr-color-danger)] - Error status-dot color.
+ * @cssprop [--lr-flow-node-status-denied-color=var(--lr-color-warning)] - Denied status-dot color.
  */
 export class LyraFlowNode extends LyraElement {
   static override styles = [LyraElement.styles, styles];

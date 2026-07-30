@@ -102,12 +102,18 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasCodeSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'code');
+      if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
     }
   }
 
   private onCodeSlotChange = (e: Event): void => {
     this.hasCodeSlot = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length > 0;
+    if (!this.hasCodeSlot && this.view === 'code') this.view = 'preview';
   };
+
+  private get accessibleLabel(): string {
+    return this.getAttribute('aria-label')?.trim() || this.label || this.localize('artifactPanelLabel');
+  }
 
   private setView(view: ArtifactPanelView): void {
     this.view = view;
@@ -164,7 +170,7 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
           ${this.kind ? html`<span part="kind">${this.kind}</span>` : nothing}
           ${this.hasCodeSlot
             ? html`
-                <div part="view-toggle" role="group" aria-label=${this.localize('artifactPanelLabel')}>
+                <div part="view-toggle" role="group" aria-label=${this.accessibleLabel}>
                   <button
                     part="view-button"
                     type="button"

@@ -199,6 +199,51 @@ describe('lr-terminal', () => {
     expect(event.detail.matchCount).to.equal(0);
   });
 
+  it('emits exactly once for search-state changes caused by writes, trims, clears, and content replacement', async () => {
+    const el = (await fixture(html`<lr-terminal max-scrollback="3"></lr-terminal>`)) as LyraTerminal;
+    el.write('error\nok');
+    await el.updateComplete;
+    await el.search('error');
+    const details: Array<{ query: string; matchCount: number; activeIndex: number }> = [];
+    el.addEventListener('lr-search-change', (event) => {
+      details.push((event as CustomEvent<{ query: string; matchCount: number; activeIndex: number }>).detail);
+    });
+
+    el.write('\nerror');
+    await el.updateComplete;
+    expect(details).to.deep.equal([{ query: 'error', matchCount: 2, activeIndex: 0 }]);
+
+    details.length = 0;
+    el.maxScrollback = 2;
+    await el.updateComplete;
+    expect(details).to.deep.equal([{ query: 'error', matchCount: 1, activeIndex: 0 }]);
+
+    details.length = 0;
+    el.clear();
+    await el.updateComplete;
+    expect(details).to.deep.equal([{ query: '', matchCount: 0, activeIndex: -1 }]);
+
+    el.write('error');
+    await el.search('error');
+    details.length = 0;
+    el.content = 'replacement';
+    await el.updateComplete;
+    expect(details).to.deep.equal([{ query: '', matchCount: 0, activeIndex: -1 }]);
+  });
+
+  it('does not emit lr-search-change when normalization leaves public search state unchanged', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('one match');
+    await el.search('match');
+    let deliveries = 0;
+    el.addEventListener('lr-search-change', () => deliveries++);
+    await el.search('match');
+    el.searchNext();
+    el.maxScrollback = 5000;
+    await el.updateComplete;
+    expect(deliveries).to.equal(0);
+  });
+
   it('scrolling away from the bottom disengages follow and emits lr-follow-change', async () => {
     const el = (await fixture(
       html`<div style="height:60px;display:block"><lr-terminal></lr-terminal></div>`,
@@ -273,6 +318,65 @@ describe('lr-terminal', () => {
     expect(event.detail.id).to.equal('h1');
     await el.updateComplete;
     expect(line.getAttribute('aria-current')).to.equal('true');
+  });
+
+  it('gives a multi-line highlight one named interactive owner and leaves blank continuation lines non-interactive', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('first line\n\nthird line');
+    el.highlights = [{
+      id: 'range',
+      label: 'Failure context',
+      anchor: { kind: 'line-range', start: 1, end: 3 },
+      tone: 'danger',
+    }];
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const highlighted = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[data-highlight-tone="danger"]')];
+    expect(highlighted.length).to.equal(3);
+    const buttons = highlighted.filter((line) => line.getAttribute('role') === 'button');
+    expect(buttons.length).to.equal(1);
+    expect(buttons[0]!.getAttribute('data-line-number')).to.equal('1');
+    expect(buttons[0]!.getAttribute('aria-label') ?? '').to.include('Failure context');
+    expect(highlighted[1]!.getAttribute('tabindex')).to.equal(null);
+  });
+
+  it('rehomes a trimmed line-range highlight owner to its first surviving covered line', async () => {
+    const el = (await fixture(html`<lr-terminal max-scrollback="3"></lr-terminal>`)) as LyraTerminal;
+    el.write('first\nsecond\nthird');
+    el.highlights = [{
+      id: 'range',
+      label: 'Failure context',
+      anchor: { kind: 'line-range', start: 1, end: 3 },
+      tone: 'danger',
+    }];
+    await el.updateComplete;
+
+    el.write('\nfourth');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const highlighted = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[data-highlight-tone="danger"]')];
+    const buttons = highlighted.filter((line) => line.getAttribute('role') === 'button');
+    expect(highlighted.map((line) => line.getAttribute('data-line-number'))).to.deep.equal(['2', '3']);
+    expect(buttons).to.have.lengthOf(1);
+    expect(buttons[0]!.getAttribute('data-line-number')).to.equal('2');
+
+    const activated = oneEvent(el, 'lr-highlight-activate');
+    buttons[0]!.click();
+    expect(((await activated) as CustomEvent<{ id: string }>).detail.id).to.equal('range');
+  });
+
+  it('gives every visibly resolved overlapping highlight exactly one interactive owner', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('one\ntwo\nthree\nfour');
+    el.highlights = [
+      { id: 'first', anchor: { kind: 'line-range', start: 1, end: 3 }, tone: 'danger' },
+      { id: 'second', anchor: { kind: 'line-range', start: 2, end: 4 }, tone: 'warning' },
+    ];
+    await el.updateComplete;
+
+    const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+    const owners = [...list.shadowRoot!.querySelectorAll<HTMLElement>('[role="button"]')];
+    expect(owners.map((line) => line.getAttribute('data-line-number'))).to.deep.equal(['1', '4']);
   });
 
   it('retints an accent-tone highlighted line via --lr-terminal-highlight-accent-bg, decoupled from the shared --lr-color-brand-quiet token used by the toolbar-button hover state', async () => {
@@ -554,6 +658,29 @@ describe('lr-terminal', () => {
     await new Promise((resolve) => setTimeout(resolve, 20)); // Announcer's own throttle uses real timers
     const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
     expect(region.textContent).to.equal('first chunk\nsecond chunk');
+  });
+
+  it('cancels queued output when clear(), content replacement, or announce-output=false invalidates it', async () => {
+    const el = (await fixture(html`<lr-terminal announce-output></lr-terminal>`)) as LyraTerminal;
+    const region = el.shadowRoot!.querySelector('[part="announcer"]')!;
+
+    el.write('cleared before speech');
+    el.clear();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(region.textContent).to.equal('');
+
+    el.write('stale before replacement');
+    el.content = 'replacement output';
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(region.textContent).to.equal('replacement output');
+
+    region.textContent = '';
+    el.write('disabled before speech');
+    el.announceOutput = false;
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(region.textContent).to.equal('');
   });
 
   it('lr-text-select resolves a null anchor when a selection endpoint is not inside any mounted line', async () => {

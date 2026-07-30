@@ -12,6 +12,17 @@ it('declares a fallback for --lr-control-width so an unset value never leaves th
   expect(css).to.match(/flex:\s*1 1 var\(--lr-control-width,\s*[^)]+\)/);
 });
 
+it('names the semantic group that owns the prompt option controls', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input
+      .modelCatalog=${[{ group: 'Models', models: [{ value: 'fast', label: 'Fast' }] }]}
+    ></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const controls = el.shadowRoot!.querySelector('[part="controls"]')!;
+  expect(controls.getAttribute('role')).to.equal('group');
+  expect(controls.getAttribute('aria-label')).to.equal('Prompt options');
+});
+
 it('keeps a definite flex-basis for controls even when --lr-control-width is never set (regression)', async () => {
   const el = (await fixture(
     html`<lr-prompt-input .modelCatalog=${['fast', 'accurate']}></lr-prompt-input>`,
@@ -127,6 +138,92 @@ it('detects mention triggers, anchors the popover to the real textarea, and inse
   const event = await selected as CustomEvent<{ id: string; label: string; trigger: '@' }>;
   expect(event.detail).to.deep.equal({ id: 'ada', label: 'Ada', trigger: '@' });
   expect(el.value).to.equal('Hello @Ada ');
+});
+
+it('invalidates a suggestion session when the controlled value changes', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input .mentionItems=${[{ id: 'ada', label: 'Ada' }]}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  composer.value = 'Hello @ad';
+  await composer.updateComplete;
+  composer.selectionStart = composer.value.length;
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    }),
+  );
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  expect(popover.open).to.be.true;
+
+  el.value = 'Controlled replacement';
+  await el.updateComplete;
+  await popover.updateComplete;
+  expect(popover.open).to.be.false;
+
+  popover.dispatchEvent(
+    new CustomEvent('lr-mention-select', {
+      bubbles: true,
+      composed: true,
+      detail: { id: 'ada', label: 'Ada' },
+    }),
+  );
+  expect(el.value).to.equal('Controlled replacement');
+});
+
+it('invalidates a suggestion session when its public item collection changes', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input .mentionItems=${[{ id: 'ada', label: 'Ada' }]}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  composer.value = '@a';
+  await composer.updateComplete;
+  composer.selectionStart = composer.value.length;
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    }),
+  );
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+  expect(popover.open).to.be.true;
+
+  el.mentionItems = [{ id: 'bea', label: 'Bea' }];
+  await el.updateComplete;
+  await popover.updateComplete;
+  expect(popover.open).to.be.false;
+});
+
+it('does not revive a stale suggestion session after disable and re-enable', async () => {
+  const el = (await fixture(html`
+    <lr-prompt-input .mentionItems=${[{ id: 'ada', label: 'Ada' }]}></lr-prompt-input>
+  `)) as LyraPromptInput;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  composer.value = '@a';
+  await composer.updateComplete;
+  composer.selectionStart = composer.value.length;
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', {
+      bubbles: true,
+      composed: true,
+      detail: { value: composer.value },
+    }),
+  );
+  await el.updateComplete;
+  const popover = el.shadowRoot!.querySelector('lr-mention-popover') as LyraMentionPopover;
+
+  el.disabled = true;
+  await el.updateComplete;
+  el.disabled = false;
+  await el.updateComplete;
+  await popover.updateComplete;
+
+  expect(popover.open).to.be.false;
 });
 
 it('forwards composer submit and stop events from its own host', async () => {

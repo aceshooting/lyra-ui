@@ -210,6 +210,36 @@ describe('lr-svg-viewer', () => {
   });
 });
 
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-svg-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-svg-viewer-max-height')).to.equal('calc(10rem + 2px)');
+});
+
+it('filters invalid public region rectangles before rendering highlight geometry', async () => {
+  const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+  el.highlights = [
+    {
+      id: 'unsafe',
+      anchor: { kind: 'region', rect: { x: 0, y: 0, width: -1, height: 10 } },
+    },
+    {
+      id: 'safe',
+      anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } },
+    },
+  ];
+  const highlights = (
+    el as unknown as { regionHighlights(): Array<{ id: string }> }
+  ).regionHighlights();
+  expect(highlights.map((highlight) => highlight.id)).to.deep.equal(['safe']);
+});
+
 describe('zoomable', () => {
   it('does not wrap in lr-zoomable-frame by default', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
@@ -351,6 +381,25 @@ describe('region highlights', () => {
       const first = actions[0]!.getBoundingClientRect();
       const second = actions[1]!.getBoundingClientRect();
       expect(first.bottom).to.be.at.most(second.top);
+    } finally {
+      restore();
+    }
+  });
+
+  it('gives unlabeled dense highlight actions distinct ordinal names', async () => {
+    const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 2, height: 2 } } },
+        { id: 'b', anchor: { kind: 'region', rect: { x: 20, y: 20, width: 2, height: 2 } } },
+      ];
+      await el.updateComplete;
+      const names = [...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]')]
+        .map((action) => action.getAttribute('aria-label'));
+      expect(names).to.deep.equal(['Highlight 1 of 2', 'Highlight 2 of 2']);
     } finally {
       restore();
     }

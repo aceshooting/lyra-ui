@@ -18,7 +18,8 @@ A determinate or indeterminate progress bar.
 **Properties:** `value`, `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
 `accessibleLabel` (`accessible-label`).
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
-determinate.
+determinate. When `show-value` exposes label-slot text, that visible text names the progressbar
+unless host `aria-label`/`accessible-label` overrides it; live label mutations stay synchronized.
 
 **Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
 **Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the

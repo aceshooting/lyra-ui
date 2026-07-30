@@ -60,6 +60,12 @@ export interface StatRow {
  *   reads the shared `--lr-color-danger` token directly.
  * @cssprop [--lr-stat-trend-bad-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
  *   Background of the trend pill when its polarity is "bad".
+ * @cssprop [--lr-stat-value-success-color=var(--lr-color-success)] - Headline value color for the
+ *   `success` variant.
+ * @cssprop [--lr-stat-value-warning-color=var(--lr-color-warning)] - Headline value color for the
+ *   `warning` variant.
+ * @cssprop [--lr-stat-value-danger-color=var(--lr-color-danger)] - Headline value color for the
+ *   `danger` variant.
  */
 export class LyraStat extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

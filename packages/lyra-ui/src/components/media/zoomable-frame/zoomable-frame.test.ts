@@ -159,3 +159,11 @@ it('clamps a non-finite/negative zoom-step to a positive floor so zoomIn/zoomOut
   await el.updateComplete;
   expect(el.zoom).to.be.greaterThan(afterFirstZoomIn);
 });
+
+it('formats the reset zoom percentage with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-zoomable-frame lang="ar-EG"></lr-zoomable-frame>`,
+  )) as LyraZoomableFrame;
+  const reset = el.shadowRoot!.querySelector('[part="reset"]') as HTMLButtonElement;
+  expect(reset.textContent).to.include(new Intl.NumberFormat('ar-EG').format(100));
+});

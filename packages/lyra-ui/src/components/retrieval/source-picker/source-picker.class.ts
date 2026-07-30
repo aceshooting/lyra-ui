@@ -46,7 +46,8 @@ interface SourceRow {
  * @csspart summary - The "{selected} of {total} selected" text.
  * @csspart tree - The `role="tree"` container.
  * @csspart item - One `role="treeitem"` row.
- * @csspart disclosure - A folder row's expand/collapse button.
+ * @csspart disclosure - A folder row's pointer-only expand/collapse indicator. Keyboard
+ * expansion remains owned by the surrounding treeitem.
  * @csspart checkbox - The tri-state checkbox glyph.
  * @csspart icon - The `lr-file-icon` type badge.
  * @csspart label - The entry's label text.
@@ -66,7 +67,8 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   /** Flat (no `children`) or a tree. */
   @property({ attribute: false }) sources: LyraSourceEntry[] = [];
-  /** Leaf ids only. The picker updates its own copy on toggle *then* emits; reassign to control. */
+  /** Leaf ids only. Duplicates and ids absent from `sources` are discarded. The picker updates
+   * its own copy on toggle *then* emits; reassign to control. */
   @property({ attribute: false }) selectedIds: string[] = [];
   @property({ type: Boolean, attribute: 'show-select-all', converter: trueDefaultBooleanConverter }) showSelectAll = true;
   @property({ type: Boolean, converter: trueDefaultBooleanConverter }) searchable = true;
@@ -79,7 +81,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   @state() private expandedIds = new Set<string>();
   @state() private query = '';
   @state() private activeId: string | null = null;
-  private pendingFocusIndex: number | 'search' | undefined;
+  private pendingFocusIndex: number | 'search' | 'base' | undefined;
 
   private allLeafIds(entries: LyraSourceEntry[] = this.sources): string[] {
     const acc: string[] = [];
@@ -96,6 +98,16 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   private descendantLeafIds(entry: LyraSourceEntry): string[] {
     if (!entry.children?.length) return [entry.id];
     return [...new Set(entry.children.flatMap((c) => this.descendantLeafIds(c)))];
+  }
+
+  private normalizedSelectedIds(): string[] {
+    const valid = new Set(this.allLeafIds());
+    const seen = new Set<string>();
+    return this.selectedIds.filter((id) => {
+      if (!valid.has(id) || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }
 
   private checkedState(entry: LyraSourceEntry): 'true' | 'false' | 'mixed' {
@@ -141,6 +153,15 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('sources') || changed.has('selectedIds')) {
+      const normalized = this.normalizedSelectedIds();
+      if (
+        normalized.length !== this.selectedIds.length ||
+        normalized.some((id, index) => id !== this.selectedIds[index])
+      ) {
+        this.selectedIds = normalized;
+      }
+    }
     if (!changed.has('sources') && !changed.has('query') && !changed.has('expandedIds')) return;
 
     const renderedRows = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part~="item"]'));
@@ -156,7 +177,12 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     this.activeId = nextIndex >= 0 ? rows[nextIndex]!.entry.id : null;
 
     if (focusedIndex >= 0) {
-      this.pendingFocusIndex = nextIndex >= 0 ? nextIndex : 'search';
+      this.pendingFocusIndex =
+        nextIndex >= 0
+          ? nextIndex
+          : this.sources.length === 0 || !this.searchable
+            ? 'base'
+            : 'search';
     }
   }
 
@@ -167,6 +193,10 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     this.pendingFocusIndex = undefined;
     if (pending === 'search') {
       (this.renderRoot.querySelector('[part~="search"]') as HTMLElement | null)?.focus();
+      return;
+    }
+    if (pending === 'base') {
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
     const rows = this.renderRoot.querySelectorAll<HTMLElement>('[part~="item"]');
@@ -285,12 +315,9 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
         }}
       >
         ${row.hasChildren
-          ? html`<button
+          ? html`<span
               part="disclosure"
-              type="button"
-              tabindex="-1"
-              aria-label=${this.localize(expanded ? 'showLess' : 'showMore')}
-              aria-expanded=${expanded ? 'true' : 'false'}
+              aria-hidden="true"
               @click=${(event: MouseEvent) => {
                 event.stopPropagation();
                 const next = new Set(this.expandedIds);
@@ -298,7 +325,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
                 else next.add(row.entry.id);
                 this.expandedIds = next;
               }}
-            >${expanded ? '−' : '+'}</button>`
+            >${expanded ? '−' : '+'}</span>`
           : nothing}
         <span part="checkbox" aria-hidden="true" data-state=${state}></span>
         <lr-file-icon part="icon" decorative mime-type=${row.entry.mimeType ?? ''} name=${row.entry.name ?? row.entry.label}></lr-file-icon>
@@ -310,7 +337,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
   override render(): TemplateResult {
     const label = this.accessibleLabel || this.label || this.localize('sourceListDefaultLabel');
     if (this.sources.length === 0) {
-      return html`<div part="base"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
+      return html`<div part="base" tabindex="-1"><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }
     const rows = this.visibleRows();
     const activeId = this.activeId ?? rows[0]?.entry.id ?? null;
@@ -324,7 +351,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
           : 'mixed';
 
     return html`
-      <div part="base">
+      <div part="base" tabindex="-1">
         ${this.searchable
           ? html`<lr-input
               part="search"

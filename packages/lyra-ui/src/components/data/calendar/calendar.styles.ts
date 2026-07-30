@@ -54,7 +54,7 @@ export const styles = css`
   [part='day'][data-today='true'] { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); outline-offset: calc(var(--lr-border-width-medium) * -1); }
   [part='day'][data-selected='true'] { background: var(--lr-calendar-day-selected-bg); }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
-  [part='event'] { overflow: hidden; inline-size: 100%; margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   [part='event']:hover { filter: brightness(var(--lr-hover-brightness)); }
   [part='event']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

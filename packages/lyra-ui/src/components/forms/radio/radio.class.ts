@@ -1,9 +1,14 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnchoredValidityController, VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './radio.styles.js';
+
+const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
+  fromAttribute: (value) => value ?? '',
+  toAttribute: (value) => value || null,
+};
 
 export interface LyraRadioEventMap {
   input: CustomEvent<undefined>;
@@ -11,6 +16,15 @@ export interface LyraRadioEventMap {
   'lr-change': CustomEvent<{ checked: boolean; value: string }>;
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
+}
+
+interface RadioGroupController {
+  disabled: boolean;
+  ownsRadio?: (radio: LyraRadio) => boolean;
+  radioCheckedChanged?: (radio: LyraRadio) => void;
+  reconcileRadio?: (radio: LyraRadio) => boolean;
+  releaseRadio?: (radio: LyraRadio) => void;
+  selectRadio?: (radio: LyraRadio) => boolean;
 }
 
 /**
@@ -28,7 +42,10 @@ export interface LyraRadioEventMap {
  * @slot - Label text.
  * @event input - The user selected this radio.
  * @event change - The user selected this radio.
- * @event lr-change - The selection changed. `detail: { checked, value }`.
+ * @event lr-change - A standalone radio was selected. `detail: { checked, value }`. An owning
+ * radio group emits its aggregate event instead.
+ * @event focus - The internal radio received focus.
+ * @event blur - The internal radio lost focus.
  * @csspart base - The interactive radio control.
  * @csspart circle - The circular radio indicator.
  * @csspart dot - The selected indicator.
@@ -54,7 +71,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   static override properties = {
     checked: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
-    name: { reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true, converter: omittedEmptyStringConverter },
     required: { type: Boolean, reflect: true, noAccessor: true },
     value: { reflect: true, noAccessor: true },
   };
@@ -71,6 +88,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   private _groupDisabled = false;
   private _groupRequired = false;
   private _tabbable = true;
+  private groupOwner: RadioGroupController | null = null;
   // What `form.reset()` restores to — captured once from the declarative
   // `checked` content attribute at first connect, mirroring
   // `<lr-checkbox>`'s identical `_defaultChecked`/`_defaultCaptured` pair.
@@ -80,9 +98,12 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   get checked(): boolean { return this._checked; }
   set checked(value: boolean) {
     const old = this._checked;
-    this._checked = Boolean(value);
+    const next = Boolean(value);
+    if (old === next) return;
+    this._checked = next;
     this.syncFormState();
     this.requestUpdate('checked', old);
+    if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
   }
   get disabled(): boolean { return this._disabled; }
   set disabled(value: boolean) {
@@ -102,22 +123,39 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
   get name(): string { return this._name; }
   set name(value: string) {
     const old = this._name;
-    this._name = value ?? '';
-    this.toggleAttribute('name', Boolean(this._name));
-    if (this._name) this.setAttribute('name', this._name);
+    const next = value ?? '';
+    if (old === next) {
+      if (!next && this.hasAttribute('name')) this.removeAttribute('name');
+      return;
+    }
+    this._name = next;
+    if (next) {
+      if (this.getAttribute('name') !== next) this.setAttribute('name', next);
+    } else if (this.hasAttribute('name')) {
+      this.removeAttribute('name');
+    }
     this.requestUpdate('name', old);
   }
   get value(): string { return this._value; }
   set value(value: string) {
     const old = this._value;
-    this._value = value ?? 'on';
-    this.toggleAttribute('value', Boolean(this._value));
-    if (this._value) this.setAttribute('value', this._value);
+    const next = value ?? 'on';
+    if (old === next) return;
+    this._value = next;
+    if (value == null) {
+      if (this.hasAttribute('value')) this.removeAttribute('value');
+    } else if (this.getAttribute('value') !== next) {
+      this.setAttribute('value', next);
+    }
     this.syncFormState();
     this.requestUpdate('value', old);
   }
-  get effectiveDisabled(): boolean { return this.disabled || this._fieldsetDisabled || this._groupDisabled; }
-  get effectiveRequired(): boolean { return this.required || this._groupRequired; }
+  get effectiveDisabled(): boolean {
+    return this.disabled || this._fieldsetDisabled || Boolean(this.currentGroup()?.disabled);
+  }
+  get effectiveRequired(): boolean {
+    return this.required || (this.currentGroup() ? this._groupRequired : false);
+  }
   get form(): HTMLFormElement | null { return this.internals.form; }
   get validity(): ValidityState { return this.internals.validity; }
   get validationMessage(): string { return this.internals.validationMessage; }
@@ -175,6 +213,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
       this._defaultChecked = this.hasAttribute('checked');
     }
     this.updateValidity();
+    this.group();
   }
 
   formResetCallback(): void {
@@ -188,6 +227,7 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this._checked = state === 'checked';
     this.syncFormState();
     this.requestUpdate('checked', old);
+    if (this.isConnected) this.group()?.radioCheckedChanged?.(this);
   }
   formDisabledCallback(disabled: boolean): void {
     this._fieldsetDisabled = disabled;
@@ -219,6 +259,21 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this._tabbable = value;
     this.requestUpdate();
   }
+  /** @internal Claims this radio for one owning `<lr-radio-group>`. */
+  setGroupOwner(owner: RadioGroupController): void {
+    if (this.groupOwner === owner) return;
+    this.groupOwner?.releaseRadio?.(this);
+    this.groupOwner = owner;
+  }
+  /** @internal Releases state imposed by the specified owning `<lr-radio-group>`. */
+  releaseGroupOwner(owner: RadioGroupController, authorName: string): void {
+    if (this.groupOwner !== owner) return;
+    this.groupOwner = null;
+    this.name = authorName;
+    this.setGroupRequired(false);
+    this.setGroupDisabled(false);
+    this.setGroupTabbable(true);
+  }
   override click(): void {
     this[VALIDITY_ANCHOR]()?.click();
   }
@@ -232,14 +287,30 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.internals.setFormValue(this.checked ? this.value : null, this.checked ? 'checked' : 'unchecked');
     this.updateValidity();
   }
-  private group(): HTMLElement | null {
-    return this.closest(tag('radio-group')) as HTMLElement | null;
+  private currentGroup(): RadioGroupController | null {
+    const group = this.closest(tag('radio-group')) as (HTMLElement & RadioGroupController) | null;
+    return group?.isConnected && group.ownsRadio?.(this) ? group : null;
+  }
+  private group(): RadioGroupController | null {
+    const group = this.currentGroup();
+    if (!group) {
+      this.groupOwner?.releaseRadio?.(this);
+      return null;
+    }
+    this.setGroupOwner(group);
+    group.reconcileRadio?.(this);
+    return group;
   }
   private select(): void {
+    const group = this.group();
     if (this.effectiveDisabled || this.checked) return;
-    const group = this.group() as { selectRadio?: (radio: LyraRadio) => void } | null;
-    if (group?.selectRadio) group.selectRadio(this);
-    else this.checked = true;
+    if (group) {
+      if (!group.selectRadio?.(this)) return;
+      this.emit('input');
+      this.emit('change');
+      return;
+    }
+    this.checked = true;
     this.emit('input');
     this.emit('change');
     this.emit('lr-change', { checked: true, value: this.value });

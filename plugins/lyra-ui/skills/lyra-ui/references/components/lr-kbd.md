@@ -44,8 +44,9 @@ resolves a full `keys` string with the same optional localization callback.
 **Slots:** default — an escape hatch for fully custom key-cap content (e.g. an icon instead of a
 text glyph). When it has any real (non-whitespace) content, it replaces the `keys`-driven rendering
 entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
-content to carry its own accessible name — a host-supplied `aria-label` attribute is still forwarded
-onto the rendered chip in either mode, custom content included.
+content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
+to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
+leaves the slotted content's own semantics exposed.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 

@@ -243,4 +243,12 @@ export const styles = css`
       transition: none !important;
     }
   }
+  [part='presets'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='preset-button'] {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
 `;

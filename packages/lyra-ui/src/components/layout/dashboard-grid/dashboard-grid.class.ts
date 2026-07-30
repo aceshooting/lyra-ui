@@ -7,6 +7,7 @@ import { tag } from "../../../internal/prefix.js";
 import { srOnly } from "../../../internal/a11y.js";
 import { Announcer } from "../../../internal/announcer.js";
 import { isRtl } from "../../../internal/rtl.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
 import {
   isArrowKey,
   finiteInteger,
@@ -65,6 +66,7 @@ interface CellResizeState {
   colPitch: number;
   rowPitch: number;
   wrapper: HTMLElement;
+  captureTarget: HTMLElement;
   rtlFlip: number;
   currentW?: number;
   currentH?: number;
@@ -156,6 +158,8 @@ export interface LyraDashboardGridEventMap {
  *   cell is a real focusable, draggable/resizable target). Set to `transparent` to opt out.
  * @cssprop [--lr-dashboard-grid-collision-outline-color=var(--lr-color-danger)] - Outline color
  *   of a cell whose current drag/resize preview collides with another cell.
+ * @cssprop [--lr-dashboard-grid-interaction-shadow=var(--lr-shadow)] - Box shadow applied to a
+ *   cell for the duration of its pointer drag or resize interaction.
  */
 export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -220,8 +224,12 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     };
   }
 
+  private get normalizedLayout(): DashboardCell[] {
+    return this.layout.map((cell) => this.normalizeCell(cell));
+  }
+
   private get sortedLayout(): DashboardCell[] {
-    return sortSpatial(this.layout.map((cell) => this.normalizeCell(cell)));
+    return sortSpatial(this.normalizedLayout);
   }
 
   private readonly announcer = new Announcer({
@@ -233,30 +241,64 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
 
   private cellDrag?: CellDragState;
   private cellResize?: CellResizeState;
+  private rehomeCellFocus = false;
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     // An in-flight drag/resize gesture holds window-level listeners; if the element is removed
     // mid-gesture nothing else ever detaches them, and a later unrelated pointerup would fire
     // against a detached tree with stale gesture state.
-    this.cellDrag = undefined;
-    window.removeEventListener("pointermove", this.onCellPointerMove);
-    window.removeEventListener("pointerup", this.onCellPointerUp);
-    window.removeEventListener("pointercancel", this.onCellPointerUp);
-    window.removeEventListener("lostpointercapture", this.onCellPointerUp);
-    this.cellResize = undefined;
-    window.removeEventListener("pointermove", this.onResizeHandlePointerMove);
-    window.removeEventListener("pointerup", this.onResizeHandlePointerUp);
-    window.removeEventListener("pointercancel", this.onResizeHandlePointerUp);
-    window.removeEventListener(
-      "lostpointercapture",
-      this.onResizeHandlePointerUp
-    );
+    this.cancelCellDrag();
+    this.cancelCellResize();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
-    if (changed.has("layout")) this.syncDefaultCells();
+    if (changed.has("layout")) {
+      this.rehomeCellFocus =
+        (this.renderRoot as ShadowRoot).activeElement?.getAttribute("part") ===
+        "cell";
+      this.syncDefaultCells();
+      const cells = this.sortedLayout;
+      const retainedIndex = cells.findIndex(
+        (cell) => cell.id === this.activeCellId
+      );
+      const nextIndex =
+        cells.length === 0
+          ? 0
+          : retainedIndex >= 0
+          ? retainedIndex
+          : Math.min(this.activeCellIndex, cells.length - 1);
+      this.activeCellIndex = nextIndex;
+      this.activeCellId = cells[nextIndex]?.id ?? "";
+    }
+    if (
+      this.cellDrag &&
+      (changed.has("layout") ||
+        changed.has("cellsDraggable") ||
+        changed.has("locked")) &&
+      !this.canDragCell(this.cellDrag.cellId)
+    ) {
+      this.cancelCellDrag();
+    }
+    if (
+      this.cellResize &&
+      (changed.has("layout") ||
+        changed.has("cellsResizable") ||
+        changed.has("locked")) &&
+      !this.canResizeCell(this.cellResize.cellId)
+    ) {
+      this.cancelCellResize();
+    }
+  }
+
+  protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (!this.rehomeCellFocus) return;
+    this.rehomeCellFocus = false;
+    this.renderRoot
+      .querySelector<HTMLElement>('[part="cell"][tabindex="0"]')
+      ?.focus();
   }
 
   // ---------------------------------------------------------------------
@@ -331,8 +373,8 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private onCellFocus(id: string): void {
     const index = this.sortedLayout.findIndex((c) => c.id === id);
     if (index >= 0) {
-      this.activeCellIndex = index;
-      this.activeCellId = id;
+      if (this.activeCellIndex !== index) this.activeCellIndex = index;
+      if (this.activeCellId !== id) this.activeCellId = id;
     }
   }
 
@@ -342,11 +384,12 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     this.activeCellIndex = index;
     const cell = cells[index]!; // safe: bounds checked above (0 <= index < cells.length)
     this.activeCellId = cell.id;
+    const number = getNumberFormat(this.effectiveLocale);
     this.announcer.announce(
       this.localize("flowItemAnnouncement", undefined, {
         item: this.cellLabel(cell),
-        index: index + 1,
-        total: cells.length,
+        index: number.format(index + 1),
+        total: number.format(cells.length),
       })
     );
     void this.updateComplete.then(() => {
@@ -427,10 +470,11 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     requested: { x: number; y: number; w: number; h: number },
     kind: "move" | "resize"
   ): void {
-    const cell = this.layout.find((c) => c.id === id);
+    const layout = this.normalizedLayout;
+    const cell = layout.find((c) => c.id === id);
     if (!cell) return;
     const result = resolvePlacement(
-      this.layout,
+      layout,
       id,
       requested,
       this.safeColumns,
@@ -453,6 +497,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       return;
     }
     const updated = result.layout.find((c) => c.id === id)!;
+    const number = getNumberFormat(this.effectiveLocale);
     // `requested` is clamped (bounds + this cell's own min/max) before ever reaching collision
     // resolution, so e.g. a shrink-past-minW request can come back byte-identical to `cell` --
     // that's a real no-op, not a move/resize, and must not emit a spurious event.
@@ -470,8 +515,8 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       this.announcer.announce(
         this.localize("dashboardCellMoved", undefined, {
           label: this.cellLabel(cell),
-          x: updated.x + 1,
-          y: updated.y + 1,
+          x: number.format(updated.x + 1),
+          y: number.format(updated.y + 1),
         })
       );
     } else {
@@ -483,8 +528,8 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       this.announcer.announce(
         this.localize("dashboardCellResized", undefined, {
           label: this.cellLabel(cell),
-          w: updated.w,
-          h: updated.h,
+          w: number.format(updated.w),
+          h: number.format(updated.h),
         })
       );
     }
@@ -523,16 +568,83 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   }
 
   private resetCellInlineStyle(id: string, wrapper: HTMLElement): void {
-    const cell = this.layout.find((c) => c.id === id);
-    if (!cell) return;
-    const style = this.cellStyle(cell);
-    wrapper.style.gridColumn = style["grid-column"];
-    wrapper.style.gridRow = style["grid-row"];
     wrapper.removeAttribute("data-collision");
+    const cell = this.normalizedLayout.find((candidate) => candidate.id === id);
+    if (cell) {
+      const style = this.cellStyle(cell);
+      wrapper.style.gridColumn = style["grid-column"];
+      wrapper.style.gridRow = style["grid-row"];
+    }
+  }
+
+  private canDragCell(id: string): boolean {
+    const cell = this.layout.find((candidate) => candidate.id === id);
+    return (
+      this.cellsDraggable && !this.locked && cell !== undefined && !cell.locked
+    );
+  }
+
+  private canResizeCell(id: string): boolean {
+    const cell = this.layout.find((candidate) => candidate.id === id);
+    return (
+      this.cellsResizable && !this.locked && cell !== undefined && !cell.locked
+    );
+  }
+
+  /** Capability revocation can end a gesture before the native pointerup/pointercancel that would
+   *  normally release capture. Ignore the browser's NotFoundError when a synthetic event, a
+   *  disconnect, or an implicit native release already ended capture. */
+  private releaseGesturePointerCapture(
+    target: HTMLElement,
+    pointerId: number
+  ): void {
+    try {
+      target.releasePointerCapture?.(pointerId);
+    } catch {
+      // Capture is already gone.
+    }
+  }
+
+  private cancelCellDrag(): void {
+    const drag = this.cellDrag;
+    if (!drag) return;
+    this.cellDrag = undefined;
+    this.releaseGesturePointerCapture(drag.wrapper, drag.pointerId);
+    drag.wrapper.removeAttribute("data-dragging");
+    this.resetCellInlineStyle(drag.cellId, drag.wrapper);
+    window.removeEventListener("pointermove", this.onCellPointerMove);
+    window.removeEventListener("pointerup", this.onCellPointerUp);
+    window.removeEventListener("pointercancel", this.onCellPointerUp);
+    window.removeEventListener("lostpointercapture", this.onCellPointerUp);
+  }
+
+  private cancelCellResize(): void {
+    const resize = this.cellResize;
+    if (!resize) return;
+    this.cellResize = undefined;
+    this.releaseGesturePointerCapture(
+      resize.captureTarget,
+      resize.pointerId
+    );
+    resize.wrapper.removeAttribute("data-resizing");
+    this.resetCellInlineStyle(resize.cellId, resize.wrapper);
+    window.removeEventListener("pointermove", this.onResizeHandlePointerMove);
+    window.removeEventListener("pointerup", this.onResizeHandlePointerUp);
+    window.removeEventListener("pointercancel", this.onResizeHandlePointerUp);
+    window.removeEventListener(
+      "lostpointercapture",
+      this.onResizeHandlePointerUp
+    );
   }
 
   private onCellPointerDown(e: PointerEvent, cell: DashboardCell): void {
-    if (!this.cellsDraggable || this.locked || cell.locked || e.button !== 0)
+    if (
+      !this.cellsDraggable ||
+      this.locked ||
+      cell.locked ||
+      this.cellDrag ||
+      e.button !== 0
+    )
       return;
     const wrapper = e.currentTarget as HTMLElement;
     const interactive = (e.target as HTMLElement).closest(
@@ -567,6 +679,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private onCellPointerMove = (e: PointerEvent): void => {
     const drag = this.cellDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
+    if (!this.canDragCell(drag.cellId)) {
+      this.cancelCellDrag();
+      return;
+    }
     const dxUnits = Math.round(
       ((e.clientX - drag.startClientX) * drag.rtlFlip) / drag.colPitch
     );
@@ -585,7 +701,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     drag.wrapper.style.gridRow = `${y + 1} / span ${drag.h}`;
     if (this.collision !== "overlap") {
       const collides =
-        findCollisions(this.layout, {
+        findCollisions(this.normalizedLayout, {
           id: drag.cellId,
           x,
           y,
@@ -601,6 +717,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private onCellPointerUp = (e: PointerEvent): void => {
     const drag = this.cellDrag;
     if (!drag || e.pointerId !== drag.pointerId) return;
+    if (e.type !== "pointerup" || !this.canDragCell(drag.cellId)) {
+      this.cancelCellDrag();
+      return;
+    }
     this.cellDrag = undefined;
     drag.wrapper.removeAttribute("data-dragging");
     window.removeEventListener("pointermove", this.onCellPointerMove);
@@ -624,7 +744,13 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     e: PointerEvent,
     cell: DashboardCell
   ): void {
-    if (!this.cellsResizable || this.locked || cell.locked || e.button !== 0)
+    if (
+      !this.cellsResizable ||
+      this.locked ||
+      cell.locked ||
+      this.cellResize ||
+      e.button !== 0
+    )
       return;
     const wrapper = (e.currentTarget as HTMLElement).closest(
       '[part="cell"]'
@@ -633,6 +759,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     const pitch = this.measurePitch();
     if (!pitch) return;
     e.stopPropagation();
+    const captureTarget = e.currentTarget as HTMLElement;
     this.cellResize = {
       pointerId: e.pointerId,
       cellId: cell.id,
@@ -644,9 +771,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       y: cell.y,
       ...pitch,
       wrapper,
+      captureTarget,
       rtlFlip: isRtl(this) ? -1 : 1,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    captureTarget.setPointerCapture?.(e.pointerId);
     wrapper.setAttribute("data-resizing", "");
     window.addEventListener("pointermove", this.onResizeHandlePointerMove);
     window.addEventListener("pointerup", this.onResizeHandlePointerUp);
@@ -657,6 +785,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private onResizeHandlePointerMove = (e: PointerEvent): void => {
     const resize = this.cellResize;
     if (!resize || e.pointerId !== resize.pointerId) return;
+    if (!this.canResizeCell(resize.cellId)) {
+      this.cancelCellResize();
+      return;
+    }
     const dwUnits = Math.round(
       ((e.clientX - resize.startClientX) * resize.rtlFlip) / resize.colPitch
     );
@@ -664,7 +796,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
       (e.clientY - resize.startClientY) / resize.rowPitch
     );
     const { w, h } = clampCandidate(
-      this.layout.find((c) => c.id === resize.cellId) ?? {},
+      this.normalizedLayout.find((c) => c.id === resize.cellId) ?? {},
       {
         x: resize.x,
         y: resize.y,
@@ -677,7 +809,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     resize.wrapper.style.gridRow = `${resize.y + 1} / span ${h}`;
     if (this.collision !== "overlap") {
       const collides =
-        findCollisions(this.layout, {
+        findCollisions(this.normalizedLayout, {
           id: resize.cellId,
           x: resize.x,
           y: resize.y,
@@ -693,6 +825,10 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
   private onResizeHandlePointerUp = (e: PointerEvent): void => {
     const resize = this.cellResize;
     if (!resize || e.pointerId !== resize.pointerId) return;
+    if (e.type !== "pointerup" || !this.canResizeCell(resize.cellId)) {
+      this.cancelCellResize();
+      return;
+    }
     this.cellResize = undefined;
     resize.wrapper.removeAttribute("data-resizing");
     window.removeEventListener("pointermove", this.onResizeHandlePointerMove);

@@ -32,7 +32,8 @@ function starSolid(): SVGTemplateResult {
 }
 
 /**
- * `<lr-rating>` — a keyboard-accessible star rating control.
+ * `<lr-rating>` — a keyboard-accessible star rating control. Pointer position within a star is
+ * mirrored under RTL and snapped to `precision`, matching keyboard/value fractional selection.
  *
  * @customElement lr-rating
  * @event lr-change - The rating changed. `detail: { value }`.
@@ -45,7 +46,8 @@ function starSolid(): SVGTemplateResult {
  * star's filled fraction (0%, a partial percentage under a fractional
  * `precision`, or 100%).
  * @cssprop [--lr-rating-fill=var(--lr-color-warning)] - Filled-star color.
- * @cssprop [--lr-rating-empty-color=var(--lr-color-border)] - Unfilled-star color.
+ * @cssprop [--lr-rating-empty-color=var(--lr-color-border)] - Unfilled-star color, retained during
+ * hover preview.
  * @cssprop [--lr-rating-size=var(--lr-font-size-xl)] - Star size.
  */
 export class LyraRating extends LyraElement<LyraRatingEventMap> {
@@ -85,7 +87,18 @@ export class LyraRating extends LyraElement<LyraRatingEventMap> {
   }
   private onClick = (event: MouseEvent): void => {
     const target = (event.target as HTMLElement).closest('[data-value]') as HTMLElement | null;
-    if (target) this.setValue(Number(target.dataset['value']));
+    if (!target) return;
+    const star = Number(target.dataset['value']);
+    const rect = target.getBoundingClientRect();
+    if (!Number.isFinite(star) || rect.width <= 0) {
+      this.setValue(star);
+      return;
+    }
+    const physicalFraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const logicalFraction = this.effectiveDirection === 'rtl' ? 1 - physicalFraction : physicalFraction;
+    const rawValue = star - 1 + logicalFraction;
+    const precision = this.safePrecision;
+    this.setValue(Math.max(precision, Math.ceil(rawValue / precision) * precision));
   };
   private onKeyDown = (event: KeyboardEvent): void => {
     const forwardKey = this.effectiveDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';

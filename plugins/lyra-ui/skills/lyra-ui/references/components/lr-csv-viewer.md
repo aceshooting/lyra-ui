@@ -23,9 +23,9 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 **Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
-setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`. `anchorKinds` is a
-readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
+values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly `['cell-range']`
+(this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query

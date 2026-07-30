@@ -41,6 +41,9 @@ export const styles = css`
     z-index: var(--lr-layer-content);
     display: flex;
     flex-direction: column;
+    min-inline-size: 0;
+    max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
+    box-sizing: border-box;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--lr-color-surface);
@@ -53,6 +56,11 @@ export const styles = css`
     display: flex;
     align-items: center;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+  }
+  .legend-row > span:last-child {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='legend-swatch'] {
     inline-size: var(--lr-size-0-75rem);

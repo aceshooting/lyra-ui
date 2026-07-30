@@ -6,7 +6,7 @@
 - **Class** `LyraTestResults`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/test-results/test-results.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 14 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,16 +22,30 @@ name: string; tests: TestCaseResult[] }` and `TestCaseResult { id: string; name:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
 'skipped' | 'running'` (all three exported here). `statusFilter: TestStatus[] =
 []` (attribute: false) — empty shows every status; and `autoExpandFailures: boolean = true`
-(attribute `auto-expand-failures`).
+(attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
+invalid/negative values are omitted rather than reaching `Intl.NumberFormat`.
 
-**Slots:** `detail-{testId}` — rich failure detail for that test, rendered after its plain `message`
-text once the row is expanded.
+**Slots:** `detail-{encodedSuiteId}:{encodedTestId}` — collision-free suite-scoped rich detail for
+a test, where each encoded segment is `encodeURIComponent(id)`. It renders after the plain
+`message` once expanded (for example, suite `unit` and test `same` use
+`slot="detail-unit:same"`). This canonical form distinguishes duplicate and delimiter-containing
+ids and wins when multiple forms are supplied. The prior
+`detail-{suiteId}-{testId}` form remains an unambiguous compatibility fallback; it is ignored when
+the same name could address multiple rows or collide with another row's canonical name. The older
+`detail-{testId}` form remains supported only while that test id is globally unique across all
+suites. Slot listeners remain mounted while detail is absent, so appending matching slotted
+content after the component's first render immediately enables the row's disclosure.
 
 **Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
 component updates its own `statusFilter` first, then emits),
-and `lr-toggle` (`detail: { id: string; expanded: boolean }`, a row's failure detail was
-expanded/collapsed).
+and `lr-toggle` (`detail: { id: string; suiteId?: string; expanded: boolean }`, a row's failure
+detail was expanded/collapsed). To preserve the established exact event shape, `suiteId` is omitted
+for a globally unique test id and included when the id occurs in more than one suite. Manual
+expansion state is always keyed by the suite+test pair, so toggling one duplicate never toggles its
+sibling.
+Each expand/collapse action's localized accessible name includes both suite and test names, so
+repeated row controls remain distinguishable.
 
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
@@ -47,4 +61,8 @@ filter toggle. All three follow the state-scoped-property convention described u
 the element or on any ancestor. They exist because
 `::part(filter-toggle)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so restyling the pressed state otherwise meant overriding the
-library-wide brand tokens.
+library-wide brand tokens. Per-result status foregrounds are independently exposed through
+`--lr-test-results-passed-color` (default `var(--lr-color-success)`),
+`--lr-test-results-failed-color` (default `var(--lr-color-danger)`),
+`--lr-test-results-skipped-color` (default `var(--lr-color-text-quiet)`), and
+`--lr-test-results-running-color` (default `var(--lr-color-brand)`).

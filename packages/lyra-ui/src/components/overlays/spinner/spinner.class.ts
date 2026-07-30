@@ -9,7 +9,8 @@ export type SpinnerLabelPlacement = 'none' | 'after';
  * `<lr-spinner>` — an indeterminate busy indicator.
  *
  * @customElement lr-spinner
- * @slot - Optional visible label.
+ * @slot - Optional label. `label-placement="after"` renders it and uses its text as the status
+ * name; `none` hides it from both rendering and the accessibility tree.
  * @csspart base - The wrapper.
  * @csspart spinner - The animated indicator.
  * @csspart label - The accessible/visible label wrapper.
@@ -22,14 +23,42 @@ export type SpinnerLabelPlacement = 'none' | 'after';
 export class LyraSpinner extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   @property({ attribute: 'label-placement', reflect: true }) labelPlacement: SpinnerLabelPlacement = 'none';
-  /** Accessible name for the busy status, forwarded from a host `aria-label`. When unset, the
-   *  localized "Loading…" default provides the name. */
+  /** Accessible name for the busy status, forwarded from a host `aria-label`. When unset, a
+   *  visible `label-placement="after"` label names it, then the localized "Loading…" fallback. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+  private labelObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
+    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  override disconnectedCallback(): void {
+    this.labelObserver?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  private get visibleLabelText(): string {
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot');
+    return (
+      slot
+        ?.assignedNodes({ flatten: true })
+        .map((node) => node.textContent ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim() ?? ''
+    );
+  }
+
   override render(): TemplateResult {
-    const label = this.accessibleLabel || this.localize('loading');
+    const label =
+      this.accessibleLabel ||
+      (this.labelPlacement === 'after' ? this.visibleLabelText : '') ||
+      this.localize('loading');
     return html`<span part="base" role="status" aria-label=${label}>
       <span part="spinner" aria-hidden="true"></span>
-      <span part="label" ?hidden=${this.labelPlacement === 'none'}><slot></slot></span>
+      <span part="label" ?hidden=${this.labelPlacement === 'none'}><slot @slotchange=${() => this.requestUpdate()}></slot></span>
     </span>`;
   }
 }

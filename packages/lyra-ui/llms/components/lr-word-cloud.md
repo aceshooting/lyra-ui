@@ -31,8 +31,9 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
   string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
   `0` for sizing purposes only — the original value is still echoed verbatim in `lr-word-click`'s
-  `detail`), `color` overrides the palette for that word, `group` shares one palette color across
-  every word with the same `group` value
+  `detail`), a valid CSS `color` overrides the palette for that word (invalid values,
+  declaration-breaking input, and `url()` fall back to the palette), and `group` shares one palette
+  color across every word with the same `group` value
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
@@ -42,10 +43,12 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
 - `orientations: 'horizontal'|'mixed' = 'horizontal'` — `mixed` lets ~25% of words render rotated
   90° for denser packing
 - `palette?: string[]` (attribute: false) — custom categorical colors, cycled by word index (or by
-  `group`); defaults to the `--lr-word-cloud-color-1..8` tokens
+  `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
+  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens
 - `legend: WordCloudLegendItem[] = []` (attribute: false) — optional named `{ label, color }`
   entries for explaining explicit `words[].color`/group color overrides; when omitted, the
-  component derives entries from grouped and explicitly colored words
+  component derives entries from grouped and explicitly colored words. An invalid legend color
+  renders a transparent swatch.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection

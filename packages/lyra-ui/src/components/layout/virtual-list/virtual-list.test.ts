@@ -758,6 +758,9 @@ it("reflects loading via the loading attribute and aria-busy on the scroll conta
   expect(el.hasAttribute("loading")).to.be.true;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.getAttribute("aria-busy")).to.equal("true");
+  el.loading = false;
+  await el.updateComplete;
+  expect(base.getAttribute("aria-busy")).to.equal("false");
 });
 
 it('falls back to auto (measured) mode when row-height is neither "auto" nor a valid positive number', async () => {
@@ -1301,6 +1304,30 @@ describe("public offset/index queries", () => {
     expect(el.offsetForIndex(0)).to.equal(0);
   });
 
+  it("saturates cumulative fixed-row offsets instead of serializing Infinitypx", async () => {
+    const el = (await fixture(
+      html`<lr-virtual-list
+        style="--lr-virtual-list-height:200px"
+        row-height=${Number.MAX_VALUE}
+        .items=${[1, 2, 3]}
+        .renderItem=${renderText}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>`
+    )) as LyraVirtualList;
+    await el.updateComplete;
+
+    const offsets = [0, 1, 2, 3].map((index) => el.offsetForIndex(index));
+    expect(offsets.every(Number.isFinite)).to.be.true;
+    expect(offsets).to.deep.equal([
+      0,
+      Number.MAX_VALUE,
+      Number.MAX_VALUE,
+      Number.MAX_VALUE,
+    ]);
+    const spacer = el.shadowRoot!.querySelector('[part="spacer"]') as HTMLElement;
+    expect(spacer.getAttribute("style")).to.not.contain("Infinity");
+  });
+
   it("indexAtOffset round-trips offsetForIndex for every index in a mixed-height list", async () => {
     const heights = [30, 90, 55, 120, 45, 70];
     const items = heights.map((h, i) => ({ id: i, h }));
@@ -1575,6 +1602,7 @@ describe("sticky group overlay", () => {
       groups?: typeof groups;
       items?: unknown[];
       renderItem?: (item: unknown, index: number) => unknown;
+      renderStickyGroup?: (group: (typeof groups)[number]) => unknown;
     } = {}
   ): Promise<LyraVirtualList> {
     const el = (await fixture(
@@ -1586,7 +1614,8 @@ describe("sticky group overlay", () => {
         .groups=${extra.groups ?? groups}
         .renderItem=${extra.renderItem ?? renderGroupAwareRow}
         .keyFunction=${numberKey}
-        .renderStickyGroup=${sticky ? renderSticky : undefined}
+        .renderStickyGroup=${extra.renderStickyGroup ??
+        (sticky ? renderSticky : undefined)}
       ></lr-virtual-list>`
     )) as LyraVirtualList;
     await el.updateComplete;
@@ -1842,6 +1871,92 @@ describe("sticky group overlay", () => {
       copy.closest('[aria-hidden="true"]') === copy,
       "the copy itself carries the aria-hidden"
     ).to.be.true;
+  });
+
+  it("removes focus stops nested inside an open custom-element shadow root from the aria-hidden copy", async () => {
+    const tagName = "test-sticky-shadow-control";
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: "open", delegatesFocus: true });
+            root.innerHTML = '<button type="button">Shadow action</button>';
+          }
+        }
+      );
+    }
+
+    const el = await mount(true, {
+      renderStickyGroup: (group) =>
+        html`<div
+          role="heading"
+          aria-level="2"
+          style="block-size:${STICKY_HEIGHT}px"
+        >
+          ${group.label}<test-sticky-shadow-control></test-sticky-shadow-control>
+        </div>`,
+    });
+    await scrollTo(el, 10 * ROW);
+
+    const customControl = overlay(el)!.querySelector<HTMLElement>(tagName)!;
+    const shadowButton =
+      customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
+    expect(shadowButton.tabIndex).to.equal(-1);
+  });
+
+  it("removes shadow focus stops added or replaced after the sticky copy renders", async () => {
+    const tagName = "test-async-sticky-shadow-control";
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open", delegatesFocus: true });
+          }
+
+          connectedCallback(): void {
+            queueMicrotask(() => this.renderAction("Initial action"));
+          }
+
+          renderAction(label: string): void {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = label;
+            this.shadowRoot!.replaceChildren(button);
+          }
+        }
+      );
+    }
+
+    const el = await mount(true, {
+      renderStickyGroup: (group) =>
+        html`<div
+          role="heading"
+          aria-level="2"
+          style="block-size:${STICKY_HEIGHT}px"
+        >
+          ${group.label}<test-async-sticky-shadow-control></test-async-sticky-shadow-control>
+        </div>`,
+    });
+    await scrollTo(el, 10 * ROW);
+    await aTimeout(0);
+
+    const customControl = overlay(el)!.querySelector<HTMLElement>(
+      tagName
+    ) as HTMLElement & { renderAction(label: string): void };
+    const firstButton =
+      customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
+    expect(firstButton.tabIndex).to.equal(-1);
+
+    customControl.renderAction("Replacement action");
+    await aTimeout(0);
+    const replacementButton =
+      customControl.shadowRoot!.querySelector<HTMLButtonElement>("button")!;
+    expect(replacementButton).to.not.equal(firstButton);
+    expect(replacementButton.tabIndex).to.equal(-1);
   });
 
   it("is pointer-transparent by default and interactive only when the consumer opts in", async () => {

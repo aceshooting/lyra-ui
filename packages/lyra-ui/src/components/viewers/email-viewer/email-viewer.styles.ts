@@ -31,7 +31,7 @@ export const styles = css`
   [part='subject'] { font-weight: var(--lr-font-weight-semibold); overflow-wrap: anywhere; }
   [part='body'] { box-sizing: border-box; overflow: auto; max-block-size: var(--lr-email-viewer-max-height); padding: var(--lr-space-m); }
   [part='body-html'], [part='body-text'] { color: var(--lr-color-text); font-size: var(--lr-font-size-md-sm); line-height: var(--lr-line-height-normal); }
-  [part='body-html'] { overflow-wrap: anywhere; }
+  [part='body-html'] { contain: paint; overflow-wrap: anywhere; }
   [part='body-text'] { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   [part='attachments'] { padding: var(--lr-space-m); border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border); }
   [part='attachments-label'] { display: block; margin-block-end: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-weight: var(--lr-font-weight-semibold); font-size: var(--lr-font-size-xs); text-transform: uppercase; }

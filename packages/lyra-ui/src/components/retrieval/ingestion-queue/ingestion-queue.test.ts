@@ -285,6 +285,27 @@ describe('retry/cancel affordances', () => {
     expect((event as CustomEvent).detail).to.deep.equal({ itemId: '1', attempt: 1 });
   });
 
+  it('emits retry attempts from the same nonnegative finite-integer normalization used by the UI', async () => {
+    const cases = [
+      { attempts: -4, displayed: null, next: 1 },
+      { attempts: 2.8, displayed: 'Attempt 2', next: 3 },
+      { attempts: Number.POSITIVE_INFINITY, displayed: null, next: 1 },
+    ];
+
+    for (const testCase of cases) {
+      const el = (await fixture(
+        html`<lr-ingestion-queue
+          .items=${[item({ id: `attempt-${String(testCase.attempts)}`, stage: 'failed', attempts: testCase.attempts })]}
+        ></lr-ingestion-queue>`,
+      )) as LyraIngestionQueue;
+      const attempts = el.shadowRoot!.querySelector('[part="item-attempts"]');
+      expect(attempts?.textContent.trim() ?? null).to.equal(testCase.displayed);
+      const pending = oneEvent(el, 'lr-retry');
+      (el.shadowRoot!.querySelector('[part="retry-button"]') as HTMLButtonElement).click();
+      expect((await pending).detail.attempt).to.equal(testCase.next);
+    }
+  });
+
   it('fires lr-cancel with { itemId } on click', async () => {
     const el = (await fixture(
       html`<lr-ingestion-queue .items=${[item({ id: '9', stage: 'embedding' })]}></lr-ingestion-queue>`,

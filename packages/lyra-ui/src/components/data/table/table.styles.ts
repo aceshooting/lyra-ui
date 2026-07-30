@@ -41,6 +41,9 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
+  :where([part='filter']):hover {
+    background: var(--lr-color-brand-quiet);
+  }
   [part='filter']::placeholder {
     color: var(--lr-color-text-quiet);
     opacity: 1;
@@ -232,6 +235,9 @@ export const styles = css`
   [part='cell-editor']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
+  }
+  :where([part='cell-editor']):hover {
+    background: var(--lr-color-brand-quiet);
   }
   /* editType: 'number' cells render a native type="number" editor; without this reset the
      browser's default up/down spinner buttons show in raw, unstyled UA chrome inside an otherwise

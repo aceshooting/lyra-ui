@@ -9,6 +9,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='toolbar'] {
     display: flex;
@@ -157,7 +159,9 @@ export const styles = css`
     color: var(--lr-color-text);
     background: var(--lr-color-surface);
     padding-inline: var(--lr-space-2xs);
-    white-space: nowrap;
+    max-inline-size: min(var(--lr-size-16rem), 100%);
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   [part='annotation-box'] {
     position: absolute;

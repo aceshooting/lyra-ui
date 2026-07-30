@@ -4,6 +4,8 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './graph-legend.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 
 /** The exact `lr-graph.nodeTypes` entry shape, declared locally (not imported from
  *  `lr-graph`) so this zero-dependency component never pulls in the graph's own d3 optional-peer
@@ -12,6 +14,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 export type LyraGraphLegendType = {
   id: string;
   label: string;
+  /** A CSS color. Invalid values and `url()` paint servers use the categorical fallback. */
   color?: string;
   shape?: 'circle' | 'square' | 'diamond';
 };
@@ -49,6 +52,8 @@ const FALLBACK_PALETTE = ['#0969da', '#1a7f37', '#9a6700', '#cf222e', '#8250df',
  * @csspart live-region - The visually hidden filter-toggle announcement.
  * @cssprop [--lr-graph-legend-hidden-color=var(--lr-color-text-quiet)] - Text color for a
  * filtered-out (hidden) legend row's label/count, independent of the shared quiet-text token.
+ * @cssprop [--lr-graph-legend-hidden-swatch-opacity=0.5] - Opacity of a filtered-out row's
+ * decorative swatch.
  */
 export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   static override styles = [LyraElement.styles, styles, srOnly];
@@ -74,7 +79,7 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   }
 
   private swatchColor(type: LyraGraphLegendType, index: number): string {
-    return type.color || this.paletteColor(index);
+    return sanitizeCssColor(type.color) ?? this.paletteColor(index);
   }
 
   private isVisible(id: string): boolean {
@@ -114,7 +119,9 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
                 : nothing}
             </svg>
             <span part="label">${type.label}</span>
-            ${count != null ? html`<span part="count">${count}</span>` : nothing}
+            ${count != null
+              ? html`<span part="count">${getNumberFormat(this.effectiveLocale).format(count)}</span>`
+              : nothing}
           `;
           return this.interactive
             ? html`<button

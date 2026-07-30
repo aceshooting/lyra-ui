@@ -52,7 +52,7 @@ const MIN_PLAYBACK_RATE = 0.0625;
 const MAX_PLAYBACK_RATE = 16;
 
 function formatTime(seconds: number, locale: string): string {
-  const total = Math.max(0, Math.round(seconds));
+  const total = Math.round(finiteRange(seconds, 0, 0));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
@@ -226,7 +226,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Live playback position: the media element's own `currentTime` once mounted, else the last
    *  locally-tracked value (e.g. a `seek()` issued before metadata loaded). */
   get currentTime(): number {
-    return this.mediaEl ? this.mediaEl.currentTime : this.currentTimeState;
+    const max = this.duration > 0 ? this.duration : Infinity;
+    const value = this.mediaEl ? this.mediaEl.currentTime : this.currentTimeState;
+    return finiteRange(value, this.currentTimeState, 0, max);
   }
   set currentTime(value: number) {
     // `this.duration` stays 0 until real metadata loads (see onLoadedMetadata()), so clamping the
@@ -310,9 +312,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     if (el) this.drawWaveform();
   };
 
-  /** Proxies the native media element's `play()`. A no-op before the element mounts. */
-  play(): void {
-    void this.mediaEl?.play();
+  /** Proxies the native media element's `play()` and preserves its promise/rejection. Resolves
+   *  immediately before the element mounts. */
+  play(): Promise<void> {
+    return this.mediaEl?.play() ?? Promise.resolve();
   }
   /** Proxies the native media element's `pause()`. A no-op before the element mounts. */
   pause(): void {
@@ -320,7 +323,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
   /** Plays if paused, pauses if playing. A no-op before the element mounts. */
   toggle(): void {
-    if (this.mediaEl?.paused) this.play();
+    if (this.mediaEl?.paused) void this.play().catch(this.onPlaybackFailure);
     else this.pause();
   }
   /** Sets `currentTime` and forces an immediate `lr-time-change`, bypassing the playing-time throttle. */
@@ -342,10 +345,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   private onLoadedMetadata = (event: Event): void => {
     if (!this.isCurrentMediaEvent(event)) return;
     this.metadataLoaded = true;
-    this.duration = this.mediaEl?.duration || 0;
+    this.duration = finiteRange(this.mediaEl?.duration ?? 0, 0, 0);
     this.renderError = false;
     if (this.pendingSeek !== null && this.mediaEl) {
-      this.mediaEl.currentTime = this.pendingSeek;
+      const max = this.duration > 0 ? this.duration : Infinity;
+      const pendingSeek = finiteRange(this.pendingSeek, 0, 0, max);
+      this.mediaEl.currentTime = pendingSeek;
+      this.currentTimeState = pendingSeek;
       this.pendingSeek = null;
     }
     this.emit('lr-load', { duration: this.duration, kind: this.detectedKind() });
@@ -365,6 +371,11 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.emit('lr-render-error', { error: new Error('The media failed to load.') });
   };
 
+  private onPlaybackFailure = (error: unknown): void => {
+    this.renderError = true;
+    this.emit('lr-render-error', { error });
+  };
+
   private emitTimeChange(force: boolean): void {
     const now = Date.now();
     if (!force && now - this.lastTimeChangeAt < TIME_CHANGE_THROTTLE_MS) return;
@@ -380,8 +391,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     let active: LyraAvCue | undefined;
     let activeIndex = -1;
     this.cues.forEach((cue, index) => {
-      if (time >= cue.start && time < (cue.end ?? Infinity)) {
-        if (!active || cue.start >= active.start) {
+      const start = this.safeCueStart(cue);
+      const end = this.safeCueEnd(cue, start);
+      if (time >= start && time < end) {
+        if (!active || start >= this.safeCueStart(active)) {
           active = cue;
           activeIndex = index;
         }
@@ -489,7 +502,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     ctx.fillStyle = color;
     const barWidth = width / this.peaks.length;
     this.peaks.forEach((peak, i) => {
-      const barHeight = Math.max(1, peak * height);
+      const barHeight = Math.max(1, finiteRange(peak, 0, 0, 1) * height);
       ctx.fillRect(i * barWidth, (height - barHeight) / 2, Math.max(1, barWidth - 1), barHeight);
     });
   }
@@ -507,8 +520,13 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     );
     if (!ranged.length) return nothing;
     return html`${ranged.map((h) => {
-      const start = (h.anchor.start / this.duration) * 100;
-      const end = ((h.anchor.end ?? h.anchor.start) / this.duration) * 100;
+      const startSeconds = finiteRange(h.anchor.start, 0, 0, this.duration);
+      const endSeconds =
+        h.anchor.end == null
+          ? startSeconds
+          : finiteRange(h.anchor.end, startSeconds, startSeconds, this.duration);
+      const start = (startSeconds / this.duration) * 100;
+      const end = (endSeconds / this.duration) * 100;
       return html`<button
         part="timeline-marker"
         type="button"
@@ -569,12 +587,34 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
    *  offered `rates` list (a caller-driven value, or a rate offered by an earlier `rates` array that
    *  has since been narrowed) would otherwise display a rate that doesn't match `playbackRate`. */
   private rateOptions(): number[] {
-    if (this.rates.includes(this.playbackRate)) return this.rates;
-    return [...this.rates, this.playbackRate].sort((a, b) => a - b);
+    const validRates = [
+      ...new Set(
+        (Array.isArray(this.rates) ? this.rates : []).filter(
+          (rate) =>
+            Number.isFinite(rate) &&
+            rate >= MIN_PLAYBACK_RATE &&
+            rate <= MAX_PLAYBACK_RATE,
+        ),
+      ),
+    ];
+    if (validRates.includes(this.playbackRate)) return validRates;
+    return [...validRates, this.playbackRate].sort((a, b) => a - b);
+  }
+
+  private safeCueStart(cue: LyraAvCue): number {
+    const max = this.duration > 0 ? this.duration : Infinity;
+    return finiteRange(cue.start, 0, 0, max);
+  }
+
+  private safeCueEnd(cue: LyraAvCue, start: number): number {
+    if (cue.end == null) return Infinity;
+    const max = this.duration > 0 ? this.duration : Infinity;
+    return finiteRange(cue.end, start, start, max);
   }
 
   private renderCue = (cue: unknown, index: number): TemplateResult => {
     const c = cue as LyraAvCue;
+    const start = this.safeCueStart(c);
     const isActive = this.activeCueIndex === index;
     const matchPosition = this.searchMatches.indexOf(index);
     const isMatch = matchPosition !== -1;
@@ -588,9 +628,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
       aria-current=${isActive ? 'true' : 'false'}
       ?data-match=${isMatch}
       ?data-active-match=${isActiveMatch}
-      @click=${() => this.seek(c.start)}
+      @click=${() => this.seek(start)}
     >
-      <span part="cue-time">${formatTime(c.start, this.effectiveLocale)}</span>
+      <span part="cue-time">${formatTime(start, this.effectiveLocale)}</span>
       ${c.speaker ? html`<span part="cue-speaker">${c.speaker}</span>` : nothing}
       <span part="cue-text">${c.text}</span>
     </button>`;
@@ -658,7 +698,14 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             aria-label=${this.localize('avPlayerPlaybackRate')}
             @change=${(e: Event) => (this.playbackRate = Number((e.target as HTMLSelectElement).value))}
           >
-            ${this.rateOptions().map((rate) => html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}>${getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 2 }).format(rate)}x</option>`)}
+            ${this.rateOptions().map((rate) => {
+              const formattedRate = getNumberFormat(this.effectiveLocale, {
+                maximumFractionDigits: 2,
+              }).format(rate);
+              return html`<option value=${String(rate)} ?selected=${rate === this.playbackRate}
+                >${this.localize('avPlayerRateOption', undefined, { rate: formattedRate })}</option
+              >`;
+            })}
           </select>
           <span class="rate-select-chevron" aria-hidden="true">${chevronIcon()}</span>
         </span>

@@ -184,6 +184,36 @@ describe('model + cost summary', () => {
     expect(summary.hidden).to.be.true;
     expect(summary.querySelector('slot[name="summary"]')).to.exist;
   });
+
+  it('contains long public model and metric data inside a 320px allocation', async () => {
+    const long = `identifier-${'unbroken'.repeat(40)}`;
+    const wrapper = await fixture(html`
+      <div style="inline-size:320px">
+        <lr-agent-run
+          .run=${makeRun({ status: { kind: 'done' }, startedAt: 0, endedAt: 1000, model: long })}
+          .metrics=${[
+            { id: 'long-label', label: long, value: long },
+            { id: 'long-value', label: 'Output', value: long },
+          ]}
+        ></lr-agent-run>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-agent-run') as LyraAgentRun;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const summary = el.shadowRoot!.querySelector('[part="summary"]') as HTMLElement;
+    expect(el.getBoundingClientRect().width).to.be.at.most(321);
+    for (const part of [base, header, summary]) {
+      expect(part.scrollWidth, part.getAttribute('part') ?? '').to.be.at.most(Math.ceil(part.getBoundingClientRect().width) + 1);
+    }
+    for (const partName of ['model', 'metric', 'metric-label', 'metric-value']) {
+      const parts = [...el.shadowRoot!.querySelectorAll(`[part="${partName}"]`)] as HTMLElement[];
+      expect(parts.length, partName).to.be.greaterThan(0);
+      for (const part of parts) {
+        expect(part.scrollWidth, partName).to.be.at.most(Math.ceil(part.getBoundingClientRect().width) + 1);
+      }
+    }
+  });
 });
 
 describe('cancel/retry controls', () => {

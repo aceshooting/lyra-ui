@@ -20,11 +20,12 @@ is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does, wired through `aria-describedby`. Cells
-are inspectable, not actionable: there is no per-cell click/activation event, so unlike
-`<lr-heatmap>` there is nothing to fire on Enter/Space. Setting `showLegend` additionally renders a
-static `[part="legend"]` key below the strip, so the color-to-category mapping is readable without
-visiting each cell.
+the same `[part="tooltip"]` detail that pointer hover does. The tooltip is visual only and is not
+wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
+text and describing it again would duplicate the announcement. Cells are inspectable, not
+actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>` there is nothing
+to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
+below the strip, so the color-to-category mapping is readable without visiting each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
@@ -34,9 +35,10 @@ visiting each cell.
   `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: SequenceStripCategory[] = []` (attribute: false) — `{ key, color, label? }`; `color`
-  is the cell background for every item whose `category` matches `key` (an item whose `category`
-  matches no entry renders `transparent`); `label` is used in the auto-generated `aria-label` summary
-  and as the hover-tooltip fallback text, falling back to `key` itself when unset
+  is the cell background for every item whose `category` matches `key`; invalid CSS colors,
+  declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
+  used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
+  back to `key` itself when unset
 - `orientation: 'horizontal' = 'horizontal'` (reflected) — only `'horizontal'` is supported today;
   vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated

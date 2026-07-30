@@ -57,6 +57,43 @@ export const RichRows: Story = {
   `,
 };
 
+export const RetintedBadges: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Every badge tone exposes independent foreground and background hooks without changing the tree selection colors.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-tree
+      style="
+        max-width:20rem;
+        --lr-tree-badge-brand-color: var(--lr-color-danger);
+        --lr-tree-badge-brand-bg: var(--lr-color-danger-quiet);
+        --lr-tree-badge-success-color: var(--lr-color-brand);
+        --lr-tree-badge-success-bg: var(--lr-color-brand-quiet);
+        --lr-tree-badge-warning-color: var(--lr-color-success);
+        --lr-tree-badge-warning-bg: var(--lr-color-success-quiet);
+        --lr-tree-badge-danger-color: var(--lr-color-warning);
+        --lr-tree-badge-danger-bg: var(--lr-color-warning-quiet);
+      "
+      label="Retinted badge tones"
+      .data=${[{
+        id: 'root',
+        label: 'Build',
+        badges: [
+          { text: 'Brand', tone: 'brand' },
+          { text: 'Ready', tone: 'success' },
+          { text: 'Wait', tone: 'warning' },
+          { text: 'Fail', tone: 'danger' },
+        ],
+      }] satisfies TreeItem[]}
+    ></lr-tree>
+  `,
+};
+
 /** Demonstrates the imperative `expandAll()`/`collapseAll()` methods. */
 export const ExpandCollapseAll: Story = {
   render: () => {

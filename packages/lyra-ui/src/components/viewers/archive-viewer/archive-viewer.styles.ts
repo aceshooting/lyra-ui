@@ -1,5 +1,51 @@
 import { css } from 'lit';
 
+/** Highlight rules installed into the embedded virtual list's shadow root. Archive entry rows are
+ * rendered there, so highlight pseudos and fallback marks must be styled in that tree as well. */
+export const virtualListHighlightStyles = css`
+  ::highlight(lr-highlight-accent) {
+    background-color: var(--lr-archive-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
+  }
+  ::highlight(lr-highlight-success) {
+    background-color: var(--lr-archive-viewer-highlight-success-background, var(--lr-color-success-quiet));
+  }
+  ::highlight(lr-highlight-warning) {
+    background-color: var(--lr-archive-viewer-highlight-warning-background, var(--lr-color-warning-quiet));
+  }
+  ::highlight(lr-highlight-danger) {
+    background-color: var(--lr-archive-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
+  }
+  ::highlight(lr-highlight-neutral) {
+    background-color: var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface));
+  }
+  ::highlight(lr-highlight-active) {
+    background-color: var(--lr-archive-viewer-highlight-active-background, var(--lr-color-brand-quiet));
+    text-decoration: underline;
+  }
+  mark[data-lr-highlight-tone] {
+    background: var(--lr-archive-viewer-highlight-accent-background, var(--lr-color-brand-quiet));
+    color: inherit;
+    border-radius: calc(var(--lr-radius) * 0.5);
+  }
+  mark[data-lr-highlight-tone='success'] {
+    background: var(--lr-archive-viewer-highlight-success-background, var(--lr-color-success-quiet));
+  }
+  mark[data-lr-highlight-tone='warning'] {
+    background: var(--lr-archive-viewer-highlight-warning-background, var(--lr-color-warning-quiet));
+  }
+  mark[data-lr-highlight-tone='danger'] {
+    background: var(--lr-archive-viewer-highlight-danger-background, var(--lr-color-danger-quiet));
+  }
+  mark[data-lr-highlight-tone='neutral'] {
+    background: var(--lr-archive-viewer-highlight-neutral-background, var(--lr-color-surface));
+  }
+  mark[data-lr-highlight-name='lr-highlight-active'] {
+    outline: var(--lr-border-width-thin) solid
+      var(--lr-archive-viewer-highlight-active-outline, var(--lr-color-brand));
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+`;
+
 export const styles = css`
   :host { display: block; }
   [part='base'] { display: flex; flex-direction: column; box-sizing: border-box; border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius); background: var(--lr-color-surface); overflow: hidden; }

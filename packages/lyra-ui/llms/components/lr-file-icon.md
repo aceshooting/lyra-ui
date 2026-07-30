@@ -20,7 +20,9 @@ type wins; filename extension fallback is used only for an empty or `application
 MIME type. Unknown values return a generic file result.
 
 **Properties:** `mimeType` (attribute `mime-type`), `name`, `size` (bytes; `0` renders no size),
-`label`, `decorative`, and `variant: 'icon' | 'label'`.
+`label`, `decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed
+localized file-type/size name. `decorative` changes the semantic owner to presentation and renders
+`aria-hidden="true"` explicitly.
 
 **CSS parts:** `base`, `icon`, `label`, and `size`.
 

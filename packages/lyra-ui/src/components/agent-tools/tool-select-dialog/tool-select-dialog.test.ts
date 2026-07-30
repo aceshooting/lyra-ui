@@ -58,6 +58,16 @@ function categoryHeadingName(heading: Element): string {
   return clone.textContent!.trim();
 }
 
+it('formats visible and announced category counts with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-tool-select-dialog lang="ar-EG" .tools=${TOOLS} open></lr-tool-select-dialog>`,
+  )) as LyraToolSelectDialog;
+  const heading = el.shadowRoot!.querySelector('[part="category-heading"]')!;
+  const formatted = new Intl.NumberFormat('ar-EG').format(2);
+  expect(heading.querySelector('[part="category-count"]')!.textContent).to.equal(formatted);
+  expect(heading.querySelector('.sr-only')!.textContent).to.include(formatted);
+});
+
 it('renders closed by default, with no role/aria-modal on the panel', async () => {
   const el = (await fixture(html`<lr-tool-select-dialog></lr-tool-select-dialog>`)) as LyraToolSelectDialog;
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
@@ -142,6 +152,26 @@ it('groups tools by category in first-seen order, with an uncategorized "Other" 
   )) as LyraToolSelectDialog;
   const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map(categoryHeadingName);
   expect(headings).to.deep.equal(['Research', 'Code execution', 'Other']);
+});
+
+it('keeps a caller category literally named "Other" separate from the uncategorized bucket', async () => {
+  const el = (await fixture(html`
+    <lr-tool-select-dialog
+      .strings=${{ otherCategory: 'Uncategorized' }}
+      .tools=${[
+        { id: 'explicit-other', name: 'Explicit other', category: 'Other' },
+        { id: 'research', name: 'Research tool', category: 'Research' },
+        { id: 'uncategorized', name: 'No category' },
+      ]}
+    ></lr-tool-select-dialog>
+  `)) as LyraToolSelectDialog;
+  const headings = [...el.shadowRoot!.querySelectorAll('[part="category-heading"]')].map(categoryHeadingName);
+  const groups = [...el.shadowRoot!.querySelectorAll('[part="category"]')];
+
+  expect(headings).to.deep.equal(['Other', 'Research', 'Uncategorized']);
+  expect(groups).to.have.length(3);
+  expect(groups[0]!.querySelector('[value="explicit-other"]')).to.exist;
+  expect(groups[2]!.querySelector('[value="uncategorized"]')).to.exist;
 });
 
 it('shows the tool count next to each category heading', async () => {

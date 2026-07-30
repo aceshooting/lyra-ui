@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './chart.js';
 import './doughnut-chart.js';
-import { seriesPalette, type LyraChart } from './chart.js';
+import { seriesPalette, type LyraChart, type Series } from './chart.js';
 import { styles } from './chart.styles.js';
 import { loadChartAndZoom } from './chart-loader.js';
 
@@ -13,7 +13,7 @@ it('shows a loading skeleton and aria-busy while chart.js loads, then swaps to t
 
   await waitUntil(() => (el as any).chart != null, 'chart.js never initialized', { timeout: 5000 });
 
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
 });
@@ -76,10 +76,10 @@ it('exports mixed data and point series as spreadsheet-safe CSV', () => {
   ];
 
   expect(el.exportData('csv')).to.equal([
-    'label,"Revenue, net",Forecast',
-    'Q1,12,20',
-    "'=FORMULA(),,30",
-    'Q3,,40',
+    'label,"Revenue, net",Forecast x,Forecast y',
+    'Q1,12,0,20',
+    "'=FORMULA(),,1,30",
+    'Q3,,2,40',
   ].join('\r\n'));
 });
 
@@ -104,7 +104,7 @@ it('updates in place (same Chart instance) when only data changes', async () => 
 });
 
 it('preserves a legend-toggled hidden dataset across an in-place datasets-only update', async () => {
-  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  const el = (await fixture(html`<lr-chart legend></lr-chart>`)) as LyraChart;
   el.type = 'bar';
   el.labels = ['A', 'B'];
   el.datasets = [
@@ -124,6 +124,64 @@ it('preserves a legend-toggled hidden dataset across an in-place datasets-only u
 
   expect(chart.isDatasetVisible(0)).to.be.true;
   expect(chart.isDatasetVisible(1)).to.be.false;
+  expect(
+    [...el.shadowRoot!.querySelectorAll('[part="legend-item"]')]
+      .map((item) => item.getAttribute('aria-pressed')),
+  ).to.deep.equal(['true', 'false']);
+});
+
+it('does not preserve configured hidden state as a legend override when replacement data makes it visible', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.config = {
+    data: {
+      labels: ['A'],
+      datasets: [{ label: 'Series', data: [1], hidden: true }],
+    },
+  } as never;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  expect(chart.isDatasetVisible(0)).to.be.false;
+
+  el.config = {
+    data: {
+      labels: ['A'],
+      datasets: [{ label: 'Series', data: [2], hidden: false }],
+    },
+  } as never;
+  await el.updateComplete;
+
+  expect(chart.isDatasetVisible(0)).to.be.true;
+  expect(
+    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+  ).to.equal('true');
+});
+
+it('preserves an explicit legend show override for a configured-hidden dataset', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.config = {
+    data: {
+      labels: ['A'],
+      datasets: [{ label: 'Series', data: [1], hidden: true }],
+    },
+  } as never;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  chart.setDatasetVisibility(0, true);
+
+  el.config = {
+    data: {
+      labels: ['A'],
+      datasets: [{ label: 'Series', data: [2], hidden: true }],
+    },
+  } as never;
+  await el.updateComplete;
+
+  expect(chart.isDatasetVisible(0)).to.be.true;
+  expect(
+    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+  ).to.equal('true');
 });
 
 it('repaints after restoring a legend-toggled hidden dataset, not just updating metadata', async () => {
@@ -190,6 +248,82 @@ it('keeps a newly-added series visible instead of inheriting a stale hidden defa
   expect(chart.isDatasetVisible(1)).to.be.true;
 });
 
+it('renders a newly-added series as pressed in the DOM legend on its first update', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Existing', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+
+  el.datasets = [
+    { label: 'Existing', data: [2] },
+    { label: 'Appended', data: [3] },
+  ];
+  await el.updateComplete;
+
+  const legendItems = [
+    ...el.shadowRoot!.querySelectorAll('[part="legend-item"]'),
+  ];
+  expect(chart.isDatasetVisible(1)).to.be.true;
+  expect(legendItems.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal([
+    'true',
+    'true',
+  ]);
+});
+
+it('uses effective dataset hidden state in the DOM legend before Chart.js exists', async () => {
+  const el = document.createElement('lr-chart') as LyraChart;
+  // Keep the peer load pending so this exercises the rendered pre-draw state, not a Chart.js
+  // instance that happened to initialize before the assertion.
+  (el as any).loadLibrary = () => new Promise(() => {});
+  (el as any).loading = false;
+  el.legend = true;
+  el.config = {
+    data: {
+      labels: ['A'],
+      datasets: [{ label: 'Configured hidden', data: [1], hidden: true }],
+    },
+  } as never;
+  const wrapper = await fixture(html`<div></div>`);
+  wrapper.append(el);
+  await el.updateComplete;
+
+  expect((el as any).chart).to.equal(undefined);
+  expect(
+    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+  ).to.equal('false');
+});
+
+it('uses a newly-added effective dataset hidden flag before the in-place draw', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Existing', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+
+  el.config = {
+    data: {
+      labels: ['A'],
+      datasets: [
+        { label: 'Existing', data: [2] },
+        { label: 'Appended hidden', data: [3], hidden: true },
+      ],
+    },
+  } as never;
+  await el.updateComplete;
+
+  const legendItems = [
+    ...el.shadowRoot!.querySelectorAll('[part="legend-item"]'),
+  ];
+  expect(chart.isDatasetVisible(1)).to.be.false;
+  expect(legendItems.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal([
+    'true',
+    'false',
+  ]);
+});
+
 it('does not restore visibility for a dataset index removed by a shrinking update', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.type = 'bar';
@@ -237,13 +371,72 @@ it('rebuilds (new Chart instance) when type changes', async () => {
   await waitUntil(() => (el as any).chart !== instance);
 });
 
-it('exposes role=img with a dataset-label-derived aria-label', async () => {
+it('derives legend state from effective data when a type change will rebuild the chart', async () => {
+  const el = (await fixture(html`<lr-chart type="line" legend></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const oldChart = (el as any).chart;
+
+  (el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement).click();
+  await el.updateComplete;
+  expect(oldChart.isDatasetVisible(0)).to.be.false;
+
+  el.type = 'bar';
+  await el.updateComplete;
+  const rebuiltChart = (el as any).chart;
+
+  expect(rebuiltChart).to.not.equal(oldChart);
+  expect(rebuiltChart.isDatasetVisible(0)).to.be.true;
+  expect(
+    el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+  ).to.equal('true');
+});
+
+it('resynchronizes the legend after a plugin change rebuilds the live chart', async () => {
+  const el = (await fixture(html`<lr-chart type="bar" legend></lr-chart>`)) as LyraChart;
+  el.labels = ['A'];
+  el.datasets = [{ label: 'Revenue', data: [1] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const oldChart = (el as any).chart;
+
+  (el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement).click();
+  await el.updateComplete;
+  expect(oldChart.isDatasetVisible(0)).to.be.false;
+
+  // Turn on the feature without scheduling its normal property update, then invoke the same
+  // late-plugin seam used by the loader. This isolates the rebuild's own obligation to request
+  // a DOM legend refresh.
+  const originalRequestUpdate = el.requestUpdate;
+  (el as any).requestUpdate = () => {};
+  el.dataLabels = true;
+  (el as any).requestUpdate = originalRequestUpdate;
+  const originalUpdateChartArea = (el as any).updateChartArea;
+  (el as any).updateChartArea = () => {};
+  try {
+    (el as any).applyDataLabelsPlugin({ id: 'legend-rebuild-probe' });
+    await el.updateComplete;
+
+    const rebuiltChart = (el as any).chart;
+    expect(rebuiltChart).to.not.equal(oldChart);
+    expect(rebuiltChart.isDatasetVisible(0)).to.be.true;
+    expect(
+      el.shadowRoot!.querySelector('[part="legend-item"]')!.getAttribute('aria-pressed'),
+    ).to.equal('true');
+  } finally {
+    (el as any).updateChartArea = originalUpdateChartArea;
+  }
+});
+
+it('exposes an interactive application role with a dataset-label-derived aria-label', async () => {
   const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
   el.datasets = [{ label: 'Revenue', data: [1] }];
   await el.updateComplete;
   await waitUntil(() => (el as any).chart != null);
   const canvas = el.shadowRoot!.querySelector('canvas')!;
-  expect(canvas.getAttribute('role')).to.equal('img');
+  expect(canvas.getAttribute('role')).to.equal('application');
   expect(canvas.getAttribute('aria-label')).to.contain('Revenue');
 });
 
@@ -257,7 +450,7 @@ it('forwards a host aria-label to the canvas and keeps the chart role on that se
 
   const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(canvas.getAttribute('aria-label')).to.equal('Quarterly revenue');
-  expect(canvas.getAttribute('role')).to.equal('img');
+  expect(canvas.getAttribute('role')).to.equal('application');
   expect(el.getAttribute('role')).to.equal(null);
   expect(el.shadowRoot!.querySelectorAll('[role]')).to.have.length(1);
 });
@@ -1460,7 +1653,7 @@ it('renders a visible, accessible error state instead of a blank canvas when the
     const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
     expect(errorEl.getAttribute('role')).to.equal('alert');
     expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
-    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.shadowRoot!.querySelectorAll('canvas').length).to.equal(0);
     expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
   } finally {
@@ -2386,5 +2579,311 @@ describe('data labels and stack totals', () => {
       'data-labels plugin never attached after turn-on',
       { timeout: 5000 },
     );
+  });
+});
+
+describe('remediated effective chart contract', () => {
+  it('uses explicit config.data for mutation, export, naming, summary, and the fallback table', async () => {
+    const el = (await fixture(html`<lr-chart show-data-table></lr-chart>`)) as LyraChart;
+    el.labels = ['Simplified'];
+    el.datasets = [{ label: 'Simplified series', data: [1] }];
+    el.config = {
+      data: {
+        labels: ['Configured A'] as never,
+        datasets: [{ label: 'Configured series', data: [42] }] as never,
+      },
+    };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    const description = el.shadowRoot!.querySelector('[part="description"]')!;
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table')!;
+    expect(canvas.getAttribute('aria-label')).to.contain('Configured series');
+    expect(canvas.getAttribute('aria-label')).to.not.contain('Simplified series');
+    expect(description.textContent).to.contain('Configured series');
+    expect(description.textContent).to.not.contain('Simplified series');
+    expect(table.textContent).to.contain('Configured A');
+    expect(table.textContent).to.contain('Configured series');
+    expect(table.textContent).to.contain('42');
+    expect(el.exportData('csv')).to.equal('label,Configured series\r\nConfigured A,42');
+
+    el.appendData('Configured B', [84]);
+    await el.updateComplete;
+
+    expect((el as any).chart.data.labels).to.deep.equal(['Configured A', 'Configured B']);
+    expect((el as any).chart.data.datasets[0].data).to.deep.equal([42, 84]);
+    expect(el.exportData('csv')).to.equal(
+      'label,Configured series\r\nConfigured A,42\r\nConfigured B,84',
+    );
+
+    let detail: unknown;
+    el.addEventListener('lr-point-click', (event) => {
+      detail = (event as CustomEvent).detail;
+    }, { once: true });
+    canvas.focus();
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(detail).to.deep.equal({
+      datasetIndex: 0,
+      index: 0,
+      label: 'Configured A',
+      value: 42,
+    });
+  });
+
+  it('mutates only the explicitly overridden config.data member and preserves generated styling', async () => {
+    const el = (await fixture(html`
+      <lr-chart style="--series-color: rgb(12, 34, 56)"></lr-chart>
+    `)) as LyraChart;
+    el.labels = ['Simplified A'];
+    el.datasets = [{ label: 'Revenue', data: [1], color: 'var(--series-color)' }];
+    el.config = { data: { labels: ['Configured A'] as never } };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    el.appendData('Configured B', [2]);
+    await el.updateComplete;
+    const dataConfig = (el.config as any).data;
+    const rendered = (el as any).buildConfig().data.datasets[0];
+    expect(dataConfig.labels).to.deep.equal(['Configured A', 'Configured B']);
+    expect(dataConfig.datasets).to.equal(undefined);
+    expect(el.datasets[0]!.data).to.deep.equal([1, 2]);
+    expect(rendered.borderColor).to.equal('rgb(12, 34, 56)');
+  });
+
+  it('retains typed x/y/r/per-point labels through render, export, events, keyboard, and table semantics', async () => {
+    const points: NonNullable<Series['points']> = [
+      { x: 10, y: 20, r: 7, label: 'North cluster' },
+      { x: 30, y: 40, r: 9, label: 'South cluster' },
+    ];
+    const el = (await fixture(html`<lr-chart type="bubble" show-data-table></lr-chart>`)) as LyraChart;
+    el.datasets = [{ label: 'Clusters', points }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    expect((el as any).buildConfig().data.datasets[0].data).to.deep.equal(points);
+    expect(el.exportData('csv')).to.equal([
+      'label,Clusters x,Clusters y,Clusters r,Clusters label',
+      'North cluster,10,20,7,North cluster',
+      'South cluster,30,40,9,South cluster',
+    ].join('\r\n'));
+
+    const tableText = el.shadowRoot!.querySelector('[part="data-table"] table')!.textContent!;
+    expect(tableText).to.contain('North cluster');
+    expect(tableText).to.contain('10');
+    expect(tableText).to.contain('20');
+    expect(tableText).to.contain('7');
+    const descriptionText = el.shadowRoot!.querySelector('[part="description"]')!.textContent!;
+    expect(descriptionText).to.contain('North cluster');
+    expect(descriptionText).to.contain('10');
+    expect(descriptionText).to.contain('20');
+    expect(descriptionText).to.contain('7');
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    canvas.focus();
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('North cluster');
+    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('10');
+    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('20');
+    expect(el.shadowRoot!.querySelector('[aria-live]')!.textContent).to.contain('7');
+
+    let keyboardDetail: unknown;
+    el.addEventListener('lr-point-click', (event) => {
+      keyboardDetail = (event as CustomEvent).detail;
+    }, { once: true });
+    canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(keyboardDetail).to.deep.equal({
+      datasetIndex: 0,
+      index: 0,
+      label: 'North cluster',
+      value: points[0],
+    });
+
+    const chart = (el as any).chart;
+    const original = chart.getElementsAtEventForMode;
+    chart.getElementsAtEventForMode = () => [{ datasetIndex: 0, index: 1 }];
+    try {
+      let detail: unknown;
+      el.addEventListener('lr-point-click', (event) => {
+        detail = (event as CustomEvent).detail;
+      }, { once: true });
+      (el as any).buildConfig().options.onClick({} as never, [], chart);
+      expect(detail).to.deep.equal({
+        datasetIndex: 0,
+        index: 1,
+        label: 'South cluster',
+        value: points[1],
+      });
+    } finally {
+      chart.getElementsAtEventForMode = original;
+    }
+  });
+
+  it('uses interactive application semantics for its keyboard-navigable canvas', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.datasets = [{ label: 'Revenue', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    expect(canvas.getAttribute('role')).to.equal('application');
+    expect(canvas.getAttribute('aria-roledescription')).to.equal(el.localize('chart'));
+  });
+
+  it('keeps a visible fallback table and a long wrapping legend in normal document flow', async () => {
+    const wrapper = await fixture(html`
+      <div style="inline-size: 256px">
+        <lr-chart show-data-table legend></lr-chart>
+        <div id="after">After chart</div>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-chart') as LyraChart;
+    el.labels = ['A'];
+    el.datasets = [{
+      label: 'A deliberately long translated revenue series label that must remain visible',
+      data: [1],
+    }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    await aTimeout(0);
+
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
+    const legendItem = el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement;
+    const after = wrapper.querySelector('#after') as HTMLElement;
+    expect(legendItem).to.exist;
+    expect(legendItem.textContent).to.contain('must remain visible');
+    expect(legendItem.getBoundingClientRect().right).to.be.at.most(
+      el.getBoundingClientRect().right + 0.5,
+    );
+    expect(table.getBoundingClientRect().bottom).to.be.at.most(
+      el.getBoundingClientRect().bottom + 0.5,
+    );
+    expect(after.getBoundingClientRect().top).to.be.at.least(
+      el.getBoundingClientRect().bottom - 0.5,
+    );
+    expect((el as any).buildConfig().options.plugins.legend.display).to.equal(false);
+
+    legendItem.click();
+    await el.updateComplete;
+    expect((el as any).chart.isDatasetVisible(0)).to.equal(false);
+    expect(legendItem.getAttribute('aria-pressed')).to.equal('false');
+  });
+
+  it('re-resolves a public series color for the DOM legend on theme refresh', async () => {
+    const el = (await fixture(html`
+      <lr-chart legend style="--series-color: rgb(10, 20, 30)"></lr-chart>
+    `)) as LyraChart;
+    el.datasets = [{ label: 'Revenue', data: [1], color: 'var(--series-color)' }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    let swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    expect(swatch.style.backgroundColor).to.equal('rgb(10, 20, 30)');
+
+    el.style.setProperty('--series-color', 'rgb(40, 50, 60)');
+    el.refreshTheme();
+    await el.updateComplete;
+    swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    expect(swatch.style.backgroundColor).to.equal('rgb(40, 50, 60)');
+  });
+
+  it('wraps long reset-zoom and error text without widening its allocation', async () => {
+    const el = (await fixture(html`<lr-chart zoom style="inline-size: 180px"></lr-chart>`)) as LyraChart;
+    el.datasets = [{ label: 'Revenue', data: [1] }];
+    el.strings = {
+      resetZoom: 'A deliberately long translated reset zoom action that must wrap safely',
+      chartMissingLibrary: 'A deliberately long translated dependency error that must wrap safely',
+    };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+
+    (el as any).zoomed = true;
+    await el.updateComplete;
+    const reset = el.shadowRoot!.querySelector('[part="reset-zoom-button"]') as HTMLElement;
+    expect(getComputedStyle(reset).overflowWrap).to.equal('anywhere');
+    expect(reset.getBoundingClientRect().right).to.be.at.most(el.getBoundingClientRect().right + 0.5);
+
+    (el as any).loading = false;
+    (el as any).loadFailed = true;
+    await el.updateComplete;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(getComputedStyle(error).overflowWrap).to.equal('anywhere');
+    expect(error.scrollWidth).to.be.at.most(error.clientWidth);
+  });
+
+  it('does not redraw for an out-of-band theme refresh while off-screen', async () => {
+    const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+    el.datasets = [{ label: 'Revenue', data: [1] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null);
+    const chart = (el as any).chart;
+    const data = chart.data;
+
+    (el as any).visible = false;
+    el.refreshTheme();
+
+    expect(chart.data).to.equal(data);
+  });
+
+  it('coalesces resize work and keeps the resize callback visibility-gated', async () => {
+    const OriginalResizeObserver = window.ResizeObserver;
+    let componentCallback: ResizeObserverCallback | undefined;
+    class CapturingResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        componentCallback ??= callback;
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+      CapturingResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+      el.datasets = [{ label: 'Revenue', data: [1] }];
+      await el.updateComplete;
+      await waitUntil(() => (el as any).chart != null);
+      const chart = (el as any).chart;
+      await aTimeout(20);
+      const data = chart.data;
+      const originalUpdate = chart.update.bind(chart);
+      let updateCount = 0;
+      chart.update = (...args: unknown[]) => {
+        updateCount++;
+        return originalUpdate(...args);
+      };
+
+      (el as any).visible = false;
+      componentCallback!(
+        [{ contentRect: { width: 320 } } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+      await aTimeout(20);
+      expect(chart.data).to.equal(data);
+      expect(updateCount).to.equal(0);
+
+      // Make the next observed width change the responsive legend position. The resize frame and
+      // the resulting reactive state update must still share one Chart.js redraw.
+      (el as any).autoLegendPosition = 'right';
+      await el.updateComplete;
+      el.style.inlineSize = '321px';
+      await aTimeout(0);
+      updateCount = 0;
+      (el as any).visible = true;
+      componentCallback!(
+        [{ contentRect: { width: 321 } } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+      componentCallback!(
+        [{ contentRect: { width: 322 } } as unknown as ResizeObserverEntry],
+        {} as ResizeObserver,
+      );
+      await aTimeout(20);
+      expect(chart.data).to.not.equal(data);
+      expect(updateCount).to.equal(1);
+    } finally {
+      (window as unknown as { ResizeObserver: typeof ResizeObserver }).ResizeObserver =
+        OriginalResizeObserver;
+    }
   });
 });

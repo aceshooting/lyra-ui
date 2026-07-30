@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { assertTableDimensions, isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
@@ -13,6 +14,7 @@ import { parseDelimitedRecords } from '../../../internal/delimited-data.js';
 import { LatestTask } from '../../../internal/latest-task.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 export interface DatasetTable { fields: string[]; rows: Record<string, string>[]; }
 type DatasetFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; table: DatasetTable } | { kind: 'empty' } | { kind: 'error'; message: string };
@@ -86,6 +88,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   /** Display name used for the table's accessible name after an explicit host `aria-label`. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. */
@@ -206,6 +209,9 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     if (!colHighlights.length) return html`<div part=${part} role=${role}>${value}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
+    const accessibleLabel = this.localize('highlightWithLabel', undefined, {
+      label: primary.highlight.label ? `${value} — ${primary.highlight.label}` : value,
+    });
     const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     // The outer element must stay a plain `role="cell"` so the ARIA table tree (table > row >
     // cell) remains valid; the activation affordance is a nested native <button>, which carries
@@ -214,7 +220,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
       <button
         part="cell-highlight-action"
         type="button"
-        aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
+        aria-label=${accessibleLabel}
         @click=${activate}
       >${value}</button>
     </div>`;
@@ -376,7 +382,8 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" style=${this.maxHeight ? `--lr-dataset-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" style=${maxHeight ? styleMap({ '--lr-dataset-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

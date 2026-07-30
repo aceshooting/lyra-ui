@@ -1,5 +1,6 @@
 import { html, nothing, svg, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { fileIcon } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -15,6 +16,10 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
 import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import {
+  sanitizeCssLength,
+  sanitizePercentRect,
+} from '../../../internal/safe-css.js';
 
 export type DocumentPreviewStatus = 'idle' | 'converting' | 'ready' | 'error';
 
@@ -238,7 +243,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   /** A CSS length (e.g. `"24rem"`); once set, `[part="body"]` scrolls
    *  internally past this height instead of growing the page — same
-   *  contract as `<lr-json-viewer>`'s identically-named prop. */
+   *  contract as `<lr-json-viewer>`'s identically-named prop. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Wraps the rendered image (image format only) in an internal `<lr-zoomable-frame>`. `false`
@@ -458,10 +463,38 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
       anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
     }
   > {
-    return this.highlights.filter(
-      (h): h is LyraHighlight & { anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } } } =>
-        h.anchor.kind === 'region',
-    );
+    return this.highlights.flatMap((highlight) => {
+      if (highlight.anchor.kind !== 'region') return [];
+      const rect = sanitizePercentRect(highlight.anchor.rect);
+      return rect
+        ? [
+            {
+              ...highlight,
+              anchor: { ...highlight.anchor, rect },
+            } as LyraHighlight & {
+              anchor: {
+                kind: 'region';
+                rect: { x: number; y: number; width: number; height: number };
+              };
+            },
+          ]
+        : [];
+    });
+  }
+
+  private highlightActionLabel(
+    highlight: LyraHighlight,
+    index: number,
+    total: number,
+  ): string {
+    if (highlight.label) {
+      return this.localize('highlightWithLabel', undefined, { label: highlight.label });
+    }
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    return this.localize('highlightOfTotal', undefined, {
+      index: numberFormat.format(index + 1),
+      total: numberFormat.format(total),
+    });
   }
 
   private renderHighlightLayer(
@@ -474,17 +507,19 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     // overlay under RTL while the image underneath stays put.
     return html`<div part="highlight-layer">
       ${regionHighlights.map(
-        (h) => html`
+        (h, index) => html`
           ${interactive ? html`<button
             part="region-highlight-target"
             data-highlight-id=${h.id}
-            style="left:calc(${h.anchor.rect.x}% + ${h.anchor.rect.width / 2}%);
-              top:calc(${h.anchor.rect.y}% + ${h.anchor.rect.height / 2}%);
-              width:max(${h.anchor.rect.width}%, var(--lr-icon-button-size));
-              height:max(${h.anchor.rect.height}%, var(--lr-icon-button-size))"
+            style=${styleMap({
+              left: `calc(${h.anchor.rect.x}% + ${h.anchor.rect.width / 2}%)`,
+              top: `calc(${h.anchor.rect.y}% + ${h.anchor.rect.height / 2}%)`,
+              width: `max(${h.anchor.rect.width}%, var(--lr-icon-button-size))`,
+              height: `max(${h.anchor.rect.height}%, var(--lr-icon-button-size))`,
+            })}
             type="button"
             role="button"
-            aria-label=${h.label || this.localize('viewerHighlightLabel')}
+            aria-label=${this.highlightActionLabel(h, index, regionHighlights.length)}
             @click=${() => this.emit('lr-highlight-activate', { id: h.id })}
           ></button>` : nothing}
           <div
@@ -493,7 +528,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
             data-tone=${h.tone ?? 'accent'}
             ?data-active=${h.id === this.activeHighlightId}
             aria-hidden="true"
-            style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
+            style=${styleMap({
+              left: `${h.anchor.rect.x}%`,
+              top: `${h.anchor.rect.y}%`,
+              width: `${h.anchor.rect.width}%`,
+              height: `${h.anchor.rect.height}%`,
+            })}
           ></div>
         `,
       )}
@@ -505,17 +545,20 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   ): TemplateResult | typeof nothing {
     if (regionHighlights.length < 2) return nothing;
     return html`<div part="highlight-actions">
-      ${regionHighlights.map((highlight) => html`
+      ${regionHighlights.map((highlight, index) => {
+        const label = this.highlightActionLabel(highlight, index, regionHighlights.length);
+        return html`
         <button
           part="region-highlight-action"
           type="button"
           data-highlight-id=${highlight.id}
-          aria-label=${highlight.label || this.localize('viewerHighlightLabel')}
+          aria-label=${label}
           @click=${() => this.emit('lr-highlight-activate', { id: highlight.id })}
         >
-          ${highlight.label || this.localize('viewerHighlightLabel')}
+          ${highlight.label || label}
         </button>
-      `)}
+      `;
+      })}
     </div>`;
   }
 
@@ -590,7 +633,12 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   override render(): TemplateResult {
     return html`
-      <div part="base" style=${this.maxHeight ? `--lr-document-preview-max-height:${this.maxHeight}` : nothing}>
+      <div
+        part="base"
+        style=${sanitizeCssLength(this.maxHeight)
+          ? styleMap({ '--lr-document-preview-max-height': sanitizeCssLength(this.maxHeight)! })
+          : nothing}
+      >
         <div part="header" ?hidden=${!this.filename}>
           <span part="filename" title=${this.filename}>${this.filename}</span>
         </div>

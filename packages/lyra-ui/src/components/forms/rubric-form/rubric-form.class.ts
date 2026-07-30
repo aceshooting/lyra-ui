@@ -293,6 +293,18 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
     return Number.isInteger(count) && count >= 0 && count <= 10;
   }
 
+  private scoreValues(k: RubricKey): number[] {
+    if (!this.isSegmentedScore(k)) return [];
+    const min = k.min ?? 0;
+    const max = k.max ?? 5;
+    const step = k.step ?? 1;
+    const count = Math.round((max - min) / step);
+    return Array.from(
+      { length: count + 1 },
+      (_, index) => index === count ? max : min + index * step,
+    );
+  }
+
   private computeValidation(): { errors: Record<string, string>; flags: ValidityStateFlags } {
     const errors: Record<string, string> = {};
     const flags: ValidityStateFlags = {};
@@ -459,8 +471,11 @@ export class LyraRubricForm extends LyraElement<LyraRubricFormEventMap> {
       .filter((value): value is string => Boolean(value))
       .join('. ');
     if (this.isSegmentedScore(k)) {
-      const items: SegmentedItem[] = [];
-      for (let v = min; v <= max; v += step) items.push({ value: String(v), label: String(v), disabled });
+      const items: SegmentedItem[] = this.scoreValues(k).map((score) => ({
+        value: String(score),
+        label: String(score),
+        disabled,
+      }));
       const value = typeof current === 'number' ? String(current) : '';
       return html`<lr-segmented
         id=${fieldId}

@@ -72,10 +72,7 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
     // updated()'s `changed.has('open')` branch never reruns to notice `open` is still true --
     // resume the overlay registration *and* restart the positioning subscription
     // disconnectedCallback tore down (mirrors lr-tooltip's identical reconnect handling).
-    if (this.hasUpdated && this.open) {
-      this.overlay?.resume();
-      this.startPositioning();
-    }
+    if (this.hasUpdated) this.syncOpenLifecycle();
   }
 
   override disconnectedCallback(): void {
@@ -86,25 +83,35 @@ export class LyraSelectionToolbar extends LyraElement<LyraSelectionToolbarEventM
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('open')) {
-      if (this.open) {
-        this.overlay = activateOverlay({
-          host: this,
-          panel: () => this.toolbar ?? null,
-          onEscape: () => this.dismiss(),
-          modal: false,
-          trapFocus: false,
-        });
-        this.startPositioning();
-      } else {
-        this.stopPositioning?.();
-        this.stopPositioning = undefined;
-        this.overlay?.deactivate();
-        this.overlay = undefined;
-      }
+    if (changed.has('open') || changed.has('text')) this.syncOpenLifecycle();
+    if (this.open && this.text && (changed.has('rect') || changed.has('actions'))) {
+      this.updateToolbarPosition();
     }
-    if (this.open && (changed.has('rect') || changed.has('actions'))) this.updateToolbarPosition();
-    if (this.open && (changed.has('open') || changed.has('actions'))) void this.syncRovingStops();
+    if (this.open && this.text && (changed.has('open') || changed.has('text') || changed.has('actions'))) {
+      void this.syncRovingStops();
+    }
+  }
+
+  private syncOpenLifecycle(): void {
+    if (!this.open || !this.text) {
+      this.stopPositioning?.();
+      this.stopPositioning = undefined;
+      this.overlay?.deactivate();
+      this.overlay = undefined;
+      return;
+    }
+    if (this.overlay?.isActive()) {
+      this.overlay.resume();
+    } else {
+      this.overlay = activateOverlay({
+        host: this,
+        panel: () => this.toolbar ?? null,
+        onEscape: () => this.dismiss(),
+        modal: false,
+        trapFocus: false,
+      });
+    }
+    this.startPositioning();
   }
 
   private dismiss(): void {

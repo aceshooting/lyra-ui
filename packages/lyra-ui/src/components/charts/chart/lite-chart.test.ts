@@ -2,6 +2,7 @@ import { fixture, expect, html, waitUntil, aTimeout } from '@open-wc/testing';
 import './lite-chart.js';
 import type { LyraLiteChart } from './lite-chart.js';
 import { styles } from './lite-chart.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 it('provides hover feedback for keyboard-focusable bars and points', () => {
   // Pseudo-class presence is the behavior under test; synthetic pointer events do not
@@ -26,6 +27,27 @@ const BAR_DATASETS = [
   { label: 'A', data: [1, 2, 3] },
   { label: 'B', data: [4, 5, 6] },
 ];
+
+it('rejects unsafe public height and series paint values while preserving valid ones', async () => {
+  const el = await mount(html`<lr-lite-chart
+    .height=${'12rem;position:fixed'}
+    .legend=${true}
+    .labels=${['A']}
+    .datasets=${[{ label: 'Series', data: [1], color: 'url("data:image/svg+xml,<svg/>")' }]}
+  ></lr-lite-chart>`);
+  const bar = el.shadowRoot!.querySelector('[part="bar"]')!;
+  const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+  expect(el.style.getPropertyValue('--lr-chart-height')).to.equal('');
+  expect(el.style.position).to.equal('');
+  expect(bar.getAttribute('fill')).to.not.contain('url(');
+  expect(swatch.style.background).to.not.contain('url(');
+
+  el.height = 'calc(12rem + 2px)';
+  el.datasets = [{ label: 'Series', data: [1], color: 'color-mix(in srgb, red 50%, blue)' }];
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-chart-height')).to.equal('calc(12rem + 2px)');
+  expect(el.shadowRoot!.querySelector('[part="bar"]')!.getAttribute('fill')).to.contain('color-mix');
+});
 
 it('parses begin-at-zero="false" as false from plain HTML', async () => {
   const el = await mount(html`<lr-lite-chart begin-at-zero="false"></lr-lite-chart>`);
@@ -167,12 +189,9 @@ it('uses one roving tab stop, arrow/Home/End navigation, and a data-table altern
   marks()[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
   await el.updateComplete;
   expect(marks()[1]!.getAttribute('tabindex')).to.equal('0');
-  // `focusMark()` announces immediately, then its own subsequent programmatic
-  // `.focus()` re-announces the identical text via the native `focus` event's
-  // `onMarkFocus()` -- `<lr-live-region>` treats that as a same-text
-  // reannounce (clears, then re-populates on the next animation frame, so a
-  // screen reader observes a real content change rather than a silent no-op)
-  // -- wait one frame for that reannounce to land before reading the text.
+  // `focusMark()` delegates announcement to the resulting native focus event,
+  // so the live region receives exactly one update. Wait one frame for that
+  // announcement to land before reading it.
   await new Promise((resolve) => requestAnimationFrame(resolve));
   const liveRegion = el.shadowRoot!.querySelector('[part="live-region"]') as HTMLElement & { shadowRoot: ShadowRoot };
   expect(liveRegion.shadowRoot.querySelector('[part="region"]')!.textContent).to.contain('2 of 6');
@@ -975,7 +994,7 @@ it('leaves bar/label x-position at the internal per-category formula when barX i
 
 // --- pointText tooltip formatter -----------------------------------------------
 
-it('pointText overrides the per-bar tooltip/aria-label text', async () => {
+it('pointText overrides the per-bar title-derived accessible name', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
@@ -984,10 +1003,10 @@ it('pointText overrides the per-bar tooltip/aria-label text', async () => {
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   expect(rect.querySelector('title')!.textContent).to.equal('custom a 42 0');
-  expect(rect.getAttribute('aria-label')).to.equal('custom a 42 0');
+  expect(rect.hasAttribute('aria-label')).to.equal(false);
 });
 
-it('pointText overrides the per-point tooltip/aria-label text for type="line" too', async () => {
+it('pointText overrides the per-point title-derived accessible name for type="line" too', async () => {
   const el = await mount(html`<lr-lite-chart
     type="line"
     .labels=${['x']}
@@ -996,10 +1015,10 @@ it('pointText overrides the per-point tooltip/aria-label text for type="line" to
   ></lr-lite-chart>`);
   const point = el.shadowRoot!.querySelector('[part="point"]') as SVGCircleElement;
   expect(point.querySelector('title')!.textContent).to.equal('pt x:7#0');
-  expect(point.getAttribute('aria-label')).to.equal('pt x:7#0');
+  expect(point.hasAttribute('aria-label')).to.equal(false);
 });
 
-it('falls back to the built-in raw-value tooltip/aria-label text when pointText is unset (regression)', async () => {
+it('falls back to the built-in raw-value title when pointText is unset (regression)', async () => {
   const el = await mount(html`<lr-lite-chart
     type="bar"
     .labels=${['a']}
@@ -1007,7 +1026,7 @@ it('falls back to the built-in raw-value tooltip/aria-label text when pointText 
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   expect(rect.querySelector('title')!.textContent).to.equal('S, a: 42');
-  expect(rect.getAttribute('aria-label')).to.equal('S, a: 42');
+  expect(rect.hasAttribute('aria-label')).to.equal(false);
 });
 
 it('formats the built-in bar/point label through localize() and Intl instead of a hard-coded template', async () => {
@@ -1018,7 +1037,7 @@ it('formats the built-in bar/point label through localize() and Intl instead of 
   ></lr-lite-chart>`);
   const rect = el.shadowRoot!.querySelector('[part="bar"]') as SVGRectElement;
   const expected = `S, a: ${new Intl.NumberFormat(el.effectiveLocale).format(1234.5)}`;
-  expect(rect.getAttribute('aria-label')).to.equal(expected);
+  expect(rect.hasAttribute('aria-label')).to.equal(false);
   expect(rect.querySelector('title')!.textContent).to.equal(expected);
 });
 
@@ -2194,6 +2213,215 @@ describe('review remediation regressions', () => {
       )
       .join(' ');
     expect(geometry).to.not.match(/(?:NaN|Infinity)/);
+  });
+});
+
+describe('remediated lite-chart semantics and geometry', () => {
+  it('uses one SVG title as each mark name instead of duplicating it as name and description', async () => {
+    const bars = await mount(html`
+      <lr-lite-chart
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [1] }]}
+      ></lr-lite-chart>
+    `);
+    const bar = bars.shadowRoot!.querySelector('[part="bar"]')!;
+    expect(bar.querySelector('title')?.textContent).to.equal('Revenue, A: 1');
+    expect(bar.hasAttribute('aria-label')).to.equal(false);
+
+    const lines = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['A']}
+        .datasets=${[{ label: 'Revenue', data: [1] }]}
+      ></lr-lite-chart>
+    `);
+    const point = lines.shadowRoot!.querySelector('[part="point"]')!;
+    expect(point.querySelector('title')?.textContent).to.equal('Revenue, A: 1');
+    expect(point.hasAttribute('aria-label')).to.equal(false);
+  });
+
+  it('announces a roving-keyboard move exactly once', async () => {
+    const el = await mount(html`
+      <lr-lite-chart
+        .labels=${['A', 'B']}
+        .datasets=${[{ label: 'Revenue', data: [1, 2] }]}
+      ></lr-lite-chart>
+    `);
+    const liveRegion = el.shadowRoot!.querySelector('lr-live-region') as any;
+    const original = liveRegion.announce.bind(liveRegion);
+    let announcements = 0;
+    liveRegion.announce = (...args: unknown[]) => {
+      announcements++;
+      return original(...args);
+    };
+
+    const marks = [...el.shadowRoot!.querySelectorAll('[part="bar"]')];
+    marks[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await el.updateComplete;
+    await aTimeout(0);
+
+    expect(announcements).to.equal(1);
+  });
+
+  it('clips dense pointer geometry at the midpoint so adjacent marks never overlap', async () => {
+    const line = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['A', 'B', 'C', 'D']}
+        .datasets=${[{ label: 'Revenue', data: [1, 1, 1, 1] }]}
+      ></lr-lite-chart>
+    `);
+    (line as any).plotWidth = 60;
+    (line as any).plotHeight = 120;
+    await line.updateComplete;
+    const pointHits = [
+      ...line.shadowRoot!.querySelectorAll<SVGCircleElement>('[data-mark-hit-target="point"]'),
+    ];
+    for (let index = 1; index < pointHits.length; index++) {
+      const previous = pointHits[index - 1]!;
+      const current = pointHits[index]!;
+      const distance = Number(current.getAttribute('cx')) - Number(previous.getAttribute('cx'));
+      expect(Number(previous.getAttribute('r')) + Number(current.getAttribute('r'))).to.be.at.most(
+        distance + 0.001,
+      );
+    }
+
+    const bars = await mount(html`
+      <lr-lite-chart
+        .labels=${['A', 'B', 'C', 'D']}
+        .datasets=${[{ label: 'Revenue', data: [1, 1, 1, 1] }]}
+      ></lr-lite-chart>
+    `);
+    (bars as any).plotWidth = 60;
+    (bars as any).plotHeight = 120;
+    await bars.updateComplete;
+    const barHits = [
+      ...bars.shadowRoot!.querySelectorAll<SVGRectElement>('[data-mark-hit-target="bar"]'),
+    ];
+    for (let index = 1; index < barHits.length; index++) {
+      const previous = barHits[index - 1]!;
+      const current = barHits[index]!;
+      const previousRight =
+        Number(previous.getAttribute('x')) + Number(previous.getAttribute('width'));
+      expect(previousRight).to.be.at.most(Number(current.getAttribute('x')));
+    }
+  });
+
+  it('arbitrates overlapping same-category line hit areas by two-dimensional distance', async () => {
+    const line = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['Low', 'Target', 'High']}
+        .datasets=${[
+          { label: 'Earlier', data: [0, 40, 100] },
+          { label: 'Later', data: [0, 44, 100] },
+        ]}
+      ></lr-lite-chart>
+    `);
+    const earlierPoint = line.shadowRoot!.querySelector<SVGCircleElement>(
+      '[part="point"][data-dataset-index="0"][data-index="1"]',
+    )!;
+    const pointEvents: CustomEvent[] = [];
+    line.addEventListener('lr-point-click', (event) => pointEvents.push(event as CustomEvent));
+    const rect = earlierPoint.getBoundingClientRect();
+
+    try {
+      await sendMouse({
+        type: 'click',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+    } finally {
+      await resetMouse();
+    }
+
+    expect(pointEvents).to.have.length(1);
+    expect(pointEvents[0]!.detail).to.deep.equal({
+      datasetIndex: 0,
+      index: 1,
+      label: 'Target',
+      value: 40,
+    });
+  });
+
+  it('keeps the actual later-painted point when coincident marks are equally near the click', async () => {
+    const line = await mount(html`
+      <lr-lite-chart
+        type="line"
+        .labels=${['Target']}
+        .datasets=${[
+          { label: 'Earlier', data: [40] },
+          { label: 'Later', data: [40] },
+        ]}
+      ></lr-lite-chart>
+    `);
+    const laterPoint = line.shadowRoot!.querySelector<SVGCircleElement>(
+      '[part="point"][data-dataset-index="1"][data-index="0"]',
+    )!;
+    const pointEvents: CustomEvent[] = [];
+    line.addEventListener('lr-point-click', (event) => pointEvents.push(event as CustomEvent));
+    const rect = laterPoint.getBoundingClientRect();
+
+    try {
+      await sendMouse({
+        type: 'click',
+        position: [
+          Math.round(rect.left + rect.width / 2),
+          Math.round(rect.top + rect.height / 2),
+        ],
+      });
+    } finally {
+      await resetMouse();
+    }
+
+    expect(pointEvents).to.have.length(1);
+    expect(pointEvents[0]!.detail).to.deep.equal({
+      datasetIndex: 1,
+      index: 0,
+      label: 'Target',
+      value: 40,
+    });
+  });
+
+  it('ellipsizes long narrow-axis labels, preserves their full title, and contains SVG paint', async () => {
+    const labels = [
+      'A deliberately long translated first category label',
+      'A deliberately long translated second category label',
+      'A deliberately long translated third category label',
+    ];
+    const el = await mount(html`
+      <lr-lite-chart
+        style="inline-size: 256px"
+        .labels=${labels}
+        .datasets=${[{ label: 'Revenue', data: [1, 2, 3] }]}
+      ></lr-lite-chart>
+    `);
+    (el as any).plotWidth = 256;
+    (el as any).plotHeight = 200;
+    await el.updateComplete;
+
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const axisLabels = [
+      ...el.shadowRoot!.querySelectorAll<SVGTextElement>(
+        '[part="axis-label"][text-anchor="middle"]',
+      ),
+    ];
+    expect(axisLabels[0]!.textContent).to.not.equal(labels[0]);
+    expect(axisLabels[0]!.textContent).to.contain('…');
+    expect(axisLabels[0]!.getAttribute('aria-label')).to.equal(labels[0]);
+    expect(getComputedStyle(svg).overflow).to.equal('hidden');
+
+    const svgRect = svg.getBoundingClientRect();
+    const labelRects = axisLabels.map((label) => label.getBoundingClientRect());
+    for (const rect of labelRects) {
+      expect(rect.left).to.be.at.least(svgRect.left - 0.5);
+      expect(rect.right).to.be.at.most(svgRect.right + 0.5);
+    }
+    for (let index = 1; index < labelRects.length; index++) {
+      expect(labelRects[index - 1]!.right).to.be.at.most(labelRects[index]!.left + 0.5);
+    }
   });
 });
 

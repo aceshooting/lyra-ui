@@ -33,9 +33,9 @@ it('reflects disabled/destructive to attributes', async () => {
   expect(el.getAttribute('aria-disabled')).to.equal('true');
 });
 
-it('has no aria-disabled attribute when enabled', async () => {
+it('renders aria-disabled="false" when enabled', async () => {
   const el = (await fixture(html`<lr-menu-item>Rename</lr-menu-item>`)) as LyraMenuItem;
-  expect(el.hasAttribute('aria-disabled')).to.be.false;
+  expect(el.getAttribute('aria-disabled')).to.equal('false');
 });
 
 it('fires lr-menu-item-select on click', async () => {

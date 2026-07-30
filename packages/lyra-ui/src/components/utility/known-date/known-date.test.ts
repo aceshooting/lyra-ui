@@ -375,6 +375,15 @@ describe('focus/blur bridging', () => {
     expect(ev.composed).to.be.true;
   });
 
+  it('delivers exactly one public focus event for a trusted internal focus transition', async () => {
+    const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+    let focusCount = 0;
+    el.addEventListener('focus', () => focusCount++);
+    fieldFor(el, 'day').focus();
+    await Promise.resolve();
+    expect(focusCount).to.equal(1);
+  });
+
   it('does not fire blur on the host while Tabbing day -> month -> year, only when leaving the whole control', async () => {
     const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;

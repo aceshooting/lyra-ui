@@ -38,6 +38,18 @@ describe('defaults', () => {
   });
 });
 
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraXmlViewer>(html`<lr-xml-viewer></lr-xml-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-xml-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-xml-viewer-max-height')).to.equal('calc(10rem + 2px)');
+});
+
 describe('parsing and tree rendering', () => {
   it('renders one node row per element and text leaf', async () => {
     const el = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
@@ -371,6 +383,15 @@ describe('node-path anchors', () => {
     expect(await el.scrollToAnchor({ kind: 'node-path', path: ['bogus'] })).to.be.false;
     expect(await el.scrollToAnchor({ kind: 'node-path', path: ['@href', 0] })).to.be.false;
   });
+
+  it('resolves false for an empty or missing trailing attribute segment', async () => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${RSS_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 1, 0, '@'] })).to.be.false;
+    expect(await el.scrollToAnchor({ kind: 'node-path', path: [0, 1, 0, '@missing'] })).to.be.false;
+  });
 });
 
 describe('node cap', () => {
@@ -651,6 +672,16 @@ describe('collapsed child-count preview pluralization', () => {
     const two = (await fixture(html`<lr-xml-viewer .xml=${SIMPLE_XML} collapsed-depth="0"></lr-xml-viewer>`)) as LyraXmlViewer;
     await two.updateComplete;
     expect(two.shadowRoot!.querySelector('.preview')!.textContent).to.equal('2 children');
+  });
+
+  it('counts rendered text, comment, CDATA, and processing-instruction children in the preview', async () => {
+    const el = await fixture<LyraXmlViewer>(
+      html`<lr-xml-viewer
+        .xml=${'<root>text<!--note--><![CDATA[data]]><?app value?></root>'}
+        collapsed-depth="0"
+      ></lr-xml-viewer>`,
+    );
+    expect(el.shadowRoot!.querySelector('.preview')!.textContent).to.equal('4 children');
   });
 });
 

@@ -11,7 +11,10 @@ export async function loadHtmlSanitizerDeps(
     // `{ default: X }` or the bare module namespace -- fall back to the bare shape, matching
     // docx-loader.ts/email-loader.ts's `value.default ?? value` in this same family.
     const module = await importDompurify();
-    return (module as { default?: OptionalPeerApi }).default ?? (module as OptionalPeerApi);
+    const candidate =
+      (module as { default?: OptionalPeerApi }).default ??
+      (module as OptionalPeerApi);
+    return typeof candidate.sanitize === 'function' ? candidate : null;
   } catch (error) {
     console.warn(
       '<lr-html-viewer> needs the optional peer dependency `dompurify` to sanitize rendered HTML markup — install it with `pnpm add dompurify`:',

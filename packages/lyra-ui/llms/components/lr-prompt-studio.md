@@ -38,6 +38,10 @@ PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
 `preview`, `save`, `run`.
 
+Each message's role select and content editor has a localized contextual accessible name containing
+its one-based message index and purpose (plus the current role for content), so repeated controls do
+not collapse to indistinguishable generic names.
+
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts

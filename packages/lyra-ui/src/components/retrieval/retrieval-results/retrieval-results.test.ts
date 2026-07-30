@@ -437,6 +437,37 @@ it('is accessible with a populated, selectable, metadata-carrying result set', a
   await expect(el).to.be.accessible();
 });
 
+it('moves focus to the closest surviving result when controlled chunks remove the focused row', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results .chunks=${chunks} sort="none"></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  const secondCheckbox = flatRows(el)[1]!.querySelector('lr-checkbox') as LyraCheckbox;
+  secondCheckbox.focus();
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('LR-CHECKBOX');
+
+  el.chunks = [chunks[0]!, chunks[2]!];
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(el.shadowRoot!.activeElement?.tagName).to.equal('LR-CHECKBOX');
+  expect(el.shadowRoot!.activeElement?.getAttribute('data-chunk-id')).to.equal('c3');
+});
+
+it('moves focus to the stable base when a controlled transition removes every result action', async () => {
+  const el = (await fixture(
+    html`<lr-retrieval-results .chunks=${chunks} sort="none"></lr-retrieval-results>`,
+  )) as LyraRetrievalResults;
+  const firstCheckbox = flatRows(el)[0]!.querySelector('lr-checkbox') as LyraCheckbox;
+  firstCheckbox.focus();
+
+  el.error = 'Unavailable';
+  await el.updateComplete;
+  await nextFrame();
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(-1);
+});
+
 it('is accessible while grouped and virtualized', async () => {
   const el = (await fixture(html`<lr-retrieval-results grouping="source"></lr-retrieval-results>`)) as LyraRetrievalResults;
   el.chunks = chunks;

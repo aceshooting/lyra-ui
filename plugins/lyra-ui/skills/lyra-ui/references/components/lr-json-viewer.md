@@ -6,7 +6,7 @@
 - **Class** `LyraJsonViewer`, also available unregistered from `@aceshooting/lyra-ui/components/utility/json-viewer/json-viewer.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 9 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -26,7 +26,9 @@ stack overflow on cyclic `data`.
 - `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
-  viewer scrolls internally past this height instead of growing the page
+  viewer scrolls internally past this height instead of growing the page. Values that do not parse
+  as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
+  `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
 - `search: string = ''` — case-insensitive substring match against keys/values; matches are
@@ -53,7 +55,8 @@ search query, match count, or active-match cursor changes, from `runSearch()`/`s
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
-tree), `key` (an object property key or array index label, `data-match` while it matches `search`,
+tree; a host `aria-label` is forwarded here), `row` (every structural opening/value and
+closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `search`,
 `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position),
 `value` (a primitive value's text — carries `data-type` of
 `string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, `data-match`
@@ -71,6 +74,8 @@ until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono
 box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
 without repainting every other warning-toned surface that reads the same shared token;
+`--lr-json-viewer-row-hover-bg` (default `var(--lr-color-brand-quiet)`) — structural-row hover
+background;
 `--lr-json-viewer-active-outline` (default `var(--lr-focus-ring-color)`) — outline color for the
 current imperative search match; `--lr-json-viewer-string-color` (default
 `var(--lr-color-success)`), `--lr-json-viewer-number-color` (default `var(--lr-color-brand)`),
@@ -109,5 +114,7 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
   a different shape.
 - Per-node copy buttons call `stopPropagation()` on click so clicking one doesn't also toggle the
   row's expand/collapse state.
+- Whole-value copy always produces text, including for a root `undefined`, `Symbol`, or function
+  that native `JSON.stringify()` would otherwise return as no value.
 
 ---

@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { ToolApprovalEventDetail } from '../../../ai/types.js';
 import type { ToolApprovalDialogCloseReason } from '../tool-approval-dialog/tool-approval-dialog.class.js';
@@ -120,7 +121,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
       part="request"
       type="button"
       data-selected=${request.id === this.selectedId ? 'true' : 'false'}
-      aria-current=${request.id === this.selectedId ? 'true' : nothing}
+      aria-current=${request.id === this.selectedId ? 'true' : 'false'}
       aria-label=${this.localize('approvalQueueOpen', undefined, { tool: request.toolName })}
       @click=${() => this.select(request)}
     >
@@ -141,15 +142,18 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
         ? html`<div part="list" role="list">${this.requests.map((item) => this.renderRequest(item))}</div>`
         : html`<p part="empty">${this.localize('approvalQueueEmpty')}</p>`}
       ${request
-        ? html`<lr-tool-approval-dialog
-            .open=${this.open}
-            .toolName=${request.toolName}
-            .args=${request.args}
-            .editable=${this.editable}
-            @lr-approve=${this.onApprove}
-            @lr-deny=${this.onDeny}
-            @lr-close=${this.onClose}
-          ></lr-tool-approval-dialog>`
+        ? keyed(
+            request.id,
+            html`<lr-tool-approval-dialog
+              .open=${this.open}
+              .toolName=${request.toolName}
+              .args=${request.args}
+              .editable=${this.editable}
+              @lr-approve=${this.onApprove}
+              @lr-deny=${this.onDeny}
+              @lr-close=${this.onClose}
+            ></lr-tool-approval-dialog>`,
+          )
         : nothing}
     </section>`;
   }

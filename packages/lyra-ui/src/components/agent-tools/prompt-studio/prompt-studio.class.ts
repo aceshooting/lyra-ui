@@ -146,12 +146,14 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
   private onFocus = (): void => { this.emit('focus'); };
   private onBlur = (): void => { this.emit('blur'); };
 
-  private renderMessage = (message: PromptStudioMessage): TemplateResult => html`
-    <li part="message">
+  private renderMessage = (message: PromptStudioMessage, index: number): TemplateResult => {
+    const displayIndex = getNumberFormat(this.effectiveLocale).format(index + 1);
+    const role = this.roleLabel(message.role);
+    return html`<li part="message">
       <span class="message-role-wrapper">
         <select
           part="message-role"
-          aria-label=${this.roleLabel(message.role)}
+          aria-label=${this.localize('promptStudioMessageRole', undefined, { index: displayIndex, role })}
           .value=${message.role}
           ?disabled=${this.disabled}
           @change=${(event: Event) =>
@@ -165,7 +167,7 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       </span>
       <textarea
         part="message-content"
-        aria-label=${this.roleLabel(message.role)}
+        aria-label=${this.localize('promptStudioMessageContent', undefined, { index: displayIndex, role })}
         .value=${message.content}
         ?disabled=${this.disabled}
         @input=${(event: Event) =>
@@ -182,8 +184,8 @@ export class LyraPromptStudio extends LyraElement<LyraPromptStudioEventMap> {
       >
         ×
       </button>
-    </li>
-  `;
+    </li>`;
+  };
 
   override render(): TemplateResult {
     const label = this.getAttribute('aria-label') || this.label || this.localize('promptStudioLabel');

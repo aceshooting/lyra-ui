@@ -331,6 +331,11 @@ it('treats a required boolean as property presence, so false and true are both v
   const el = (await fixture(
     html`<lr-tool-param-form .schema=${requiredBoolSchema}></lr-tool-param-form>`,
   )) as LyraToolParamForm;
+  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement & { required: boolean };
+  expect(
+    checkbox.required,
+    'JSON Schema required means the property must be present, not that a checkbox must be checked',
+  ).to.be.false;
   expect(el.checkValidity()).to.be.false;
 
   el.value = { confirm: false };
@@ -519,6 +524,30 @@ it('surfaces a form-level required error for a key listed in required but absent
   expect(el.checkValidity()).to.be.true;
 });
 
+it('renders and focuses a localized error for an unmet required key that has no matching property', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {},
+    required: ['ghost'],
+  };
+  const el = (await fixture(
+    html`<lr-tool-param-form
+      .schema=${schema}
+      .strings=${{ toolParamMissingProperty: 'Missing schema property: {key}' }}
+    ></lr-tool-param-form>`,
+  )) as LyraToolParamForm;
+
+  expect(el.reportValidity()).to.be.false;
+  await el.updateComplete;
+  await Promise.resolve();
+
+  const error = el.shadowRoot!.querySelector<HTMLElement>('[part="error"][data-missing-property]');
+  expect(error).to.exist;
+  expect(error!.textContent).to.equal('Missing schema property: ghost');
+  expect(error!.tabIndex).to.equal(-1);
+  expect(el.shadowRoot!.activeElement).to.equal(error);
+});
+
 it('formStateRestoreCallback recovers to {} on invalid persisted JSON, and restores valid JSON normally', async () => {
   const el = (await fixture(html`<lr-tool-param-form .schema=${basicSchema}></lr-tool-param-form>`)) as LyraToolParamForm;
 
@@ -586,6 +615,52 @@ it('emits lr-input on a select field change, driven by the selected option value
   const ev = await oneEvent(el, 'lr-input');
   expect(ev.detail.value.units).to.equal('fahrenheit');
   expect(el.value).to.deep.equal({ units: 'fahrenheit' });
+});
+
+it('contains nested control input/change aliases and emits only the form-level lr-input contract', async () => {
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      mode: { type: 'string', enum: ['fast', 'safe'] },
+      confirm: { type: 'boolean' },
+    },
+  };
+  const el = (await fixture(html`<lr-tool-param-form .schema=${schema}></lr-tool-param-form>`)) as LyraToolParamForm;
+  const leaked = { input: 0, change: 0, lrChange: 0, lrShow: 0, lrHide: 0, lrOptionChange: 0 };
+  let formInputs = 0;
+  el.addEventListener('input', () => leaked.input++);
+  el.addEventListener('change', () => leaked.change++);
+  el.addEventListener('lr-change', () => leaked.lrChange++);
+  el.addEventListener('lr-show', () => leaked.lrShow++);
+  el.addEventListener('lr-hide', () => leaked.lrHide++);
+  el.addEventListener('lr-option-change', () => leaked.lrOptionChange++);
+  el.addEventListener('lr-input', () => formInputs++);
+
+  const select = field(el, 'mode').querySelector('lr-select') as HTMLElement & { value: string };
+  select.value = 'safe';
+  select.dispatchEvent(new CustomEvent('input', { detail: { value: 'safe' }, bubbles: true, composed: true }));
+  select.dispatchEvent(new CustomEvent('change', { detail: { value: 'safe' }, bubbles: true, composed: true }));
+  select.dispatchEvent(new CustomEvent('lr-change', { detail: { value: 'safe' }, bubbles: true, composed: true }));
+  select.dispatchEvent(new CustomEvent('lr-show', { bubbles: true, composed: true }));
+  select.dispatchEvent(new CustomEvent('lr-hide', { bubbles: true, composed: true }));
+  select.querySelector('lr-option')!.dispatchEvent(
+    new CustomEvent('lr-option-change', { bubbles: true, composed: true }),
+  );
+
+  const checkbox = field(el, 'confirm').querySelector('lr-checkbox') as HTMLElement;
+  (checkbox.shadowRoot!.querySelector('[part="base"]') as HTMLElement).click();
+  await el.updateComplete;
+
+  expect(leaked).to.deep.equal({
+    input: 0,
+    change: 0,
+    lrChange: 0,
+    lrShow: 0,
+    lrHide: 0,
+    lrOptionChange: 0,
+  });
+  expect(formInputs).to.equal(2);
+  expect(el.value).to.deep.equal({ mode: 'safe', confirm: true });
 });
 
 it('rejects non-finite numbers and schema defaults that do not match their declared type', async () => {
@@ -1000,7 +1075,7 @@ it('resets the native number spin-button on numeric control fields', () => {
   expect(css).to.match(/input\.control::-webkit-inner-spin-button/);
 });
 
-it('associates enum and boolean descriptions/errors and exposes boolean required state', async () => {
+it('associates enum and boolean descriptions/errors without imposing must-check semantics', async () => {
   const schema: ToolParamFormSchema = {
     type: 'object',
     properties: {
@@ -1016,7 +1091,28 @@ it('associates enum and boolean descriptions/errors and exposes boolean required
   const checkbox = field(el, 'confirm').querySelector('lr-checkbox')!;
   expect(select.shadowRoot!.querySelector('[part="trigger"]')!.getAttribute('aria-describedby')).to.equal('select-error select-hint');
   expect(checkbox.getAttribute('aria-describedby')).to.include('-desc');
-  expect((checkbox as HTMLElement & { required: boolean }).required).to.be.true;
+  expect((checkbox as HTMLElement & { required: boolean }).required).to.be.false;
+});
+
+it('wraps long titles and descriptions without widening a 320px allocation', async () => {
+  const longWord = 'customer_support_escalation_identifier_'.repeat(8);
+  const schema: ToolParamFormSchema = {
+    type: 'object',
+    properties: {
+      plain: { type: 'string', title: longWord, description: longWord },
+      mode: { type: 'string', enum: ['fast', 'safe'], title: longWord, description: longWord },
+      confirm: { type: 'boolean', title: longWord, description: longWord },
+    },
+  };
+  const container = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 320px">
+      <lr-tool-param-form .schema=${schema}></lr-tool-param-form>
+    </div>
+  `);
+  const el = container.querySelector('lr-tool-param-form') as LyraToolParamForm;
+  await el.updateComplete;
+
+  expect(container.scrollWidth).to.be.at.most(container.clientWidth);
 });
 
 it('forwards schema-defined native editing hints to generated text inputs', async () => {

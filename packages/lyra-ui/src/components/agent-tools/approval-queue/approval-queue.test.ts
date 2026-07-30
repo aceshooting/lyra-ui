@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './approval-queue.js';
 import type { LyraApprovalQueue, ToolApprovalRequest } from './approval-queue.class.js';
+import type { LyraToolApprovalDialog } from '../tool-approval-dialog/tool-approval-dialog.class.js';
 
 const requests: ToolApprovalRequest[] = [{ id: 'call-1', toolName: 'web_search', args: { query: 'Lyra UI' } }];
 
@@ -53,6 +54,38 @@ describe('lr-approval-queue', () => {
     (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
     await el.updateComplete;
     expect(dialog.open).to.be.true;
+  });
+
+  it('starts with a clean dialog draft and pending state when selection changes while open', async () => {
+    const twoRequests: ToolApprovalRequest[] = [
+      { id: 'call-1', toolName: 'web_search', args: { query: 'first' } },
+      { id: 'call-2', toolName: 'read_file', args: { path: 'second.md' } },
+    ];
+    const el = (await fixture(html`
+      <lr-approval-queue .requests=${twoRequests}></lr-approval-queue>
+    `)) as LyraApprovalQueue;
+    const rows = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="request"]')];
+    rows[0]!.click();
+    await el.updateComplete;
+    let dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    const edit = dialog.shadowRoot!.querySelector('[part="edit-button"]') as HTMLButtonElement;
+    edit.click();
+    await dialog.updateComplete;
+    expect(dialog.shadowRoot!.querySelector('[part="args-editor"]')).to.exist;
+
+    dialog.addEventListener('lr-deny', (event) => event.preventDefault(), { once: true });
+    (dialog.shadowRoot!.querySelector('[part="deny-button"]') as HTMLElement).click();
+    await dialog.updateComplete;
+    expect(dialog.pending).to.equal('deny');
+
+    rows[1]!.click();
+    await el.updateComplete;
+    dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as LyraToolApprovalDialog;
+    await dialog.updateComplete;
+    expect(dialog.toolName).to.equal('read_file');
+    expect(dialog.pending).to.equal(null);
+    expect(dialog.shadowRoot!.querySelector('[part="args-editor"]')).to.not.exist;
+    expect(dialog.shadowRoot!.querySelector('[part="args-view"]')).to.exist;
   });
 
   it('translates nested approve and deny requests into correlated queue decisions', async () => {
@@ -134,7 +167,7 @@ describe('lr-approval-queue', () => {
 
     const unselected = (await fixture(html`<lr-approval-queue .requests=${requests}></lr-approval-queue>`)) as LyraApprovalQueue;
     const unselectedRequest = unselected.shadowRoot!.querySelector('[part="request"]') as HTMLElement;
-    expect(unselectedRequest.hasAttribute('aria-current')).to.be.false;
+    expect(unselectedRequest.getAttribute('aria-current')).to.equal('false');
   });
 
   it('allows the selected request border to be rethemed independently', async () => {

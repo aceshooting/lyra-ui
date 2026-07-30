@@ -24,6 +24,23 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('uses its native fieldset/legend as the sole named group landmark', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group label="Visible label" aria-label="Explicit group name">
+      <lr-checkbox>A</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  const fieldset = el.shadowRoot!.querySelector('fieldset') as HTMLFieldSetElement;
+  const options = el.shadowRoot!.querySelector('[part="options"]') as HTMLElement;
+
+  expect(fieldset.getAttribute('aria-label')).to.equal('Explicit group name');
+  expect(fieldset.getAttribute('role'), 'the native fieldset keeps its implicit group role').to.equal(null);
+  expect(options.getAttribute('role'), 'the option layout must not create a duplicate group landmark').to.equal(null);
+  expect(options.hasAttribute('aria-label')).to.be.false;
+  expect(options.hasAttribute('aria-labelledby')).to.be.false;
+  await expect(el).to.be.accessible();
+});
+
 it('uses the semibold font-weight design token for the label instead of a hardcoded value', () => {
   expect(styles.cssText).to.include('var(--lr-font-weight-semibold)');
   expect(styles.cssText).to.not.match(/\[part='form-control-label'\]\s*\{[^}]*font-weight:\s*600/);

@@ -328,6 +328,20 @@ it('forwards a host aria-label onto the internal list element', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Run timeline');
 });
 
+it('names each details disclosure with its entry name', async () => {
+  const entries: ToolTimelineEntry[] = [
+    makeEntry({ id: 'search', name: 'web_search' }),
+    makeEntry({ id: 'code', name: 'run_code' }),
+  ];
+  const el = (await fixture(html`<lr-tool-timeline .entries=${entries}></lr-tool-timeline>`)) as LyraToolTimeline;
+  await el.updateComplete;
+  const details = [...el.shadowRoot!.querySelectorAll<HTMLElement>('lr-details')];
+  expect(details.map((item) => (item as HTMLElement & { summary: string }).summary)).to.deep.equal([
+    'Details for web_search',
+    'Details for run_code',
+  ]);
+});
+
 it('accepts approval-editable="false" as a plain-HTML attribute string', async () => {
   const el = (await fixture(html`<lr-tool-timeline approval-editable="false"></lr-tool-timeline>`)) as LyraToolTimeline;
   expect(el.approvalEditable).to.be.false;

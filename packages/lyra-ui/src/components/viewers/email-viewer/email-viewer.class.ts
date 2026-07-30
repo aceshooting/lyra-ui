@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -10,6 +11,7 @@ import { getDateTimeFormat, getListFormat, getNumberFormat } from '../../../inte
 import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip/attachment-chip.class.js';
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 export interface ParsedEmailAttachment { filename: string; mimeType: string; size: number; content?: Uint8Array; }
 export interface ParsedEmail { from: string; to: string; subject: string; date: string; bodyHtml: string | null; bodyText: string | null; attachments: ParsedEmailAttachment[]; }
@@ -76,8 +78,8 @@ function foldHtmlQuotes(html: string, localize: (key: string) => string, expande
 
 /**
  * Parses `.eml` messages with the optional `postal-mime` peer and renders
- * their HTML body only after DOMPurify sanitization. Plain-text messages remain
- * useful without DOMPurify. Attachment rows are real buttons that emit
+ * their HTML body only after DOMPurify sanitization and inside a paint-contained surface.
+ * Plain-text messages remain useful without DOMPurify. Attachment rows are real buttons that emit
  * `lr-attachment-open` with the attachment's decoded bytes -- this component itself never
  * opens, downloads, or object-URLs the content; a host routes the event into e.g.
  * `URL.createObjectURL(new Blob([content], { type: mimeType }))` -> `lr-document-viewer` ->
@@ -126,12 +128,47 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
    *  style sibling document viewers. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Collapses trailing quoted-reply text/HTML behind a localized toggle. `false` (the default)
    *  preserves today's exact body rendering. */
   @property({ type: Boolean, attribute: 'fold-quotes' }) foldQuotes = false;
-  /** Shared text search and anchor-target API for message headers/body text. */
-  override async search(query: string): Promise<number> { return super.search(query); }
+  /** Shared text search and anchor-target API for message headers/body text. Searching for text
+   * inside a folded quote reveals every matching quote before navigating the active match. */
+  override async search(query: string): Promise<number> {
+    if (this.foldQuotes && this.fetchState.kind === 'loaded' && query.trim()) {
+      const normalizedQuery = query.toLocaleLowerCase(this.effectiveLocale);
+      const { bodyHtml, bodyText } = this.fetchState.email;
+      if (bodyHtml !== null) {
+        const doc = new DOMParser().parseFromString(bodyHtml, 'text/html');
+        const next = new Set(this.expandedHtmlQuoteIndices);
+        doc.body.querySelectorAll(QUOTE_SELECTOR).forEach((block, index) => {
+          if ((block.textContent ?? '').toLocaleLowerCase(this.effectiveLocale).includes(normalizedQuery)) {
+            next.add(index);
+          }
+        });
+        const expanded = [...next];
+        if (
+          expanded.length !== this.expandedHtmlQuoteIndices.length
+          || expanded.some((value, index) => value !== this.expandedHtmlQuoteIndices[index])
+        ) {
+          this.expandedHtmlQuoteIndices = expanded;
+          await this.updateComplete;
+        }
+      } else if (bodyText !== null) {
+        const split = splitTrailingQuoteBlock(bodyText);
+        if (
+          split
+          && split.quoted.toLocaleLowerCase(this.effectiveLocale).includes(normalizedQuery)
+          && !this.textQuoteExpanded
+        ) {
+          this.textQuoteExpanded = true;
+          await this.updateComplete;
+        }
+      }
+    }
+    return super.search(query);
+  }
   override async searchNext(): Promise<boolean> { return super.searchNext(); }
   override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
   override clearSearch(): void { super.clearSearch(); }
@@ -325,9 +362,17 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     const block = this.renderRoot.querySelector<HTMLElement>(`[data-quote-index="${index}"]`);
     const numericIndex = Number(index);
     if (!block || !Number.isInteger(numericIndex) || numericIndex < 0) return;
+    const restoreFocus = this.shadowRoot?.activeElement === target;
     this.expandedHtmlQuoteIndices = this.expandedHtmlQuoteIndices.includes(numericIndex)
       ? this.expandedHtmlQuoteIndices.filter((value) => value !== numericIndex)
       : [...this.expandedHtmlQuoteIndices, numericIndex];
+    if (restoreFocus) {
+      this.scheduleAfterUpdate(() => {
+        this.renderRoot
+          .querySelector<HTMLElement>(`[data-quote-toggle="${numericIndex}"]`)
+          ?.focus();
+      });
+    }
   };
 
   private renderBody(): TemplateResult {
@@ -339,7 +384,10 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     }
   }
 
-  override render(): TemplateResult { return html`<div part="base" role="region" style=${this.maxHeight ? `--lr-email-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('emailViewerLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`; }
+  override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-email-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('emailViewerLabel')}>${this.renderBody()}${this.renderAnchorLiveRegion()}</div>`;
+  }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-email-viewer': LyraEmailViewer; } }

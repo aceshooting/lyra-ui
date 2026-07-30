@@ -59,6 +59,24 @@ export const styles = css`
     fill: none;
     cursor: pointer;
   }
+  [data-hit-area] {
+    fill: none;
+    stroke: transparent;
+    stroke-width: var(--lr-size-24px);
+    vector-effect: non-scaling-stroke;
+    cursor: pointer;
+  }
+  [data-hit-area='node'],
+  [data-hit-area='link'] {
+    stroke-linecap: round;
+    pointer-events: stroke;
+  }
+  [data-hit-area='hull'] {
+    fill: transparent;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: all;
+  }
   /* filter:brightness rather than a fixed background/stroke swap -- like lr-span-waterfall's
      identical per-item [part='bar']:hover, this part's own color is per-instance/data-driven
      (--lr-link-color, --lr-node-fill, --lr-graph-hull-fill), so a single hardcoded hover color

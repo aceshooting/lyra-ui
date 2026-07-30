@@ -31,6 +31,12 @@ export interface LyraComparePanelEventMap {
  * @csspart live-region - The internal vote-announcement live region.
  * @cssprop [--lr-compare-panel-max-height=var(--lr-size-24rem)] - Cap on how tall each pane's
  *   scroll region grows before it scrolls internally.
+ * @cssprop [--lr-compare-panel-selected-background=var(--lr-color-brand-quiet)] - Selected vote
+ *   button background.
+ * @cssprop [--lr-compare-panel-selected-border-color=var(--lr-color-brand)] - Selected vote
+ *   button border color.
+ * @cssprop [--lr-compare-panel-selected-color=var(--lr-color-brand)] - Selected vote button text
+ *   color.
  */
 export class LyraComparePanel extends LyraElement<LyraComparePanelEventMap> {
   static override styles = [LyraElement.styles, styles];

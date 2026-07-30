@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import './docx-viewer.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';
+import type { LyraHighlight } from '../document-viewer/anchors.js';
 
 const meta: Meta = {
   title: 'DocxViewer',
@@ -13,9 +14,25 @@ export default meta;
 type Story = StoryObj;
 
 const source = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${MINIMAL_DOCX_BASE64}`;
+const resolvedHighlights: LyraHighlight[] = [{
+  id: 'fixture-purpose',
+  label: 'Fixture purpose',
+  anchor: { kind: 'text-quote', quote: 'tiny fixture document' },
+}];
 
 export const Default: Story = {
   render: () => html`<lr-docx-viewer style="max-inline-size: 32rem;" src=${source} name="fixture.docx"></lr-docx-viewer>`,
+};
+
+export const ResolvedHighlightAction: Story = {
+  render: () => html`
+    <lr-docx-viewer
+      style="max-inline-size: 32rem;"
+      src=${source}
+      name="fixture.docx"
+      .highlights=${resolvedHighlights}
+    ></lr-docx-viewer>
+  `,
 };
 
 export const NoSourceSet: Story = {

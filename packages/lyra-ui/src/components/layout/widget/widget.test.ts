@@ -19,6 +19,25 @@ class WidgetTestShadowInput extends HTMLElement {
 }
 customElements.define("widget-test-shadow-input", WidgetTestShadowInput);
 
+it("validates fullscreen and backdrop inset values before assigning them", async () => {
+  const el = await fixture<LyraWidget>(html`<lr-widget fullscreen></lr-widget>`);
+  el.fullscreenInset = "1rem;position:fixed";
+  el.backdropInset = 'url("data:image/svg+xml,<svg/>")';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+  expect(base.style.position).to.equal("");
+  expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal("");
+  expect(backdrop.style.backgroundImage).to.equal("");
+  expect(backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")).to.equal("");
+
+  el.fullscreenInset = "var(--lr-space-l) 0";
+  el.backdropInset = "";
+  await el.updateComplete;
+  expect(base.style.getPropertyValue("--lr-widget-fullscreen-inset")).to.equal("var(--lr-space-l) 0");
+  expect(backdrop.style.getPropertyValue("--lr-widget-backdrop-inset")).to.equal("var(--lr-space-l) 0");
+});
+
 it("renders label and sublabel in the header", async () => {
   const el = (await fixture(
     html`<lr-widget label="Load profile" sublabel="Last 7 days"

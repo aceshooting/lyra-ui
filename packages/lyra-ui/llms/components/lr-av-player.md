@@ -30,9 +30,17 @@ number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: 
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
-**Methods:** `play()`, `pause()`, and `toggle()` proxy the native media element. `seek(seconds)`
-sets `currentTime` and forces an immediate `lr-time-change`. `search(query)` resolves the match
-count; `searchNext()`/`searchPrevious()` wrap; `clearSearch()` resets.
+Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
+and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
+cannot leak into state or events. `rates` keeps only unique finite values in the supported
+`0.0625..16` range, while always including the normalized current `playbackRate`.
+
+**Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
+promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
+`toggle()` proxy the native element; an internal toggle that cannot start playback renders the
+error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
+`lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap;
+`clearSearch()` resets.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),

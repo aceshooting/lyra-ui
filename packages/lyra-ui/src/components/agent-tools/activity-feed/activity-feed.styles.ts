@@ -56,12 +56,17 @@ export const styles = css`
     animation: lr-activity-feed-pulse var(--lr-transition-ambient) infinite;
   }
   [part='label'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='summary'] {
     flex: 1 1 auto;
-    min-inline-size: 0;
+    min-inline-size: var(--lr-size-3ch);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

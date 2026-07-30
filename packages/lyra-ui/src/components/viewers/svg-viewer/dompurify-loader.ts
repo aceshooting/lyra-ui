@@ -12,7 +12,10 @@ export async function loadSvgSanitizerDeps(
     // (matches archive-loader.ts/spreadsheet-loader.ts's identical dual-shape tolerance).
     const module = await importDompurify();
     const candidate = (module as { default?: OptionalPeerApi }).default;
-    return candidate && typeof candidate.sanitize === 'function' ? candidate : (module as OptionalPeerApi);
+    if (candidate && typeof candidate.sanitize === 'function') return candidate;
+    return typeof (module as OptionalPeerApi).sanitize === 'function'
+      ? (module as OptionalPeerApi)
+      : null;
   } catch (error) {
     console.warn(
       '<lr-svg-viewer> needs the optional peer dependency `dompurify` to sanitize rendered SVG markup — install it with `pnpm add dompurify`:',

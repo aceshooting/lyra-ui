@@ -23,7 +23,8 @@ here — a sanitized SVG document has neither pages nor extractable text to quot
 its registry entry declares `capabilities: { anchors: ['region'], search: false, textSelect: false }`.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable body. `zoomable: boolean = false` (reflected) — wraps the rendered content in an
+the scrollable body; invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+`zoomable: boolean = false` (reflected) — wraps the rendered content in an
 internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
@@ -31,7 +32,9 @@ declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry'
 calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
 scroll, it is not reference-gated. `highlights: LyraHighlight[] = []` (attribute: false) —
 display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
-from `DocumentAnchorTarget` rather than declared locally. `activeHighlightId: string | null = null`
+from `DocumentAnchorTarget` rather than declared locally. A region rectangle renders/resolves only
+when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
+`activeHighlightId: string | null = null`
 (attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
 (`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
 supported `LyraAnchor.kind` values for the shared anchor-target contract).

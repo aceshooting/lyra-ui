@@ -51,7 +51,7 @@ a selected (`data-selected="true"`) day cell. Component-scoped indirection over 
 without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
 token directly for a visually distinct purpose (transient hover feedback).
 
-**Gotcha:** month-view `[part='event']` markers are a mouse-only quick-select affordance — they sit
-inside the day `<button>`, which may not contain focusable descendants. Agenda view renders each
-event as a real `<button part="agenda-event">` and is the keyboard-accessible path to
-`lr-event-select`.
+Month-view `[part='event']` markers are real keyboard-focusable buttons inside a non-interactive
+`role="gridcell"` day container; Enter/Space activates the same `lr-event-select` path as a pointer.
+Their target stays at least 24×24 CSS px even in the narrow month layout. Agenda view likewise
+renders each event as a `<button part="agenda-event">`.

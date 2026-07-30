@@ -39,6 +39,39 @@ export const ExternalPlacement: Story = {
   `,
 };
 
+export const RetintedRunStates: Story = {
+  name: 'Retinted run states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each execution-state rectangle has its own component-scoped color hook; the shared semantic palette remains unchanged.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-flow-canvas
+      style="width:100%;height:20rem"
+      .nodes=${nodes}
+      .edges=${edges}
+      .decorations=${{
+        fetch: { status: 'success' },
+        summarize: { status: 'running' },
+        notify: { status: 'denied' },
+      }}
+    >
+      <lr-flow-minimap
+        slot="bottom-end"
+        style="
+          --lr-flow-minimap-node-running-color: var(--lr-color-danger);
+          --lr-flow-minimap-node-success-color: var(--lr-color-brand);
+          --lr-flow-minimap-node-denied-color: var(--lr-color-success);
+        "
+      ></lr-flow-minimap>
+    </lr-flow-canvas>
+  `,
+};
+
 export const NarrowAllocation: Story = {
   name: 'Narrow allocation (320px)',
   parameters: {

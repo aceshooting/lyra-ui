@@ -1442,6 +1442,41 @@ it('resets the native search-cancel glyph on the search field', () => {
 });
 
 describe('keyboard navigation past the rendered window', () => {
+  async function mountKeyboardWindow(): Promise<LyraThreadList> {
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          lr-thread-list::part(row) {
+            block-size: 48px;
+            overflow: hidden;
+          }
+        </style>
+        <lr-thread-list
+          style="block-size:200px"
+          grouping="none"
+          searchable
+          .threads=${manyThreads.slice(0, 20)}
+        ></lr-thread-list>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    await el.updateComplete;
+    return el;
+  }
+
+  function startPastRenderedEdge(el: LyraThreadList): string {
+    const rendered = dataRows(el);
+    const last = rendered[rendered.length - 1]!;
+    (last.shadowRoot!.querySelector('[part="option"]') as HTMLElement).focus();
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true }));
+    return rendered[0]!.id;
+  }
+
   it('mounts and focuses the next row without dispatching a synthetic scroll event', async () => {
     // Pinning each row box to exactly the internal list's own unmeasured-row estimate keeps this
     // fixture's offsets stable as new rows mount: measurement then never moves an earlier row, so
@@ -1526,6 +1561,50 @@ describe('keyboard navigation past the rendered window', () => {
     expect(viewportEl(el).scrollTop).to.equal(0);
     const last = rows[rows.length - 1];
     expect(last.shadowRoot!.activeElement === last.shadowRoot!.querySelector('[part="option"]')).to.be.true;
+  });
+
+  it('does not let an older two-frame task override newer keyboard navigation', async () => {
+    const el = await mountKeyboardWindow();
+    const firstId = startPastRenderedEdge(el);
+    el.shadowRoot!
+      .querySelector('[part="list"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, composed: true }));
+
+    await nextFrame();
+    await nextFrame();
+    const focusedId =
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
+      'none';
+    expect(focusedId).to.equal(firstId);
+  });
+
+  it('does not steal focus back from a search that supersedes edge navigation', async () => {
+    const el = await mountKeyboardWindow();
+    startPastRenderedEdge(el);
+    const search = el.shadowRoot!.querySelector('[part="search-input"]') as HTMLInputElement;
+    search.focus();
+    search.value = 'thread';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+
+    await el.updateComplete;
+    await nextFrame();
+    await nextFrame();
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('search-input');
+  });
+
+  it('cancels an edge-focus task across a disconnect and reconnect', async () => {
+    const el = await mountKeyboardWindow();
+    startPastRenderedEdge(el);
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+
+    await nextFrame();
+    await nextFrame();
+    const focusedId =
+      dataRows(el).find((row) => row.shadowRoot!.activeElement?.getAttribute('part') === 'option')?.id ??
+      'none';
+    expect(focusedId).to.equal('none');
   });
 });
 

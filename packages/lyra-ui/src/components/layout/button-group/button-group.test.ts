@@ -16,6 +16,16 @@ describe('<lr-button-group>', () => {
     expect(base.getAttribute('aria-label')).to.equal('View actions');
   });
 
+  it('lets a host aria-label override the label prop on the internal group', async () => {
+    const el = await fixture<LyraButtonGroup>(html`
+      <lr-button-group label="Visible actions" aria-label="Author actions">
+        <lr-button>Open</lr-button>
+      </lr-button-group>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-label')).to.equal('Author actions');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraButtonGroup>(html`<lr-button-group label="Actions"><lr-button>Open</lr-button></lr-button-group>`);
     await expect(el).to.be.accessible();

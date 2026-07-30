@@ -17,7 +17,7 @@ export const styles = css`
     --lr-segmented-font-size: var(--lr-font-size-sm);
   }
   :host([size="2xs"]) {
-    --lr-segmented-track-min-height: var(--lr-size-1-25rem);
+    --lr-segmented-track-min-height: var(--lr-size-1-5rem);
     --lr-segmented-segment-padding: var(--lr-size-0-0625rem) var(--lr-space-2xs);
     --lr-segmented-font-size: var(--lr-font-size-2xs);
   }
@@ -88,6 +88,11 @@ export const styles = css`
     font-size: var(--lr-segmented-font-size);
     padding: var(--lr-segmented-segment-padding);
     cursor: pointer;
+  }
+  :host([size="2xs"]) [part="segment"],
+  :host([size="xs"]) [part="segment"] {
+    min-inline-size: var(--lr-size-1-5rem);
+    min-block-size: var(--lr-size-1-5rem);
   }
   [part="segment-icon"] {
     display: inline-flex;

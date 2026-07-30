@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './ebook-viewer.js';
 import { __setEpubJsForTesting } from './ebook-loader.js';
 import type { LyraEbookViewer } from './ebook-viewer.js';
@@ -48,6 +48,16 @@ function stubFetch(): () => void {
   const original = window.fetch;
   window.fetch = (() => Promise.resolve(response())) as typeof window.fetch;
   return () => { window.fetch = original; };
+}
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void; reject: (error: unknown) => void } {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 /** Extends `fakeBook()` with navigation/spine-find/annotations/relocated/selected support, for the
@@ -581,6 +591,25 @@ describe('location', () => {
     }
   });
 
+  it('applies a controlled location override assigned inside lr-location-change', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      el.addEventListener('lr-location-change', () => {
+        el.location = 'epubcfi(/6/10!)';
+      });
+      fake.relocate({ start: { cfi: 'epubcfi(/6/2!)', href: 'ch1.xhtml' } });
+      await aTimeout(20);
+      expect(el.location).to.equal('epubcfi(/6/10!)');
+      expect(fake.displayedCfis).to.include('epubcfi(/6/10!)');
+    } finally {
+      restore();
+    }
+  });
+
   it('applies an externally-assigned location immediately once the book is ready', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
     __setEpubJsForTesting(fake.factory as never);
@@ -591,6 +620,60 @@ describe('location', () => {
       el.location = 'epubcfi(/6/10!)';
       await aTimeout(20);
       expect(fake.displayedCfis).to.include('epubcfi(/6/10!)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('handles a rejected controlled-location display as a localized render failure', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
+    fake.rendition.display = (target?: string) =>
+      target === 'epubcfi(/6/reject!)'
+        ? Promise.reject(new Error('display rejected'))
+        : Promise.resolve();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`
+        <lr-ebook-viewer
+          src="https://example.test/book.epub"
+          .strings=${{ ebookViewerLoadError: 'Localized location failure.' }}
+        ></lr-ebook-viewer>
+      `)) as LyraEbookViewer;
+      await aTimeout(20);
+      const errorPromise = oneEvent(el, 'lr-render-error');
+      el.location = 'epubcfi(/6/reject!)';
+      await errorPromise;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent).to.equal('Localized location failure.');
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('rendition actions', () => {
+  it('handles rejected previous/next actions as localized render failures', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
+    fake.rendition.prev = () => Promise.reject(new Error('previous rejected'));
+    fake.rendition.next = () => Promise.reject(new Error('next rejected'));
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`
+        <lr-ebook-viewer
+          src="https://example.test/book.epub"
+          .strings=${{ ebookViewerLoadError: 'Localized navigation failure.' }}
+        ></lr-ebook-viewer>
+      `)) as LyraEbookViewer;
+      await aTimeout(20);
+      let errorCount = 0;
+      el.addEventListener('lr-render-error', () => { errorCount++; });
+      (el.shadowRoot!.querySelector('[part="previous-button"]') as HTMLButtonElement).click();
+      (el.shadowRoot!.querySelector('[part="next-button"]') as HTMLButtonElement).click();
+      await waitUntil(() => errorCount === 2);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent).to.equal('Localized navigation failure.');
     } finally {
       restore();
     }
@@ -609,6 +692,25 @@ describe('lr-ebook-viewer search', () => {
       expect(count).to.equal(1);
       expect(await el.searchNext()).to.be.true;
       expect(fake.highlightCalls.length).to.be.greaterThan(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('caps peer-produced search results at 10,000 matches', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'needle' });
+    fake.book.spine.spineItems[0].find = () => Array.from(
+      { length: 25_000 },
+      (_unused, index) => ({ cfi: `epubcfi(/6/2!/4/${index})`, excerpt: `match ${index}` }),
+    );
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      expect(await el.search('needle')).to.equal(10_000);
+      const state = el as unknown as { searchMatches: unknown[] };
+      expect(state.searchMatches.length).to.equal(10_000);
     } finally {
       restore();
     }
@@ -793,6 +895,34 @@ describe('lr-ebook-viewer search', () => {
     }
   });
 
+  it('does not annotate a stale match after a newer search supersedes its delayed display', async () => {
+    const fake = fakeBookWithFeatures({
+      'ch1.xhtml': 'apple pie',
+      'ch2.xhtml': 'banana bread',
+    });
+    const delayedDisplay = deferred<void>();
+    const originalDisplay = fake.rendition.display;
+    fake.rendition.display = (target?: string) => {
+      const immediate = originalDisplay(target);
+      return target?.includes('ch1.xhtml') ? delayedDisplay.promise : immediate;
+    };
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      const stale = el.search('apple');
+      await waitUntil(() => fake.displayedCfis.some((cfi) => cfi.includes('ch1.xhtml')));
+      expect(await el.search('banana')).to.equal(1);
+      delayedDisplay.resolve();
+      await stale;
+      const painted = fake.highlightCalls.filter((call) => call.className === 'lr-ebook-search');
+      expect(painted[painted.length - 1]?.cfi).to.include('ch2.xhtml');
+    } finally {
+      restore();
+    }
+  });
+
   it('searchNext() and searchPrevious() resolve false and no-op when there are no matches', async () => {
     const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
     __setEpubJsForTesting(fake.factory as never);
@@ -892,6 +1022,56 @@ describe('scrollToAnchor (ebook)', () => {
       await aTimeout(20);
       expect(await el.scrollToAnchor({ kind: 'cfi', cfi: 'epubcfi(/6/8!)' })).to.be.true;
       expect(fake.displayedCfis).to.include('epubcfi(/6/8!)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('prevents a delayed stale text-quote anchor from displaying after a newer anchor', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'old quote' });
+    const delayedFind = deferred<Array<{ cfi: string; excerpt: string }>>();
+    fake.book.spine.spineItems[0].find = () => delayedFind.promise as never;
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`<lr-ebook-viewer src="https://example.test/book.epub"></lr-ebook-viewer>`)) as LyraEbookViewer;
+      await aTimeout(20);
+      const stale = el.scrollToAnchor({ kind: 'text-quote', quote: 'old quote' });
+      await aTimeout(0);
+      expect(await el.scrollToAnchor({ kind: 'cfi', cfi: 'epubcfi(/6/8!)' })).to.be.true;
+      delayedFind.resolve([{ cfi: 'epubcfi(/6/2!/4/stale)', excerpt: 'old quote' }]);
+      expect(await stale).to.be.false;
+      expect(fake.displayedCfis[fake.displayedCfis.length - 1]).to.equal('epubcfi(/6/8!)');
+    } finally {
+      restore();
+    }
+  });
+
+  it('turns a rejected anchor display into one localized false result', async () => {
+    const fake = fakeBookWithFeatures({ 'ch1.xhtml': 'hello' });
+    fake.rendition.display = (target?: string) =>
+      target ? Promise.reject(new Error('display rejected')) : Promise.resolve();
+    __setEpubJsForTesting(fake.factory as never);
+    const restore = stubFetch();
+    try {
+      const el = (await fixture(html`
+        <lr-ebook-viewer
+          src="https://example.test/book.epub"
+          .strings=${{ ebookViewerLoadError: 'Localized ebook failure.' }}
+        ></lr-ebook-viewer>
+      `)) as LyraEbookViewer;
+      await aTimeout(20);
+      let resultCount = 0;
+      let found: boolean | undefined;
+      el.addEventListener('lr-anchor-result', (event) => {
+        resultCount++;
+        found = (event as CustomEvent<{ found: boolean }>).detail.found;
+      });
+      expect(await el.scrollToAnchor({ kind: 'cfi', cfi: 'epubcfi(/6/8!)' })).to.be.false;
+      await el.updateComplete;
+      expect(resultCount).to.equal(1);
+      expect(found).to.be.false;
+      expect(el.shadowRoot!.querySelector('[role="alert"]')?.textContent).to.equal('Localized ebook failure.');
     } finally {
       restore();
     }
@@ -1111,6 +1291,16 @@ describe('back-compat', () => {
       restore();
     }
   });
+});
+
+it('exposes loading through a busy state owner and one status region', async () => {
+  const el = await fixture<LyraEbookViewer>(html`<lr-ebook-viewer></lr-ebook-viewer>`);
+  (el as unknown as { ebookState: unknown }).ebookState = { kind: 'loading' };
+  el.requestUpdate();
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('aria-busy')).to.equal('true');
+  expect(base.querySelectorAll('[role="status"]').length).to.equal(3);
 });
 
 describe('styling', () => {

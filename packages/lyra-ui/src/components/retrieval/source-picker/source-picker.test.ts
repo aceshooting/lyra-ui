@@ -397,6 +397,20 @@ it('moves real DOM focus to the closest survivor when the focused source is remo
   expect(el.shadowRoot!.querySelectorAll('[role="treeitem"][tabindex="0"]')).to.have.length(1);
 });
 
+it('moves real DOM focus to a stable base when the focused source is removed with the whole tree', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker .sources=${[{ id: 'only', label: 'Only source' }]}></lr-source-picker>`,
+  )) as LyraSourcePicker;
+  el.shadowRoot!.querySelector<HTMLElement>('[role="treeitem"]')!.focus();
+
+  el.sources = [];
+  await el.updateComplete;
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('base');
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.tabIndex).to.equal(-1);
+});
+
 it('moves real DOM focus to the visible survivor when filtering removes the focused source', async () => {
   const el = (await fixture(
     html`<lr-source-picker
@@ -552,7 +566,10 @@ it('exposes tree levels and a separate pointer disclosure affordance for folders
   const el = (await fixture(html`<lr-source-picker .sources=${sources}></lr-source-picker>`)) as LyraSourcePicker;
   const folder = el.shadowRoot!.querySelector('[role="treeitem"]')!;
   expect(folder.getAttribute('aria-level')).to.equal('1');
-  const disclosure = folder.querySelector('[part="disclosure"]') as HTMLButtonElement;
+  const disclosure = folder.querySelector('[part="disclosure"]') as HTMLElement;
+  expect(disclosure.tagName).to.equal('SPAN');
+  expect(disclosure.getAttribute('role')).to.equal(null);
+  expect(disclosure.getAttribute('aria-hidden')).to.equal('true');
   expect(getComputedStyle(disclosure).minInlineSize).to.equal('40px');
   expect(getComputedStyle(disclosure).minBlockSize).to.equal('40px');
   disclosure.click();
@@ -605,4 +622,28 @@ it('renders and selects only the first source occurrence for duplicate ids', asy
   const pending = oneEvent(el, 'lr-sources-change');
   (rows[0] as HTMLElement).click();
   expect((await pending).detail.selectedIds).to.deep.equal(['duplicate']);
+});
+
+it('deduplicates and prunes controlled selected ids across source replacement and emitted toggles', async () => {
+  const el = (await fixture(
+    html`<lr-source-picker
+      .sources=${[
+        { id: 'a', label: 'Alpha' },
+        { id: 'b', label: 'Beta' },
+      ]}
+      .selectedIds=${['a', 'a', 'ghost']}
+    ></lr-source-picker>`,
+  )) as LyraSourcePicker;
+
+  expect(el.selectedIds).to.deep.equal(['a']);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include('1 of 2');
+
+  const pending = oneEvent(el, 'lr-sources-change');
+  el.shadowRoot!.querySelectorAll<HTMLElement>('[role="treeitem"]')[1]!.click();
+  expect((await pending).detail.selectedIds).to.deep.equal(['a', 'b']);
+
+  el.sources = [{ id: 'b', label: 'Beta' }];
+  await el.updateComplete;
+  expect(el.selectedIds).to.deep.equal(['b']);
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include('1 of 1');
 });

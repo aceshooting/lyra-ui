@@ -14,6 +14,28 @@ function swatches(el: LyraSwatchPicker): HTMLButtonElement[] {
 }
 
 describe('lr-swatch-picker', () => {
+  it('rejects unsafe option colors from both CSS and gemstone SVG paint sinks', async () => {
+    const el = await fixture<LyraSwatchPicker>(html`<lr-swatch-picker></lr-swatch-picker>`);
+    el.mode = 'gemstone';
+    el.options = [
+      {
+        value: 'unsafe',
+        label: 'Unsafe',
+        gemstone: 'ruby',
+        color: 'url("data:image/svg+xml,<svg/>")',
+      },
+    ];
+    await el.updateComplete;
+    const swatch = swatches(el)[0]!;
+    expect(swatch.style.getPropertyValue('--lr-swatch-color')).to.equal('');
+    expect(swatch.querySelector('path')!.getAttribute('fill')).to.equal('currentColor');
+
+    el.options = [{ value: 'safe', label: 'Safe', gemstone: 'ruby', color: 'var(--lr-color-brand)' }];
+    await el.updateComplete;
+    expect(swatches(el)[0]!.style.getPropertyValue('--lr-swatch-color')).to.equal('var(--lr-color-brand)');
+    expect(swatches(el)[0]!.querySelector('path')!.getAttribute('fill')).to.equal('var(--lr-color-brand)');
+  });
+
   it('renders role=radiogroup with one role=radio per option, aria-checked on the selected one', async () => {
     const el = (await fixture(
       html`<lr-swatch-picker .options=${options()} value="green"></lr-swatch-picker>`,
@@ -162,7 +184,7 @@ describe('lr-swatch-picker', () => {
     expect(el.value).to.equal('green');
   });
 
-  it('sets aria-label on the radiogroup from the label prop, falling back to a forwarded host aria-label', async () => {
+  it('lets a forwarded host aria-label win on the radiogroup while retaining the label prop fallback', async () => {
     const labeled = (await fixture(
       html`<lr-swatch-picker label="Accent" .options=${options()}></lr-swatch-picker>`,
     )) as LyraSwatchPicker;
@@ -176,6 +198,17 @@ describe('lr-swatch-picker', () => {
     expect(
       (forwarded.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
     ).to.equal('Forwarded');
+
+    const hostOverride = (await fixture(
+      html`<lr-swatch-picker
+        label="Accent"
+        aria-label="Author label"
+        .options=${options()}
+      ></lr-swatch-picker>`,
+    )) as LyraSwatchPicker;
+    expect(
+      (hostOverride.shadowRoot!.querySelector('[part="base"]') as HTMLElement).getAttribute('aria-label'),
+    ).to.equal('Author label');
   });
 
   it('renders a custom icon in place of the plain circle when the option provides one', async () => {

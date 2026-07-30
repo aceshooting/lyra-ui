@@ -74,7 +74,7 @@ Package-level CSV utilities (used internally, also exported for standalone use �
 escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
 ```ts
-escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes formula-injection (=,+,@,tab,CR) with a leading apostrophe — a bare leading '-' is deliberately left alone (OWASP guidance: it's not itself formula syntax, and guarding it would mangle ordinary negative numbers)
+escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string): void      // triggers a browser download
 ```
@@ -86,6 +86,10 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
   for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
+- `open` is valid only when `formats` contains more than one choice. An invalid open request is
+  normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
+  or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves
+  an own enumerable column literally named `__proto__`.
 - the multi-format menu (`role="menu"`) supports full arrow-key navigation — ArrowUp/ArrowDown move
   between items (opening the menu and seeding the right one focused, if it was closed), Home/End
   jump to the first/last item once open, Escape closes it and returns focus to the trigger button,
@@ -135,6 +139,8 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 - best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
   and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
   with the intended text so a consumer can always show its own confirmation/fallback UI.
+- Changing `value` clears any in-progress "Copied" feedback immediately, so the confirmation can
+  never describe stale text.
 
 **Additional API surface:**
 
@@ -201,7 +207,9 @@ stack overflow on cyclic `data`.
 - `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
-  viewer scrolls internally past this height instead of growing the page
+  viewer scrolls internally past this height instead of growing the page. Values that do not parse
+  as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
+  `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
 - `search: string = ''` — case-insensitive substring match against keys/values; matches are
@@ -228,7 +236,8 @@ search query, match count, or active-match cursor changes, from `runSearch()`/`s
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
-tree), `key` (an object property key or array index label, `data-match` while it matches `search`,
+tree; a host `aria-label` is forwarded here), `row` (every structural opening/value and
+closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `search`,
 `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position),
 `value` (a primitive value's text — carries `data-type` of
 `string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, `data-match`
@@ -246,6 +255,8 @@ until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono
 box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
 without repainting every other warning-toned surface that reads the same shared token;
+`--lr-json-viewer-row-hover-bg` (default `var(--lr-color-brand-quiet)`) — structural-row hover
+background;
 `--lr-json-viewer-active-outline` (default `var(--lr-focus-ring-color)`) — outline color for the
 current imperative search match; `--lr-json-viewer-string-color` (default
 `var(--lr-color-success)`), `--lr-json-viewer-number-color` (default `var(--lr-color-brand)`),
@@ -284,6 +295,8 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
   a different shape.
 - Per-node copy buttons call `stopPropagation()` on click so clicking one doesn't also toggle the
   row's expand/collapse state.
+- Whole-value copy always produces text, including for a root `undefined`, `Symbol`, or function
+  that native `JSON.stringify()` would otherwise return as no value.
 
 ---
 
@@ -402,6 +415,9 @@ accessible phase-transition announcements.
 `paused`), `lr-pause-change` (`detail: boolean` — fired when `paused` changes via the built-in
 button).
 
+**Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
+including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
@@ -428,14 +444,16 @@ repainting every other component that reuses the same shared success token. Plus
 
 Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
 than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Reassigning `nextInMs` at any time restarts the countdown from that new
-value; pausing/resuming, or toggling `active`, starts or stops the ticker without discarding the
-current remaining time. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announced
-via an internal `<lr-live-region>` in polite mode.
+and timers were throttled. Assigning a *changed* `nextInMs` value starts a fresh deadline; assigning
+the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
+Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
+event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
+changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are
+announced via an internal `<lr-live-region>` in polite mode.
 
 **Known gotchas:**
-- there's no built-in "reset" or "extend" method beyond reassigning `nextInMs` — a host that wants to
-  push the deadline back out on user activity re-sets `nextInMs` itself.
+- `restart()` is the explicit reset/extend path when the configured delay value itself has not
+  changed.
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires
   `lr-pause-change` — that event is scoped to the built-in pause button's own toggle, not to
   `active`.
@@ -590,8 +608,11 @@ fresh `query` is the proxy for "the caret may have moved").
 - A caret that moves for a reason other than typing (e.g. a mouse click elsewhere in the text while
   the popover happens to still be open) is not separately tracked — force a re-measure by toggling
   `open` or reassigning `anchor`.
-- `activeIndex` resets to `0` whenever `query` or `items` changes, but not when only `anchor`
-  changes — reassigning `anchor` alone preserves whatever row was last highlighted.
+- `activeIndex` resets to `0` whenever `query`, `items`, or `filter` changes, but not when only
+  `anchor` changes — reassigning `anchor` alone preserves whatever row was last highlighted. If
+  fallback focus currently lives in the listbox and filtering removes every option, closing,
+  emptying, or disconnecting the popover returns focus to the connected anchor before removing the
+  active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
   here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
@@ -675,6 +696,7 @@ consumer can compute or unit-test the same alignment without instantiating the e
   explicit performance-risk opt-out.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
+- Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.
 
 **Additional API surface:**
 
@@ -704,7 +726,9 @@ Dependency-free SVG path icon: no icon font, no sprite sheet, no network fetch. 
 **Slots:** (default) — custom SVG geometry, rendered only when neither `path` nor a known `name`
 resolves. Slotted nodes are cloned into the component-owned `<svg>` (Chromium does not paint SVG
 geometry distributed through a slot that sits inside an SVG), so pass plain `<path>`/`<circle>`/
-`<g>` elements, not a whole `<svg>`.
+`<g>` elements, not a whole `<svg>`. Attribute and descendant mutations to assigned geometry are
+mirrored live while connected; observation stops on detach and a reconnect synchronizes the latest
+source tree.
 
 **CSS parts:** `svg`
 
@@ -714,7 +738,8 @@ the surrounding text with no configuration.
 
 ## `lr-divider`
 
-A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`.
+A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
+`aria-label` is forwarded to that inner semantic owner.
 
 **Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected).
 
@@ -741,6 +766,9 @@ inherited `lang`; see `llms/shared.md`) and is passed to `Intl` as `undefined` w
 empty, which means "the runtime's default locale". Every `Intl` instance is pulled from the shared
 memoized `internal/intl-cache.ts` (one instance per locale + options pair, LRU-capped), so these are
 cheap to use per row in a large table or feed.
+
+Malformed runtime options fall back to a safe option set without discarding an otherwise-valid
+effective locale. Only a malformed locale itself falls back to the runtime default.
 
 **Properties:**
 - `value: number = 0`
@@ -796,7 +824,8 @@ name is localized too. Text-only host — no CSS parts, events, or own tokens; l
 
 The unit ladder is fixed at `byte`, `kilobyte`, `megabyte`, `gigabyte`, `terabyte`, `petabyte` and
 saturates at the top; the index is `floor(log|value| / log(unitStep))`, and `0` always formats as
-bytes. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
+bytes. Magnitudes below one byte, including negative values, stay in the `byte` unit rather than
+forming a negative unit index. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
 `log(1) === 0`) falling back to `1024`; `decimals` is clamped to `[0, 10]` — an out-of-range value
 would otherwise throw a `RangeError` from `maximumFractionDigits`. Note that `unitStep: 1024` still
 prints the SI-named `kB`/`MB` units, not `KiB`/`MiB` — `Intl` has no binary unit names.
@@ -855,7 +884,8 @@ field currently has focus.
 
 **Events:** `input` (every keystroke), `change` (a field blur where the composite value newly
 transitioned), plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
-leaves all three fields, not per field-to-field Tab). `input`/`change` detail is
+leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
+exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
 
@@ -974,6 +1004,8 @@ directional `fade-*` effects).
 - The host is `display: block`. For an inline text-fragment swap inside a sentence, override
   `lr-random-content { display: inline; }` from outside; `display: contents` is deliberately not
   used (a11y-tree inconsistencies across engines).
+- Slot/focus microtasks and autoplay never queue new selection work while detached; reconnecting
+  starts again from current state rather than replaying stale work.
 
 ## `lr-tour`
 
@@ -988,8 +1020,8 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   `start()`/`end()`
 - `steps: TourStep[] = []` (attribute: false) — empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to
-  `[0, steps.length - 1]`, including for a direct property/attribute write that bypasses
-  `goToStep()`
+  `[0, steps.length - 1]` as a finite integer, including for a direct property/attribute write that
+  bypasses `goToStep()`; fractions floor and non-finite values fall back to `0`
 - `placement: Placement = 'bottom'` (reflected) — tour-level Floating UI default, overridable per
   step; resolved through `rtlAwarePlacement()`
 - `distance: number = 12` — px offset between target and popover. Tour-level only (no per-step
@@ -1006,9 +1038,11 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 **Exported types:** `TourStep { id: string; target: TourTarget; heading: string; content?: string;
 placement?: Placement; spotlightPadding?: number; interactiveTarget?: boolean; hidePrevious?: boolean }`;
 `TourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
-`ownerDocument.querySelector` (top-level light DOM only), and every form is re-resolved on each step
-activation, never cached, so a target mounted later still resolves. `heading` is required and
-becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
+`ownerDocument.querySelector` (top-level light DOM only). Every form resolves exactly once when the
+step becomes active and is kept as one connected snapshot for that activation, then resolves again
+on a later activation/reconnect. Invalid selectors, throwing resolvers, non-`HTMLElement` results,
+and detached elements use the normal missing-target path instead of throwing. `heading` is required
+and becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
 `TourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
@@ -1030,8 +1064,9 @@ step: a consumer needing different rich content per step swaps the slotted child
 
 **CSS parts:** `backdrop` (the full-viewport `<svg>` scrim with the cutout, `aria-hidden`),
 `spotlight` (the decorative ring around the padded target rect, `pointer-events: none`),
-`popover` (the step panel, `role="dialog" aria-modal="true"`, `data-unanchored` when the target
-didn't resolve), `heading` (the `aria-labelledby` target), `body` (slot or `step.content`),
+`popover` (the step panel, `role="dialog"`, `aria-modal="true"` for default steps and `"false"` for
+an `interactiveTarget` step, `data-unanchored` when the target didn't resolve), `heading` (the
+`aria-labelledby` target), `body` (slot or `step.content`),
 `progress` (wrapper), `progress-text` (the "Step X of Y" text — an `aria-describedby` target),
 `progress-dot` (one decorative dot per step, `data-current` on the active one, `aria-hidden`),
 `footer` (the control row), `previous-button`, `skip-button`, `next-button` (the Next control's
@@ -1056,20 +1091,20 @@ rather than per component.
 **Known gotchas:**
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
-  Set `step.interactiveTarget` to clip the backdrop around the target so clicks fall through — that
-  restores pointer reachability only. The focus trap still confines Tab to the popover regardless,
-  so for a keyboard-reachable demonstrated interaction have the app's own listener call `next()`.
-- Uses the overlay manager with `modal: false` deliberately: `modal: true` would mark the whole page
-  (including the target, which lives outside this element) `inert`. `role="dialog"` +
-  `aria-modal="true"` are still rendered on the panel so screen readers confine their virtual cursor.
+  A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to
+  clip the backdrop around the target, switch the panel to nonmodal semantics, and install an
+  explicit two-way Tab route between the panel and the live target, so both pointer and keyboard
+  interaction remain reachable.
 - Each step transition mounts a genuinely new popover node (keyed on `step.id`) so focus reliably
   re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
 - No `Home`/`End` shortcut and no click-to-jump progress dots (unlike `lr-stepper`): later steps may
   depend on an earlier step's side effect having run. `goToStep()` is available for a caller that
   knows better. ArrowRight/ArrowLeft do move between steps (swapped under RTL), except while focus
   is in an `input`/`textarea`/`contenteditable` inside slotted content.
-- A direct `HTMLElement` target is re-checked for `isConnected` on every activation and treated as
-  missing if it was remounted — prefer a selector string or resolver function for targets that can
-  be replaced mid-tour.
+- A direct `HTMLElement` target must be connected at activation and is treated as missing after a
+  remount; prefer a selector string or resolver function for targets that can be replaced between
+  activations.
 - The active step's target is `scrollIntoView({ block: 'center' })`'d on activation, smoothly unless
   `prefers-reduced-motion: reduce`.
+- Changing `placement`, `distance`, or tour-level `spotlightPadding` while open repositions/repaints
+  the current step live without scrolling again or emitting a duplicate `lr-tour-target-missing`.

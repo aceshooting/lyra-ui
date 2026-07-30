@@ -42,6 +42,27 @@ export const HiddenSummary: Story = {
   `,
 };
 
+export const RetintedRunStates: Story = {
+  name: 'Retinted run states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each summary-count state has a component-scoped dot color hook, independent of the shared semantic palette.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-flow-run-overlay
+      style="
+        --lr-flow-run-overlay-status-running-color: var(--lr-color-danger);
+        --lr-flow-run-overlay-status-success-color: var(--lr-color-brand);
+      "
+      .decorations=${decorations}
+    ></lr-flow-run-overlay>
+  `,
+};
+
 export const NarrowAllocation: Story = {
   name: 'Narrow allocation (320px)',
   parameters: { docs: { description: { story: 'The strip wraps onto one extra row at a 320px allocation.' } } },

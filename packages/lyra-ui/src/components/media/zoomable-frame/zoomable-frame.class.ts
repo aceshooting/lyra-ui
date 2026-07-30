@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './zoomable-frame.styles.js';
 
 function ownsKeyboardInput(event: KeyboardEvent): boolean {
@@ -138,7 +139,9 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       </div>
       <div part="controls" role="toolbar" aria-label=${this.localize('zoomControls')}>
         <button part="zoom-out" type="button" aria-label=${this.localize('zoomOut')} ?disabled=${zoom <= min} @click=${this.zoomOut}>−</button>
-        <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${this.resetZoom}>${this.localize('pdfViewerCurrentZoom', undefined, { percent: 100 })}</button>
+        <button part="reset" type="button" aria-label=${this.localize('resetZoom')} @click=${this.resetZoom}>${this.localize('pdfViewerCurrentZoom', undefined, {
+          percent: getNumberFormat(this.effectiveLocale).format(100),
+        })}</button>
         <button part="zoom-in" type="button" aria-label=${this.localize('zoomIn')} ?disabled=${zoom >= max} @click=${this.zoomIn}>+</button>
       </div>
     </div>`;

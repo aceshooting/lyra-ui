@@ -14,10 +14,10 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     font-weight: var(--lr-font-weight-medium);
   }
-  [part='count'][data-status='passed'] { color: var(--lr-color-success); }
-  [part='count'][data-status='failed'] { color: var(--lr-color-danger); }
-  [part='count'][data-status='skipped'] { color: var(--lr-color-text-quiet); }
-  [part='count'][data-status='running'] { color: var(--lr-color-brand); }
+  [part='count'][data-status='passed'] { color: var(--lr-test-results-passed-color, var(--lr-color-success)); }
+  [part='count'][data-status='failed'] { color: var(--lr-test-results-failed-color, var(--lr-color-danger)); }
+  [part='count'][data-status='skipped'] { color: var(--lr-test-results-skipped-color, var(--lr-color-text-quiet)); }
+  [part='count'][data-status='running'] { color: var(--lr-test-results-running-color, var(--lr-color-brand)); }
   [part='filter'] {
     display: flex;
     flex-wrap: wrap;
@@ -78,13 +78,15 @@ export const styles = css`
   [part='test-status'] lr-spinner {
     --lr-spinner-size: var(--lr-size-1em);
   }
-  [part='test-status'][data-status='passed'] { color: var(--lr-color-success); }
-  [part='test-status'][data-status='failed'] { color: var(--lr-color-danger); }
-  [part='test-status'][data-status='skipped'] { color: var(--lr-color-text-quiet); }
-  [part='test-status'][data-status='running'] { color: var(--lr-color-brand); }
+  [part='test-status'][data-status='passed'] { color: var(--lr-test-results-passed-color, var(--lr-color-success)); }
+  [part='test-status'][data-status='failed'] { color: var(--lr-test-results-failed-color, var(--lr-color-danger)); }
+  [part='test-status'][data-status='skipped'] { color: var(--lr-test-results-skipped-color, var(--lr-color-text-quiet)); }
+  [part='test-status'][data-status='running'] { color: var(--lr-test-results-running-color, var(--lr-color-brand)); }
   [part='test-name'] {
     flex: 1 1 auto;
-    min-inline-size: var(--lr-size-6ch);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     background: none;
     border: none;
     font: inherit;
@@ -122,6 +124,6 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    color: var(--lr-color-danger);
+    color: var(--lr-test-results-failed-color, var(--lr-color-danger));
   }
 `;

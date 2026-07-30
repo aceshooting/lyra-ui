@@ -34,6 +34,10 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     white-space: nowrap;
   }
+  [part='tick'][data-edge='end'] [part='tick-label'] {
+    inset-inline-start: auto;
+    inset-inline-end: var(--lr-space-xs);
+  }
 
   [part='row'] {
     display: grid;
@@ -73,21 +77,29 @@ export const styles = css`
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
   }
-  [part='bar'][data-tone='success'] { background: var(--lr-color-success); }
-  [part='bar'][data-tone='danger'] { background: var(--lr-color-danger); }
-  [part='bar'][data-tone='warning'] { background: var(--lr-color-warning); }
+  [part='bar'][data-tone='success'] {
+    background: var(--lr-span-waterfall-success-color, var(--lr-color-success));
+  }
+  [part='bar'][data-tone='danger'] {
+    background: var(--lr-span-waterfall-error-color, var(--lr-color-danger));
+  }
+  [part='bar'][data-tone='warning'] {
+    background: var(--lr-span-waterfall-denied-color, var(--lr-color-warning));
+  }
   [part='bar'][data-tone='accent'] {
     background-image: repeating-linear-gradient(
       45deg,
-      var(--lr-color-brand) 0 var(--lr-size-6px),
-      var(--lr-color-brand-quiet) var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
+      var(--lr-span-waterfall-running-color, var(--lr-color-brand)) 0 var(--lr-size-6px),
+      var(--lr-span-waterfall-running-stripe-color, var(--lr-color-brand-quiet))
+        var(--lr-size-6px) calc(var(--lr-size-6px) * 2)
     );
     background-size: 200% 100%;
     animation: lr-span-waterfall-stripe var(--lr-span-waterfall-stripe-speed, var(--lr-transition-ambient)) linear infinite;
   }
   [part='bar'][data-tone='neutral'] {
     background: transparent;
-    border: var(--lr-border-width-thin) dashed var(--lr-color-border-strong);
+    border: var(--lr-border-width-thin) dashed
+      var(--lr-span-waterfall-pending-border-color, var(--lr-color-border-strong));
   }
   /* background-position is physical, so the stripe crawl direction does not mirror on its own
      under RTL; play the same keyframes backwards there. animation-direction (not a second

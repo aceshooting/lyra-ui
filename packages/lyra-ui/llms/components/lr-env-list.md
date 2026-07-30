@@ -15,7 +15,8 @@
 
 A masked key/value list for environment variables and secrets, with per-row reveal and copy.
 Masking is presentational, not a security boundary: the real value sits in a DOM property
-regardless of mask state.
+regardless of mask state. Names, revealed values, and localized action text wrap within narrow
+allocations; the name track uses at most 40% of the available inline size.
 
 **Properties:** `entries: EnvEntry[] = []` (attribute: false), `revealable: boolean = true`
 (reflected), `copyable: boolean = true` (reflected), and `label: string = ''`.

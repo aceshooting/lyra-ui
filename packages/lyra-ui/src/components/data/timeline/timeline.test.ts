@@ -128,6 +128,24 @@ it('reports itemCount as 0 for an empty timeline', async () => {
   expect(el.itemCount).to.equal(0);
 });
 
+it('counts only slotted lr-timeline-item elements before and after slot changes', async () => {
+  const el = (await fixture(
+    html`<lr-timeline>
+      <div>Unrelated default-slot element</div>
+      <lr-timeline-item>Only event</lr-timeline-item>
+    </lr-timeline>`,
+  )) as LyraTimeline;
+  expect(el.itemCount).to.equal(1);
+
+  const unrelated = document.createElement('span');
+  const slot = el.shadowRoot!.querySelector('slot') as HTMLSlotElement;
+  const changed = oneEvent(slot, 'slotchange');
+  el.append(unrelated);
+  await changed;
+  await el.updateComplete;
+  expect(el.itemCount).to.equal(1);
+});
+
 it('suppresses the trailing rail on the last item only, reacting to DOM changes with no JS coordination', async () => {
   const el = (await fixture(
     html`<lr-timeline>

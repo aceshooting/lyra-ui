@@ -49,6 +49,8 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 - best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
   and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
   with the intended text so a consumer can always show its own confirmation/fallback UI.
+- Changing `value` clears any in-progress "Copied" feedback immediately, so the confirmation can
+  never describe stale text.
 
 **Additional API surface:**
 

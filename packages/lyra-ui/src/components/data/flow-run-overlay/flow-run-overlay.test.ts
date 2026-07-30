@@ -148,6 +148,68 @@ it('renders the "{done} of {total} steps complete" summary and per-status counts
   expect(counts.length).to.equal(2); // success + running only -- pending/error/denied are all 0
 });
 
+it('lets each summary-count status color be rethemed independently', async () => {
+  const statusNodes: FlowNode[] = ['pending', 'running', 'success', 'error', 'denied'].map(
+    (id, index) => ({ id, position: { x: index * 100, y: 0 } }),
+  );
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-run-overlay
+        slot="top-end"
+        style="
+          --lr-flow-run-overlay-status-pending-color: rgb(1, 2, 3);
+          --lr-flow-run-overlay-status-running-color: rgb(4, 5, 6);
+          --lr-flow-run-overlay-status-success-color: rgb(7, 8, 9);
+          --lr-flow-run-overlay-status-error-color: rgb(10, 11, 12);
+          --lr-flow-run-overlay-status-denied-color: rgb(13, 14, 15);
+        "
+        .decorations=${Object.fromEntries(
+          statusNodes.map((node) => [node.id, { status: node.id }]),
+        ) as FlowRunDecorations}
+      ></lr-flow-run-overlay>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = statusNodes;
+  await wrapper.updateComplete;
+  const overlay = wrapper.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
+  await overlay.updateComplete;
+
+  const expected = new Map([
+    ['pending', 'rgb(1, 2, 3)'],
+    ['running', 'rgb(4, 5, 6)'],
+    ['success', 'rgb(7, 8, 9)'],
+    ['error', 'rgb(10, 11, 12)'],
+    ['denied', 'rgb(13, 14, 15)'],
+  ]);
+  for (const count of overlay.shadowRoot!.querySelectorAll<HTMLElement>('[part="count"]')) {
+    const dot = count.querySelector('.tone-dot') as HTMLElement;
+    expect(getComputedStyle(dot).backgroundColor).to.equal(expected.get(count.dataset.status));
+  }
+});
+
+it('contains long summary, count, and slotted text in a 320px allocation', async () => {
+  const token = `RUN_${'IDENTIFIER'.repeat(40)}`;
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 320px; max-inline-size: 320px;">
+      <lr-flow-run-overlay
+        .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}
+        .strings=${{ flowRunSummary: token, flowRunStatusCount: token }}
+      ><span>${token}</span></lr-flow-run-overlay>
+    </div>
+  `)) as HTMLElement;
+  const overlay = wrapper.querySelector('lr-flow-run-overlay') as LyraFlowRunOverlay;
+  await overlay.updateComplete;
+
+  const base = overlay.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+  for (const part of ['summary', 'count']) {
+    const node = overlay.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+    expect(node.scrollWidth, part).to.be.at.most(Math.ceil(node.getBoundingClientRect().width) + 1);
+  }
+  const slotted = overlay.querySelector('span') as HTMLElement;
+  expect(slotted.scrollWidth).to.be.at.most(Math.ceil(slotted.getBoundingClientRect().width) + 1);
+});
+
 it('hideSummary suppresses the visible strip but still mirrors decorations into the canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas>

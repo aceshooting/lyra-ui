@@ -39,8 +39,9 @@ hand-building that chrome isn't worth it.
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
 computed accessible name outright, winning over every other source below (a slotted heading,
-`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. Left unset, the
-existing three-tier fallback below is unchanged.
+`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. It changes naming
+only: a `heading` property still renders its visible header chrome. Left unset, the existing
+three-tier fallback below is unchanged.
 
 **Methods:** `close(reason: DialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-dialog-close` with `reason`, and returns focus to whatever had it right before the dialog
@@ -52,8 +53,10 @@ own `close()` (a consumer's own cleanup code, a parent re-render that drops it);
 whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or `confirm()`'s
 own `'confirm'`/`'cancel'`).
 
-**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — fired on every dismissal path
-(Escape, backdrop click, any `close()` call, or an `'unmount'` removal as above).
+**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — a cancelable event fired on every
+dismissal path (Escape, backdrop click, the built-in close button, any `close()` call, or an
+`'unmount'` removal as above). Calling `preventDefault()` keeps a connected dialog open for every
+dismissal path; `'unmount'` cannot practically be vetoed because removal already happened.
 
 **Stacking:** participates in the shared per-document overlay stack described above. A dialog can be
 stacked with another dialog or any other modal family; only the visually topmost overlay receives
@@ -103,19 +106,20 @@ clipped; the viewport is still a hard limit either way), plus shared tokens `--l
 
 Accessible name / visible header, in priority order: (0) if the host element itself has an
 `aria-label` attribute set, its value becomes `aria-label` on the panel outright, overriding every
-source below (including a slotted heading) and suppressing the visible header/`heading` row and the
-sr-only `label` element from rendering at all — the standard ARIA convention for a consumer that
-wants full control over the announced name regardless of whatever `heading`/`label` props are also
-set; (1) otherwise, if a heading element (`h1`–`h6` or
+source below (including a slotted heading) while leaving visible `heading` chrome intact — the
+standard ARIA convention for a consumer that wants full control over the announced name regardless
+of whatever `heading`/`label` props are also set; (1) otherwise, if a heading element (`h1`–`h6` or
 `[role="heading"]`) is a *direct child* (not inside `slot="footer"`), its text content becomes
 `aria-label` on the panel — takes priority over `heading` below so an existing consumer that already
 slots its own heading keeps rendering it exactly as before; (2) otherwise, when `heading` is set, a
 visible header row (`[part="header"]`) renders containing that text (`[part="heading"]`), which
 becomes the `aria-labelledby` target; (3) otherwise, when `label` is set, an invisible (`.sr-only`,
 exposed as the `label` part) element carrying that text is rendered inside the panel and
-`aria-labelledby` points at it instead. Only one of cases 2/3 ever renders at a time. `label` itself
-never renders visible chrome on its own — `::part(label)` can be restyled to make the sr-only text
-visible, or `heading` can be set instead, for visible chrome without slotting a real heading element.
+`aria-labelledby` points at it instead. Only one of cases 2/3 supplies `aria-labelledby` at a time;
+case 0 can coexist with case 2's visible heading, but its explicit `aria-label` remains the name.
+`label` itself never renders visible chrome on its own — `::part(label)` can be restyled to make the
+sr-only text visible, or `heading` can be set instead, for visible chrome without slotting a real
+heading element.
 The slotted-heading case (1) deliberately uses `aria-label` (a copied string) rather than
 `aria-labelledby` pointing at the heading's `id`, because the heading is light-DOM content while
 `[part="panel"]` lives in shadow DOM and an ID-reference attribute can't resolve across that
@@ -125,9 +129,8 @@ root it labels.
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
   inspecting closed markup won't show them.
-- Heading detection only rescans on `slotchange`, not on every render — mutating an already-slotted
-  heading's `textContent` in place (rather than replacing the node) won't retroactively update
-  `aria-label`; set `label` instead for a title that needs to change live.
+- Heading detection observes child, subtree, and character-data changes, so mutating an
+  already-slotted direct heading's text updates the copied panel `aria-label` live.
 - Only *direct* children are scanned for a heading — one nested several layers deep, or inside a
   slotted custom element's own shadow root, is left to the consumer to label explicitly via `label`.
 - A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
@@ -174,7 +177,8 @@ used is still a `--lr-*` token reference, never a raw literal.
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
   `<lr-dialog>`'s own `close()`/`lr-dialog-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
-  `.remove()` itself.
+  `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
+  dispatch and remains pending/mounted when a listener calls `preventDefault()`.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
   tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each token chains through Web
   Awesome's matching `*-on-loud` semantic role and has contrast-tested standalone light/dark

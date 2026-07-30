@@ -60,7 +60,10 @@ export const NarrowLongContent: Story = {
   },
 };
 
-/** Canvas chrome reads the shared chart tokens; `refreshTheme()` picks up out-of-band changes. */
+/**
+ * Canvas chrome and the wrapping DOM legend share chart tokens; `refreshTheme()` picks up
+ * out-of-band canvas and computed legend-swatch changes.
+ */
 export const ThemedTokensAndRefresh: Story = {
   render: () => {
     const boxes: BoxPlotSeries[] = [

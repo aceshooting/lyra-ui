@@ -140,3 +140,38 @@ it('allows a strings override to reach the histogram dataset label', async () =>
     ),
   ).to.include('Häufigkeit');
 });
+
+it('appends streamed samples through the inherited appendData contract and caps values', () => {
+  const el = document.createElement('lr-histogram') as LyraHistogram;
+  el.values = [1, 2];
+
+  el.appendData('samples', [3, null, 4], 4);
+
+  expect(el.values).to.deep.equal([1, 2, 3, 4]);
+});
+
+it('does not recreate Chart.js after a values update is disconnected in the same tick', async () => {
+  const el = (await fixture(html`<lr-histogram .values=${[1, 2, 3]}></lr-histogram>`)) as LyraHistogram;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+
+  el.values = [4, 5, 6];
+  el.remove();
+  await el.updateComplete;
+
+  expect((el as any).chart).to.equal(undefined);
+});
+
+it('keeps histogram value redraws visibility-gated', async () => {
+  const el = (await fixture(html`<lr-histogram .values=${[1, 2, 3]}></lr-histogram>`)) as LyraHistogram;
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+  const data = chart.data;
+
+  (el as any).visible = false;
+  el.values = [10, 20, 30];
+  await el.updateComplete;
+
+  expect(chart.data).to.equal(data);
+});

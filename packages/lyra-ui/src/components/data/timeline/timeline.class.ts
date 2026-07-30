@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { tag } from '../../../internal/prefix.js';
 import { styles } from './timeline.styles.js';
 
 export type TimelineOrientation = 'vertical' | 'horizontal';
@@ -62,15 +63,21 @@ export class LyraTimeline extends LyraElement {
       // still assigns to the default slot per the HTML slot algorithm, so check the attribute's
       // value rather than its mere presence. Otherwise this pre-count could disagree with
       // firstUpdated's authoritative slot-based recount below and schedule a wasted second update.
-      this.slottedCount = Array.from(this.children).filter((el) => !el.getAttribute('slot')).length;
+      this.slottedCount = Array.from(this.children).filter(
+        (element) => !element.getAttribute('slot') && element.localName === tag('timeline-item'),
+      ).length;
     }
+  }
+
+  private countTimelineItems(slot: HTMLSlotElement): number {
+    return slot.assignedElements({ flatten: true }).filter((element) => element.localName === tag('timeline-item')).length;
   }
 
   override firstUpdated(): void {
     // Fallback reconciliation for slot-forwarding / engines that don't fire `slotchange` for content
     // present at parse time.
     const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    this.slottedCount = slot.assignedElements({ flatten: true }).length;
+    this.slottedCount = this.countTimelineItems(slot);
   }
 
   /** Read-only, live-updated count of the currently-slotted `<lr-timeline-item>` children — handy
@@ -80,7 +87,7 @@ export class LyraTimeline extends LyraElement {
   }
 
   private onSlotChange = (e: Event): void => {
-    this.slottedCount = (e.target as HTMLSlotElement).assignedElements({ flatten: true }).length;
+    this.slottedCount = this.countTimelineItems(e.target as HTMLSlotElement);
   };
 
   override render(): TemplateResult {

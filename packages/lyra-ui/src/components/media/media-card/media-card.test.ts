@@ -6,6 +6,18 @@ import { safeMediaSrc, safeLinkHref } from './media-card.js';
 const DATA_URI =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraMediaCard>(html`<lr-media-card kind="file"></lr-media-card>`);
+  el.maxHeight = '12rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-media-card-max-height')).to.equal('');
+  el.maxHeight = 'calc(12rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-media-card-max-height')).to.equal('calc(12rem + 2px)');
+});
+
 describe('safeMediaSrc / safeLinkHref', () => {
   it('allows http:/https:/blob: for both', () => {
     for (const url of ['http://example.test/a.png', 'https://example.test/a.png', 'blob:https://example.test/uuid']) {

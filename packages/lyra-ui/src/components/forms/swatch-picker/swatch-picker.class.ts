@@ -6,11 +6,12 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { gemstoneGlyph, type GemstoneKey } from '../../../theme/gemstones.js';
 import { styles } from './swatch-picker.styles.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 
 export interface SwatchOption {
   /** The option's value -- reported in `lr-change` and matched against `value`. */
   value: string;
-  /** The swatch's fill color -- any CSS color string the consumer supplies. */
+  /** The swatch's fill color. Invalid CSS colors and `url()` paint servers are ignored. */
   color: string;
   /** The swatch's accessible name; also used as its native `title` tooltip. */
   label: string;
@@ -90,11 +91,9 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
    * gemstone glyph for options with a `gemstone` key and enables its glow/shine recipe. */
   @property({ reflect: true }) mode: LyraSwatchPickerMode = 'swatch';
 
-  /** Accessible name for the radiogroup, used when no visible label context
-   *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
-   *  as `aria-label` on the `role="radiogroup"` element. A plain `aria-label`
-   *  attribute on the host itself is honored as a fallback when this is left
-   *  unset, matching `<lr-segmented>`. */
+  /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
+   *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
+   *  The resolved name is set on the `role="radiogroup"` element. */
   @property() label = '';
 
   // Values are submitted/emitted as strings but are not required to be
@@ -202,7 +201,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
   };
 
   override render(): TemplateResult {
-    const ariaLabel = this.label || this.getAttribute('aria-label') || nothing;
+    const ariaLabel = this.getAttribute('aria-label') || this.label || nothing;
     // WAI-ARIA APG radiogroup: exactly one radio is ever tabbable. That's normally the checked
     // swatch, but a fresh/cleared picker (value === null) has no checked swatch -- fall back to
     // the first swatch so the radiogroup stays keyboard-reachable.
@@ -214,7 +213,12 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           this.options,
           (_option, index) => index,
           (option, index) => {
-            const icon = option.icon ?? (this.mode === 'gemstone' && option.gemstone ? gemstoneGlyph(option.color) : null);
+            const color = sanitizeCssColor(option.color);
+            const icon =
+              option.icon ??
+              (this.mode === 'gemstone' && option.gemstone
+                ? gemstoneGlyph(color ?? 'currentColor')
+                : null);
             return html`<button
             type="button"
             part="swatch"
@@ -225,7 +229,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
             aria-label=${option.label}
             title=${option.label}
             tabindex=${index === tabbableIndex ? '0' : '-1'}
-            style=${styleMap({ '--lr-swatch-color': option.color })}
+            style=${styleMap(color ? { '--lr-swatch-color': color } : {})}
             @click=${() => this.select(option, index)}
           >${
             icon

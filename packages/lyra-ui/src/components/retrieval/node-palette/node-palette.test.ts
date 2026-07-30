@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil, oneEvent } from '@open-wc/testing';
 import { LitElement, type PropertyValues } from 'lit';
 import './node-palette.js';
-import type { LyraNodePalette, PaletteItem } from './node-palette.js';
+import type { LyraNodePalette, LyraNodePaletteEventMap, PaletteItem } from './node-palette.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.js';
 import { styles } from './node-palette.styles.js';
 
@@ -383,6 +383,17 @@ it('bridges the search field\'s native focus/blur across the shadow boundary as 
   const blurListener = oneEvent(el, 'blur');
   input.dispatchEvent(new FocusEvent('blur'));
   await blurListener;
+});
+
+it('types the bridged focus and blur events in the public EventMap', () => {
+  const events: [
+    LyraNodePaletteEventMap['focus'],
+    LyraNodePaletteEventMap['blur'],
+  ] = [
+    new CustomEvent('focus'),
+    new CustomEvent('blur'),
+  ];
+  expect(events.map((event) => event.type)).to.deep.equal(['focus', 'blur']);
 });
 
 it("wraps the item hover/focus-visible rule in :where() so a consumer's ::part(item):hover wins without !important", async () => {

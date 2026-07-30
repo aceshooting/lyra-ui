@@ -1,15 +1,18 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { unsafeSVG } from 'lit/directives/unsafe-svg.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseText } from '../../../internal/resource-loader.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { loadSvgSanitizer } from './dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
+import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 
 function sameRegionAnchor(a: LyraAnchor, b: LyraAnchor): boolean {
   if (a.kind !== 'region' || b.kind !== 'region') return false;
@@ -84,7 +87,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   /** Accessible name for the rendered SVG. */
   @property() name = '';
 
-  /** CSS length that caps the scrollable body. */
+  /** CSS length that caps the scrollable body. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Wraps the rendered content in an internal `<lr-zoomable-frame>`. `false` (the default)
@@ -192,10 +195,38 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } };
     }
   > {
-    return this.highlights.filter(
-      (h): h is LyraHighlight & { anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } } } =>
-        h.anchor.kind === 'region',
-    );
+    return this.highlights.flatMap((highlight) => {
+      if (highlight.anchor.kind !== 'region') return [];
+      const rect = sanitizePercentRect(highlight.anchor.rect);
+      return rect
+        ? [
+            {
+              ...highlight,
+              anchor: { ...highlight.anchor, rect },
+            } as LyraHighlight & {
+              anchor: {
+                kind: 'region';
+                rect: { x: number; y: number; width: number; height: number };
+              };
+            },
+          ]
+        : [];
+    });
+  }
+
+  private highlightActionLabel(
+    highlight: LyraHighlight,
+    index: number,
+    total: number,
+  ): string {
+    if (highlight.label) {
+      return this.localize('highlightWithLabel', undefined, { label: highlight.label });
+    }
+    const numberFormat = getNumberFormat(this.effectiveLocale);
+    return this.localize('highlightOfTotal', undefined, {
+      index: numberFormat.format(index + 1),
+      total: numberFormat.format(total),
+    });
   }
 
   private renderHighlightLayer(
@@ -208,17 +239,19 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     // overlay under RTL while the render underneath stays put.
     return html`<div part="highlight-layer">
       ${regionHighlights.map(
-        (h) => html`
+        (h, index) => html`
           ${interactive ? html`<button
             part="region-highlight-target"
             data-highlight-id=${h.id}
-            style="left:calc(${h.anchor.rect.x}% + ${h.anchor.rect.width / 2}%);
-              top:calc(${h.anchor.rect.y}% + ${h.anchor.rect.height / 2}%);
-              width:max(${h.anchor.rect.width}%, var(--lr-icon-button-size));
-              height:max(${h.anchor.rect.height}%, var(--lr-icon-button-size))"
+            style=${styleMap({
+              left: `calc(${h.anchor.rect.x}% + ${h.anchor.rect.width / 2}%)`,
+              top: `calc(${h.anchor.rect.y}% + ${h.anchor.rect.height / 2}%)`,
+              width: `max(${h.anchor.rect.width}%, var(--lr-icon-button-size))`,
+              height: `max(${h.anchor.rect.height}%, var(--lr-icon-button-size))`,
+            })}
             type="button"
             role="button"
-            aria-label=${h.label || this.localize('viewerHighlightLabel')}
+            aria-label=${this.highlightActionLabel(h, index, regionHighlights.length)}
             @click=${() => this.emit('lr-highlight-activate', { id: h.id })}
           ></button>` : nothing}
           <div
@@ -227,7 +260,12 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
             data-tone=${h.tone ?? 'accent'}
             ?data-active=${h.id === this.activeHighlightId}
             aria-hidden="true"
-            style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
+            style=${styleMap({
+              left: `${h.anchor.rect.x}%`,
+              top: `${h.anchor.rect.y}%`,
+              width: `${h.anchor.rect.width}%`,
+              height: `${h.anchor.rect.height}%`,
+            })}
           ></div>
         `,
       )}
@@ -239,17 +277,20 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   ): TemplateResult | typeof nothing {
     if (regionHighlights.length < 2) return nothing;
     return html`<div part="highlight-actions">
-      ${regionHighlights.map((highlight) => html`
+      ${regionHighlights.map((highlight, index) => {
+        const label = this.highlightActionLabel(highlight, index, regionHighlights.length);
+        return html`
         <button
           part="region-highlight-action"
           type="button"
           data-highlight-id=${highlight.id}
-          aria-label=${highlight.label || this.localize('viewerHighlightLabel')}
+          aria-label=${label}
           @click=${() => this.emit('lr-highlight-activate', { id: highlight.id })}
         >
-          ${highlight.label || this.localize('viewerHighlightLabel')}
+          ${highlight.label || label}
         </button>
-      `)}
+      `;
+      })}
     </div>`;
   }
 
@@ -275,7 +316,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" style=${this.maxHeight ? `--lr-svg-viewer-max-height:${this.maxHeight}` : nothing}>
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" style=${maxHeight ? styleMap({ '--lr-svg-viewer-max-height': maxHeight }) : nothing}>
       <div part="body">${this.renderBody()}</div>
       ${this.renderAnchorLiveRegion()}
     </div>`;

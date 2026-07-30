@@ -190,6 +190,27 @@ it('resolves hide() even if the element disconnects mid-hide-animation', async (
   await hidden; // must not hang forever
 });
 
+it('resumes an interrupted hide after reconnect and completes exactly once', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0" style="--lr-toast-hide-duration: 20ms linear">msg</lr-toast-item>`,
+  )) as LyraToastItem;
+  const parent = el.parentElement!;
+  let afterHideCount = 0;
+  el.addEventListener('lr-after-hide', () => afterHideCount++);
+
+  const interruptedHide = el.hide();
+  el.remove();
+  await interruptedHide;
+  expect(afterHideCount).to.equal(0);
+
+  const completed = oneEvent(el, 'lr-after-hide');
+  parent.append(el);
+  await completed;
+
+  expect(afterHideCount).to.equal(1);
+  expect(el.isConnected).to.be.false;
+});
+
 it('applies distinct visual sizing per the `size` property', async () => {
   const xs = (await fixture(
     html`<lr-toast-item size="xs" duration="0">a</lr-toast-item>`,
@@ -300,6 +321,54 @@ it('keeps focus on the close button once hiding starts, instead of dropping it t
   ).to.equal(button);
 });
 
+it('rehomes focus to an adjacent toast when a focused action toast is removed', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="before">Before toasts</button>
+      <lr-toast>
+        <lr-toast-item duration="0" style="--lr-toast-hide-duration: 0ms">
+          First message <button id="action">Undo</button>
+        </lr-toast-item>
+        <lr-toast-item duration="0">Second message</lr-toast-item>
+      </lr-toast>
+    </div>
+  `);
+  const [first, second] = [...wrapper.querySelectorAll('lr-toast-item')] as LyraToastItem[];
+  const before = wrapper.querySelector('#before') as HTMLButtonElement;
+  const action = first.querySelector('#action') as HTMLButtonElement;
+  const secondClose = second.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+  before.focus();
+  action.focus();
+
+  const afterHide = oneEvent(first, 'lr-after-hide');
+  void first.hide();
+  await afterHide;
+
+  expect(second.shadowRoot!.activeElement).to.equal(secondClose);
+});
+
+it('restores pre-toast focus when the only toast closes from its focused close button', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="before">Before toast</button>
+      <lr-toast>
+        <lr-toast-item duration="0" style="--lr-toast-hide-duration: 0ms">Only message</lr-toast-item>
+      </lr-toast>
+    </div>
+  `);
+  const before = wrapper.querySelector('#before') as HTMLButtonElement;
+  const item = wrapper.querySelector('lr-toast-item') as LyraToastItem;
+  const close = item.shadowRoot!.querySelector('[part="close-button"]') as HTMLButtonElement;
+  before.focus();
+  close.focus();
+
+  const afterHide = oneEvent(item, 'lr-after-hide');
+  close.click();
+  await afterHide;
+
+  expect(document.activeElement).to.equal(before);
+});
+
 it('stays paused on pointerleave while focus still holds it paused', async () => {
   const el = (await fixture(html`<lr-toast-item duration="120">hi</lr-toast-item>`)) as LyraToastItem;
   await oneEvent(el, 'lr-show');
@@ -390,6 +459,20 @@ it('derives the close button aria-label from the toast message for a11y in multi
   )) as LyraToastItem;
   const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
   expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
+});
+
+it('derives and live-updates the close label from rich message markup', async () => {
+  const el = (await fixture(
+    html`<lr-toast-item duration="0"><strong>Upload complete</strong></lr-toast-item>`,
+  )) as LyraToastItem;
+  const button = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+  const message = el.querySelector('strong')!;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload complete');
+
+  message.textContent = 'Upload failed';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await el.updateComplete;
+  expect(button.getAttribute('aria-label')).to.equal('Close: Upload failed');
 });
 
 it('falls back to a generic close label when the toast has no text content', async () => {

@@ -108,8 +108,8 @@ export interface LyraCheckboxEventMap {
  * Deliberately no hint/error chrome of its own -- the default slot already carries real, visible
  * label text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`
  * props has nothing to add here. A consumer needing hint/error messaging composes it in their own
- * wrapper (e.g. `<lr-tool-param-form>` folds a boolean field's validation error into adjacent
- * description text / `aria-label` rather than a `<lr-checkbox>`-owned slot), the same way a
+ * wrapper (e.g. `<lr-tool-param-form>` supplies adjacent description/error nodes through this
+ * component's `aria-describedby` bridge rather than a `<lr-checkbox>`-owned slot), the same way a
  * native `<input type="checkbox">` plus `<label>` pairs with an externally-owned error node.
  *
  * @customElement lr-checkbox

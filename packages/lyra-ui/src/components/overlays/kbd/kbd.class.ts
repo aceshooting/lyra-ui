@@ -179,9 +179,9 @@ const IS_MAC = detectIsMac();
  *
  * The default slot is not used for the normal glyph rendering above — it's
  * an escape hatch for fully custom content (e.g. an icon instead of a text
- * glyph) that, when non-empty, replaces the `keys`-driven rendering
- * entirely and stops this component from asserting its own `aria-label`,
- * leaving the slotted content to carry its own accessible name.
+ * glyph) that, when non-empty, replaces the `keys`-driven rendering.
+ * A host `aria-label` names that custom shortcut as one `role="img"` unit;
+ * without one, the slotted content continues to own its own semantics.
  *
  * @customElement lr-kbd
  * @slot - Optional override for fully custom key-cap content, replacing the
@@ -218,7 +218,11 @@ export class LyraKbd extends LyraElement {
 
     if (this.hasCustomContent) {
       return html`
-        <span part="base">
+        <span
+          part="base"
+          role=${explicitLabel ? 'img' : nothing}
+          aria-label=${explicitLabel || nothing}
+        >
           <slot @slotchange=${this.onSlotChange}></slot>
         </span>
       `;

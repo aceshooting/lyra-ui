@@ -11,6 +11,10 @@ it('linearAlpha handles a zero-span range without dividing by zero', () => {
   expect(linearAlpha(5, 5, 5)).to.equal(0.1);
 });
 
+it('linearAlpha preserves the midpoint of the full finite number range', () => {
+  expect(linearAlpha(0, -Number.MAX_VALUE, Number.MAX_VALUE)).to.be.closeTo(0.55, 0.001);
+});
+
 it('sqrtStep returns -1 only for a negative count (the no-data sentinel)', () => {
   expect(sqrtStep(-1, 10, 7)).to.equal(-1);
 });
@@ -47,6 +51,10 @@ describe('linearBucket', () => {
   it('clamps out-of-range values to the first/last bucket', () => {
     expect(linearBucket(-10, 0, 100, 4)).to.equal(0);
     expect(linearBucket(1000, 0, 100, 4)).to.equal(3);
+  });
+
+  it('places the midpoint of the full finite number range in the middle bucket', () => {
+    expect(linearBucket(0, -Number.MAX_VALUE, Number.MAX_VALUE, 4)).to.equal(2);
   });
 });
 

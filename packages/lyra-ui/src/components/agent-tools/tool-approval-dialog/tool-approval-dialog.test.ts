@@ -376,6 +376,28 @@ describe('focus management', () => {
     expect(el.shadowRoot!.activeElement).to.equal(textarea(el));
   });
 
+  it('bridges editor focus and blur as bubbling, composed host events', async () => {
+    const el = (await fixture(html`
+      <lr-tool-approval-dialog open tool-name="web_search" .args=${ARGS}></lr-tool-approval-dialog>
+    `)) as LyraToolApprovalDialog;
+    editButton(el).click();
+    await el.updateComplete;
+    const editor = textarea(el);
+    editor.blur();
+
+    const focusPromise = oneEvent(el, 'focus');
+    editor.focus();
+    const focusEvent = await focusPromise;
+    expect(focusEvent.bubbles).to.be.true;
+    expect(focusEvent.composed).to.be.true;
+
+    const blurPromise = oneEvent(el, 'blur');
+    editor.blur();
+    const blurEvent = await blurPromise;
+    expect(blurEvent.bubbles).to.be.true;
+    expect(blurEvent.composed).to.be.true;
+  });
+
   it('refocuses the Deny button (keeping the trap engaged) when editable is turned off while the textarea has focus', async () => {
     const el = (await fixture(
       html`<lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>`,
@@ -933,4 +955,16 @@ it('is accessible while open and editing, including with an invalid-JSON error s
   setTextareaValue(el, '{ not valid json');
   await el.updateComplete;
   await expect(el).to.be.accessible();
+});
+
+it('renders the disabled edit action with the shared disabled opacity token', async () => {
+  const el = (await fixture(html`
+    <lr-tool-approval-dialog tool-name="web_search" .args=${ARGS} open></lr-tool-approval-dialog>
+  `)) as LyraToolApprovalDialog;
+  const edit = editButton(el);
+  edit.disabled = true;
+  await el.updateComplete;
+  const expected = getComputedStyle(el).getPropertyValue('--lr-opacity-disabled').trim();
+  expect(getComputedStyle(edit).opacity).to.equal(expected);
+  expect(getComputedStyle(edit).opacity).not.to.equal('1');
 });

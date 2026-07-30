@@ -137,13 +137,14 @@ describe('shortcutTokenLabel (pure, parameterized on isMac)', () => {
   });
 });
 
-it('leaves custom slotted content to own its semantics instead of labeling a generic wrapper', async () => {
+it('forwards an explicit host label and image semantics to custom slotted content', async () => {
   const el = (await fixture(
-    html`<lr-kbd aria-label="Custom shortcut"><span>Custom content</span></lr-kbd>`,
+    html`<lr-kbd aria-label="Custom shortcut"><span aria-hidden="true">⌘</span></lr-kbd>`,
   )) as LyraKbd;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-  expect(base.hasAttribute('aria-label')).to.be.false;
-  expect(base.hasAttribute('role')).to.be.false;
+  expect(base.getAttribute('aria-label')).to.equal('Custom shortcut');
+  expect(base.getAttribute('role')).to.equal('img');
+  await expect(el).to.be.accessible();
 });
 
 describe('parseShortcut', () => {
@@ -265,10 +266,11 @@ describe('default slot override', () => {
     expect(base.hasAttribute('role')).to.be.false;
   });
 
-  it('leaves even an explicit host label off the generic wrapper when custom content owns semantics', async () => {
+  it('uses an explicit host label as the custom shortcut wrapper name', async () => {
     const el = (await fixture(html`<lr-kbd aria-label="Custom shortcut">fn+F5</lr-kbd>`)) as LyraKbd;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.hasAttribute('aria-label')).to.be.false;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('Custom shortcut');
   });
 
   it('reacts to the slot being populated after first render', async () => {

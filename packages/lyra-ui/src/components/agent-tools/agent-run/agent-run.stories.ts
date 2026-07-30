@@ -170,7 +170,19 @@ export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-agent-run .run=${runningRun}></lr-agent-run>
+      <lr-agent-run
+        .run=${{
+          ...runningRun,
+          model: `provider-${'unbroken-model-identifier'.repeat(8)}`,
+        }}
+        .metrics=${[
+          {
+            id: 'long-metric',
+            label: `Metric-${'unbroken-label'.repeat(8)}`,
+            value: `value-${'unbroken'.repeat(8)}`,
+          },
+        ]}
+      ></lr-agent-run>
     </div>
   `,
 };

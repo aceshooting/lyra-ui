@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
@@ -8,6 +9,7 @@ import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { parseVCards, type VCardAddress, type VCardContact } from './vcard.js';
 import { styles } from './contact-viewer.styles.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: string };
 export interface LyraContactViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-render-error': CustomEvent<{ error: unknown }>; }
@@ -41,6 +43,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
    *  `csvViewerLabel`-style sibling document viewers. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shared text search and anchor-target API for the rendered contact cards. */
   override async search(query: string): Promise<number> { return super.search(query); }
@@ -162,7 +165,10 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
     }
   }
 
-  override render(): TemplateResult { return html`<div part="base" role="region" style=${this.maxHeight ? `--lr-contact-viewer-max-height:${this.maxHeight}` : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`; }
+  override render(): TemplateResult {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" role="region" style=${maxHeight ? styleMap({ '--lr-contact-viewer-max-height': maxHeight }) : nothing} aria-label=${this.getAttribute('aria-label') || this.name || this.localize('contactViewerLabel')}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+  }
 }
 
 declare global { interface HTMLElementTagNameMap { 'lr-contact-viewer': LyraContactViewer; } }

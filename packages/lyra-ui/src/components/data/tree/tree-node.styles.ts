@@ -60,6 +60,9 @@ export const styles = css`
     cursor: pointer;
     flex: 0 0 auto;
   }
+  [part='toggle']:disabled {
+    cursor: default;
+  }
   [part='toggle'][hidden] {
     /* visibility (not display) so the placeholder keeps its layout box --
        a leaf row still lines up with sibling rows that do have a chevron. */
@@ -112,23 +115,23 @@ export const styles = css`
     margin-inline-start: var(--lr-space-xs);
   }
   [part='badge'][data-tone='neutral'] {
-    color: var(--lr-color-text-quiet);
-    background: var(--lr-color-surface);
+    color: var(--lr-tree-badge-neutral-color, var(--lr-color-text-quiet));
+    background: var(--lr-tree-badge-neutral-bg, var(--lr-color-surface));
   }
   [part='badge'][data-tone='brand'] {
-    color: var(--lr-color-brand);
-    background: var(--lr-color-brand-quiet);
+    color: var(--lr-tree-badge-brand-color, var(--lr-color-brand));
+    background: var(--lr-tree-badge-brand-bg, var(--lr-color-brand-quiet));
   }
   [part='badge'][data-tone='success'] {
-    color: var(--lr-color-success);
-    background: var(--lr-color-success-quiet);
+    color: var(--lr-tree-badge-success-color, var(--lr-color-success));
+    background: var(--lr-tree-badge-success-bg, var(--lr-color-success-quiet));
   }
   [part='badge'][data-tone='warning'] {
-    color: var(--lr-color-warning);
-    background: var(--lr-color-warning-quiet);
+    color: var(--lr-tree-badge-warning-color, var(--lr-color-warning));
+    background: var(--lr-tree-badge-warning-bg, var(--lr-color-warning-quiet));
   }
   [part='badge'][data-tone='danger'] {
-    color: var(--lr-color-danger);
-    background: var(--lr-color-danger-quiet);
+    color: var(--lr-tree-badge-danger-color, var(--lr-color-danger));
+    background: var(--lr-tree-badge-danger-bg, var(--lr-color-danger-quiet));
   }
 `;

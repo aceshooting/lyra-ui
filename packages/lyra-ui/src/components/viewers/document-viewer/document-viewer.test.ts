@@ -15,6 +15,7 @@ describe('defaults', () => {
     expect(el.name).to.equal('');
     expect(el.mimeType).to.equal('');
     expect(el.src).to.equal('');
+    expect(el.alt).to.equal(undefined);
   });
 });
 
@@ -110,6 +111,75 @@ describe('registry dispatch', () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('#custom-registry-output')).to.exist;
   });
+
+  it('preserves unset, explicit-empty, and nonempty alt values for registered renderers', async () => {
+    const observed: Array<string | undefined> = [];
+    registerDocumentRenderer('image/png', {
+      render: (file) => {
+        observed.push(file.alt);
+        return html`<span>image</span>`;
+      },
+    });
+    const el = await fixture<LyraDocumentViewer>(
+      html`<lr-document-viewer open mime-type="image/png" src="https://example.test/image.png"></lr-document-viewer>`,
+    );
+    await el.updateComplete;
+    el.alt = '';
+    await el.updateComplete;
+    el.alt = 'Diagram';
+    await el.updateComplete;
+    expect(observed).to.deep.equal([undefined, '', 'Diagram']);
+  });
+
+  it('marks the lazy-renderer body busy and exposes loading text through a status owner', async () => {
+    registerDocumentRenderer('application/pdf', {
+      load: () => new Promise(() => {}),
+    });
+    const el = await fixture<LyraDocumentViewer>(
+      html`<lr-document-viewer open mime-type="application/pdf" src="https://example.test/report.pdf"></lr-document-viewer>`,
+    );
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector('[part="body"]')!;
+    expect(body.getAttribute('aria-busy')).to.equal('true');
+    expect(body.querySelectorAll('[role="status"]').length).to.equal(1);
+  });
+
+  for (const [hook, definition] of [
+    ['matcher', {
+      matches: () => { throw new Error('consumer matcher failed'); },
+      render: () => html`<p>unreachable</p>`,
+    }],
+    ['renderer', {
+      matches: () => true,
+      render: () => { throw new Error('consumer renderer failed'); },
+    }],
+  ] as const) {
+    it(`localizes a thrown consumer ${hook} and completes its anchor exactly once`, async () => {
+      const registry = new Map([['consumer-hook', definition]]);
+      const el = await fixture<LyraDocumentViewer>(html`
+        <lr-document-viewer
+          name="report.custom"
+          mime-type="application/x-custom"
+          src="https://example.test/report.custom"
+          .registry=${registry}
+          .anchor=${{ kind: 'page', page: 1 }}
+          .strings=${{ documentPreviewGenericError: 'Localized display failure.' }}
+        ></lr-document-viewer>
+      `);
+      const results: boolean[] = [];
+      el.addEventListener('lr-anchor-result', (event) => {
+        results.push((event as CustomEvent<{ found: boolean }>).detail.found);
+      });
+
+      el.open = true;
+      await el.updateComplete;
+      await aTimeout(30);
+
+      expect(el.shadowRoot!.querySelector('[part="body"] [role="alert"]')?.textContent)
+        .to.equal('Localized display failure.');
+      expect(results).to.deep.equal([false]);
+    });
+  }
 });
 
 describe('dialog wiring', () => {

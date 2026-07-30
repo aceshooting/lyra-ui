@@ -84,6 +84,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   /** Which menu item to focus the next time `open` flips true; reset after use. */
   private pendingMenuFocusIndex = 0;
   private formatsFocusSnapshot?: { index: number; id: string };
+  private forcedMenuClose?: 'invalid-open' | 'formats' | 'state';
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -182,7 +183,25 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this._isFirstUpdate = !this.hasUpdated;
-    this.toggleAttribute('aria-busy', this.loading);
+    this.setAttribute('aria-busy', String(this.loading));
+    if ((changed.has('disabled') || changed.has('loading')) && (this.disabled || this.loading)) {
+      const active = this.shadowRoot?.activeElement;
+      if (
+        active === this.triggerEl ||
+        (active instanceof HTMLElement && active.getAttribute('part') === 'menu-item')
+      ) {
+        if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
+        const ownerHTMLElement = this.ownerDocument.defaultView?.HTMLElement;
+        const nativeFocus = ownerHTMLElement
+          ? Reflect.get(ownerHTMLElement.prototype, 'focus', this)
+          : undefined;
+        if (typeof nativeFocus === 'function') nativeFocus.call(this, { preventScroll: true });
+      }
+      if (this.open) {
+        this.open = false;
+        this.forcedMenuClose = 'state';
+      }
+    }
     if (changed.has('formats')) {
       const active = this.shadowRoot?.activeElement;
       const items = this.menuItemEls();
@@ -192,11 +211,23 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       this.formatsFocusSnapshot =
         index >= 0 && previous ? { index, id: this.formatId(previous) } : undefined;
     }
+    if (this.open && this.formats.length <= 1) {
+      const previousOpen = changed.get('open');
+      this.forcedMenuClose =
+        changed.has('formats') && (changed.get('formats') as ExportFormatOption[] | undefined)?.length
+          ? 'formats'
+          : previousOpen === false || previousOpen === undefined
+            ? 'invalid-open'
+            : 'state';
+      this.open = false;
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('open')) {
+    const forcedMenuClose = this.forcedMenuClose;
+    this.forcedMenuClose = undefined;
+    if (changed.has('open') || forcedMenuClose === 'formats' || forcedMenuClose === 'state') {
       this.cleanup?.();
       this.cleanup = undefined;
       // Reacting to the `open` property itself (not just inside
@@ -216,7 +247,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         this.focusMenuItem(this.pendingMenuFocusIndex);
         this.pendingMenuFocusIndex = 0;
       } else {
-        if (!this._isFirstUpdate) this.emit('lr-hide');
+        if (!this._isFirstUpdate && forcedMenuClose !== 'invalid-open') this.emit('lr-hide');
       }
     }
     if (changed.has('formats') && this.formatsFocusSnapshot) {
@@ -255,7 +286,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
   private rowsForExport(): Record<string, unknown>[] {
     const keys = this.effectiveColumns().map((c) => c.key);
     return this.rows.map((row) => {
-      const picked: Record<string, unknown> = {};
+      const picked = Object.create(null) as Record<string, unknown>;
       for (const key of keys) picked[key] = row[key];
       return picked;
     });
@@ -335,7 +366,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
         type="button"
         ?disabled=${this.disabled || this.loading}
         aria-label=${this.accessibleLabel || nothing}
-        aria-busy=${this.loading ? 'true' : nothing}
+        aria-busy=${this.loading ? 'true' : 'false'}
         aria-haspopup=${this.formats.length > 1 ? 'menu' : nothing}
         aria-expanded=${this.formats.length > 1 ? (this.open ? 'true' : 'false') : nothing}
         aria-controls=${this.formats.length > 1 ? this.menuId : nothing}

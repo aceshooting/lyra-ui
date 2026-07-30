@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { aTimeout, fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './av-player.js';
 import '../../layout/virtual-list/virtual-list.js';
 import type { LyraAvPlayer, LyraAvCue } from './av-player.js';
@@ -124,6 +124,69 @@ describe('playback controls', () => {
     expect(css).to.match(/\[part='rate-select'\]:hover[^{]*\{[^}]*background:/);
     expect(css).to.match(/\[part='rate-select'\]:focus-visible[^{]*\{[^}]*outline:/);
   });
+
+  it('returns the native play promise and preserves its rejection for imperative callers', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const failure = new DOMException('Playback blocked', 'NotAllowedError');
+    Object.defineProperty(media, 'play', {
+      value: () => Promise.reject(failure),
+      configurable: true,
+    });
+    const suppressUnhandled = (event: PromiseRejectionEvent): void => event.preventDefault();
+    window.addEventListener('unhandledrejection', suppressUnhandled);
+    try {
+      const result = (el as unknown as { play(): Promise<void> }).play();
+      const rejection = result ? await result.then(() => null, (error: unknown) => error) : null;
+      await aTimeout(0);
+      expect(result).to.be.instanceOf(Promise);
+      expect(rejection).to.equal(failure);
+    } finally {
+      window.removeEventListener('unhandledrejection', suppressUnhandled);
+    }
+  });
+
+  it('handles an internal keyboard-triggered play rejection through the localized render-error path', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    const failure = new DOMException('Playback blocked', 'NotAllowedError');
+    Object.defineProperty(media, 'play', {
+      value: () => Promise.reject(failure),
+      configurable: true,
+    });
+    let reported: unknown;
+    el.addEventListener('lr-render-error', (event) => {
+      reported = event.detail.error;
+    });
+    const suppressUnhandled = (event: PromiseRejectionEvent): void => event.preventDefault();
+    window.addEventListener('unhandledrejection', suppressUnhandled);
+    try {
+      const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+      timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+      await aTimeout(0);
+      await el.updateComplete;
+      expect(reported).to.equal(failure);
+      expect(el.shadowRoot!.querySelector('[part="error"]')!.textContent).to.equal(
+        'The media failed to load.',
+      );
+    } finally {
+      window.removeEventListener('unhandledrejection', suppressUnhandled);
+    }
+  });
+
+  it('localizes and reorders playback-rate option text through avPlayerRateOption', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .rates=${[1, 1.5]}
+        .strings=${{ avPlayerRateOption: 'vitesse {rate}' }}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const labels = [...el.shadowRoot!.querySelectorAll('[part="rate-select"] option')].map(
+      (option) => option.textContent,
+    );
+    expect(labels).to.deep.equal(['vitesse 1', 'vitesse 1.5']);
+  });
 });
 
 describe('cues and transcript', () => {
@@ -178,7 +241,7 @@ describe('cues and transcript', () => {
       (option) => option.textContent,
     );
     expect(time).to.equal('١:٠١');
-    expect(labels).to.include('١٫٥x');
+    expect(labels).to.include('١٫٥×');
   });
 
   it('marks only one occurrence current when public cue ids are duplicated', async () => {
@@ -503,6 +566,104 @@ describe('numeric safety (finite clamping)', () => {
     el.currentTime = -20;
     expect(media.currentTime).to.equal(0);
   });
+
+  it('normalizes a non-finite native duration before it reaches state, events, ARIA, or time labels', async () => {
+    const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    Object.defineProperty(media, 'duration', { value: Number.POSITIVE_INFINITY, configurable: true });
+    const loadEvent = oneEvent(el, 'lr-load');
+    media.dispatchEvent(new Event('loadedmetadata'));
+    const loaded = await loadEvent;
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+
+    expect(loaded.detail.duration).to.equal(0);
+    expect(timeline.getAttribute('aria-valuemax')).to.equal('0');
+    expect(timeline.getAttribute('aria-valuetext')).to.not.match(/Infinity|NaN|∞/);
+  });
+
+  it('clamps a pending seek to the finite duration when metadata becomes available', async () => {
+    const el = document.createElement('lr-av-player') as LyraAvPlayer;
+    el.src = MP3_SRC;
+    el.currentTime = 500;
+    try {
+      document.body.append(el);
+      await el.updateComplete;
+      const media = mediaEl(el);
+      Object.defineProperty(media, 'duration', { value: 100, configurable: true });
+      media.dispatchEvent(new Event('loadedmetadata'));
+      expect(media.currentTime).to.equal(100);
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('drops non-finite/out-of-range/duplicate public rate options', async () => {
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .rates=${[Number.NaN, Number.POSITIVE_INFINITY, -1, 0, 1, 2, 2]}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const values = [...el.shadowRoot!.querySelectorAll('[part="rate-select"] option')].map(
+      (option) => (option as HTMLOptionElement).value,
+    );
+    expect(values).to.deep.equal(['1', '2']);
+  });
+
+  it('normalizes non-finite cue times and waveform peaks before visible/canvas math', async () => {
+    const cues: LyraAvCue[] = [{
+      id: 'bad-time',
+      start: Number.POSITIVE_INFINITY,
+      end: Number.NaN,
+      text: 'Still renderable',
+    }];
+    const el = (await fixture(html`
+      <lr-av-player
+        src=${MP3_SRC}
+        .cues=${cues}
+        .peaks=${[Number.NaN, Number.POSITIVE_INFINITY, -1, 2]}
+      ></lr-av-player>
+    `)) as LyraAvPlayer;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    await list.updateComplete;
+    const cueTime = cueRows(el)[0]!.querySelector('[part~="cue-time"]')!.textContent!;
+    expect(cueTime).to.not.match(/Infinity|NaN|∞/);
+
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const context = canvas.getContext('2d')!;
+    const originalFillRect = context.fillRect.bind(context);
+    const calls: number[][] = [];
+    context.fillRect = (...args: [number, number, number, number]) => {
+      calls.push(args);
+    };
+    try {
+      window.dispatchEvent(new Event('resize'));
+      expect(calls.length).to.equal(4);
+      expect(calls.every((args) => args.every(Number.isFinite))).to.be.true;
+    } finally {
+      context.fillRect = originalFillRect;
+    }
+  });
+});
+
+it('contains unbroken transcript text inside a 320px allocation', async () => {
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 320px">
+      <lr-av-player
+        src=${MP3_SRC}
+        .cues=${[{ id: 'long', start: 0, text: 'Transcript'.repeat(250) }]}
+      ></lr-av-player>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-av-player') as LyraAvPlayer;
+  const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+    updateComplete: Promise<boolean>;
+  };
+  await list.updateComplete;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });
 
 describe('seeking before the media element mounts', () => {

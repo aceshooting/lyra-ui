@@ -45,6 +45,7 @@ export interface GroundingSummaryThresholds {
  *
  * @customElement lr-grounding-summary
  * @event lr-citation-select - An evidence citation badge was activated. `detail: { citation }`.
+ * @event lr-claim-select - A composed claim-evidence row was activated. `detail: { claim }`.
  * @csspart base - The `role="group"` root wrapper.
  * @csspart stats - Container for the claim-count/coverage/confidence `<lr-stat>` row.
  * @csspart warnings - Wrapper for the warnings section. Omitted when there are no warnings.

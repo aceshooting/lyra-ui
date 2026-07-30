@@ -29,6 +29,11 @@ truth.
 **Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row).
 `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
 
+If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
+page instead of using the rendered window's local index or being lost with the virtualized row.
+Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
+numeric type-ahead buffer is cleared on detach.
+
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
 button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas
 wrapper), `page-number` (the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one

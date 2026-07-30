@@ -110,7 +110,7 @@ it('shows a loading skeleton and aria-busy while d3 loads, then swaps to the svg
     timeout: NODE_COUNT_TIMEOUT,
   });
 
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('svg')).to.exist;
 });
@@ -124,6 +124,60 @@ it('renders an svg with a circle per node once d3 loads', async () => {
     timeout: NODE_COUNT_TIMEOUT,
   });
   expect(el.shadowRoot!.querySelectorAll('[part="link"]').length).to.equal(1);
+});
+
+it('keeps SVG node, link, and conditional-hull pointer geometry at least 24px under scale', async () => {
+  const el = (await fixture(
+    html`<lr-graph width="400" height="300" style="inline-size:400px;block-size:300px"></lr-graph>`,
+  )) as LyraGraph;
+  el.communities = [{ id: 'team', memberIds: ['a', 'b'] }];
+  el.nodes = [
+    { id: 'a', label: 'A', communityId: 'team', radius: 6 },
+    { id: 'b', label: 'B', communityId: 'team', radius: 6 },
+  ];
+  el.links = [{ id: 'ab', source: 'a', target: 'b', width: 1 }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+
+  const hits = {
+    node: [...el.shadowRoot!.querySelectorAll<SVGElement>('[data-hit-area="node"]')],
+    link: [...el.shadowRoot!.querySelectorAll<SVGElement>('[data-hit-area="link"]')],
+    hull: [...el.shadowRoot!.querySelectorAll<SVGElement>('[data-hit-area="hull"]')],
+  };
+  expect(hits.node).to.have.length(2);
+  expect(hits.link).to.have.length(1);
+  expect(hits.hull).to.have.length(1);
+  for (const [kind, elements] of Object.entries(hits)) {
+    for (const hit of elements) {
+      expect(hit.hasAttribute('part'), `${kind} hit is internal`).to.be.false;
+      expect(hit.getAttribute('aria-hidden'), `${kind} hit is not duplicated for AT`).to.equal('true');
+      expect(hit.getAttribute('vector-effect'), `${kind} hit does not scale`).to.equal('non-scaling-stroke');
+      expect(Number.parseFloat(getComputedStyle(hit).strokeWidth), `${kind} stroke`).to.be.at.least(24);
+    }
+  }
+  const graphLayer = el.shadowRoot!.querySelector('svg > g') as SVGGElement;
+  graphLayer.setAttribute('transform', 'scale(0.25)');
+  const nodeHit = hits.node[0] as SVGLineElement;
+  const nodeCenter = new DOMPoint(
+    nodeHit.x1.baseVal.value,
+    nodeHit.y1.baseVal.value,
+  ).matrixTransform(nodeHit.getScreenCTM()!);
+  expect(
+    el.shadowRoot!.elementFromPoint(nodeCenter.x + 11, nodeCenter.y),
+    'scaled node pointer edge',
+  ).to.equal(nodeHit);
+  expect(select(hits.node[0]!).on('mousedown.drag')).to.be.a('function');
+
+  const activations: string[] = [];
+  el.addEventListener('lr-node-click', () => activations.push('node'));
+  el.addEventListener('lr-link-click', () => activations.push('link'));
+  el.addEventListener('lr-community-click', () => activations.push('hull'));
+  hits.node[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  hits.link[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  hits.hull[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(activations).to.deep.equal(['node', 'link', 'hull']);
 });
 
 it('forwards a host aria-label to the semantic graph svg', async () => {
@@ -2255,6 +2309,33 @@ it('does not let a GraphNode.color value inject extra CSS declarations via the n
   expect(coloredEl.style.top).to.equal('');
 });
 
+it('rejects url paint servers from node, type, link, and community colors', async () => {
+  const paintServer = 'url("data:image/svg+xml,<svg/>")';
+  const el = await fixture<LyraGraph>(html`<lr-graph seed="42"></lr-graph>`);
+  el.nodeTypes = [{ id: 'unsafe', label: 'Unsafe', color: paintServer }];
+  el.nodes = [
+    { id: 'a', label: 'A', type: 'unsafe', communityId: 'team' },
+    { id: 'b', label: 'B', color: paintServer, communityId: 'team' },
+  ];
+  el.links = [{ source: 'a', target: 'b', color: paintServer }];
+  el.communities = [{ id: 'team', memberIds: [], color: paintServer }];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="node"]').length === 2, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  for (const node of el.shadowRoot!.querySelectorAll<SVGElement>('[part="node"]')) {
+    expect(node.style.getPropertyValue('--lr-node-fill')).to.not.contain('url(');
+  }
+  expect(
+    (el.shadowRoot!.querySelector('[part="link"]') as SVGElement).style.getPropertyValue('--lr-link-color'),
+  ).to.equal('');
+  expect(
+    (el.shadowRoot!.querySelector('[part="hull"]') as SVGElement).style.getPropertyValue(
+      '--lr-graph-hull-fill',
+    ),
+  ).to.equal('');
+});
+
 it('wires up d3-drag on each node (draggable, per the Interfaces spec)', async () => {
   const el = (await fixture(html`<lr-graph></lr-graph>`)) as LyraGraph;
   el.nodes = nodes;
@@ -2433,6 +2514,47 @@ it('normalizes non-finite/non-positive width or height so the viewBox and force-
   const center = simulation.force('center');
   expect(Number.isFinite(center.x())).to.be.true;
   expect(Number.isFinite(center.y())).to.be.true;
+});
+
+it('normalizes public link widths before SVG, canvas, and picking geometry consume them', async () => {
+  const el = (await fixture(html`<lr-graph layout="layered"></lr-graph>`)) as LyraGraph;
+  el.nodes = nodes;
+  el.links = [
+    { id: 'nan', source: 'a', target: 'b', width: NaN },
+    { id: 'negative', source: 'a', target: 'b', width: -4 },
+    { id: 'infinite', source: 'a', target: 'b', width: Infinity },
+    { id: 'valid', source: 'a', target: 'b', width: 2.25 },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="link"]').length === 4, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  const svgWidths = [...el.shadowRoot!.querySelectorAll('[part="link"]')].map((link) =>
+    Number(link.getAttribute('stroke-width')),
+  );
+  expect(svgWidths).to.deep.equal([1.5, 0, 1.5, 2.25]);
+
+  el.renderer = 'canvas';
+  await el.updateComplete;
+  type Internals = {
+    canvasScene?: { links: { width: number }[] };
+    safeLinkWidth(link: { width?: number }): number;
+  };
+  await waitUntil(() => !!(el as unknown as Internals).canvasScene, undefined, {
+    timeout: NODE_COUNT_TIMEOUT,
+  });
+  expect((el as unknown as Internals).canvasScene!.links.map((link) => link.width)).to.deep.equal([
+    1.5,
+    0,
+    1.5,
+    2.25,
+  ]);
+  expect(el.links.map((link) => (el as unknown as Internals).safeLinkWidth(link))).to.deep.equal([
+    1.5,
+    0,
+    1.5,
+    2.25,
+  ]);
 });
 
 it('normalizes non-finite/negative min-zoom or max-zoom so the live scaleExtent and zoomed scale stay finite', async () => {
@@ -3512,8 +3634,8 @@ describe('coverage: private-helper direct branches', () => {
     };
     const internal = el as unknown as Internals;
     const fullSimNodes = internal.simNodes;
-    // Reset first, the same way rebuildSimulation() itself does, then spy on `.add` to count how
-    // many of the 3 already-rendered elements actually get (re)bound.
+    // Reset first, the same way rebuildSimulation() itself does, then spy on `.add` to count the
+    // visible shape + expanded hit geometry that actually get (re)bound.
     internal.boundNodeEls = new WeakSet();
     const originalAdd = internal.boundNodeEls.add.bind(internal.boundNodeEls);
     let addCalls = 0;
@@ -3527,7 +3649,7 @@ describe('coverage: private-helper direct branches', () => {
       // index" scenario applyInteractions()'s `if (!n) return;` guards against.
       internal.simNodes = fullSimNodes.slice(0, 1);
       internal.applyInteractions(new Map([['simNodes', fullSimNodes]]));
-      expect(addCalls).to.equal(1);
+      expect(addCalls).to.equal(2);
     } finally {
       internal.simNodes = fullSimNodes;
       delete (internal.boundNodeEls as unknown as { add?: unknown }).add;
@@ -3728,6 +3850,115 @@ describe('coverage: canvas renderer internals', () => {
     );
     expect(target.fx).to.be.null;
     expect(target.fy).to.be.null;
+  });
+
+  it('cancels a canvas node drag on pointercancel and lostpointercapture', async () => {
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+
+    type Internals = {
+      canvasDragNode?: unknown;
+      canvasPointerId?: number;
+      canvasPointerDownAt?: { x: number; y: number };
+      pickDirty: boolean;
+      simulation?: { stop: () => void; alphaTarget: () => number };
+    };
+    const internals = el as unknown as Internals;
+    internals.simulation?.stop();
+    const target = el.simNodes.find((node) => node.id === 'a')!;
+    target.x = 100;
+    target.y = 100;
+    internals.pickDirty = true;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const startX = rect.left + target.x;
+    const startY = rect.top + target.y;
+    const captured: number[] = [];
+    const released: number[] = [];
+    canvas.setPointerCapture = (pointerId) => captured.push(pointerId);
+    canvas.releasePointerCapture = (pointerId) => released.push(pointerId);
+
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientX: startX, clientY: startY, pointerId: 41 }),
+    );
+    expect(target.fx).to.equal(100);
+    expect(target.fy).to.equal(100);
+    canvas.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 41 }));
+    expect(target.fx).to.be.null;
+    expect(target.fy).to.be.null;
+    expect(internals.canvasDragNode).to.be.undefined;
+    expect(internals.canvasPointerId).to.be.undefined;
+    expect(internals.canvasPointerDownAt).to.be.undefined;
+    expect(internals.simulation?.alphaTarget()).to.equal(0);
+    expect(captured).to.deep.equal([41]);
+    expect(released).to.deep.equal([41]);
+
+    internals.pickDirty = true;
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, clientX: startX, clientY: startY, pointerId: 42 }),
+    );
+    expect(target.fx).to.equal(100);
+    canvas.dispatchEvent(new PointerEvent('lostpointercapture', { bubbles: true, pointerId: 42 }));
+    expect(target.fx).to.be.null;
+    expect(target.fy).to.be.null;
+    expect(internals.canvasDragNode).to.be.undefined;
+    expect(internals.canvasPointerId).to.be.undefined;
+    expect(internals.canvasPointerDownAt).to.be.undefined;
+    expect(internals.simulation?.alphaTarget()).to.equal(0);
+    expect(captured).to.deep.equal([41, 42]);
+    expect(released).to.deep.equal([41]);
+  });
+
+  it('cleans up a live canvas node drag when disconnected', async () => {
+    const el = (await fixture(
+      html`<lr-graph renderer="canvas" width="400" height="300" style="width:400px;height:300px"></lr-graph>`,
+    )) as LyraGraph;
+    el.nodes = nodes;
+    el.links = links;
+    await el.updateComplete;
+    await waitUntil(() => !!el.shadowRoot!.querySelector('canvas'), undefined, { timeout: NODE_COUNT_TIMEOUT });
+
+    type Internals = {
+      canvasDragNode?: unknown;
+      canvasPointerId?: number;
+      canvasPointerDownAt?: { x: number; y: number };
+      pickDirty: boolean;
+      simulation?: { stop: () => void; alphaTarget: () => number };
+    };
+    const internals = el as unknown as Internals;
+    internals.simulation?.stop();
+    const target = el.simNodes.find((node) => node.id === 'a')!;
+    target.x = 100;
+    target.y = 100;
+    internals.pickDirty = true;
+    const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const released: number[] = [];
+    canvas.setPointerCapture = () => {};
+    canvas.releasePointerCapture = (pointerId) => released.push(pointerId);
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        clientX: rect.left + target.x,
+        clientY: rect.top + target.y,
+        pointerId: 43,
+      }),
+    );
+    expect(target.fx).to.equal(100);
+
+    el.remove();
+    expect(target.fx).to.be.null;
+    expect(target.fy).to.be.null;
+    expect(internals.canvasDragNode).to.be.undefined;
+    expect(internals.canvasPointerId).to.be.undefined;
+    expect(internals.canvasPointerDownAt).to.be.undefined;
+    expect(internals.simulation?.alphaTarget()).to.equal(0);
+    expect(released).to.deep.equal([43]);
   });
 
   it('canvas pointer click resolves a link (not a node) and emits lr-link-click', async () => {
@@ -4086,7 +4317,7 @@ describe('optional d3 peer failure', () => {
       const errorEl = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
       expect(errorEl.getAttribute('role')).to.equal('alert');
       expect(errorEl.textContent!.trim().length).to.be.greaterThan(0);
-      expect(el.hasAttribute('aria-busy')).to.be.false;
+      expect(el.getAttribute('aria-busy')).to.equal('false');
       expect(el.shadowRoot!.querySelectorAll('svg, canvas').length).to.equal(0);
       expect(el.shadowRoot!.querySelectorAll('lr-skeleton').length).to.equal(0);
     } finally {

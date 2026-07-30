@@ -1,6 +1,9 @@
 import { fixture, expect, html, oneEvent, waitUntil, aTimeout } from '@open-wc/testing';
 import './knowledge-graph-explorer.js';
-import type { LyraKnowledgeGraphExplorer } from './knowledge-graph-explorer.js';
+import type {
+  LyraKnowledgeGraphExplorer,
+  LyraKnowledgeGraphExplorerEventMap,
+} from './knowledge-graph-explorer.js';
 import type { LyraGraph, GraphNode, GraphLink, GraphNodeType, GraphCommunity } from '../graph/graph.class.js';
 import type { LyraGraphLegend } from '../graph-legend/graph-legend.class.js';
 import type { LyraPopover } from '../../overlays/overlay/popover.class.js';
@@ -116,6 +119,73 @@ describe('lr-knowledge-graph-explorer', () => {
     expect(el.shadowRoot!.querySelector('[part="search-empty"]')).to.exist;
     expect(graph.dimmedNodeIds).to.deep.equal(['marie', 'pierre', 'polonium']);
     expect(graph.dimmedLinkIds).to.deep.equal(['marie->pierre', 'marie->polonium']);
+  });
+
+  it('excludes hidden nodes from search and neighbor activation surfaces', async () => {
+    const el = (await fixture(html`
+      <lr-knowledge-graph-explorer
+        .nodes=${nodes}
+        .links=${links}
+        .nodeTypes=${nodeTypes}
+        .hiddenTypes=${['person']}
+        .selectedNodeId=${'polonium'}
+      ></lr-knowledge-graph-explorer>
+    `)) as LyraKnowledgeGraphExplorer;
+    await el.updateComplete;
+
+    const searchInput = el.shadowRoot!.querySelector('[part="search"]') as LyraInput;
+    searchInput.dispatchEvent(
+      new CustomEvent('lr-input', {
+        detail: { value: 'curie' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="search-result"]').length).to.equal(0);
+
+    const neighborList = el.shadowRoot!.querySelector(
+      '[part="detail-card"] lr-neighbor-list',
+    ) as LyraNeighborList;
+    expect(neighborList.rows.length).to.equal(0);
+
+    const selections: Array<string | null> = [];
+    el.addEventListener('lr-selection-change', (event) => {
+      selections.push(event.detail.selectedNodeId);
+    });
+    el.shadowRoot!.querySelector('[part="base"]')!.dispatchEvent(
+      new CustomEvent('lr-entity-activate', {
+        detail: { id: 'marie' },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+    expect(el.selectedNodeId).to.equal('polonium');
+    expect(selections).to.deep.equal([]);
+  });
+
+  it('types every documented bubbled child event in the explorer EventMap', () => {
+    const events: [
+      LyraKnowledgeGraphExplorerEventMap['lr-node-click'],
+      LyraKnowledgeGraphExplorerEventMap['lr-link-click'],
+      LyraKnowledgeGraphExplorerEventMap['lr-node-expand'],
+      LyraKnowledgeGraphExplorerEventMap['lr-community-click'],
+      LyraKnowledgeGraphExplorerEventMap['lr-relation-activate'],
+    ] = [
+      new CustomEvent('lr-node-click', { detail: { id: 'a', x: 1, y: 2 } }),
+      new CustomEvent('lr-link-click', { detail: { source: 'a', target: 'b' } }),
+      new CustomEvent('lr-node-expand', { detail: { id: 'a' } }),
+      new CustomEvent('lr-community-click', { detail: { id: 'community' } }),
+      new CustomEvent('lr-relation-activate', { detail: { relation: 'related_to' } }),
+    ];
+    expect(events.map((event) => event.type)).to.deep.equal([
+      'lr-node-click',
+      'lr-link-click',
+      'lr-node-expand',
+      'lr-community-click',
+      'lr-relation-activate',
+    ]);
   });
 
   it('case-folds graph search with the effective locale and localizes the match count', async () => {
@@ -715,6 +785,13 @@ describe('lr-knowledge-graph-explorer', () => {
     await priv.activateEntity('marie');
     expect(el.selectedNodeId).to.equal('marie');
     expect(() => priv.openDetailAt('marie', { x: 10, y: 10 })).to.not.throw();
+
+    const hidden = document.createElement('lr-knowledge-graph-explorer') as LyraKnowledgeGraphExplorer;
+    hidden.nodes = [{ id: 'hidden', type: 'person' }];
+    hidden.hiddenTypes = ['person'];
+    await (hidden as unknown as { activateEntity(id: string): Promise<void> })
+      .activateEntity('hidden');
+    expect(hidden.selectedNodeId).to.equal(null);
   });
 
   it('openDetailAt falls back to an empty accessible label when the given id has no matching entity', async () => {

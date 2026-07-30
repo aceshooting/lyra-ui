@@ -8,6 +8,7 @@ import {
 import { lockScroll } from "../../../internal/scroll-lock.js";
 import { isRtl } from "../../../internal/rtl.js";
 import { finiteRange } from "../../../internal/numbers.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
 import {
   CollapseBreakpointController,
   OrientationBreakpointController,
@@ -163,7 +164,11 @@ export interface LyraSplitEventMap {
  *   `orientationBreakpoint` changes the effective resize/layout axis.
  * @slot - Panels to arrange side by side (or stacked, when `orientation="vertical"`); each direct child becomes one resizable panel.
  * @csspart base - The flex layout wrapper (`position: relative`, so the `'floating'` collapse state can anchor to it).
- * @csspart divider - Each divider between two panels; carries `aria-disabled="true"` and is drag/keyboard-inert while its adjacent panel is collapsed (`'rail'`/`'floating'`).
+ * @csspart divider - Each `role="separator"` between two panels. `aria-valuenow` is the leading
+ *   panel's percentage; `aria-valuemin`/`aria-valuemax` are that divider's currently achievable
+ *   range, bounded by both adjacent panels' effective constraints and their current combined
+ *   share (not whole-track bounds). Carries `aria-disabled="true"` and is drag/keyboard-inert
+ *   while its adjacent panel is collapsed (`'rail'`/`'floating'`).
  * @csspart backdrop - The `'floating'` drawer's scrim. Only rendered while `collapseState === 'floating'` and `open`.
  * @cssprop [--lr-split-overlay-color=var(--lr-color-overlay)] - The `'floating'` drawer scrim's color, applied to `[part="backdrop"]`.
  * @cssprop [--lr-split-divider-hit-slop=calc((var(--lr-size-3px) - var(--lr-icon-button-size)) / 2)] -
@@ -1277,7 +1282,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
   private onPointerUp = (e: PointerEvent): void => {
     if (!this.drags.has(e.pointerId)) return;
     this.drags.delete(e.pointerId);
-    this.persist();
+    if (e.type === "pointerup") this.persist();
     if (this.drags.size === 0) {
       window.removeEventListener("pointermove", this.onPointerMove);
       window.removeEventListener("pointerup", this.onPointerUp);
@@ -1553,8 +1558,8 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         aria-label=${this.dividerLabel
           ? this.dividerLabel(i, this.panelCount)
           : this.localize("resizeDivider", undefined, {
-              a: i + 1,
-              b: i + 2,
+              a: getNumberFormat(this.effectiveLocale).format(i + 1),
+              b: getNumberFormat(this.effectiveLocale).format(i + 2),
             })}
         aria-orientation=${this.effectiveOrientation === "vertical"
           ? "horizontal"
@@ -1562,7 +1567,7 @@ export class LyraSplit extends LyraElement<LyraSplitEventMap> {
         aria-valuenow=${Math.round(this.sizes[i] ?? 0)}
         aria-valuemin=${Math.round(valueMin)}
         aria-valuemax=${Math.round(valueMax)}
-        aria-disabled=${disabled ? "true" : nothing}
+        aria-disabled=${disabled ? "true" : "false"}
         tabindex=${disabled ? "-1" : "0"}
         style=${`order:${i * 2 + 1}`}
         @pointerdown=${(e: PointerEvent) => this.onPointerDown(e, i)}

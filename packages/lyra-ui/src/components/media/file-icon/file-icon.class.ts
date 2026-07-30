@@ -65,13 +65,15 @@ export class LyraFileIcon extends LyraElement {
             (value) => getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 1 }).format(value),
           )
         : '';
-    const accessibleLabel = sizeText
+    const fallbackLabel = sizeText
       ? this.localize('fileTypeWithSize', undefined, { label: localizedLabel, size: sizeText })
       : localizedLabel;
+    const accessibleLabel = this.getAttribute('aria-label') || fallbackLabel;
     return html`
       <span
         part="base"
         role=${this.decorative ? 'presentation' : 'img'}
+        aria-hidden=${this.decorative ? 'true' : nothing}
         aria-label=${this.decorative ? nothing : accessibleLabel}
         title=${this.mimeType || nothing}
       >

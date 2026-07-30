@@ -22,7 +22,9 @@ names `[part="base"]`'s `role="status"`; unset falls back to the localized "Load
 **Events:** none.
 
 **Slots:** default — optional label text. `label-placement="after"` renders it inline next to the
-indicator; `'none'` (the default) keeps it visually clipped but still in the DOM.
+indicator and its text becomes the status name unless `aria-label` overrides it. `'none'` (the
+default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
+the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
 
 **CSS parts:** `base` (the `role="status"` wrapper), `spinner` (the animated ring; `aria-hidden`),
 `label` (the default-slot wrapper).

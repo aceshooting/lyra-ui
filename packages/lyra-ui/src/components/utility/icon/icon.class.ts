@@ -30,6 +30,22 @@ export class LyraIcon extends LyraElement {
   @property() label = '';
   @query('svg') private svgEl?: SVGSVGElement;
   @query('slot') private customSlot?: HTMLSlotElement;
+  private customContentObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated) {
+      queueMicrotask(() => {
+        if (this.isConnected) this.syncCustomNodes();
+      });
+    }
+  }
+
+  override disconnectedCallback(): void {
+    this.customContentObserver?.disconnect();
+    this.customContentObserver = undefined;
+    super.disconnectedCallback();
+  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -49,6 +65,7 @@ export class LyraIcon extends LyraElement {
     const svgEl = this.svgEl;
     if (!svgEl) return;
     svgEl.querySelectorAll('[data-lr-custom-copy]').forEach((node) => node.remove());
+    this.customContentObserver?.disconnect();
 
     const slot = this.customSlot;
     if (!slot) return;
@@ -57,6 +74,24 @@ export class LyraIcon extends LyraElement {
       if (!copy) continue;
       copy.setAttribute('data-lr-custom-copy', '');
       svgEl.append(copy);
+    }
+    this.observeCustomContent(slot);
+  }
+
+  private observeCustomContent(slot: HTMLSlotElement): void {
+    this.customContentObserver?.disconnect();
+    if (!this.isConnected) return;
+    this.customContentObserver ??= new MutationObserver(() => {
+      if (this.isConnected) this.syncCustomNodes();
+    });
+    for (const node of slot.assignedNodes({ flatten: true })) {
+      if (node instanceof Element) {
+        this.customContentObserver.observe(node, {
+          attributes: true,
+          childList: true,
+          subtree: true,
+        });
+      }
     }
   }
 

@@ -108,8 +108,8 @@ function resolveQrColor(value: string, fallbackHex: string): string {
  * since it is the one meaningful descendant here (mirrors
  * `lr-file-icon`'s single-image pattern rather than the composite-group
  * pattern used by `lr-heatmap`/`lr-word-cloud`). The accessible name
- * resolves, in order: `label`, then a host `aria-label` attribute (forwarded
- * onto the canvas), then `value` itself. An empty `value` renders
+ * resolves, in order: a host `aria-label` attribute (forwarded onto the canvas),
+ * then `label`, then `value` itself. An empty `value` renders
  * `[part="empty"]` instead of an `img`-role element -- there is nothing to
  * encode or name.
  *
@@ -155,7 +155,8 @@ export class LyraQrCode extends LyraElement {
   /** The data to encode. Empty renders `[part="empty"]` -- no encode is attempted. */
   @property() value = '';
 
-  /** Accessible-name override. Falls back through `aria-label` then `value` -- see the class doc
+  /** Accessible-name fallback when the host has no `aria-label`; otherwise falls back to `value`
+   *  -- see the class doc
    *  comment for the full precedence order. Caller-supplied data, not routed through `localize()`. */
   @property() label = '';
 
@@ -242,6 +243,11 @@ export class LyraQrCode extends LyraElement {
       });
       this.intersectionObserver.observe(this);
     }
+    // If an in-flight peer result settled while detached, generate() correctly discarded it at
+    // the post-await `isConnected` guard and left the visible state at `loading`. Reconnects do
+    // not inherently re-run updated(), so explicitly restart that discarded work. A still-pending
+    // old attempt is harmless: the new generation token supersedes it.
+    if (this.hasUpdated && this.value && this.loadState.kind === 'loading') void this.generate();
   }
 
   override disconnectedCallback(): void {
@@ -307,9 +313,10 @@ export class LyraQrCode extends LyraElement {
     }
   }
 
-  /** Redraws canvas content after an upstream token, theme, or DPR change -- reuses the already-
-   *  cached module matrix rather than re-encoding `value`. No global theme-broadcast event exists
-   *  in lyra-ui to subscribe to automatically; call this from a consumer's own theme-toggle handler. */
+  /** Redraws canvas content after an upstream token, theme, or DPR change, reusing the already-
+   *  cached module matrix rather than re-encoding `value`. The component automatically observes
+   *  ancestor theme-attribute changes and color-scheme changes; this method remains available for
+   *  consumer-owned token changes that are not represented by those signals. */
   refreshTheme(): void {
     this.draw();
   }
@@ -377,7 +384,7 @@ export class LyraQrCode extends LyraElement {
   }
 
   private accessibleName(): string {
-    return this.label || this.getAttribute('aria-label') || this.value;
+    return this.getAttribute('aria-label') || this.label || this.value;
   }
 
   private renderBody(): TemplateResult {

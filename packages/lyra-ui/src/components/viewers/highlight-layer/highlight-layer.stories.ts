@@ -43,8 +43,8 @@ export const NonInteractive: Story = {
 
 export const Narrow320: Story = {
   render: () => html`
-    <figure style="position:relative; width:320px; margin:0;">
-      <div style="width:320px; height:160px; background:var(--lr-color-surface-raised);"></div>
+    <figure style="position:relative; inline-size:100%; max-inline-size:320px; margin:0;">
+      <div style="inline-size:100%; block-size:160px; background:var(--lr-color-surface-raised);"></div>
       <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
     </figure>
   `,

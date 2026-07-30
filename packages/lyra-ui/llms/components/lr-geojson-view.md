@@ -6,7 +6,7 @@
 - **Class** `LyraGeojsonView`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/geojson-view/geojson-view.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -27,17 +27,24 @@ approximation weighting latitude span ~2x, with 40% padding), then hands the par
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
 collapsed-depth="2">` of the raw value instead of the map.
 
+The root owns the named `region` landmark while loading, in fallback/error/idle states, and while a
+lazy map initializes. After `lr-map-load`, landmark ownership transfers to the map canvas so there
+is exactly one named region. Serialized metadata is locally inline-scrollable, preventing long
+unbroken values from widening a 320px allocation.
+
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
 `geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`. The shared
 text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
-`clearSearch()`, and `scrollToAnchor()` for rendered feature metadata and status text.
+`clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
+text, independent of whether the optional map peer is available.
 
 **Events:** `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
 
 **CSS parts:** `base` (the root container), `status` (the feature-count status line, `role="status"`,
-shown only in the `<lr-map>` path), `missing-library` (the missing-`maplibre-gl` callout shown
+shown only in the `<lr-map>` path), `metadata` (selectable/searchable serialized GeoJSON `<pre>`,
+rendered in both map and fallback paths), `missing-library` (the missing-`maplibre-gl` callout shown
 alongside the `lr-json-viewer` fallback), `error` (the error region, `role="alert"`), `spinner`
 (the loading status region).
 

@@ -61,10 +61,14 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
-provided. The accessible name always comes from `label` regardless, so icon-only slot content still
-announces correctly.
+provided. The semantic button's accessible name comes from `accessibleLabel`/host `aria-label`,
+then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
+the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
+controls keep their own activation and do not also open the picker; clicking non-interactive custom
+content still activates the dropzone.
 
-**CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
+**CSS parts:** `base` (the native dropzone button, visually behind but semantically beside the
+slotted content), `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
 `rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
 each currently-rejected file next to a per-reason message — in addition to, never in place of, the

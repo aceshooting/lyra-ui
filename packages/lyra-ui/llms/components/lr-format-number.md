@@ -24,6 +24,9 @@ empty, which means "the runtime's default locale". Every `Intl` instance is pull
 memoized `internal/intl-cache.ts` (one instance per locale + options pair, LRU-capped), so these are
 cheap to use per row in a large table or feed.
 
+Malformed runtime options fall back to a safe option set without discarding an otherwise-valid
+effective locale. Only a malformed locale itself falls back to the runtime default.
+
 **Properties:**
 - `value: number = 0`
 - `currency: string = ''` — an ISO 4217 code (`'EUR'`, `'JPY'`). Non-empty switches the formatter to

@@ -72,4 +72,12 @@ export const styles = css`
   [part='error'][hidden] {
     display: none;
   }
+  [part='form-control'],
+  [part='form-control-label'],
+  [part='hint'],
+  [part='error'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
 `;

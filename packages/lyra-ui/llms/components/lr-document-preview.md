@@ -65,13 +65,15 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   `status="error"`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"24rem"`); once set,
   `[part="body"]` scrolls internally past this height instead of growing the page — same contract as
-  `lr-json-viewer`'s identically-named prop.
+  `lr-json-viewer`'s identically-named prop. Invalid CSS `max-height` values, declaration breaks,
+  and `url()` are ignored, leaving the stylesheet token in control.
 - `zoomable: boolean = false` (reflected) — wraps the rendered image (image format only) in an
   internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
   inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
   viewport; an inspection surface opts in.
 - `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
-  over the image-format preview; ignored for the `text`/`generic` formats.
+  over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
+  when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds` is a readonly `['region']` (this viewer's supported `LyraAnchor.kind` values for the

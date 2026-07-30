@@ -9,4 +9,12 @@ export const groupStyles = css`
   [part='hint'], [part='error'] { font-size: var(--lr-font-size-sm); }
   [part='hint'] { color: var(--lr-color-text-quiet); }
   [part='error'] { color: var(--lr-color-danger); }
+  [part='base'],
+  [part='label'],
+  [part='hint'],
+  [part='error'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
 `;

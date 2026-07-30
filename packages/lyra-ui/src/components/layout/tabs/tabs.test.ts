@@ -414,6 +414,34 @@ it("reassigns active when the currently-active child is removed", async () => {
   expect(tabButtons(el).length).to.equal(2);
 });
 
+it("rehomes focus when the focused active tab is removed", async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  tabButtons(el)[0].focus();
+  el.querySelector('[slot="input"]')!.remove();
+
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(el.active).to.equal("preview");
+  expect(focused?.dataset["slot"]).to.equal("preview");
+  expect(focused?.tabIndex).to.equal(0);
+});
+
+it("rehomes focus when the focused active tab becomes disabled", async () => {
+  const el = (await fixture(basic())) as LyraTabs;
+  tabButtons(el)[0].focus();
+  el.querySelector('[slot="input"]')!.setAttribute("disabled", "");
+
+  await aTimeout(0);
+  await el.updateComplete;
+
+  const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+  expect(el.active).to.equal("preview");
+  expect(focused?.dataset["slot"]).to.equal("preview");
+  expect(focused?.tabIndex).to.equal(0);
+});
+
 it("keeps real keyboard focus on the active tab when a tab BEFORE it is removed", async () => {
   const el = (await fixture(basic())) as LyraTabs;
   tabButtons(el)[1].click();

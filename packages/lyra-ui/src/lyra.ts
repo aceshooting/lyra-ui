@@ -461,7 +461,12 @@ export type {
 } from './components/charts/chart/lite-chart.js';
 export { binValues } from './components/charts/chart/histogram-bin.js';
 export type { HistogramBucket } from './components/charts/chart/histogram-bin.js';
-export type { Series, LyraChartType, LyraChartExportFormat } from './components/charts/chart/chart.js';
+export type {
+  ChartPoint,
+  Series,
+  LyraChartType,
+  LyraChartExportFormat,
+} from './components/charts/chart/chart.js';
 export type { BoxPlotSeries, BoxPlotPoint } from './components/charts/chart/box-plot.js';
 export type { GraphNode, GraphLink } from './components/retrieval/graph/graph.js';
 export type { LegendEntry, ChoroplethLayer, MapMarker, GeoJsonDataLayer } from './components/media/map/map.js';

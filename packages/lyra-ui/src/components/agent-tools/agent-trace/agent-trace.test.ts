@@ -55,6 +55,22 @@ describe('lr-agent-trace', () => {
     expect(legend.types.map((t) => t.label)).to.deep.equal(['Agent', 'LLM', 'Tool', 'Retriever']);
   });
 
+  it('names the span-kind filter as a trace filter instead of a graph legend', async () => {
+    const el = (await fixture(html`
+      <lr-agent-trace
+        .spans=${SPANS}
+        .strings=${{ agentTraceFilterLabel: 'Trace categories' }}
+      ></lr-agent-trace>
+    `)) as LyraAgentTrace;
+    await el.updateComplete;
+    const legend = el.shadowRoot!.querySelector('lr-graph-legend') as LyraGraphLegend;
+    await legend.updateComplete;
+    expect(legend.label).to.equal('Trace categories');
+    expect(legend.shadowRoot!.querySelector('[role="group"]')!.getAttribute('aria-label')).to.equal(
+      'Trace categories',
+    );
+  });
+
   it('filters the spans passed into lr-trace-tree when a filter legend item is toggled off, and reflects hiddenKinds', async () => {
     const el = (await fixture(html`<lr-agent-trace .spans=${SPANS}></lr-agent-trace>`)) as LyraAgentTrace;
     await el.updateComplete;
@@ -113,6 +129,22 @@ describe('lr-agent-trace', () => {
     expect(subAgentButton).to.exist;
   });
 
+  it('does not announce a direct non-agent parent as the source agent of a handoff', async () => {
+    const spans: LyraSpan[] = [
+      { id: 'root', name: 'Planner', kind: 'agent', startMs: 0, endMs: 100, status: 'success' },
+      { id: 'model', parentId: 'root', name: 'Model step', kind: 'llm', startMs: 10, endMs: 80, status: 'success' },
+      { id: 'child', parentId: 'model', name: 'Researcher', kind: 'agent', startMs: 20, endMs: 70, status: 'success' },
+    ];
+    const el = (await fixture(html`<lr-agent-trace .spans=${spans}></lr-agent-trace>`)) as LyraAgentTrace;
+    await el.updateComplete;
+    const child = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="handoff"]')].find(
+      (button) => button.getAttribute('aria-label')?.includes('Researcher'),
+    )!;
+    expect(child.getAttribute('aria-label')).to.equal('Transferred to Researcher');
+    const divider = child.querySelector('lr-handoff-divider') as LyraHandoffDivider;
+    expect(divider.fromAgent).to.equal('');
+  });
+
   it('applies localized handoff accessible names', async () => {
     const el = (await fixture(html`
       <lr-agent-trace
@@ -143,6 +175,7 @@ describe('lr-agent-trace', () => {
     await el.updateComplete;
     const buttons = [...el.shadowRoot!.querySelectorAll('[part="handoff"]')] as HTMLButtonElement[];
     const subAgentButton = buttons.find((b) => b.getAttribute('aria-label')?.includes('Research Agent'))!;
+    expect(subAgentButton.getAttribute('aria-current')).to.equal('false');
     const listener = oneEvent(el, 'lr-span-select');
     subAgentButton.click();
     const ev = await listener;

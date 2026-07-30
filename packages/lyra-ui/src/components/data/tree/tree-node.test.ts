@@ -88,6 +88,30 @@ it('gives the expand/collapse toggle the shared minimum tappable size', async ()
   expect(getComputedStyle(toggle).minBlockSize).to.equal('40px');
 });
 
+it('keeps a disabled branch toggle inert and does not move focus to the disabled treeitem', async () => {
+  const disabledBranch = {
+    ...item,
+    disabled: true,
+    children: [{ id: '1.1', label: 'Child' }],
+  };
+  const wrapper = await fixture(html`
+    <div role="tree">
+      <button id="before">Before</button>
+      <lr-tree-node .item=${disabledBranch}></lr-tree-node>
+    </div>
+  `);
+  const before = wrapper.querySelector<HTMLButtonElement>('#before')!;
+  const el = wrapper.querySelector('lr-tree-node') as LyraTreeNode;
+  await el.updateComplete;
+  const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
+
+  expect(toggle.disabled).to.be.true;
+  expect(getComputedStyle(toggle).cursor).to.equal('default');
+  before.focus();
+  toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, composed: true }));
+  expect(document.activeElement).to.equal(before);
+});
+
 // A `role="treeitem"` host is only ARIA-valid nested inside a `role="tree"`/`role="group"`
 // ancestor (the WAI-ARIA required-parent rule) -- <lr-tree-node> is never used standalone in
 // practice (see the class doc), so this wraps it the same way <lr-tree> itself always does,

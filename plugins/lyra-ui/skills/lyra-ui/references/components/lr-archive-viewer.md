@@ -6,7 +6,7 @@
 - **Class** `LyraArchiveViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/archive-viewer/archive-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `jszip` — see `llms/peers.md`
-- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,18 +24,33 @@ fully decompressing only the rare entry missing that header field. The list comp
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
-case-insensitive text search over rendered entry names; `scrollToAnchor()` resolves text-quote and
-fragment anchors and emits `lr-anchor-result`.
+case-insensitive text search over every loaded entry path; next/previous wrap and scroll the active
+virtualized row into view. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
+`lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
+complete entry path; both forms first mount the absolute virtualized row and only then perform the
+shared DOM-level anchor resolution.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
+`lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
+clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
+entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
 
 **CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
-`spinner`, and `error`. A directory row's name element carries both `entry-name` and
+`highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, and `error`. A
+directory row's name element carries both `entry-name` and
 `entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
 `::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
 `<lr-virtual-list>`'s own shadow root and forwarded with `exportparts`, so
 `lr-archive-viewer::part(entry)` (and every other row part above) reaches them from a consuming
 stylesheet.
+
+**Themeable custom properties:** `--lr-archive-viewer-highlight-accent-background`,
+`--lr-archive-viewer-highlight-success-background`,
+`--lr-archive-viewer-highlight-warning-background`,
+`--lr-archive-viewer-highlight-danger-background`, and
+`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds.
+`--lr-archive-viewer-highlight-active-background` and
+`--lr-archive-viewer-highlight-active-outline` control the active quote.
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 

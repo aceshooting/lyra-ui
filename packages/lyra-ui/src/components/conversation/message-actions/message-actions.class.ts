@@ -51,16 +51,8 @@ function editIcon(): SVGTemplateResult {
  * (swapped under `effectiveDirection === 'rtl'`) plus Home/End move focus across *every* stop --
  * built-ins and slotted controls alike -- via `.focus()`, including composite children
  * (`lr-copy-button`, the `feedback` built-in, any slotted custom element) that expose their own
- * `focus()` delegation. See the class-level "Known limitation" note for why only the plain-button
- * stops get their `tabindex` toggled by this component (composite children's internal focusable
- * elements live in their own shadow root, unreachable from here).
- *
- * **Known limitation.** A byte-perfect APG toolbar keeps exactly one Tab stop for the entire
- * toolbar. This component only achieves that for its own plain-button built-ins; a composite child
- * (the `feedback` built-in, `lr-copy-button`, any slotted custom element) remains independently
- * reachable via the page's native Tab order alongside the toolbar's single roving stop, since this
- * component cannot suppress an element living inside another component's shadow root from the
- * document's Tab order. Arrow-key navigation is unaffected by this and reaches every stop.
+ * `focus()` delegation. Composite children are reconciled after their own Lit updates so the
+ * toolbar retains exactly one sequential Tab stop.
  *
  * @customElement lr-message-actions
  * @slot - Additional controls (e.g. `lr-copy-button`, `lr-icon-button`, `lr-branch-picker`)
@@ -115,14 +107,20 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
   @state() private revealed = false;
 
   private hoverTarget: HTMLElement | null = null;
+  private stopSyncGeneration = 0;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.addEventListener('focusin', this.onFocusIn);
+    this.addEventListener('focusout', this.onFocusOut);
     if (this.revealOnHover) this.bindHoverTarget();
   }
 
   override disconnectedCallback(): void {
+    this.stopSyncGeneration++;
     this.unbindHoverTarget();
+    this.removeEventListener('focusin', this.onFocusIn);
+    this.removeEventListener('focusout', this.onFocusOut);
     super.disconnectedCallback();
   }
 
@@ -135,12 +133,14 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
 
   protected override firstUpdated(): void {
     this.setActiveStop(this.focusableStops(), 0);
+    void this.reconcileStopsAfterChildren();
   }
 
   protected override updated(changed: PropertyValues): void {
     if (changed.has('controls')) {
       const stops = this.focusableStops();
       this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
+      void this.reconcileStopsAfterChildren();
     }
     if (changed.has('revealed')) {
       // Toggled on the host itself (not a shadow-internal part) so the stylesheet's `:host(...)`
@@ -157,16 +157,12 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     this.hoverTarget = target;
     target.addEventListener('pointerenter', this.onHoverTargetEnter);
     target.addEventListener('pointerleave', this.onHoverTargetLeave);
-    this.addEventListener('focusin', this.onFocusIn);
-    this.addEventListener('focusout', this.onFocusOut);
   }
 
   private unbindHoverTarget(): void {
     this.hoverTarget?.removeEventListener('pointerenter', this.onHoverTargetEnter);
     this.hoverTarget?.removeEventListener('pointerleave', this.onHoverTargetLeave);
     this.hoverTarget = null;
-    this.removeEventListener('focusin', this.onFocusIn);
-    this.removeEventListener('focusout', this.onFocusOut);
     this.revealed = false;
   }
 
@@ -238,9 +234,22 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
     });
   }
 
+  private async reconcileStopsAfterChildren(): Promise<void> {
+    const generation = ++this.stopSyncGeneration;
+    const pending = this.focusableStops()
+      .map((stop) => (stop as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete)
+      .filter((value): value is Promise<unknown> => value instanceof Promise);
+    await Promise.all(pending);
+    await Promise.resolve();
+    if (generation !== this.stopSyncGeneration || !this.isConnected) return;
+    const stops = this.focusableStops();
+    this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
+  }
+
   private onSlotChange = (): void => {
     const stops = this.focusableStops();
     this.setActiveStop(stops, Math.min(this.activeStopIndex, Math.max(0, stops.length - 1)));
+    void this.reconcileStopsAfterChildren();
   };
 
   private onToolbarKeyDown = (e: KeyboardEvent): void => {

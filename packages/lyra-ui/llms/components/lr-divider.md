@@ -13,7 +13,8 @@
 
 ## `lr-divider`
 
-A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`.
+A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
+`aria-label` is forwarded to that inner semantic owner.
 
 **Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected).
 

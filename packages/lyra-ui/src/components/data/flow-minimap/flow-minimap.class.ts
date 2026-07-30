@@ -34,6 +34,13 @@ interface FlowCanvasLike extends HTMLElement {
  * @csspart live-region - Visually hidden viewport-change announcements.
  * @cssprop [--lr-flow-minimap-inline-size=var(--lr-size-12rem)] - Map inline size.
  * @cssprop [--lr-flow-minimap-block-size=var(--lr-size-8rem)] - Map block size.
+ * @cssprop [--lr-flow-minimap-node-color=var(--lr-color-border-strong)] - Fill of nodes without
+ *   an execution status.
+ * @cssprop [--lr-flow-minimap-node-pending-color=var(--lr-color-border-strong)] - Pending-node fill.
+ * @cssprop [--lr-flow-minimap-node-running-color=var(--lr-color-brand)] - Running-node fill.
+ * @cssprop [--lr-flow-minimap-node-success-color=var(--lr-color-success)] - Successful-node fill.
+ * @cssprop [--lr-flow-minimap-node-error-color=var(--lr-color-danger)] - Failed-node fill.
+ * @cssprop [--lr-flow-minimap-node-denied-color=var(--lr-color-warning)] - Denied-node fill.
  */
 export class LyraFlowMinimap extends LyraElement {
   static override styles = [LyraElement.styles, styles, srOnly];

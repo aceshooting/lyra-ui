@@ -28,7 +28,9 @@ Dependency-free SVG path icon: no icon font, no sprite sheet, no network fetch. 
 **Slots:** (default) — custom SVG geometry, rendered only when neither `path` nor a known `name`
 resolves. Slotted nodes are cloned into the component-owned `<svg>` (Chromium does not paint SVG
 geometry distributed through a slot that sits inside an SVG), so pass plain `<path>`/`<circle>`/
-`<g>` elements, not a whole `<svg>`.
+`<g>` elements, not a whole `<svg>`. Attribute and descendant mutations to assigned geometry are
+mirrored live while connected; observation stops on detach and a reconnect synchronizes the latest
+source tree.
 
 **CSS parts:** `svg`
 

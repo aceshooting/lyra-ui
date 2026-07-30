@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from "lit";
+import { html, type TemplateResult } from "lit";
 import { property } from "lit/decorators.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { safeLinkHref } from "../../../internal/safe-url.js";
@@ -29,8 +29,8 @@ export class LyraBreadcrumbItem extends LyraElement {
     const separator = html`<span part="separator" aria-hidden="true">/</span>`;
     const base =
       href && !this.current
-        ? html`<a part="base" href=${href}><slot></slot></a>`
-        : html`<span part="base" aria-current=${this.current ? "page" : nothing}
+        ? html`<a part="base" href=${href} aria-current="false"><slot></slot></a>`
+        : html`<span part="base" aria-current=${this.current ? "page" : "false"}
             ><slot></slot
           ></span>`;
     return html`${separator}${base}`;

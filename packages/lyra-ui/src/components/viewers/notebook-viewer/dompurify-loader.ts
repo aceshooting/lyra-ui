@@ -13,7 +13,10 @@ export async function loadNotebookSanitizerDeps(
     // dual-shape tolerance spreadsheet-loader.ts/qr-code-loader.ts already apply.
     const module = await importDompurify();
     const candidate = (module as { default?: OptionalPeerApi }).default;
-    return candidate && typeof candidate.sanitize === 'function' ? candidate : (module as OptionalPeerApi);
+    if (candidate && typeof candidate.sanitize === 'function') return candidate;
+    return typeof (module as OptionalPeerApi).sanitize === 'function'
+      ? (module as OptionalPeerApi)
+      : null;
   } catch (error) {
     console.warn(
       '<lr-notebook-viewer> needs the optional peer dependency `dompurify` to render raw HTML/SVG cell outputs — install it with `pnpm add dompurify`:',

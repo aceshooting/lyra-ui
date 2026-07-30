@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './browser-frame.js';
 import type { LyraBrowserFrame } from './browser-frame.js';
 import { styles } from './browser-frame.styles.js';
@@ -68,6 +68,46 @@ describe('lr-browser-frame', () => {
     await el.updateComplete;
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect((el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left).to.equal('50%');
+  });
+
+  it('clears stale image geometry as soon as frameSrc changes, clears, is rejected, or errors', async () => {
+    const el = (await fixture(html`
+      <lr-browser-frame
+        frame-src="https://example.com/first.png"
+        .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
+      ></lr-browser-frame>
+    `)) as LyraBrowserFrame;
+    const pingLeft = () => (el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left;
+    let img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
+    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
+    img.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    expect(pingLeft()).to.include('px');
+
+    el.frameSrc = 'https://example.com/second.png';
+    await el.updateComplete;
+    expect(pingLeft()).to.equal('50%');
+
+    img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
+    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+    Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
+    img.dispatchEvent(new Event('load'));
+    await el.updateComplete;
+    expect(pingLeft()).to.include('px');
+    img.dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(pingLeft()).to.equal('50%');
+
+    el.frameSrc = '';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
+    expect(pingLeft()).to.equal('50%');
+
+    el.frameSrc = 'javascript:alert(1)';
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="frame"]')).to.not.exist;
+    expect(pingLeft()).to.equal('50%');
   });
 
   it('keeps all toolbar controls reachable in a 320px allocation with long localized text', async () => {
@@ -176,32 +216,71 @@ describe('lr-browser-frame', () => {
   });
 
   it('keeps the ping content rect tracking viewport resizes after a disconnect/reconnect', async () => {
-    const wrapper = (await fixture(html`
-      <div style="inline-size: 400px">
-        <lr-browser-frame
-          frame-src="https://example.com/shot.png"
-          .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
-        ></lr-browser-frame>
-      </div>
-    `)) as HTMLDivElement;
-    const el = wrapper.querySelector('lr-browser-frame') as LyraBrowserFrame;
-    await el.updateComplete;
-    const img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
-    Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
-    Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
-    img.dispatchEvent(new Event('load'));
-    await el.updateComplete;
-    const pingLeft = () => (el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left;
-    await waitUntil(() => pingLeft().endsWith('px'), 'ping never switched to the measured pixel content rect');
-    el.remove();
-    wrapper.append(el);
-    await el.updateComplete;
-    const before = pingLeft();
-    wrapper.style.inlineSize = '200px';
-    await waitUntil(
-      () => pingLeft().endsWith('px') && pingLeft() !== before,
-      'ping did not track the viewport resize after a reconnect',
-    );
+    const nativeResizeObserver = window.ResizeObserver;
+    const observers: ControlledResizeObserver[] = [];
+    class ControlledResizeObserver {
+      readonly targets = new Set<Element>();
+      disconnected = false;
+
+      constructor(private readonly callback: ResizeObserverCallback) {
+        observers.push(this);
+      }
+
+      observe(target: Element): void {
+        this.targets.add(target);
+      }
+
+      unobserve(target: Element): void {
+        this.targets.delete(target);
+      }
+
+      disconnect(): void {
+        this.disconnected = true;
+        this.targets.clear();
+      }
+
+      trigger(): void {
+        this.callback([], this as unknown as ResizeObserver);
+      }
+    }
+    window.ResizeObserver = ControlledResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      const wrapper = (await fixture(html`
+        <div style="inline-size: 400px">
+          <lr-browser-frame
+            frame-src="https://example.com/shot.png"
+            .pings=${[{ id: 'p1', x: 50, y: 50, kind: 'click' }]}
+          ></lr-browser-frame>
+        </div>
+      `)) as HTMLDivElement;
+      const el = wrapper.querySelector('lr-browser-frame') as LyraBrowserFrame;
+      await el.updateComplete;
+      const img = el.shadowRoot!.querySelector('[part="frame"]') as HTMLImageElement;
+      Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+      Object.defineProperty(img, 'naturalHeight', { value: 450, configurable: true });
+      img.dispatchEvent(new Event('load'));
+      await el.updateComplete;
+      const pingLeft = () => (el.shadowRoot!.querySelector('[part="ping"]') as HTMLElement).style.left;
+      expect(pingLeft()).to.include('px');
+      expect(observers).to.have.length(1);
+
+      el.remove();
+      expect(observers[0]!.disconnected).to.be.true;
+      wrapper.append(el);
+      await el.updateComplete;
+      expect(observers).to.have.length(2);
+      expect(observers[1]!.targets.size).to.equal(1);
+
+      const before = pingLeft();
+      wrapper.style.inlineSize = '200px';
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      observers[1]!.trigger();
+      await el.updateComplete;
+      expect(pingLeft()).to.include('px');
+      expect(pingLeft()).to.not.equal(before);
+    } finally {
+      window.ResizeObserver = nativeResizeObserver;
+    }
   });
 
   it('never captures or forwards pointer/keyboard input to any transport (no such listener exists)', async () => {

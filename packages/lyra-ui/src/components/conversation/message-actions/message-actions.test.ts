@@ -173,6 +173,46 @@ it('roving tabindex: only the active plain-button stop is tabbable, and ArrowRig
   expect(el.shadowRoot!.activeElement).to.equal(edit);
 });
 
+it('reconciles the roving stop when a non-active action receives direct focus without reveal-on-hover', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions .controls=${['regenerate', 'edit']}></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const regenerate = el.shadowRoot!.querySelector('[part~="regenerate-button"]') as HTMLButtonElement;
+  const edit = el.shadowRoot!.querySelector('[part~="edit-button"]') as HTMLButtonElement;
+
+  edit.focus();
+  await el.updateComplete;
+
+  expect(edit.tabIndex).to.equal(0);
+  expect(regenerate.tabIndex).to.equal(-1);
+  el.shadowRoot!
+    .querySelector('[part="base"]')!
+    .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  expect(el.shadowRoot!.activeElement).to.equal(regenerate);
+});
+
+it('keeps one sequential Tab stop after composite children finish their own updates', async () => {
+  const el = (await fixture(
+    html`<lr-message-actions
+      copy-text="hello"
+      .controls=${['copy', 'feedback', 'regenerate']}
+    ></lr-message-actions>`,
+  )) as LyraMessageActions;
+  const copy = el.shadowRoot!.querySelector('lr-copy-button') as HTMLElement & { updateComplete: Promise<unknown> };
+  const feedback = el.shadowRoot!.querySelector('lr-message-feedback') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+  };
+  await Promise.all([copy.updateComplete, feedback.updateComplete]);
+  await Promise.resolve();
+
+  const controls = [
+    copy.shadowRoot!.querySelector('button') as HTMLButtonElement,
+    ...(feedback.shadowRoot!.querySelectorAll('button') as NodeListOf<HTMLButtonElement>),
+    el.shadowRoot!.querySelector('[part~="regenerate-button"]') as HTMLButtonElement,
+  ];
+  expect(controls.filter((control) => control.tabIndex === 0).length).to.equal(1);
+});
+
 it('ArrowLeft/ArrowRight swap under RTL', async () => {
   const el = (await fixture(
     html`<lr-message-actions dir="rtl" .controls=${['regenerate', 'edit']}></lr-message-actions>`,

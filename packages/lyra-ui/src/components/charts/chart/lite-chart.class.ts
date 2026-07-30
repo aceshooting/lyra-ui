@@ -1,5 +1,6 @@
 import { html, svg, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
@@ -9,11 +10,13 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
 
 export interface LiteSeries {
   label: string;
   data: (number | null)[];
-  /** Defaults to a semantic categorical color, keyed by dataset index. */
+  /** A CSS color. Invalid values and `url()` paint servers fall back to the semantic categorical
+   *  color keyed by dataset index. */
   color?: string;
 }
 
@@ -75,6 +78,7 @@ const TICK_COUNT = 4;
 const BAR_GROUP_GAP = 0.2; // fraction of a category slot left as gap between categories
 const BAR_GAP = 0.08; // fraction of a category slot left as gap between grouped bars
 const BAR_CORNER_RADIUS = 4; // px, used only when roundedBars is true
+const APPROX_LABEL_CHARACTER_WIDTH = 7;
 
 /**
  * Picks a "nice" (1/2/5 × 10^n) step size for an axis spanning `span` over
@@ -169,6 +173,13 @@ interface InteractiveMark {
   value: number;
 }
 
+interface LineHitPoint {
+  datasetIndex: number;
+  index: number;
+  x: number;
+  y: number;
+}
+
 export interface LyraLiteChartEventMap {
   'lr-point-click': CustomEvent<{
     datasetIndex: number;
@@ -204,7 +215,7 @@ export interface LyraLiteChartEventMap {
  * their labels. All three are additive and no-ops when left unset.
  *
  * Seven further additive, opt-in properties: `pointText` overrides the
- * per-bar/per-point `<title>`/`aria-label` tooltip text (mirrors
+ * per-bar/per-point `<title>` tooltip and accessible-name text (mirrors
  * `lr-heatmap`'s `cellText` hook), falling back to the built-in raw-value
  * template when unset; `roundedBars` draws bars as a rounded-top path
  * instead of a square-cornered rect; `skipZero` omits a bar entirely (not
@@ -255,6 +266,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   @property({ attribute: false }) labels: string[] = [];
   @property({ attribute: false }) datasets: LiteSeries[] = [];
   @property({ type: Boolean }) legend = false;
+  /** A CSS `height`; invalid values leave the default height token in control. */
   @property() height = '280px';
   @property({ attribute: 'x-label' }) xLabel = '';
   @property({ attribute: 'y-label' }) yLabel = '';
@@ -291,7 +303,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  coordinate function. Unset (the default) uses the existing internal per-category slot math,
    *  unchanged from before this property existed. */
   @property({ attribute: false }) barX?: (index: number) => number;
-  /** Formats the per-bar/per-point `<title>`/`aria-label` tooltip text — receives the category
+  /** Formats the per-bar/per-point `<title>` tooltip and accessible-name text — receives the category
    *  label, the raw value, and the dataset index. Falls back to the built-in raw-value template
    *  when unset (mirrors `lr-heatmap`'s `cellText` hook). */
   @property({ attribute: false }) pointText?: (label: string, value: number, datasetIndex: number) => string;
@@ -461,7 +473,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('height')) {
-      this.style.setProperty('--lr-chart-height', this.height);
+      const height = sanitizeCssLength(this.height, 'height');
+      if (height) this.style.setProperty('--lr-chart-height', height);
+      else this.style.removeProperty('--lr-chart-height');
     }
     if (this.refocusMarkAfterUpdate) {
       this.refocusMarkAfterUpdate = false;
@@ -477,7 +491,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   }
 
   private colorFor(index: number, series: LiteSeries): string {
-    return series.color ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!; // safe: modulo a non-empty constant palette
+    return sanitizeCssColor(series.color) ?? DEFAULT_PALETTE[index % DEFAULT_PALETTE.length]!; // safe: modulo a non-empty constant palette
   }
 
   /** Dispatches to the host-provided `pointText` formatter when set, otherwise `undefined` (the
@@ -575,10 +589,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const marks = this.interactiveMarks();
     if (!marks[index]) return;
     this.activeMarkIndex = index;
-    this.liveRegion?.announce(this.markAnnouncement(index, marks), { force: true });
     void this.updateComplete.then(() => {
       const markEls = Array.from(this.renderRoot.querySelectorAll('[part="bar"], [part="point"]')) as HTMLElement[];
-      markEls[index]?.focus();
+      const mark = markEls[index];
+      if (!mark) return;
+      if (this.shadowRoot?.activeElement === mark) this.onMarkFocus(index);
+      else mark.focus();
     });
   }
 
@@ -665,6 +681,52 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const label = this.labels[index];
     const value = this.datasets[datasetIndex]?.data[index] ?? null;
     this.emit<PointDetail>('lr-point-click', { datasetIndex, index, label, value });
+  }
+
+  private emitNearestLinePoint(
+    event: MouseEvent,
+    points: readonly LineHitPoint[],
+    fallbackDatasetIndex: number,
+    fallbackIndex: number,
+  ): void {
+    let selected = points.find(
+      (point) => point.datasetIndex === fallbackDatasetIndex && point.index === fallbackIndex,
+    );
+    const currentTarget = event.currentTarget;
+    const svgElement =
+      currentTarget instanceof SVGElement ? currentTarget.ownerSVGElement : null;
+    const screenMatrix = svgElement?.getScreenCTM();
+
+    // A physical pointer click carries screen coordinates and `detail > 0`; choose the closest
+    // mark in both axes so overlapping 24px targets cannot hand selection to whichever series was
+    // painted last. Programmatic `.click()`/dispatchEvent() activation has `detail === 0`, so it
+    // intentionally keeps the addressed mark as its deterministic fallback.
+    if (event.detail > 0 && svgElement && screenMatrix && points.length) {
+      const renderedPoint = svgElement.createSVGPoint();
+      const squaredDistance = (point: LineHitPoint): number => {
+        renderedPoint.x = point.x;
+        renderedPoint.y = point.y;
+        const screenPoint = renderedPoint.matrixTransform(screenMatrix);
+        const dx = event.clientX - screenPoint.x;
+        const dy = event.clientY - screenPoint.y;
+        return dx * dx + dy * dy;
+      };
+      let bestDistance = selected
+        ? squaredDistance(selected)
+        : Number.POSITIVE_INFINITY;
+      for (const point of points) {
+        const distance = squaredDistance(point);
+        if (distance < bestDistance) {
+          selected = point;
+          bestDistance = distance;
+        }
+      }
+    }
+
+    this.emitPoint(
+      selected?.datasetIndex ?? fallbackDatasetIndex,
+      selected?.index ?? fallbackIndex,
+    );
   }
 
   private onPointKeyDown(e: KeyboardEvent, datasetIndex: number, index: number, markIndex: number): void {
@@ -865,7 +927,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             label,
             value: numberFormat.format(v),
           });
-        const ariaLabel = barText;
         const titleText = barText;
         const w = Math.max(0, barW);
         let h = Math.max(0, y2 - y1);
@@ -885,8 +946,20 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         }
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = this.selectedIndex.includes(i);
-        const hitWidth = Math.max(24, w);
-        const hitHeight = Math.max(24, h);
+        const intraGroupSpacing = barW + BAR_GAP * slot;
+        const crossCategorySpacing =
+          slot - Math.max(0, groupCount - 1) * intraGroupSpacing;
+        const horizontalSpacing = Math.max(
+          0,
+          groupCount > 1
+            ? Math.min(intraGroupSpacing, crossCategorySpacing)
+            : slot,
+        );
+        const hitWidth = Math.max(w, Math.min(24, horizontalSpacing));
+        // Stacked segments share one x lane, so a 24px vertical floor would overlap and make the
+        // later-painted segment steal pointer input from its neighbor. The visual segment itself
+        // remains the hit target in that constrained case.
+        const hitHeight = this.stacked ? h : Math.max(24, h);
         const hitX = rectX - (hitWidth - w) / 2;
         const hitY = y1 - (hitHeight - h) / 2;
         const hitTarget = svg`
@@ -912,7 +985,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               fill=${color}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
-              aria-label=${ariaLabel}
               aria-pressed=${selected ? 'true' : 'false'}
               ?data-selected=${selected}
               data-mark-index=${markIndex}
@@ -936,7 +1008,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               fill=${color}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
-              aria-label=${ariaLabel}
               aria-pressed=${selected ? 'true' : 'false'}
               ?data-selected=${selected}
               data-mark-index=${markIndex}
@@ -963,6 +1034,18 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     // Hoisted out of the per-point loop for the same reason as renderBars(): the whole SVG
     // re-renders per reactive change, so this would otherwise repeat per point per pass.
     const numberFormat = getNumberFormat(this.effectiveLocale);
+    const hitPoints: LineHitPoint[] = [];
+    this.datasets.forEach((series, datasetIndex) => {
+      series.data.forEach((value, index) => {
+        if (value == null || !Number.isFinite(value)) return;
+        hitPoints.push({
+          datasetIndex,
+          index,
+          x: xFor(index),
+          y: yFor(value),
+        });
+      });
+    });
 
     return this.datasets.map((s, di) => {
       const color = this.colorFor(di, s);
@@ -988,7 +1071,6 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
             label,
             value: numberFormat.format(v),
           });
-        const ariaLabel = barText;
         const titleText = barText;
         const markIndex = markIndexes.get(`${di}:${i}`)!;
         const selected = this.selectedIndex.includes(i);
@@ -999,9 +1081,9 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               aria-hidden="true"
               cx=${xFor(i)}
               cy=${yFor(v)}
-              r="12"
+              r=${n > 1 ? Math.min(12, plotW / (n - 1) / 2) : 12}
               style="fill: transparent; pointer-events: all"
-              @click=${() => this.emitPoint(di, i)}
+              @click=${(event: MouseEvent) => this.emitNearestLinePoint(event, hitPoints, di, i)}
             ></circle>
             <circle
               part="point"
@@ -1011,13 +1093,12 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               fill=${color}
               tabindex=${activeMarkIndex === markIndex ? '0' : '-1'}
               role="button"
-              aria-label=${ariaLabel}
               aria-pressed=${selected ? 'true' : 'false'}
               ?data-selected=${selected}
               data-mark-index=${markIndex}
               data-dataset-index=${di}
               data-index=${i}
-              @click=${() => this.emitPoint(di, i)}
+              @click=${(event: MouseEvent) => this.emitNearestLinePoint(event, hitPoints, di, i)}
               @focus=${() => this.onMarkFocus(markIndex)}
               @keydown=${(e: KeyboardEvent) => this.onPointKeyDown(e, di, i, markIndex)}
             ><title>${titleText}</title></circle>
@@ -1054,6 +1135,16 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     const count = Math.min(n, Math.max(2, max));
     if (count <= 1) return new Set(n === 1 ? [0] : []);
     return new Set(Array.from({ length: count }, (_, index) => Math.round((index * (n - 1)) / (count - 1))));
+  }
+
+  private displayCategoryLabel(label: string, availableWidth: number): string {
+    const maxCharacters = Math.max(
+      1,
+      Math.floor(availableWidth / APPROX_LABEL_CHARACTER_WIDTH),
+    );
+    if (label.length <= maxCharacters) return label;
+    if (maxCharacters === 1) return '…';
+    return `${label.slice(0, maxCharacters - 1)}…`;
   }
 
   private renderChart(): TemplateResult {
@@ -1101,13 +1192,29 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
         : this.renderLines(plotX, plotY, plotW, plotH, lo, hi);
 
     const visibleLabelIndexes = this.visibleLabelIndexes(n);
+    const categoryLabelWidth = Math.max(
+      0,
+      (this.type === 'bar'
+        ? slot
+        : n > 1
+          ? plotW / (n - 1)
+          : plotW) - BAR_CORNER_RADIUS,
+    );
     const categoryLabels = this.labels.map((label, i) => {
       if (visibleLabelIndexes && !visibleLabelIndexes.has(i)) return nothing;
+      const fullLabel = label ?? '';
       const x =
         this.type === 'bar' && n > 0
           ? (this.barX ? this.barX(i) : plotX + i * slot) + slot / 2 // matches renderBars()'s own per-category slot center (or the barX override, when set)
           : plotX + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2);
-      return svg`<text part="axis-label" x=${x} y=${plotY + plotH + CATEGORY_LABEL_OFFSET} text-anchor="middle">${label}</text>`;
+      const displayLabel = this.displayCategoryLabel(fullLabel, categoryLabelWidth);
+      return svg`<text
+        part="axis-label"
+        x=${x}
+        y=${plotY + plotH + CATEGORY_LABEL_OFFSET}
+        text-anchor="middle"
+        aria-label=${displayLabel === fullLabel ? nothing : fullLabel}
+      >${displayLabel}</text>`;
     });
 
     const datasetLabels = this.datasets.map((dataset) => dataset.label);
@@ -1208,7 +1315,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
               ${this.datasets.map(
                 (s, i) => html`
                   <span part="legend-item">
-                    <span part="legend-swatch" style="background:${this.colorFor(i, s)}"></span>
+                    <span part="legend-swatch" style=${styleMap({ background: this.colorFor(i, s) })}></span>
                     ${s.label}${this.legendText
                       ? html`<span part="legend-text">${this.legendText(s.label, i)}</span>`
                       : nothing}

@@ -22,6 +22,39 @@ describe('lr-artifact-panel', () => {
     expect(withCode.shadowRoot!.querySelector('[part="view-toggle"]')).to.exist;
   });
 
+  it('uses a host aria-label to name the rendered view-selector group', async () => {
+    const el = (await fixture(html`
+      <lr-artifact-panel aria-label="Report artifact">
+        <pre slot="code">code</pre>
+      </lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await el.updateComplete;
+    const group = el.shadowRoot!.querySelector('[part="view-toggle"]') as HTMLElement;
+    expect(group.getAttribute('role')).to.equal('group');
+    expect(group.getAttribute('aria-label')).to.equal('Report artifact');
+    await expect(el).to.be.accessible();
+  });
+
+  it('returns to preview when the active code slot is removed', async () => {
+    const el = (await fixture(html`
+      <lr-artifact-panel>
+        <div id="preview">preview</div>
+        <pre id="code" slot="code">code</pre>
+      </lr-artifact-panel>
+    `)) as LyraArtifactPanel;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="view-button"][data-view="code"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(el.view).to.equal('code');
+
+    el.querySelector('#code')!.remove();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await el.updateComplete;
+    expect(el.view).to.equal('preview');
+    expect(el.shadowRoot!.querySelector('[part="view-toggle"]')).to.not.exist;
+    expect((el.shadowRoot!.querySelector('slot:not([name])') as HTMLElement).style.display).to.equal('');
+  });
+
   it('view-button activation emits lr-view-change and updates view', async () => {
     const el = (await fixture(html`
       <lr-artifact-panel><pre slot="code">code</pre></lr-artifact-panel>

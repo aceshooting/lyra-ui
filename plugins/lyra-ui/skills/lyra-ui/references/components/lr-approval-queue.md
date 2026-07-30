@@ -22,6 +22,8 @@ It never executes tools or persists decisions.
 
 **Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+`lr-approval-decision` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
+request and keeps the decision dialog pending.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`

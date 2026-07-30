@@ -130,6 +130,31 @@ it("wires aria-activedescendant to a stable id on the active command row", async
   expect(input.getAttribute("aria-activedescendant")).to.equal(rows[1].id);
 });
 
+it("keeps aria-activedescendant-owned command options out of the sequential tab order", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette
+      .commands=${[
+        { id: "save", label: "Save" },
+        { id: "close", label: "Close" },
+      ]}
+    ></lr-command-palette>`
+  )) as LyraCommandPalette;
+  el.openPalette();
+  await el.updateComplete;
+
+  const input = el.shadowRoot!.querySelector("input") as HTMLInputElement;
+  const rows = [
+    ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="command"]'),
+  ];
+  input.focus();
+
+  expect(rows.map((row) => row.tabIndex)).to.deep.equal([-1, -1]);
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.localName).to.equal(
+    "input"
+  );
+  expect(input.getAttribute("aria-activedescendant")).to.equal(rows[0]!.id);
+});
+
 it("skips disabled commands during arrow navigation and marks them aria-disabled", async () => {
   const el = (await fixture(
     html`<lr-command-palette

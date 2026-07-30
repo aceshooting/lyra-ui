@@ -36,7 +36,10 @@ line-granular (a match identifies a whole line, not a character range) and cappe
 stops climbing on a pathologically repetitive buffer. `getPlainText()` returns the SGR-stripped
 plain text of the whole buffer.
 
-**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`),
+**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`, cancelable — by
+default the component creates a plain-text `Blob`/object URL and activates a synthetic
+`<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
+server-side or other handling),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
 activeIndex }`), `lr-highlight-activate` (`detail: { id }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
@@ -66,3 +69,12 @@ beat it without `!important`.
 
 - `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
 - `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.
+
+While a search query is active, writes, scrollback trimming, `content` replacement, and `clear()`
+recompute the exact match count and emit `lr-search-change` only when that public search snapshot
+actually changes. Pending output announcements are canceled by clear/replacement, disabling
+`announceOutput`, or disconnect, so stale text is never announced after it has been removed.
+A multi-line highlight paints every retained covered line but exposes exactly one keyboard/click
+owner at the anchor's start, or at the first surviving covered line after scrollback trims that
+start. Its accessible name combines the caller label with visible line text (or a localized line
+number for an empty line), avoiding duplicate tab stops for one logical highlight.

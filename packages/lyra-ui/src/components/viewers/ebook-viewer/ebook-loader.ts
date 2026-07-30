@@ -12,7 +12,8 @@ export async function loadEpubJs(
 ): Promise<EpubFactory | null> {
   try {
     const mod = await importEpub();
-    return ('default' in mod ? mod.default : mod) as EpubFactory;
+    const candidate = ('default' in mod ? mod.default : mod) as unknown;
+    return typeof candidate === 'function' ? candidate as EpubFactory : null;
   } catch (error) {
     console.warn('The optional `epubjs` peer is required to render EPUB files.', error);
     return null;

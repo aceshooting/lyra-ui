@@ -38,6 +38,28 @@ it('emits full selections plus status-appropriate cancel and retry intents', asy
   expect((await retryPending).detail).to.deep.equal({ runId: 'review' });
 });
 
+it('activates the focused treeitem with Enter/Space and contextualizes row actions', async () => {
+  const el = (await fixture(html`<lr-subagent-panel .runs=${runs}></lr-subagent-panel>`)) as LyraSubagentPanel;
+  await el.updateComplete;
+  const research = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="research"]')!;
+  const review = el.shadowRoot!.querySelector<HTMLElement>('[data-run-id="review"]')!;
+  research.focus();
+  const enterPending = oneEvent(el, 'lr-run-select');
+  research.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true }));
+  expect((await enterPending).detail).to.deep.equal({ run: runs[0] });
+
+  review.focus();
+  const spacePending = oneEvent(el, 'lr-run-select');
+  review.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, composed: true }));
+  expect((await spacePending).detail).to.deep.equal({ run: runs[2] });
+  expect(
+    el.shadowRoot!.querySelector('[data-run-id="research"] [part="cancel"]')!.getAttribute('aria-label'),
+  ).to.equal('Cancel Researcher');
+  expect(
+    el.shadowRoot!.querySelector('[data-run-id="review"] [part="retry"]')!.getAttribute('aria-label'),
+  ).to.equal('Retry Reviewer');
+});
+
 it('renders an empty state and has an accessible populated state', async () => {
   const empty = (await fixture(html`<lr-subagent-panel></lr-subagent-panel>`)) as LyraSubagentPanel;
   expect(empty.shadowRoot!.querySelector('lr-empty')).to.exist;

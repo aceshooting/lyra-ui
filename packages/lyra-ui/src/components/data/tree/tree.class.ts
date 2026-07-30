@@ -95,7 +95,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const acc: LyraTreeNode[] = [];
     const walk = (nodes: LyraTreeNode[]): void => {
       for (const n of nodes) {
-        if (!n.item?.disabled) acc.push(n);
+        if (n.item?.disabled) continue;
+        acc.push(n);
         if (n.expanded) walk(this.childrenOf(n));
       }
     };
@@ -128,7 +129,21 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       const item = stack.pop()!;
       if (seen.has(item)) continue;
       seen.add(item);
-      if (!item.disabled) return item.id;
+      if (item.disabled) continue;
+      return item.id;
+    }
+    return null;
+  }
+
+  private isEnabledReachableId(items: TreeItem[], id: string): boolean {
+    const stack = [...items].reverse();
+    const seen = new Set<TreeItem>();
+    while (stack.length > 0) {
+      const item = stack.pop()!;
+      if (seen.has(item)) continue;
+      seen.add(item);
+      if (item.disabled) continue;
+      if (item.id === id) return true;
       if (item.children) {
         for (let i = item.children.length - 1; i >= 0; i--) {
           const child = item.children[i];
@@ -136,7 +151,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
         }
       }
     }
-    return null;
+    return false;
   }
 
   /**
@@ -197,7 +212,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       if (
         !this.activeId ||
         !activeItem ||
-        activeItem.disabled
+        activeItem.disabled ||
+        !this.isEnabledReachableId(this.data, this.activeId)
       ) {
         this.activeId = this.firstEnabledId(this.data);
       }
@@ -451,6 +467,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     const setAll = async (nodes: LyraTreeNode[]): Promise<void> => {
       await Promise.all(
         nodes.map(async (n) => {
+          if (n.item?.disabled) {
+            n.expanded = false;
+            await n.updateComplete;
+            return;
+          }
           if (n.hasChildren) n.expanded = true;
           await n.updateComplete;
           await setAll(this.childrenOf(n));
@@ -469,13 +490,18 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * `role="group"` is about to disappear.
    */
   collapseAll(): void {
+    const focused = this.deepFocusedNode();
     const setAll = (nodes: LyraTreeNode[]): void => {
       for (const n of nodes) {
         setAll(this.childrenOf(n));
-        n.collapse();
+        if (n.item?.disabled) n.expanded = false;
+        else n.collapse();
       }
     };
     setAll(this.nodeElements);
+    const activeTopLevel = this.data.some((item) => !item.disabled && item.id === this.activeId);
+    if (!activeTopLevel) this.activeId = this.firstEnabledId(this.data);
+    if (focused) this.pendingFocusId = this.activeId;
   }
 
   override render(): TemplateResult {

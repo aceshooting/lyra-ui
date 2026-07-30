@@ -6,7 +6,7 @@
 - **Class** `LyraFlowRunOverlay`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-run-overlay/flow-run-overlay.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 4 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -15,7 +15,8 @@
 
 Execution-state presentation for a `lr-flow-canvas`: pushes a `FlowRunDecorations` map into the
 resolved canvas (the canvas itself renders the node/edge paint) and renders a compact run-summary
-strip. Does not execute, poll, or time anything — pure pushed state; `durationMs` is host-computed.
+strip. Summary/count text and slotted host chrome wrap within narrow allocations. Does not execute,
+poll, or time anything — pure pushed state; `durationMs` is host-computed.
 
 **Properties:**
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
@@ -37,7 +38,13 @@ badge).
 **CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
 status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-flow-run-overlay-status-color` controls a count dot without
+an execution status. `--lr-flow-run-overlay-status-{pending|running|success|error|denied}-color`
+independently retints each status count, defaulting respectively to the shared border-strong,
+brand, success, danger, and warning tokens. Their expanded names are
+`--lr-flow-run-overlay-status-pending-color`, `--lr-flow-run-overlay-status-running-color`,
+`--lr-flow-run-overlay-status-success-color`, `--lr-flow-run-overlay-status-error-color`, and
+`--lr-flow-run-overlay-status-denied-color`.
 
 **Optional peer deps:** none.
 

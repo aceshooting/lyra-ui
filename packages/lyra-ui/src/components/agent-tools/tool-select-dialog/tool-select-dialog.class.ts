@@ -11,7 +11,8 @@ import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** One selectable agent tool. `category` groups the row; tools with no
- *  `category` (or an empty one) fall into the trailing "Other" bucket. */
+ *  `category` (or an empty one) fall into the trailing localized "Other" bucket. A literal caller
+ *  category named "Other" remains a separate ordinary category. */
 export interface ToolSelectDialogTool {
   id: string;
   name: string;
@@ -53,7 +54,8 @@ export interface LyraToolSelectDialogEventMap {
   focus: CustomEvent<undefined>;
 }
 
-const OTHER_CATEGORY = 'Other';
+const UNCATEGORIZED = null;
+type ToolCategoryKey = string | null;
 const MAX_RENDERED_TOOLS = 200;
 
 /** Default `filter`: case-insensitive substring match against the tool's name and description. */
@@ -65,7 +67,7 @@ function defaultFilter(tool: ToolSelectDialogTool, query: string, locale: string
 }
 
 interface ToolGroup {
-  category: string;
+  category: ToolCategoryKey;
   tools: ToolSelectDialogTool[];
 }
 
@@ -104,6 +106,8 @@ interface ToolGroup {
  * `detail: { selected: string[], useDefaults: boolean }`.
  * @event lr-close - `detail: ToolSelectDialogCloseReason`. Fired exactly once per dismissal,
  * via Escape, a backdrop click, or a `close()` call.
+ * @event focus - Re-dispatched when the internal search input receives focus.
+ * @event blur - Re-dispatched when the internal search input loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
  * @csspart header - The wrapper around the title/subtitle.
@@ -173,10 +177,11 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
   private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
   private readonly titleId = nextId('tool-select-dialog-title');
-  // Stable per-category heading ids, keyed by category name -- generated
-  // once (not regenerated every render/keystroke) so a category's
+  // Stable per-category heading ids, keyed by category name (or the null
+  // uncategorized sentinel) -- generated once (not regenerated every
+  // render/keystroke) so a category's
   // aria-labelledby target keeps the same id across re-renders.
-  private readonly categoryIds = new Map<string, string>();
+  private readonly categoryIds = new Map<ToolCategoryKey, string>();
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated) {
@@ -288,7 +293,7 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
     this.emitChange();
   }
 
-  private categoryId(category: string): string {
+  private categoryId(category: ToolCategoryKey): string {
     let id = this.categoryIds.get(category);
     if (!id) {
       id = nextId('tool-select-dialog-category');
@@ -302,19 +307,19 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
    *  category left with zero matches is dropped entirely rather than
    *  rendered as an empty heading. */
   private get groups(): ToolGroup[] {
-    const order: string[] = [];
-    const byCategory = new Map<string, ToolSelectDialogTool[]>();
+    const order: ToolCategoryKey[] = [];
+    const byCategory = new Map<ToolCategoryKey, ToolSelectDialogTool[]>();
     for (const tool of this.tools) {
-      const category = tool.category?.trim() || OTHER_CATEGORY;
+      const category: ToolCategoryKey = tool.category?.trim() || UNCATEGORIZED;
       let bucket = byCategory.get(category);
       if (!bucket) {
         bucket = [];
         byCategory.set(category, bucket);
-        if (category !== OTHER_CATEGORY) order.push(category);
+        if (category !== UNCATEGORIZED) order.push(category);
       }
       bucket.push(tool);
     }
-    if (byCategory.has(OTHER_CATEGORY)) order.push(OTHER_CATEGORY);
+    if (byCategory.has(UNCATEGORIZED)) order.push(UNCATEGORIZED);
 
     const q = this.query.trim().toLocaleLowerCase(this.effectiveLocale);
     const matches = q
@@ -358,16 +363,17 @@ export class LyraToolSelectDialog extends LyraElement<LyraToolSelectDialogEventM
 
   private renderCategory(group: ToolGroup): TemplateResult {
     const headingId = this.categoryId(group.category);
+    const formattedCount = getNumberFormat(this.effectiveLocale).format(group.tools.length);
     return html`
       <div part="category" role="group" aria-labelledby=${headingId}>
         <h3 part="category-heading" id=${headingId}>
-          ${group.category === OTHER_CATEGORY ? this.localize('otherCategory') : group.category}<span
+          ${group.category === UNCATEGORIZED ? this.localize('otherCategory') : group.category}<span
             part="category-count"
             aria-hidden="true"
-            >${group.tools.length}</span
+            >${formattedCount}</span
           ><span class="sr-only"
             >${this.localize(group.tools.length === 1 ? 'toolCount' : 'toolCountPlural', undefined, {
-              count: group.tools.length,
+              count: formattedCount,
             })}</span
           >
         </h3>

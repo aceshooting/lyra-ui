@@ -94,6 +94,28 @@ describe('default render / freeze-frame state', () => {
   });
 });
 
+it('reconciles playing against a reduced-motion preference that changed while detached', async () => {
+  const motion = stubReducedMotion(false);
+  try {
+    const el = (await fixture(html`
+      <lr-animated-image alt="Pixel" .play=${true}></lr-animated-image>
+    `)) as LyraAnimatedImage;
+    await el.updateComplete;
+    expect(el.playing).to.be.true;
+    const parent = el.parentElement!;
+
+    el.remove();
+    motion.fire(true);
+    parent.append(el);
+    await el.updateComplete;
+
+    expect(el.playing).to.be.false;
+    expect(el.hasAttribute('playing')).to.be.false;
+  } finally {
+    motion.restore();
+  }
+});
+
 describe('lr-load / DPR-aware frame capture', () => {
   it('fires lr-load and captures a DPR-aware frozen frame matching the loaded image', async () => {
     const el = (await fixture(html`<lr-animated-image alt="Pixel"></lr-animated-image>`)) as LyraAnimatedImage;

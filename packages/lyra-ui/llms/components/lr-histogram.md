@@ -6,7 +6,7 @@
 - **Class** `LyraHistogram`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/histogram.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,16 +35,20 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).
 
-**Methods:** `resetZoom()`, `refreshTheme()` — both inherited.
+**Methods:** `resetZoom()`, `refreshTheme()` — both inherited; plus
+`appendData(_label, values, maxPoints?)`, which appends finite raw samples to `values` and
+optionally retains only the newest `maxPoints`. The label argument is ignored because bucket
+labels are regenerated from the rebinned sample range.
 
 **Events:** `lr-zoom`, `lr-point-click` — inherited; `lr-point-click`'s `index` is the bucket index
 and `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
-`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
-dependency fails to load — inherited from `LyraChart`, unaffected by the binning logic).
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load —
+inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -70,5 +74,8 @@ their semantics, defaults, and gotchas.
   property write from requesting an unbounded bucket array.
 - non-finite samples in `values` are dropped before bucketing rather than corrupting bucket-index
   math; constant data (every sample equal) lands wholly in the **first** bucket, not the last.
+- `values`/`bins`/`label` changes join the inherited connected-and-visible redraw path. There is no
+  second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
+  canvas and off-screen sample updates do not repaint it.
 
 ---

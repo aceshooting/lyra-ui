@@ -14,6 +14,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { createAnsiParser, type AnsiStyles } from '../../../internal/ansi.js';
 import { loadNotebookSanitizer } from './dompurify-loader.js';
 import { styles } from './notebook-viewer.styles.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 const MAX_CELLS = 2000;
 const MAX_OUTPUTS = 20_000;
@@ -240,6 +241,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
 
   /** A CSS length (e.g. `"30rem"`); once set, the notebook scrolls internally past this height
    *  instead of growing the page. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
@@ -525,14 +527,24 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       >`;
     }
     const data = output.data ?? {};
+    const mediaName =
+      joinText(data['text/plain']) ||
+      this.localize('notebookViewerCodeCell', undefined, {
+        index: getNumberFormat(this.effectiveLocale).format(cellIndex + 1),
+      });
     if (data['image/png']) {
-      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/png;base64,${joinText(data['image/png'])}" alt=${joinText(data['text/plain'])} /></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/png;base64,${joinText(data['image/png'])}" alt=${mediaName} /></div>`;
     }
     if (data['image/jpeg']) {
-      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${joinText(data['text/plain'])} /></div>`;
+      return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${mediaName} /></div>`;
     }
     if (data['image/svg+xml']) {
-      return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['image/svg+xml']), 'svg', key, joinText(data['text/plain']))}</div>`;
+      return html`<div
+        part="output"
+        data-output-type=${output.output_type}
+        role="img"
+        aria-label=${mediaName}
+      >${this.renderSanitized(joinText(data['image/svg+xml']), 'svg', key, joinText(data['text/plain']))}</div>`;
     }
     if (data['text/html']) {
       return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['text/html']), 'html', key, joinText(data['text/plain']))}</div>`;
@@ -652,7 +664,9 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     const label = this.getAttribute('aria-label') || this.name || this.localize('notebookViewerLabel');
     return html`<div
       part="base"
-      style=${this.maxHeight ? `--lr-notebook-viewer-max-height:${this.maxHeight}` : nothing}
+      style=${sanitizeCssLength(this.maxHeight)
+        ? styleMap({ '--lr-notebook-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+        : nothing}
       role="region"
       aria-label=${label}
       aria-busy=${this.loadState.kind === 'loading' ? 'true' : 'false'}

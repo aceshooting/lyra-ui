@@ -1,4 +1,5 @@
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { finiteInterpolate, finiteRatio } from '../../../internal/numbers.js';
 
 export interface HistogramBucket {
   label: string;
@@ -44,8 +45,7 @@ export function binValues(
   // dataset reads as "N items, one bucket populated" starting from the data's
   // own value, not its synthetic +1 upper edge.
   const constant = hi === lo;
-  const span = hi - lo || 1;
-  const width = span / bins;
+  const labelHi = constant ? lo + 1 : hi;
   const numberFormat = getNumberFormat(locale, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
@@ -57,8 +57,8 @@ export function binValues(
   ).formatRange?.bind(numberFormat);
 
   const buckets: HistogramBucket[] = Array.from({ length: bins }, (_, i) => {
-    const bLo = lo + i * width;
-    const bHi = lo + (i + 1) * width;
+    const bLo = finiteInterpolate(lo, labelHi, i / bins);
+    const bHi = finiteInterpolate(lo, labelHi, (i + 1) / bins);
     return {
       label: `${LEFT_TO_RIGHT_ISOLATE}${
         formatRange
@@ -70,7 +70,7 @@ export function binValues(
   });
 
   for (const v of finite) {
-    const index = constant ? 0 : v === hi ? bins - 1 : Math.floor((v - lo) / width);
+    const index = constant ? 0 : Math.floor(finiteRatio(v, lo, hi) * bins);
     buckets[Math.min(bins - 1, Math.max(0, index))]!.count++; // safe: index clamped to [0, bins-1], buckets has length bins
   }
   return buckets;

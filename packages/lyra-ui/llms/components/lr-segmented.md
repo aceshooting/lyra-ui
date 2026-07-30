@@ -58,6 +58,8 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
+The compact `2xs` track has a 24px minimum block size, and every `2xs`/`xs` segment retains at least
+a 24×24px activation target even when its label is very short.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default

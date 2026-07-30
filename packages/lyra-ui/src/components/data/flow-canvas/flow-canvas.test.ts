@@ -745,6 +745,41 @@ describe('node drag', () => {
     expect(wrapper.style.transform).to.equal('translate(0px, 0px)');
   });
 
+  it('rolls back node and edge previews without emitting a move when the drag is canceled', async () => {
+    for (const [index, endType] of (['pointercancel', 'lostpointercapture'] as const).entries()) {
+      const el = (await fixture(html`<lr-flow-canvas nodes-draggable></lr-flow-canvas>`)) as LyraFlowCanvas;
+      el.nodes = [
+        { id: 'a', position: { x: 0, y: 0 } },
+        { id: 'b', position: { x: 200, y: 0 } },
+      ];
+      el.edges = [{ id: 'a-b', source: 'a', target: 'b' }];
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector('[data-node-id="a"]') as HTMLElement;
+      const path = el.shadowRoot!.querySelector('[part="edge"]') as SVGPathElement;
+      wrapper.setPointerCapture = () => {};
+      const originalPath = path.getAttribute('d');
+      let moves = 0;
+      el.addEventListener('lr-node-move', () => moves++);
+      const pointerId = 30 + index;
+
+      wrapper.dispatchEvent(
+        new PointerEvent('pointerdown', { pointerId, clientX: 0, clientY: 0, bubbles: true }),
+      );
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 40, clientY: 0 }));
+      expect(wrapper.style.transform, endType).to.equal('translate(40px, 0px)');
+      expect(path.getAttribute('d'), endType).to.not.equal(originalPath);
+
+      window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+      await el.updateComplete;
+
+      expect(moves, endType).to.equal(0);
+      expect(wrapper.style.transform, endType).to.equal('translate(0px, 0px)');
+      expect(path.getAttribute('d'), endType).to.equal(originalPath);
+      window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 80, clientY: 0 }));
+      expect(wrapper.style.transform, endType).to.equal('translate(0px, 0px)');
+    }
+  });
+
   it('does not drag when nodes-draggable is unset', async () => {
     const el = (await fixture(html`<lr-flow-canvas></lr-flow-canvas>`)) as LyraFlowCanvas;
     el.nodes = [{ id: 'a', position: { x: 0, y: 0 } }];
@@ -1031,6 +1066,55 @@ describe('connect gesture', () => {
     el.addEventListener('lr-connect', () => (fired = true));
     controlA.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     expect(fired).to.be.false;
+  });
+
+  it('clears keyboard-connect source and target state when the node model refreshes', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    nodeControl(el, 'a').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-connect-target]').length).to.equal(1);
+
+    el.nodes = [
+      { id: 'b', position: { x: 200, y: 0 } },
+      { id: 'c', position: { x: 400, y: 0 } },
+    ];
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[data-connect-target]').length).to.equal(0);
+    let connects = 0;
+    el.addEventListener('lr-connect', () => connects++);
+    nodeControl(el, 'b').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    );
+    expect(connects).to.equal(0);
+  });
+
+  it('clears keyboard-connect state across disconnect and reconnect', async () => {
+    const el = (await fixture(html`<lr-flow-canvas connectable></lr-flow-canvas>`)) as LyraFlowCanvas;
+    el.nodes = [
+      { id: 'a', position: { x: 0, y: 0 } },
+      { id: 'b', position: { x: 200, y: 0 } },
+    ];
+    await el.updateComplete;
+    nodeControl(el, 'a').dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'c', bubbles: true, cancelable: true }),
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-connect-target]').length).to.equal(1);
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('[data-connect-target]').length).to.equal(0);
   });
 
   it('falls back to out/in handle ids when the source/target node has an empty handle array', async () => {

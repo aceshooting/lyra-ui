@@ -208,6 +208,16 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
         e.preventDefault();
         this.focusRow(rows[rows.length - 1]);
         break;
+      case 'Enter':
+      case ' ': {
+        const target = e.target as HTMLElement;
+        if (target.getAttribute('role') !== 'treeitem') return;
+        const row = rows.find((candidate) => candidate.run.id === target.dataset['runId']);
+        if (!row) return;
+        e.preventDefault();
+        this.emit('lr-run-select', { run: row.run });
+        break;
+      }
       default:
         return;
     }
@@ -257,10 +267,20 @@ export class LyraSubagentPanel extends LyraElement<LyraSubagentPanelEventMap> {
           </button>
           <span part="actions">
             ${ACTIVE.has(run.status)
-              ? html`<button part="cancel" type="button" aria-label=${this.localize('subagentPanelCancel')} @click=${() => this.emit('lr-cancel', { runId: run.id })}>×</button>`
+              ? html`<button
+                  part="cancel"
+                  type="button"
+                  aria-label=${this.localize('subagentPanelCancelRun', undefined, { name: run.label })}
+                  @click=${() => this.emit('lr-cancel', { runId: run.id })}
+                >×</button>`
               : nothing}
             ${run.status === 'error' || run.status === 'cancelled'
-              ? html`<button part="retry" type="button" @click=${() => this.emit('lr-retry', { runId: run.id })}>${this.localize('subagentPanelRetry')}</button>`
+              ? html`<button
+                  part="retry"
+                  type="button"
+                  aria-label=${this.localize('subagentPanelRetryRun', undefined, { name: run.label })}
+                  @click=${() => this.emit('lr-retry', { runId: run.id })}
+                >${this.localize('subagentPanelRetry')}</button>`
               : nothing}
           </span>
         </div>

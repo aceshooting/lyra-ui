@@ -58,6 +58,27 @@ it('applies per-instance localized strings', async () => {
   expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Localized prompt workshop');
 });
 
+it('names duplicate-role message controls by purpose and display position', async () => {
+  const duplicateRoles: PromptStudioMessage[] = [
+    { id: 'first', role: 'user', content: 'First' },
+    { id: 'second', role: 'user', content: 'Second' },
+  ];
+  const el = (await fixture(html`
+    <lr-prompt-studio .messages=${duplicateRoles}></lr-prompt-studio>
+  `)) as LyraPromptStudio;
+  await el.updateComplete;
+  const roles = [...el.shadowRoot!.querySelectorAll<HTMLSelectElement>('[part="message-role"]')];
+  const contents = [...el.shadowRoot!.querySelectorAll<HTMLTextAreaElement>('[part="message-content"]')];
+  expect(roles.map((control) => control.getAttribute('aria-label'))).to.deep.equal([
+    'Message 1 role (User)',
+    'Message 2 role (User)',
+  ]);
+  expect(contents.map((control) => control.getAttribute('aria-label'))).to.deep.equal([
+    'Message 1 content (User)',
+    'Message 2 content (User)',
+  ]);
+});
+
 it('keeps both variable controls named when a caller supplies an empty variable name', async () => {
   const el = (await fixture(html`<lr-prompt-studio
     .variables=${[{ name: '', value: 'developers' }]}

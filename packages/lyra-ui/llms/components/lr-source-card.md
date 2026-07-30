@@ -37,7 +37,8 @@ handy for building a `label-plural` string reactively, e.g. `` list.labelPlural 
 collapsing the list.
 
 **Slots:** default — `<lr-source-card>` elements (or any content, though the card pairing is the
-intended usage).
+intended usage). While connected, each assigned element receives `role="listitem"`; its author
+role is retained across live changes and restored when it leaves the list or the list disconnects.
 
 **CSS parts:** `base` (outer container), `header` (the clickable `<button>` toggling `expanded`),
 `toggle` (the chevron indicator inside the header), `list` (wrapper around the default slot, `hidden`

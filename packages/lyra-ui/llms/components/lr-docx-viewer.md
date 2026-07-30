@@ -6,7 +6,7 @@
 - **Class** `LyraDocxViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/docx-viewer/docx-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
 - **Optional peers** `dompurify`, `mammoth` — see `llms/peers.md`
-- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -22,10 +22,13 @@ hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth con
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
 stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Adopts
 `DocumentAnchorTarget`: `fragment` anchors resolve against that outline, `text-quote` anchors via
-the shared quote-scoping helpers; `highlights` re-resolve by quote after every render.
+the shared quote-scoping helpers; `highlights` re-resolve by quote after every render. Native
+keyboard actions are exposed only for highlights whose quote resolves in the currently loaded
+document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable document body. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
+the scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
+ignored. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,
@@ -38,14 +41,17 @@ painted marks.
 **Events:** `lr-render-error` with `detail.error` when fetching, conversion, sanitization, or a
 non-fatal Mammoth conversion message occurs. `lr-search-change` (`detail: { query, matchCount,
 activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
-`lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked.
+`lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
+resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
 content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call.
 
 **CSS parts:** `base`, `body`, `content`, `spinner`, `error`, `highlight` (a painted `text-quote`
-highlight), `search-match` (a painted in-document search match), and `search-match-active` (the
-currently active search match, also carries `search-match`).
+highlight), `highlight-actions` (keyboard-accessible actions for resolved highlights),
+`highlight-action` (one native highlight activation button), `search-match` (a painted in-document
+search match), and `search-match-active` (the currently active search match, also carries
+`search-match`).
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.

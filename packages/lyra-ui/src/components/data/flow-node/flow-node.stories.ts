@@ -26,6 +26,39 @@ export const RunStates: Story = {
   `,
 };
 
+export const RetintedRunStates: Story = {
+  name: 'Retinted run states',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Status-dot colors can be retinted independently without changing the shared brand, success, warning, or danger tokens.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        display:flex;
+        flex-direction:column;
+        gap:1rem;
+        align-items:flex-start;
+        --lr-flow-node-status-pending-color: var(--lr-color-text);
+        --lr-flow-node-status-running-color: var(--lr-color-danger);
+        --lr-flow-node-status-success-color: var(--lr-color-brand);
+        --lr-flow-node-status-error-color: var(--lr-color-warning);
+        --lr-flow-node-status-denied-color: var(--lr-color-success);
+      "
+    >
+      <lr-flow-node heading="Queued" status="pending"></lr-flow-node>
+      <lr-flow-node heading="Fetching" status="running"></lr-flow-node>
+      <lr-flow-node heading="Complete" status="success"></lr-flow-node>
+      <lr-flow-node heading="Failed" status="error"></lr-flow-node>
+      <lr-flow-node heading="Denied" status="denied"></lr-flow-node>
+    </div>
+  `,
+};
+
 export const WithSlots: Story = {
   render: () => html`
     <lr-flow-node heading="Review" status="running">

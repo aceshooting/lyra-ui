@@ -34,7 +34,9 @@ export interface LyraRagEvalDashboardEventMap {
 /**
  * `<lr-rag-eval-dashboard>` — a controlled RAG quality overview with current metric cards,
  * per-metric trends, evaluation slices, and run history. It displays host-computed metrics and
- * never executes datasets, retrieval, judges, or model calls.
+ * never executes datasets, retrieval, judges, or model calls. A controlled `slice` absent from
+ * the current runs is preserved and renders an explicit localized unavailable-filter state;
+ * the component never silently switches it to All.
  *
  * @customElement lr-rag-eval-dashboard
  * @event lr-metric-change - A metric was activated. `detail: { metricId }`.
@@ -52,7 +54,7 @@ export interface LyraRagEvalDashboardEventMap {
  * @csspart runs - Evaluation run history.
  * @csspart runs-heading - Run-history heading.
  * @csspart run - One evaluation run.
- * @csspart empty - The empty state.
+ * @csspart empty - The no-runs or unavailable-controlled-slice state.
  */
 export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -60,6 +62,8 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
   @property({ attribute: false }) metrics: RagEvaluationMetric[] = [];
   @property({ attribute: false }) runs: RagEvaluationRun[] = [];
   @property({ attribute: 'metric-id' }) metricId = '';
+  /** Controlled evaluation slice. An unavailable value is preserved and renders an explicit
+   * localized state until the host changes it or supplies a matching run. */
   @property() slice = '';
   @property() label = '';
   @property({ type: Boolean, attribute: 'show-chart', reflect: true, converter: trueDefaultBooleanConverter })
@@ -135,6 +139,20 @@ export class LyraRagEvalDashboard extends LyraElement<LyraRagEvalDashboardEventM
     }
     const active = this.activeMetric;
     const filtered = this.filteredRuns;
+    if (this.slice && !this.slices.includes(this.slice)) {
+      return html`
+        <section part="base" aria-label=${label}>
+          <h2 part="heading">${label}</h2>
+          ${this.renderSlices()}
+          <lr-empty
+            part="empty"
+            heading=${this.localize('ragEvalDashboardSliceUnavailable', undefined, {
+              slice: this.slice,
+            })}
+          ></lr-empty>
+        </section>
+      `;
+    }
     const values = filtered.map((run) => {
       const value = active ? run.metrics[active.id] : undefined;
       return Number.isFinite(value) ? (value as number) : null;

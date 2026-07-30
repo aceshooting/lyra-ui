@@ -84,7 +84,7 @@ export const CustomSlotContent: Story = {
     docs: {
       description: {
         story:
-          'Slotting content bypasses `keys` entirely (and the component stops asserting its own `aria-label` — the slotted content carries its own accessible name).',
+          'Slotting content bypasses `keys` entirely. Without a host name the slotted content keeps its own semantics; with the `aria-label` shown here, the wrapper exposes `role="img"` and forwards that name.',
       },
     },
   },

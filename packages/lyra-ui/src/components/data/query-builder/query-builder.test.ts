@@ -202,9 +202,32 @@ describe('lr-query-builder', () => {
     await el.updateComplete;
     const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
     const promise = oneEvent(el, 'lr-input');
-    setAndDispatch(input, 'value', 'acme', 'input');
+    setAndDispatch(input, 'value', 'acme', 'lr-input');
     const ev = await promise;
     expect(ev.detail.value.conditions[0].value).to.equal('acme');
+  });
+
+  it('emits exactly one aggregate lr-input for one real nested text keystroke', async () => {
+    const value: QueryBuilderValue = {
+      combinator: 'and',
+      conditions: [{ id: 'c1', field: 'name', operator: 'contains', value: '' }],
+    };
+    const parent = await fixture(
+      html`<div><lr-query-builder .fields=${FIELDS} .value=${value}></lr-query-builder></div>`,
+    );
+    const el = parent.querySelector('lr-query-builder') as LyraQueryBuilder;
+    await el.updateComplete;
+    const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
+    const native = input.shadowRoot!.querySelector('input') as HTMLInputElement;
+    const details: unknown[] = [];
+    parent.addEventListener('lr-input', (event) => details.push((event as CustomEvent).detail));
+
+    native.value = 'beta';
+    native.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    expect(details.length).to.equal(1);
+    expect(details[0]).to.deep.equal({ value: el.value });
   });
 
   it('editing a number value control parses to a number, and an emptied field becomes undefined', async () => {
@@ -213,11 +236,11 @@ describe('lr-query-builder', () => {
     await el.updateComplete;
     const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
     let promise = oneEvent(el, 'lr-input');
-    setAndDispatch(input, 'value', '42', 'input');
+    setAndDispatch(input, 'value', '42', 'lr-input');
     let ev = await promise;
     expect(ev.detail.value.conditions[0].value).to.equal(42);
     promise = oneEvent(el, 'lr-input');
-    setAndDispatch(input, 'value', '', 'input');
+    setAndDispatch(input, 'value', '', 'lr-input');
     ev = await promise;
     expect(ev.detail.value.conditions[0].value).to.be.undefined;
   });
@@ -337,7 +360,7 @@ describe('lr-query-builder', () => {
     parent.addEventListener('lr-input', () => wrapperInputs++);
 
     const input = conditionRow(el, 0).querySelector('[part="value"]') as LyraInput;
-    setAndDispatch(input, 'value', 'beta', 'input');
+    setAndDispatch(input, 'value', 'beta', 'lr-input');
     await el.updateComplete;
     const field = conditionRow(el, 0).querySelector('[part="field-select"]') as LyraSelect;
     setAndDispatch(field, 'value', 'age', 'change');

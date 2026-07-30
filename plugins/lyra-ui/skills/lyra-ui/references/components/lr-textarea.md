@@ -28,7 +28,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | --- | --- | --- | --- | --- |
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
-| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). |
+| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |

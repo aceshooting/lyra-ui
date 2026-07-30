@@ -1,4 +1,4 @@
-import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { closeIcon } from '../../../internal/icons.js';
@@ -119,7 +119,20 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
    *  This component's two real use cases (a chart-series visibility
    *  toggle, a category filter chip) never need both at once. `false` (the default, with
    *  `toggleable` also left at its default) reproduces today's exact passive-label-pill output. */
-  @property({ type: Boolean, reflect: true }) selected = false;
+  private _selected = false;
+  @property({ type: Boolean, reflect: true })
+  get selected(): boolean {
+    return this._selected;
+  }
+  set selected(next: boolean) {
+    const normalized = Boolean(next);
+    const old = this._selected;
+    // Latch at assignment time rather than update time: Lit batches same-task writes, so looking
+    // only at the final value would lose an explicit `true` followed by `false`.
+    if (normalized) this.toggleable = true;
+    this._selected = normalized;
+    this.requestUpdate('selected', old);
+  }
 
   /** Explicit opt-in into `selected`'s toggle/pressed interactive mode, independent of the
    *  *current* value of `selected`. Setting `selected` to `true` at any point opts in
@@ -153,16 +166,9 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
     super.disconnectedCallback();
   }
 
-  protected override willUpdate(changed: PropertyValues): void {
+  protected override willUpdate(): void {
     if (!this.hasUpdated) {
       this.hasIconSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'icon');
-    }
-    // Sticky opt-in: once `selected` has been true at any point, `toggleable` latches on and
-    // never resets, so toggling `selected` back to false later can't un-opt the chip out of
-    // toggle mode. `toggleable` can also be set directly up front for a chip that starts
-    // unselected (selected's own default) but must still be interactive from the outset.
-    if (changed.has('selected') && this.selected) {
-      this.toggleable = true;
     }
   }
 
@@ -192,6 +198,8 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   private get accessibleRemoveLabel(): string {
+    const hostLabel = this.getAttribute('aria-label');
+    if (hostLabel) return hostLabel;
     const text = this.labelText;
     return text ? this.localize('removeWithContext', undefined, { label: text }) : this.localize('remove');
   }

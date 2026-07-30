@@ -64,3 +64,5 @@ directional `fade-*` effects).
 - The host is `display: block`. For an inline text-fragment swap inside a sentence, override
   `lr-random-content { display: inline; }` from outside; `display: contents` is deliberately not
   used (a11y-tree inconsistencies across engines).
+- Slot/focus microtasks and autoplay never queue new selection work while detached; reconnecting
+  starts again from current state rather than replaying stale work.

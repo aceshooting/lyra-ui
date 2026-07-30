@@ -112,6 +112,70 @@ describe("grid placement", () => {
     expect(cell.getAttribute("style")).to.not.include("NaN");
     expect(cell.getAttribute("style")).to.not.include("Infinity");
   });
+
+  it("normalizes non-finite geometry and constraints before placement events and layout snapshots", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [
+      {
+        id: "bad",
+        x: Number.NaN,
+        y: Number.POSITIVE_INFINITY,
+        w: Number.NaN,
+        h: Number.NEGATIVE_INFINITY,
+        minW: Number.NaN,
+        maxW: Number.POSITIVE_INFINITY,
+        minH: Number.NaN,
+        maxH: Number.POSITIVE_INFINITY,
+      },
+    ];
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+    let move:
+      | {
+          position: { x: number; y: number };
+          previous: { x: number; y: number };
+        }
+      | undefined;
+    let snapshot: DashboardCell[] | undefined;
+    el.addEventListener(
+      "lr-cell-move",
+      (event) => (move = (event as CustomEvent).detail)
+    );
+    el.addEventListener(
+      "lr-layout-change",
+      (event) => (snapshot = (event as CustomEvent).detail.layout)
+    );
+
+    cell.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    expect(move).to.deep.equal({
+      id: "bad",
+      position: { x: 1, y: 0 },
+      previous: { x: 0, y: 0 },
+    });
+    const proposed = snapshot![0]!;
+    expect(
+      [
+        proposed.x,
+        proposed.y,
+        proposed.w,
+        proposed.h,
+        proposed.minW,
+        proposed.maxW,
+        proposed.minH,
+        proposed.maxH,
+      ].every((value) => Number.isFinite(value))
+    ).to.be.true;
+  });
 });
 
 describe("default cell composition", () => {
@@ -309,6 +373,24 @@ describe("roving keyboard navigation", () => {
         .shadowRoot!.querySelector('[tabindex="0"]')!
         .getAttribute("data-cell-id")
     ).to.equal("b");
+  });
+
+  it("rehomes focus when the focused active cell is removed", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = twoCells();
+    await el.updateComplete;
+    const second = el.shadowRoot!.querySelector(
+      '[data-cell-id="b"]'
+    ) as HTMLElement;
+    second.focus();
+    el.layout = [twoCells()[0]!];
+    await el.updateComplete;
+
+    const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(focused?.dataset["cellId"]).to.equal("a");
+    expect(focused?.tabIndex).to.equal(0);
   });
 });
 
@@ -669,6 +751,57 @@ describe("pointer drag", () => {
     });
   });
 
+  it("rolls back the live move preview without terminal events when the gesture is canceled", async () => {
+    for (const [index, endType] of (
+      ["pointercancel", "lostpointercapture"] as const
+    ).entries()) {
+      const el = (await fixture(
+        html`<lr-dashboard-grid
+          cells-draggable
+          row-height="50"
+          gap="8"
+        ></lr-dashboard-grid>`
+      )) as LyraDashboardGrid;
+      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector(
+        '[part="cell"]'
+      ) as HTMLElement;
+      wrapper.setPointerCapture = () => {};
+      wrapper.releasePointerCapture = () => {};
+      const originalGridRow = wrapper.style.gridRow;
+      let moves = 0;
+      let layouts = 0;
+      el.addEventListener("lr-cell-move", () => moves++);
+      el.addEventListener("lr-layout-change", () => layouts++);
+      const pointerId = 80 + index;
+
+      wrapper.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerId,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId,
+          clientX: 0,
+          clientY: 116,
+        })
+      );
+      expect(wrapper.style.gridRow, endType).to.not.equal(originalGridRow);
+
+      window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+      await el.updateComplete;
+
+      expect(moves, endType).to.equal(0);
+      expect(layouts, endType).to.equal(0);
+      expect(wrapper.style.gridRow, endType).to.equal(originalGridRow);
+    }
+  });
+
   it("clamps an extreme rightward drag to the last valid column", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-draggable columns="4"></lr-dashboard-grid>`
@@ -804,6 +937,76 @@ describe("pointer drag", () => {
     expect(fired).to.be.false;
   });
 
+  it("aborts an active drag when grid or per-cell capability is revoked", async () => {
+    const cases: Array<{
+      name: string;
+      revoke: (el: LyraDashboardGrid) => void;
+    }> = [
+      {
+        name: "cells-draggable",
+        revoke: (el) => {
+          el.cellsDraggable = false;
+        },
+      },
+      {
+        name: "grid lock",
+        revoke: (el) => {
+          el.locked = true;
+        },
+      },
+      {
+        name: "cell lock",
+        revoke: (el) => {
+          el.layout = [{ ...el.layout[0]!, locked: true }];
+        },
+      },
+    ];
+
+    for (const [index, testCase] of cases.entries()) {
+      const el = (await fixture(
+        html`<lr-dashboard-grid cells-draggable></lr-dashboard-grid>`
+      )) as LyraDashboardGrid;
+      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector(
+        '[part="cell"]'
+      ) as HTMLElement;
+      wrapper.setPointerCapture = () => {};
+      let releasedPointerId: number | undefined;
+      wrapper.releasePointerCapture = (pointerId) => {
+        releasedPointerId = pointerId;
+      };
+      let moves = 0;
+      el.addEventListener("lr-cell-move", () => (moves += 1));
+      const pointerId = 60 + index;
+      wrapper.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerId,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+
+      testCase.revoke(el);
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId,
+          clientX: 100,
+          clientY: 100,
+        })
+      );
+      window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
+
+      expect(moves, testCase.name).to.equal(0);
+      expect(
+        wrapper.hasAttribute("data-dragging"),
+        testCase.name
+      ).to.be.false;
+      expect(releasedPointerId, testCase.name).to.equal(pointerId);
+    }
+  });
+
   it("does not render a resize handle for a locked cell even when cells-resizable is set", async () => {
     const el = (await fixture(
       html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
@@ -865,6 +1068,133 @@ describe("pointer resize", () => {
       previous: { w: 1, h: 1 },
     });
   });
+
+  it("rolls back the live resize preview without terminal events when the gesture is canceled", async () => {
+    for (const [index, endType] of (
+      ["pointercancel", "lostpointercapture"] as const
+    ).entries()) {
+      const el = (await fixture(
+        html`<lr-dashboard-grid
+          cells-resizable
+          row-height="50"
+          gap="8"
+        ></lr-dashboard-grid>`
+      )) as LyraDashboardGrid;
+      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector(
+        '[part="cell"]'
+      ) as HTMLElement;
+      const handle = el.shadowRoot!.querySelector(
+        '[part="resize-handle"]'
+      ) as HTMLElement;
+      handle.setPointerCapture = () => {};
+      handle.releasePointerCapture = () => {};
+      const originalGridRow = wrapper.style.gridRow;
+      let resizes = 0;
+      let layouts = 0;
+      el.addEventListener("lr-cell-resize", () => resizes++);
+      el.addEventListener("lr-layout-change", () => layouts++);
+      const pointerId = 90 + index;
+
+      handle.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerId,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId,
+          clientX: 0,
+          clientY: 116,
+        })
+      );
+      expect(wrapper.style.gridRow, endType).to.not.equal(originalGridRow);
+
+      window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+      await el.updateComplete;
+
+      expect(resizes, endType).to.equal(0);
+      expect(layouts, endType).to.equal(0);
+      expect(wrapper.style.gridRow, endType).to.equal(originalGridRow);
+    }
+  });
+
+  it("aborts an active resize when grid or per-cell capability is revoked", async () => {
+    const cases: Array<{
+      name: string;
+      revoke: (el: LyraDashboardGrid) => void;
+    }> = [
+      {
+        name: "cells-resizable",
+        revoke: (el) => {
+          el.cellsResizable = false;
+        },
+      },
+      {
+        name: "grid lock",
+        revoke: (el) => {
+          el.locked = true;
+        },
+      },
+      {
+        name: "cell lock",
+        revoke: (el) => {
+          el.layout = [{ ...el.layout[0]!, locked: true }];
+        },
+      },
+    ];
+
+    for (const [index, testCase] of cases.entries()) {
+      const el = (await fixture(
+        html`<lr-dashboard-grid cells-resizable></lr-dashboard-grid>`
+      )) as LyraDashboardGrid;
+      el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
+      await el.updateComplete;
+      const wrapper = el.shadowRoot!.querySelector(
+        '[part="cell"]'
+      ) as HTMLElement;
+      const handle = el.shadowRoot!.querySelector(
+        '[part="resize-handle"]'
+      ) as HTMLElement;
+      handle.setPointerCapture = () => {};
+      let releasedPointerId: number | undefined;
+      handle.releasePointerCapture = (pointerId) => {
+        releasedPointerId = pointerId;
+      };
+      let resizes = 0;
+      el.addEventListener("lr-cell-resize", () => (resizes += 1));
+      const pointerId = 70 + index;
+      handle.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          pointerId,
+          clientX: 0,
+          clientY: 0,
+          bubbles: true,
+        })
+      );
+
+      testCase.revoke(el);
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          pointerId,
+          clientX: 100,
+          clientY: 100,
+        })
+      );
+      window.dispatchEvent(new PointerEvent("pointerup", { pointerId }));
+
+      expect(resizes, testCase.name).to.equal(0);
+      expect(
+        wrapper.hasAttribute("data-resizing"),
+        testCase.name
+      ).to.be.false;
+      expect(releasedPointerId, testCase.name).to.equal(pointerId);
+    }
+  });
 });
 
 describe("narrow allocation", () => {
@@ -925,14 +1255,9 @@ describe("accessibility", () => {
     )) as LyraDashboardGrid;
     el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1 }];
     await el.updateComplete;
-    // 'dashboardGridLabel' has no `DEFAULT_STRINGS` entry yet (src/internal/localization.ts is a
-    // shared file outside this component's own directory -- see the component doc/PR notes for
-    // why), so `resolveLyraString()`'s final fallback is the raw key itself until that shared
-    // file gains a real English string for it. This asserts today's actual (pending) behavior,
-    // not the eventual one -- update this alongside adding the DEFAULT_STRINGS entry.
     expect(
       el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-label")
-    ).to.equal("dashboardGridLabel");
+    ).to.equal("Dashboard grid");
     el.accessibleLabel = "Ops overview";
     await el.updateComplete;
     expect(
@@ -988,6 +1313,71 @@ describe("localized strings", () => {
       .announcer;
     expect(announcer.pendingText).to.equal("Alpha bloqué");
   });
+
+  it("provides English defaults for move, resize, and collision announcements", async () => {
+    const el = (await fixture(
+      html`<lr-dashboard-grid
+        cells-draggable
+        cells-resizable
+      ></lr-dashboard-grid>`
+    )) as LyraDashboardGrid;
+    el.layout = [
+      { id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
+      { id: "b", x: 2, y: 0, w: 1, h: 1, label: "Beta" },
+    ];
+    await el.updateComplete;
+    const cellA = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+    const announcer = (el as unknown as {
+      announcer: { pendingText?: string };
+    }).announcer;
+
+    cellA.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(announcer.pendingText).to.equal(
+      "Alpha moved to column 2, row 1."
+    );
+
+    cellA.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowDown",
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(announcer.pendingText).to.equal(
+      "Alpha resized to width 1, height 2."
+    );
+
+    el.layout = [
+      { id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" },
+      { id: "b", x: 1, y: 0, w: 1, h: 1, label: "Beta" },
+    ];
+    await el.updateComplete;
+    const updatedCellA = el.shadowRoot!.querySelector(
+      '[data-cell-id="a"]'
+    ) as HTMLElement;
+    updatedCellA.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ArrowRight",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(announcer.pendingText).to.equal(
+      "Alpha cannot be placed there because it overlaps another cell."
+    );
+  });
 });
 
 it("gives resize-handle a hover state", () => {
@@ -1034,6 +1424,30 @@ it('cascades --lr-dashboard-grid-cell-hover-outline-color onto [part="cell"]', a
   ).to.equal("rgb(21, 43, 65)");
 });
 
+it("themes the live drag elevation through a component-scoped interaction-shadow hook", async () => {
+  const el = (await fixture(
+    html`<lr-dashboard-grid
+      cells-draggable
+      style="--lr-dashboard-grid-interaction-shadow: rgb(21, 43, 65) 0 0 0 7px"
+      .layout=${twoCells()}
+    ></lr-dashboard-grid>`
+  )) as LyraDashboardGrid;
+  const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  cell.setPointerCapture = () => {};
+  cell.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      pointerId: 91,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+    })
+  );
+
+  expect(getComputedStyle(cell).boxShadow).to.include("rgb(21, 43, 65)");
+
+  window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 91 }));
+});
+
 it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraElement would still run", async () => {
   // No shared mixin actually overrides willUpdate() today, so the only way to prove the chain is
   // live (rather than grepping source text for the call) is to patch the base-class hook itself
@@ -1071,4 +1485,29 @@ it("chains willUpdate() to super.willUpdate() so a mixin layered under LyraEleme
         .willUpdate;
     }
   }
+});
+
+it("formats move and resize announcement coordinates with the effective locale", async () => {
+  const el = (await fixture(
+    html`<lr-dashboard-grid lang="ar-EG" cells-draggable cells-resizable></lr-dashboard-grid>`
+  )) as LyraDashboardGrid;
+  el.layout = [{ id: "a", x: 0, y: 0, w: 1, h: 1, label: "Alpha" }];
+  await el.updateComplete;
+  const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  const announcer = (el as unknown as {
+    announcer: { pendingText?: string };
+  }).announcer;
+  const number = new Intl.NumberFormat("ar-EG");
+
+  cell.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "ArrowRight", ctrlKey: true, bubbles: true, cancelable: true,
+  }));
+  expect(announcer.pendingText).to.include(number.format(2));
+  expect(announcer.pendingText).to.include(number.format(1));
+
+  cell.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "ArrowDown", ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true,
+  }));
+  expect(announcer.pendingText).to.include(number.format(2));
+  expect(announcer.pendingText).to.include(number.format(1));
 });

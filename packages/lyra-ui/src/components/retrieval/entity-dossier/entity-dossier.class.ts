@@ -2,10 +2,20 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
-import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.class.js';
-import type { LyraChunk } from '../chunk-inspector/chunk-inspector.class.js';
-import type { LyraProvenance } from '../provenance-panel/provenance-panel.class.js';
+import type {
+  LyraNeighborListEventMap,
+  LyraNeighborRow,
+} from '../neighbor-list/neighbor-list.class.js';
+import type {
+  LyraChunk,
+  LyraChunkInspectorEventMap,
+} from '../chunk-inspector/chunk-inspector.class.js';
+import type {
+  LyraProvenance,
+  LyraProvenancePanelEventMap,
+} from '../provenance-panel/provenance-panel.class.js';
 import type { StatVariant, StatRow } from '../../data/stat/stat.class.js';
+import type { LyraTabsEventMap } from '../../layout/tabs/tabs.class.js';
 import '../entity-card/entity-card.class.js';
 import '../neighbor-list/neighbor-list.class.js';
 import '../chunk-inspector/chunk-inspector.class.js';
@@ -44,6 +54,14 @@ export interface LyraEntityDossierConfidence {
   rows?: StatRow[];
 }
 
+export interface LyraEntityDossierEventMap
+  extends LyraNeighborListEventMap,
+    LyraChunkInspectorEventMap,
+    LyraProvenancePanelEventMap,
+    Omit<LyraTabsEventMap, 'lr-tabs-change'> {
+  'lr-tabs-change': CustomEvent<{ tabId: LyraEntityDossierTab }>;
+}
+
 /**
  * `<lr-entity-dossier>` — a full entity detail surface: a persistent header (`lr-entity-card` plus
  * an optional confidence `lr-stat`) above a `lr-tabs` strip for Relationships (`lr-neighbor-list`),
@@ -52,7 +70,7 @@ export interface LyraEntityDossierConfidence {
  * five composed components already render themselves; every one of their own events (`
  * lr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tabs-change`)
  * bubbles through unmodified (`composed: true` crosses this component's own shadow boundary with no
- * re-dispatch needed) rather than being re-declared as this component's own event.
+ * re-dispatch needed).
  *
  * `chunks`/`thresholds` (the "supporting chunks" tab) and `provenance` (the "Provenance" tab) are
  * deliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks
@@ -66,12 +84,25 @@ export interface LyraEntityDossierConfidence {
  * new dossier-specific keys, so a translated locale only has to cover each string once and the tab
  * strip and the panel underneath it always agree.
  *
- * This component declares no events of its own -- `lr-tabs-change` (`detail: { tabId:
- * LyraEntityDossierTab }`) and every composed child's own event bubble through unmodified, the
- * same "pure projection + event conduit" convention `lr-provenance-panel` and
- * `lr-spreadsheet-viewer`'s internal `lr-tabs` already establish.
+ * This component emits no events of its own. Its EventMap and `@event` documentation name the
+ * composed events that bubble through so host listeners remain typed and discoverable;
+ * `lr-tabs-change` carries `detail: { tabId: LyraEntityDossierTab }`. This is the same "pure
+ * projection + event conduit" convention `lr-provenance-panel` and `lr-spreadsheet-viewer`'s
+ * internal `lr-tabs` already establish.
  *
  * @customElement lr-entity-dossier
+ * @event lr-entity-activate - Surfaced unchanged from the embedded entity card or neighbor list.
+ *   `detail: { id }`.
+ * @event lr-node-expand - Surfaced unchanged from the embedded neighbor list.
+ *   `detail: { id }`.
+ * @event lr-chunk-open - Surfaced unchanged from the embedded chunk inspector.
+ *   `detail: { id, sourceId, anchor? }`.
+ * @event lr-expand - Surfaced unchanged from the embedded chunk inspector.
+ *   `detail: { id, expanded }`.
+ * @event lr-toggle - Surfaced unchanged from the embedded provenance panel.
+ *   `detail: { section, expanded }`.
+ * @event lr-tabs-change - Surfaced unchanged from the embedded tabs.
+ *   `detail: { tabId }`.
  * @csspart base - The root wrapper, or the empty state's wrapper when `entity` is `null`.
  * @csspart header - The wrapper around the entity summary and the confidence stat.
  * @csspart entity-card - The nested `lr-entity-card`.
@@ -82,7 +113,7 @@ export interface LyraEntityDossierConfidence {
  * @csspart provenance-panel - The nested `lr-provenance-panel`, inside the Provenance tab.
  * @csspart empty - The empty state shown when `entity` is `null`.
  */
-export class LyraEntityDossier extends LyraElement {
+export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** `null` renders the shared `lr-empty` `noData` state in place of the whole dossier. */

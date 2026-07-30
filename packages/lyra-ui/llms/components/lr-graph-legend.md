@@ -6,7 +6,7 @@
 - **Class** `LyraGraphLegend`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/graph-legend/graph-legend.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,7 +21,8 @@ same event-decoupled contract every sibling in this family follows.
 **Properties:**
 - `types: LyraGraphLegendType[] = []` (attribute: false) — `{ id: string; label: string; color?:
   string; shape?: 'circle' | 'square' | 'diamond' }`, the exact `lr-graph.nodeTypes` entry shape
-  (declared locally, not imported, so this stays a zero-dependency component)
+  (declared locally, not imported, so this stays a zero-dependency component). A color is used only
+  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
   label
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
@@ -41,7 +42,8 @@ after each toggle).
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
 independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
-every other quiet-text surface. Also reads `--lr-graph-cat-1` through `-8`
+every other quiet-text surface; `--lr-graph-legend-hidden-swatch-opacity` (default `0.5`) controls
+only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
 
 **Optional peer deps:** none.

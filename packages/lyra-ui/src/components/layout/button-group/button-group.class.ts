@@ -22,7 +22,7 @@ export class LyraButtonGroup extends LyraElement {
   @property() label = '';
 
   override render(): TemplateResult {
-    const accessibleLabel = this.label || this.getAttribute('aria-label') || nothing;
+    const accessibleLabel = this.getAttribute('aria-label') || this.label || nothing;
     return html`<div part="base" role="group" aria-label=${accessibleLabel}><slot></slot></div>`;
   }
 }

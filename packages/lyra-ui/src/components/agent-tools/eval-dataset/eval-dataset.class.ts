@@ -32,6 +32,8 @@ export interface LyraEvalDatasetEventMap {
   'lr-example-remove-request': CustomEvent<{ id: string }>;
   'lr-import-request': CustomEvent<{ files: File[] }>;
   'lr-export-request': CustomEvent<{ format: string }>;
+  focus: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
 }
 
 /**

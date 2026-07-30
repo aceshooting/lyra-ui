@@ -3,6 +3,18 @@ import './code-editor.js';
 import type { LyraCodeEditor } from './code-editor.js';
 import { styles } from './code-editor.styles.js';
 
+it('falls back from an invalid runtime resize value without injecting declarations', async () => {
+  const el = await fixture<LyraCodeEditor>(html`<lr-code-editor></lr-code-editor>`);
+  el.resize = 'vertical;position:fixed' as unknown as LyraCodeEditor['resize'];
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  expect(textarea.style.resize).to.equal('both');
+  expect(textarea.style.position).to.equal('');
+  el.resize = 'horizontal';
+  await el.updateComplete;
+  expect(textarea.style.resize).to.equal('horizontal');
+});
+
 it('keeps scrolling on the editor frame instead of creating a nested textarea scrollbar', () => {
   expect(styles.cssText).to.contain('grid-template-columns: auto max-content');
   expect(styles.cssText).to.contain('inline-size: max-content');

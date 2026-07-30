@@ -45,12 +45,17 @@ primitives, with retry counts and sensitive-field redaction.
 unknown }`, extending the shared detail from `@aceshooting/lyra-ui/ai`). `args` is present only when
 `approved` is `true`, and may differ from what the entry originally proposed — the dialog's inline
 edit step can hand back different arguments. A listener that only needs `{ invocationId, approved }`
-can ignore it; one actually executing the tool needs it.
+can ignore it; one actually executing the tool needs it. This is a cancelable veto point:
+`preventDefault()` preserves the pending approval dialog and its current inline argument edits
+instead of closing/resetting them, so asynchronous host validation can finish before resolving the
+decision.
 
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
 `entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`.
+Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
+repeated bare "Details" label.
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the

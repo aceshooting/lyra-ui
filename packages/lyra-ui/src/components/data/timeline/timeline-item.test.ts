@@ -152,10 +152,10 @@ it('variant reflects the attribute, defaults to "neutral", and drives --lr-timel
   ).to.equal('#cf222e');
 });
 
-it('active reflects, defaults to false, and drives aria-current="true" / entirely absent (not "false")', async () => {
+it('active reflects and drives an explicit aria-current true/false state', async () => {
   const el = (await fixture(html`<lr-timeline-item>Event</lr-timeline-item>`)) as LyraTimelineItem;
   expect(el.active).to.be.false;
-  expect(el.hasAttribute('aria-current')).to.be.false;
+  expect(el.getAttribute('aria-current')).to.equal('false');
 
   const activeEl = (await fixture(html`<lr-timeline-item active>Event</lr-timeline-item>`)) as LyraTimelineItem;
   expect(activeEl.hasAttribute('active')).to.be.true;
@@ -163,7 +163,7 @@ it('active reflects, defaults to false, and drives aria-current="true" / entirel
 
   activeEl.active = false;
   await activeEl.updateComplete;
-  expect(activeEl.hasAttribute('aria-current')).to.be.false;
+  expect(activeEl.getAttribute('aria-current')).to.equal('false');
 });
 
 it('pulses the marker while active, and disables the animation under prefers-reduced-motion (assert via stylesheet text)', async () => {

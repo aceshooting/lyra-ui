@@ -171,6 +171,19 @@ it('localizes the empty-state message via a .strings override, not a hardcoded E
   expect(el.shadowRoot!.querySelector('[part="empty"]')!.textContent).to.include('Aucun extrait récupéré');
 });
 
+it('lets a host aria-label override the label prop on the populated group owner', async () => {
+  const el = (await fixture(
+    html`<lr-chunk-inspector
+      label="Chunk fallback"
+      aria-label="Author chunks"
+      .chunks=${chunks}
+    ></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  expect(base.getAttribute('role')).to.equal('group');
+  expect(base.getAttribute('aria-label')).to.equal('Author chunks');
+});
+
 it('is accessible with mixed-tier chunks', async () => {
   const el = (await fixture(html`<lr-chunk-inspector></lr-chunk-inspector>`)) as LyraChunkInspector;
   el.chunks = chunks;
@@ -424,4 +437,12 @@ it('gives open-button and toggle hover/focus-visible', () => {
     expect(css, `${part} hover`).to.match(new RegExp(`\\[part~='${part}'\\]:hover`));
     expect(css, `${part} focus-visible`).to.match(new RegExp(`\\[part~='${part}'\\]:focus-visible[^{]*\\{[^}]*outline:`));
   }
+});
+
+it('formats visible score percentages with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-chunk-inspector lang="ar-EG" .chunks=${[chunks[0]!]}></lr-chunk-inspector>`,
+  )) as LyraChunkInspector;
+  expect(el.shadowRoot!.querySelector('[part~="score"]')!.textContent)
+    .to.include(new Intl.NumberFormat('ar-EG').format(92));
 });

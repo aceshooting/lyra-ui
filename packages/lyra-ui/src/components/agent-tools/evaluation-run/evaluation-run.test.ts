@@ -64,6 +64,18 @@ it('renders a batch progress bar reflecting completed/total and a completed-of-t
   );
 });
 
+it('formats generated example, progress, and status counts with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-evaluation-run lang="ar-EG" .examples=${examples} total="4"></lr-evaluation-run>`,
+  )) as LyraEvaluationRun;
+  const number = new Intl.NumberFormat('ar-EG');
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include(number.format(2));
+  expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.include(number.format(4));
+  expect(el.shadowRoot!.querySelectorAll('[part="example-label"]')[1]!.textContent).to.include(number.format(2));
+  expect([...el.shadowRoot!.querySelectorAll('[part="count"]')].every((node) =>
+    node.textContent?.includes(number.format(1)))).to.be.true;
+});
+
 it('falls back to examples.length when total is unset', async () => {
   const el = (await fixture(html`<lr-evaluation-run .examples=${examples}></lr-evaluation-run>`)) as LyraEvaluationRun;
   expect(el.shadowRoot!.querySelector('[part="progress"]')!.getAttribute('max')).to.equal('3');

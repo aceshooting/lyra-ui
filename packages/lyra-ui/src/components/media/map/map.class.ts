@@ -4,8 +4,9 @@ import { styleMap } from 'lit/directives/style-map.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
-import { sanitizeSwatchColor } from '../../../internal/safe-css.js';
+import { sanitizeCssColor, sanitizeSwatchColor } from '../../../internal/safe-css.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { notifyMapCanvasReady } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from './map-loader.js';
 import { styles } from './map.styles.js';
 import '../../overlays/skeleton/skeleton.class.js';
@@ -44,7 +45,9 @@ export interface GeoJsonDataLayer {
 export interface MapMarker {
   id?: string;
   lngLat: [number, number];
+  /** A CSS color. Invalid values and `url()` paint servers use maplibre-gl's default marker color. */
   color?: string;
+  /** Visible popup text and the marker button's accessible name. */
   label?: string;
   /**
    * Rendered as the marker's popup content via maplibre-gl's
@@ -147,8 +150,9 @@ export interface LyraMapEventMap {
  * @customElement lr-map
  * @event lr-map-load - Fired once the underlying maplibregl.Map loads.
  * @event lr-map-click - `detail: { lngLat, feature? }`.
- * @csspart base - The map wrapper.
- * @csspart container - The maplibre container.
+ * @csspart base - The non-semantic map wrapper.
+ * @csspart container - The MapLibre container. Its generated canvas is the actual focusable map
+ *   region and receives the host-first accessible name and effective locale.
  * @csspart legend - The map legend.
  * @csspart legend-swatch - A legend color swatch.
  * @csspart error - `role="alert"` message shown instead of `container` if the optional
@@ -172,9 +176,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  source plus fill/line/circle layers. Defaults empty (zero behavior change). */
   @property({ attribute: false }) dataLayers: GeoJsonDataLayer[] = [];
 
-  /** Accessible name fallback for the map group. A host `aria-label` takes
-   *  precedence when both are set; when neither is present, the group uses
-   *  the localized `map` message. */
+  /** Accessible-name fallback for MapLibre's focusable canvas. A host `aria-label` takes
+   *  precedence when both are set; when neither is present, the canvas uses the localized `map`
+   *  message. */
   @property() label = '';
 
   /** True until the lazy-loaded `maplibre-gl` peer dependency has settled (success or failure). */
@@ -227,6 +231,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   // re-awaiting the (already-settled) loadMaplibre() promise.
   private _maplibreModule?: OptionalPeerApi;
   private _markerInstances = new Map<string, OptionalPeerApi>();
+  private _markerLabels = new Map<string, string | undefined>();
+  private _markerPopupIds = new Map<string, string>();
+  private _configuredPopups = new WeakSet<object>();
+  private _nextPopupId = 0;
   // The installed maplibre-gl's `Marker` class has no `setColor()` (verified
   // against its shipped `.d.ts` -- `color` is only ever consumed by the
   // constructor), so an id-matched marker whose `color` changes can't be
@@ -327,6 +335,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     for (const marker of this._markerInstances.values()) marker.remove();
     this._markerInstances.clear();
     this._markerColors.clear();
+    this._markerLabels.clear();
+    this._markerPopupIds.clear();
   }
 
   /**
@@ -345,7 +355,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       style: this.mapStyle,
       center: this.safeCenter,
       zoom: this.safeZoom,
+      locale: {
+        'Map.Title': this.effectiveMapLabel,
+        'Marker.Title': this.localize('map'),
+        'Popup.Close': this.localize('close'),
+      },
     });
+    const canvas = this._map.getCanvas?.() as HTMLCanvasElement | undefined;
+    if (canvas) notifyMapCanvasReady(this, canvas);
     // maplibre-gl's Evented base rethrows an 'error' emission that has no
     // listener attached (mirroring Node's EventEmitter convention) -- with
     // no handler here, a failed tile/style fetch (e.g. DEFAULT_STYLE's
@@ -378,8 +395,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (this.loading) this.setAttribute('aria-busy', 'true');
-    else this.removeAttribute('aria-busy');
+    this.setAttribute('aria-busy', String(this.loading));
 
     // Became visible after the maplibre-gl module had already loaded (the
     // reverse order — module loads first, visibility follows — is the
@@ -426,6 +442,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('center') && this._map) this._map.setCenter(this.safeCenter);
     if (changed.has('zoom') && this._map) this._map.setZoom(this.safeZoom);
     if (changed.has('markers') && this._map) this.applyMarkers();
+    this.syncMapSemantics();
   }
 
   private applyChoropleth(): void {
@@ -605,17 +622,23 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // staying stable/consistent across re-renders as long as their relative
     // order in `this.markers` doesn't change.
     const coordCounts = new Map<string, number>();
-    for (const m of this.markers) {
-      let key = m.id;
-      if (key == null) {
-        const coordKey = `${m.lngLat[0]},${m.lngLat[1]}`;
+    for (const candidate of Array.isArray(this.markers) ? this.markers : []) {
+      const lngLat = this.validMarkerLngLat(candidate);
+      if (!lngLat) continue;
+      const m = candidate as MapMarker;
+      let key: string;
+      if (m.id != null) {
+        key = `id:${m.id}`;
+      } else {
+        const coordKey = `${lngLat[0]},${lngLat[1]}`;
         const occurrence = coordCounts.get(coordKey) ?? 0;
         coordCounts.set(coordKey, occurrence + 1);
-        key = `${coordKey}#${occurrence}`;
+        key = `coordinate:${coordKey}#${occurrence}`;
       }
       visible.add(key);
       let existing = this._markerInstances.get(key);
-      if (existing && this._markerColors.get(key) !== m.color) {
+      const markerColor = sanitizeCssColor(m.color);
+      if (existing && this._markerColors.get(key) !== markerColor) {
         // `color` is baked into the marker's SVG at construction time with
         // no way to mutate it afterwards -- fall through to the "no existing
         // marker" branch below to reconstruct it instead. Note: this closes
@@ -628,34 +651,52 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         existing = undefined;
       }
       if (!existing) {
-        const marker = new mod.Marker(m.color ? { color: m.color } : undefined).setLngLat(m.lngLat);
+        const marker = new mod.Marker(markerColor ? { color: markerColor } : undefined).setLngLat(lngLat);
         if (m.unsafeHtml || m.label) {
           const popup = new mod.Popup({ offset: 12 });
           if (m.unsafeHtml) popup.setHTML(m.unsafeHtml);
           else if (m.label) popup.setText(m.label);
           marker.setPopup(popup);
+          this.configurePopupSemantics(key, marker, popup);
         }
         marker.addTo(map);
         this._markerInstances.set(key, marker);
-        this._markerColors.set(key, m.color);
+        this._markerColors.set(key, markerColor);
       } else {
-        existing.setLngLat(m.lngLat);
+        existing.setLngLat(lngLat);
         const popup = existing.getPopup();
         if (m.unsafeHtml) {
           if (popup) popup.setHTML(m.unsafeHtml);
-          else existing.setPopup(new mod.Popup({ offset: 12 }).setHTML(m.unsafeHtml));
+          else {
+            const nextPopup = new mod.Popup({ offset: 12 }).setHTML(m.unsafeHtml);
+            existing.setPopup(nextPopup);
+            this.configurePopupSemantics(key, existing, nextPopup);
+          }
         } else if (m.label) {
           if (popup) popup.setText(m.label);
-          else existing.setPopup(new mod.Popup({ offset: 12 }).setText(m.label));
+          else {
+            const nextPopup = new mod.Popup({ offset: 12 }).setText(m.label);
+            existing.setPopup(nextPopup);
+            this.configurePopupSemantics(key, existing, nextPopup);
+          }
         } else if (popup) {
           existing.setPopup(undefined);
         }
       }
+      this._markerLabels.set(key, m.label);
       const markerElement = (this._markerInstances.get(key) as { getElement?: () => HTMLElement } | undefined)
         ?.getElement?.();
       if (markerElement) {
-        if (m.label) markerElement.setAttribute('aria-label', m.label);
-        else markerElement.removeAttribute('aria-label');
+        markerElement.setAttribute('aria-label', m.label || this.localize('map'));
+        markerElement.setAttribute('lang', this.effectiveLocale);
+        const popup = this._markerInstances.get(key)?.getPopup?.();
+        if (popup) {
+          this.configurePopupSemantics(key, this._markerInstances.get(key), popup);
+          this.syncPopupSemantics(key, this._markerInstances.get(key), popup);
+        } else {
+          markerElement.removeAttribute('aria-controls');
+          markerElement.removeAttribute('aria-expanded');
+        }
       }
     }
     for (const [key, marker] of this._markerInstances) {
@@ -663,7 +704,96 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         marker.remove();
         this._markerInstances.delete(key);
         this._markerColors.delete(key);
+        this._markerLabels.delete(key);
+        this._markerPopupIds.delete(key);
       }
+    }
+  }
+
+  private get effectiveMapLabel(): string {
+    return this.getAttribute('aria-label') || this.label || this.localize('map');
+  }
+
+  private validMarkerLngLat(candidate: unknown): [number, number] | null {
+    if (!candidate || typeof candidate !== 'object') return null;
+    const lngLat = (candidate as { lngLat?: unknown }).lngLat;
+    if (!Array.isArray(lngLat) || lngLat.length < 2) return null;
+    const [lng, lat] = lngLat;
+    if (
+      typeof lng !== 'number' ||
+      typeof lat !== 'number' ||
+      !Number.isFinite(lng) ||
+      !Number.isFinite(lat) ||
+      lat < -90 ||
+      lat > 90
+    ) {
+      return null;
+    }
+    return [lng, lat];
+  }
+
+  private popupId(key: string): string {
+    let id = this._markerPopupIds.get(key);
+    if (!id) {
+      id = `map-popup-${this._connectGeneration}-${++this._nextPopupId}`;
+      this._markerPopupIds.set(key, id);
+    }
+    return id;
+  }
+
+  private configurePopupSemantics(
+    key: string,
+    marker: OptionalPeerApi,
+    popup: OptionalPeerApi,
+  ): void {
+    if (!popup || typeof popup !== 'object' || this._configuredPopups.has(popup)) return;
+    this._configuredPopups.add(popup);
+    popup.on?.('open', () => this.syncPopupSemantics(key, marker, popup));
+    popup.on?.('close', () => {
+      marker.getElement?.()?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  private syncPopupSemantics(
+    key: string,
+    marker: OptionalPeerApi,
+    popup: OptionalPeerApi,
+  ): void {
+    const markerElement = marker?.getElement?.() as HTMLElement | undefined;
+    if (!markerElement) return;
+    const id = this.popupId(key);
+    markerElement.setAttribute('aria-controls', id);
+    markerElement.setAttribute('aria-expanded', popup?.isOpen?.() ? 'true' : 'false');
+    const popupElement = popup?.getElement?.() as HTMLElement | undefined;
+    if (!popupElement) return;
+    popupElement.id = id;
+    popupElement.setAttribute('role', 'dialog');
+    popupElement.setAttribute('lang', this.effectiveLocale);
+    popupElement.setAttribute(
+      'aria-label',
+      this._markerLabels.get(key) || this.effectiveMapLabel,
+    );
+    popupElement
+      .querySelector('.maplibregl-popup-close-button')
+      ?.setAttribute('aria-label', this.localize('close'));
+  }
+
+  private syncMapSemantics(): void {
+    const canvas = this._map?.getCanvas?.() as HTMLCanvasElement | undefined;
+    if (canvas) {
+      canvas.setAttribute('aria-label', this.effectiveMapLabel);
+      canvas.setAttribute('lang', this.effectiveLocale);
+    }
+    for (const [key, marker] of this._markerInstances) {
+      const markerElement = marker.getElement?.() as HTMLElement | undefined;
+      if (!markerElement) continue;
+      markerElement.setAttribute(
+        'aria-label',
+        this._markerLabels.get(key) || this.localize('map'),
+      );
+      markerElement.setAttribute('lang', this.effectiveLocale);
+      const popup = marker.getPopup?.();
+      if (popup) this.syncPopupSemantics(key, marker, popup);
     }
   }
 
@@ -676,14 +806,12 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return html`
       <div
         part="base"
-        role="group"
-        aria-label=${this.getAttribute('aria-label') || this.label || this.localize('map')}
       >
         ${this.loadFailed
           ? html`<div part="error" role="alert">${this.localize('mapMissingLibrary')}</div>`
           : this.loading
             ? html`<lr-skeleton variant="rect"></lr-skeleton>`
-            : html`<div part="container"></div>`}
+            : html`<div part="container" lang=${this.effectiveLocale}></div>`}
         ${this.legend.length
           ? html`<div part="legend">
               ${this.legend.map((entry) => {

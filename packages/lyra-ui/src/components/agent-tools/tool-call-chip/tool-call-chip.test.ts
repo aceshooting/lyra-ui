@@ -480,6 +480,28 @@ it('is accessible in a populated state with category, duration, and an open deta
   await expect(el).to.be.accessible();
 });
 
+it('keeps long labels and localized metadata visible inside a 256px allocation', async () => {
+  const el = (await fixture(html`
+    <div style="inline-size:256px">
+      <lr-tool-call-chip
+        name="query_customer_database_readonly_with_a_long_identifier"
+        category="customer-support-production-tools"
+        status="running"
+        summary="Searching customer records across every configured regional data source"
+        .strings=${{ statusRunning: 'Execution actuellement en cours dans l’environnement sécurisé' }}
+      ></lr-tool-call-chip>
+    </div>
+  `)).querySelector('lr-tool-call-chip') as LyraToolCallChip;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+  const meta = el.shadowRoot!.querySelector<HTMLElement>('[part="meta"]')!;
+  expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(256);
+  expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+  expect(label.getBoundingClientRect().width).to.be.greaterThan(0);
+  expect(meta.getBoundingClientRect().width).to.be.at.most(base.getBoundingClientRect().width);
+});
+
 /** Render the max-inline-size declared on `selector` (read off the element's own applied stylesheets)
  *  into the component's shadow scope with the viewport-clamp token pinned to a tiny value, returning
  *  its resolved computed value. Wired to --lr-popover-viewport-clamp the min() collapses to that

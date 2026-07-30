@@ -34,7 +34,9 @@ final.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
-  shadow root) — same contract as `<lr-document-preview>`'s identically-named prop.
+  shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
+  not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
+  the stylesheet token in control.
 - `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
   `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
   box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a

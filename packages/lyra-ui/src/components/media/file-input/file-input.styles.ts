@@ -3,21 +3,52 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .dropzone {
+    position: relative;
+    display: grid;
+    min-inline-size: 0;
   }
   [part='base'] {
+    grid-area: 1 / 1;
+    inline-size: 100%;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    box-sizing: border-box;
+    font: inherit;
+    cursor: pointer;
+    appearance: none;
+    padding: var(--lr-space-l);
+    border: var(--lr-border-width-medium) dashed var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-md-sm);
+  }
+  .dropzone-content {
+    grid-area: 1 / 1;
+    z-index: var(--lr-layer-content);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: var(--lr-space-xs);
     padding: var(--lr-space-l);
-    border: var(--lr-border-width-medium) dashed var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
     text-align: center;
-    cursor: pointer;
     font-size: var(--lr-font-size-md-sm);
+    overflow-wrap: anywhere;
+    pointer-events: none;
+  }
+  ::slotted(*) {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    pointer-events: auto;
   }
   /* Density escape -- same convention as lr-empty's compact. A --lr-space-l dropzone is unusable in
      a toolbar or a table cell; compact shrinks the padding, gap and label font so the zone fits a
@@ -25,6 +56,10 @@ export const styles = css`
      which every instance re-declares and so shadows any ancestor value) so a consumer can retune
      them from outside; the fallbacks preserve today's rendering for an unset dropzone. */
   :host([compact]) [part='base'] {
+    padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
+    font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
+  }
+  :host([compact]) .dropzone-content {
     padding: var(--lr-file-input-compact-padding, var(--lr-space-s));
     gap: var(--lr-file-input-compact-gap, var(--lr-space-2xs));
     font-size: var(--lr-file-input-compact-font-size, var(--lr-font-size-sm));
@@ -45,6 +80,9 @@ export const styles = css`
   :host(:not([disabled])) [part='base']:hover {
     border-color: var(--lr-color-brand);
   }
+  :host(:not([disabled])) .dropzone:hover [part='base'] {
+    border-color: var(--lr-color-brand);
+  }
   [part='base']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
     outline-offset: var(--lr-focus-ring-offset);
@@ -56,10 +94,13 @@ export const styles = css`
   /* Visible per-file rejection feedback, rendered alongside (not instead of) the sr-only status
      count summary -- see file-input.class.ts's rejectionMessage(). */
   [part='rejection'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     margin-block: var(--lr-space-2xs) 0;
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);
     text-align: start;
+    overflow-wrap: anywhere;
   }
   [part='rejection'] ul {
     margin: 0;

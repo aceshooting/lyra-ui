@@ -14,6 +14,10 @@ function unwrapDefault(value: OptionalPeerApi): OptionalPeerApi {
   return value.default ?? value;
 }
 
+function hasCallable(value: OptionalPeerApi | undefined, name: string): value is OptionalPeerApi {
+  return value != null && typeof value[name] === 'function';
+}
+
 export async function loadMammothAndSanitizer(
   importMammoth: () => Promise<OptionalPeerApi> = () =>
     import('mammoth/mammoth.browser.js') as Promise<OptionalPeerApi>,
@@ -22,7 +26,8 @@ export async function loadMammothAndSanitizer(
 ): Promise<DocxDeps> {
   let mammoth: MammothApi | undefined;
   try {
-    mammoth = unwrapDefault(await importMammoth());
+    const candidate = unwrapDefault(await importMammoth());
+    mammoth = hasCallable(candidate, 'convertToHtml') ? candidate : undefined;
   } catch (error) {
     console.warn(
       '<lr-docx-viewer> needs the optional peer dependency `mammoth` to convert DOCX documents — install it with `pnpm add mammoth`:',
@@ -32,7 +37,8 @@ export async function loadMammothAndSanitizer(
 
   let DOMPurify: OptionalPeerApi | undefined;
   try {
-    DOMPurify = unwrapDefault(await importDompurify());
+    const candidate = unwrapDefault(await importDompurify());
+    DOMPurify = hasCallable(candidate, 'sanitize') ? candidate : undefined;
   } catch (error) {
     console.warn(
       '<lr-docx-viewer> needs the optional peer dependency `dompurify` to sanitize converted HTML — install it with `pnpm add dompurify`:',

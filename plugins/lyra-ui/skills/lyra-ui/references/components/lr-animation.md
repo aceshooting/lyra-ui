@@ -42,7 +42,7 @@ Declaratively animates one slotted element through the native Web Animations API
   `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
   (attribute `root-margin`) configure that observer.
 - `currentTime: number` — the underlying `Animation.currentTime` (`0` when no animation exists);
-  writable, forwarded to the animation when one exists.
+  writable, forwarded to the animation when one exists. Non-finite assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
 property), `pause()` (`play = false`), `finish()`, `cancel()`.

@@ -143,6 +143,10 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
     this.mediaQuery =
       typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : undefined;
     this.mediaQuery?.addEventListener('change', this.onMotionPreferenceChange);
+    // A preference change while detached cannot deliver an event to this instance. Re-run the
+    // same arbitration on every connection so `playing` never reflects the stale pre-detach
+    // preference after a reparent/reinsert.
+    this.requestUpdate();
   }
 
   override disconnectedCallback(): void {

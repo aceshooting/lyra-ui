@@ -10,6 +10,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='media'] {
     inline-size: 100%;
@@ -131,6 +133,9 @@ export const styles = css`
     cursor: pointer;
     color: var(--lr-color-text);
     font: inherit;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   /* Declared before ::part(cue-current) below so the current cue's own background always wins on
      specificity-tie source order, even while it's also being hovered. */
@@ -158,6 +163,11 @@ export const styles = css`
   lr-virtual-list::part(cue-speaker) {
     font-weight: var(--lr-font-weight-semibold);
     margin-inline-end: var(--lr-space-2xs);
+  }
+  lr-virtual-list::part(cue-speaker),
+  lr-virtual-list::part(cue-text) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
   }
   [part='error'] {
     color: var(--lr-color-danger);

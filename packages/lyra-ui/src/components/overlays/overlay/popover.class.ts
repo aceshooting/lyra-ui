@@ -15,6 +15,27 @@ const DEFAULT_DISTANCE = 4;
 /** Semantic role vocabulary for the popup surface. Dropdown subclasses set this to `menu`. */
 export type LyraPopupRole = 'dialog' | 'menu';
 
+type PopoverVirtualRect = {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  contextElement?: Element;
+};
+
+function normalizeVirtualRect(rect: PopoverVirtualRect): PopoverVirtualRect | undefined {
+  const width = rect.width ?? 0;
+  const height = rect.height ?? 0;
+  if (![rect.x, rect.y, width, height].every(Number.isFinite)) return undefined;
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: Math.max(0, width),
+    height: Math.max(0, height),
+    contextElement: rect.contextElement,
+  };
+}
+
 export interface LyraPopoverEventMap {
   'lr-show': CustomEvent<undefined>;
   'lr-hide': CustomEvent<undefined>;
@@ -28,6 +49,8 @@ export interface LyraPopoverEventMap {
  * consumer did not supply one), not the shadow-private popup. That keeps the relationship
  * resolvable for native triggers and lets `<lr-button>`/`<lr-icon-button>` reflect the host onto
  * their focused shadow-internal controls through `ariaControlsElements`.
+ * Live `popupRole` and host-id changes keep those trigger relationships synchronized. Removing the
+ * trigger closes a trigger-anchored popover; a deliberate `showAt()` virtual anchor remains open.
  *
  * @customElement lr-popover
  * @slot trigger - The interactive element that toggles the popover.
@@ -87,38 +110,43 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private overlayHandle?: OverlayHandle;
   private readonly generatedHostId = nextId('popover');
   private readonly popupId = nextId('popover-popup');
+  private lightDismissDocument?: Document;
+  private hostIdObserver?: MutationObserver;
   private firstUpdate = true;
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('open') || changed.has('placement') || changed.has('distance')) {
+    if (changed.has('open') || changed.has('placement') || changed.has('distance') || changed.has('popupRole')) {
       this.cleanup?.();
       this.cleanup = undefined;
-      if (this.open) this.position();
+      if (this.open && this.isConnected) this.position();
       // Scoped to a real open/close transition -- a placement/distance-only
       // change re-runs this whole block to reposition, but must not re-emit
       // lr-show/lr-hide or toggle the document listener when `open`
       // itself didn't change.
       if (changed.has('open')) {
         if (this.open) {
-          document.addEventListener('pointerdown', this.onDocumentPointer);
-          this.activatePopoverOverlay();
-          if (!this.firstUpdate) this.emit('lr-show');
+          if (this.isConnected) {
+            this.startLightDismiss();
+            this.activatePopoverOverlay();
+            if (!this.firstUpdate) this.emit('lr-show');
+          }
         } else {
-          document.removeEventListener('pointerdown', this.onDocumentPointer);
+          this.stopLightDismiss();
           this.overlayHandle?.deactivate();
           this.overlayHandle = undefined;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
-          if (!this.firstUpdate) this.emit('lr-hide');
+          if (this.isConnected && !this.firstUpdate) this.emit('lr-hide');
         }
       }
-      this.syncTriggerA11y();
+      if (this.isConnected) this.syncTriggerA11y();
     }
     this.firstUpdate = false;
   }
   override connectedCallback(): void {
     super.connectedCallback();
     if (!this.id) this.id = this.generatedHostId;
+    this.observeHostId();
     if (this.trigger && !this.triggerA11y) {
       this.snapshotTriggerA11y(this.trigger);
       this.syncTriggerA11y();
@@ -129,16 +157,19 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
     // notice `open` is still true -- restore the light-dismiss listener and
     // the Floating UI positioner subscription it dropped.
     if (this.hasUpdated && this.open) {
-      document.addEventListener('pointerdown', this.onDocumentPointer);
-      if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
+      const wasPreviouslyActivated = this.overlayHandle?.isActive() === true;
+      this.startLightDismiss();
+      if (wasPreviouslyActivated) this.overlayHandle!.resume();
       else this.activatePopoverOverlay();
       this.position();
+      if (!wasPreviouslyActivated) this.emit('lr-show');
     }
   }
   override disconnectedCallback(): void {
     this.cleanup?.();
     this.cleanup = undefined;
-    document.removeEventListener('pointerdown', this.onDocumentPointer);
+    this.stopLightDismiss();
+    this.hostIdObserver?.disconnect();
     this.overlayHandle?.suspend();
     this.restoreTriggerA11y();
     super.disconnectedCallback();
@@ -147,7 +178,7 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    *  remain nonmodal and non-focus-trapping; the manager owns Escape and restoration to the
    *  trigger (or a virtual anchor's explicit `returnFocusTo`). */
   private activatePopoverOverlay(): void {
-    if (this.overlayHandle?.isActive()) return;
+    if (!this.isConnected || this.overlayHandle?.isActive()) return;
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
@@ -186,12 +217,16 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
    * focus to `options.returnFocusTo` when supplied, or skip focus-return entirely otherwise --
    * refocusing the right place after a virtual anchor closes is the host's responsibility, since
    * Lyra can't assume how e.g. a graph node's own keyboard model wants focus back.
+   * Non-finite coordinates or dimensions are ignored and leave the current open/anchor state
+   * unchanged.
    */
   showAt(
-    rect: { x: number; y: number; width?: number; height?: number; contextElement?: Element },
+    rect: PopoverVirtualRect,
     options?: { returnFocusTo?: HTMLElement },
   ): void {
-    this.virtualAnchor = virtualAnchorFromRect(rect);
+    const normalizedRect = normalizeVirtualRect(rect);
+    if (!normalizedRect) return;
+    this.virtualAnchor = virtualAnchorFromRect(normalizedRect);
     this.returnFocusTo = options?.returnFocusTo;
     if (this.open) {
       this.updatePopoverRestoreFocusTarget();
@@ -289,10 +324,15 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   private onTriggerSlotChange = (event: Event): void => {
     const next = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
     if (next === this.trigger) return;
+    const hadTrigger = this.trigger !== undefined;
     this.restoreTriggerA11y();
     this.trigger = next;
     if (this.trigger) this.snapshotTriggerA11y(this.trigger);
     this.syncTriggerA11y();
+    if (hadTrigger && !this.trigger && this.open && !this.virtualAnchor) {
+      this.hide({ focusTrigger: false });
+      return;
+    }
     if (this.open) {
       this.updatePopoverRestoreFocusTarget();
       this.position();
@@ -300,8 +340,31 @@ export class LyraPopover extends LyraElement<LyraPopoverEventMap> {
   };
   private onTriggerClick = (): void => { this.open = !this.open; };
   private onDocumentPointer = (event: PointerEvent): void => {
+    if (!this.overlayHandle?.isTopmost()) return;
     if (!event.composedPath().includes(this)) this.hide();
   };
+
+  private startLightDismiss(): void {
+    const nextDocument = this.ownerDocument;
+    if (this.lightDismissDocument === nextDocument) return;
+    this.stopLightDismiss();
+    nextDocument.addEventListener('pointerdown', this.onDocumentPointer);
+    this.lightDismissDocument = nextDocument;
+  }
+
+  private stopLightDismiss(): void {
+    this.lightDismissDocument?.removeEventListener('pointerdown', this.onDocumentPointer);
+    this.lightDismissDocument = undefined;
+  }
+
+  private observeHostId(): void {
+    this.hostIdObserver ??= new MutationObserver(() => {
+      if (!this.isConnected) return;
+      if (!this.id) this.id = this.generatedHostId;
+      this.syncTriggerA11y();
+    });
+    this.hostIdObserver.observe(this, { attributes: true, attributeFilter: ['id'] });
+  }
 
   private setOpen(next: boolean): void {
     if (this._open === next) return;

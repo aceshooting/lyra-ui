@@ -25,8 +25,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
-  can override the spoken name and tooltip independently. A link whose `source` id doesn't resolve
-  to a real node is still dropped entirely
+  can override the spoken name and tooltip independently. `width` is normalized before reaching
+  SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
+  value uses `1.5`. A link whose `source` id doesn't resolve to a real node is still dropped entirely
   (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
@@ -69,7 +70,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per node/link/hull.
+  button per node/link/hull. In both renderers, node, link, and community-hull picking keeps at
+  least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
+  only, not the visible marks.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -82,7 +85,9 @@ id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), 
 `lr-link-enter`/`lr-link-leave` (`detail: { source, target, id? }`, same hover contract),
 `lr-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), `lr-community-click`
-(`detail: { id }`, a hull was activated)
+(`detail: { id }`, a hull was activated), `lr-selection-change`
+(`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
 
 **Slots:** none.
 
@@ -118,8 +123,10 @@ Under `renderer="canvas"` these five are read from computed style at paint time 
 per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
-together; lazy-`import()`ed once per page, `console.warn` once and renders empty if missing —
-install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
+together; lazy-`import()`ed once per page). Each loaded module is validated for the named callable
+capabilities the graph uses; a missing package or malformed module fails closed through the
+localized `part="error"` alert. Install with
+`pnpm add d3-force d3-drag d3-zoom d3-selection`.
 
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
@@ -161,12 +168,11 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
   `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
   example, because they are not installed), the graph fails closed with a localized
   `part="error"` / `role="alert"` message instead of leaving an empty SVG.
-- `GraphNode.color` is sanitized (rejects `;`/`{`/`}`) before being written into the
-  `--lr-node-fill` inline custom property, so an untrusted color string can't break out of that
-  CSS declaration.
-- `GraphLink.color` applies the same declaration-delimiter sanitization. `GraphLink.dash` is used
-  only when every entry is finite and non-negative; an empty or invalid array falls back to a solid
-  line rather than partially applying malformed SVG stroke data.
+- `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
+  when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
+  ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every
+  entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
+  than partially applying malformed SVG stroke data.
 - a structural `nodes`/`links` change now carries over each already-settled node's position (and any
   in-progress drag) by id when rebuilding the simulation, instead of discarding every node's (x, y)
   and re-running the whole ~300-tick random-start settle from scratch — only genuinely new ids get a
@@ -175,6 +181,8 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 - under `prefers-reduced-motion: reduce`, or whenever `seed` is set, the simulation converges
   synchronously (ticked in a loop down to `alphaMin` before first paint) instead of animating over
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
+- in canvas mode, `pointercancel`, lost pointer capture, and disconnect all release a live node's
+  force pin and reset the simulation target; a canceled drag never leaves the node pinned.
 - the `<svg part="svg">` now carries `role="group"` and an `aria-label` summarizing the node/link
   counts (e.g. "Node-link diagram with 5 nodes and 4 links"), and node `<text part="label">`s are
   `aria-hidden="true"` (their content is already covered by each node's own `aria-label`).
@@ -282,7 +290,8 @@ same event-decoupled contract every sibling in this family follows.
 **Properties:**
 - `types: LyraGraphLegendType[] = []` (attribute: false) — `{ id: string; label: string; color?:
   string; shape?: 'circle' | 'square' | 'diamond' }`, the exact `lr-graph.nodeTypes` entry shape
-  (declared locally, not imported, so this stays a zero-dependency component)
+  (declared locally, not imported, so this stays a zero-dependency component). A color is used only
+  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
   label
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
@@ -302,7 +311,8 @@ after each toggle).
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
 independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
-every other quiet-text surface. Also reads `--lr-graph-cat-1` through `-8`
+every other quiet-text surface; `--lr-graph-legend-hidden-swatch-opacity` (default `0.5`) controls
+only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
 
 **Optional peer deps:** none.
@@ -670,7 +680,8 @@ stance `lr-tool-select-dialog` already takes.
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
   string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
   a tree — presence of `children` makes a row a group/folder with tri-state select
-- `selectedIds: string[] = []` (attribute: false) — controlled; the host assigns this back from
+- `selectedIds: string[] = []` (attribute: false) — controlled; duplicates and ids that are not
+  leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
@@ -686,7 +697,8 @@ fired after every toggle including select-all).
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
 `select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
-(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's expand/collapse button),
+(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's pointer-only
+expand/collapse indicator; the surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
 when `sources` is empty, `noMatches` when a filter empties the tree).
 
@@ -842,8 +854,9 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   echoed back verbatim in both events; never read or validated by this component.
 - `href: string = ''` — optional direct link target for the citation's source, carried into
   `lr-citation-open`'s detail as-is; this component never navigates.
-- `label: string = ''` — overrides the computed accessible name. The built-in citation/status
-  summary is a complete localized template; a host `aria-label` has highest precedence.
+- `label: string = ''` — adds caller-supplied context to the localized citation name while retaining
+  the visible citation number (for example, `"Citation 3, Annual report"`). A host `aria-label`
+  remains the exact highest-precedence override.
 
 **Events:**
 - `lr-citation-activate` (`detail: { sourceId: string; index: number }`) — fires on click, or on
@@ -946,7 +959,8 @@ handy for building a `label-plural` string reactively, e.g. `` list.labelPlural 
 collapsing the list.
 
 **Slots:** default — `<lr-source-card>` elements (or any content, though the card pairing is the
-intended usage).
+intended usage). While connected, each assigned element receives `role="listitem"`; its author
+role is retained across live changes and restored when it leaves the list or the list disconnects.
 
 **CSS parts:** `base` (outer container), `header` (the clickable `<button>` toggling `expanded`),
 `toggle` (the chevron indicator inside the header), `list` (wrapper around the default slot, `hidden`
@@ -1144,7 +1158,8 @@ and `lr-citation-badge` for each evidence entry.
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s own `lr-citation-activate` (`detail: { sourceId, index }`) still
 bubbles through unmodified; this richer event exists because a bare `sourceId`/`index` pair can't
-tell a host which exact evidence *span* to jump to.
+tell a host which exact evidence *span* to jump to. The composed `lr-claim-evidence` also surfaces
+`lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
 
 **Slots:** none.
 
@@ -1187,7 +1202,8 @@ embedding counts, retry attempts, errors, and retry/cancel requests. Never inges
 **Events:**
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
   `{ attempt: number; messageId?: string; itemId: string }`) — `attempt` is the attempt about to be
-  made, `(item.attempts ?? 0) + 1`. Only offered on `'failed'` rows.
+  made: the displayed nonnegative finite-integer `item.attempts` value plus one (invalid, negative,
+  or fractional inputs are normalized first). Only offered on `'failed'` rows.
 - `lr-cancel` (`detail: IngestionCancelEventDetail` = `CancelEventDetail & { itemId: string }` =
   `{ reason?: string; itemId: string }`) — this component never supplies `reason` itself. Only
   offered on non-terminal rows (`'queued'` plus the five active stages).
@@ -1298,7 +1314,8 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
-  `lr-graph-legend.hiddenTypes`
+  `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
+  neighbor rows, and activation
 - `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives the details popover
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
@@ -1582,6 +1599,8 @@ is non-empty and not `loading`), `empty` (only when `empty` and neither `loading
 - Submitting while `loading` is already true **supersedes** the in-flight request: `lr-cancel` fires
   immediately before the new `lr-search`. Clicking the submit button (rather than pressing Enter)
   while `loading` only emits `lr-cancel` and does not resubmit.
+- Long unbroken filter keys, values, and scope labels are contained within the search allocation;
+  the removable chip label truncates while its remove action remains available.
 
 ---
 
@@ -1668,7 +1687,8 @@ the component only normalizes them into SVG, colors optional clusters, and emits
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
 `accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
-omitted.
+omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
+keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
@@ -1685,7 +1705,9 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''`; `hideIngestion: boolean = false`.
+`label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
+`hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
+normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 
 **Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the

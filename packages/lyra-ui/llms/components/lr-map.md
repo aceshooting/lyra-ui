@@ -42,7 +42,9 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   content, sanitize anything derived from user input first; prefer `label` (`Popup.setText()`,
   escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
-  gotchas.
+  gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
+  aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
+  declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
 - `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
   geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three layers
@@ -54,10 +56,9 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   is: an entry whose `sourceId` persists across a `dataLayers` reassignment gets its GeoJSON updated
   in place (`setData()`), one that's dropped has its source/layers removed, and a genuinely new
   `sourceId` gets a new source/layers — nothing leaks on removal, style change, or disconnect.
-- `label: string = ''` — accessible name for the map region, applied as `[part="base"]`'s
-  `aria-label`. A plain `aria-label` attribute on the host itself is honored as a fallback when
-  `label` is left unset, matching `lr-slider`/`lr-checkbox`/`lr-switch`; with neither set, it
-  falls back to the localized `'map'` message.
+- `label: string = ''` — accessible-name fallback for MapLibre's actual focusable canvas. A plain
+  host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
+  `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
 
 **Getters:** `map` → the raw `maplibregl.Map` instance.
 
@@ -116,6 +117,10 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   layer/source maplibre-gl knows about.
 - Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
   hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
+- A marker uses `label` as its accessible name, falling back to the localized map label. Popup
+  ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
+  `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
+  own control strings all follow the component's effective locale.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an

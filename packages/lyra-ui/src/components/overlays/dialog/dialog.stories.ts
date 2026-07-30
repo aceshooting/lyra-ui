@@ -80,6 +80,27 @@ export const LabelPropNoHeading: Story = {
   `,
 };
 
+export const AccessibleNameWithVisibleHeading: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A host `aria-label` overrides the panel’s announced name without suppressing the visible `heading` property.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      heading="Visible account settings"
+      aria-label="Account settings dialog"
+      closable
+    >
+      <p>The visible heading remains present while assistive technology receives the explicit host name.</p>
+    </lr-dialog>
+  `,
+};
+
 export const NestedDialogs: Story = {
   render: () => html`
     <div>

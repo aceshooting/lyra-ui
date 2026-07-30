@@ -8,3 +8,16 @@ export const InlineError: StoryObj = {
   name: 'Inline error',
   render: () => html`<lr-callout inline variant="danger"><span slot="icon" aria-hidden="true">!</span>Unable to save changes.</lr-callout>`,
 };
+export const NarrowLongContent: StoryObj = {
+  render: () => html`
+    <div style="inline-size:20rem">
+      <lr-callout
+        variant="warning"
+        heading="A deliberately long warning heading that must wrap inside a narrow allocation"
+        closable
+      >
+        ThisIsAnUnbrokenDiagnosticTokenThatMustNotPushTheMessageOrCloseControlOutsideTheCallout
+      </lr-callout>
+    </div>
+  `,
+};

@@ -49,7 +49,7 @@ export const styles = css`
     inline-size: 100%;
     block-size: 100%;
     min-block-size: 0;
-    overflow: visible;
+    overflow: hidden;
   }
   [part='grid-line'] {
     stroke: var(--lr-chart-grid-color);

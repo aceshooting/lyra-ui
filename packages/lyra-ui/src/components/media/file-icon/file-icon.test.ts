@@ -56,6 +56,21 @@ describe('lr-file-icon', () => {
     expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('PDF (2.3 MB)');
   });
 
+  it('lets a host aria-label win on the image owner without replacing the visible label', async () => {
+    const el = await fixture<LyraFileIcon>(html`
+      <lr-file-icon
+        aria-label="Author file description"
+        label="Visible file label"
+        mime-type="application/pdf"
+        variant="label"
+        size="2415919"
+      ></lr-file-icon>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    expect(base.getAttribute('aria-label')).to.equal('Author file description');
+    expect(el.shadowRoot!.querySelector('[part="label"]')!.textContent).to.equal('Visible file label');
+  });
+
   it('formats the size number with the effective locale', async () => {
     const el = await fixture(html`
       <lr-file-icon lang="ar-EG" mime-type="application/pdf" variant="label" size="2415919"></lr-file-icon>
@@ -90,5 +105,31 @@ describe('lr-file-icon', () => {
     expect(style.overflow).to.equal('hidden');
     expect(style.textOverflow).to.equal('ellipsis');
     expect(style.whiteSpace).to.equal('nowrap');
+  });
+
+  it('hides the complete label badge subtree from accessibility APIs when decorative', async () => {
+    const el = await fixture(html`
+      <lr-file-icon mime-type="application/pdf" variant="label" size="2415919" decorative></lr-file-icon>
+    `);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-hidden')).to.equal('true');
+    expect(base.querySelector('[part="label"]')).to.exist;
+    expect(base.querySelector('[part="size"]')).to.exist;
+    await expect(el).to.be.accessible();
+  });
+
+  it('contains an unbroken public label inside a 280px allocation', async () => {
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 280px">
+        <lr-file-icon
+          style="max-inline-size: 100%"
+          mime-type="application/pdf"
+          variant="label"
+          label=${'Document'.repeat(200)}
+          size="2415919"
+        ></lr-file-icon>
+      </div>
+    `)) as HTMLElement;
+    expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
   });
 });

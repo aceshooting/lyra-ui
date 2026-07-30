@@ -950,6 +950,261 @@ it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is ne
   expect(document.activeElement, 'Escape must not move focus off the trigger, as before').to.equal(trigger);
 });
 
+describe('overlay semantic and lifecycle regressions', () => {
+  it('promotes actionable content inside an assigned custom element open shadow root', async () => {
+    const tagName = 'lr-test-tooltip-shadow-action';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: 'open' });
+            const button = document.createElement('button');
+            button.textContent = 'Shadow action';
+            root.append(button);
+          }
+        },
+      );
+    }
+
+    const el = (await fixture(html`
+      <lr-tooltip delay="0">
+        <button slot="trigger">Help</button>
+        <lr-test-tooltip-shadow-action></lr-test-tooltip-shadow-action>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await el.updateComplete;
+
+    const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    expect(popup.getAttribute('role')).to.equal('dialog');
+
+    const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+    const customContent = el.querySelector(tagName)!;
+    const action = customContent.shadowRoot!.querySelector('button') as HTMLButtonElement;
+    trigger.focus();
+    await el.updateComplete;
+    action.focus();
+    await el.updateComplete;
+    expect(el.open, 'focus moving into an actionable open shadow root must keep the tooltip open').to.be.true;
+  });
+
+  it('promotes actionable open-shadow content attached after the tooltip is already open', async () => {
+    const tagName = 'lr-test-tooltip-late-shadow-action';
+    if (!customElements.get(tagName)) {
+      customElements.define(
+        tagName,
+        class extends HTMLElement {
+          attachAction(): HTMLButtonElement {
+            const root = this.attachShadow({ mode: 'open' });
+            const button = document.createElement('button');
+            button.textContent = 'Late shadow action';
+            root.append(button);
+            return button;
+          }
+        },
+      );
+    }
+
+    const el = (await fixture(html`
+      <lr-tooltip delay="0">
+        <button slot="trigger">Help</button>
+        <lr-test-tooltip-late-shadow-action></lr-test-tooltip-late-shadow-action>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+    trigger.focus();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('tooltip');
+
+    const content = el.querySelector(tagName) as HTMLElement & { attachAction(): HTMLButtonElement };
+    const action = content.attachAction();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('dialog');
+    action.focus();
+    await el.updateComplete;
+    expect(el.open, 'late actionable content must remain reachable by keyboard focus').to.be.true;
+  });
+
+  it('stops probing a permanently rootless custom element after a bounded grace period', async () => {
+    const tagName = 'lr-test-tooltip-rootless-content';
+    if (!customElements.get(tagName)) customElements.define(tagName, class extends HTMLElement {});
+
+    const el = (await fixture(html`
+      <lr-tooltip open manual>
+        <button slot="trigger">Help</button>
+        <lr-test-tooltip-rootless-content></lr-test-tooltip-rootless-content>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+
+    for (let frame = 0; frame < 10; frame++) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+
+    expect(
+      (el as unknown as { shadowContentScanFrame?: number }).shadowContentScanFrame,
+      'a legitimate custom element without a shadow root must not cause perpetual frame work',
+    ).to.equal(undefined);
+  });
+
+  it('lets Escape from interactive tooltip content dismiss and restore trigger focus', async () => {
+    const el = (await fixture(html`
+      <lr-tooltip delay="0">
+        <button slot="trigger">Help</button>
+        <button id="action">Action</button>
+      </lr-tooltip>
+    `)) as LyraTooltip;
+    const trigger = el.querySelector('[slot="trigger"]') as HTMLButtonElement;
+    const action = el.querySelector('#action') as HTMLButtonElement;
+    trigger.focus();
+    await el.updateComplete;
+    action.focus();
+
+    action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }));
+    await el.updateComplete;
+
+    expect(el.open).to.be.false;
+    expect(document.activeElement).to.equal(trigger);
+
+    trigger.blur();
+    trigger.focus();
+    await el.updateComplete;
+    expect(el.open, 'only the synchronous focus-return event is suppressed').to.be.true;
+  });
+
+  it('light-dismisses only the topmost sibling popover', async () => {
+    const wrapper = await fixture(html`
+      <div>
+        <lr-popover open><button slot="trigger">One</button><button id="one">One action</button></lr-popover>
+        <lr-popover open><button slot="trigger">Two</button><button id="two">Two action</button></lr-popover>
+      </div>
+    `);
+    const [underlying, top] = [...wrapper.querySelectorAll('lr-popover')] as LyraPopover[];
+    await underlying.updateComplete;
+    await top.updateComplete;
+
+    top.querySelector('#two')!.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await underlying.updateComplete;
+    await top.updateComplete;
+    expect(underlying.open, 'interacting in the top layer must not dismiss a sibling underneath').to.be.true;
+    expect(top.open).to.be.true;
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await underlying.updateComplete;
+    await top.updateComplete;
+    expect(top.open, 'an outside pointer must dismiss the topmost layer').to.be.false;
+    expect(underlying.open, 'the same pointer must not cascade into the underlying layer').to.be.true;
+  });
+
+  it('updates trigger aria-haspopup when popupRole changes live', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+
+    el.popupRole = 'menu';
+    await el.updateComplete;
+
+    expect(trigger.getAttribute('aria-haspopup')).to.equal('menu');
+    expect(el.shadowRoot!.querySelector('[part="popup"]')?.getAttribute('role')).to.equal('menu');
+  });
+
+  it('treats non-finite showAt coordinates as a no-op', async () => {
+    const popover = (await fixture(html`<lr-popover><p>Details</p></lr-popover>`)) as LyraPopover;
+    popover.showAt({ x: Number.NaN, y: 10 });
+    await popover.updateComplete;
+    expect(popover.open).to.be.false;
+
+    const tooltip = (await fixture(html`<lr-tooltip>Details</lr-tooltip>`)) as LyraTooltip;
+    tooltip.showAt({ x: 10, y: Number.POSITIVE_INFINITY });
+    await tooltip.updateComplete;
+    expect(tooltip.open).to.be.false;
+  });
+
+  it('does not activate a detached popover until it reconnects', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const parent = el.parentElement!;
+    el.remove();
+    el.open = true;
+    await el.updateComplete;
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await el.updateComplete;
+    expect(el.open, 'a detached open property must not register global Escape ownership').to.be.true;
+
+    parent.append(el);
+    await el.updateComplete;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await el.updateComplete;
+    expect(el.open, 'reconnecting an open popover must activate it').to.be.false;
+  });
+
+  it('closes trigger-anchored overlays when their trigger is removed', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    popover.querySelector('[slot="trigger"]')!.remove();
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await popover.updateComplete;
+    expect(popover.open).to.be.false;
+
+    const tooltip = (await fixture(
+      html`<lr-tooltip open manual><button slot="trigger">Help</button>Details</lr-tooltip>`,
+    )) as LyraTooltip;
+    tooltip.querySelector('[slot="trigger"]')!.remove();
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await tooltip.updateComplete;
+    expect(tooltip.open).to.be.false;
+  });
+
+  it('listens for popover light dismiss in ownerDocument after adoption', async () => {
+    const iframe = document.createElement('iframe');
+    document.body.append(iframe);
+    try {
+      const frameDocument = iframe.contentDocument!;
+      const el = (await fixture(
+        html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+      )) as LyraPopover;
+      frameDocument.body.append(el);
+      await el.updateComplete;
+
+      document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.open, 'the former document must no longer own light dismiss').to.be.true;
+
+      frameDocument.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+      await el.updateComplete;
+      expect(el.open, 'the adopted owner document must own light dismiss').to.be.false;
+    } finally {
+      iframe.remove();
+    }
+  });
+
+  it('keeps the generated host id and trigger controls synchronized after live id edits', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    const generatedId = el.id;
+
+    el.id = 'consumer-popover-id';
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(trigger.getAttribute('aria-controls')?.split(/\s+/)).to.include('consumer-popover-id');
+
+    el.removeAttribute('id');
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(el.id).to.equal(generatedId);
+    expect(trigger.getAttribute('aria-controls')?.split(/\s+/)).to.include(generatedId);
+    expect(trigger.getAttribute('aria-controls')?.split(/\s+/)).to.not.include('consumer-popover-id');
+  });
+});
+
 describe('lr-popover focus return', () => {
   async function setup(): Promise<{
     el: LyraPopover;

@@ -5,6 +5,18 @@ import type { LyraTextarea } from './textarea.js';
 import { styles } from './textarea.styles.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 
+it('falls back from an invalid runtime resize value without injecting declarations', async () => {
+  const el = await fixture<LyraTextarea>(html`<lr-textarea></lr-textarea>`);
+  el.resize = 'both;position:fixed' as unknown as LyraTextarea['resize'];
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector('textarea')!;
+  expect(textarea.style.resize).to.equal('vertical');
+  expect(textarea.style.position).to.equal('');
+  el.resize = 'both';
+  await el.updateComplete;
+  expect(textarea.style.resize).to.equal('both');
+});
+
 it('gives the textarea field hover feedback matching the keyboard focus-visible cue', () => {
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='textarea'\]:hover\s*\{[^}]*border-color:/);

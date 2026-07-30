@@ -20,6 +20,8 @@ export interface LyraImageComparerEventMap {
  * @slot before - The before-state image or content.
  * @slot after - The after-state image or content.
  * @event lr-position-change - Divider moved. `detail: { position }`, where position is 0–100.
+ * @event focus - Re-dispatched from the native range handle as a bubbling, composed event.
+ * @event blur - Re-dispatched from the native range handle as a bubbling, composed event.
  * @csspart base - The comparison viewport.
  * @csspart before - The clipped before-state layer.
  * @csspart after - The after-state layer.

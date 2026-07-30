@@ -65,6 +65,8 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
   swap.
+- reduced-motion arbitration is re-evaluated on every reconnect, so a preference change made while
+  the element was detached cannot leave `playing` stale.
 
 **Additional API surface:**
 

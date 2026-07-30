@@ -144,7 +144,7 @@ export const styles = css`
   }
   [part='edit-button']:disabled {
     cursor: not-allowed;
-    opacity: var(--lr-disabled-opacity);
+    opacity: var(--lr-opacity-disabled);
   }
   [part='edit-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from "lit";
 import { property, state } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import {
   activateOverlay,
@@ -15,6 +16,7 @@ import {
 import { nextId } from "../../../internal/a11y.js";
 import { chevronIcon, closeIcon, expandIcon } from "../../../internal/icons.js";
 import { styles } from "./widget.styles.js";
+import { sanitizeCssInset } from "../../../internal/safe-css.js";
 
 export interface WidgetView {
   id: string;
@@ -116,14 +118,14 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
   @property({ attribute: "storage-key" }) storageKey?: string;
   @property({ type: Boolean, reflect: true }) expandable = false;
   @property({ type: Boolean, reflect: true }) fullscreen = false;
-  /** Raw CSS `inset` shorthand applied to the fullscreen panel and backdrop instead of the default
+  /** CSS `inset` shorthand applied to the fullscreen panel and backdrop instead of the default
    *  `var(--lr-space-l)` on every side — e.g. `"0 0 0 240px"` to leave a 240px persistent sidebar
-   *  visible while fullscreen. */
+   *  visible while fullscreen. Invalid values are ignored. */
   @property({ attribute: "fullscreen-inset" }) fullscreenInset = "";
   /** Overrides the fullscreen *backdrop*'s own inset independent of `fullscreen-inset` -- e.g.
    *  `"0"` to dim the full viewport-to-panel-edge region while the panel itself keeps a narrower
    *  `fullscreen-inset`. Unset (the default) falls back to `fullscreen-inset`, i.e. today's exact
-   *  coupled behavior. */
+   *  coupled behavior. Invalid values fall back to a valid `fullscreen-inset`, if present. */
   @property({ attribute: "backdrop-inset" }) backdropInset = "";
   /** Tighter header/body padding for constrained spaces. */
   @property({ type: Boolean, reflect: true }) compact = false;
@@ -397,26 +399,23 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     const hasLabel = this.label.length > 0;
     const hasSublabel = this.sublabel.length > 0;
     const views = this.normalizedViews;
+    const fullscreenInset = sanitizeCssInset(this.fullscreenInset);
+    const backdropInset =
+      sanitizeCssInset(this.backdropInset) ?? fullscreenInset;
     return html`
       ${this.fullscreen
         ? html`<div
             part="backdrop"
-            style=${(() => {
-              const decls: string[] = [];
-              if (this.fullscreenInset)
-                decls.push(
-                  `--lr-widget-fullscreen-inset:${this.fullscreenInset}`
-                );
-              // A custom property's var() fallback resolves per-element using that element's own
-              // cascade, but `:host`'s `--lr-widget-backdrop-inset: var(--lr-widget-fullscreen-inset)`
-              // is always *set* (never invalid), so its inherited (already-resolved-at-:host) value
-              // wins over this div's own local `--lr-widget-fullscreen-inset` override -- the CSS
-              // fallback chain alone can't see it. Resolve the fallback here in JS instead.
-              const backdropInset = this.backdropInset || this.fullscreenInset;
-              if (backdropInset)
-                decls.push(`--lr-widget-backdrop-inset:${backdropInset}`);
-              return decls.length ? decls.join(";") : nothing;
-            })()}
+            style=${fullscreenInset || backdropInset
+              ? styleMap({
+                  ...(fullscreenInset
+                    ? { "--lr-widget-fullscreen-inset": fullscreenInset }
+                    : {}),
+                  ...(backdropInset
+                    ? { "--lr-widget-backdrop-inset": backdropInset }
+                    : {}),
+                })
+              : nothing}
             @click=${this.onBackdropClick}
           ></div>`
         : nothing}
@@ -431,8 +430,8 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
             this.localize("widgetFullscreenPanel")
           : nothing}
         tabindex=${this.fullscreen ? "-1" : nothing}
-        style=${this.fullscreenInset
-          ? `--lr-widget-fullscreen-inset:${this.fullscreenInset}`
+        style=${fullscreenInset
+          ? styleMap({ "--lr-widget-fullscreen-inset": fullscreenInset })
           : nothing}
       >
         <div part="header">

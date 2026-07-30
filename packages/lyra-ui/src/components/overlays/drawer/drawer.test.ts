@@ -33,6 +33,26 @@ it('closes through the inherited cancelable close contract', async () => {
   expect(el.open).to.be.false;
 });
 
+it('does not activate inherited modal infrastructure when opened while detached', async () => {
+  const el = (await fixture(html`<lr-drawer heading="Details"></lr-drawer>`)) as LyraDrawer;
+  const parent = el.parentElement!;
+  el.remove();
+  el.open = true;
+  await el.updateComplete;
+
+  expect(document.documentElement.style.overflow).to.equal('');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  parent.append(el);
+  await el.updateComplete;
+  expect(document.documentElement.style.overflow).to.equal('hidden');
+  el.close();
+  await el.updateComplete;
+  expect(document.documentElement.style.overflow).to.equal('');
+});
+
 it('is accessible while open', async () => {
   const el = (await fixture(html`
     <lr-drawer open aria-label="Navigation drawer"><p>Navigation</p></lr-drawer>

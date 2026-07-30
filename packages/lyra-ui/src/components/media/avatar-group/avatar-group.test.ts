@@ -514,3 +514,37 @@ describe('per-size overflow-badge font-size', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('keeps the interactive overflow badge at least 40px in both axes at sm and md tiers', async () => {
+  for (const size of ['sm', 'md', undefined] as const) {
+    const el = (await fixture(
+      size
+        ? html`<lr-avatar-group size=${size} max="1">
+            <lr-avatar initials="AB"></lr-avatar>
+            <lr-avatar initials="CD"></lr-avatar>
+          </lr-avatar-group>`
+        : html`<lr-avatar-group max="1">
+            <lr-avatar initials="AB"></lr-avatar>
+            <lr-avatar initials="CD"></lr-avatar>
+          </lr-avatar-group>`,
+    )) as LyraAvatarGroup;
+    const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement;
+    const rect = badge.getBoundingClientRect();
+    expect(rect.width, size ?? 'default md').to.be.at.least(40);
+    expect(rect.height, size ?? 'default md').to.be.at.least(40);
+  }
+});
+
+it('reapplies owned overflow hiding when reconnected', async () => {
+  const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
+  const avatars = [...el.querySelectorAll('lr-avatar')] as HTMLElement[];
+  expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, false, false, true, true]);
+  const parent = el.parentElement!;
+
+  el.remove();
+  expect(avatars.every((avatar) => !avatar.hidden)).to.be.true;
+  parent.append(el);
+  await el.updateComplete;
+
+  expect(avatars.map((avatar) => avatar.hidden)).to.deep.equal([false, false, false, true, true]);
+});

@@ -11,6 +11,7 @@ import { linearAlpha, linearBucket, minMax, sqrtStep } from './heatmap-scale.js'
 import { styles } from './heatmap.styles.js';
 import { buildCalendarGrid, parseIsoDate, quartileBucket, type CalendarCell, type CalendarDay } from './calendar-grid.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 
 const PAD_LEFT = 60;
 const PAD_TOP = 20;
@@ -109,7 +110,8 @@ export interface HeatmapLegendStop {
   value: number;
   /**
    * Any CSS color — typically whatever the consumer's own `cellColor` returns for `value`.
-   * Omit it (or pass an empty string) for a **caption-only** stop: the entry then renders its
+   * Omit it, pass an empty string, or pass an invalid/non-color value for a **caption-only** stop:
+   * the entry then renders its
    * `[part="legend-stop-label"]` alone, with no `[part="legend-swatch"]` element in the DOM at
    * all, so a leading "0" / trailing "more" caption around a run of colored stops doesn't leave
    * an empty swatch box in the row.
@@ -653,7 +655,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    *  bring a validated, non-linear (or simply non-2-endpoint) sequential palette. Governs both
    *  `mode`s and both `scale` values, discretizing whichever scale would otherwise interpolate
    *  continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer than 2
-   *  entries) keeps today's 2-endpoint interpolation exactly. */
+   *  entries) keeps today's 2-endpoint interpolation exactly. Invalid entries use the canvas
+   *  fallback color and prevent the custom legend gradient from being assigned. */
   @property({ attribute: false }) colorSteps?: string[];
   /**
    * Calendar mode only: overrides the x-origin (canvas-local CSS px) of week
@@ -844,8 +847,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       );
     }
     if (changed.has('colorSteps') || !this.hasUpdated) {
-      if (this.colorSteps && this.colorSteps.length >= 2) {
-        this.style.setProperty('--lr-heatmap-color-steps-gradient', `linear-gradient(to right, ${this.colorSteps.join(', ')})`);
+      const colorSteps = this.colorSteps?.map(sanitizeCssColor);
+      if (
+        colorSteps &&
+        colorSteps.length >= 2 &&
+        colorSteps.every((color): color is string => color !== undefined)
+      ) {
+        this.style.setProperty('--lr-heatmap-color-steps-gradient', `linear-gradient(to right, ${colorSteps.join(', ')})`);
       } else {
         this.style.removeProperty('--lr-heatmap-color-steps-gradient');
       }
@@ -2190,22 +2198,23 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private renderLegendScale(range: [number, number] | null): TemplateResult {
     const stops = this.legendStops;
     if (stops && stops.length > 0) {
-      return html`${stops.map(
-        (stop) => html`
+      return html`${stops.map((stop) => {
+        const color = sanitizeCssColor(stop.color);
+        return html`
           <span part="legend-stop">
             ${
               // A template guard, deliberately not just `styleMap({ background: stop.color })` with
               // an optional `color`: styleMap skips a nullish value silently, which is a legal
               // no-op that would still leave the swatch's own 0.6rem box sitting in the row. A
               // caption-only stop has to omit the element itself.
-              stop.color
-                ? html`<span part="legend-swatch" style=${styleMap({ background: stop.color })}></span>`
+              color
+                ? html`<span part="legend-swatch" style=${styleMap({ background: color })}></span>`
                 : nothing
             }
             <span part="legend-stop-label">${stop.label ?? this.formatNumericValue(stop.value)}</span>
           </span>
-        `,
-      )}`;
+        `;
+      })}`;
     }
     // The indentation here, and the `<div part="legend">`-hugging interpolation in render(),
     // are deliberate: together they reproduce this branch's markup — whitespace included —
@@ -2225,8 +2234,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           part="canvas"
           tabindex=${this.accessibleCells ? '-1' : '0'}
           aria-hidden=${this.accessibleCells ? 'true' : nothing}
-          role=${this.accessibleCells ? nothing : 'group'}
-          aria-label=${this.accessibleCells ? nothing : (this.getAttribute('aria-label') ?? nothing)}
+          role=${nothing}
+          aria-label=${nothing}
           aria-describedby=${this.accessibleCells ? nothing : 'live-region'}
           @pointermove=${this.onPointerMove}
           @pointerleave=${this.onPointerLeave}

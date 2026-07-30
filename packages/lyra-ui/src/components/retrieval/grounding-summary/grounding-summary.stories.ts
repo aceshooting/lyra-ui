@@ -25,6 +25,14 @@ const assessmentWithConfidenceAndWarnings: GroundingAssessment = {
     'One claim could not be matched to a source.',
     'Two claims cite the same source but different pages.',
   ],
+  claims: [
+    {
+      id: 'claim-1',
+      text: 'The answer is supported by the annual report.',
+      status: 'supported',
+      citationIds: ['cite-1'],
+    },
+  ],
 };
 
 const citations: Citation[] = [
@@ -52,6 +60,8 @@ export const WithEvidence: Story = {
       .assessment=${assessmentWithConfidenceAndWarnings}
       .citations=${citations}
       @lr-citation-select=${(e: CustomEvent<{ citation: Citation }>) => console.log('lr-citation-select', e.detail)}
+      @lr-claim-select=${(e: CustomEvent<{ claim: NonNullable<GroundingAssessment['claims']>[number] }>) =>
+        console.log('lr-claim-select', e.detail)}
     ></lr-grounding-summary>
   `,
 };

@@ -107,11 +107,16 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
     const hi = Math.max(min, max);
     const step = finiteRange(this.temperatureStep, 0, 0);
     const hasStep = step > 0;
-    let stepped = finiteNumber(raw, lo);
+    let stepped = Math.min(hi, Math.max(lo, finiteNumber(raw, lo)));
     if (hasStep) {
-      const stepsFromLo = Math.round((stepped - lo) / step);
-      const factor = 10 ** decimalPlaces(step);
-      stepped = Math.round((lo + stepsFromLo * step) * factor) / factor;
+      const ratio = (stepped - lo) / step;
+      if (Number.isFinite(ratio)) {
+        const candidate = lo + Math.round(ratio) * step;
+        if (Number.isFinite(candidate)) {
+          const factor = 10 ** Math.min(decimalPlaces(step), 15);
+          stepped = Math.round(candidate * factor) / factor;
+        }
+      }
     }
     return Math.min(hi, Math.max(lo, stepped));
   }

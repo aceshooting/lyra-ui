@@ -88,7 +88,9 @@ combination (`catalog` empty/unset, or `allowCustom` true) renders the free-text
 (`[part="combobox"]`/`[part="combobox-input"]`) with live substring filtering against the catalog (id or
 label, case-insensitive). The mode is re-evaluated on every render, so toggling `allowCustom` or clearing
 `catalog` at runtime switches modes live, repositioning the shared `[part="listbox"]` popover against
-whichever element is the active anchor.
+whichever element is the active anchor. Replacing `catalog` while free-text mode remains open
+refilters suggestions without erasing the user's current draft; controlled `value` changes and
+actual mode switches still rebase the input to the committed value.
 
 A `value` that isn't present in `catalog` (e.g. a model id saved from a provider whose live catalog has
 since changed) is never silently dropped: it's appended to the rendered option list as a synthetic,
@@ -103,6 +105,8 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 - `change` (`Event`, no detail) — fired alongside `lr-change`, mirroring `<lr-select>`/
   `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
   handlers behave consistently across the picker family.
+- `input` (`Event`, no detail) — fired immediately before `change` alongside each committed
+  `lr-change`, providing the same native-style value-event pair as `<lr-select>`/`<lr-combobox>`.
 - `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
   bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
   equivalent re-dispatch, matching `<lr-select>`'s own trigger.

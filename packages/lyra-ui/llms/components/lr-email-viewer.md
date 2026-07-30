@@ -25,8 +25,9 @@ downloading, or object-URL'ing them is the host's job (e.g.
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `foldQuotes:
-boolean = false` (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
+(attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
 `aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.

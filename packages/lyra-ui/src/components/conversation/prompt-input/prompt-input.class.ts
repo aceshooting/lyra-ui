@@ -122,6 +122,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @query('lr-chat-composer') private composer?: LyraChatComposer;
   @query('lr-mention-popover') private suggestionPopover?: LyraMentionPopover;
   private suggestionAnchor?: HTMLElement;
+  private pendingSuggestionValue: string | undefined;
 
   override focus(options?: FocusOptions): void {
     this.composer?.focus(options);
@@ -138,6 +139,20 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   select(): void {
     this.composer?.select();
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    let invalidate = changed.has('mentionItems') || changed.has('commandItems') || changed.has('disabled');
+    if (changed.has('value')) {
+      const internal = this.pendingSuggestionValue === this.value;
+      this.pendingSuggestionValue = undefined;
+      invalidate ||= !internal;
+    }
+    if (invalidate) {
+      this.activeSuggestion = null;
+      this.suggestionAnchor = undefined;
+    }
   }
 
   protected override updated(_changed: PropertyValues): void {
@@ -174,6 +189,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
     event.stopPropagation();
     const composer = event.currentTarget as LyraChatComposer | null;
     this.suggestionAnchor = composer?.input ?? this.composer?.input ?? undefined;
+    this.pendingSuggestionValue = event.detail.value;
     this.value = event.detail.value;
     this.detectSuggestion(this.value);
     this.emit('lr-input', { value: this.value });
@@ -282,7 +298,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
 
   private renderControls(): TemplateResult | typeof nothing {
     if (!this.modelCatalog?.length && !this.voiceCatalog?.length && !this.sources.length) return nothing;
-    return html`<div part="controls" aria-label=${this.localize('promptInputControls')}>
+    return html`<div part="controls" role="group" aria-label=${this.localize('promptInputControls')}>
       ${this.modelCatalog?.length
         ? html`<lr-model-select
             .catalog=${this.modelCatalog}

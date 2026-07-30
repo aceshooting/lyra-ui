@@ -238,6 +238,31 @@ it('omits data-polarity for a flat (zero) trend', async () => {
   expect(trend.hasAttribute('data-polarity')).to.be.false;
 });
 
+it('lets each headline value variant color be rethemed independently', async () => {
+  const el = (await fixture(html`
+    <lr-stat
+      label="x"
+      value="1"
+      style="
+        --lr-stat-value-success-color: rgb(1, 2, 3);
+        --lr-stat-value-warning-color: rgb(4, 5, 6);
+        --lr-stat-value-danger-color: rgb(7, 8, 9);
+      "
+    ></lr-stat>
+  `)) as LyraStat;
+  const expected = new Map([
+    ['success', 'rgb(1, 2, 3)'],
+    ['warning', 'rgb(4, 5, 6)'],
+    ['danger', 'rgb(7, 8, 9)'],
+  ]);
+  for (const [variant, color] of expected) {
+    el.variant = variant as LyraStat['variant'];
+    await el.updateComplete;
+    const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+    expect(getComputedStyle(value).color).to.equal(color);
+  }
+});
+
 describe('trend pill tint decoupled from the headline value tint', () => {
   it("defaults the 'good' trend pill's color to the same shared --lr-color-success token the headline value's variant=\"success\" tint reads, byte-identical to before", async () => {
     const el = (await fixture(

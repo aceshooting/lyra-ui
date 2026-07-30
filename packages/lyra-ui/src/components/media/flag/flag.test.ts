@@ -33,7 +33,7 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   // hasn't settled yet (proven by the aria-busy assertion above).
   el.country = '';
   await el.updateComplete;
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
 
@@ -42,7 +42,7 @@ it('shows a loading skeleton and aria-busy while the flag package loads, and ign
   // buggy one overwrites the cleared state with the stale flag.
   await aTimeout(200);
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
 it('renders an img for a country code', async function () {
@@ -59,7 +59,7 @@ it('renders an img for a country code', async function () {
   expect(el2.getAttribute('alt')).to.equal(
     new Intl.DisplayNames([navigator.language], { type: 'region' }).of('FR'),
   );
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
 it('re-resolves the flag when country changes on an already-mounted element', async () => {
@@ -234,7 +234,7 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
     )) as LyraFlag;
     // No `await img(el)`/`waitUntil` needed: src bypasses the async peer-package
     // round trip entirely, so the <img> is present on the very first render.
-    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     const image = el.shadowRoot!.querySelector('img');
     expect(image).to.exist;
     expect(image!.getAttribute('src')).to.equal(TEST_FLAG_SRC);
@@ -247,7 +247,7 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
 
     el.src = undefined;
     await el.updateComplete;
-    expect(el.hasAttribute('aria-busy')).to.be.true; // now resolving country="fr" via the peer package
+    expect(el.getAttribute('aria-busy')).to.equal('true'); // now resolving country="fr" via the peer package
 
     const image = await img(el);
     expect(image.getAttribute('src')).to.contain('fr.svg');
@@ -257,7 +257,7 @@ describe('src (pre-resolved URL, bypasses the peer-package lookup)', () => {
     const el = (await fixture(html`<lr-flag src=${TEST_FLAG_SRC} label="A"></lr-flag>`)) as LyraFlag;
     el.src = TEST_FLAG_SRC_REPLACEMENT;
     await el.updateComplete;
-    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.shadowRoot!.querySelector('img')!.getAttribute('src')).to.equal(TEST_FLAG_SRC_REPLACEMENT);
   });
 });
@@ -270,7 +270,7 @@ it('rejects a path-traversal-shaped country value instead of passing it to the f
   // never calls the resolver at all, so no <img> ever appears.
   await aTimeout(50);
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
 it('rejects a path-traversal-shaped language region subtag instead of passing it to the flag resolver', async () => {
@@ -280,7 +280,7 @@ it('rejects a path-traversal-shaped language region subtag instead of passing it
   // pointing outside the intended flags/ directory.
   await aTimeout(50);
   expect(el.shadowRoot!.querySelector('img')).to.not.exist;
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
 });
 
 it('uses a human-readable region name as the default alt text', async () => {
@@ -379,7 +379,7 @@ describe('a rejected resolver (the willUpdate() .catch() handling)', () => {
     expect(caught, 'no unhandledrejection event should have fired').to.be.undefined;
     expect(warnings.join('\n')).to.include('failed to resolve a flag URL for "fr"');
     expect(el.loading).to.be.false;
-    expect(el.hasAttribute('aria-busy')).to.be.false;
+    expect(el.getAttribute('aria-busy')).to.equal('false');
     expect(el.shadowRoot!.querySelector('img')).to.not.exist;
   });
 

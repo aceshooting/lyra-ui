@@ -170,6 +170,55 @@
       }
     },
     {
+      "name": "--lr-archive-viewer-highlight-accent-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Accent highlight background."
+      }
+    },
+    {
+      "name": "--lr-archive-viewer-highlight-active-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Active highlight background."
+      }
+    },
+    {
+      "name": "--lr-archive-viewer-highlight-active-outline",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Active fallback-highlight outline."
+      }
+    },
+    {
+      "name": "--lr-archive-viewer-highlight-danger-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Danger highlight background."
+      }
+    },
+    {
+      "name": "--lr-archive-viewer-highlight-neutral-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Neutral highlight background."
+      }
+    },
+    {
+      "name": "--lr-archive-viewer-highlight-success-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Success highlight background."
+      }
+    },
+    {
+      "name": "--lr-archive-viewer-highlight-warning-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-archive-viewer>`** — Warning highlight background."
+      }
+    },
+    {
       "name": "--lr-artifact-panel-view-active-bg",
       "description": {
         "kind": "markdown",
@@ -789,7 +838,7 @@
       "name": "--lr-chart-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-size-280px)`) — The host's `block-size`. Set on the host element from the `height` property on every change (custom properties only cascade downward, so it cannot be set from inside the shadow root); a host-level override is overwritten the next time `height` changes."
+        "value": "**`<lr-bar-chart>`, `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-scatter-chart>`** (default: `var(--lr-size-280px)`) — The plot region's `block-size` and the host's minimum block size. A visible data table or wrapping DOM legend grows the host in normal flow instead of overlapping following content. Set on the host from `height`."
       }
     },
     {
@@ -1360,6 +1409,27 @@
       }
     },
     {
+      "name": "--lr-compare-panel-selected-background",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-compare-panel>`** (default: `var(--lr-color-brand-quiet)`) — Selected vote button background."
+      }
+    },
+    {
+      "name": "--lr-compare-panel-selected-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-compare-panel>`** (default: `var(--lr-color-brand)`) — Selected vote button border color."
+      }
+    },
+    {
+      "name": "--lr-compare-panel-selected-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-compare-panel>`** (default: `var(--lr-color-brand)`) — Selected vote button text color."
+      }
+    },
+    {
       "name": "--lr-confirm-bar-approved-color",
       "description": {
         "kind": "markdown",
@@ -1518,6 +1588,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-space-m)`) — Gap between cells on both axes. Written inline on `[part=\"base\"]` from the `gap` property (in px) on every render."
+      }
+    },
+    {
+      "name": "--lr-dashboard-grid-interaction-shadow",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-dashboard-grid>`** (default: `var(--lr-shadow)`) — Box shadow applied to a cell for the duration of its pointer drag or resize interaction."
       }
     },
     {
@@ -2200,6 +2277,48 @@
       }
     },
     {
+      "name": "--lr-flow-minimap-node-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-border-strong)`) — Fill of nodes without an execution status."
+      }
+    },
+    {
+      "name": "--lr-flow-minimap-node-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-warning)`) — Denied-node fill."
+      }
+    },
+    {
+      "name": "--lr-flow-minimap-node-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-danger)`) — Failed-node fill."
+      }
+    },
+    {
+      "name": "--lr-flow-minimap-node-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-border-strong)`) — Pending-node fill."
+      }
+    },
+    {
+      "name": "--lr-flow-minimap-node-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-brand)`) — Running-node fill."
+      }
+    },
+    {
+      "name": "--lr-flow-minimap-node-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-minimap>`** (default: `var(--lr-color-success)`) — Successful-node fill."
+      }
+    },
+    {
       "name": "--lr-flow-node-compact-gap",
       "description": {
         "kind": "markdown",
@@ -2239,6 +2358,90 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Border color of the card while `selected`. Overriding the selection color otherwise requires hijacking the library-wide `--lr-color-brand` token."
+      }
+    },
+    {
+      "name": "--lr-flow-node-status-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-border-strong)`) — Status-dot color when no execution status is set."
+      }
+    },
+    {
+      "name": "--lr-flow-node-status-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-warning)`) — Denied status-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-node-status-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-danger)`) — Error status-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-node-status-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-border-strong)`) — Pending status-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-node-status-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-brand)`) — Running status-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-node-status-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-node>`** (default: `var(--lr-color-success)`) — Success status-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-run-overlay-status-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-border-strong)`) — Count-dot color when no execution status is set."
+      }
+    },
+    {
+      "name": "--lr-flow-run-overlay-status-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-warning)`) — Denied count-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-run-overlay-status-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-danger)`) — Error count-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-run-overlay-status-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-border-strong)`) — Pending count-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-run-overlay-status-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-brand)`) — Running count-dot color."
+      }
+    },
+    {
+      "name": "--lr-flow-run-overlay-status-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-flow-run-overlay>`** (default: `var(--lr-color-success)`) — Success count-dot color."
       }
     },
     {
@@ -2295,6 +2498,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-graph-legend>`** (default: `var(--lr-color-text-quiet)`) — Text color for a filtered-out (hidden) legend row's label/count, independent of the shared quiet-text token."
+      }
+    },
+    {
+      "name": "--lr-graph-legend-hidden-swatch-opacity",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-graph-legend>`** (default: `0.5`) — Opacity of a filtered-out row's decorative swatch."
       }
     },
     {
@@ -2715,6 +2925,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-brand)`) — Number value color."
+      }
+    },
+    {
+      "name": "--lr-json-viewer-row-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-json-viewer>`** (default: `var(--lr-color-brand-quiet)`) — Hover background for a structural row."
       }
     },
     {
@@ -3463,7 +3680,7 @@
       "name": "--lr-rating-empty-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-rating>`** (default: `var(--lr-color-border)`) — Unfilled-star color."
+        "value": "**`<lr-rating>`** (default: `var(--lr-color-border)`) — Unfilled-star color, retained during hover preview."
       }
     },
     {
@@ -3894,10 +4111,31 @@
       }
     },
     {
+      "name": "--lr-span-waterfall-denied-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-warning)`) — Denied bar fill."
+      }
+    },
+    {
+      "name": "--lr-span-waterfall-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-danger)`) — Error bar fill."
+      }
+    },
+    {
       "name": "--lr-span-waterfall-name-width",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-span-waterfall>`** (default: `8rem`) — Width of the name gutter column."
+      }
+    },
+    {
+      "name": "--lr-span-waterfall-pending-border-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-border-strong)`) — Pending bar border."
       }
     },
     {
@@ -3908,10 +4146,31 @@
       }
     },
     {
+      "name": "--lr-span-waterfall-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-brand)`) — Running stripe foreground."
+      }
+    },
+    {
+      "name": "--lr-span-waterfall-running-stripe-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-brand-quiet)`) — Running stripe background."
+      }
+    },
+    {
       "name": "--lr-span-waterfall-stripe-speed",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-span-waterfall>`** — Animation duration for a `running` span's striped bar; defaults to `--lr-transition-ambient`."
+      }
+    },
+    {
+      "name": "--lr-span-waterfall-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-span-waterfall>`** (default: `var(--lr-color-success)`) — Success bar fill."
       }
     },
     {
@@ -3978,6 +4237,20 @@
       }
     },
     {
+      "name": "--lr-stack-trace-interactive-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stack-trace>`** (default: `var(--lr-color-brand)`) — Interactive frame/toggle accent."
+      }
+    },
+    {
+      "name": "--lr-stack-trace-internal-frame-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stack-trace>`** (default: `var(--lr-color-text-quiet)`) — Internal frame foreground."
+      }
+    },
+    {
       "name": "--lr-stack-trace-max-height",
       "description": {
         "kind": "markdown",
@@ -4010,6 +4283,27 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-stat>`** (default: `var(--lr-color-success)`) — Text color of the trend pill when its polarity is \"good\". Independent of the headline value's `variant=\"success\"` tint, which reads the shared `--lr-color-success` token directly."
+      }
+    },
+    {
+      "name": "--lr-stat-value-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-danger)`) — Headline value color for the `danger` variant."
+      }
+    },
+    {
+      "name": "--lr-stat-value-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-success)`) — Headline value color for the `success` variant."
+      }
+    },
+    {
+      "name": "--lr-stat-value-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-stat>`** (default: `var(--lr-color-warning)`) — Headline value color for the `warning` variant."
       }
     },
     {
@@ -4363,10 +4657,38 @@
       }
     },
     {
+      "name": "--lr-task-list-error-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-color-danger)`) — Error status icon color."
+      }
+    },
+    {
+      "name": "--lr-task-list-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-color-text-quiet)`) — Pending status icon color."
+      }
+    },
+    {
+      "name": "--lr-task-list-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-color-brand)`) — Running status icon color."
+      }
+    },
+    {
       "name": "--lr-task-list-spin",
       "description": {
         "kind": "markdown",
         "value": "**`<lr-task-list>`** (default: `var(--lr-transition-ambient)`) — Running-status icon spin animation duration/timing."
+      }
+    },
+    {
+      "name": "--lr-task-list-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-task-list>`** (default: `var(--lr-color-success)`) — Success status icon color."
       }
     },
     {
@@ -4426,6 +4748,13 @@
       }
     },
     {
+      "name": "--lr-test-results-failed-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-danger)`) — Failed-state foreground."
+      }
+    },
+    {
       "name": "--lr-test-results-filter-active-bg",
       "description": {
         "kind": "markdown",
@@ -4447,6 +4776,27 @@
       }
     },
     {
+      "name": "--lr-test-results-passed-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-success)`) — Passed-state foreground."
+      }
+    },
+    {
+      "name": "--lr-test-results-running-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-brand)`) — Running-state foreground."
+      }
+    },
+    {
+      "name": "--lr-test-results-skipped-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-test-results>`** (default: `var(--lr-color-text-quiet)`) — Skipped-state foreground."
+      }
+    },
+    {
       "name": "--lr-textarea-max-block-size",
       "description": {
         "kind": "markdown",
@@ -4458,6 +4808,13 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-thinking-panel>`** (default: `var(--lr-size-16rem)`) — Cap on how tall the expanded reasoning transcript grows before `[part=\"body\"]` scrolls internally."
+      }
+    },
+    {
+      "name": "--lr-thinking-panel-pending-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-thinking-panel>`** (default: `var(--lr-color-brand)`) — Live pending-state color."
       }
     },
     {
@@ -5158,6 +5515,76 @@
       "description": {
         "kind": "markdown",
         "value": "**`<lr-chat-message>`** (default: `1.8s ease-in-out`) — Streaming-indicator animation duration and timing function.\n\n**`<lr-skeleton>`** (default: `1.8s ease-in-out`) — Animation duration and timing function shared by the pulse and sheen effects.\n\n**`<lr-tool-call-chip>`** (default: `1.8s ease-in-out`) — Pending-icon pulse duration and timing."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-brand-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand-quiet)`) — Brand badge background."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-brand-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand)`) — Brand badge text color."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-danger-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-danger-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-danger)`) — Danger badge text color."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-neutral-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-surface)`) — Neutral badge background."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-neutral-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-text-quiet)`) — Neutral badge text color."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-success-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-success-quiet)`) — Success badge background."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-success-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-success)`) — Success badge text color."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-warning-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-warning-quiet)`) — Warning badge background."
+      }
+    },
+    {
+      "name": "--lr-tree-badge-warning-color",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-warning)`) — Warning badge text color."
       }
     },
     {

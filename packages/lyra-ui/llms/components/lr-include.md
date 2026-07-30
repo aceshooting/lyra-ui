@@ -22,8 +22,8 @@ raw injection option is omitted, not shipped as a no-op).
 
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
-all of it on every load). `aria-busy="true"` is set on the host while a fetch is in flight and
-removed once it settles either way. Build error UI from `lr-include-error`.
+all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true only
+while a fetch is in flight. Build error UI from `lr-include-error`.
 
 **Properties:**
 - `src: string = ''` (reflected) — URL of the fragment, validated through the shared `safeFetchUrl()`
@@ -38,7 +38,8 @@ removed once it settles either way. Build error UI from `lr-include-error`.
 The shared text-viewer contract is also available for the sanitized light-DOM fragment:
 `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()`
-operate on the included text.
+operate on the included text. A successful replacement explicitly recomputes any active search
+against the new fragment rather than leaving results from the previous content.
 
 **Events:**
 - `lr-load` — `detail: { src }` — the fragment was sanitized and written into the light DOM.

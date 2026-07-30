@@ -28,6 +28,19 @@ it('renders title and page combined', async () => {
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('annual_report.pdf — p. 12');
 });
 
+it('lets a host aria-label name the title button without replacing its visible title', async () => {
+  const el = (await fixture(
+    html`<lr-source-card
+      title="annual_report.pdf"
+      page="12"
+      aria-label="Open the cited annual report"
+    ></lr-source-card>`,
+  )) as LyraSourceCard;
+  const title = el.shadowRoot!.querySelector('[part="title"]')!;
+  expect(title.getAttribute('aria-label')).to.equal('Open the cited annual report');
+  expect(title.textContent!.trim()).to.equal('annual_report.pdf — p. 12');
+});
+
 it('renders a non-numeric page label as-is', async () => {
   const el = (await fixture(html`<lr-source-card title="notes.txt" page="iv"></lr-source-card>`)) as LyraSourceCard;
   expect(el.shadowRoot!.querySelector('[part="title"]')!.textContent!.trim()).to.equal('notes.txt — p. iv');

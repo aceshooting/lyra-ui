@@ -219,7 +219,7 @@ describe('lr-csv-viewer', () => {
         expect(highlighted.getAttribute('role')).to.equal('cell');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
         expect(action !== null).to.be.true;
-        expect(action.getAttribute('aria-label')).to.equal('First result');
+        expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada — First result');
         const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
@@ -507,4 +507,16 @@ describe('lr-csv-viewer', () => {
       }
     });
   });
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraCsvViewer>(html`<lr-csv-viewer></lr-csv-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-csv-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-csv-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });

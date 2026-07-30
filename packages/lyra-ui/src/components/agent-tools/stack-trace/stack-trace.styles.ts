@@ -53,11 +53,11 @@ export const styles = css`
     cursor: pointer;
   }
   [part='frame'][data-internal] {
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-stack-trace-internal-frame-color, var(--lr-color-text-quiet));
   }
   [part='frame']:hover,
   [part='frame']:focus-visible {
-    color: var(--lr-color-brand);
+    color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand));
   }
   [part='frame']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -75,7 +75,7 @@ export const styles = css`
     display: block;
     font: inherit;
     font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-brand);
+    color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand));
     background: none;
     border: none;
     cursor: pointer;
@@ -106,7 +106,7 @@ export const styles = css`
     margin-block-end: var(--lr-space-s);
   }
   [part='copy-button']:hover {
-    border-color: var(--lr-color-brand);
+    border-color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand));
   }
   [part='copy-button']:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

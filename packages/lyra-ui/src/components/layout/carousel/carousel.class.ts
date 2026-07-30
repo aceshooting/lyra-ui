@@ -82,6 +82,14 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.reduceMotion = this.mediaQuery?.matches ?? false;
     this.mediaQuery?.addEventListener("change", this.onMotionPreferenceChange);
     this.restartAutoplay();
+    if (this.hasUpdated) {
+      queueMicrotask(() => {
+        if (!this.isConnected) return;
+        this.syncSlides();
+        this.restartAutoplay();
+        this.requestUpdate();
+      });
+    }
   }
 
   override disconnectedCallback(): void {
@@ -222,10 +230,11 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private changeTo(index: number): void {
     const count = this.slides().length;
-    if (count === 0) return;
-    let next = index;
-    if (this.loop) next = (index + count) % count;
-    else next = Math.min(count - 1, Math.max(0, index));
+    if (count === 0 || !Number.isFinite(index)) return;
+    const requested = Math.trunc(index);
+    let next = requested;
+    if (this.loop) next = (requested + count) % count;
+    else next = Math.min(count - 1, Math.max(0, requested));
     if (next === this.index) return;
     this.index = next;
     this.emit("lr-slide-change", { index: next });

@@ -109,6 +109,8 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * confirmation is ever pending at a time: starting a new action (on the same item or a different
  * one) silently cancels whichever confirmation was already open, the same way only one row can be
  * mid-edit in a list at once.
+ * If a controlled collection replacement removes the row containing focus, focus moves to the
+ * closest surviving memory row, or to the stable root when no row survives.
  *
  * Three distinct, non-overlapping actions: `add` promotes a short-term item into long-term memory
  * (only offered on short-term items -- long-term items are already there); `remove` deletes one
@@ -176,9 +178,14 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private readonly idBase = nextId('memory-panel');
   private readonly itemIds = new WeakMap<LyraMemoryItem, string>();
   private nextItemId = 0;
+  private pendingControlledFocus:
+    | { scope: MemoryScope; index: number }
+    | 'base'
+    | undefined;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
+    this.captureControlledFocus(changed);
     if (!this.pending) return;
     if (this.pending.kind === 'forget-all') {
       // The confirmation applies to the exact controlled collection the user saw. If the host
@@ -190,6 +197,64 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
     const items = this.pending.scope === 'short-term' ? this.shortTerm : this.longTerm;
     if (!items.includes(this.pending.item)) this.pending = null;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    const pending = this.pendingControlledFocus;
+    if (pending === undefined) return;
+    this.pendingControlledFocus = undefined;
+    if (pending === 'base') {
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
+      return;
+    }
+    this.refocusItem(pending.scope, pending.index);
+  }
+
+  private captureControlledFocus(changed: PropertyValues<this>): void {
+    if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
+    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    if (!active) return;
+
+    const row = active.closest<HTMLElement>('[part="item"]');
+    if (row) {
+      const scope = row.dataset['scope'] as MemoryScope | undefined;
+      if (!scope) return;
+      const property = scope === 'short-term' ? 'shortTerm' : 'longTerm';
+      if (!changed.has(property)) return;
+      const oldRows = [
+        ...this.renderRoot.querySelectorAll<HTMLElement>(
+          `[part="section"][data-scope="${scope}"] [part="item"]`,
+        ),
+      ];
+      const oldIndex = oldRows.indexOf(row);
+      const previousItems =
+        (changed.get(property) as LyraMemoryItem[] | undefined) ?? [];
+      const focusedItem = previousItems[oldIndex];
+      const nextItems = scope === 'short-term' ? this.shortTerm : this.longTerm;
+      const survivingIndex = focusedItem ? nextItems.indexOf(focusedItem) : -1;
+      if (survivingIndex === oldIndex) return;
+      if (nextItems.length === 0 && this.shortTerm.length === 0 && this.longTerm.length === 0) {
+        this.pendingControlledFocus = 'base';
+      } else {
+        this.pendingControlledFocus = {
+          scope,
+          index:
+            survivingIndex >= 0
+              ? survivingIndex
+              : Math.min(Math.max(oldIndex, 0), Math.max(0, nextItems.length - 1)),
+        };
+      }
+      return;
+    }
+
+    if (
+      active.getAttribute('part') === 'forget-all-button' &&
+      changed.has('longTerm') &&
+      this.longTerm.length === 0
+    ) {
+      this.pendingControlledFocus = 'base';
+    }
   }
 
   private itemKey(item: LyraMemoryItem, scope: MemoryScope): string {
@@ -233,7 +298,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
         ),
       ];
       const target = rows[Math.min(index, rows.length - 1)] ??
-        this.renderRoot.querySelector<HTMLElement>('[part="item"]');
+        this.renderRoot.querySelector<HTMLElement>('[part="item"]') ??
+        this.renderRoot.querySelector<HTMLElement>('[part="base"]');
       target?.focus();
     });
   }
@@ -403,11 +469,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     const groupLabel = this.getAttribute('aria-label') || this.label || this.localize('memoryPanelLabel');
 
     if (allEmpty) {
-      return html`<div part="base" aria-label=${groupLabel}><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
+      return html`<div part="base" tabindex="-1" aria-label=${groupLabel}><lr-empty part="empty" heading=${this.localize('noData')}></lr-empty></div>`;
     }
 
     return html`
-      <div part="base" role="group" aria-label=${groupLabel}>
+      <div part="base" role="group" tabindex="-1" aria-label=${groupLabel}>
         ${this.renderSection('short-term', 'memoryPanelShortTermHeading', this.shortTerm)}
         ${this.renderSection('long-term', 'memoryPanelLongTermHeading', this.longTerm)}
       </div>

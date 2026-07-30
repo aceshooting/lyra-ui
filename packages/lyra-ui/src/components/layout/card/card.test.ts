@@ -246,6 +246,24 @@ describe("lr-card", () => {
       );
     });
 
+    it("refreshes its content-derived activation name after detached text changes", async () => {
+      const el = (await fixture(
+        html`<lr-card interactive>Original project</lr-card>`
+      )) as LyraCard;
+      const parent = el.parentElement!;
+      el.remove();
+      el.textContent = "Renamed while detached";
+      parent.append(el);
+      await el.updateComplete;
+
+      const activation = el.shadowRoot!.querySelector(
+        '[part="activation-button"]'
+      ) as HTMLButtonElement;
+      expect(activation.getAttribute("aria-label")).to.equal(
+        "Renamed while detached"
+      );
+    });
+
     it("does not emit when the click originates in a slotted interactive control", async () => {
       const el = (await fixture(html`
         <lr-card interactive>

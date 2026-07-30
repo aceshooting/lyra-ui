@@ -191,6 +191,7 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.accessibleContentText = this.textContent?.trim() ?? "";
     this.contentObserver = new MutationObserver(() => {
       this.accessibleContentText = this.textContent?.trim() ?? "";
     });

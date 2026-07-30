@@ -41,6 +41,33 @@ export const FixedPixelRangePanel: Story = {
   `,
 };
 
+export const AchievableDividerAriaBounds: Story = {
+  name: 'Adjacent achievable divider bounds',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each divider separator reports the leading panel percentage as aria-valuenow. Its aria-valuemin/max are the range currently achievable within that adjacent pair, after applying both panels’ constraints—not global whole-track bounds.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-split
+      style="height: 8rem; border: 1px solid var(--lr-color-border)"
+      .sizes=${[50, 30, 20]}
+      .panelConstraints=${[
+        { minPercent: 20, maxPercent: 60 },
+        { minPercent: 15, maxPercent: 35 },
+        { minPercent: 10, maxPercent: 40 },
+      ]}
+    >
+      <div style="padding: 0.5rem">Panel A</div>
+      <div style="padding: 0.5rem">Panel B</div>
+      <div style="padding: 0.5rem">Panel C</div>
+    </lr-split>
+  `,
+};
+
 export const ResponsiveCollapse: Story = {
   render: () => html`
     <div

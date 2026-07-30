@@ -87,6 +87,13 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   protected override willUpdate(changed: PropertyValues): void {
     if (!this.hasUpdated || changed.has('tree') || changed.has('document') || changed.has('state') || changed.has('registry')) {
+      if (this.document !== null && this.document.version !== '1') {
+        this.resolved = null;
+        this.emit('lr-render-error', {
+          error: new Error('lr-widget-renderer: unsupported document version'),
+        });
+        return;
+      }
       const registry = this.registry ?? getDefaultWidgetTypeRegistry();
       const root = this.document?.root ?? this.tree;
       const next = resolveTree(root, {
@@ -109,7 +116,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
 
   private collectMappedKeys(node: ResolvedNode | null, out: Set<string>): void {
     if (!node || node.kind === 'text') return;
-    if (node.kind === 'mapped') out.add(node.key);
+    if (node.kind === 'mapped') out.add(node.identityKey);
     for (const child of node.children) this.collectMappedKeys(child, out);
   }
 
@@ -199,9 +206,9 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
    *  re-resolution. */
   private getOrCreateElement(node: ResolvedElement): HTMLElement | null {
     if (!node.tag) return null;
-    const existing = this.elements.get(node.key);
+    const existing = this.elements.get(node.identityKey);
     const el = existing && existing.tagName.toLowerCase() === node.tag ? existing : document.createElement(node.tag);
-    if (el !== existing) this.elements.set(node.key, el);
+    if (el !== existing) this.elements.set(node.identityKey, el);
     const previousKeys = this.assignedProps.get(el) ?? new Set<string>();
     const initialValues = this.initialProps.get(el) ?? new Map<string, unknown>();
     const nextKeys = new Set(Object.keys(node.props));
@@ -225,8 +232,14 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     }
     this.syncActionHandler(el, node);
     this.syncBindingHandlers(el, node);
-    render(html`${repeat(node.children, (c) => c.key, (c) => this.renderChildValue(c))}`, el, { host: this });
+    render(html`${repeat(node.children, (child) => this.renderIdentity(child), (child) => this.renderChildValue(child))}`, el, {
+      host: this,
+    });
     return el;
+  }
+
+  private renderIdentity(node: ResolvedNode): string {
+    return node.kind === 'text' ? `text:${node.key}` : node.identityKey;
   }
 
   private renderChildValue(node: ResolvedNode): unknown {
@@ -239,7 +252,7 @@ export class LyraWidgetRenderer extends LyraElement<LyraWidgetRendererEventMap> 
     const part = node.kind === 'builtin-row' ? 'row' : node.kind === 'builtin-col' ? 'col' : 'text';
     return html`<div part=${part} style=${styleMap(this.builtinStyle(node))} slot=${node.slot ?? nothing}>
       ${node.kind === 'builtin-text' ? node.props['value'] ?? nothing : nothing}
-      ${repeat(node.children, (c) => c.key, (c) => this.renderChildValue(c))}
+      ${repeat(node.children, (child) => this.renderIdentity(child), (child) => this.renderChildValue(child))}
     </div>`;
   }
 

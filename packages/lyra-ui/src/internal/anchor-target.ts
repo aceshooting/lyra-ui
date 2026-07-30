@@ -34,8 +34,13 @@ export interface LyraAnchorTarget {
 }
 
 function selectionRange(root: LyraElement): Range | null {
-  const shadowRoot = root.renderRoot instanceof ShadowRoot ? root.renderRoot : undefined;
-  const globalSelection = (typeof window !== 'undefined' ? window.getSelection() : null) as
+  const document = root.ownerDocument;
+  const view = document.defaultView;
+  const renderRoot = root.renderRoot as unknown as { host?: Element; nodeType?: number };
+  const shadowRoot = renderRoot?.nodeType === 11 && renderRoot.host === root
+    ? renderRoot as unknown as ShadowRoot
+    : undefined;
+  const globalSelection = (view?.getSelection() ?? null) as
     | (Selection & { getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[] })
     | null;
 
@@ -243,6 +248,8 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
      *  `document.getSelection()`. Collapsed selections never fire. */
     protected bindTextSelection(contentRoot: Element): void {
       this.unbindTextSelection();
+      const document = contentRoot.ownerDocument;
+      const view = document.defaultView;
 
       const onSelectionEnd = (): void => {
         const range = selectionRange(this);
@@ -255,10 +262,14 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         this.emit<TextSelectDetail>('lr-text-select', { text, anchor, rects });
       };
 
-      let debounceHandle: ReturnType<typeof requestAnimationFrame> | undefined;
+      let debounceHandle: number | undefined;
       const onSelectionChange = (): void => {
-        if (debounceHandle !== undefined) cancelAnimationFrame(debounceHandle);
-        debounceHandle = requestAnimationFrame(() => {
+        if (!view) {
+          onSelectionEnd();
+          return;
+        }
+        if (debounceHandle !== undefined) view.cancelAnimationFrame(debounceHandle);
+        debounceHandle = view.requestAnimationFrame(() => {
           debounceHandle = undefined;
           onSelectionEnd();
         });
@@ -272,7 +283,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
         contentRoot.removeEventListener('pointerup', onSelectionEnd);
         contentRoot.removeEventListener('keyup', onSelectionEnd);
         document.removeEventListener('selectionchange', onSelectionChange);
-        if (debounceHandle !== undefined) cancelAnimationFrame(debounceHandle);
+        if (debounceHandle !== undefined) view?.cancelAnimationFrame(debounceHandle);
       };
     }
 

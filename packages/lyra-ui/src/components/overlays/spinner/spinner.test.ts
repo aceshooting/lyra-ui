@@ -26,7 +26,9 @@ it('keeps the slotted label sr-only when label-placement is "none" (default)', a
 it('shows the slotted label in flow when label-placement is "after"', async () => {
   const el = (await fixture(html`<lr-spinner label-placement="after">Loading data</lr-spinner>`)) as LyraSpinner;
   const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(label.hidden).to.be.false;
+  expect(base.getAttribute('aria-label')).to.equal('Loading data');
   const computed = getComputedStyle(label);
   expect(computed.position).to.not.equal('absolute');
   expect(computed.clipPath).to.not.equal('inset(50%)');

@@ -171,6 +171,8 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private isMounting = true;
 
   private scrollRafId?: number;
+  private virtualAnchorReleaseRafId?: number;
+  private anchoringVirtualTail = false;
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
@@ -178,6 +180,11 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
       cancelAnimationFrame(this.scrollRafId);
       this.scrollRafId = undefined;
     }
+    if (this.virtualAnchorReleaseRafId !== undefined) {
+      cancelAnimationFrame(this.virtualAnchorReleaseRafId);
+      this.virtualAnchorReleaseRafId = undefined;
+    }
+    this.anchoringVirtualTail = false;
   }
 
   /** `virtualizeThreshold`, normalized to a finite non-negative integer (falling back to the
@@ -221,17 +228,38 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
     }
 
     const justAnchored = (changed.has('expanded') || changed.has('mode')) && this.expanded && this.mode === 'live';
-    if (justAnchored || (changed.has('entries') && this.expanded && this.mode === 'live' && this.follow)) {
+    const followingChangedRenderPath =
+      changed.has('virtualizeThreshold') && this.expanded && this.mode === 'live' && this.follow;
+    if (
+      justAnchored ||
+      followingChangedRenderPath ||
+      (changed.has('entries') && this.expanded && this.mode === 'live' && this.follow)
+    ) {
       this.scrollToLatest();
     }
   }
 
   private scrollToLatest(): void {
     if (this.isVirtualized) {
+      this.anchoringVirtualTail = true;
       // Deferred to updateComplete: the internal virtual-list may not have re-rendered its own
       // windowed rows for the latest `entries` yet within this same synchronous pass.
       void this.updateComplete.then(() => {
-        this.virtualListEl?.scrollToIndex(this.entries.length - 1, { align: 'end' });
+        const list = this.virtualListEl;
+        if (!list || !this.isConnected) {
+          this.anchoringVirtualTail = false;
+          return;
+        }
+        list.scrollToIndex(this.entries.length - 1, { align: 'end', behavior: 'auto' });
+        if (this.virtualAnchorReleaseRafId !== undefined) {
+          cancelAnimationFrame(this.virtualAnchorReleaseRafId);
+        }
+        this.virtualAnchorReleaseRafId = requestAnimationFrame(() => {
+          this.virtualAnchorReleaseRafId = requestAnimationFrame(() => {
+            this.virtualAnchorReleaseRafId = undefined;
+            this.anchoringVirtualTail = false;
+          });
+        });
       });
       return;
     }
@@ -271,6 +299,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   private onVirtualListRangeChanged = (e: CustomEvent<VirtualListRange>): void => {
     e.stopPropagation();
     if (this.mode !== 'live') return;
+    if (this.anchoringVirtualTail) return;
     const atBottom = this.entries.length > 0 && e.detail.end >= this.entries.length - 1;
     if (atBottom !== this.follow) this.follow = atBottom;
   };

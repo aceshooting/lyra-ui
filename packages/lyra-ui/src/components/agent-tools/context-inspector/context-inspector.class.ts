@@ -4,7 +4,12 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { Citation } from '../../../ai/types.js';
 import type { ContextMeterSegment, ContextMeterTone } from '../../data/context-meter/context-meter.class.js';
-import type { ExportFormatOption } from '../../utility/export-button/export-button.class.js';
+import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
+import type { LyraCopyButtonEventMap } from '../../utility/copy-button/copy-button.class.js';
+import type {
+  ExportFormatOption,
+  LyraExportButtonEventMap,
+} from '../../utility/export-button/export-button.class.js';
 import '../../data/context-meter/context-meter.class.js';
 import '../../utility/copy-button/copy-button.class.js';
 import '../../utility/export-button/export-button.class.js';
@@ -84,6 +89,11 @@ function formatCount(n: number, locale: string): string {
   return Math.round(finiteCount(n)).toLocaleString(locale);
 }
 
+export interface LyraContextInspectorEventMap
+  extends LyraCitationBadgeEventMap,
+    LyraCopyButtonEventMap,
+    LyraExportButtonEventMap {}
+
 /**
  * `<lr-context-inspector>` — an inspection view of the exact context assembled for a model call:
  * per-segment token estimates via `<lr-context-meter>`, source attribution via
@@ -127,7 +137,7 @@ function formatCount(n: number, locale: string): string {
  * @csspart truncation-boundary - The marker appended after a `truncated` segment's text.
  * @csspart empty - The empty state, shown when `segments` is empty.
  */
-export class LyraContextInspector extends LyraElement {
+export class LyraContextInspector extends LyraElement<LyraContextInspectorEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The assembled context, one entry per piece (system prompt, retrieved chunk, history turn, ...). */

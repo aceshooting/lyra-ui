@@ -4,7 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
-import { finiteRange } from '../../../internal/numbers.js';
+import { finiteCount, finiteRange } from '../../../internal/numbers.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
@@ -260,7 +260,11 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private formatNumber(n: number): string {
-    return getNumberFormat(this.effectiveLocale).format(n);
+    return getNumberFormat(this.effectiveLocale).format(finiteCount(n));
+  }
+
+  private validTokenMetric(value: number | undefined): value is number {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0;
   }
 
   private toggleSpan(id: string): void {
@@ -489,16 +493,17 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     const durationLabel = this.formatDuration(span.endMs != null ? span.endMs - span.startMs : undefined);
     const fragments = [
       span.name,
+      span.detail ?? '',
       this.localize(KIND_LABEL_KEY[span.kind]),
       this.localize(STATUS_LABEL_KEY[span.status]),
       durationLabel,
-      this.showTokens && span.tokensIn != null
+      this.showTokens && this.validTokenMetric(span.tokensIn)
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('tokensIn'),
             value: this.formatNumber(span.tokensIn),
           })
         : '',
-      this.showTokens && span.tokensOut != null
+      this.showTokens && this.validTokenMetric(span.tokensOut)
         ? this.localize('traceTreeMetricLabel', undefined, {
             label: this.localize('tokensOut'),
             value: this.formatNumber(span.tokensOut),
@@ -556,8 +561,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
           : nothing}
         <span part="duration">${durationLabel}</span>
         ${this.showTokens
-          ? html`<span part="tokens-in">${span.tokensIn != null ? this.formatNumber(span.tokensIn) : ''}</span>
-              <span part="tokens-out">${span.tokensOut != null ? this.formatNumber(span.tokensOut) : ''}</span>`
+          ? html`<span part="tokens-in">${this.validTokenMetric(span.tokensIn) ? this.formatNumber(span.tokensIn) : ''}</span>
+              <span part="tokens-out">${this.validTokenMetric(span.tokensOut) ? this.formatNumber(span.tokensOut) : ''}</span>`
           : nothing}
         ${this.showCost ? html`<span part="cost">${span.costText ?? ''}</span>` : nothing}
       </div>

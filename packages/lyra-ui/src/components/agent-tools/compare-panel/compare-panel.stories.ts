@@ -66,6 +66,25 @@ export const WithVoteLogging: Story = {
   `,
 };
 
+export const SelectedThemeHooks: Story = {
+  name: 'Selected vote theme hooks',
+  render: () => html`
+    <lr-compare-panel
+      style="
+        max-width: 44rem;
+        --lr-compare-panel-selected-background: var(--lr-color-success-quiet);
+        --lr-compare-panel-selected-border-color: var(--lr-color-success);
+        --lr-compare-panel-selected-color: var(--lr-color-success);
+      "
+      item-id="pair-themed"
+      vote="a"
+    >
+      <p slot="a">Answer A.</p>
+      <p slot="b">Answer B.</p>
+    </lr-compare-panel>
+  `,
+};
+
 /** 320px container — panes stack vertically below 640px. */
 export const Narrow: Story = {
   render: () => html`

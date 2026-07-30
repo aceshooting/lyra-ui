@@ -47,6 +47,15 @@ export interface LyraKnowledgeGraphExplorerEventMap {
    *  change` already establishes), so reassigning it back is optional -- useful only for a host
    *  that wants to persist or observe pins elsewhere. */
   'lr-pin-change': CustomEvent<{ pinnedNodeIds: string[] }>;
+  'lr-node-click': CustomEvent<{ id: string; x: number; y: number }>;
+  'lr-link-click': CustomEvent<{ source: string; target: string; id?: string }>;
+  'lr-node-expand': CustomEvent<{ id: string }>;
+  'lr-community-click': CustomEvent<{ id: string }>;
+  'lr-relation-activate': CustomEvent<{
+    relation: string;
+    sourceId?: string;
+    targetId?: string;
+  }>;
 }
 
 /**
@@ -88,6 +97,8 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * still being presettable/observable properties and emitting events (`lr-selection-change`,
  * `lr-pin-change`, `lr-path-request`, plus every composed primitive's own event bubbling straight through
  * unmodified) for a host that wants to persist or react to them.
+ * Hidden node types are excluded from both search matches and selected-entity neighbor rows, and
+ * activation requests for a hidden node are ignored before selection changes.
  *
  * `highlight` controls what drives that dimming, on top of the always-active search-match
  * dimming: `'selection'` (the default) dims by the selected node's immediate neighborhood;
@@ -285,6 +296,12 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     return !!node && (node.type == null || !this.hiddenTypes.includes(node.type));
   }
 
+  private canActivateNode(id: string): boolean {
+    const node = this.nodes.find((candidate) => candidate.id === id);
+    if (node) return node.type == null || !this.hiddenTypes.includes(node.type);
+    return !this.hasUpdated && this.nodes.length === 0;
+  }
+
   private nodeLabel(id: string): string {
     return this.nodeById.get(id)?.label || id;
   }
@@ -318,10 +335,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     for (const link of this.linksByNodeId.get(id) ?? []) {
       if (link.source === id) {
         const node = this.entityFor(link.target);
-        if (node) rows.push({ relation: link.label ?? '', direction: 'out', node });
+        if (node && this.isVisibleNode(link.target)) {
+          rows.push({ relation: link.label ?? '', direction: 'out', node });
+        }
       } else if (link.target === id) {
         const node = this.entityFor(link.source);
-        if (node) rows.push({ relation: link.label ?? '', direction: 'in', node });
+        if (node && this.isVisibleNode(link.source)) {
+          rows.push({ relation: link.label ?? '', direction: 'in', node });
+        }
       }
     }
     return rows;
@@ -332,8 +353,9 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     if (!q) return undefined;
     return this.nodes.filter(
       (node) =>
-        node.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
-        (node.label ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q),
+        this.isVisibleNode(node.id) &&
+        (node.id.toLocaleLowerCase(this.effectiveLocale).includes(q) ||
+          (node.label ?? '').toLocaleLowerCase(this.effectiveLocale).includes(q)),
     );
   }
 
@@ -420,6 +442,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
    *  path-strip elements, `lr-entity-card`'s own built-in focus button, and the keyboard-Enter/
    *  Space fallback for a direct graph node activation. */
   private async activateEntity(id: string): Promise<void> {
+    if (!this.canActivateNode(id)) return;
     const generation = ++this.activationGeneration;
     this.setInternalSelectedNodeId(id);
     this.trackedNodeEl = undefined;
@@ -467,6 +490,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
 
   private onGraphNodeClick = (event: CustomEvent<{ id: string; x: number; y: number }>): void => {
     const id = event.detail.id;
+    if (!this.canActivateNode(id)) return;
     this.activationGeneration++;
     this.setInternalSelectedNodeId(id);
     this.pendingNodeId = id;

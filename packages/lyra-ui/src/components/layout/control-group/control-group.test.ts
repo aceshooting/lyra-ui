@@ -17,14 +17,14 @@ describe('<lr-control-group>', () => {
     expect(base.getAttribute('aria-label')).to.equal('Chart toolbar');
   });
 
-  it('prefers the label prop over a forwarded host aria-label', async () => {
+  it('lets a forwarded host aria-label override the label prop', async () => {
     const el = await fixture<LyraControlGroup>(html`
-      <lr-control-group label="Toolbar" aria-label="Ignored">
+      <lr-control-group label="Toolbar" aria-label="Author toolbar">
         <lr-button>Open</lr-button>
       </lr-control-group>
     `);
     const base = el.shadowRoot!.querySelector('[part="base"]')!;
-    expect(base.getAttribute('aria-label')).to.equal('Toolbar');
+    expect(base.getAttribute('aria-label')).to.equal('Author toolbar');
   });
 
   it('is accessible', async () => {

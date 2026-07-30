@@ -12,6 +12,38 @@ describe('lr-avatar', () => {
     expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
   });
 
+  it('treats default-slotted text and emoji nodes as glyph content', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AI" alt="Assistant">🤖</lr-avatar>`)) as LyraAvatar;
+    await el.updateComplete;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hidden).to.be.false;
+    const slot = icon.querySelector('slot') as HTMLSlotElement;
+    expect(slot.assignedNodes({ flatten: true }).map((node) => node.textContent).join('')).to.contain('🤖');
+    expect(el.shadowRoot!.querySelector('[part="initials"]')).to.not.exist;
+  });
+
+  it('retries a previously failed source after a successful semantic source transition', async () => {
+    const sourceA = 'https://example.test/avatar-a.png';
+    const sourceB = 'https://example.test/avatar-b.png';
+    const el = (await fixture(html`
+      <lr-avatar initials="AB" src=${sourceA} alt="A. Bee"></lr-avatar>
+    `)) as LyraAvatar;
+    let image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+    image.dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
+
+    el.src = sourceB;
+    await el.updateComplete;
+    image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+    expect(image.getAttribute('src')).to.equal(sourceB);
+
+    el.src = sourceA;
+    await el.updateComplete;
+    image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
+    expect(image.getAttribute('src')).to.equal(sourceA);
+  });
+
   it('prefers a loaded image over initials', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
     await aTimeout(50);

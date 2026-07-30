@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, aTimeout } from '@open-wc/testing';
 import './icon.js';
 import type { LyraIcon } from './icon.js';
 
@@ -53,4 +53,30 @@ it('does not clone hyphenated light-DOM custom elements into the SVG namespace',
   await (el as LyraIcon).updateComplete;
   expect(el.shadowRoot!.querySelector('svg > x-icon-test-node')).to.not.exist;
   expect(el.shadowRoot!.querySelector('svg > path')).to.exist;
+});
+
+it('tracks assigned SVG attribute and descendant mutations only while connected', async () => {
+  const el = (await fixture(html`
+    <lr-icon><g><path d="M1 1"></path></g></lr-icon>
+  `)) as LyraIcon;
+  const parent = el.parentElement!;
+  const sourceGroup = el.querySelector('g')!;
+  const sourcePath = sourceGroup.querySelector('path')!;
+
+  sourcePath.setAttribute('d', 'M2 2');
+  const sourceCircle = document.createElement('circle');
+  sourceCircle.setAttribute('r', '4');
+  sourceGroup.append(sourceCircle);
+  await aTimeout(0);
+  expect(el.shadowRoot!.querySelector('svg > g > path')!.getAttribute('d')).to.equal('M2 2');
+  expect(el.shadowRoot!.querySelector('svg > g > circle')!.getAttribute('r')).to.equal('4');
+
+  el.remove();
+  sourcePath.setAttribute('d', 'M3 3');
+  await aTimeout(0);
+  expect(el.shadowRoot!.querySelector('svg > g > path')!.getAttribute('d')).to.equal('M2 2');
+
+  parent.append(el);
+  await aTimeout(0);
+  expect(el.shadowRoot!.querySelector('svg > g > path')!.getAttribute('d')).to.equal('M3 3');
 });

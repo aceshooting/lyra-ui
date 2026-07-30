@@ -40,6 +40,11 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 embedded `lr-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
 
+While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
+Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and
+nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
+styles or anchor hit testing.
+
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
 `var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation

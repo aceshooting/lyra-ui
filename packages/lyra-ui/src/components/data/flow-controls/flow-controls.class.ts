@@ -185,7 +185,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="zoom-in"
         type="button"
-        ?disabled=${disabled || atMax}
+        ?disabled=${disabled || this.locked || atMax}
         aria-label=${this.localize('zoomIn')}
         title=${this.localize('zoomIn')}
         @click=${() => this.canvasEl?.zoomIn()}
@@ -193,7 +193,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="zoom-out"
         type="button"
-        ?disabled=${disabled || atMin}
+        ?disabled=${disabled || this.locked || atMin}
         aria-label=${this.localize('zoomOut')}
         title=${this.localize('zoomOut')}
         @click=${() => this.canvasEl?.zoomOut()}
@@ -201,7 +201,7 @@ export class LyraFlowControls extends LyraElement {
       <button
         part="fit"
         type="button"
-        ?disabled=${disabled}
+        ?disabled=${disabled || this.locked}
         aria-label=${this.localize('zoomToFit')}
         title=${this.localize('zoomToFit')}
         @click=${() => this.canvasEl?.fit()}

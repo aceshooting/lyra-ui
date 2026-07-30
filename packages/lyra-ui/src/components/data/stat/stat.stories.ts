@@ -28,6 +28,31 @@ export const Gallery: Story = {
   `,
 };
 
+export const RetintedVariants: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Headline variant colors are independently themeable without changing the trend-pill or shared semantic colors.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      class="flex flex-wrap gap-4"
+      style="
+        --lr-stat-value-success-color: var(--lr-color-brand);
+        --lr-stat-value-warning-color: var(--lr-color-danger);
+        --lr-stat-value-danger-color: var(--lr-color-warning);
+      "
+    >
+      <lr-stat label="Passed" value="128" variant="success"></lr-stat>
+      <lr-stat label="Waiting" value="42" variant="warning"></lr-stat>
+      <lr-stat label="Failed" value="3" variant="danger"></lr-stat>
+    </div>
+  `,
+};
+
 export const SparkAndBreakdown: Story = {
   render: () => html`
     <div class="flex flex-wrap gap-4">

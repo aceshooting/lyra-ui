@@ -348,6 +348,85 @@ it('drags the start handle with pointer events and emits lr-input then lr-change
   expect(changeDetail!.start).to.equal(50);
 });
 
+it('pointer-maps the midpoint of the full finite number range without overflowing', async () => {
+  const el = (await fixture(html`
+    <lr-time-range
+      min=${-Number.MAX_VALUE}
+      max=${Number.MAX_VALUE}
+      start=${-Number.MAX_VALUE}
+      end=${Number.MAX_VALUE}
+      step="0"
+    ></lr-time-range>
+  `)) as LyraTimeRange;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+  startHandle.setPointerCapture = () => {};
+  base.getBoundingClientRect = () =>
+    ({
+      left: 0,
+      top: 0,
+      right: 200,
+      bottom: 0,
+      width: 200,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON() {
+        return {};
+      },
+    }) as DOMRect;
+
+  startHandle.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 71, clientX: 0 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 71, clientX: 100 }));
+  expect(el.start).to.equal(0);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 71 }));
+});
+
+it('keeps live values but suppresses lr-change and tears down on pointercancel/lostpointercapture', async () => {
+  for (const [index, endType] of (['pointercancel', 'lostpointercapture'] as const).entries()) {
+    const el = (await fixture(
+      html`<lr-time-range min="0" max="100" start="20" end="80" step="1"></lr-time-range>`,
+    )) as LyraTimeRange;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const startHandle = el.shadowRoot!.querySelector('[part="handle-start"]') as HTMLElement;
+    startHandle.setPointerCapture = () => {};
+    base.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 0,
+        width: 200,
+        height: 0,
+        x: 0,
+        y: 0,
+        toJSON() {
+          return {};
+        },
+      }) as DOMRect;
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener('lr-input', () => inputs++);
+    el.addEventListener('lr-change', () => changes++);
+    const pointerId = 60 + index;
+
+    startHandle.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerId, clientX: 40 }),
+    );
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 100 }));
+    expect(el.start, endType).to.equal(50);
+    expect(inputs, endType).to.equal(1);
+
+    window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+    expect(changes, endType).to.equal(0);
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 180 }));
+    expect(inputs, endType).to.equal(1);
+    expect(el.start, endType).to.equal(50);
+  }
+});
+
 it('mirrors the drag ratio under dir="rtl", since the track is positioned with inset-inline-start', async () => {
   const el = (await fixture(
     html`<lr-time-range

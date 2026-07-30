@@ -15,7 +15,8 @@ export async function loadEmailAndSanitizer(
   let PostalMime: OptionalPeerApi | undefined;
   try {
     const module = await importPostalMime();
-    PostalMime = module.default ?? module;
+    const candidate = module.default ?? module;
+    PostalMime = typeof candidate.parse === 'function' ? candidate : undefined;
   } catch (error) {
     console.warn(
       '<lr-email-viewer> needs the optional peer dependency `postal-mime` to parse .eml messages — install it with `pnpm add postal-mime`:',
@@ -26,7 +27,8 @@ export async function loadEmailAndSanitizer(
   let DOMPurify: OptionalPeerApi | undefined;
   try {
     const module = await importDompurify();
-    DOMPurify = module.default ?? module;
+    const candidate = module.default ?? module;
+    DOMPurify = typeof candidate.sanitize === 'function' ? candidate : undefined;
   } catch (error) {
     console.warn(
       '<lr-email-viewer> needs the optional peer dependency `dompurify` to sanitize HTML message bodies — install it with `pnpm add dompurify`:',

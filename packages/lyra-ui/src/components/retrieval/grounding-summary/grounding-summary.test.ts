@@ -68,6 +68,33 @@ it('renders claim-level evidence when claims are supplied and allows it to be hi
   expect(el.shadowRoot!.querySelector('lr-claim-evidence')).to.not.exist;
 });
 
+it('exposes the bubbled lr-claim-select contract with the complete claim detail', async () => {
+  const claim = {
+    id: 'claim-1',
+    text: 'A supported claim',
+    status: 'supported' as const,
+    citationIds: ['cite-1'],
+  };
+  const el = (await fixture(html`<lr-grounding-summary></lr-grounding-summary>`)) as LyraGroundingSummary;
+  el.assessment = {
+    supportedClaims: 1,
+    unsupportedClaims: 0,
+    coverage: 1,
+    claims: [claim],
+  };
+  el.citations = CITATIONS;
+  await el.updateComplete;
+  const claims = el.shadowRoot!.querySelector('lr-claim-evidence') as HTMLElement & {
+    updateComplete: Promise<unknown>;
+    shadowRoot: ShadowRoot;
+  };
+  await claims.updateComplete;
+
+  const pending = oneEvent(el, 'lr-claim-select');
+  (claims.shadowRoot.querySelector('[part="claim-trigger"]') as HTMLButtonElement).click();
+  expect((await pending).detail).to.deep.equal({ claim });
+});
+
 it('formats large claim counts through the effective locale', async () => {
   const el = (await fixture(html`<lr-grounding-summary locale="de-DE"></lr-grounding-summary>`)) as LyraGroundingSummary;
   el.assessment = { supportedClaims: 1234, unsupportedClaims: 0, coverage: 0.5 };

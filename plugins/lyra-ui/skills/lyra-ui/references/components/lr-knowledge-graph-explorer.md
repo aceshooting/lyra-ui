@@ -35,7 +35,8 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
-  `lr-graph-legend.hiddenTypes`
+  `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
+  neighbor rows, and activation
 - `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives the details popover
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find

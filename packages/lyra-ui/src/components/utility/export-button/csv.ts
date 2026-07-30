@@ -1,8 +1,7 @@
-// A bare leading '-' is not itself formula syntax (only '=', and context-dependent '+'/'@',
-// reliably trigger spreadsheet formula evaluation) — guarding it forces text rendering on
-// ordinary negative numbers/currency. Per OWASP CSV-injection guidance, '-' is intentionally
-// excluded here.
-const UNSAFE_LEADING = /^[=+@\t\r\n]/;
+// Guard every common ASCII and fullwidth formula sigil. Spreadsheet engines vary in whether
+// leading '-' is interpreted as a formula, and fullwidth variants can be normalized during
+// import, so treating all of them as text is the fail-closed export contract.
+const UNSAFE_LEADING = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20\t\r\n]/;
 const NEEDS_QUOTING = /[",\r\n]/;
 
 /** Escapes a CSV field: quotes as needed, guards against formula injection. */

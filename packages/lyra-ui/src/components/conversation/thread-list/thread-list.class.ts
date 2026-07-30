@@ -36,6 +36,8 @@ export interface LyraThreadListEventMap {
   'lr-thread-rename': CustomEvent<{ id: string; title: string }>;
   'lr-filter-change': CustomEvent<{ text: string; matchCount: number }>;
   'lr-group-toggle': CustomEvent<{ id: string; collapsed: boolean }>;
+  blur: CustomEvent<undefined>;
+  focus: CustomEvent<undefined>;
 }
 
 export type ThreadBucketKey =
@@ -334,6 +336,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   @query('lr-virtual-list') private virtualListEl?: LyraVirtualList;
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
+  private focusTaskGeneration = 0;
   private readonly injectedListItemRoles = new Set<Element>();
 
   // Slotted mode is only for a host that's actually relying on it (real slotted content present)
@@ -353,6 +356,19 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (
+      changed.has('threads') ||
+      changed.has('searchText') ||
+      changed.has('filter') ||
+      changed.has('grouping') ||
+      changed.has('groupBy') ||
+      changed.has('groupOrder') ||
+      changed.has('collapsedGroupIds') ||
+      changed.has('showArchived')
+    ) {
+      this.focusTaskGeneration++;
+    }
     if (!this.hasUpdated) {
       this.hasEmptySlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'empty');
       const defaultSlotted = this.defaultSlottedElements();
@@ -402,6 +418,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.focusTaskGeneration++;
     this.restoreInjectedListItemRoles();
     super.disconnectedCallback();
   }
@@ -544,6 +561,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private onSearchInput = (e: Event): void => {
+    this.focusTaskGeneration++;
     this.searchText = (e.target as HTMLInputElement).value;
     const count = this.visibleThreads.length;
     this.emit<{ text: string; matchCount: number }>('lr-filter-change', {
@@ -566,6 +584,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   private onSearchKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== 'ArrowDown') return;
+    this.focusTaskGeneration++;
     const rows = this.rowElements();
     if (rows.length === 0) return;
     e.preventDefault();
@@ -607,6 +626,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
     const origin = e.composedPath()[0];
     if (origin instanceof Element && origin.closest('[part="group-toggle"]')) return;
+    const focusGeneration = ++this.focusTaskGeneration;
     const rows = this.rowElements();
     if (rows.length === 0) return;
     const currentIndex = this.focusedRowIndex(rows);
@@ -647,8 +667,26 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
       // that native scroll and the virtual list's coalesced scroll render a frame to settle; the
       // second pass covers a measurement update that mounts the exact target one frame later.
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) => {
+          const view = this.ownerDocument.defaultView;
+          if (view) view.requestAnimationFrame(() => resolve());
+          else requestAnimationFrame(() => resolve());
+        });
+        if (
+          focusGeneration !== this.focusTaskGeneration ||
+          !this.isConnected ||
+          this.virtualListEl !== list
+        ) {
+          return;
+        }
         await list.updateComplete;
+        if (
+          focusGeneration !== this.focusTaskGeneration ||
+          !this.isConnected ||
+          this.virtualListEl !== list
+        ) {
+          return;
+        }
         const targetRow = this.rowElements().find((row) => row.id === targetId);
         if (!targetRow) continue;
         this.optionEl(targetRow)?.focus();

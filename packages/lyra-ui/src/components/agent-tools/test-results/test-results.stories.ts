@@ -43,7 +43,33 @@ export const Empty: Story = {
 export const Narrow320: Story = {
   name: 'Narrow (320px)',
   render: () =>
-    html`<div style="max-width:320px"><lr-test-results .suites=${mixedSuites}></lr-test-results></div>`,
+    html`<div style="max-width:320px"><lr-test-results
+      .suites=${[
+        ...mixedSuites,
+        {
+          id: 'long',
+          name: 'Long content',
+          tests: [{ id: 'long-test', name: `test-${'identifier'.repeat(24)}`, status: 'passed' }],
+        },
+      ]}
+    ></lr-test-results></div>`,
+};
+
+export const SuiteScopedDetails: Story = {
+  name: 'Duplicate test ids with suite-scoped details',
+  render: () => html`
+    <lr-test-results
+      style="max-width:32rem"
+      .autoExpandFailures=${false}
+      .suites=${[
+        { id: 'unit', name: 'Unit', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
+        { id: 'integration', name: 'Integration', tests: [{ id: 'same', name: 'shared id', status: 'passed' }] },
+      ]}
+    >
+      <p slot="detail-unit:same">Unit detail</p>
+      <p slot="detail-integration:same">Integration detail</p>
+    </lr-test-results>
+  `,
 };
 
 export const RetintedActiveFilter: Story = {

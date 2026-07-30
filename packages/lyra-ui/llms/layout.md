@@ -251,14 +251,16 @@ position) survives the transition.
 - `collapsed: boolean = false` (reflected)
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
 - `fullscreen: boolean = false` (reflected)
-- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — raw CSS `inset` shorthand applied to
+- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — CSS `inset` shorthand applied to
   `[part="base"]` and `[part="backdrop"]` while fullscreen instead of the default per-side
   `max(var(--lr-space-l), <safe-area inset>)`, e.g. `"0 0 0 240px"` to leave a 240px persistent
-  sidebar/toolbar visible during fullscreen
+  sidebar/toolbar visible during fullscreen. Invalid values, declaration-breaking input, and
+  `url()` are ignored.
 - `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
   `lr-empty`'s `compact`
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
-  CSS `inset` independently from `fullscreenInset`; when empty, it follows `fullscreenInset`
+  CSS `inset` independently from `fullscreenInset`; when empty or invalid, it follows a valid
+  `fullscreenInset`
 - `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
   chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
   TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
@@ -381,6 +383,8 @@ navigation.
 
 **Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
 `lr-slide-change` (`detail: { index }`).
+
+**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes.
 
 **CSS parts:** `base` (the `role="region"` landmark), `viewport` (the keyboard-focusable slide
 viewport), `track`, `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
@@ -868,6 +872,8 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
+The compact `2xs` track has a 24px minimum block size, and every `2xs`/`xs` segment retains at least
+a 24×24px activation target even when its label is very short.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default
@@ -1604,7 +1610,9 @@ called with no second argument, so `event.detail` is `null`, not `undefined`; fi
 when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
 roving-focused item), `lr-menu-item-change` (`detail: { value, checked }` — fired when a
 `type="checkbox"` item is activated and its `checked` state toggled, in addition to — never instead
-of — `lr-menu-item-select`; never fired for `type="normal"`)
+of — `lr-menu-item-select`; never fired for `type="normal"`),
+`lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
+state changes so the parent menu can repair its roving-tabindex state immediately)
 
 **Slots:** default (the item's label content), `icon` (optional leading icon)
 
@@ -2025,6 +2033,7 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
 **Additional API surface:**
 
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
+- `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow)`.
 
 ## `lr-drilldown-panel`
 

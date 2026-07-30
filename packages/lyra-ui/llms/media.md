@@ -253,7 +253,9 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   content, sanitize anything derived from user input first; prefer `label` (`Popup.setText()`,
   escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
-  gotchas.
+  gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
+  aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
+  declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
 - `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
   geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three layers
@@ -265,10 +267,9 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   is: an entry whose `sourceId` persists across a `dataLayers` reassignment gets its GeoJSON updated
   in place (`setData()`), one that's dropped has its source/layers removed, and a genuinely new
   `sourceId` gets a new source/layers — nothing leaks on removal, style change, or disconnect.
-- `label: string = ''` — accessible name for the map region, applied as `[part="base"]`'s
-  `aria-label`. A plain `aria-label` attribute on the host itself is honored as a fallback when
-  `label` is left unset, matching `lr-slider`/`lr-checkbox`/`lr-switch`; with neither set, it
-  falls back to the localized `'map'` message.
+- `label: string = ''` — accessible-name fallback for MapLibre's actual focusable canvas. A plain
+  host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
+  `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
 
 **Getters:** `map` → the raw `maplibregl.Map` instance.
 
@@ -327,6 +328,10 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   layer/source maplibre-gl knows about.
 - Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
   hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
+- A marker uses `label` as its accessible name, falling back to the localized map label. Popup
+  ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
+  `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
+  own control strings all follow the component's effective locale.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
@@ -401,10 +406,14 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
-provided. The accessible name always comes from `label` regardless, so icon-only slot content still
-announces correctly.
+provided. The semantic button's accessible name comes from `accessibleLabel`/host `aria-label`,
+then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
+the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
+controls keep their own activation and do not also open the picker; clicking non-interactive custom
+content still activates the dropzone.
 
-**CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
+**CSS parts:** `base` (the native dropzone button, visually behind but semantically beside the
+slotted content), `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
 `rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
 each currently-rejected file next to a per-reason message — in addition to, never in place of, the
@@ -679,7 +688,9 @@ type wins; filename extension fallback is used only for an empty or `application
 MIME type. Unknown values return a generic file result.
 
 **Properties:** `mimeType` (attribute `mime-type`), `name`, `size` (bytes; `0` renders no size),
-`label`, `decorative`, and `variant: 'icon' | 'label'`.
+`label`, `decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed
+localized file-type/size name. `decorative` changes the semantic owner to presentation and renders
+`aria-hidden="true"` explicitly.
 
 **CSS parts:** `base`, `icon`, `label`, and `size`.
 
@@ -716,7 +727,9 @@ final.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
-  shadow root) — same contract as `<lr-document-preview>`'s identically-named prop.
+  shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
+  not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
+  the stylesheet token in control.
 - `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
   `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
   box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
@@ -818,10 +831,10 @@ capability as a row.
   attribute.
 - `disabled: boolean = false` (reflected)
 - `triggerLabel?: string` (attribute `trigger-label`) — overrides the single-capability trigger
-  button's `aria-label`, which otherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.
-  `'Attach files'`); only affects the single-capability button (`[part='trigger']`) — the
-  multi-capability menu's own trigger keeps its fixed `'Add attachment'` label regardless. Unset
-  (the default) keeps the built-in English default.
+  button's accessible-name fallback, which otherwise comes from the localized capability metadata
+  (e.g. `'Attach files'`); only affects the single-capability button (`[part='trigger']`). The
+  multi-capability trigger uses its localized `'Add attachment'` fallback. A host `aria-label`
+  takes precedence on either trigger shape.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 
@@ -834,8 +847,8 @@ default) — fired when the `camera` / `audio` capability is activated; this com
 capture UI of its own, the host owns everything from here (there's no single right answer for
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
-blob to `<lr-attachment-chip>`). Internal `focus`/`blur` from the hidden input are re-emitted as
-host events.
+blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
+are re-emitted as bubbling, composed host events; the hidden file input is not the focus owner.
 
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
@@ -872,6 +885,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 - The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
+- Setting `disabled` closes an open capability menu, disables its items as well as the trigger, and
+  discards a native file selection that arrives after the component became disabled.
 
 **Additional API surface:**
 
@@ -905,10 +920,10 @@ it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Events:** none.
 
-**Slots:** default slot — icon/glyph content (e.g. an inline SVG), shown in place of the image and
-initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role glyph. Takes priority over both
-`src` and `initials`. The glyph is treated as decorative (`aria-hidden`) — set `alt` alongside it
-for an accessible name.
+**Slots:** default slot — icon/glyph content (e.g. an inline SVG or non-whitespace text/emoji),
+shown in place of the image and initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role
+glyph. Takes priority over both `src` and `initials`. The glyph is treated as decorative
+(`aria-hidden`) — set `alt` alongside it for an accessible name.
 
 **CSS parts:** `base` (the outer circle/square container), `icon` (wrapper around the slotted
 icon/glyph, only shown while the slot has assigned content), `image` (the `<img>`, only rendered
@@ -937,7 +952,8 @@ override it on the element for a size the built-in scale doesn't cover. Plus sha
 
 **Known gotchas:**
 - an image load failure falls back to `initials` automatically. Changing `src` clears the failure
-  state so the replacement URL gets its own load attempt.
+  state so the replacement URL gets its own load attempt, including when a later transition returns
+  to a URL that failed previously.
 - when `alt` or host `aria-label` supplies a name, the base preserves that name through the
   initials fallback while hiding duplicate initials text from assistive technology.
 
@@ -997,6 +1013,8 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
   swap.
+- reduced-motion arbitration is re-evaluated on every reconnect, so a preference change made while
+  the element was detached cannot leave `playing` stale.
 
 **Additional API surface:**
 
@@ -1033,7 +1051,7 @@ Declaratively animates one slotted element through the native Web Animations API
   `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
   (attribute `root-margin`) configure that observer.
 - `currentTime: number` — the underlying `Animation.currentTime` (`0` when no animation exists);
-  writable, forwarded to the animation when one exists.
+  writable, forwarded to the animation when one exists. Non-finite assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
 property), `pause()` (`play = false`), `finish()`, `cancel()`.
@@ -1106,6 +1124,9 @@ badge label. `size` swaps it per tier (`var(--lr-font-size-xs)` at `sm`, `var(--
 caps read at the same optical weight; override it alongside `--lr-avatar-font-size` on the avatars
 themselves when tuning a custom tier.
 
+The overflow badge keeps a 40×40px minimum activation target at `sm`, `md`, and `lg`; this does not
+change the visible avatar circles themselves.
+
 **Optional peer deps:** none.
 
 ```html
@@ -1143,16 +1164,17 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
-- `showCounter: boolean = true` (attribute `show-counter`) — shows `[part="counter"]` and its
-  live-region announcement.
+- `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
+  The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-zoomable-frame>`, which does the
   normalizing.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
 
-**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `reason` defaults to `'api'`
-and is forwarded as the close event's detail.
+**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
+index without changing state or emitting `lr-index-change`; `reason` defaults to `'api'` and is
+forwarded as the close event's detail.
 
 **Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
@@ -1197,12 +1219,14 @@ photo content.
 
 ## `lr-qr-code`
 
-Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`, `label`,
-`size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas owns `role="img"`;
-its accessible name uses `label`, host `aria-label`, then `value`. Empty values render an empty state.
+Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
+`label`, `size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas
+owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`. Empty
+values render an empty state.
 **CSS parts:** `base`, `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
-`--lr-qr-code-fill` and `--lr-qr-code-background`. Call `refreshTheme()` after external theme changes
-when the computed QR colors need to be redrawn immediately.
+`--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
+changes redraw automatically. Call `refreshTheme()` only for consumer-owned token changes that
+aren't represented by those signals.
 
 ## `lr-image-viewer`
 
@@ -1232,6 +1256,11 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+
+While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
+Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and
+nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
+styles or anchor hit testing.
 
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
@@ -1272,9 +1301,17 @@ number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: 
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
-**Methods:** `play()`, `pause()`, and `toggle()` proxy the native media element. `seek(seconds)`
-sets `currentTime` and forces an immediate `lr-time-change`. `search(query)` resolves the match
-count; `searchNext()`/`searchPrevious()` wrap; `clearSearch()` resets.
+Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
+and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
+cannot leak into state or events. `rates` keeps only unique finite values in the supported
+`0.0625..16` range, while always including the normalized current `playbackRate`.
+
+**Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
+promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
+`toggle()` proxy the native element; an internal toggle that cannot start playback renders the
+error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
+`lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap;
+`clearSearch()` resets.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),

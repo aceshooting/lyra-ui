@@ -818,3 +818,50 @@ it('is accessible while compact', async () => {
   const el = (await fixture(html`<lr-file-input compact></lr-file-input>`)) as LyraFileInput;
   await expect(el).to.be.accessible();
 });
+
+it('keeps arbitrary slotted controls outside the dropzone button and does not open the picker from them', async () => {
+  const el = (await fixture(html`
+    <lr-file-input>
+      <button type="button">Configure upload</button>
+    </lr-file-input>
+  `)) as LyraFileInput;
+  const slottedButton = el.querySelector('button')!;
+  const dropzoneButton = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  let pickerClicks = 0;
+  input.addEventListener('click', () => pickerClicks++);
+
+  slottedButton.click();
+
+  expect(pickerClicks).to.equal(0);
+  expect(dropzoneButton.tagName).to.equal('BUTTON');
+  expect(dropzoneButton.contains(slottedButton)).to.be.false;
+  await expect(el).to.be.accessible();
+});
+
+it('ignores a terminal native file selection that arrives after the host becomes disabled', async () => {
+  const el = (await fixture(html`<lr-file-input></lr-file-input>`)) as LyraFileInput;
+  const input = el.shadowRoot!.querySelector('input[type="file"]') as HTMLInputElement;
+  const transfer = new DataTransfer();
+  transfer.items.add(makeFile('late.csv', 'text/csv'));
+  input.files = transfer.files;
+  let emissions = 0;
+  el.addEventListener('lr-files', () => emissions++);
+
+  el.disabled = true;
+  await el.updateComplete;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+
+  expect(emissions).to.equal(0);
+  expect(input.value).to.equal('');
+});
+
+it('contains an unbroken custom label inside a 280px allocation', async () => {
+  const longLabel = 'Upload'.repeat(300);
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 280px">
+      <lr-file-input>${longLabel}</lr-file-input>
+    </div>
+  `)) as HTMLElement;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
+});

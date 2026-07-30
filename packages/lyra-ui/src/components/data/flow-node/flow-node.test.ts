@@ -25,6 +25,33 @@ it('shows a visible status chip with text (never color-only) for each status', a
   expect(el.shadowRoot!.querySelector('[part="status"]')!.textContent).to.include('Error');
 });
 
+it('lets each status-dot color be rethemed independently', async () => {
+  const el = (await fixture(html`
+    <lr-flow-node
+      style="
+        --lr-flow-node-status-pending-color: rgb(1, 2, 3);
+        --lr-flow-node-status-running-color: rgb(4, 5, 6);
+        --lr-flow-node-status-success-color: rgb(7, 8, 9);
+        --lr-flow-node-status-error-color: rgb(10, 11, 12);
+        --lr-flow-node-status-denied-color: rgb(13, 14, 15);
+      "
+    ></lr-flow-node>
+  `)) as LyraFlowNode;
+  const expected = new Map([
+    ['pending', 'rgb(1, 2, 3)'],
+    ['running', 'rgb(4, 5, 6)'],
+    ['success', 'rgb(7, 8, 9)'],
+    ['error', 'rgb(10, 11, 12)'],
+    ['denied', 'rgb(13, 14, 15)'],
+  ]);
+  for (const [status, color] of expected) {
+    el.status = status as LyraFlowNode['status'];
+    await el.updateComplete;
+    const dot = el.shadowRoot!.querySelector('.status-dot') as HTMLElement;
+    expect(getComputedStyle(dot).backgroundColor).to.equal(color);
+  }
+});
+
 it('renders a determinate progress bar only when progress is set', async () => {
   const el = (await fixture(html`<lr-flow-node></lr-flow-node>`)) as LyraFlowNode;
   expect(el.shadowRoot!.querySelector('[part="progress"]')).to.not.exist;

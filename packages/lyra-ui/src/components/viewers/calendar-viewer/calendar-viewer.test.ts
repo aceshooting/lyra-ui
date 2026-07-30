@@ -128,3 +128,15 @@ describe('lr-calendar-viewer', () => {
     });
   });
 });
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraCalendarViewer>(html`<lr-calendar-viewer></lr-calendar-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-calendar-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-calendar-viewer-max-height')).to.equal('calc(10rem + 2px)');
+});

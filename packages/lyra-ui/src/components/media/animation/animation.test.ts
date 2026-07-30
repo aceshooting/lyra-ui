@@ -465,6 +465,24 @@ it('currentTime getter/setter proxy the underlying Animation once one exists', a
   expect(el.currentTime).to.equal(250);
 });
 
+it('ignores non-finite currentTime assignments instead of forwarding them into WAAPI', async () => {
+  const el = (await fixture(html`
+    <lr-animation .keyframes=${[{ opacity: 0 }, { opacity: 1 }]}>
+      <div>Target</div>
+    </lr-animation>
+  `)) as LyraAnimation;
+  await el.updateComplete;
+  el.currentTime = 125;
+  expect(el.currentTime).to.equal(125);
+
+  expect(() => {
+    el.currentTime = Number.NaN;
+    el.currentTime = Number.POSITIVE_INFINITY;
+    el.currentTime = Number.NEGATIVE_INFINITY;
+  }).to.not.throw();
+  expect(el.currentTime).to.equal(125);
+});
+
 it('play-on-visible: observes the slotted target and starts playback once it intersects, then auto-disconnects (repeat defaults to false)', async () => {
   const io = stubIntersectionObserver();
   try {

@@ -31,7 +31,7 @@ export const ActionableContent: Story = {
     docs: {
       description: {
         story:
-          'Actionable default-slot content promotes the popup from `role="tooltip"` to a named `role="dialog"` and keeps it open while pointer or focus is inside. Use `<lr-popover>` instead when the trigger should own conventional click-to-open behavior.',
+          'Actionable default-slot content (including controls inside nested open shadow roots) promotes the popup from `role="tooltip"` to a named `role="dialog"` and keeps it open while pointer or focus is inside. Escape from popup content closes it and restores trigger focus. Use `<lr-popover>` instead when the trigger should own conventional click-to-open behavior.',
       },
     },
   },
@@ -58,7 +58,7 @@ export const VirtualAnchor: Story = {
     docs: {
       description: {
         story:
-          'Instead of a slotted `trigger`, `showAt({ x, y })` anchors the tooltip to an arbitrary rectangle -- here, the point clicked inside the surface below. There is no hover/blur to close it since there is no real trigger, so it stays open until Escape or the next click.',
+          'Instead of a slotted `trigger`, `showAt({ x, y })` anchors the tooltip to an arbitrary rectangle -- here, the point clicked inside the surface below. There is no hover/blur to close it since there is no real trigger, so it stays open until Escape or an explicit `open = false`; another click reanchors it and keeps it open.',
       },
     },
   },

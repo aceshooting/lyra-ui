@@ -44,9 +44,9 @@ export interface LyraDialogEventMap {
  *    becomes `aria-label` on the panel outright, overriding every source
  *    below (including a slotted heading) — the standard ARIA convention for
  *    a consumer that wants full control over the announced name regardless
- *    of whatever `heading`/`label` props are also set. Also suppresses the
- *    visible header/`heading` row and the sr-only `label` element from
- *    rendering at all, same as case 1 already does to cases 2/3 below.
+ *    of whatever `heading`/`label` props are also set. This naming override
+ *    does not suppress visible `heading` chrome; sighted users still receive
+ *    the heading text the consumer supplied.
  * 1. Otherwise, if a heading element (`h1`–`h6` or `[role="heading"]`) is a *direct
  *    child* (not inside `slot="footer"`), its text content becomes
  *    `aria-label` on the panel — unchanged, and takes priority over `heading`
@@ -58,7 +58,7 @@ export interface LyraDialogEventMap {
  * 3. Otherwise, when `label` is set, an invisible (`.sr-only`, exposed as the
  *    `label` part) element carrying that text is rendered inside the panel
  *    and `aria-labelledby` points at it instead.
- * Only one of cases 2/3 ever renders at a time, so exactly one element ever
+ * Only one of cases 2/3 ever names the panel at a time, so exactly one element ever
  * claims `aria-labelledby`. `label` itself never renders visible chrome on
  * its own — `::part(label)` can be restyled to make the sr-only text visible,
  * or `heading` can be set instead, if a consumer wants visible chrome without
@@ -133,9 +133,10 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   @property({ type: Boolean, attribute: 'closable' }) closable = false;
 
   /** Host-level `aria-label` override for the panel's accessible name — wins over every other
-   *  source (a slotted heading, `heading`, `label`), matching `<lr-date-input>`'s
-   *  `accessibleLabel` pattern. See the class doc for the full precedence order. Set as a plain
-   *  `aria-label` attribute on `<lr-dialog>` itself, not a public JS property. */
+   *  naming source (a slotted heading, `heading`, `label`) without suppressing visible heading
+   *  chrome, matching `<lr-date-input>`'s `accessibleLabel` pattern. See the class doc for the
+   *  full precedence order. Set as a plain `aria-label` attribute on `<lr-dialog>` itself, not a
+   *  public JS property. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
   /** Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s
@@ -160,7 +161,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     }
     if (changed.has('open')) {
       if (this.open) {
-        this.activateOverlay();
+        if (this.isConnected) this.activateOverlay();
       } else {
         this.deactivateOverlay();
       }
@@ -170,7 +171,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   // Runs after render so the manager can resolve the panel and its composed
   // focus targets, including controls projected through either slot.
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('open') && this.open) {
+    if (changed.has('open') && this.open && this.isConnected) {
       this.overlay?.focusInitial();
     }
   }
@@ -267,7 +268,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   };
 
   private activateOverlay(): void {
-    if (this.overlay?.isActive()) return;
+    if (!this.isConnected || this.overlay?.isActive()) return;
     this.releaseScrollLock ??= lockScroll(this.ownerDocument);
     this.overlay = activateOverlay({
       host: this,
@@ -290,9 +291,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // `heading` get a turn, then `label`'s sr-only fallback -- never more than one of the two below
     // claims aria-labelledby for the same panel, and never more than one source ever claims
     // aria-label.
-    const useHeadingProp = !this.accessibleLabel && !this.headingText && !!this.heading;
-    const useSrLabel = !this.accessibleLabel && !this.headingText && !useHeadingProp && this.label.length > 0;
-    const showHeader = useHeadingProp || this.closable;
+    const renderHeadingProp = !this.headingText && !!this.heading;
+    const useHeadingPropForName = !this.accessibleLabel && renderHeadingProp;
+    const useSrLabel =
+      !this.accessibleLabel && !this.headingText && !useHeadingPropForName && this.label.length > 0;
+    const showHeader = renderHeadingProp || this.closable;
     return html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
       <div
@@ -300,7 +303,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         role=${this.open ? 'dialog' : nothing}
         aria-modal=${this.open ? 'true' : nothing}
         aria-label=${this.accessibleLabel ?? this.headingText ?? nothing}
-        aria-labelledby=${useHeadingProp ? this.headingId : useSrLabel ? this.srLabelId : nothing}
+        aria-labelledby=${useHeadingPropForName ? this.headingId : useSrLabel ? this.srLabelId : nothing}
         tabindex="-1"
       >
         ${useSrLabel
@@ -309,7 +312,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
         ${showHeader
           ? html`
               <div part="header">
-                ${useHeadingProp
+                ${renderHeadingProp
                   ? html`<span id=${this.headingId} part="heading">${this.heading}</span>`
                   : nothing}
                 ${this.closable

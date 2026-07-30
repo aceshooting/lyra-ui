@@ -62,6 +62,20 @@ export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-stack-trace .trace=${jsTrace}></lr-stack-trace></div>`,
 };
 
+export const ScopedStateColors: Story = {
+  name: 'Scoped state colors',
+  render: () => html`
+    <lr-stack-trace
+      style="
+        max-width:40rem;
+        --lr-stack-trace-internal-frame-color: var(--lr-color-warning);
+        --lr-stack-trace-interactive-color: var(--lr-color-success);
+      "
+      .trace=${jsTrace}
+    ></lr-stack-trace>
+  `,
+};
+
 export const PlainInsideCard: Story = {
   name: 'appearance="plain" (nested in a bordered host)',
   render: () => html`

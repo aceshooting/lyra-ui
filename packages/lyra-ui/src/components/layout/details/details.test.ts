@@ -4,6 +4,7 @@ import "./details.js";
 import "./accordion.js";
 import "./accordion-item.js";
 import type { LyraDetails } from "./details.js";
+import type { LyraAccordion } from "./accordion.js";
 import { styles as detailsStyles } from "./details.styles.js";
 import { styles as accordionStyles } from "./accordion.styles.js";
 
@@ -40,6 +41,30 @@ it("closes sibling panels when multiple is false", async () => {
   );
   await Promise.all(panels.map((panel) => panel.updateComplete));
   expect(panels[0].open).to.be.false;
+});
+
+it("reconciles multiple initially-open panels when multiple is false", async () => {
+  const el = await fixture(html`<lr-accordion>
+    <lr-accordion-item open summary="One">A</lr-accordion-item>
+    <lr-accordion-item open summary="Two">B</lr-accordion-item>
+  </lr-accordion>`);
+  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraDetails[];
+  await Promise.all(panels.map((panel) => panel.updateComplete));
+
+  expect(panels.map((panel) => panel.open)).to.deep.equal([true, false]);
+});
+
+it("reconciles open panels when multiple changes from true to false", async () => {
+  const el = (await fixture(html`<lr-accordion multiple>
+    <lr-accordion-item open summary="One">A</lr-accordion-item>
+    <lr-accordion-item open summary="Two">B</lr-accordion-item>
+  </lr-accordion>`)) as LyraAccordion;
+  el.multiple = false;
+  await el.updateComplete;
+  const panels = [...el.querySelectorAll("lr-accordion-item")] as LyraDetails[];
+  await Promise.all(panels.map((panel) => panel.updateComplete));
+
+  expect(panels.map((panel) => panel.open)).to.deep.equal([true, false]);
 });
 
 it("reconciles accordion listener ownership when panels are appended, removed, or moved", async () => {

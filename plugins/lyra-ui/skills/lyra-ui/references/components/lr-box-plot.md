@@ -6,7 +6,7 @@
 - **Class** `LyraBoxPlot`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/box-plot.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 5 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,7 +20,8 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `labels: string[] = []` (attribute: false)
 - `boxes: BoxPlotSeries[] = []` (attribute: false) — `BoxPlotSeries { label: string; data:
   BoxPlotPoint[]; color?: string }`, `BoxPlotPoint { min, q1, median, q3, max }`
-- `legend: boolean = false`
+- `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
+  visibility without clipping long labels.
 - `height: string = '280px'`
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
@@ -30,13 +31,16 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   localized five-number summary
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 
-**Methods:** `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme change.
+**Methods:** `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
+change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
+its computed color swatches.
 
 **Events:** none.
 
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
-**CSS parts:** `base`, `canvas`, `description`, `data-table`, `error` (`role="alert"` message shown
+**CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
+`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (`role="alert"` message shown
 instead of `canvas` when the optional box-plot peer fails to load)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
@@ -61,8 +65,12 @@ through the same cached `chart-loader.ts` used by `lr-chart`.
 - no raw `config` passthrough — limited to the properties above; can't reach the underlying
   controller's own options (`itemRadius`, `outlierRadius`, `coef`).
 - Chart.js receives `effectiveLocale`; generated numeric summaries use it, the y axis moves to
-  logical start in RTL, canvas tooltip/axis colors are token-driven, and animation is disabled
-  under reduced motion.
+  logical start in RTL, and live ancestor `lang`/`dir` changes redraw the already-mounted canvas
+  without requiring another box property write. Canvas tooltip/axis colors are token-driven, and
+  animation is disabled under reduced motion.
+- `--lr-chart-height` fixes the `plot` height and the host's minimum height, not the complete host.
+  A visible or slotted table and the wrapping legend remain in normal document flow, grow the
+  component, and cannot overlap following content; oversized tables scroll inside the host.
 - If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
   fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
 

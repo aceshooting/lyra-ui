@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
@@ -8,6 +9,7 @@ import { isAbortError, isResourceLimitError, LyraUserFacingError, readResponseTe
 import { srOnly } from '../../../internal/a11y.js';
 import { loadHtmlSanitizer } from './dompurify-loader.js';
 import { styles } from './html-viewer.styles.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 type HtmlFetchState =
   | { kind: 'idle' }
@@ -22,7 +24,8 @@ export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
 class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
 
 /**
- * Fetches and safely renders an inline HTML document.
+ * Fetches and safely renders an inline HTML document. The sanitized surface establishes paint
+ * containment so retained author styles cannot position content over the surrounding application.
  *
  * @customElement lr-html-viewer
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
@@ -42,6 +45,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   /** Accessible name for the rendered HTML document. */
   @property() name = '';
   /** CSS length that caps the scrollable body. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /** Shared text search and anchor-target API for sanitized HTML output. */
   override async search(query: string): Promise<number> { return super.search(query); }
@@ -110,7 +114,8 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   }
 
   override render(): TemplateResult {
-    return html`<div part="base" style=${this.maxHeight ? `--lr-html-viewer-max-height:${this.maxHeight}` : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return html`<div part="base" style=${maxHeight ? styleMap({ '--lr-html-viewer-max-height': maxHeight }) : nothing}><div part="body">${this.renderBody()}</div>${this.renderAnchorLiveRegion()}</div>`;
   }
 }
 

@@ -57,11 +57,64 @@ describe('lr-embedding-explorer', () => {
     expect(el.shadowRoot!.activeElement?.getAttribute('data-index')).to.equal('0');
   });
 
+  it('synchronizes the roving tab stop for pointer and direct-focus activation', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    let rendered = [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
+    rendered[1]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await el.updateComplete;
+    rendered = [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
+    expect(rendered.map((point) => point.getAttribute('tabindex'))).to.deep.equal(['-1', '0']);
+
+    rendered[0]!.focus();
+    await el.updateComplete;
+    rendered = [...el.shadowRoot!.querySelectorAll<SVGGElement>('[part="point"]')];
+    expect(rendered.map((point) => point.getAttribute('tabindex'))).to.deep.equal(['0', '-1']);
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('a');
+  });
+
   it('formats the point position with the effective locale', async () => {
     const el = (await fixture(
       html`<lr-embedding-explorer lang="ar-u-nu-arab" .points=${points}></lr-embedding-explorer>`,
     )) as LyraEmbeddingExplorer;
     expect(el.shadowRoot!.querySelector('[part="point"]')!.getAttribute('aria-label')).to.contain('١');
+  });
+
+  it('keeps point picking at least 24px across narrow allocations', async () => {
+    for (const width of [320, 383]) {
+      const wrapper = await fixture(html`
+        <div style="inline-size: ${width}px">
+          <lr-embedding-explorer .points=${points}></lr-embedding-explorer>
+        </div>
+      `);
+      const hit = wrapper
+        .querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!
+        .shadowRoot!.querySelector<SVGGeometryElement>('.point-hit')!;
+      const style = getComputedStyle(hit);
+      const matrix = hit.getScreenCTM()!;
+      const renderedScale = Math.hypot(matrix.a, matrix.b);
+      const worldDiameter =
+        hit instanceof SVGCircleElement
+          ? hit.r.baseVal.value * 2
+          : Math.hypot(
+              (hit as SVGLineElement).x2.baseVal.value - (hit as SVGLineElement).x1.baseVal.value,
+              (hit as SVGLineElement).y2.baseVal.value - (hit as SVGLineElement).y1.baseVal.value,
+            );
+      const strokeWidth = style.stroke === 'none' ? 0 : Number.parseFloat(style.strokeWidth);
+      const renderedStroke =
+        hit.getAttribute('vector-effect') === 'non-scaling-stroke'
+          ? strokeWidth
+          : strokeWidth * renderedScale;
+      expect(worldDiameter * renderedScale + renderedStroke, `${width}px allocation`).to.be.at.least(
+        24,
+      );
+      const center = new DOMPoint(0, 0).matrixTransform(matrix);
+      expect(
+        hit.getRootNode<ShadowRoot>().elementFromPoint(center.x + 11, center.y),
+        `${width}px allocation pointer edge`,
+      ).to.equal(hit);
+    }
   });
 
   it('is accessible in empty and populated states', async () => {

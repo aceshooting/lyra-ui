@@ -69,8 +69,15 @@ export class LyraFormatNumber extends LyraElement {
         text = getNumberFormat(this.effectiveLocale || undefined, options).format(value);
       } catch {
         // Invalid locale/currency/option values are untyped-JS reachable despite the public
-        // TypeScript surface. Preserve a useful readout rather than rejecting Lit's update.
-        text = getNumberFormat(undefined, { notation: 'standard' }).format(value);
+        // TypeScript surface. Discard the invalid options without also discarding a valid
+        // effective locale; only a malformed locale itself needs the runtime-locale fallback.
+        try {
+          text = getNumberFormat(this.effectiveLocale || undefined, {
+            notation: 'standard',
+          }).format(value);
+        } catch {
+          text = getNumberFormat(undefined, { notation: 'standard' }).format(value);
+        }
       }
     }
     return html`${text || html`<slot></slot>`}`;

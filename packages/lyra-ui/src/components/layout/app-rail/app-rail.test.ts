@@ -90,6 +90,26 @@ it('hides app-rail-item labels visually in icon-only mode while retaining their 
   expect(getComputedStyle(label).position).to.not.equal('absolute');
 });
 
+it('releases parent-owned icon-only state when an item leaves the rail', async () => {
+  const wrapper = (await fixture(html`
+    <div>
+      <lr-app-rail mode="icon-only">
+        <lr-app-rail-item>Inbox</lr-app-rail-item>
+      </lr-app-rail>
+      <div id="outside"></div>
+    </div>
+  `)) as HTMLElement;
+  const rail = wrapper.querySelector('lr-app-rail') as LyraAppRail;
+  const item = wrapper.querySelector('lr-app-rail-item') as HTMLElement;
+  expect(item.hasAttribute('icon-only')).to.be.true;
+
+  wrapper.querySelector('#outside')!.append(item);
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  await rail.updateComplete;
+
+  expect(item.hasAttribute('icon-only')).to.be.false;
+});
+
 // -- breakpoint-driven mode wiring ---------------------------------------
 
 it('resolves the correct mode on the first rendered frame, before any matchMedia change event', async () => {
@@ -777,6 +797,47 @@ describe('resizable', () => {
     await el.updateComplete;
     expect(el.dragging).to.be.false;
     expect(getComputedStyle(base).transitionProperty).to.not.equal('none');
+  });
+
+  it('aborts an active pointer resize when resizable is revoked', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable rail-width-px="240"></lr-app-rail>`,
+    )) as LyraAppRail;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    resizer.setPointerCapture = () => {};
+    let events = 0;
+    el.addEventListener('lr-rail-resize', () => (events += 1));
+    resizer.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 41, clientX: 0, bubbles: true }),
+    );
+
+    el.resizable = false;
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 41, clientX: 100 }),
+    );
+
+    expect(el.railWidthPx).to.equal(240);
+    expect(el.dragging).to.be.false;
+    expect(events).to.equal(0);
+  });
+
+  it('aborts an active pointer resize when full mode is revoked', async () => {
+    const el = (await fixture(
+      html`<lr-app-rail resizable rail-width-px="240"></lr-app-rail>`,
+    )) as LyraAppRail;
+    const resizer = el.shadowRoot!.querySelector('[part="resizer"]') as HTMLElement;
+    resizer.setPointerCapture = () => {};
+    resizer.dispatchEvent(
+      new PointerEvent('pointerdown', { pointerId: 42, clientX: 0, bubbles: true }),
+    );
+
+    el.mode = 'icon-only';
+    window.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 42, clientX: 100 }),
+    );
+
+    expect(el.railWidthPx).to.equal(240);
+    expect(el.dragging).to.be.false;
   });
 
   it('does not toggle dragging for keyboard-driven resize steps', async () => {

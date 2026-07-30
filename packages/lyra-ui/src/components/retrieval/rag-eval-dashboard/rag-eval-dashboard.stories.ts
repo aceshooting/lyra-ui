@@ -37,6 +37,26 @@ export const Default: Story = {
   render: renderDashboard,
 };
 
+export const UnavailableControlledSlice: Story = {
+  name: 'Unavailable controlled slice',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The unavailable `slice` remains controlled; available filters stay actionable while an explicit localized state replaces misleading metrics, chart, and run rows.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-rag-eval-dashboard
+      metric-id="groundedness"
+      slice="unavailable"
+      .metrics=${metrics}
+      .runs=${runs}
+    ></lr-rag-eval-dashboard>
+  `,
+};
+
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px;">${renderDashboard()}</div>`,
 };

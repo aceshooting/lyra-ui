@@ -535,7 +535,10 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     }
   };
 
-  private onFieldFocus = (): void => {
+  private onFieldFocus = (e: FocusEvent): void => {
+    // Trusted composed focus can be retargeted to the host even though it does not bubble.
+    // Suppress that private event before emitting the one documented public bridge.
+    e.stopPropagation();
     this.emit('focus');
   };
 

@@ -73,6 +73,29 @@ export const Search: Story = {
   `,
 };
 
+export const RowTheming: Story = {
+  render: () => html`
+    <style>
+      .json-row-theme::part(row) {
+        box-shadow: inset 0 0 0 var(--lr-border-width-thin) var(--lr-color-border);
+      }
+    </style>
+    <lr-json-viewer
+      class="json-row-theme"
+      .data=${sample}
+      style="max-width: 32rem; --lr-json-viewer-row-hover-bg: var(--lr-color-warning-quiet);"
+    ></lr-json-viewer>
+  `,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Every structural row exposes `part="row"`; its hover fill can be scoped with `--lr-json-viewer-row-hover-bg`.',
+      },
+    },
+  },
+};
+
 export const MaxHeightScrolling: Story = {
   render: () => html`
     <lr-json-viewer .data=${sample} max-height="10rem" style="max-width: 32rem;"></lr-json-viewer>

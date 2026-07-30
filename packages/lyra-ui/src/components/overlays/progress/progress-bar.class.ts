@@ -13,7 +13,8 @@ const DEFAULT_MAX = 100;
  * `<lr-progress-bar>` — a determinate or indeterminate progress indicator.
  *
  * @customElement lr-progress-bar
- * @slot label - Optional label content.
+ * @slot label - Optional label content. While `show-value` makes it visible, its text names the
+ * progressbar unless an explicit accessible label overrides it; live text mutations stay synced.
  * @csspart base - The progress wrapper.
  * @csspart track - The track.
  * @csspart indicator - The filled progress indicator.
@@ -29,6 +30,30 @@ export class LyraProgressBar extends LyraElement {
   @property({ reflect: true }) variant: ProgressVariant = 'brand';
   @property({ type: Boolean, attribute: 'show-value' }) showValue = false;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  private labelObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
+    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  override disconnectedCallback(): void {
+    this.labelObserver?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  private get visibleLabelText(): string {
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot[name="label"]');
+    return (
+      slot
+        ?.assignedNodes({ flatten: true })
+        .map((node) => node.textContent ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim() ?? ''
+    );
+  }
 
   /** `max`, normalized to a finite number and guarded against `<= 0` — which would otherwise
    *  divide-by-zero in `percent` below — falling back to the property's own default of `100`. */
@@ -54,11 +79,15 @@ export class LyraProgressBar extends LyraElement {
   }
 
   override render(): TemplateResult {
-    const label = this.getAttribute('aria-label') || this.accessibleLabel || this.localize('progress');
+    const label =
+      this.getAttribute('aria-label') ||
+      this.accessibleLabel ||
+      (this.showValue ? this.visibleLabelText : '') ||
+      this.localize('progress');
     return html`<div part="base" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
-      <div part="label" ?hidden=${!this.showValue}><slot name="label"></slot>${this.showValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
+      <div part="label" ?hidden=${!this.showValue}><slot name="label" @slotchange=${() => this.requestUpdate()}></slot>${this.showValue && !this.indeterminate ? html`<span>${this.formattedPercent}</span>` : nothing}</div>
       <div part="track"><div part="indicator" style="inline-size:${this.indeterminate ? '40%' : `${this.percent}%`}"></div></div>
     </div>`;
   }

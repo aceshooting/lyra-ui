@@ -162,6 +162,31 @@ describe('lr-qr-code', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist;
   });
 
+  it('restarts generation on reconnect when a pending result was discarded while detached', async () => {
+    const el = (await fixture(html`<lr-qr-code></lr-qr-code>`)) as LyraQrCode;
+    let resolveLoad!: (api: FakeQrCodeApi | null) => void;
+    const pending = new Promise<FakeQrCodeApi | null>((resolve) => {
+      resolveLoad = resolve;
+    });
+    let loads = 0;
+    (el as unknown as { loadLibrary: () => Promise<FakeQrCodeApi | null> }).loadLibrary = () => {
+      loads++;
+      return pending;
+    };
+    el.value = 'reconnect';
+    await waitForPart(el, 'loading');
+    const parent = el.parentElement!;
+
+    el.remove();
+    resolveLoad(fakeApi(() => ({ modules: fakeModules(true) })));
+    await aTimeout(20);
+    expect(el.shadowRoot!.querySelector('canvas')).to.not.exist;
+
+    parent.append(el);
+    await waitForPart(el, 'canvas');
+    expect(loads).to.equal(2);
+  });
+
   it('renders a canvas sized to `size` CSS px with a DPR-scaled backing store', async () => {
     const el = (await fixture(html`
       <lr-qr-code
@@ -250,9 +275,9 @@ describe('lr-qr-code', () => {
     expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Host label');
   });
 
-  it('`label` wins over a host `aria-label` when both are set', async () => {
+  it('a host `aria-label` wins over `label` on the canvas when both are set', async () => {
     const el = (await fixture(
-      html`<lr-qr-code label="Label wins" aria-label="Host label"></lr-qr-code>`,
+      html`<lr-qr-code label="Label fallback" aria-label="Host label"></lr-qr-code>`,
     )) as LyraQrCode;
     installFakeLoader(
       el,
@@ -260,7 +285,7 @@ describe('lr-qr-code', () => {
     );
     el.value = 'https://example.test';
     await waitForPart(el, 'canvas');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Label wins');
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Host label');
   });
 
   it('refreshTheme() redraws from the cached matrix without recalling loadLibrary/create', async () => {

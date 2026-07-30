@@ -48,11 +48,11 @@ it('forwards a host-level aria-label to the base region when accessible-label is
   expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Storage warning');
 });
 
-it('lets accessible-label take precedence over a host-level aria-label', async () => {
+it('lets a host-level aria-label take precedence over accessible-label on the status owner', async () => {
   const el = (await fixture(
     html`<lr-callout accessible-label="Explicit label" aria-label="Host label">Message</lr-callout>`
   )) as LyraCallout;
-  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Explicit label');
+  expect(el.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-label')).to.equal('Host label');
 });
 
 it('gives the close button the shared minimum hit area in both the default and inline variants, shrinking only the visible glyph', async () => {

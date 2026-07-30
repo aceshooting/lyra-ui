@@ -234,8 +234,8 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     value: { attribute: false, noAccessor: true },
   };
 
-  /** Accessible name for the root `role="group"` wrapper. A plain `aria-label` attribute on the
-   *  host itself is honored as a fallback when this is left unset, matching `<lr-control-group>`. */
+  /** Accessible-name fallback for the root `role="group"` wrapper when the host has no
+   *  `aria-label`, matching `<lr-control-group>`. */
   @property() label = "";
 
   /** Disables every composed filter control and the reset button. Plain property -- see the
@@ -571,6 +571,11 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
     }
   }
 
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has("disabled") && this.disabled) this.cancelDebounce();
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncTextControls();
@@ -724,7 +729,7 @@ export class LyraFilterBar extends LyraElement<LyraFilterBarEventMap> {
 
   override render(): TemplateResult {
     const accessibleLabel =
-      this.label || this.getAttribute("aria-label") || nothing;
+      this.getAttribute("aria-label") || this.label || nothing;
     const active = this.activeEntries;
     return html`
       <div part="base" role="group" aria-label=${accessibleLabel}>

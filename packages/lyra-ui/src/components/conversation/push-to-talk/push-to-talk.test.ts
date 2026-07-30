@@ -46,6 +46,25 @@ class FakeMediaRecorder extends EventTarget {
     this.onstop?.();
   }
 }
+class DelayedStopMediaRecorder extends FakeMediaRecorder {
+  static last: DelayedStopMediaRecorder | undefined;
+  stopCalls = 0;
+
+  constructor(stream: FakeStream, options?: { mimeType?: string }) {
+    super(stream, options);
+    DelayedStopMediaRecorder.last = this;
+  }
+
+  override stop(): void {
+    if (this.state === 'inactive') throw new DOMException('already inactive', 'InvalidStateError');
+    this.stopCalls++;
+    this.state = 'inactive';
+    queueMicrotask(() => {
+      this.ondataavailable?.({ data: new Blob(['x'], { type: this.mimeType }) });
+      this.onstop?.();
+    });
+  }
+}
 class FakeAnalyserNode {
   fftSize = 256;
   frequencyBinCount = 128;
@@ -358,6 +377,32 @@ describe('hold mode', () => {
     } finally {
       navigator.mediaDevices.getUserMedia = originalGetUserMedia;
       window.MediaRecorder = originalMediaRecorder;
+    }
+  });
+
+  it('coalesces repeated releases while the recorder stop event is still pending', async () => {
+    const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+    const originalMediaRecorder = window.MediaRecorder;
+    navigator.mediaDevices.getUserMedia = (async () =>
+      new FakeStream() as unknown as MediaStream) as typeof navigator.mediaDevices.getUserMedia;
+    window.MediaRecorder = DelayedStopMediaRecorder as unknown as typeof MediaRecorder;
+    try {
+      const el = (await fixture(html`<lr-push-to-talk></lr-push-to-talk>`)) as LyraPushToTalk;
+      await el.start();
+      const stopped = oneEvent(el, 'lr-record-stop');
+
+      expect(() => {
+        el.stop();
+        el.stop();
+      }).not.to.throw();
+
+      await stopped;
+      expect(DelayedStopMediaRecorder.last?.stopCalls).to.equal(1);
+      expect(el.state).to.equal('idle');
+    } finally {
+      navigator.mediaDevices.getUserMedia = originalGetUserMedia;
+      window.MediaRecorder = originalMediaRecorder;
+      DelayedStopMediaRecorder.last = undefined;
     }
   });
 

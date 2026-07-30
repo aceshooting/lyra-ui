@@ -67,5 +67,7 @@ is non-empty and not `loading`), `empty` (only when `empty` and neither `loading
 - Submitting while `loading` is already true **supersedes** the in-flight request: `lr-cancel` fires
   immediately before the new `lr-search`. Clicking the submit button (rather than pressing Enter)
   while `loading` only emits `lr-cancel` and does not resubmit.
+- Long unbroken filter keys, values, and scope labels are contained within the search allocation;
+  the removable chip label truncates while its remove action remains available.
 
 ---

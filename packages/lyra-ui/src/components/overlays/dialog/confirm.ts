@@ -56,7 +56,9 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * Every dismissal path (confirm button, cancel button, Escape, backdrop
  * click) funnels through `<lr-dialog>`'s own `close()`/`lr-dialog-close`
  * event, so there is exactly one place that resolves the promise and tears
- * the dialog down.
+ * the dialog down. Because that event is cancelable, a veto leaves this
+ * promise pending and the transient dialog mounted until a later accepted
+ * close.
  *
  * @example
  * const ok = await confirm({
@@ -72,6 +74,7 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
 
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement(tag('dialog')) as LyraDialog;
+    let settled = false;
 
     const heading = document.createElement('h2');
     heading.textContent = title;
@@ -86,10 +89,17 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       dialog.appendChild(desc);
     }
 
-    dialog.addEventListener('lr-dialog-close', (e) => {
-      const reason = (e as CustomEvent<DialogCloseReason>).detail;
-      resolve(reason === 'confirm');
-      dialog.remove();
+    dialog.addEventListener('lr-dialog-close', (event) => {
+      // A close veto can be installed above this transient dialog (including a capture listener
+      // on document). Settle only after the event has completed its entire propagation path so a
+      // later bubble listener's preventDefault() is honored too.
+      queueMicrotask(() => {
+        if (settled || event.defaultPrevented) return;
+        settled = true;
+        const reason = (event as CustomEvent<DialogCloseReason>).detail;
+        resolve(reason === 'confirm');
+        dialog.remove();
+      });
     });
 
     const cancelButton = createButton(

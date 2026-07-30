@@ -35,11 +35,24 @@ export class LyraHistogram extends LyraChart {
   /** Dataset label used for the legend/tooltip/accessible summary. Falls back to a localized "Frequency" when unset. */
   @property() label = '';
 
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    if (['values', 'bins', 'label', 'locale', 'strings'].some((name) => changed.has(name))) {
-      this.refreshTheme();
-    }
+  /**
+   * Appends raw finite samples to `values`. The inherited signature is retained so histogram
+   * remains substitutable for `LyraChart`; its category label has no meaning for rebinned samples.
+   */
+  override appendData(_label: string, values: (number | null)[], maxPoints = 0): void {
+    const appended = values.filter((value): value is number =>
+      typeof value === 'number' && Number.isFinite(value),
+    );
+    const combined = [...this.values, ...appended];
+    const limit = Number.isFinite(maxPoints) ? Math.max(0, Math.floor(maxPoints)) : 0;
+    this.values = limit > 0 ? combined.slice(-limit) : combined;
+  }
+
+  protected override chartContentChanged(changed: PropertyValues): boolean {
+    return (
+      super.chartContentChanged(changed) ||
+      ['values', 'bins', 'label'].some((name) => changed.has(name))
+    );
   }
 }
 

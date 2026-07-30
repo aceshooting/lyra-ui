@@ -41,6 +41,30 @@ it('zoom-in/zoom-out call the resolved canvas methods and fit calls fit()', asyn
   expect(wrapper.viewport.zoom).to.be.greaterThan(zoomBefore);
 });
 
+it('disables viewport controls and preserves the viewport while the canvas is locked', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-controls slot="bottom-start"></lr-flow-controls>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  wrapper.setViewport({ x: 23, y: 17, zoom: 1 });
+  wrapper.locked = true;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const controls = wrapper.querySelector('lr-flow-controls') as LyraFlowControls;
+  await controls.updateComplete;
+  const before = { ...wrapper.viewport };
+  const zoomIn = controls.shadowRoot!.querySelector('[part="zoom-in"]') as HTMLButtonElement;
+  const fit = controls.shadowRoot!.querySelector('[part="fit"]') as HTMLButtonElement;
+
+  expect(zoomIn.disabled).to.be.true;
+  expect(fit.disabled).to.be.true;
+  zoomIn.click();
+  fit.click();
+  expect(wrapper.viewport).to.deep.equal(before);
+});
+
 it('the zoom-out button disables once the canvas viewport reaches minZoom', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas min-zoom="1"><lr-flow-controls slot="bottom-start"></lr-flow-controls></lr-flow-canvas>

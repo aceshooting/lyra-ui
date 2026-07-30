@@ -51,6 +51,35 @@ it('keeps extreme finite domains and tiny steps finite instead of overflowing ro
   expect(thumb.getAttribute('style')).to.not.contain('Infinity');
 });
 
+it('defaults to the true midpoint and pointer-maps the full finite number range', async () => {
+  const defaulted = (await fixture(html`
+    <lr-slider
+      min=${-Number.MAX_VALUE}
+      max=${Number.MAX_VALUE}
+      step="0"
+    ></lr-slider>
+  `)) as LyraSlider;
+  expect(defaulted.valueAsNumber).to.equal(0);
+
+  const dragged = (await fixture(html`
+    <lr-slider
+      min=${-Number.MAX_VALUE}
+      max=${Number.MAX_VALUE}
+      step="0"
+      value=${-Number.MAX_VALUE}
+    ></lr-slider>
+  `)) as LyraSlider;
+  const thumb = dragged.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  thumb.setPointerCapture = () => {};
+  mockTrackWidth(dragged, 200);
+  thumb.dispatchEvent(
+    new PointerEvent('pointerdown', { bubbles: true, pointerId: 70, clientX: 0 }),
+  );
+  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 70, clientX: 100 }));
+  expect(dragged.valueAsNumber).to.equal(0);
+  window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 70 }));
+});
+
 it('honors a declared value attribute instead of the midpoint default', async () => {
   const el = (await fixture(html`<lr-slider value="70"></lr-slider>`)) as LyraSlider;
   expect(el.value).to.equal('70');
@@ -108,6 +137,15 @@ it('maps a numeric value to opt-in human-readable aria-valuetext without changin
   expect(readout.textContent).to.equal('1');
 });
 
+it('formats the default visible value and aria-valuetext with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-slider lang="ar-EG" min="0" max="2000" value="1234"></lr-slider>`,
+  )) as LyraSlider;
+  const formatted = new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 20 }).format(1234);
+  expect(el.shadowRoot!.querySelector('[part="thumb"]')!.getAttribute('aria-valuetext')).to.equal(formatted);
+  expect(el.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal(formatted);
+});
+
 it('preserves numeric aria-valuetext when valueFormatter is unset and omits it for a nullish result', async () => {
   const el = (await fixture(html`<lr-slider value="42"></lr-slider>`)) as LyraSlider;
   const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
@@ -133,7 +171,7 @@ it('omits the value readout from a plain HTML show-value="false" content attribu
   expect(defaulted.showValue).to.be.true;
 });
 
-it('sets aria-label on the thumb from the label prop, falling back to a forwarded host aria-label', async () => {
+it('lets a forwarded host aria-label win on the thumb while retaining the label prop fallback', async () => {
   const labeled = (await fixture(
     html`<lr-slider label="Temperature"></lr-slider>`,
   )) as LyraSlider;
@@ -145,6 +183,12 @@ it('sets aria-label on the thumb from the label prop, falling back to a forwarde
   )) as LyraSlider;
   const thumb2 = forwarded.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
   expect(thumb2.getAttribute('aria-label')).to.equal('Forwarded label');
+
+  const hostOverride = (await fixture(
+    html`<lr-slider label="Temperature" aria-label="Author label"></lr-slider>`,
+  )) as LyraSlider;
+  const thumb3 = hostOverride.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  expect(thumb3.getAttribute('aria-label')).to.equal('Author label');
 });
 
 it('falls back to the localized generic slider label when neither `label` nor a host aria-label is set', async () => {
@@ -237,6 +281,35 @@ it('does not emit lr-change on keyup of a non-slider key', async () => {
   el.addEventListener('lr-change', () => (changeFired = true));
   thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'Tab', bubbles: true }));
   expect(changeFired).to.be.false;
+});
+
+it('clears a pending keyboard commit when own or fieldset disablement interrupts the key sequence', async () => {
+  const form = (await fixture(html`
+    <form><fieldset>
+      <lr-slider min="0" max="100" value="20" step="5"></lr-slider>
+    </fieldset></form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const el = form.querySelector('lr-slider') as LyraSlider;
+  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+  let changes = 0;
+  el.addEventListener('lr-change', () => changes++);
+
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(el.valueAsNumber).to.equal(25);
+  el.disabled = true;
+  el.disabled = false;
+  await el.updateComplete;
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect(changes, 're-enabling must not revive an own-disabled key sequence').to.equal(0);
+
+  thumb.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  expect(el.valueAsNumber).to.equal(30);
+  fieldset.disabled = true;
+  fieldset.disabled = false;
+  await el.updateComplete;
+  thumb.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+  expect(changes, 're-enabling must not revive a fieldset-disabled key sequence').to.equal(0);
 });
 
 it('mirrors ArrowRight/ArrowLeft under dir="rtl", matching lr-time-range/lr-split', async () => {
@@ -377,21 +450,31 @@ it('mirrors the drag ratio under dir="rtl", since the track is positioned with i
   expect(inputDetail!.value).to.equal(80);
 });
 
-it('tears down the drag on pointercancel/lostpointercapture even though no pointerup ever arrives', async () => {
-  const el = (await fixture(html`<lr-slider value="20" step="1"></lr-slider>`)) as LyraSlider;
-  const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
-  thumb.setPointerCapture = () => {};
-  mockTrackWidth(el, 200);
+it('keeps live values but suppresses lr-change and tears down on pointercancel/lostpointercapture', async () => {
+  for (const [index, endType] of (['pointercancel', 'lostpointercapture'] as const).entries()) {
+    const el = (await fixture(
+      html`<lr-slider min="0" max="100" value="20" step="1"></lr-slider>`,
+    )) as LyraSlider;
+    const thumb = el.shadowRoot!.querySelector('[part="thumb"]') as HTMLElement;
+    thumb.setPointerCapture = () => {};
+    mockTrackWidth(el, 200);
+    let inputs = 0;
+    let changes = 0;
+    el.addEventListener('lr-input', () => inputs++);
+    el.addEventListener('lr-change', () => changes++);
+    const pointerId = 50 + index;
 
-  thumb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 40 }));
-  window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1 }));
+    thumb.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId, clientX: 40 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 100 }));
+    expect(el.valueAsNumber, endType).to.equal(50);
+    expect(inputs, endType).to.equal(1);
 
-  let inputFired = false;
-  el.addEventListener('lr-input', () => (inputFired = true));
-  const before = el.valueAsNumber;
-  window.dispatchEvent(new PointerEvent('pointermove', { pointerId: 1, clientX: 180 }));
-  expect(inputFired).to.be.false;
-  expect(el.valueAsNumber).to.equal(before);
+    window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+    expect(changes, endType).to.equal(0);
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 180 }));
+    expect(inputs, endType).to.equal(1);
+    expect(el.valueAsNumber, endType).to.equal(50);
+  }
 });
 
 it('removes the window pointermove/pointerup listeners on disconnect so a detached drag cannot leak', async () => {

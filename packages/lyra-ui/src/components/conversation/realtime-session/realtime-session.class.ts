@@ -69,15 +69,23 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
     if (!changed.has('state')) return;
     const focused =
       this.renderRoot instanceof ShadowRoot ? this.renderRoot.activeElement : this.ownerDocument.activeElement;
+    const focusedPart = focused instanceof HTMLElement ? focused.getAttribute('part') : null;
     this.transferActionFocus =
       focused instanceof HTMLElement &&
-      (focused.getAttribute('part') === 'connect' || focused.getAttribute('part') === 'disconnect');
+      (focused.closest('[part="controls"]') !== null ||
+        focusedPart === 'connect' ||
+        focusedPart === 'disconnect' ||
+        focusedPart === 'mute' ||
+        focusedPart === 'interrupt' ||
+        focusedPart === 'capture');
   }
 
   protected override updated(changed: PropertyValues<this>): void {
     if (!changed.has('state')) return;
     if (changed.get('state') !== undefined) {
-      this.liveRegion?.announce(this.stateLabel(), { force: true });
+      // The rendered error owns the transition as an assertive alert. Clear any queued polite
+      // status instead of announcing the same transition through two simultaneous live owners.
+      this.liveRegion?.announce(this.state === 'error' ? '' : this.stateLabel(), { force: true });
     }
     if (this.transferActionFocus) {
       this.transferActionFocus = false;

@@ -78,3 +78,15 @@ it('formats bucket ranges with the requested locale', () => {
   expect(buckets[0]!.label).to.contain('1.000');
   expect(buckets[0]!.label).to.not.contain('1000.0');
 });
+
+it('bins full-range and subnormal finite endpoints without overflowing derived boundaries', () => {
+  let fullRange: ReturnType<typeof binValues> = [];
+  expect(() => {
+    fullRange = binValues([-Number.MAX_VALUE, 0, Number.MAX_VALUE], 2);
+  }).to.not.throw();
+  expect(fullRange.map((bucket) => bucket.count)).to.deep.equal([1, 2]);
+
+  const subnormal = binValues([-Number.MIN_VALUE, 0, Number.MIN_VALUE], 2);
+  expect(subnormal.map((bucket) => bucket.count)).to.deep.equal([1, 2]);
+  expect(subnormal.every((bucket) => bucket.label.length > 0)).to.be.true;
+});

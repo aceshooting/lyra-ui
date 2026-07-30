@@ -5,6 +5,13 @@ const meta: Meta = { title: 'Form/Rating', component: 'lr-rating', tags: ['autod
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-rating value="3" aria-label="Satisfaction"></lr-rating>` };
 export const HalfStarPrecision: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story: 'Pointer selection uses the position within each star and snaps to the configured 0.5 precision.',
+      },
+    },
+  },
   render: () => html`<lr-rating value="3.5" precision="0.5" max="5" aria-label="Satisfaction"></lr-rating>`,
 };
 export const CustomTheming: StoryObj = {

@@ -389,6 +389,38 @@ describe('320px allocation', () => {
     await el.updateComplete;
     expect(el.getBoundingClientRect().width).to.be.at.most(320);
   });
+
+  it('contains long unbroken filter and scope chip labels', async () => {
+    const wrapper = await fixture(html`
+      <div style="box-sizing: border-box; inline-size: 320px; overflow: auto;">
+        <lr-retrieval-search></lr-retrieval-search>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-retrieval-search') as LyraRetrievalSearch;
+    const long = `identifier-${'segment'.repeat(40)}`;
+    el.scope = [long];
+    el.filters = { [long]: long };
+    await el.updateComplete;
+    const filters = el.shadowRoot!.querySelector('[part="filters"]') as HTMLElement;
+    const chips = Array.from(filters.querySelectorAll('lr-chip')) as HTMLElement[];
+
+    const firstChip = chips[0]!;
+    const chipBase = firstChip.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const chipLabel = firstChip.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    const dimensions = {
+      wrapper: [wrapper.clientWidth, wrapper.scrollWidth],
+      search: [el.clientWidth, el.scrollWidth],
+      filters: [filters.clientWidth, filters.scrollWidth],
+      chip: [firstChip.clientWidth, firstChip.scrollWidth, getComputedStyle(firstChip).maxInlineSize],
+      chipBase: [chipBase.clientWidth, chipBase.scrollWidth],
+      chipLabel: [chipLabel.clientWidth, chipLabel.scrollWidth],
+    };
+    expect(wrapper.scrollWidth, JSON.stringify(dimensions)).to.be.at.most(wrapper.clientWidth);
+    expect(filters.getBoundingClientRect().width).to.be.at.most(el.getBoundingClientRect().width);
+    for (const chip of chips) {
+      expect(chip.getBoundingClientRect().width).to.be.at.most(filters.getBoundingClientRect().width);
+    }
+  });
 });
 
 describe('hover treatment', () => {

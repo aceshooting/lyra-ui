@@ -23,6 +23,16 @@ it("renders a disabled button when no href is available", async () => {
   ) as HTMLButtonElement;
   expect(button.tagName).to.equal("BUTTON");
   expect(button.disabled).to.be.true;
+  expect(button.getAttribute("aria-disabled")).to.equal("true");
+});
+
+it('renders aria-disabled="false" on an enabled item', async () => {
+  const el = (await fixture(
+    html`<lr-app-rail-item href="/settings">Settings</lr-app-rail-item>`
+  )) as LyraAppRailItem;
+  expect(
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute("aria-disabled")
+  ).to.equal("false");
 });
 
 it("hardens links opened in a new browsing context", async () => {
@@ -164,6 +174,42 @@ describe("tooltip", () => {
     base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')).to.not.exist;
+  });
+
+  it("dismisses a visible flyout when tooltip is revoked", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
+      1
+    );
+
+    el.tooltip = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
+      0
+    );
+  });
+
+  it("dismisses a visible flyout when icon-only is revoked", async () => {
+    const el = (await fixture(
+      html`<lr-app-rail-item tooltip icon-only>Dashboard</lr-app-rail-item>`
+    )) as LyraAppRailItem;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.dispatchEvent(new FocusEvent("focus", { bubbles: true }));
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
+      1
+    );
+
+    el.removeAttribute("icon-only");
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="tooltip"]').length).to.equal(
+      0
+    );
   });
 
   it("excludes icon-slot text from the flyout label, using only the default slot content", async () => {

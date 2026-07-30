@@ -179,6 +179,56 @@ it('authenticates remote uniquely-origin sandbox messages by frame window and op
   expect(calls).to.equal(1);
 });
 
+it('replaces the iframe window across resource navigation so the previous opaque document cannot message the host', async () => {
+  const first = { uri: 'ui://first', html: '<p>First</p>' };
+  const second = { uri: 'ui://second', html: '<p>Second</p>' };
+  const el = (await fixture(html`<lr-mcp-app .resource=${first}></lr-mcp-app>`)) as LyraMcpApp;
+  const oldFrame = el.shadowRoot!.querySelector('iframe')!;
+  const oldWindow = oldFrame.contentWindow;
+  el.resource = second;
+  await el.updateComplete;
+  const newFrame = el.shadowRoot!.querySelector('iframe')!;
+  expect(newFrame.contentWindow === oldWindow).to.be.false;
+
+  let calls = 0;
+  el.addEventListener('lr-mcp-tool-call', () => calls++);
+  const data = { channel: 'lyra-mcp-app', version: 1, type: 'tool-call', name: 'stale', args: {} };
+  window.dispatchEvent(new MessageEvent('message', { source: oldWindow, origin: 'null', data }));
+  expect(calls).to.equal(0);
+  window.dispatchEvent(new MessageEvent('message', { source: newFrame.contentWindow, origin: 'null', data }));
+  expect(calls).to.equal(1);
+});
+
+it('keeps the loaded state when only height constraints change', async () => {
+  const el = (await fixture(html`
+    <lr-mcp-app .resource=${{ uri: 'ui://sizing', html: '<p>Sizing</p>' }}></lr-mcp-app>
+  `)) as LyraMcpApp;
+  const frame = el.shadowRoot!.querySelector('iframe')!;
+  frame.dispatchEvent(new Event('load'));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="loading"]').length).to.equal(0);
+
+  el.height = 420;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="loading"]').length).to.equal(0);
+  el.maxHeight = 500;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="loading"]').length).to.equal(0);
+});
+
+it('posts host context with the nearest inherited effective locale', async () => {
+  const wrapper = await fixture(html`
+    <div lang="de-DE">
+      <lr-mcp-app .resource=${{ uri: 'ui://locale', html: '<p>Locale</p>' }}></lr-mcp-app>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-mcp-app') as LyraMcpApp;
+  const contexts: unknown[] = [];
+  el.postHostContext = (context: unknown) => contexts.push(context);
+  el.shadowRoot!.querySelector('iframe')!.dispatchEvent(new Event('load'));
+  expect((contexts[0] as { locale: string }).locale).to.equal('de-DE');
+});
+
 it('applies per-instance strings to the unavailable state', async () => {
   const el = (await fixture(
     html`<lr-mcp-app

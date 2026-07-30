@@ -3,6 +3,8 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     /* Sequential ramp endpoints for the data-driven cell colors (canvas can't
        consume var() directly, so heatmap.ts resolves these via
        getComputedStyle and interpolates between them). Component-specific
@@ -51,6 +53,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   canvas {
     display: block;
@@ -125,12 +129,18 @@ export const styles = css`
   }
   [part='legend'] {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
+    overflow-wrap: anywhere;
   }
   [part='legend'] .bar {
+    flex: 0 1 var(--lr-size-6rem);
+    min-inline-size: 0;
     inline-size: var(--lr-size-6rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-size-2px);
@@ -151,6 +161,9 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-3px);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   /* The swatch's background is the consumer-supplied stop color, applied inline per stop --
      it's data, not a themeable design value, so it can't live here. */
@@ -161,15 +174,28 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
   }
   [part='legend-stop-label'] {
-    white-space: nowrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-variant-numeric: tabular-nums;
+  }
+  [part='legend-lo'],
+  [part='legend-hi'],
+  [part='legend-value-label'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='legend-annotation'] {
     display: inline-flex;
     align-items: center;
     gap: var(--lr-size-3px);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='legend-annotation'] .ring-swatch {
+    flex: 0 0 auto;
     inline-size: var(--lr-size-0-6rem);
     block-size: var(--lr-size-0-6rem);
     border-radius: 50%;

@@ -183,8 +183,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  `noLightDismiss` exactly (name, default, no reflect). */
   @property({ type: Boolean, attribute: 'no-light-dismiss' }) noLightDismiss = false;
 
-  /** Shows/hides `part="counter"` (and its `part="live-region"` announcement). Mirrors
-   *  `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses
+  /** Shows/hides only the visible `part="counter"`. The accessibility `part="live-region"`
+   *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
+   *  Mirrors `<lr-carousel>`'s `showIndicators` (name shape, no reflect). Uses
    *  {@link showCounterConverter} rather than Lit's default presence-based `type: Boolean`
    *  handling, so a plain-HTML consumer with no way to write a `.showCounter` property binding
    *  can still turn this off with `show-counter="false"`. */
@@ -235,7 +236,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   private changeTo(index: number): void {
     const count = this.images.length;
-    if (count === 0) return;
+    if (count === 0 || !Number.isFinite(index)) return;
     const next = this.loop ? ((index % count) + count) % count : Math.min(count - 1, Math.max(0, index));
     if (next === this.currentIndex()) return;
     this.index = next;

@@ -102,10 +102,21 @@ export const DensityAndChrome: Story = {
 };
 
 export const Narrow320: Story = {
-  name: 'Narrow (320px)',
+  name: 'Narrow (320px, long content)',
   render: () => html`
     <div style="inline-size: 320px; max-inline-size: 100%;">
-      <lr-task-list .items=${items}></lr-task-list>
+      <lr-task-list
+        expanded
+        .items=${[
+          ...items,
+          {
+            id: 'long',
+            label: `task-${'identifier'.repeat(20)}`,
+            detail: `detail-${'identifier'.repeat(20)}`,
+            status: 'running',
+          },
+        ]}
+      ></lr-task-list>
     </div>
   `,
 };

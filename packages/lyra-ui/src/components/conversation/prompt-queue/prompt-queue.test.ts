@@ -78,6 +78,20 @@ it('localizes the editable item label as a whole template with a locale-formatte
   expect(textarea.label).to.equal(`ITEM ${new Intl.NumberFormat('ar').format(1)}`);
 });
 
+it('gives every repeated action a row-contextual accessible name', async () => {
+  const el = (await fixture(html`<lr-prompt-queue .items=${items}></lr-prompt-queue>`)) as LyraPromptQueue;
+  const names = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-action="send"]')].map((button) =>
+    button.getAttribute('aria-label'),
+  );
+  expect(names).to.deep.equal(['Send now, queued prompt 1', 'Send now, queued prompt 2']);
+  expect(new Set(names).size).to.equal(items.length);
+
+  const removeNames = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[data-action="remove"]')].map((button) =>
+    button.getAttribute('aria-label'),
+  );
+  expect(removeNames).to.deep.equal(['Remove, queued prompt 1', 'Remove, queued prompt 2']);
+});
+
 it('honors editable="false" and is accessible while populated', async () => {
   const el = (await fixture(
     html`<lr-prompt-queue editable="false" .items=${items}></lr-prompt-queue>`,

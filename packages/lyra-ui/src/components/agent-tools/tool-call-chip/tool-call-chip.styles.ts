@@ -41,6 +41,7 @@ export const styles = css`
 
   [part='base'] {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-xs);
     max-inline-size: 100%;
@@ -96,11 +97,15 @@ export const styles = css`
     align-items: baseline;
     gap: var(--lr-size-0-3em);
     flex: 1 1 auto;
-    min-inline-size: 0;
+    min-inline-size: var(--lr-size-6ch);
     overflow: hidden;
   }
   [part='category'] {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     /* Full-strength text, not --lr-color-text-quiet -- this sits on top of
        the per-status *-quiet tint backgrounds above (e.g. success-quiet),
        and text-quiet's gray fails WCAG AA contrast against several of those
@@ -139,7 +144,11 @@ export const styles = css`
 
   [part='meta'] {
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
     align-items: baseline;
     gap: var(--lr-size-0-4em);
     margin-inline-start: auto;
@@ -150,7 +159,11 @@ export const styles = css`
     font-weight: var(--lr-font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: var(--lr-size-0-03em);
-    white-space: nowrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: end;
   }
   [part='duration'] {
     /* See [part='category']'s comment above -- same contrast rationale. */
@@ -202,4 +215,5 @@ export const styles = css`
       animation: none !important;
     }
   }
+
 `;

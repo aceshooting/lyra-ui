@@ -50,6 +50,19 @@ export const LivePending: Story = {
   `,
 };
 
+export const NarrowLongContent: Story = {
+  name: 'Narrow (320px, unbroken content)',
+  render: () => html`
+    <div style="inline-size:320px;max-inline-size:100%">
+      <lr-thinking-panel
+        mode="live"
+        expanded
+        style="--lr-thinking-panel-pending-color: var(--lr-color-warning)"
+      >reasoning-${'identifier'.repeat(24)}</lr-thinking-panel>
+    </div>
+  `,
+};
+
 export const Collapsed: Story = {
   render: () => html`
     <lr-thinking-panel mode="post-hoc" duration-ms="820" style="max-width: 32rem;">

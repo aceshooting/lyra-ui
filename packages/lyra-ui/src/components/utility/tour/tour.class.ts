@@ -31,12 +31,12 @@ const DEFAULT_SPOTLIGHT_PADDING = 4;
  * `this.ownerDocument.querySelector<HTMLElement>(target)` (top-level light DOM only -- CSS
  * selectors can't pierce a closed shadow root); pass a direct `HTMLElement` or a resolver
  * function for anything else (inside a shadow root, not yet mounted, computed dynamically).
- * Re-resolved every time this step becomes active (never cached) so a target that mounts later
- * in the app's lifecycle still resolves correctly once its own step is reached. A direct
- * `HTMLElement` reference is checked for `isConnected` on every re-resolution (same
- * target-missing handling as a selector/function that returns nothing) since, unlike a selector
- * string, a stale element reference can't "self-heal" across a DOM remount -- prefer a `string`
- * or function resolver for targets that might be replaced while the tour runs.
+ * Resolved exactly once whenever this step becomes active, then retained as one connected
+ * snapshot for that activation so rendering, focus routing, positioning, and the spotlight all
+ * agree on the same element. It resolves again on a later activation/reconnect, so a target that
+ * mounts later can still be found when its step is reached. Invalid selectors, throwing
+ * resolvers, non-`HTMLElement` results, and detached elements all follow the documented
+ * target-missing path instead of rejecting the component update.
  */
 export type TourTarget = string | HTMLElement | (() => HTMLElement | null);
 
@@ -259,6 +259,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private spotlightCleanup?: () => void;
   private interactiveKeyboardTarget?: HTMLElement;
   private overlayInteractive?: boolean;
+  private activeTargetSnapshot: HTMLElement | null = null;
 
   private readonly maskId = nextId('tour-mask');
   private readonly headingId = nextId('tour-heading');
@@ -290,29 +291,26 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
         this.deactivateOverlayInternal();
       }
     }
-    // Resolved here, not in updated()/activateStep(), purely to derive `unanchored` -- a value
-    // this same render branches on (the backdrop's mask-vs-plain-scrim markup, [part="popover"]'s
-    // data-unanchored) -- before render runs, so the popover renders in its correct
-    // anchored/unanchored shape on the first pass instead of needing a second corrective render.
-    // resolveTarget() only ever queries the top-level document or calls an external resolver
-    // function -- never this element's own render tree -- so it's safe to call this early, unlike
-    // the DOM-measurement-dependent half of step activation (scrollIntoView/place()/trackRect(),
-    // which need the freshly rendered popover and so still run from updated(), via
-    // activateStep()). Setting a reactive property from updated()/firstUpdated() instead schedules
-    // a *second* update on top of the one that just finished, which Lit's dev-mode console flags
-    // ("scheduled an update ... after an update completed") -- mirrors lr-split's/
-    // lr-virtual-list's identical willUpdate()-not-updated() fix for their own derived-property
-    // writes.
+    // Resolve once, before render, both to derive `unanchored` and to establish the single target
+    // snapshot every other concern uses for this activation. Resolution is intentionally not
+    // repeated from updated(), focus routing, or positioning: an unstable resolver must not make
+    // those concerns disagree about which live element owns the active step.
     if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
       const step = this.steps[this.activeIndex];
-      this.unanchored = step ? !this.resolveTarget(step) : false;
+      this.activeTargetSnapshot = step ? this.resolveTarget(step) : null;
+      this.unanchored = step ? !this.activeTargetSnapshot : false;
     }
   }
 
   // Runs after render so the manager can resolve the (possibly just-swapped, per keyed()) panel,
   // and so activateStep() can query the freshly-rendered popover/spotlight/mask elements.
   protected override updated(changed: PropertyValues): void {
-    if (this.open && (changed.has('open') || changed.has('activeIndex') || changed.has('steps'))) {
+    const activationChanged = changed.has('open') || changed.has('activeIndex') || changed.has('steps');
+    const geometryChanged =
+      changed.has('placement') ||
+      changed.has('distance') ||
+      changed.has('spotlightPadding');
+    if (this.open && (activationChanged || geometryChanged)) {
       const preserveInteractiveTargetFocus =
         changed.has('steps') && this.canPreserveInteractiveTargetFocus();
       const overlayChanged = this.activateOverlayInternal();
@@ -324,7 +322,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       ) {
         this.overlay?.focusInitial();
       }
-      this.activateStep();
+      this.activateStep({
+        scroll: activationChanged,
+        announceMissing: activationChanged,
+      });
     }
   }
 
@@ -341,15 +342,18 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       } else {
         this.activateOverlayInternal();
       }
-      queueMicrotask(() => {
+      queueMicrotask(async () => {
+        if (!this.isConnected || !this.open) return;
         // willUpdate() never reruns on a reconnect (see the comment above), so re-derive
         // `unanchored` here too -- the target's resolvability may have changed while
-        // disconnected. Safe to set directly: this runs after connectedCallback() already
-        // returned, well outside any Lit lifecycle-callback's synchronous call stack.
+        // disconnected, while retaining exactly one snapshot for this reconnect activation.
         const step = this.steps[this.activeIndex];
-        this.unanchored = step ? !this.resolveTarget(step) : false;
+        this.activeTargetSnapshot = step ? this.resolveTarget(step) : null;
+        this.unanchored = step ? !this.activeTargetSnapshot : false;
+        await this.updateComplete;
+        if (!this.isConnected || !this.open) return;
         this.overlay?.focusInitial();
-        this.activateStep();
+        this.activateStep({ scroll: true, announceMissing: true });
       });
     }
   }
@@ -426,7 +430,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private clampIndex(index: number): number {
     const total = this.steps.length;
     if (total === 0) return 0;
-    return Math.min(Math.max(index, 0), total - 1);
+    return finiteInteger(index, 0, 0, total - 1);
   }
 
   private transitionTo(index: number, via: 'next' | 'back' | 'goto'): void {
@@ -443,57 +447,75 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   }
 
   private resolveTarget(step: TourStep): HTMLElement | null {
-    const { target } = step;
-    if (typeof target === 'string') {
-      return this.ownerDocument.querySelector<HTMLElement>(target);
+    try {
+      const { target } = step;
+      const resolved =
+        typeof target === 'string'
+          ? this.ownerDocument.querySelector(target)
+          : typeof target === 'function'
+            ? target()
+            : target;
+      return resolved instanceof HTMLElement && resolved.isConnected ? resolved : null;
+    } catch {
+      return null;
     }
-    if (typeof target === 'function') {
-      return target() ?? null;
-    }
-    return target.isConnected ? target : null;
   }
 
   private canPreserveInteractiveTargetFocus(): boolean {
     const previousTarget = this.interactiveKeyboardTarget;
     const step = this.steps[this.activeIndex];
     if (!previousTarget?.isConnected || !step?.interactiveTarget) return false;
-    const currentTarget = this.resolveTarget(step);
+    const currentTarget = this.activeTargetSnapshot;
     return (
       currentTarget === previousTarget &&
       composedContains(previousTarget, deepActiveElement(this.ownerDocument))
     );
   }
 
-  // Resolves the active step's target, scrolls it into view, and (re)wires the shared
+  // Uses the activation's normalized target snapshot, scrolls it into view, and (re)wires the shared
   // positioner (`place()`) for the popover and `trackRect()` for the spotlight cutout/ring.
-  // Re-run on every step activation -- targets are never cached, per TourTarget's doc comment.
+  // Re-run on every step activation and live geometry-property change.
   // `unanchored` is already correctly derived for this render by willUpdate() (see its own doc)
   // by the time this runs, so the freshly queried popover already reflects the right
   // anchored/unanchored shape -- no separate corrective re-render/await round-trip needed here.
-  private activateStep(): void {
+  private activateStep(options: { scroll: boolean; announceMissing: boolean }): void {
     this.disposePositioning();
     const step = this.steps[this.activeIndex];
     if (!step) return;
-    const target = this.resolveTarget(step);
+    const target = this.activeTargetSnapshot;
 
-    if (!target) {
-      this.emit<{ index: number; step: TourStep }>('lr-tour-target-missing', { index: this.activeIndex, step });
+    if (!target?.isConnected) {
+      if (options.announceMissing) {
+        this.emit<{ index: number; step: TourStep }>('lr-tour-target-missing', {
+          index: this.activeIndex,
+          step,
+        });
+      }
       return;
     }
 
     const popover = this.renderRoot.querySelector('[part="popover"]') as HTMLElement | null;
     if (!popover) return;
 
-    target.scrollIntoView({
-      block: 'center',
-      inline: 'nearest',
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-    });
+    if (options.scroll) {
+      target.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      });
+    }
 
     const placement = rtlAwarePlacement(step.placement ?? this.placement, this);
-    this.placeCleanup = place(target, popover, { placement, offset: finiteNumber(this.distance, DEFAULT_DISTANCE) });
+    this.placeCleanup = place(target, popover, {
+      placement,
+      offset: finiteNumber(this.distance, DEFAULT_DISTANCE),
+    });
 
-    const padding = finiteRange(step.spotlightPadding ?? this.spotlightPadding, DEFAULT_SPOTLIGHT_PADDING, 0);
+    const padding = finiteRange(
+      step.spotlightPadding ?? this.spotlightPadding,
+      DEFAULT_SPOTLIGHT_PADDING,
+      0,
+    );
     const interactive = !!step.interactiveTarget;
     if (interactive) {
       this.interactiveKeyboardTarget = target;
@@ -561,6 +583,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private deactivateOverlayInternal(): void {
     this.disposePositioning();
+    this.activeTargetSnapshot = null;
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
     this.overlay?.deactivate();
@@ -608,7 +631,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     if (event.defaultPrevented) return;
     const step = this.steps[this.activeIndex];
     if (event.key === 'Tab' && step?.interactiveTarget) {
-      const target = this.resolveTarget(step);
+      const target = this.interactiveKeyboardTarget;
       const popover = this.renderRoot.querySelector<HTMLElement>('[part="popover"]');
       if (target && popover) {
         const panelFocusable = collectFocusableElements(popover);

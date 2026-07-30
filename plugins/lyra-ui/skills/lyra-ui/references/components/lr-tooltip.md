@@ -23,7 +23,8 @@ contextElement? }, options?: { returnFocusTo?: HTMLElement })` — same virtual-
 Escape returns focus to `options.returnFocusTo` or skips focus-return, re-call with fresh
 coordinates to re-anchor a moving point). Opens immediately, bypassing `delay`/`manual` (both are
 hover-debounce concerns for a slotted trigger, not a deliberate programmatic call); close it the
-same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, default content.
+same way any tooltip closes, by setting `open = false`. Non-finite coordinates or dimensions are a
+no-op. **Slots:** `trigger`, default content.
 **CSS parts:** `trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size`
 (default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
@@ -35,6 +36,16 @@ not the shadow-private popup. Native triggers resolve that ID directly. `lr-butt
 intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
 author-provided descriptions are merged while open and restored when the trigger is replaced or
 the tooltip disconnects.
+
+Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
+default-slot subtree — including inside a nested custom element's open shadow root — the popup
+promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
+from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+While open, rootless custom-element content receives a bounded initialization grace period for an
+upgrade or newly attached open shadow root; later observable content mutations start a fresh
+grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
+work for a legitimate custom element that intentionally has no shadow root. Use `lr-popover` when
+click-to-open ownership is desired.
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own

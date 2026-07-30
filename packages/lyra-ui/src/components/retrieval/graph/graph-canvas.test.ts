@@ -320,4 +320,37 @@ describe('drawPickingScene', () => {
     expect(pickColorToIndex(hullPixel[0]!, hullPixel[1]!, hullPixel[2]!)).to.equal(0);
     expect(pickColorToIndex(nodePixel[0]!, nodePixel[1]!, nodePixel[2]!)).to.equal(1);
   });
+
+  it('keeps a node pick target at least 24px wide under camera scale', () => {
+    const ctx = make2dContext();
+    drawPickingScene(ctx, { k: 0.25, x: 0, y: 0 }, {
+      hulls: [],
+      links: [],
+      nodes: [{ x: 200, y: 200, r: 4, shape: 'circle' }],
+    });
+    const edge = ctx.getImageData(61, 50, 1, 1).data;
+    expect(pickColorToIndex(edge[0]!, edge[1]!, edge[2]!)).to.equal(0);
+  });
+
+  it('keeps a link pick target at least 24px wide under camera scale', () => {
+    const ctx = make2dContext();
+    drawPickingScene(ctx, { k: 0.25, x: 0, y: 0 }, {
+      hulls: [],
+      links: [{ x1: 40, y1: 200, x2: 360, y2: 200, width: 1 }],
+      nodes: [],
+    });
+    const edge = ctx.getImageData(50, 61, 1, 1).data;
+    expect(pickColorToIndex(edge[0]!, edge[1]!, edge[2]!)).to.equal(0);
+  });
+
+  it('keeps hull-boundary picking at least 24px wide under camera scale', () => {
+    const ctx = make2dContext();
+    drawPickingScene(ctx, { k: 0.25, x: 0, y: 0 }, {
+      hulls: [{ d: 'M 80 80 L 320 80 L 320 320 L 80 320 Z' }],
+      links: [],
+      nodes: [],
+    });
+    const edge = ctx.getImageData(50, 9, 1, 1).data;
+    expect(pickColorToIndex(edge[0]!, edge[1]!, edge[2]!)).to.equal(0);
+  });
 });

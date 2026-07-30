@@ -60,4 +60,52 @@ describe('loadD3Modules (uncached, dependency-injectable)', () => {
     const loggedArgs = calls.flat();
     expect(loggedArgs).to.contain(err);
   });
+
+  it('fails closed when resolved peer modules omit a required callable capability', async () => {
+    const identity = {
+      translate(): typeof identity {
+        return this;
+      },
+      scale(): typeof identity {
+        return this;
+      },
+    };
+    const valid = {
+      force: {
+        forceSimulation: () => ({}),
+        forceLink: () => ({}),
+        forceManyBody: () => ({}),
+        forceCenter: () => ({}),
+        forceCollide: () => ({}),
+      },
+      drag: { drag: () => ({}) },
+      zoom: {
+        zoom: () => ({}),
+        zoomIdentity: identity,
+        zoomTransform: () => identity,
+      },
+      selection: { select: () => ({}) },
+    };
+    const malformed = [
+      { ...valid, force: { ...valid.force, forceSimulation: undefined } },
+      { ...valid, drag: { drag: 'not callable' } },
+      { ...valid, zoom: { ...valid.zoom, zoomTransform: undefined } },
+      { ...valid, selection: { select: null } },
+    ];
+    const originalWarn = console.warn;
+    console.warn = () => {};
+    try {
+      for (const peers of malformed) {
+        const result = await loadD3Modules(
+          async () => peers.force,
+          async () => peers.drag,
+          async () => peers.zoom,
+          async () => peers.selection,
+        );
+        expect(result === null).to.be.true;
+      }
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
 });

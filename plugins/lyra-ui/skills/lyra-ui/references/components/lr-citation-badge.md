@@ -28,8 +28,9 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   echoed back verbatim in both events; never read or validated by this component.
 - `href: string = ''` — optional direct link target for the citation's source, carried into
   `lr-citation-open`'s detail as-is; this component never navigates.
-- `label: string = ''` — overrides the computed accessible name. The built-in citation/status
-  summary is a complete localized template; a host `aria-label` has highest precedence.
+- `label: string = ''` — adds caller-supplied context to the localized citation name while retaining
+  the visible citation number (for example, `"Citation 3, Annual report"`). A host `aria-label`
+  remains the exact highest-precedence override.
 
 **Events:**
 - `lr-citation-activate` (`detail: { sourceId: string; index: number }`) — fires on click, or on

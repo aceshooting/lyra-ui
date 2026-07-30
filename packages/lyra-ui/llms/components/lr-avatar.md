@@ -37,10 +37,10 @@ it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Events:** none.
 
-**Slots:** default slot — icon/glyph content (e.g. an inline SVG), shown in place of the image and
-initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role glyph. Takes priority over both
-`src` and `initials`. The glyph is treated as decorative (`aria-hidden`) — set `alt` alongside it
-for an accessible name.
+**Slots:** default slot — icon/glyph content (e.g. an inline SVG or non-whitespace text/emoji),
+shown in place of the image and initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role
+glyph. Takes priority over both `src` and `initials`. The glyph is treated as decorative
+(`aria-hidden`) — set `alt` alongside it for an accessible name.
 
 **CSS parts:** `base` (the outer circle/square container), `icon` (wrapper around the slotted
 icon/glyph, only shown while the slot has assigned content), `image` (the `<img>`, only rendered
@@ -69,7 +69,8 @@ override it on the element for a size the built-in scale doesn't cover. Plus sha
 
 **Known gotchas:**
 - an image load failure falls back to `initials` automatically. Changing `src` clears the failure
-  state so the replacement URL gets its own load attempt.
+  state so the replacement URL gets its own load attempt, including when a later transition returns
+  to a URL that failed previously.
 - when `alt` or host `aria-label` supplies a name, the base preserves that name through the
   initials fallback while hiding duplicate initials text from assistive technology.
 

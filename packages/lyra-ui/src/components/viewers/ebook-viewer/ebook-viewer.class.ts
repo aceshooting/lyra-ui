@@ -16,7 +16,13 @@ import { Announcer } from '../../../internal/announcer.js';
 import { announceSearchResult } from '../../../internal/viewer-search.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
-import type { LyraAnchor, LyraHighlightTone, HighlightActivateDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type {
+  AnchorResultDetail,
+  LyraAnchor,
+  LyraHighlightTone,
+  HighlightActivateDetail,
+  TextSelectDetail,
+} from '../document-viewer/anchors.js';
 import { getEpubJs, type EpubBook, type EpubRendition } from './ebook-loader.js';
 import { assertEpubArchiveWithinLimits } from './epub-resource-guard.js';
 import { styles } from './ebook-viewer.styles.js';
@@ -41,6 +47,7 @@ interface EbookSearchMatch {
 
 const MAX_TOC_ITEMS = 10_000;
 const MAX_TOC_DEPTH = 100;
+const MAX_SEARCH_MATCHES = 10_000;
 
 /** Tone -> the token (and its light-theme fallback) a painted `cfi` highlight resolves its `fill`
  *  from, mirroring `highlight-layer`'s own tone mapping. epub.js's `annotations.highlight()`
@@ -144,12 +151,11 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   private generation = 0;
   private searchQuery = '';
   private searchGeneration = 0;
-  /** Set (for the duration of one synchronous relocated-handler call) before assigning
-   *  `location` from epub.js's own `relocated` event, and consumed inside `updated()` -- Lit's
-   *  update cycle is microtask-batched, so a flag reset synchronously right after the assignment
-   *  would already be back to `false` by the time `updated()` observes it; consuming it there
-   *  instead is what actually breaks the `relocated` <-> `display()` loop. */
-  private applyingRelocated = false;
+  private anchorOperationGeneration = 0;
+  /** CFI most recently assigned by a peer `relocated` callback. Tracking the value rather than a
+   * boolean lets a controlled consumer replace `location` synchronously from
+   * `lr-location-change`: only the peer's exact CFI is suppressed as a display loop. */
+  private relocatedLocation?: string;
   private paintedHighlightCfis: string[] = [];
   private searchAnnotationCfi?: string;
   private readonly announcer = new Announcer({ onFlush: (text) => this.announceViaLiveRegion(text) });
@@ -158,9 +164,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     super.updated(changed); // reaches DocumentAnchorTarget's own cleanup/live-region wiring
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('location')) {
-      const fromRelocated = this.applyingRelocated;
-      this.applyingRelocated = false;
-      if (!fromRelocated && this.rendition && this.location) void this.rendition.display(this.location);
+      const fromRelocated = this.relocatedLocation === this.location;
+      this.relocatedLocation = undefined;
+      if (!fromRelocated && this.rendition && this.location) this.displayLocation(this.location);
     }
     if ((changed.has('highlights') || changed.has('activeHighlightId')) && this.rendition) {
       this.repaintHighlights();
@@ -182,6 +188,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.anchorOperationGeneration++;
     this.teardown();
     // Reset rather than leaving a stale "ready" state: without this, a
     // reconnect that isn't followed by a fresh load (src unset, or the
@@ -269,7 +276,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         const cfi = loc?.start?.cfi ?? '';
         const href = loc?.start?.href ?? '';
         if (!cfi || cfi === this.location) return;
-        this.applyingRelocated = true;
+        this.relocatedLocation = cfi;
         this.location = cfi;
         this.emit('lr-location-change', { cfi, href });
       });
@@ -300,8 +307,45 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.emit('lr-render-error', { error });
   }
 
-  private previous = (): void => { void this.rendition?.prev(); };
-  private next = (): void => { void this.rendition?.next(); };
+  private reportRenditionFailure(error: unknown, rendition: EpubRendition, generation: number): void {
+    if (
+      !this.isConnected
+      || generation !== this.generation
+      || rendition !== this.rendition
+    ) return;
+    this.ebookState = { kind: 'error', message: this.localize('ebookViewerLoadError') };
+    this.emit('lr-render-error', { error });
+  }
+
+  private displayLocation(location: string): void {
+    const rendition = this.rendition;
+    if (!rendition) return;
+    const generation = this.generation;
+    try {
+      void Promise.resolve(rendition.display(location)).catch((error: unknown) => {
+        this.reportRenditionFailure(error, rendition, generation);
+      });
+    } catch (error) {
+      this.reportRenditionFailure(error, rendition, generation);
+    }
+  }
+
+  private runRenditionNavigation(action: 'previous' | 'next'): void {
+    const rendition = this.rendition;
+    if (!rendition) return;
+    const generation = this.generation;
+    try {
+      const task = action === 'previous' ? rendition.prev() : rendition.next();
+      void Promise.resolve(task).catch((error: unknown) => {
+        this.reportRenditionFailure(error, rendition, generation);
+      });
+    } catch (error) {
+      this.reportRenditionFailure(error, rendition, generation);
+    }
+  }
+
+  private previous = (): void => { this.runRenditionNavigation('previous'); };
+  private next = (): void => { this.runRenditionNavigation('next'); };
 
   // -- table of contents -------------------------------------------------------------------------
 
@@ -340,17 +384,34 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
 
   // -- anchor-target: applyAnchor per kind ---------------------------------------------------------
 
+  override async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
+    const operation = ++this.anchorOperationGeneration;
+    try {
+      return await super.scrollToAnchor(target);
+    } catch (error) {
+      if (operation !== this.anchorOperationGeneration) return false;
+      const rendition = this.rendition;
+      if (rendition) this.reportRenditionFailure(error, rendition, this.generation);
+      this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
+      return false;
+    }
+  }
+
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
-    if (!this.rendition) return false;
+    const rendition = this.rendition;
+    const operation = this.anchorOperationGeneration;
+    if (!rendition) return false;
     if (anchor.kind === 'cfi') {
-      await this.rendition.display(anchor.cfi);
-      return true;
+      if (operation !== this.anchorOperationGeneration || rendition !== this.rendition) return false;
+      await rendition.display(anchor.cfi);
+      return operation === this.anchorOperationGeneration && rendition === this.rendition;
     }
     if (anchor.kind === 'text-quote') {
       const cfi = await this.findTextQuoteCfi(anchor.quote);
       if (!cfi) return false;
-      await this.rendition.display(cfi);
-      return true;
+      if (operation !== this.anchorOperationGeneration || rendition !== this.rendition) return false;
+      await rendition.display(cfi);
+      return operation === this.anchorOperationGeneration && rendition === this.rendition;
     }
     return false;
   }
@@ -412,7 +473,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  `item.load()`/`item.find()`/`item.unload()`. Navigates to and highlights the first match once
    *  the scan completes. A newer `search()` call, `clearSearch()`, or a `src` change (via
    *  `teardown()`) aborts an in-flight scan. An empty/whitespace-only query behaves like
-   *  `clearSearch()` and resolves `0`. */
+   *  `clearSearch()` and resolves `0`. Peer-produced results are capped at 10,000 matches. */
   async search(query: string): Promise<number> {
     const generation = ++this.searchGeneration;
     this.searchQuery = query;
@@ -435,18 +496,22 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
         const results: OptionalPeerApi[] = (await item.find(query)) ?? [];
         if (generation !== this.searchGeneration || this.book !== book) return this.searchMatches.length;
-        for (const r of results) matches.push({ cfi: r.cfi, excerpt: r.excerpt ?? '' });
+        for (const r of results) {
+          if (matches.length >= MAX_SEARCH_MATCHES) break;
+          matches.push({ cfi: r.cfi, excerpt: r.excerpt ?? '' });
+        }
       } catch {
         continue;
       } finally {
         if (loaded) item.unload();
       }
+      if (matches.length >= MAX_SEARCH_MATCHES) break;
     }
     if (generation !== this.searchGeneration) return this.searchMatches.length;
     this.searchMatches = matches;
     this.searchActiveIndex = matches.length > 0 ? 0 : -1;
     this.emitSearchChange();
-    if (this.searchActiveIndex >= 0) await this.showSearchMatch(this.searchActiveIndex);
+    if (this.searchActiveIndex >= 0) await this.showSearchMatch(this.searchActiveIndex, generation);
     return matches.length;
   }
 
@@ -454,20 +519,20 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
    *  when there are no matches. */
   async searchNext(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
+    const generation = ++this.searchGeneration;
     this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
     this.emitSearchChange();
-    await this.showSearchMatch(this.searchActiveIndex);
-    return true;
+    return this.showSearchMatch(this.searchActiveIndex, generation);
   }
 
   /** Moves to the previous match, wrapping to the last before the first. Resolves `false` (no-op)
    *  when there are no matches. */
   async searchPrevious(): Promise<boolean> {
     if (!this.searchMatches.length) return false;
+    const generation = ++this.searchGeneration;
     this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.emitSearchChange();
-    await this.showSearchMatch(this.searchActiveIndex);
-    return true;
+    return this.showSearchMatch(this.searchActiveIndex, generation);
   }
 
   /** Clears the query, matches, and any painted search annotation, and resets `lr-search-change`
@@ -486,13 +551,42 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
     this.searchAnnotationCfi = undefined;
   }
 
-  private async showSearchMatch(index: number): Promise<void> {
+  private async showSearchMatch(index: number, generation = this.searchGeneration): Promise<boolean> {
     const match = this.searchMatches[index];
-    if (!match || !this.rendition) return;
+    const rendition = this.rendition;
+    if (
+      !match
+      || !rendition
+      || generation !== this.searchGeneration
+    ) return false;
     this.clearSearchAnnotation();
-    await this.rendition.display(match.cfi);
-    this.rendition.annotations.highlight(match.cfi, {}, undefined, 'lr-ebook-search', this.resolveHighlightFill(SEARCH_MATCH_FILL_TOKEN));
+    try {
+      await rendition.display(match.cfi);
+    } catch (error) {
+      if (generation === this.searchGeneration && rendition === this.rendition) {
+        this.reportRenditionFailure(error, rendition, this.generation);
+      }
+      return false;
+    }
+    if (
+      generation !== this.searchGeneration
+      || rendition !== this.rendition
+      || this.searchMatches[index] !== match
+    ) return false;
+    try {
+      rendition.annotations.highlight(
+        match.cfi,
+        {},
+        undefined,
+        'lr-ebook-search',
+        this.resolveHighlightFill(SEARCH_MATCH_FILL_TOKEN),
+      );
+    } catch (error) {
+      this.reportRenditionFailure(error, rendition, this.generation);
+      return false;
+    }
     this.searchAnnotationCfi = match.cfi;
+    return true;
   }
 
   private emitSearchChange(): void {
@@ -535,7 +629,9 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   // -- rendering --------------------------------------------------------------------------------------------
 
   private renderStatus(): TemplateResult | typeof nothing {
-    if (this.ebookState.kind === 'loading') return html`<p class="status-note">${this.localize('loadingDocument')}</p>`;
+    if (this.ebookState.kind === 'loading') {
+      return html`<p class="status-note" role="status">${this.localize('loadingDocument')}</p>`;
+    }
     if (this.ebookState.kind === 'error') return html`<div part="error" role="alert">${this.ebookState.message}</div>`;
     if (this.ebookState.kind === 'idle') {
       return html`<p class="status-note">${this.localize('documentPreviewEmpty', undefined, { type: this.localize('documentPreviewTypeDocument') })}</p>`;
@@ -546,7 +642,7 @@ export class LyraEbookViewer extends DocumentAnchorTarget(LyraEbookViewerBase) {
   override render(): TemplateResult {
     const disabled = this.ebookState.kind !== 'ready';
     return html`
-      <div part="base">
+      <div part="base" aria-busy=${this.ebookState.kind === 'loading' ? 'true' : 'false'}>
         <div part="toolbar">
           <button part="previous-button" type="button" aria-label=${this.localize('ebookViewerPreviousChapter')} ?disabled=${disabled} @click=${this.previous}>
             <span part="previous-icon" aria-hidden="true">${chevronIcon()}</span>

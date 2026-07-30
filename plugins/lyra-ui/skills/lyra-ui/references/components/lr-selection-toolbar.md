@@ -25,6 +25,8 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
 `lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
 the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
+Detaching and later reinserting the same open instance re-establishes positioning and Escape
+ownership even when the detach lasts past an event-loop turn.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 

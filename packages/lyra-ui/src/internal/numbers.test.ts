@@ -2,8 +2,12 @@ import { expect } from '@open-wc/testing';
 import {
   MAX_TIMEOUT_MS,
   finiteCount,
+  finiteAdd,
   finiteDuration,
   finiteInteger,
+  finiteInterpolate,
+  finiteMidpoint,
+  finiteRatio,
   finiteRange,
   isArrowKey,
   isSliderKey,
@@ -32,6 +36,20 @@ it('normalizes durations to finite timer-safe values', () => {
   expect(finiteDuration(Number.POSITIVE_INFINITY, 900)).to.equal(900);
   expect(finiteDuration(-10, 900, 16)).to.equal(16);
   expect(finiteDuration(Number.MAX_VALUE, 900)).to.equal(MAX_TIMEOUT_MS);
+});
+
+it('normalizes and interpolates across the full finite number range', () => {
+  expect(finiteRatio(0, -Number.MAX_VALUE, Number.MAX_VALUE)).to.equal(0.5);
+  expect(finiteRatio(Number.MAX_VALUE, -Number.MAX_VALUE, Number.MAX_VALUE)).to.equal(1);
+  expect(finiteRatio(-Number.MAX_VALUE, -Number.MAX_VALUE, Number.MAX_VALUE)).to.equal(0);
+  expect(finiteInterpolate(-Number.MAX_VALUE, Number.MAX_VALUE, 0.5)).to.equal(0);
+  expect(finiteMidpoint(-Number.MAX_VALUE, Number.MAX_VALUE)).to.equal(0);
+});
+
+it('saturates overflowing finite additions', () => {
+  expect(finiteAdd(Number.MAX_VALUE, Number.MAX_VALUE)).to.equal(Number.MAX_VALUE);
+  expect(finiteAdd(-Number.MAX_VALUE, -Number.MAX_VALUE)).to.equal(-Number.MAX_VALUE);
+  expect(finiteAdd(20, 22)).to.equal(42);
 });
 
 it('identifies arrow keys and the broader slider key set', () => {

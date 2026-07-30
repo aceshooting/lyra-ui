@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
@@ -11,12 +12,18 @@ import {
   readResponseArrayBuffer,
 } from '../../../internal/resource-loader.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { invalidateLyraLocaleCache } from '../../../internal/localization.js';
 import { Slugger } from '../../../internal/slugger.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import { scopeFromElement, resolveTextQuote, buildQuoteAnchor } from '../../../internal/text-quote.js';
 import { acquireHighlightHandle, supportsCustomHighlights, type HighlightHandle } from '../../../internal/text-highlights.js';
-import type { LyraAnchor, LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
+import type {
+  LyraAnchor,
+  LyraHighlight,
+  LyraHighlightTone,
+  HighlightActivateDetail,
+} from '../document-viewer/anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { assertDocxArchiveWithinLimits } from './docx-resource-guard.js';
 import { styles } from './docx-viewer.styles.js';
@@ -162,7 +169,9 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * against that outline, `text-quote` anchors via `internal/text-quote.ts`'s shared scope/resolve
  * helpers; `highlights` re-resolve by quote after every render (never by node identity), so a
  * highlight painted before its quote is in the rendered markup yet simply paints once a later load
- * contains it. Highlight painting uses `internal/text-highlights.ts`'s `acquireHighlightHandle()` --
+ * contains it. Keyboard-accessible highlight actions are rendered only for quotes that resolved
+ * against the currently loaded document, so an action never presents an enabled no-op. Highlight
+ * painting uses `internal/text-highlights.ts`'s `acquireHighlightHandle()` --
  * the CSS Custom Highlight API where the browser supports it (no DOM mutation at all), a `<mark>`-wrap
  * fallback otherwise. `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` do a
  * case-insensitive substring search over the rendered content's text and paint every match as a
@@ -175,7 +184,8 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @event lr-search-change - Fired whenever the search query, match count, or active match index
  *   changes, from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. `detail: { query,
  *   matchCount, activeIndex }`.
- * @event lr-highlight-activate - A painted `text-quote` highlight was clicked. `detail: { id }`.
+ * @event lr-highlight-activate - A painted `text-quote` highlight was clicked or its resolved
+ *   keyboard action was activated. `detail: { id }`.
  * @event lr-text-select - Fired on selection end inside the rendered content. `detail: { text,
  *   anchor, rects }`; `anchor` is a `text-quote` `LyraAnchor` scoped to the rendered content, or
  *   `null` if the selection couldn't be anchored.
@@ -187,6 +197,8 @@ class LyraDocxViewerBase extends LyraElement<LyraDocxViewerEventMap> {}
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
  * @csspart highlight - A painted `text-quote` highlight (`<mark>`, `<mark>`-wrap fallback path only).
+ * @csspart highlight-actions - Keyboard-accessible actions for the resolved text highlights.
+ * @csspart highlight-action - One native highlight activation button.
  * @csspart search-match - A painted in-document search match.
  * @csspart search-match-active - The currently active search match (also carries `search-match`).
  * @cssprop [--lr-docx-viewer-max-height=none] - Maximum block size of the scrollable document body before it scrolls internally. Also settable via the `max-height` property.
@@ -210,7 +222,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   /** Accessible name for the rendered document. */
   @property() name = '';
 
-  /** CSS length that caps the scrollable document body. */
+  /** A CSS `max-height` that caps the scrollable document body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this viewer resolves via `scrollToAnchor()`. Readonly. */
@@ -219,6 +231,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   @state() private fetchState: FetchState = { kind: 'idle' };
   @state() private searchMatches: DocxSearchMatch[] = [];
   @state() private searchActiveIndex = -1;
+  @state() private resolvedHighlightActions: LyraHighlight[] = [];
 
   private generation = 0;
   private lastLoadSrc = '';
@@ -234,7 +247,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
    *  coordinate hit-test -- the CSS Custom Highlight API paints ranges without creating any DOM
    *  element to attach a click listener to, so activation is resolved by comparing the click point
    *  against each range's own `getClientRects()` instead, uniformly across both paint paths. */
-  private resolvedHighlightRanges: { id: string; range: Range }[] = [];
+  private resolvedHighlightRanges: { highlight: LyraHighlight; range: Range }[] = [];
+  private pendingResolvedHighlightActions: LyraHighlight[] = [];
+  private resolvedHighlightActionSyncPending = false;
 
   private searchQuery = '';
   private paintedSearchMarks: HTMLElement[] = [];
@@ -248,6 +263,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   override disconnectedCallback(): void {
     this.generation++;
+    this.resetResolvedHighlightActions();
     super.disconnectedCallback(); // reaches DocumentAnchorTarget's own cleanup (anchor retry, selection binding)
     this.highlightHandle?.release();
     this.highlightHandle = undefined;
@@ -255,6 +271,9 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // reaches DocumentAnchorTarget's own willUpdate (declarative `anchor`)
+    if (changed.has('src') || changed.has('highlights')) {
+      this.resetResolvedHighlightActions();
+    }
     if (changed.has('src')) {
       // Search match offsets are only meaningful for the document they were found in -- reset
       // silently (no lr-search-change) rather than emit, mirroring <lr-pdf-viewer>'s identical
@@ -438,6 +457,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const root = this.contentRoot();
     const handle = this.ensureHighlightHandle();
     if (!root) {
+      this.syncResolvedHighlightActions([]);
       for (const tone of HIGHLIGHT_TONES) handle.setRanges(tone, []);
       handle.setActive(null);
       return;
@@ -450,9 +470,12 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       const range = resolveTextQuote(scope, highlight.anchor);
       if (!range) continue;
       rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
-      this.resolvedHighlightRanges.push({ id: highlight.id, range });
+      this.resolvedHighlightRanges.push({ highlight, range });
       if (highlight.id === this.activeHighlightId) activeRange = range;
     }
+    this.syncResolvedHighlightActions(
+      this.resolvedHighlightRanges.map(({ highlight }) => highlight),
+    );
     for (const [tone, ranges] of rangesByTone) handle.setRanges(tone, ranges);
     handle.setActive(activeRange);
     if (!supportsCustomHighlights()) {
@@ -466,14 +489,45 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     }
   }
 
+  /** Mirrors the synchronous range-resolution result into render state after the current Lit
+   * update has finished. Repainting runs from `updated()`, so assigning the state there directly
+   * would create a change-in-update warning; coalescing through one microtask also ensures a rapid
+   * loading -> loaded transition exposes only the latest document's resolved entries. */
+  private syncResolvedHighlightActions(highlights: LyraHighlight[]): void {
+    this.pendingResolvedHighlightActions = [...new Set(highlights)];
+    if (this.resolvedHighlightActionSyncPending) return;
+    this.resolvedHighlightActionSyncPending = true;
+    queueMicrotask(() => {
+      this.resolvedHighlightActionSyncPending = false;
+      if (!this.isConnected) return;
+      const next = this.pendingResolvedHighlightActions;
+      if (
+        next.length === this.resolvedHighlightActions.length
+        && next.every((highlight, index) => highlight === this.resolvedHighlightActions[index])
+      ) return;
+      this.resolvedHighlightActions = next;
+    });
+  }
+
+  /** Drops both live ranges and render-facing entries before a document can leave the loaded state.
+   * This is synchronous so neither a `src` transition nor reconnect can render an old document's
+   * enabled action beside idle/loading UI while the next repaint microtask is still pending. */
+  private resetResolvedHighlightActions(): void {
+    this.resolvedHighlightRanges = [];
+    this.pendingResolvedHighlightActions = [];
+    this.resolvedHighlightActions = [];
+  }
+
   /** Hit-tests a click point against every currently-resolved highlight's `getClientRects()`,
    *  topmost (last-resolved) first -- the CSS Custom Highlight API paints ranges without creating
    *  any DOM element to attach a click listener to, so this works identically on both paint paths. */
   private hitTestHighlightAt(x: number, y: number): string | null {
     for (let i = this.resolvedHighlightRanges.length - 1; i >= 0; i--) {
-      const { id, range } = this.resolvedHighlightRanges[i]!; // safe: i in [0, length)
+      const { highlight, range } = this.resolvedHighlightRanges[i]!; // safe: i in [0, length)
       for (const rect of range.getClientRects()) {
-        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return id;
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          return highlight.id;
+        }
       }
     }
     return null;
@@ -486,6 +540,52 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     const highlightId = this.hitTestHighlightAt(e.clientX, e.clientY);
     if (highlightId) this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlightId });
   };
+
+  private highlightActionLabel(highlight: LyraHighlight): string {
+    return this.localize('highlightWithLabel', undefined, {
+      label:
+        highlight.label ||
+        (highlight.anchor.kind === 'text-quote'
+          ? highlight.anchor.quote
+          : highlight.id),
+    });
+  }
+
+  private activateHighlightAction(highlight: LyraHighlight): void {
+    const resolved = this.resolvedHighlightRanges.find((entry) => entry.highlight === highlight);
+    if (!resolved) return;
+    const elementNode = this.ownerDocument.defaultView?.Node.ELEMENT_NODE ?? 1;
+    const target =
+      resolved.range.commonAncestorContainer.nodeType === elementNode
+        ? resolved.range.commonAncestorContainer as Element
+        : resolved.range.commonAncestorContainer.parentElement;
+    target?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' });
+    this.activeHighlightId = highlight.id;
+    this.emit<HighlightActivateDetail>('lr-highlight-activate', { id: highlight.id });
+  }
+
+  private renderHighlightActions(): TemplateResult | typeof nothing {
+    const resolved = new Set(this.resolvedHighlightActions);
+    const highlights = this.highlights.filter(
+      (highlight) => highlight.anchor.kind === 'text-quote' && resolved.has(highlight),
+    );
+    if (highlights.length === 0) return nothing;
+    return html`
+      <div part="highlight-actions">
+        ${highlights.map((highlight) => {
+          const label = this.highlightActionLabel(highlight);
+          return html`
+            <button
+              part="highlight-action"
+              type="button"
+              aria-label=${label}
+              @click=${() => this.activateHighlightAction(highlight)}
+            >${highlight.label || label}</button>
+          `;
+        })}
+      </div>
+    `;
+  }
 
   // -- search ----------------------------------------------------------------------------------------
 
@@ -631,9 +731,11 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     return html`
       <div
         part="base"
-        style=${this.maxHeight ? `--lr-docx-viewer-max-height:${this.maxHeight}` : nothing}
+        style=${sanitizeCssLength(this.maxHeight)
+          ? styleMap({ '--lr-docx-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+          : nothing}
       >
-        <div part="body">${this.renderBody()}</div>
+        <div part="body">${this.renderBody()}${this.renderHighlightActions()}</div>
         ${this.renderAnchorLiveRegion()}
       </div>
     `;

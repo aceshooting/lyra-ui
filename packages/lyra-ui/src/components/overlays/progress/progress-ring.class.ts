@@ -11,7 +11,8 @@ const DEFAULT_MAX = 100;
  * `<lr-progress-ring>` — a circular determinate or indeterminate progress indicator.
  *
  * @customElement lr-progress-ring
- * @slot - Optional center label.
+ * @slot - Optional center label whose text names the progressbar unless an explicit accessible
+ * label overrides it; live text mutations stay synchronized.
  * @csspart base - The progress wrapper.
  * @csspart track - The SVG track.
  * @csspart indicator - The SVG indicator.
@@ -25,6 +26,30 @@ export class LyraProgressRing extends LyraElement {
   @property({ type: Number }) max = 100;
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   @property({ attribute: 'accessible-label' }) accessibleLabel = '';
+  private labelObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.labelObserver ??= new MutationObserver(() => this.requestUpdate());
+    this.labelObserver.observe(this, { childList: true, characterData: true, subtree: true });
+  }
+
+  override disconnectedCallback(): void {
+    this.labelObserver?.disconnect();
+    super.disconnectedCallback();
+  }
+
+  private get visibleLabelText(): string {
+    const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    return (
+      slot
+        ?.assignedNodes({ flatten: true })
+        .map((node) => node.textContent ?? '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim() ?? ''
+    );
+  }
 
   /** `max`, normalized to a finite number and guarded against `<= 0` — which would otherwise
    *  divide-by-zero in `percent` below — falling back to the property's own default of `100`. */
@@ -53,7 +78,11 @@ export class LyraProgressRing extends LyraElement {
     const radius = 42;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference * (1 - this.percent / 100);
-    const label = this.getAttribute('aria-label') || this.accessibleLabel || this.localize('progress');
+    const label =
+      this.getAttribute('aria-label') ||
+      this.accessibleLabel ||
+      this.visibleLabelText ||
+      this.localize('progress');
     return html`<div part="base" role="progressbar" aria-label=${label}
       aria-valuemin="0" aria-valuemax=${this.safeMax} aria-valuenow=${this.indeterminate ? nothing : this.safeValue}
       aria-valuetext=${this.indeterminate ? nothing : this.formattedPercent}>
@@ -62,7 +91,7 @@ export class LyraProgressRing extends LyraElement {
         <circle part="indicator" cx="50" cy="50" r=${radius} stroke-width="10"
           stroke-dasharray=${circumference} stroke-dashoffset=${this.indeterminate ? circumference * 0.65 : offset}></circle>
       </svg>
-      <span part="label"><slot>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
+      <span part="label"><slot @slotchange=${() => this.requestUpdate()}>${this.indeterminate ? '' : this.formattedPercent}</slot></span>
     </div>`;
   }
 }

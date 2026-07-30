@@ -6,7 +6,7 @@
 - **Class** `LyraStackTrace`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/stack-trace/stack-trace.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 9 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,11 @@ toggle for a run of internal frames), `raw` (the verbatim fallback when zero str
 parsed), `copy-button` (only rendered while `copyable`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
-`--lr-stack-trace-font` (default `var(--lr-font-mono)`), plus shared tokens
+`--lr-stack-trace-font` (default `var(--lr-font-mono)`),
+`--lr-stack-trace-internal-frame-color` (default `var(--lr-color-text-quiet)`) — internal-frame
+foreground, and `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
+hover/focus, internal-toggle, and copy-button-hover accent. The scoped color hooks avoid changing
+the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.

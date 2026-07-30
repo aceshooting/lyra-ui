@@ -405,7 +405,7 @@ describe('lr-spreadsheet-viewer', () => {
         expect(highlighted.getAttribute('role')).to.equal('cell');
         const action = highlighted.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
         expect(action.tagName).to.equal('BUTTON');
-        expect(action.getAttribute('aria-label')).to.equal('First result');
+        expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada — First result');
         const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;

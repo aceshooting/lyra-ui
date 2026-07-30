@@ -403,3 +403,28 @@ it('is accessible with content, expanded, and a duration set', async () => {
   `)) as LyraThinkingPanel;
   await expect(el).to.be.accessible();
 });
+
+it('contains unbroken plain slotted content without creating a horizontal scroller', async () => {
+  const long = `reasoning-${'identifier'.repeat(180)}`;
+  const el = (await fixture(html`
+    <div style="inline-size:256px">
+      <lr-thinking-panel expanded>${long}</lr-thinking-panel>
+    </div>
+  `)).querySelector('lr-thinking-panel') as LyraThinkingPanel;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(256);
+  expect(body.scrollWidth).to.be.at.most(body.clientWidth + 1);
+});
+
+it('exposes a component-scoped pending color', async () => {
+  const el = (await fixture(html`
+    <lr-thinking-panel
+      mode="live"
+      expanded
+      style="--lr-thinking-panel-pending-color: rgb(1, 2, 3)"
+    ></lr-thinking-panel>
+  `)) as LyraThinkingPanel;
+  const pending = el.shadowRoot!.querySelector<HTMLElement>('[part="duration"][data-pending]')!;
+  expect(getComputedStyle(pending).color).to.equal('rgb(1, 2, 3)');
+});

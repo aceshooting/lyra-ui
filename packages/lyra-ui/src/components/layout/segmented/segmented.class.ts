@@ -82,11 +82,9 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   /** The currently selected item's `value`. */
   @property() value = "";
 
-  /** Accessible name for the radiogroup, used when no visible label context
-   *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
-   *  as `aria-label` on the `role="radiogroup"` element. A plain `aria-label`
-   *  attribute on the host itself is honored as a fallback when this is left
-   *  unset, matching `<lr-slider>`. */
+  /** Accessible-name fallback for the radiogroup when the host has no `aria-label`, used when no
+   *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
+   *  The resolved name is set on the `role="radiogroup"` element. */
   @property() label = "";
 
   /** Visual size — same `2xs`-`xl` scale as `<lr-select>`/`<lr-combobox>` (`s` through `xl`)
@@ -96,6 +94,8 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   @property({ reflect: true }) size: LyraSegmentedSize = "m";
 
   @state() private selectedItem?: SegmentedItem;
+
+  private rehomeSegmentFocus = false;
 
   private select(item: SegmentedItem): void {
     if (item.disabled || item === this.selectedItem) return;
@@ -132,6 +132,12 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (this.rehomeSegmentFocus) {
+      this.rehomeSegmentFocus = false;
+      this.renderRoot
+        .querySelector<HTMLElement>('[part="segment"][tabindex="0"]')
+        ?.focus();
+    }
     // Reveal a programmatically-changed selection. Guard the first render so an initial mount
     // never scrolls an ancestor page to the selected segment. Keyboard-driven changes already
     // reveal via focusItem()'s focus(), and re-scrolling there is harmless/idempotent.
@@ -145,12 +151,21 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (
+      changed.has("items") &&
+      (this.renderRoot as ShadowRoot).activeElement?.getAttribute("part") ===
+        "segment"
+    ) {
+      this.rehomeSegmentFocus = true;
+    }
     if (
       changed.has("value") ||
       (changed.has("items") &&
         (!this.selectedItem ||
           !this.items.includes(this.selectedItem) ||
-          this.selectedItem.value !== this.value))
+          this.selectedItem.value !== this.value ||
+          this.selectedItem.disabled))
     ) {
       this.selectedItem = this.items.find(
         (item) => item.value === this.value && !item.disabled
@@ -208,7 +223,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   };
 
   override render(): TemplateResult {
-    const ariaLabel = this.label || this.getAttribute("aria-label") || nothing;
+    const ariaLabel = this.getAttribute("aria-label") || this.label || nothing;
     // WAI-ARIA APG radiogroup: exactly one non-disabled radio is ever tabbable.
     // That's normally the checked item, but a fresh/cleared radiogroup has no
     // checked item at all -- falling back to `item.value === this.value` alone

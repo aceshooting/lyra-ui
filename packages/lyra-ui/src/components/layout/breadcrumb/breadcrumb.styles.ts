@@ -3,9 +3,14 @@ import { css } from "lit";
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part="base"] {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part="list"] {
     display: flex;
@@ -14,5 +19,7 @@ export const styles = css`
     gap: var(--lr-space-xs);
     margin: 0;
     padding: 0;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
 `;

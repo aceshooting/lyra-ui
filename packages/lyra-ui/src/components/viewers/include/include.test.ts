@@ -41,7 +41,7 @@ describe('lr-include', () => {
       await el.updateComplete;
       await aTimeout(10);
       expect(called).to.equal(false);
-      expect(el.hasAttribute('aria-busy')).to.equal(false);
+      expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
   });
 
@@ -51,7 +51,7 @@ describe('lr-include', () => {
     window.fetch = (() => new Promise<Response>((resolve) => { resolveFetch = resolve; })) as typeof window.fetch;
     try {
       const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/pending.html">Loading…</lr-include>`);
-      await waitUntil(() => el.hasAttribute('aria-busy'));
+      await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       expect(el.getAttribute('aria-busy')).to.equal('true');
       expect(el.textContent).to.equal('Loading…');
       resolveFetch(response('<p>Done</p>'));
@@ -72,8 +72,38 @@ describe('lr-include', () => {
       // own children, projected through the shadow root's default <slot>.
       expect(el.querySelector('script')).to.not.exist;
       expect(el.querySelector('h1')!.textContent).to.equal('Safe');
-      expect(el.hasAttribute('aria-busy')).to.equal(false);
+      expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
+  });
+
+  it('invalidates an active search after fetched light-DOM content is replaced', async () => {
+    const original = window.fetch;
+    let body = '<p>needle</p>';
+    window.fetch = (() => Promise.resolve(response(body))) as typeof window.fetch;
+    try {
+      const el = await fixture<LyraInclude>(html`<lr-include></lr-include>`);
+      let searchChanges = 0;
+      let lastMatchCount = -1;
+      el.addEventListener('lr-search-change', (event) => {
+        searchChanges++;
+        lastMatchCount = (event as CustomEvent<{ matchCount: number }>).detail.matchCount;
+      });
+      const firstLoad = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/first.html';
+      await firstLoad;
+      expect(await el.search('needle')).to.equal(1);
+
+      body = '<p>replacement</p>';
+      const secondLoad = oneEvent(el, 'lr-load');
+      el.src = 'https://example.test/second.html';
+      await secondLoad;
+      await waitUntil(() => searchChanges >= 2);
+
+      expect(lastMatchCount).to.equal(0);
+      expect(await el.searchNext()).to.be.false;
+    } finally {
+      window.fetch = original;
+    }
   });
 
   it('defaults mode to same-origin when the attribute is unset', async () => {
@@ -132,7 +162,7 @@ describe('lr-include', () => {
       expect(event.detail.status).to.equal(404);
       expect(event.detail.reason).to.equal('http');
       expect(el.textContent).to.equal('Fallback');
-      expect(el.hasAttribute('aria-busy')).to.equal(false);
+      expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
   });
 
@@ -211,10 +241,10 @@ describe('lr-include', () => {
     window.fetch = (() => new Promise<Response>(() => { /* never resolves */ })) as typeof window.fetch;
     try {
       const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/pending.html"></lr-include>`);
-      await waitUntil(() => el.hasAttribute('aria-busy'));
+      await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       el.src = '';
-      await waitUntil(() => !el.hasAttribute('aria-busy'));
-      expect(el.hasAttribute('aria-busy')).to.equal(false);
+      await waitUntil(() => el.getAttribute('aria-busy') === 'false');
+      expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
   });
 
@@ -223,12 +253,12 @@ describe('lr-include', () => {
     window.fetch = (() => new Promise<Response>(() => { /* never resolves */ })) as typeof window.fetch;
     try {
       const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/pending.html"></lr-include>`);
-      await waitUntil(() => el.hasAttribute('aria-busy'));
+      await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       const errorPromise = oneEvent(el, 'lr-include-error');
       el.src = 'javascript:alert(1)';
       const event = await errorPromise;
       expect(event.detail.reason).to.equal('blocked-url');
-      expect(el.hasAttribute('aria-busy')).to.equal(false);
+      expect(el.getAttribute('aria-busy')).to.equal('false');
     } finally { window.fetch = original; }
   });
 
@@ -253,7 +283,7 @@ describe('lr-include', () => {
     window.fetch = (() => new Promise<Response>((resolve) => { resolveFetch = resolve; })) as typeof window.fetch;
     try {
       const el = await fixture<LyraInclude>(html`<lr-include src="https://example.test/slow.html">Fallback</lr-include>`);
-      await waitUntil(() => el.hasAttribute('aria-busy'));
+      await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       el.remove();
       resolveFetch(response('<h1>Late</h1>'));
       await aTimeout(20);
@@ -278,7 +308,7 @@ describe('lr-include', () => {
       const el = await fixture<LyraInclude>(
         html`<lr-include src="https://example.test/reconnect.html">Fallback</lr-include>`,
       );
-      await waitUntil(() => el.hasAttribute('aria-busy'));
+      await waitUntil(() => el.getAttribute('aria-busy') === 'true');
       const parent = el.parentElement!;
       el.remove();
       parent.append(el);

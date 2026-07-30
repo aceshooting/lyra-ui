@@ -145,6 +145,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
   private chunks: Blob[] = [];
   private recordingStartedAt = 0;
   private cancelRequested = false;
+  private recorderStopRequested = false;
   private tickTimer?: ReturnType<typeof setInterval>;
   private maxDurationTimer?: ReturnType<typeof setTimeout>;
   private audioCtx?: AudioContext;
@@ -238,6 +239,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       this._stream = stream;
       const mimeType = this.resolveMimeType();
       this.recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      this.recorderStopRequested = false;
       this.chunks = [];
       this.recorder.ondataavailable = (e: BlobEvent) => {
         if (!e.data || e.data.size === 0) return;
@@ -287,8 +289,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
 
   /** Stops the active take, finalizing it via `lr-record-stop`. No-op unless `state === 'recording'`. */
   stop(): void {
-    if (this._state !== 'recording') return;
-    this.recorder?.stop();
+    this.requestRecorderStop(false);
   }
 
   /** Discards the active or pending take: fires `lr-record-cancel`, never `lr-record-stop`. */
@@ -298,8 +299,16 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
       return;
     }
     if (this._state !== 'recording') return;
-    this.cancelRequested = true;
-    this.recorder?.stop();
+    this.requestRecorderStop(true);
+  }
+
+  private requestRecorderStop(cancelled: boolean): void {
+    if (this._state !== 'recording') return;
+    if (cancelled) this.cancelRequested = true;
+    if (this.recorderStopRequested) return;
+    this.recorderStopRequested = true;
+    const recorder = this.recorder;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
   }
 
   private finalizeStop(): void {
@@ -323,6 +332,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
     for (const track of this._stream?.getTracks() ?? []) track.stop();
     this._stream = null;
     this.recorder = undefined;
+    this.recorderStopRequested = false;
     this.chunks = [];
     if (this.tickTimer !== undefined) {
       clearInterval(this.tickTimer);

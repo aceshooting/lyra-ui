@@ -2,10 +2,8 @@ import { LyraChart, lockChartType } from './chart.class.js';
 
 /**
  * `<lr-bubble-chart>` — `<lr-chart>` with `type` locked to `"bubble"`. Feed
- * points via `Series.points`, each needing an `x`/`y`/`r` (radius) triple —
- * cast the array through `as unknown as Series['points']` (or a local
- * `BubblePoint` type) when constructing it, since `Series.points` itself is
- * typed as `{ x; y; label? }[]` with no `r` field.
+ * points via `Series.points`, whose exported `ChartPoint` type carries
+ * `x`/`y`, optional bubble `r` (radius), and an optional per-point `label`.
  *
  * @customElement lr-bubble-chart
  */
@@ -21,4 +19,3 @@ declare global {
     'lr-bubble-chart': LyraBubbleChart;
   }
 }
-

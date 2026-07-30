@@ -12,7 +12,9 @@ export const styles = css`
     inset-block-start: var(--lr-selection-toolbar-block-start);
     display: flex;
     flex-wrap: wrap;
+    inline-size: max-content;
     max-inline-size: calc(100vw - var(--lr-space-m));
+    box-sizing: border-box;
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-2xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -43,6 +45,14 @@ export const styles = css`
   [part~='action'] {
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
+    max-inline-size: 100%;
+  }
+
+  [part~='action']::part(base) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   [part~='action']:hover {

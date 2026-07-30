@@ -248,6 +248,12 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   @state() private hasExcerptSlot = false;
 
   @query('[part="title-input"]') private titleInput?: HTMLInputElement;
+  private blurCommitGeneration = 0;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.hasUpdated && this.renaming) this.focusRenameInput();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
@@ -273,9 +279,13 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // updated() layered under this class must still run.
     if (changed.has('renaming') && this.renaming) {
       // Runs after render, so the input already exists in the DOM.
-      this.titleInput?.focus();
-      this.titleInput?.select();
+      this.focusRenameInput();
     }
+  }
+
+  private focusRenameInput(): void {
+    this.titleInput?.focus();
+    this.titleInput?.select();
   }
 
   private get normalizedTimestamp(): Date | undefined {
@@ -372,7 +382,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     this.emit('focus');
   };
 
-  private onTitleInputBlur = (): void => {
+  private onTitleInputBlur = (event: FocusEvent): void => {
     // Native blur/focus neither bubble nor cross the shadow boundary -- re-dispatch so a
     // host-level listener on the custom element itself can observe them. Always fires, even on
     // the Escape-driven path below, since the native input really did blur either way.
@@ -382,7 +392,15 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
     // now-removed input's blur event reaches here -- skip so Escape can't
     // also commit.
     if (!this.renaming) return;
-    this.commitRename();
+    const generation = ++this.blurCommitGeneration;
+    const synthetic = !event.isTrusted;
+    queueMicrotask(() => {
+      if (generation !== this.blurCommitGeneration || !this.renaming) return;
+      // Removing a virtualized row blurs its editor as a lifecycle side effect. Preserve the
+      // controlled draft/state so reconnect can restore the same editing session and focus.
+      if (!this.isConnected || (!synthetic && this.shadowRoot?.activeElement === this.titleInput)) return;
+      this.commitRename();
+    });
   };
 
   private onActionsSlotChange = (e: Event): void => {

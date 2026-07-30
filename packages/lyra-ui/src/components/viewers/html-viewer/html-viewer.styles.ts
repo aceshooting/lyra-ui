@@ -18,7 +18,12 @@ export const styles = css`
     overflow: auto;
     padding: var(--lr-space-m);
   }
-  [part='html'] { display: block; max-inline-size: 100%; overflow-wrap: anywhere; }
+  [part='html'] {
+    display: block;
+    max-inline-size: 100%;
+    contain: paint;
+    overflow-wrap: anywhere;
+  }
   [part='html'] img, [part='html'] video { max-inline-size: 100%; block-size: auto; }
   .empty-note, [part='error'] { margin: 0; color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-md-sm); text-align: center; }
   [part='error'] { color: var(--lr-color-danger); }

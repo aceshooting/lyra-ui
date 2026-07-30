@@ -53,6 +53,9 @@ badge label. `size` swaps it per tier (`var(--lr-font-size-xs)` at `sm`, `var(--
 caps read at the same optical weight; override it alongside `--lr-avatar-font-size` on the avatars
 themselves when tuning a custom tier.
 
+The overflow badge keeps a 40×40px minimum activation target at `sm`, `md`, and `lg`; this does not
+change the visible avatar circles themselves.
+
 **Optional peer deps:** none.
 
 ```html

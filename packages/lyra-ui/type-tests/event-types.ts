@@ -41,6 +41,7 @@ import type {
   AppRailResizeDetail,
   BoxPlotPoint,
   BoxPlotSeries,
+  ChartPoint,
   ChipSelectDetail,
   ChoroplethLayer,
   GraphLink,
@@ -72,6 +73,14 @@ import type {
   LyraSplitEventMap,
   LyraTimeRangeEventMap,
   LyraTreeEventMap,
+} from '../src/lyra.js';
+import type {
+  LyraContextInspectorEventMap,
+  LyraEntityDossierEventMap,
+  LyraEvalDatasetEventMap,
+  LyraToolApprovalDialogEventMap,
+  LyraToolParamFormEventMap,
+  LyraToolSelectDialogEventMap,
 } from '../src/lyra.js';
 import type {
   LyraActivityFeedEventMap,
@@ -128,6 +137,7 @@ import type {
   LyraMessageActionsEventMap,
   LyraMessageFeedbackEventMap,
   LyraMindMapEventMap,
+  LyraModelSelectEventMap,
   LyraMutationObserverEventMap,
   LyraNeighborListEventMap,
   LyraNodePaletteEventMap,
@@ -185,6 +195,47 @@ const publicTypes: [
   FormAssociatedInterface,
 ] | undefined = undefined;
 void publicTypes;
+
+// Compile-only guard: native-style events explicitly documented by conversation controls must
+// also be present in their exported event maps, rather than relying on HTMLElementEventMap.
+const conversationNativeEventMapTypes: [
+  LyraModelSelectEventMap['input'],
+  LyraModelSelectEventMap['change'],
+  LyraThreadListEventMap['focus'],
+  LyraThreadListEventMap['blur'],
+] | undefined = undefined;
+void conversationNativeEventMapTypes;
+
+// Compile-only guard: composed focus/blur bridges are part of these components' named
+// event-map contracts, not merely inherited guesses from HTMLElementEventMap.
+const agentToolNativeEventMapTypes: [
+  LyraEvalDatasetEventMap['focus'],
+  LyraEvalDatasetEventMap['blur'],
+  LyraToolApprovalDialogEventMap['focus'],
+  LyraToolApprovalDialogEventMap['blur'],
+  LyraToolParamFormEventMap['focus'],
+  LyraToolParamFormEventMap['blur'],
+  LyraToolSelectDialogEventMap['focus'],
+  LyraToolSelectDialogEventMap['blur'],
+] | undefined = undefined;
+void agentToolNativeEventMapTypes;
+
+// Compile-only guard: pure composition components expose the typed child events that bubble
+// through their own shadow boundary, without re-emitting a duplicate event.
+const composedEventMapTypes: [
+  LyraContextInspectorEventMap['lr-copy'],
+  LyraContextInspectorEventMap['lr-export'],
+  LyraContextInspectorEventMap['lr-export-complete'],
+  LyraContextInspectorEventMap['lr-citation-activate'],
+  LyraContextInspectorEventMap['lr-citation-open'],
+  LyraEntityDossierEventMap['lr-entity-activate'],
+  LyraEntityDossierEventMap['lr-node-expand'],
+  LyraEntityDossierEventMap['lr-chunk-open'],
+  LyraEntityDossierEventMap['lr-expand'],
+  LyraEntityDossierEventMap['lr-toggle'],
+  LyraEntityDossierEventMap['lr-tabs-change'],
+] | undefined = undefined;
+void composedEventMapTypes;
 
 // Compile-only guard: fails to typecheck if the root barrel (src/lyra.ts) ever
 // stops re-exporting one of these component event-map types, even though the
@@ -247,6 +298,7 @@ const epicBarrelEventMapTypes: [
   LyraComparePanelEventMap,
   LyraConfirmBarEventMap,
   LyraContactViewerEventMap,
+  LyraContextInspectorEventMap,
   LyraCsvViewerEventMap,
   LyraDatasetViewerEventMap,
   LyraDetailsEventMap,
@@ -257,6 +309,7 @@ const epicBarrelEventMapTypes: [
   LyraEmojiPickerEventMap,
   LyraEntityCardEventMap,
   LyraEntityChipEventMap,
+  LyraEntityDossierEventMap,
   LyraEnvListEventMap,
   LyraFileTreeEventMap,
   LyraFlowCanvasEventMap,
@@ -326,6 +379,7 @@ void epicBarrelEventMapTypes;
 // forbids). Fails to typecheck if the barrel ever drops one.
 const barrelPublicSurfaceTypes: [
   HeatmapSelectedCell,
+  ChartPoint,
   Series,
   LyraChartType,
   BoxPlotSeries,

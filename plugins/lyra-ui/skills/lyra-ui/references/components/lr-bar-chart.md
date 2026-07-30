@@ -6,7 +6,7 @@
 - **Class** `LyraBarChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/bar-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
 - **Optional peers** `chart.js`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-line-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -33,16 +33,18 @@ of every entry in these lists.**
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
 locked to this tag's value.
 
-**Methods:** `resetZoom()`, `refreshTheme()`.
+**Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `resetZoom()`,
+`refreshTheme()`.
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-point-click` (`detail: { datasetIndex,
 index, label, value }`).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
-`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
-dependency fails to load — see `llms/components/lr-chart.md`).
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load — see
+`llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -69,8 +71,8 @@ same set, so one rule retunes them together.
 - `type` truly is locked per subclass: `<lr-pie-chart type="bar">` or `el.type = 'bar'` at runtime
   is a genuine no-op (the accessor's setter silently ignores the write), not a footgun like a plain
   overridden class-field default would be.
-- `lr-bubble-chart` needs `Series.points` entries with an `x`/`y`/`r` triple, but `Series.points`
-  is typed as `{x, y, label?}[]` with no `r` field — cast the array through `as unknown as
-  Series['points']` (or a local `BubblePoint` type) when constructing bubble data.
+- `lr-bubble-chart` consumes the exported `ChartPoint` shape directly. Set `x`/`y`, optional `r`
+  for bubble radius, and optional `label` for the point-level accessible/event/export label; no
+  runtime cast is needed.
 
 ---

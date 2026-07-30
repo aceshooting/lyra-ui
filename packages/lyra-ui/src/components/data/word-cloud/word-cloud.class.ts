@@ -1,11 +1,13 @@
 import { html, nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { getScratchCtx } from '../../../internal/canvas.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteRange } from '../../../internal/numbers.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import {
   layoutWordCloud,
   MAX_FONT_SIZE_PX,
@@ -49,7 +51,8 @@ export interface LyraWordCloudEventMap {
   'lr-word-click': CustomEvent<{ text: string; weight: number; group?: string }>;
 }
 
-/** A named color override shown by the optional word-cloud legend. */
+/** A named CSS-color override shown by the optional word-cloud legend. Invalid colors render a
+ * transparent swatch. */
 export interface WordCloudLegendItem {
   label: string;
   color: string;
@@ -116,7 +119,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   /** `mixed` lets some words render rotated 90° for denser packing. */
   @property() orientations: WordCloudOrientations = 'horizontal';
 
-  /** Custom categorical palette, cycled by word index (or by `group`, see `words`). Defaults to the `--lr-word-cloud-color-*` tokens. */
+  /** Custom CSS-color palette, cycled by word index (or by `group`, see `words`). Invalid entries
+   *  and `url()` paint servers are skipped; an all-invalid palette falls back to the
+   *  `--lr-word-cloud-color-*` tokens. */
   @property({ attribute: false }) palette?: string[];
 
   /** Named color overrides shown in the optional legend. When omitted, `show-legend` derives
@@ -162,7 +167,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   private paletteColors(): string[] {
-    if (this.palette?.length) return this.palette;
+    if (this.palette?.length) {
+      const colors = this.palette
+        .map(sanitizeCssColor)
+        .filter((color): color is string => color !== undefined);
+      if (colors.length) return colors;
+    }
     const cs = getComputedStyle(this);
     const colors: string[] = [];
     for (let i = 0; i < PALETTE_SIZE; i++) {
@@ -279,8 +289,9 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     e.preventDefault();
 
     if (this.focusedIndex === null) {
-      this.focusedIndex = 0;
-      this.announce(order[0]!);
+      const next = e.key === 'End' ? order.length - 1 : 0;
+      this.focusedIndex = next;
+      this.announce(order[next]!);
       return;
     }
     // Left/Right swap under RTL, matching lr-tabs's/lr-tree's identical
@@ -306,7 +317,11 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
         ${entries.map(
           (item) => html`
             <span part="legend-item" role="listitem">
-              <span part="legend-swatch" aria-hidden="true" style=${`background-color:${item.color}`}></span>
+              <span
+                part="legend-swatch"
+                aria-hidden="true"
+                style=${styleMap({ backgroundColor: sanitizeCssColor(item.color) ?? 'transparent' })}
+              ></span>
               <span part="legend-label">${item.label}</span>
             </span>
           `,
@@ -336,7 +351,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const colors = this.paletteColors();
     const groupColor = new Map<string, string>();
     const colorFor = (word: PlacedWord): string => {
-      if (word.color) return word.color;
+      const ownColor = sanitizeCssColor(word.color);
+      if (ownColor) return ownColor;
       if (word.group) {
         if (!groupColor.has(word.group)) groupColor.set(word.group, colors[groupColor.size % colors.length]!);
         return groupColor.get(word.group)!;
@@ -361,8 +377,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       <div part="base">
         <svg
           part="svg"
-          role="group"
-          aria-label=${this.getAttribute('aria-label') ?? nothing}
+          role=${nothing}
+          aria-label=${nothing}
           aria-describedby="live-region"
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"

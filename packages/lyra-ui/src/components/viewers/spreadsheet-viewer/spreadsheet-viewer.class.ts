@@ -237,6 +237,9 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     if (!colHighlights.length) return html`<div part="cell" role=${role}>${text}</div>`;
     const active = colHighlights.find((entry) => entry.highlight.id === this.activeHighlightId);
     const primary = active ?? colHighlights[0]!;
+    const accessibleLabel = this.localize('highlightWithLabel', undefined, {
+      label: primary.highlight.label ? `${text} — ${primary.highlight.label}` : text,
+    });
     const activate = (): void => { this.emit('lr-highlight-activate', { id: primary.highlight.id }); };
     return html`<div
       part="cell cell-highlight"
@@ -246,7 +249,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     ><button
       part="cell-highlight-action"
       type="button"
-      aria-label=${primary.highlight.label || this.localize('viewerHighlightLabel')}
+      aria-label=${accessibleLabel}
       @click=${activate}
     >${text}</button></div>`;
   }

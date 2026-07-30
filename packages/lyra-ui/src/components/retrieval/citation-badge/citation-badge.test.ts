@@ -132,12 +132,24 @@ describe('accessible name', () => {
     expect(base.getAttribute('aria-label')).to.equal('Référence 3');
   });
 
-  it('lets the label prop fully override the computed accessible name', async () => {
+  it('keeps the visible citation index in the accessible name when label supplies source context', async () => {
     const el = (await fixture(
       html`<lr-citation-badge index="3" status="verified" label="Source: report.pdf, page 4"></lr-citation-badge>`,
     )) as LyraCitationBadge;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(base.getAttribute('aria-label')).to.equal('Source: report.pdf, page 4');
+    expect(base.getAttribute('aria-label')).to.equal('Citation 3, Source: report.pdf, page 4');
+  });
+
+  it('localizes the complete citation-with-custom-label message so translators control its order', async () => {
+    const el = (await fixture(html`
+      <lr-citation-badge
+        index="3"
+        label="rapport.pdf"
+        .strings=${{ citationWithCustomLabel: '{label} — référence {index}' }}
+      ></lr-citation-badge>
+    `)) as LyraCitationBadge;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('aria-label')).to.equal('rapport.pdf — référence 3');
   });
 
   it('lets an explicit host aria-label override both the label prop and the computed name', async () => {
@@ -464,4 +476,13 @@ it('keeps rich tooltip content non-interactive', async () => {
     html`<lr-citation-badge index="1"><button>Unexpected action</button></lr-citation-badge>`,
   )) as LyraCitationBadge;
   expect((el.shadowRoot!.querySelector('[part="popover"]') as HTMLElement).inert).to.be.true;
+});
+
+it('formats the visible and accessible citation index with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-citation-badge lang="ar-EG" index="3"></lr-citation-badge>`,
+  )) as LyraCitationBadge;
+  const formatted = new Intl.NumberFormat('ar-EG').format(3);
+  expect(el.shadowRoot!.querySelector('[part="index"]')!.textContent).to.equal(formatted);
+  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.include(formatted);
 });

@@ -230,6 +230,24 @@ describe('lr-compare-panel', () => {
     expect(getComputedStyle(button).opacity).to.equal('0.25');
   });
 
+  it('exposes component-scoped hooks for the selected vote state', async () => {
+    const el = (await fixture(html`
+      <lr-compare-panel
+        vote="a"
+        style="
+          --lr-compare-panel-selected-background: rgb(1, 2, 3);
+          --lr-compare-panel-selected-border-color: rgb(4, 5, 6);
+          --lr-compare-panel-selected-color: rgb(7, 8, 9);
+        "
+      ></lr-compare-panel>
+    `)) as LyraComparePanel;
+    const selected = el.shadowRoot!.querySelector('[part="vote-button"][data-selected]') as HTMLButtonElement;
+    const computed = getComputedStyle(selected);
+    expect(computed.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(computed.borderColor).to.equal('rgb(4, 5, 6)');
+    expect(computed.color).to.equal('rgb(7, 8, 9)');
+  });
+
   it('is accessible', async () => {
     const el = (await fixture(html`
       <lr-compare-panel label-a="Model A" label-b="Model B">

@@ -354,14 +354,25 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
     if (options.resetPrevious) this.previousSelection = undefined;
     const count = this.clampedCount(pool.length);
     const selected = this.preserveFocusedSubtree(pool, this.computeSelectionForMode(pool, count));
+    if (options.announce !== false) {
+      this.announcementsEnabled = true;
+      // A live region only announces mutations that happen after it owns live semantics.
+      // Reflect the semantic state synchronously before applySelection() changes hidden content;
+      // the normal reactive render keeps it in sync on the ensuing update.
+      if (!this.autoplay) {
+        this.renderRoot
+          .querySelector<HTMLElement>('[part="base"]')
+          ?.setAttribute('aria-live', 'polite');
+      }
+    }
     this.applySelection(pool, selected);
     this.previousSelection = selected;
-    if (options.announce !== false) this.announcementsEnabled = true;
     this.emit('lr-content-change', { items: selected });
     return selected;
   }
 
   private onSlotChange = (): void => {
+    if (!this.isConnected) return;
     const pool = this.eligible();
     // A slot's first assignment of already-present light-DOM children can
     // itself dispatch an async `slotchange` shortly after `firstUpdated()`
@@ -388,7 +399,16 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   private restartAutoplay(): void {
     this.stopAutoplay();
-    if (!this.autoplay || this.paused || this.focusWithin || this.reduceMotion || this.eligible().length < 2) return;
+    if (
+      !this.isConnected ||
+      !this.autoplay ||
+      this.paused ||
+      this.focusWithin ||
+      this.reduceMotion ||
+      this.eligible().length < 2
+    ) {
+      return;
+    }
     const interval = finiteDuration(this.autoplayInterval, 3000, 1000);
     this.timer = window.setInterval(() => {
       this.reselect();
@@ -402,6 +422,7 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
 
   private onFocusOut = (): void => {
     queueMicrotask(() => {
+      if (!this.isConnected) return;
       this.focusWithin = composedContains(this, deepActiveElement(this.ownerDocument));
       if (!this.focusWithin) this.restartAutoplay();
     });

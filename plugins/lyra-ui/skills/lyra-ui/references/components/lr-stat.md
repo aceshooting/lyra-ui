@@ -6,7 +6,7 @@
 - **Class** `LyraStat`, also available unregistered from `@aceshooting/lyra-ui/components/data/stat/stat.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 14 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -86,10 +86,12 @@ transparent)`) — text/background of `[part="trend"]` when its polarity (per `g
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
-which keeps reading the shared `--lr-color-success`/`--lr-color-danger` tokens directly — retinting
-the trend pill doesn't also recolor the value, and vice versa. Otherwise shared tokens only
-(`--lr-color-success/-warning/-danger` drive the `variant`-colored value text; `--lr-color-brand`
-drives `emphasis`'s accent edge and value tint).
+so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-success-color` (default `var(--lr-color-success)`),
+`--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
+`--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
+value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
+value tint.
 
 **Optional peer deps:** none.
 

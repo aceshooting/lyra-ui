@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteNumber, finiteRange } from '../../../internal/numbers.js';
@@ -93,7 +93,8 @@ function safeScore(score: number): number {
  * @event lr-chunk-open - A row's title/open button was activated, forwarded verbatim from the
  * per-row `<lr-chunk-inspector>`'s own `lr-chunk-open`. `detail: { id, sourceId }` — the event a
  * host routes into `<lr-document-viewer>`.
- * @csspart base - The outer container.
+ * @csspart base - The outer container and programmatic focus fallback when a controlled
+ * collection/state transition removes every focused result action.
  * @csspart error - The error message region (`role="alert"`), shown while `error` is non-empty.
  * @csspart spinner - The initial-load `<lr-spinner>`, shown while `loading` is true and `chunks`
  * is still empty.
@@ -195,6 +196,130 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
    *  ("Retrieved chunks") -- reused rather than a new key, since it already says exactly what this
    *  region is. */
   @property() label = '';
+  private pendingFocusTarget: string | 'base' | undefined;
+  private previousProcessedChunkIds: string[] = [];
+  private focusRestoreGeneration = 0;
+
+  private deepActiveElement(): Element | null {
+    let active = this.shadowRoot?.activeElement ?? null;
+    while (active instanceof HTMLElement && active.shadowRoot?.activeElement) {
+      active = active.shadowRoot.activeElement;
+    }
+    return active;
+  }
+
+  private chunkAnchor(start: Element | null): Element | null {
+    let current = start;
+    while (current && current !== this) {
+      if (current.hasAttribute('data-chunk-id')) return current;
+      if (current.parentElement) {
+        current = current.parentElement;
+        continue;
+      }
+      const root = current.getRootNode();
+      current = root instanceof ShadowRoot ? root.host : null;
+    }
+    return null;
+  }
+
+  private renderedChunkIds(): string[] {
+    const roots: ParentNode[] = [this.renderRoot];
+    const virtualList = this.renderRoot.querySelector('lr-virtual-list');
+    if (virtualList?.shadowRoot) roots.push(virtualList.shadowRoot);
+    return roots.flatMap((root) =>
+      [...root.querySelectorAll('lr-chunk-inspector[data-chunk-id]')]
+        .map((element) => element.getAttribute('data-chunk-id'))
+        .filter((id): id is string => id !== null),
+    );
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (
+      !changed.has('chunks') &&
+      !changed.has('dedupe') &&
+      !changed.has('sort') &&
+      !changed.has('grouping') &&
+      !changed.has('presentation') &&
+      !changed.has('selectable') &&
+      !changed.has('virtualizeAt') &&
+      !changed.has('loading') &&
+      !changed.has('error')
+    ) {
+      return;
+    }
+    const anchor = this.chunkAnchor(this.deepActiveElement());
+    const focusedId = anchor?.getAttribute('data-chunk-id');
+    if (!focusedId) return;
+    const previousIds = this.previousProcessedChunkIds.length
+      ? this.previousProcessedChunkIds
+      : this.renderedChunkIds();
+    const focusedIndex = Math.max(0, previousIds.indexOf(focusedId));
+    const nextChunks = this.error ? [] : this.processedChunks.chunks;
+    if (nextChunks.length === 0) {
+      this.pendingFocusTarget = 'base';
+      return;
+    }
+    const survivingIndex = nextChunks.findIndex((chunk) => chunk.id === focusedId);
+    const nextIndex =
+      survivingIndex >= 0
+        ? survivingIndex
+        : Math.min(focusedIndex, nextChunks.length - 1);
+    this.pendingFocusTarget = nextChunks[nextIndex]!.id;
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    this.previousProcessedChunkIds = this.error
+      ? []
+      : this.processedChunks.chunks.map((chunk) => chunk.id);
+    const generation = ++this.focusRestoreGeneration;
+    const target = this.pendingFocusTarget;
+    if (target === undefined) return;
+    this.pendingFocusTarget = undefined;
+    void this.restoreControlledFocus(target, generation);
+  }
+
+  private async restoreControlledFocus(
+    target: string | 'base',
+    generation: number,
+  ): Promise<void> {
+    await this.updateComplete;
+    if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
+    if (target === 'base') {
+      this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
+      return;
+    }
+    const virtualList = this.renderRoot.querySelector<
+      HTMLElement & { updateComplete?: Promise<unknown> }
+    >('lr-virtual-list');
+    await virtualList?.updateComplete;
+    if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
+    const roots: ParentNode[] = [this.renderRoot];
+    if (virtualList?.shadowRoot) roots.push(virtualList.shadowRoot);
+    const candidates = roots.flatMap((root) => [
+      ...root.querySelectorAll<HTMLElement>('[data-chunk-id]'),
+    ]);
+    const checkbox = candidates.find(
+      (element) =>
+        element.localName === 'lr-checkbox' &&
+        element.getAttribute('data-chunk-id') === target,
+    );
+    if (checkbox) {
+      checkbox.focus();
+      return;
+    }
+    const inspector = candidates.find(
+      (element) =>
+        element.localName === 'lr-chunk-inspector' &&
+        element.getAttribute('data-chunk-id') === target,
+    ) as (HTMLElement & { updateComplete?: Promise<unknown> }) | undefined;
+    await inspector?.updateComplete;
+    if (generation !== this.focusRestoreGeneration || !this.isConnected) return;
+    inspector?.shadowRoot
+      ?.querySelector<HTMLButtonElement>('[part="open-button"]')
+      ?.focus();
+  }
 
   private get effectiveVirtualizeAt(): number {
     return finiteCount(this.virtualizeAt, 50);
@@ -288,6 +413,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
       ${this.selectable
         ? html`<lr-checkbox
             part="select"
+            data-chunk-id=${chunk.id}
             .checked=${selected}
             aria-label=${this.localize('retrievalResultsSelectRow', undefined, { label: rowLabel })}
             @lr-change=${(event: Event) => {
@@ -298,6 +424,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
         : nothing}
       <div part=${selected ? 'row-body row-body-selected' : 'row-body'} ?data-selected=${selected}>
         <lr-chunk-inspector
+          data-chunk-id=${chunk.id}
           exportparts="chunk:chunk, chunk-current:chunk-current, score:chunk-score, score-current:chunk-score-current, score-bar:chunk-score-bar, score-fill:chunk-score-fill, score-fill-success:chunk-score-fill-success, score-fill-warning:chunk-score-fill-warning, score-fill-danger:chunk-score-fill-danger, open-button:chunk-open-button, title:chunk-title, text:chunk-text, text-clamped:chunk-text-clamped, toggle:chunk-toggle"
           .chunks=${[toLyraChunk(chunk)]}
           .thresholds=${this.thresholds}
@@ -334,24 +461,24 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const label = this.getAttribute('aria-label') || this.label || this.localize('chunkInspectorLabel');
 
     if (this.error) {
-      return html`<div part="base"><div part="error" role="alert">${this.error}</div></div>`;
+      return html`<div part="base" tabindex="-1"><div part="error" role="alert">${this.error}</div></div>`;
     }
 
     const processed = this.processedChunks;
     if (processed.chunks.length === 0) {
       if (this.loading) {
-        return html`<div part="base"><lr-spinner part="spinner" aria-label=${label}></lr-spinner></div>`;
+        return html`<div part="base" tabindex="-1"><lr-spinner part="spinner" aria-label=${label}></lr-spinner></div>`;
       }
       // `heading` is passed as slotted light-DOM content (rather than the `heading` attribute) so
       // `[part="empty"]`'s `.textContent` -- a plain DOM accessor, which never pierces
       // `<lr-empty>`'s own shadow root -- actually includes the message; the same reason
       // `<lr-chunk-inspector>`'s own empty state takes this shape.
-      return html`<div part="base"><lr-empty part="empty"><span slot="heading">${this.localize('chunkInspectorEmpty')}</span></lr-empty></div>`;
+      return html`<div part="base" tabindex="-1"><lr-empty part="empty"><span slot="heading">${this.localize('chunkInspectorEmpty')}</span></lr-empty></div>`;
     }
 
     const useVirtualList = this.grouping === 'source' || processed.chunks.length > this.effectiveVirtualizeAt;
     return html`
-      <div part="base" role="group" aria-label=${label}>
+      <div part="base" role="group" tabindex="-1" aria-label=${label}>
         ${useVirtualList
           ? html`<lr-virtual-list
               exportparts="row:row, group:group-header, select:select, row-body:row-body, row-body-selected:row-body-selected, metadata:metadata, metadata-entry:metadata-entry, metadata-term:metadata-term, metadata-value:metadata-value, chunk:chunk, chunk-current:chunk-current, chunk-score:chunk-score, chunk-score-current:chunk-score-current, chunk-score-bar:chunk-score-bar, chunk-score-fill:chunk-score-fill, chunk-score-fill-success:chunk-score-fill-success, chunk-score-fill-warning:chunk-score-fill-warning, chunk-score-fill-danger:chunk-score-fill-danger, chunk-open-button:chunk-open-button, chunk-title:chunk-title, chunk-text:chunk-text, chunk-text-clamped:chunk-text-clamped, chunk-toggle:chunk-toggle"

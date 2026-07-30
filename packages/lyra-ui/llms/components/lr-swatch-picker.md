@@ -22,10 +22,12 @@ named colors, the shape apps otherwise hand-roll as a row of round accent-color 
 
 **Properties:**
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
-  label: string; icon?: unknown; gemstone?: GemstoneKey }`; `color` is any CSS color string used as
-  the swatch fill, `label` is each swatch's accessible name and `title`. `icon` is an optional
-  custom shape rendered *instead of* the plain filled circle; `gemstone` selects the canonical
-  faceted glyph when `mode="gemstone"`. An explicit `icon` wins over `gemstone`.
+  label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+  swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
+  never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
+  `icon` is an optional custom shape rendered *instead of* the plain filled circle; `gemstone`
+  selects the canonical faceted glyph when `mode="gemstone"`. An explicit `icon` wins over
+  `gemstone`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and

@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './chip-group.styles.js';
 
 export interface ChipGroupOverflowToggleDetail {
@@ -30,6 +31,10 @@ export interface LyraChipGroupEventMap {
  * that click — i.e. only when `max-visible` is actually causing an overflow
  * state — never as a side effect of `max-visible`/children changing on
  * their own.
+ *
+ * Author-owned `hidden` changes remain live while collapse management is active. The latest author
+ * state is restored when a child leaves or the group disconnects, and reconnecting reapplies the
+ * current collapsed state.
  *
  * @customElement lr-chip-group
  * @slot - `<lr-chip>` elements (or any content, though the chip pairing is
@@ -72,6 +77,19 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
    *  revealed. Meaningless (and never rendered) while there's no overflow. */
   @state() private expanded = false;
   private readonly authorHidden = new Map<HTMLElement, boolean>();
+  private readonly observedChildren = new Set<HTMLElement>();
+  private readonly pendingHiddenWrites = new Map<HTMLElement, boolean[]>();
+  private visibilityObserver?: MutationObserver;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.visibilityObserver ??= new MutationObserver((records) => {
+      if (this.processHiddenMutations(records)) this.syncChildVisibility();
+    });
+    // A synchronous disconnect/reconnect has no reactive property change, so updated() does not
+    // rerun. Re-snapshot the restored author state and reapply collapse ownership immediately.
+    if (this.hasUpdated) this.syncChildVisibility();
+  }
 
   protected override willUpdate(): void {
     if (!this.hasUpdated) {
@@ -107,6 +125,9 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.visibilityObserver?.disconnect();
+    this.observedChildren.clear();
+    this.pendingHiddenWrites.clear();
     this.restoreChildVisibility();
     super.disconnectedCallback();
   }
@@ -122,8 +143,9 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     const max = this.maxVisible;
     const overflowing = this.hasOverflow;
     const slot = this.shadowRoot?.querySelector('slot');
-    const assignedChildren = slot?.assignedElements({ flatten: true }) ?? Array.from(this.children);
-    const current = new Set(assignedChildren as HTMLElement[]);
+    const assignedChildren = (slot?.assignedElements({ flatten: true }) ?? Array.from(this.children)) as HTMLElement[];
+    this.observeChildren(assignedChildren);
+    const current = new Set(assignedChildren);
     for (const [child, hidden] of this.authorHidden) {
       if (!current.has(child)) {
         child.hidden = hidden;
@@ -134,8 +156,69 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
       const element = child as HTMLElement;
       if (!this.authorHidden.has(element)) this.authorHidden.set(element, element.hasAttribute('hidden'));
       const authored = this.authorHidden.get(element) ?? false;
-      element.hidden = authored || (overflowing && !this.expanded && i >= (max as number));
+      this.setManagedHidden(element, authored || (overflowing && !this.expanded && i >= (max as number)));
     });
+  }
+
+  private observeChildren(children: HTMLElement[]): void {
+    const next = new Set(children);
+    if (
+      next.size === this.observedChildren.size &&
+      [...next].every((child) => this.observedChildren.has(child))
+    ) {
+      return;
+    }
+    const queued = this.visibilityObserver?.takeRecords() ?? [];
+    if (queued.length > 0) this.processHiddenMutations(queued);
+    this.visibilityObserver?.disconnect();
+    this.observedChildren.clear();
+    for (const child of children) {
+      this.visibilityObserver?.observe(child, {
+        attributes: true,
+        attributeFilter: ['hidden'],
+        attributeOldValue: true,
+      });
+      this.observedChildren.add(child);
+    }
+  }
+
+  private processHiddenMutations(records: MutationRecord[]): boolean {
+    let authorChanged = false;
+    for (let index = 0; index < records.length; index++) {
+      const record = records[index];
+      if (!record || record.type !== 'attributes' || record.attributeName !== 'hidden') continue;
+      const child = record.target as HTMLElement;
+      if (!this.authorHidden.has(child)) continue;
+      let nextRecord: MutationRecord | undefined;
+      for (let nextIndex = index + 1; nextIndex < records.length; nextIndex++) {
+        const candidate = records[nextIndex];
+        if (candidate?.type === 'attributes' && candidate.attributeName === 'hidden' && candidate.target === child) {
+          nextRecord = candidate;
+          break;
+        }
+      }
+      const hidden = nextRecord ? nextRecord.oldValue !== null : child.hasAttribute('hidden');
+      const pending = this.pendingHiddenWrites.get(child);
+      if (pending?.[0] === hidden) {
+        pending.shift();
+        if (pending.length === 0) this.pendingHiddenWrites.delete(child);
+        continue;
+      }
+      this.authorHidden.set(child, hidden);
+      authorChanged = true;
+    }
+    return authorChanged;
+  }
+
+  private setManagedHidden(child: HTMLElement, hidden: boolean): void {
+    if (child.hidden === hidden) return;
+    let pending = this.pendingHiddenWrites.get(child);
+    if (!pending) {
+      pending = [];
+      this.pendingHiddenWrites.set(child, pending);
+    }
+    pending.push(hidden);
+    child.hidden = hidden;
   }
 
   private restoreChildVisibility(): void {
@@ -155,6 +238,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
   override render(): TemplateResult {
     const overflowing = this.hasOverflow;
     const hiddenCount = overflowing ? this.childCount - (this.maxVisible as number) : 0;
+    const formattedHiddenCount = getNumberFormat(this.effectiveLocale).format(hiddenCount);
 
     return html`
       <div part="base">
@@ -164,12 +248,12 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
               part="overflow-indicator"
               type="button"
               aria-expanded=${this.expanded ? 'true' : 'false'}
-              aria-label=${this.expanded ? this.localize('showLess') : this.localize('showMoreCount', undefined, { count: hiddenCount })}
+              aria-label=${this.expanded ? this.localize('showLess') : this.localize('showMoreCount', undefined, { count: formattedHiddenCount })}
               @click=${this.onToggleOverflow}
             >
               ${this.expanded
                 ? this.localize('showLess')
-                : this.localize('showMoreCollapsed', undefined, { count: hiddenCount })}
+                : this.localize('showMoreCollapsed', undefined, { count: formattedHiddenCount })}
             </button>`
           : nothing}
       </div>

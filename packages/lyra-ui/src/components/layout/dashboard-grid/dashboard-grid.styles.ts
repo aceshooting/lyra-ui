@@ -62,7 +62,7 @@ export const styles = css`
   [part="cell"][data-dragging],
   [part="cell"][data-resizing] {
     z-index: var(--lr-layer-content);
-    box-shadow: var(--lr-shadow);
+    box-shadow: var(--lr-dashboard-grid-interaction-shadow, var(--lr-shadow));
   }
 
   [part="cell"][data-collision] {

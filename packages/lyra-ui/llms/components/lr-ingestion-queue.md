@@ -36,7 +36,8 @@ embedding counts, retry attempts, errors, and retry/cancel requests. Never inges
 **Events:**
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
   `{ attempt: number; messageId?: string; itemId: string }`) — `attempt` is the attempt about to be
-  made, `(item.attempts ?? 0) + 1`. Only offered on `'failed'` rows.
+  made: the displayed nonnegative finite-integer `item.attempts` value plus one (invalid, negative,
+  or fractional inputs are normalized first). Only offered on `'failed'` rows.
 - `lr-cancel` (`detail: IngestionCancelEventDetail` = `CancelEventDetail & { itemId: string }` =
   `{ reason?: string; itemId: string }`) — this component never supplies `reason` itself. Only
   offered on non-terminal rows (`'queued'` plus the five active stages).

@@ -303,7 +303,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   // browsers. When a host explicitly chooses the documented fallback, real
   // focus moves onto the active option so ownership and option share this
   // shadow tree instead of publishing an unresolvable string IDREF.
-  private _ownsFocus = false;
+  @state() private _ownsFocus = false;
 
   protected override willUpdate(changed: PropertyValues): void {
     this._isFirstUpdate = !this.hasUpdated;
@@ -311,7 +311,24 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     // how a filtering text field's own suggestion list re-anchors to the
     // first result on every keystroke rather than preserving a highlight
     // that may no longer even be in the filtered set.
-    if (changed.has('query') || changed.has('items')) this.activeIndex = 0;
+    if (changed.has('query') || changed.has('items') || changed.has('filter')) this.activeIndex = 0;
+    const candidatesChanged =
+      changed.has('query') || changed.has('items') || changed.has('filter');
+    if (this._ownsFocus && changed.has('open') && !this.open) {
+      this._ownsFocus = false;
+      if (this.anchor?.isConnected) this.anchor.focus({ preventScroll: true });
+    } else if (
+      this._ownsFocus &&
+      this.open &&
+      candidatesChanged &&
+      this.filteredItems.length === 0 &&
+      this.anchor?.isConnected
+    ) {
+      // Move focus before render removes the active option, and clear ownership in this same
+      // pre-render pass so the empty listbox never commits a stale tabindex="0".
+      this._ownsFocus = false;
+      this.anchor.focus({ preventScroll: true });
+    }
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -322,10 +339,6 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
         this.cleanup?.();
         this.cleanup = undefined;
         this.virtualAnchor?.remove();
-        if (this._ownsFocus) {
-          this._ownsFocus = false;
-          if (this.anchor?.isConnected) this.anchor.focus({ preventScroll: true });
-        }
         // Don't fire for markup that's simply rendering open="false" for the
         // first time, and don't fire for the commit() path (see
         // _suppressCloseEvent's own doc above) -- every other true->false
@@ -343,15 +356,23 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     // mention-popover.styles.ts) -- without this, arrowing past its visible
     // rows would silently move the highlight off-screen. `block: 'nearest'`
     // makes this a no-op whenever the active row is already fully visible.
-    if (changed.has('activeIndex') || changed.has('query') || changed.has('items')) {
+    if (
+      changed.has('activeIndex') ||
+      changed.has('query') ||
+      changed.has('items') ||
+      changed.has('filter')
+    ) {
       const active = this.renderRoot.querySelector<HTMLElement>('[part="option"][data-active]');
       active?.scrollIntoView({ block: 'nearest' });
       if (this._ownsFocus) {
         if (active) {
           active.focus({ preventScroll: true });
         } else if (this.anchor?.isConnected) {
-          this._ownsFocus = false;
+          this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.setAttribute('tabindex', '-1');
           this.anchor.focus({ preventScroll: true });
+          this.scheduleAfterUpdate(() => {
+            this._ownsFocus = false;
+          });
         } else {
           this.renderRoot.querySelector<HTMLElement>('[part="listbox"]')?.focus({
             preventScroll: true,
@@ -366,6 +387,9 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     this.cleanup?.();
     this.cleanup = undefined;
     this.virtualAnchor?.remove();
+    if (this._ownsFocus && this.anchor?.isConnected) {
+      this.anchor.focus({ preventScroll: true });
+    }
     this._ownsFocus = false;
     // Reset so a reconnect (e.g. a drag-drop reparent of the composer, or a
     // virtualized/reordering message list moving this element) re-triggers

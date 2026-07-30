@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { Announcer } from '../../../internal/announcer.js';
 import { createAnsiParser, type AnsiSegment, type AnsiStyles } from '../../../internal/ansi.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type {
   LyraAnchor,
@@ -97,6 +98,12 @@ function stylesEqual(a: AnsiStyles, b: AnsiStyles): boolean {
 
 interface SearchMatch {
   lineNumber: number;
+}
+
+interface SearchState {
+  query: string;
+  matchCount: number;
+  activeIndex: number;
 }
 
 export interface LyraTerminalEventMap {
@@ -211,9 +218,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     super.disconnectedCallback();
     clearTimeout(this.copyTimeoutId);
     this.justCopied = false;
-    this.pendingAnnounceText = '';
-    this.announcer.cancel();
-    if (this.announceRegionEl) this.announceRegionEl.textContent = '';
+    this.cancelPendingAnnouncement();
   }
 
   override firstUpdated(): void {
@@ -222,10 +227,14 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('content')) {
+      const previousSearch = this.searchState();
+      this.cancelPendingAnnouncement();
       this.resetBuffer();
-      this.writeInternal(this.content);
+      this.writeInternal(this.content, false);
+      this.emitSearchChangeIfChanged(previousSearch);
     }
     if (changed.has('maxScrollback')) this.trimScrollback();
+    if (changed.has('announceOutput') && !this.announceOutput) this.cancelPendingAnnouncement();
   }
 
   // --- Buffer / cursor model -------------------------------------------------
@@ -244,11 +253,12 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   private appendLine(): void {
     this.buffer.push({ number: ++this.lineSeq, cells: [] });
-    this.trimScrollback();
+    this.trimScrollback(false);
     this.column = 0;
   }
 
-  private trimScrollback(): void {
+  private trimScrollback(notifySearch = true): void {
+    const previousSearch = this.searchState();
     const max = Math.max(1, finiteCount(this.maxScrollback, 5000));
     let trimmed = false;
     while (this.buffer.length > max) {
@@ -264,6 +274,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     ) {
       this.scrollTargetLineNumber = this.buffer[0]?.number ?? null;
     }
+    if (notifySearch) this.emitSearchChangeIfChanged(previousSearch);
   }
 
   private putChar(ch: string, styles: AnsiStyles): void {
@@ -288,7 +299,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
   }
 
-  private writeInternal(raw: string): void {
+  private writeInternal(raw: string, notifySearch = true): void {
+    const previousSearch = this.searchState();
     if (raw !== '') {
       const segments = this.ansiParser.push(raw);
       for (const seg of segments) this.applyChunk(seg.text, seg.styles);
@@ -308,6 +320,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       this.pendingAnnounceText += (this.pendingAnnounceText ? '\n' : '') + raw;
       this.announcer.announce(this.pendingAnnounceText);
     }
+    if (notifySearch) this.emitSearchChangeIfChanged(previousSearch);
   }
 
   /** Append streamed output. Escape sequences may split across chunks -- the shared parser buffers
@@ -317,7 +330,10 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   clear(): void {
+    const previousSearch = this.searchState();
+    this.cancelPendingAnnouncement();
     this.resetBuffer();
+    this.emitSearchChangeIfChanged(previousSearch);
   }
 
   getPlainText(): string {
@@ -366,6 +382,24 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     });
   }
 
+  private searchState(): SearchState {
+    return {
+      query: this.searchQuery,
+      matchCount: this.searchMatches.length,
+      activeIndex: this.searchActiveIndex,
+    };
+  }
+
+  private emitSearchChangeIfChanged(previous: SearchState): void {
+    if (
+      previous.query !== this.searchQuery ||
+      previous.matchCount !== this.searchMatches.length ||
+      previous.activeIndex !== this.searchActiveIndex
+    ) {
+      this.emitSearchChange();
+    }
+  }
+
   private jumpToActiveMatch(): void {
     const match = this.searchMatches[this.searchActiveIndex];
     if (!match) return;
@@ -377,10 +411,11 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   }
 
   async search(query: string): Promise<number> {
+    const previousSearch = this.searchState();
     this.searchQuery = query;
     this.recomputeSearchMatches();
     this.searchActiveIndex = this.searchMatches.length > 0 ? 0 : -1;
-    this.emitSearchChange();
+    this.emitSearchChangeIfChanged(previousSearch);
     if (this.searchActiveIndex >= 0) this.jumpToActiveMatch();
     await this.updateComplete;
     return this.searchMatches.length;
@@ -388,23 +423,26 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
 
   searchNext(): void {
     if (this.searchMatches.length === 0) return;
+    const previousSearch = this.searchState();
     this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
-    this.emitSearchChange();
+    this.emitSearchChangeIfChanged(previousSearch);
     this.jumpToActiveMatch();
   }
 
   searchPrevious(): void {
     if (this.searchMatches.length === 0) return;
+    const previousSearch = this.searchState();
     this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
-    this.emitSearchChange();
+    this.emitSearchChangeIfChanged(previousSearch);
     this.jumpToActiveMatch();
   }
 
   clearSearch(): void {
+    const previousSearch = this.searchState();
     this.searchQuery = '';
     this.searchMatches = [];
     this.searchActiveIndex = -1;
-    this.emitSearchChange();
+    this.emitSearchChangeIfChanged(previousSearch);
     this.requestUpdate();
   }
 
@@ -417,6 +455,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
         lineNumber >= h.anchor.start &&
         lineNumber <= (h.anchor.end ?? h.anchor.start),
     );
+  }
+
+  private resolvedHighlightOwnerLines(): Map<LyraHighlight, number> {
+    const owners = new Map<LyraHighlight, number>();
+    for (const line of this.lines) {
+      const highlight = this.highlightForLine(line.number);
+      if (highlight && !owners.has(highlight)) owners.set(highlight, line.number);
+    }
+    return owners;
   }
 
   private activateHighlight(h: LyraHighlight): void {
@@ -467,6 +514,12 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       this.justCopied = false;
     }, 1500);
   };
+
+  private cancelPendingAnnouncement(): void {
+    this.pendingAnnounceText = '';
+    this.announcer.cancel();
+    if (this.announceRegionEl) this.announceRegionEl.textContent = '';
+  }
 
   private onDownload = (): void => {
     const filename = this.filename || 'terminal.log';
@@ -554,11 +607,12 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  combined with a trailing attribute selector the way a same-shadow-root rule could. */
   private lineStateStyle(
     highlight: LyraHighlight | undefined,
+    interactive: boolean,
     isMatchLine: boolean,
     isActiveMatchLine: boolean,
   ): Record<string, string> {
     return {
-      cursor: highlight ? 'pointer' : '',
+      cursor: interactive ? 'pointer' : '',
       outline: isMatchLine
         ? `var(--lr-size-2px) solid ${
             isActiveMatchLine
@@ -570,24 +624,44 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     };
   }
 
-  private renderLine = (line: TerminalLine): TemplateResult => {
+  private renderLine = (
+    line: TerminalLine,
+    highlightOwnerLines: Map<LyraHighlight, number>,
+  ): TemplateResult => {
     const isMatchLine = this.searchMatches.some((m) => m.lineNumber === line.number);
     const isActiveMatchLine = this.searchMatches[this.searchActiveIndex]?.lineNumber === line.number;
     const highlight = this.highlightForLine(line.number);
+    const highlightOwner =
+      highlight && highlightOwnerLines.get(highlight) === line.number
+        ? highlight
+        : undefined;
     const tone: LyraHighlightTone | undefined = highlight?.tone;
+    const lineText = plainTextOfLine(line).trim();
+    const lineLabel =
+      lineText ||
+      this.localize('terminalHighlightLine', undefined, {
+        line: getNumberFormat(this.effectiveLocale).format(line.number),
+      });
+    const highlightLabel = highlightOwner?.label
+      ? [
+          this.localize('highlightWithLabel', undefined, { label: highlightOwner.label }),
+          lineLabel,
+        ].join(this.localize('accessibleLabelSeparator'))
+      : lineLabel;
     return html`
       <div
         part="line"
         dir="ltr"
-        style=${styleMap(this.lineStateStyle(highlight, isMatchLine, isActiveMatchLine))}
+        style=${styleMap(this.lineStateStyle(highlight, highlightOwner !== undefined, isMatchLine, isActiveMatchLine))}
         data-line-number=${line.number}
         data-match=${!isMatchLine ? nothing : isActiveMatchLine ? 'active' : ''}
         data-highlight-tone=${tone ?? nothing}
-        tabindex=${highlight ? '0' : nothing}
-        role=${highlight ? 'button' : nothing}
-        aria-current=${highlight ? (highlight.id === this.activeHighlightId ? 'true' : 'false') : nothing}
-        @click=${highlight ? () => this.activateHighlight(highlight) : nothing}
-        @keydown=${highlight ? (e: KeyboardEvent) => this.onLineKeyDown(e, highlight) : nothing}
+        tabindex=${highlightOwner ? '0' : nothing}
+        role=${highlightOwner ? 'button' : nothing}
+        aria-label=${highlightOwner ? highlightLabel : nothing}
+        aria-current=${highlightOwner ? (highlightOwner.id === this.activeHighlightId ? 'true' : 'false') : nothing}
+        @click=${highlightOwner ? () => this.activateHighlight(highlightOwner) : nothing}
+        @keydown=${highlightOwner ? (e: KeyboardEvent) => this.onLineKeyDown(e, highlightOwner) : nothing}
       >${groupCells(line.cells).map(
         (seg) => html`<span style=${styleMap(this.segmentStyle(seg.styles))}>${seg.text}</span>`,
       )}</div>
@@ -610,6 +684,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   override render(): TemplateResult {
     const hasToolbar = this.copyable || this.downloadable;
     const ariaLabel = this.accessibleLabel || this.localize('terminalLabel');
+    const highlightOwnerLines = this.resolvedHighlightOwnerLines();
     return html`
       <div part="base">
         <div part="announcer" class="sr-only" role="status" aria-live="polite"></div>
@@ -640,7 +715,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           <lr-virtual-list
             exportparts="line:line"
             .items=${this.lines}
-            .renderItem=${(item: unknown) => this.renderLine(item as TerminalLine)}
+            .renderItem=${(item: unknown) => this.renderLine(item as TerminalLine, highlightOwnerLines)}
             .keyFunction=${(item: unknown) => (item as TerminalLine).number}
             .activeId=${this.scrollTargetLineNumber ?? ''}
             row-height=${this.wrap ? 'auto' : '24'}

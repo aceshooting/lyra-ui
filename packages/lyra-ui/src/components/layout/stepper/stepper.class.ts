@@ -180,6 +180,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   private _effectiveOrientation: StepperOrientation = "horizontal";
   private resizeObserver?: ResizeObserver;
+  private pendingStepFocusId?: string;
   @query('[part="base"]') private baseEl?: HTMLElement;
   /** Best-known inline size before `baseEl` exists (or as a fallback while it's momentarily
    *  unmeasured) -- seeded from a real reading of the host's own box in `connectedCallback()`
@@ -228,6 +229,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (changed.has("steps")) {
+      const focusedStep = (this.renderRoot as ShadowRoot)
+        .activeElement as HTMLElement | null;
+      if (focusedStep?.getAttribute("part") === "step") {
+        this.pendingStepFocusId = focusedStep.dataset["id"] ?? "";
+      }
+    }
     if (
       changed.has("orientationBreakpoint") ||
       changed.has("orientationBreakpointBasis")
@@ -263,6 +272,24 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   protected override updated(changed: PropertyValues): void {
+    super.updated(changed);
+    if (this.pendingStepFocusId !== undefined) {
+      const focusedId = this.pendingStepFocusId;
+      this.pendingStepFocusId = undefined;
+      const retainedStep = [
+        ...this.renderRoot.querySelectorAll<HTMLElement>('[part="step"]'),
+      ].find(
+        (step) =>
+          step.dataset["id"] === focusedId &&
+          step.getAttribute("aria-disabled") !== "true"
+      );
+      (
+        retainedStep ??
+        this.renderRoot.querySelector<HTMLElement>(
+          '[part="step"][tabindex="0"]'
+        )
+      )?.focus();
+    }
     if (
       changed.has("orientationBreakpoint") ||
       changed.has("orientationBreakpointBasis")

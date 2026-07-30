@@ -130,6 +130,30 @@ export const ConfigPassthrough: Story = {
   },
 };
 
+/**
+ * An explicit `config.data` array is the effective model for every surface: canvas, wrapping
+ * legend, generated table, accessible summary, `appendData()`, and CSV export all stay aligned.
+ */
+export const ConfigDataAsEffectiveModel: Story = {
+  render: () => html`
+    <lr-chart
+      type="bar"
+      legend
+      show-data-table
+      height="16rem"
+      style="inline-size: 22rem; max-inline-size: 100%;"
+      .labels=${['Ignored simplified label']}
+      .datasets=${[{ label: 'Ignored simplified series', data: [0] }]}
+      .config=${{
+        data: {
+          labels: ['Q1', 'Q2', 'Q3'],
+          datasets: [{ label: 'Configured revenue', data: [12, 19, 14] }],
+        },
+      }}
+    ></lr-chart>
+  `,
+};
+
 /** `horizontal` sets Chart.js's `indexAxis: 'y'`, flipping bars onto a horizontal axis. */
 export const Horizontal: Story = {
   render: () => {
@@ -171,11 +195,12 @@ export const Stacked: Story = {
 };
 
 /**
- * The `--lr-chart-grid-color`/`-tick-color`/`-legend-color`/`-tooltip-bg`/
- * `-tooltip-text` custom properties retheme Chart.js's canvas-drawn chrome
- * (grid lines, axis ticks/titles, legend labels, tooltip). Chart.js can't
- * consume `var()` directly, so these are resolved via `getComputedStyle`
- * once per draw — see `themeColors()` in `chart.ts`.
+ * The `--lr-chart-grid-color`/`-tick-color`/`-tooltip-bg`/`-tooltip-text`
+ * custom properties retheme Chart.js's canvas-drawn chrome. Chart.js can't
+ * consume `var()` directly, so those values are resolved via
+ * `getComputedStyle` once per draw. `--lr-chart-legend-color` styles the
+ * wrapping DOM legend directly; its series swatches use the same computed
+ * public series colors as the canvas.
  */
 export const ThemedTokens: Story = {
   render: () => {

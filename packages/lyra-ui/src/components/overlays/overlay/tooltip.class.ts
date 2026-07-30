@@ -6,7 +6,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { place, virtualAnchorFromRect, type VirtualAnchor } from '../../../internal/positioner.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
-import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
+import { activateOverlay, composedContains, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { tooltipStyles } from './overlay.styles.js';
 
 /** Default show/hide timer delay (ms). */
@@ -14,12 +14,43 @@ const DEFAULT_DELAY = 150;
 /** Default anchor-offset distance (px), passed to Floating UI's `offset()` middleware -- same
  *  semantics as `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware). */
 const DEFAULT_DISTANCE = 6;
+/** `attachShadow()` itself is not observable. A short grace window catches custom elements that
+ * attach an open root during upgrade/initialization without polling forever when a legitimate
+ * custom element intentionally remains in the light DOM. */
+const MAX_SHADOW_CONTENT_SCAN_FRAMES = 4;
+
+type TooltipVirtualRect = {
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  contextElement?: Element;
+};
+
+const ACTIONABLE_SELECTOR =
+  'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),' +
+  '[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"],[role="menuitem"]';
+
+function normalizeVirtualRect(rect: TooltipVirtualRect): TooltipVirtualRect | undefined {
+  const width = rect.width ?? 0;
+  const height = rect.height ?? 0;
+  if (![rect.x, rect.y, width, height].every(Number.isFinite)) return undefined;
+  return {
+    x: rect.x,
+    y: rect.y,
+    width: Math.max(0, width),
+    height: Math.max(0, height),
+    contextElement: rect.contextElement,
+  };
+}
 
 /**
  * `<lr-tooltip>` — a localized, hover/focus tooltip for a consumer-owned trigger.
- * Plain content uses tooltip semantics. When the default slot contains an actionable descendant,
- * the popup promotes to a named dialog and remains open while pointer or focus is inside so its
- * controls can be reached. Prefer `<lr-popover>` when click-to-open ownership is desired.
+ * Plain content uses tooltip semantics. When the default slot contains an actionable descendant
+ * (including inside a nested custom element's open shadow root), the popup promotes to a named
+ * dialog and remains open while pointer or focus is inside so its controls can be reached. Escape
+ * from popup content closes it and restores focus to the trigger. Prefer `<lr-popover>` when
+ * click-to-open ownership is desired.
  *
  * While open, the trigger's `aria-describedby` targets a hidden text proxy in this component's
  * light DOM rather than the shadow-private popup. Native triggers can resolve that ID directly;
@@ -45,7 +76,10 @@ export class LyraTooltip extends LyraElement {
   set open(next: boolean) {
     const old = this._open;
     this._open = next;
-    if (!next) this.cancelPendingOpen();
+    if (!next) {
+      this.cancelPendingOpen();
+      this.cancelShadowContentScan();
+    }
     this.requestUpdate('open', old);
   }
   @property({ type: Boolean }) manual = false;
@@ -72,14 +106,22 @@ export class LyraTooltip extends LyraElement {
   private cleanup?: () => void;
   private timer?: ReturnType<typeof setTimeout>;
   private pendingOpen = false;
-  /** Registered with the shared overlay manager only while a `showAt()`-opened (virtual-anchor)
-   *  tooltip is open -- see `activateVirtualAnchorOverlay()`. A trigger-based tooltip keeps using
-   *  its own trigger-scoped keydown handler below, unaffected by this. */
+  private restoreFocusOnClose = false;
+  /** Focus restoration after Escape is synchronous. Suppress only that focus event so returning
+   * to the trigger does not immediately reopen the tooltip; a later genuine focus still opens. */
+  private suppressTriggerFocusOpen = false;
+  /** Registered with the shared overlay manager while a virtual-anchor or actionable tooltip is
+   *  open, so Escape ownership and focus return remain topmost-stack-aware. */
   private overlayHandle?: OverlayHandle;
   private readonly tooltipId = nextId('tooltip');
   private readonly descriptionId = nextId('tooltip-description');
   private descriptionProxy?: HTMLSpanElement;
   private contentObserver?: MutationObserver;
+  /** While an open tooltip contains a rootless custom element, rescan for a bounded initialization
+   * grace period. Later observable content mutations start a fresh grace period. */
+  private shadowContentScanFrame?: number;
+  private shadowContentScanView?: Window;
+  private shadowContentScanAttempts = 0;
 
   protected override willUpdate(changed: PropertyValues): void {
     if (changed.has('manual') && this.manual) this.cancelPendingOpen();
@@ -87,10 +129,15 @@ export class LyraTooltip extends LyraElement {
   }
 
   protected override updated(changed: PropertyValues): void {
-    if (changed.has('open') || changed.has('placement') || changed.has('distance')) {
+    if (
+      changed.has('open') ||
+      changed.has('placement') ||
+      changed.has('distance') ||
+      changed.has('interactiveContent')
+    ) {
       this.cleanup?.();
       this.cleanup = undefined;
-      if (this.open) this.position();
+      if (this.open && this.isConnected) this.position();
       if (changed.has('open')) {
         // A virtual anchor has no slotted trigger to bind hover/focus/keydown listeners to (see
         // bindTrigger()) -- register with the shared, topmost-stack-aware overlay manager for that
@@ -100,12 +147,26 @@ export class LyraTooltip extends LyraElement {
         // state on close so a later `open = true` with no fresh `showAt()` call reverts to plain
         // trigger-based behavior.
         if (this.open) {
-          if (this.virtualAnchor) this.activateVirtualAnchorOverlay();
+          this.updateInteractiveContent();
+          if (this.isConnected && this.requiresOverlayManager) this.activateTooltipOverlay();
         } else {
-          this.overlayHandle?.deactivate({ restoreFocus: false });
+          const restoreFocus = this.restoreFocusOnClose;
+          this.suppressTriggerFocusOpen = restoreFocus;
+          try {
+            this.overlayHandle?.deactivate({ restoreFocus });
+          } finally {
+            this.suppressTriggerFocusOpen = false;
+          }
           this.overlayHandle = undefined;
+          this.restoreFocusOnClose = false;
           this.virtualAnchor = undefined;
           this.returnFocusTo = undefined;
+        }
+      } else if (changed.has('interactiveContent') && this.open && this.isConnected) {
+        if (this.requiresOverlayManager) this.activateTooltipOverlay();
+        else {
+          this.overlayHandle?.deactivate({ restoreFocus: false });
+          this.overlayHandle = undefined;
         }
       }
       this.syncTriggerA11y();
@@ -115,11 +176,8 @@ export class LyraTooltip extends LyraElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.ensureDescriptionProxy();
-    this.contentObserver ??= new MutationObserver(() => {
-      this.ensureDescriptionProxy();
-      this.updateInteractiveContent();
-    });
-    this.contentObserver.observe(this, { childList: true, subtree: true, attributes: true });
+    this.contentObserver ??= new MutationObserver(() => this.updateInteractiveContent());
+    this.updateInteractiveContent();
     if (this.trigger && !this.triggerDescription) {
       this.snapshotTriggerDescription(this.trigger);
       this.bindTrigger(this.trigger);
@@ -134,9 +192,9 @@ export class LyraTooltip extends LyraElement {
     // doesn't move independently of this host.
     if (this.hasUpdated && this.open) {
       this.position();
-      if (this.virtualAnchor) {
+      if (this.requiresOverlayManager) {
         if (this.overlayHandle?.isActive()) this.overlayHandle.resume();
-        else this.activateVirtualAnchorOverlay();
+        else this.activateTooltipOverlay();
       }
     }
   }
@@ -150,27 +208,37 @@ export class LyraTooltip extends LyraElement {
       this.restoreTriggerDescription();
     }
     this.contentObserver?.disconnect();
+    this.cancelShadowContentScan();
     super.disconnectedCallback();
   }
-  /** Registers this virtual-anchor-opened tooltip with the shared overlay manager
+  /** Registers a virtual-anchor or actionable tooltip with the shared overlay manager
    *  (`internal/overlay-manager.ts`) so Escape is routed only to the topmost overlay in the stack,
    *  instead of every open virtual-anchor popover/tooltip reacting to its own unscoped
    *  `document`-level keydown listener. Non-modal and non-focus-trapping: a virtual anchor has no
    *  DOM node to own focus, so background inerting and Tab trapping (both opt-in via `modal`/
    *  `trapFocus`) would be meaningless here -- only Escape ownership is needed. */
-  private activateVirtualAnchorOverlay(): void {
-    if (this.overlayHandle?.isActive()) return;
+  private activateTooltipOverlay(): void {
+    if (!this.isConnected) return;
+    const restoreFocusTarget = this.virtualAnchor ? (this.returnFocusTo ?? null) : (this.trigger ?? null);
+    if (this.overlayHandle?.isActive()) {
+      this.overlayHandle.updateRestoreFocusTo(restoreFocusTarget);
+      return;
+    }
     this.overlayHandle = activateOverlay({
       host: this,
       panel: () => this.renderRoot.querySelector('[part="popup"]') as HTMLElement | null,
       onEscape: () => {
-        const returnFocusTarget = this.returnFocusTo;
+        this.restoreFocusOnClose = true;
         this.open = false;
-        returnFocusTarget?.focus();
       },
+      restoreFocusTo: restoreFocusTarget,
       modal: false,
       trapFocus: false,
     });
+  }
+
+  private get requiresOverlayManager(): boolean {
+    return this.virtualAnchor !== undefined || this.interactiveContent;
   }
   /**
    * Opens the tooltip anchored to an arbitrary rectangle instead of the slotted `trigger` -- for
@@ -192,15 +260,19 @@ export class LyraTooltip extends LyraElement {
    * supplied, or skips focus-return entirely otherwise -- refocusing the right place after a
    * virtual anchor closes is the host's responsibility, since Lyra can't assume how e.g. a graph
    * node's own keyboard model wants focus back.
+   * Non-finite coordinates or dimensions are ignored and leave the current open/anchor state
+   * unchanged.
    */
   showAt(
-    rect: { x: number; y: number; width?: number; height?: number; contextElement?: Element },
+    rect: TooltipVirtualRect,
     options?: { returnFocusTo?: HTMLElement },
   ): void {
-    this.virtualAnchor = virtualAnchorFromRect(rect);
+    const normalizedRect = normalizeVirtualRect(rect);
+    if (!normalizedRect) return;
+    this.virtualAnchor = virtualAnchorFromRect(normalizedRect);
     this.returnFocusTo = options?.returnFocusTo;
     if (this.open) {
-      this.activateVirtualAnchorOverlay();
+      this.activateTooltipOverlay();
       this.position();
     }
     else this.open = true;
@@ -302,6 +374,7 @@ export class LyraTooltip extends LyraElement {
   private onTriggerSlotChange = (event: Event): void => {
     const next = (event.target as HTMLSlotElement).assignedElements({ flatten: true })[0] as HTMLElement | undefined;
     if (next === this.trigger) return;
+    const hadTrigger = this.trigger !== undefined;
     // Swapping the slotted trigger (a conditional template, a repeat() re-key)
     // must strip the outgoing element's listeners and stale aria-describedby
     // before adopting the new one -- otherwise the old node keeps driving this
@@ -312,7 +385,10 @@ export class LyraTooltip extends LyraElement {
       this.restoreTriggerDescription();
     }
     this.trigger = next;
-    if (!this.trigger) return;
+    if (!this.trigger) {
+      if (hadTrigger && this.open && !this.virtualAnchor) this.open = false;
+      return;
+    }
     this.snapshotTriggerDescription(this.trigger);
     this.bindTrigger(this.trigger);
     this.syncTriggerA11y();
@@ -320,8 +396,12 @@ export class LyraTooltip extends LyraElement {
     // trigger, so that update has no anchor to position against. Re-run positioning once the
     // trigger exists, matching the initially-open popover path.
     if (this.open) this.position();
+    if (this.open && this.interactiveContent) this.activateTooltipOverlay();
   };
-  private onEnter = (): void => { if (!this.manual) this.setOpen(true); };
+  private onEnter = (event: Event): void => {
+    if (event.type === 'focus' && this.suppressTriggerFocusOpen) return;
+    if (!this.manual) this.setOpen(true);
+  };
   private onLeave = (event: Event): void => {
     if (this.manual) return;
     const next = (event as FocusEvent | MouseEvent).relatedTarget;
@@ -340,27 +420,69 @@ export class LyraTooltip extends LyraElement {
     this.setOpen(false);
   };
   private isPopupTarget(target: EventTarget | null): boolean {
-    if (!(target instanceof Node)) return false;
+    if (!(target instanceof Element)) return false;
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('[part="popup"] slot');
     return (
       this.renderRoot.querySelector<HTMLElement>('[part="popup"]')?.contains(target) === true ||
-      slot?.assignedElements({ flatten: true }).some((element) => element === target || element.contains(target)) === true
+      slot?.assignedElements({ flatten: true }).some((element) => composedContains(element, target)) === true
     );
   }
-  private updateInteractiveContent(): void {
+  private updateInteractiveContent(fromShadowContentScan = false): void {
+    if (!fromShadowContentScan) this.shadowContentScanAttempts = 0;
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('[part="popup"] slot');
     if (!slot) return;
-    const selector =
-      'a[href],button,input,select,textarea,[contenteditable]:not([contenteditable="false"]),' +
-      '[tabindex]:not([tabindex="-1"]),[role="button"],[role="link"],[role="menuitem"]';
-    this.interactiveContent = slot.assignedElements({ flatten: true }).some(
-      (element) => element.matches(selector) || element.querySelector(selector) !== null,
-    );
+    const observedShadowRoots = new Set<ShadowRoot>();
+    let awaitingShadowRoot = false;
+    let actionable = false;
+    const inspect = (element: Element): void => {
+      if (element.matches(ACTIONABLE_SELECTOR)) actionable = true;
+      if (element.shadowRoot) {
+        observedShadowRoots.add(element.shadowRoot);
+        for (const child of element.shadowRoot.children) inspect(child);
+      } else if (element.localName.includes('-')) {
+        awaitingShadowRoot = true;
+      }
+      for (const child of element.children) inspect(child);
+    };
+    for (const element of slot.assignedElements({ flatten: true })) inspect(element);
+    this.interactiveContent = actionable;
+    this.contentObserver?.disconnect();
+    this.contentObserver?.observe(this, { childList: true, subtree: true, attributes: true });
+    for (const root of observedShadowRoots) {
+      this.contentObserver?.observe(root, { childList: true, subtree: true, attributes: true });
+    }
+    this.scheduleShadowContentScan(awaitingShadowRoot);
     this.updateDescriptionProxy();
+  }
+  private scheduleShadowContentScan(awaitingShadowRoot: boolean): void {
+    this.cancelShadowContentScan(false);
+    if (
+      !awaitingShadowRoot
+      || !this.open
+      || !this.isConnected
+      || this.shadowContentScanAttempts >= MAX_SHADOW_CONTENT_SCAN_FRAMES
+    ) return;
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    this.shadowContentScanView = view;
+    this.shadowContentScanFrame = view.requestAnimationFrame(() => {
+      this.shadowContentScanFrame = undefined;
+      this.shadowContentScanView = undefined;
+      this.shadowContentScanAttempts++;
+      this.updateInteractiveContent(true);
+    });
+  }
+  private cancelShadowContentScan(resetAttempts = true): void {
+    if (this.shadowContentScanFrame !== undefined) {
+      this.shadowContentScanView?.cancelAnimationFrame(this.shadowContentScanFrame);
+    }
+    this.shadowContentScanFrame = undefined;
+    this.shadowContentScanView = undefined;
+    if (resetAttempts) this.shadowContentScanAttempts = 0;
   }
   private ensureDescriptionProxy(): void {
     if (!this.descriptionProxy) {
-      this.descriptionProxy = document.createElement('span');
+      this.descriptionProxy = this.ownerDocument.createElement('span');
       this.descriptionProxy.id = this.descriptionId;
       this.descriptionProxy.slot = '__lr-tooltip-description';
       this.descriptionProxy.hidden = true;

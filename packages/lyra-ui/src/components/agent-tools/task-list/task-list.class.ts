@@ -9,6 +9,7 @@ import {
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './task-list.styles.js';
@@ -145,6 +146,10 @@ const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
  *   rows while `compact`.
  * @cssprop [--lr-task-list-compact-body-padding=var(--lr-space-2xs) var(--lr-space-s) var(--lr-space-s)] -
  *   `[part="body"]` padding while `compact`.
+ * @cssprop [--lr-task-list-pending-color=var(--lr-color-text-quiet)] - Pending status icon color.
+ * @cssprop [--lr-task-list-running-color=var(--lr-color-brand)] - Running status icon color.
+ * @cssprop [--lr-task-list-success-color=var(--lr-color-success)] - Success status icon color.
+ * @cssprop [--lr-task-list-error-color=var(--lr-color-danger)] - Error status icon color.
  */
 export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -283,7 +288,11 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
     const ariaLabel = this.getAttribute('aria-label') || label;
     const total = this.items.length;
     const completed = this.items.filter((item) => item.status === 'success').length;
-    const summary = this.localize('taskListCompletedOfTotal', undefined, { completed, total });
+    const number = getNumberFormat(this.effectiveLocale);
+    const summary = this.localize('taskListCompletedOfTotal', undefined, {
+      completed: number.format(completed),
+      total: number.format(total),
+    });
 
     return html`
       <div part="base">

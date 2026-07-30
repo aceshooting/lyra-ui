@@ -44,6 +44,21 @@ export const Editable: Story = {
   ></lr-token-input>`,
 };
 
+/** Editing-assistance attributes reach both the new-token draft and the inline token editor. */
+export const EditingAssistance: Story = {
+  render: () => html`
+    <lr-token-input
+      editable
+      spellcheck="false"
+      autocapitalize="off"
+      autocorrect="off"
+      label="Exact identifiers"
+      hint="Automatic spelling correction and capitalization are disabled."
+      .value=${['case-sensitive-token']}
+    ></lr-token-input>
+  `,
+};
+
 /** 320px allocation with one adversarial unbroken token and editable state. */
 export const Narrow: Story = {
   name: 'Narrow (320px)',

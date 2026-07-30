@@ -84,6 +84,73 @@ it('keeps every viewport-edge placement inside the visible viewport', async () =
   }
 });
 
+it('contains long localized action labels inside a 375px toolbar allocation', async () => {
+  const token = 'Supercalifragilisticexpialidocious'.repeat(4);
+  const el = (await fixture(html`
+    <lr-selection-toolbar
+      open
+      text="selected"
+      .strings=${{
+        selectionAsk: token,
+        selectionQuote: token,
+        selectionCite: token,
+        copy: token,
+      }}
+    ></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  toolbar.style.maxInlineSize = '375px';
+  await aTimeout(0);
+
+  expect(toolbar.scrollWidth).to.be.at.most(toolbar.clientWidth);
+});
+
+it('keeps an otherwise-fitting RTL edge toolbar in one row before collision shifting', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar
+      dir="rtl"
+      open
+      text="selected"
+      .rect=${new DOMRect(0, 200, 1, 20)}
+    ></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  const tops = [...toolbar.querySelectorAll<HTMLElement>('lr-button')].map(
+    (button) => Math.round(button.getBoundingClientRect().top),
+  );
+  expect(new Set(tops).size).to.equal(1);
+});
+
+it('starts positioning when text becomes nonempty while open', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  expect(el.shadowRoot!.querySelector('[part="toolbar"]')).to.not.exist;
+
+  el.text = 'selected';
+  await el.updateComplete;
+  const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+  await waitUntil(() => toolbar.hasAttribute('data-positioned'));
+  expect(toolbar.hasAttribute('data-positioned')).to.be.true;
+});
+
+it('deactivates overlay ownership when live text becomes empty', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  await el.updateComplete;
+  let dismissed = 0;
+  el.addEventListener('lr-dismiss', () => dismissed++);
+
+  el.text = '';
+  await el.updateComplete;
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+  expect(dismissed).to.equal(0);
+  expect(el.open).to.be.true;
+});
+
 it('maintains one roving toolbar stop and moves it from the directly focused action', async () => {
   const el = (await fixture(html`
     <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
@@ -138,6 +205,25 @@ it('restarts positioning after a disconnect/reconnect while open', async () => {
 
   expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-inline-start')).to.equal('70px');
   expect(toolbar.style.getPropertyValue('--lr-selection-toolbar-block-start')).to.equal('30px');
+});
+
+it('replaces an inactive overlay handle after a settled detach so Escape still dismisses on reconnect', async () => {
+  const el = (await fixture(html`
+    <lr-selection-toolbar open text="selected"></lr-selection-toolbar>
+  `)) as LyraSelectionToolbar;
+  const parent = el.parentElement!;
+  el.remove();
+  await aTimeout(0);
+  parent.append(el);
+  await el.updateComplete;
+
+  let dismissals = 0;
+  el.addEventListener('lr-dismiss', () => dismissals++);
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await el.updateComplete;
+
+  expect(el.open).to.be.false;
+  expect(dismissals).to.equal(1);
 });
 
 it('snapshots selection detail before awaiting clipboard writes', async () => {

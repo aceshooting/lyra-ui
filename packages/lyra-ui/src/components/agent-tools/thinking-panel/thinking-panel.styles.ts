@@ -87,7 +87,7 @@ export const styles = css`
      for a purely decorative shape but not for text carrying real content
      ("Thinking…"). */
   [part='duration'][data-pending] {
-    color: var(--lr-color-brand);
+    color: var(--lr-thinking-panel-pending-color, var(--lr-color-brand));
   }
   .pending-dot {
     inline-size: var(--lr-size-0-375rem);
@@ -108,8 +108,12 @@ export const styles = css`
     }
   }
   [part='body'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
     max-block-size: var(--lr-thinking-panel-max-block-size);
-    overflow-y: auto;
+    overflow-inline: hidden;
+    overflow-block: auto;
+    overflow-wrap: anywhere;
     /* Reaching this region's own top/bottom edge stops there instead of
        chaining the scroll into the host page -- this is precisely the
        component that tracks and respects the reader scrolling within it, so

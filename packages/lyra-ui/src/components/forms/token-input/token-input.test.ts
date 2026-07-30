@@ -254,6 +254,32 @@ it('applies the host name and field descriptions to the actual draft textbox', a
   expect(described).to.include(el.shadowRoot!.querySelector('[part="error"]')!.id);
 });
 
+it('forwards editing-assistance attributes to the draft input and inline token editor', async () => {
+  const el = (await fixture(html`
+    <lr-token-input
+      editable
+      spellcheck="false"
+      autocapitalize="off"
+      autocorrect="off"
+      .value=${['alpha']}
+    ></lr-token-input>
+  `)) as LyraTokenInput;
+  const draft = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+  expect(el.spellcheck).to.be.false;
+  expect(el.autocapitalize).to.equal('off');
+  expect(el.autoCorrect).to.equal('off');
+  expect(draft.spellcheck).to.be.false;
+  expect(draft.getAttribute('autocapitalize')).to.equal('off');
+  expect(draft.getAttribute('autocorrect')).to.equal('off');
+
+  tokenLabels(el)[0].click();
+  await el.updateComplete;
+  const tokenEditor = editor(el)!;
+  expect(tokenEditor.spellcheck).to.be.false;
+  expect(tokenEditor.getAttribute('autocapitalize')).to.equal('off');
+  expect(tokenEditor.getAttribute('autocorrect')).to.equal('off');
+});
+
 it('closes positional edit state rather than transferring it to a reordered replacement', async () => {
   const el = (await fixture(html`
     <lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>
@@ -577,6 +603,81 @@ describe('editable tokens', () => {
     expect(el.value).to.deep.equal(['beta']);
     expect(changes, 'one commit is one change').to.equal(1);
     expect(inputs).to.equal(1);
+  });
+
+  it('discards transient edits and drafts without user-change events when disabling the control', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, 'beta');
+    const main = el.shadowRoot!.querySelector('#input') as HTMLInputElement;
+    typeInto(main, 'pending-new-token');
+    let emitted = 0;
+    for (const name of ['input', 'change', 'lr-token-edit']) el.addEventListener(name, () => emitted++);
+
+    el.disabled = true;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(editor(el), 'the inline editor is torn down').to.equal(null);
+    expect(main.value, 'an uncommitted new-token draft is discarded').to.equal('');
+    expect(emitted, 'a lifecycle transition is not a user edit').to.equal(0);
+  });
+
+  it('discards an inline edit without emitting when editable is turned off', async () => {
+    const el = (await fixture(
+      html`<lr-token-input editable .value=${['alpha']}></lr-token-input>`,
+    )) as LyraTokenInput;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, 'beta');
+    let emitted = 0;
+    for (const name of ['input', 'change', 'lr-token-edit']) el.addEventListener(name, () => emitted++);
+
+    el.editable = false;
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(editor(el)).to.equal(null);
+    expect(emitted).to.equal(0);
+  });
+
+  it('discards transient edits and drafts across fieldset disablement and disconnect', async () => {
+    const form = (await fixture(html`
+      <form><fieldset>
+        <lr-token-input editable .value=${['alpha']}></lr-token-input>
+      </fieldset></form>
+    `)) as HTMLFormElement;
+    const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+    const el = form.querySelector('lr-token-input') as LyraTokenInput;
+    let emitted = 0;
+    for (const name of ['input', 'change', 'lr-token-edit']) el.addEventListener(name, () => emitted++);
+
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, 'fieldset-edit');
+    fieldset.disabled = true;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(editor(el)).to.equal(null);
+
+    fieldset.disabled = false;
+    await el.updateComplete;
+    tokenLabels(el)[0].click();
+    await el.updateComplete;
+    typeInto(editor(el)!, 'disconnect-edit');
+    typeInto(el.shadowRoot!.querySelector('#input') as HTMLInputElement, 'stale-draft');
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['alpha']);
+    expect(editor(el)).to.equal(null);
+    expect((el.shadowRoot!.querySelector('#input') as HTMLInputElement).value).to.equal('');
+    expect(emitted).to.equal(0);
   });
 
   it('commits the main draft and opens the editor without doubling change events', async () => {

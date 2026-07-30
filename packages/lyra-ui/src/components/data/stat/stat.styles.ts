@@ -131,13 +131,13 @@ export const styles = css`
     background: var(--lr-stat-trend-bad-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
   }
   :host([variant='success']) [part='value'] {
-    color: var(--lr-color-success);
+    color: var(--lr-stat-value-success-color, var(--lr-color-success));
   }
   :host([variant='warning']) [part='value'] {
-    color: var(--lr-color-warning);
+    color: var(--lr-stat-value-warning-color, var(--lr-color-warning));
   }
   :host([variant='danger']) [part='value'] {
-    color: var(--lr-color-danger);
+    color: var(--lr-stat-value-danger-color, var(--lr-color-danger));
   }
   [part='spark'] {
     /* Consumers compose their own <lr-sparkline slot="spark">; this part

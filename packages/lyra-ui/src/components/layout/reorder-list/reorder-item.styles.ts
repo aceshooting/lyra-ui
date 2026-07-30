@@ -3,11 +3,15 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: flex;
     align-items: center;
     gap: var(--lr-reorder-item-gap, var(--lr-space-xs));
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='move-up-button'],
   [part='move-down-button'] {
@@ -52,6 +56,8 @@ export const styles = css`
   [part='content'] {
     flex: 1 1 auto;
     min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   @media (prefers-reduced-motion: reduce) {
     [part='move-up-button'],

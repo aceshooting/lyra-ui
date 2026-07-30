@@ -452,7 +452,7 @@ describe('lr-dataset-viewer', () => {
         // control is a button with the highlight's accessible name covers the keyboard contract.
         const action = list.shadowRoot!.querySelector('[part="cell-highlight-action"]') as HTMLButtonElement;
         expect(action.tagName).to.equal('BUTTON');
-        expect(action.getAttribute('aria-label')).to.equal('First result');
+        expect(action.getAttribute('aria-label')).to.equal('Highlight: Ada — First result');
         const listener = oneEvent(el, 'lr-highlight-activate');
         action.click();
         const event = (await listener) as CustomEvent<{ id: string }>;
@@ -493,6 +493,18 @@ describe('lr-dataset-viewer', () => {
       }
     });
   });
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer></lr-dataset-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-dataset-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-dataset-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });
 
 describe('styling', () => {

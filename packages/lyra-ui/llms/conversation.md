@@ -990,7 +990,9 @@ combination (`catalog` empty/unset, or `allowCustom` true) renders the free-text
 (`[part="combobox"]`/`[part="combobox-input"]`) with live substring filtering against the catalog (id or
 label, case-insensitive). The mode is re-evaluated on every render, so toggling `allowCustom` or clearing
 `catalog` at runtime switches modes live, repositioning the shared `[part="listbox"]` popover against
-whichever element is the active anchor.
+whichever element is the active anchor. Replacing `catalog` while free-text mode remains open
+refilters suggestions without erasing the user's current draft; controlled `value` changes and
+actual mode switches still rebase the input to the committed value.
 
 A `value` that isn't present in `catalog` (e.g. a model id saved from a provider whose live catalog has
 since changed) is never silently dropped: it's appended to the rendered option list as a synthetic,
@@ -1005,6 +1007,8 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 - `change` (`Event`, no detail) — fired alongside `lr-change`, mirroring `<lr-select>`/
   `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
   handlers behave consistently across the picker family.
+- `input` (`Event`, no detail) — fired immediately before `change` alongside each committed
+  `lr-change`, providing the same native-style value-event pair as `<lr-select>`/`<lr-combobox>`.
 - `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
   bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
   equivalent re-dispatch, matching `<lr-select>`'s own trigger.
@@ -1724,7 +1728,8 @@ rating opens the detail panel, and `disabled: boolean = false` (reflected) for a
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
 string }`, fired by the panel's submit button (`value` is never `null` here — the panel only exists
-for a set rating).
+for a set rating). The optional comment `<textarea>`'s native `focus` and `blur` are re-dispatched
+as bubbling, composed host events.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
@@ -2461,7 +2466,11 @@ part to the built-in renderer; `label: string = ''`; `accessibleLabel: string | 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
 discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
+events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
+`lr-highlight-activate`, `lr-link-click`, `lr-preview`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`,
+`lr-tool-chip-select`, `lr-widget-action`, and `lr-widget-state-change`.
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
@@ -2574,6 +2583,8 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
 `lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
 the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
+Detaching and later reinserting the same open instance re-establishes positioning and Escape
+ownership even when the detach lasts past an event-loop turn.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 

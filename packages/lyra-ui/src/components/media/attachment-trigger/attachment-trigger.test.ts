@@ -97,6 +97,25 @@ it('overrides the single-capability aria-label with trigger-label regardless of 
   expect(trigger(el).getAttribute('aria-label')).to.equal('Joindre des fichiers');
 });
 
+it('lets a host aria-label win on the active single or menu semantic owners', async () => {
+  const el = (await fixture(
+    html`<lr-attachment-trigger
+      aria-label="Author attachment action"
+      trigger-label="Trigger fallback"
+    ></lr-attachment-trigger>`,
+  )) as LyraAttachmentTrigger;
+  expect(trigger(el).getAttribute('aria-label')).to.equal('Author attachment action');
+
+  el.capabilities = ['files', 'image'];
+  await el.updateComplete;
+  const menu = menuEl(el);
+  await menu.updateComplete;
+  expect(menuTriggerButton(el).getAttribute('aria-label')).to.equal('Author attachment action');
+  expect(menu.shadowRoot!.querySelector('[role="menu"]')!.getAttribute('aria-label')).to.equal(
+    'Author attachment action',
+  );
+});
+
 it('uses a camera-specific aria-label and renders no hidden file input for a single camera capability', async () => {
   const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
   el.capabilities = ['camera'];
@@ -573,4 +592,38 @@ describe('audio capability', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+});
+
+it('closes an open capability menu and disables every menu item when disabled', async () => {
+  const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+  el.capabilities = ['files', 'image', 'camera'];
+  await el.updateComplete;
+  const menu = menuEl(el);
+  menu.show();
+  await menu.updateComplete;
+  expect(menu.open).to.be.true;
+
+  el.disabled = true;
+  await el.updateComplete;
+  await menu.updateComplete;
+
+  expect(menu.open).to.be.false;
+  expect(menuItems(el).every((item) => item.disabled)).to.be.true;
+});
+
+it('ignores a terminal native file selection that arrives after the host becomes disabled', async () => {
+  const el = (await fixture(html`<lr-attachment-trigger></lr-attachment-trigger>`)) as LyraAttachmentTrigger;
+  const input = hiddenInput(el)!;
+  let emissions = 0;
+  el.addEventListener('lr-pick', () => emissions++);
+  const transfer = new DataTransfer();
+  transfer.items.add(makeFile('late.txt'));
+  input.files = transfer.files;
+
+  el.disabled = true;
+  await el.updateComplete;
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+
+  expect(emissions).to.equal(0);
+  expect(input.value).to.equal('');
 });

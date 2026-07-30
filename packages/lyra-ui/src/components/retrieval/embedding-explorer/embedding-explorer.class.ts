@@ -36,7 +36,8 @@ export interface LyraEmbeddingExplorerEventMap {
 /**
  * `<lr-embedding-explorer>` — a dependency-free, accessible 2D embedding projection viewer. It
  * normalizes host-provided coordinates into an SVG plot, colors optional clusters, and exposes
- * click/keyboard selection. It does not run PCA/UMAP/t-SNE, fetch chunks, or mutate points.
+ * click/keyboard selection. Pointer, script, and assistive-technology focus all synchronize the
+ * single roving tab stop. It does not run PCA/UMAP/t-SNE, fetch chunks, or mutate points.
  *
  * @customElement lr-embedding-explorer
  * @event lr-point-select - A point was activated. `detail: { point }`.
@@ -104,6 +105,11 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     this.emit('lr-point-select', { point });
   }
 
+  private activatePoint(point: EmbeddingPoint, index: number): void {
+    this.activeIndex = index;
+    this.select(point);
+  }
+
   private onPointKeyDown(event: KeyboardEvent, point: EmbeddingPoint, index: number): void {
     const points = this.validPoints;
     if (event.key === 'Enter' || event.key === ' ') {
@@ -146,10 +152,22 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
       role="option"
       aria-selected=${selected ? 'true' : 'false'}
       aria-label=${label}
-      @click=${() => this.select(point)}
+      @click=${() => this.activatePoint(point, index)}
+      @focus=${() => {
+        if (this.activeIndex !== index) this.activeIndex = index;
+      }}
       @keydown=${(event: KeyboardEvent) => this.onPointKeyDown(event, point, index)}
     >
-      <circle class="point-hit" r="20" fill="transparent"></circle>
+      <line
+        class="point-hit"
+        x1="0"
+        y1="0"
+        x2="0"
+        y2="0"
+        aria-hidden="true"
+        focusable="false"
+        vector-effect="non-scaling-stroke"
+      ></line>
       <circle class="point-marker" r="6" fill=${PALETTE[(clusterIndices.get(String(point.cluster ?? '')) ?? 0) % PALETTE.length]}></circle>
       <title>${label}</title>
     </g>`;

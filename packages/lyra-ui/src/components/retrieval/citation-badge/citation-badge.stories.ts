@@ -56,11 +56,11 @@ export const WithoutPreviewContent: Story = {
 };
 
 export const LabelOverride: Story = {
-  name: 'Custom accessible-name override (label prop)',
+  name: 'Accessible source context (label prop)',
   render: () => html`
     <p>
-      Renders identically, but exposes a fully custom accessible name instead of the computed
-      "Citation 8, verified":
+      Renders identically, but adds source context while keeping the visible index in the
+      accessible name:
       <lr-citation-badge
         index="8"
         status="verified"

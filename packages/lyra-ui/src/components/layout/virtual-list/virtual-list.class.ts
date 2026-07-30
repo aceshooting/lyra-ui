@@ -4,7 +4,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { prefersReducedMotion } from "../../../internal/motion.js";
-import { finiteInteger } from "../../../internal/numbers.js";
+import { finiteAdd, finiteInteger } from "../../../internal/numbers.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./virtual-list.styles.js";
 
@@ -411,6 +411,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private rowResizeObserver?: ResizeObserver;
   private containerResizeObserver?: ResizeObserver;
   private stickyResizeObserver?: ResizeObserver;
+  private stickyFocusObserver?: MutationObserver;
   private observedSticky?: HTMLElement;
   private readonly observedRows = new Map<string, HTMLElement>();
   private readonly observedRowKeys = new WeakMap<HTMLElement, string>();
@@ -424,6 +425,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     super.connectedCallback();
     this.rowResizeObserver = new ResizeObserver(this.onRowsResized);
     this.stickyResizeObserver = new ResizeObserver(this.onStickyResized);
+    this.stickyFocusObserver = new MutationObserver(
+      this.onStickyContentMutated
+    );
     // firstUpdated() only ever fires once per element instance -- a
     // disconnect/reconnect (e.g. a reparenting drag) needs its own
     // re-attach here, since the container observer/scroll listener were
@@ -448,6 +452,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.containerResizeObserver = undefined;
     this.stickyResizeObserver?.disconnect();
     this.stickyResizeObserver = undefined;
+    this.stickyFocusObserver?.disconnect();
+    this.stickyFocusObserver = undefined;
     this.observedSticky = undefined;
     if (this.scrollRafId !== undefined) {
       cancelAnimationFrame(this.scrollRafId);
@@ -546,7 +552,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         liveKeys?.add(identity);
         h = this.measuredHeights.get(identity) ?? DEFAULT_ROW_ESTIMATE_PX;
       }
-      offsets[i + 1] = offsets[i]! + h; // safe: offsets[0] set above, offsets[i] written on the prior iteration
+      offsets[i + 1] = finiteAdd(offsets[i]!, h); // safe: offsets[0] set above, offsets[i] written on the prior iteration
     }
     this.offsets = offsets;
     this.rowIdentities = identities;
@@ -1051,6 +1057,40 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     `;
   }
 
+  /** Removes sequential focus stops from consumer-rendered sticky content, including descendants
+   *  of open custom-element shadow roots, and observes every traversed tree so a child's later
+   *  render cannot introduce a new stop into the aria-hidden copy. */
+  private suppressStickyFocus(root: ParentNode): void {
+    root
+      .querySelectorAll<HTMLElement>(STICKY_FOCUSABLE_SELECTOR)
+      .forEach((node) => {
+        if (node.getAttribute("tabindex") !== "-1")
+          node.setAttribute("tabindex", "-1");
+      });
+    root.querySelectorAll<HTMLElement>("*").forEach((node) => {
+      if (node.shadowRoot) this.suppressStickyFocus(node.shadowRoot);
+    });
+    this.stickyFocusObserver?.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["tabindex", "href", "contenteditable", "disabled"],
+    });
+  }
+
+  /** Rebuilds the observed-tree set as well as suppressing current controls. A single observer can
+   *  watch the overlay and each open descendant shadow root, but cannot unobserve just a shadow
+   *  root that was removed, so rebuilding keeps detached consumer trees out of the watch set. */
+  private syncStickyFocusProtection(overlay: HTMLElement): void {
+    this.stickyFocusObserver?.disconnect();
+    this.suppressStickyFocus(overlay);
+  }
+
+  private onStickyContentMutated = (): void => {
+    if (this.observedSticky)
+      this.syncStickyFocusProtection(this.observedSticky);
+  };
+
   /** Keeps the overlay's measured height current, and keeps it out of the tab order. Both are
    *  deliberately done here rather than in the template: the height is only knowable after layout,
    *  and the overlay's contents come from the consumer's own callback. */
@@ -1061,6 +1101,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (overlay !== this.observedSticky) {
       if (this.observedSticky)
         this.stickyResizeObserver?.unobserve(this.observedSticky);
+      this.stickyFocusObserver?.disconnect();
       this.observedSticky = overlay ?? undefined;
       if (overlay) this.stickyResizeObserver?.observe(overlay);
     }
@@ -1068,15 +1109,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // The overlay duplicates a row that already exists in the list, so it is `aria-hidden` -- which
     // makes any focusable element inside it a tab stop with no accessible name. `inert` would solve
     // that too, but it would also block the documented `pointer-events: auto` opt-in, so the tab
-    // stop is removed directly instead. A focusable *custom element* (one with `delegatesFocus`,
-    // whose focusable node lives in its own shadow root) is beyond reach here -- a consumer
-    // rendering one into the overlay gives it `tabindex="-1"` itself.
-    overlay
-      .querySelectorAll<HTMLElement>(STICKY_FOCUSABLE_SELECTOR)
-      .forEach((node) => {
-        if (node.getAttribute("tabindex") !== "-1")
-          node.setAttribute("tabindex", "-1");
-      });
+    // stop is removed directly instead. Open custom-element shadow trees are traversed as well,
+    // because their native controls otherwise remain invisible sequential-focus stops.
+    this.syncStickyFocusProtection(overlay);
   }
 
   private onStickyResized = (entries: ResizeObserverEntry[]): void => {
@@ -1114,7 +1149,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           ? `scroll-padding-block-start:${stickyInset}px`
           : nothing}
         aria-label=${this.getAttribute("aria-label") || nothing}
-        aria-busy=${this.loading ? "true" : nothing}
+        aria-busy=${this.loading ? "true" : "false"}
       >
         <div
           part="spacer"

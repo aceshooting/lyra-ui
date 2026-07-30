@@ -14,6 +14,27 @@ function itemActions(el: LyraHighlightLayer): HTMLElement[] {
 }
 
 describe('lr-highlight-layer', () => {
+  it('omits non-finite, negative-size, and non-numeric public rectangles', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
+    el.items = [
+      {
+        id: 'unsafe',
+        rects: [
+          { x: Number.NaN, y: 0, width: 10, height: 10 },
+          { x: 0, y: 0, width: -1, height: 10 },
+          { x: '0;position:fixed', y: 0, width: 10, height: 10 } as unknown as HighlightLayerItem['rects'][number],
+        ],
+      },
+      { id: 'safe', rects: [{ x: 10, y: 20, width: 30, height: 40 }] },
+    ];
+    await el.updateComplete;
+    const rects = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="rect"]')];
+    expect(rects.length).to.equal(1);
+    expect(rects[0]!.dataset['id']).to.equal('safe');
+    expect(rects[0]!.style.left).to.equal('10%');
+    expect(rects[0]!.style.position).to.equal('');
+  });
+
   it('defaults to empty items, active-id null, and interactive true', async () => {
     const el = await fixture<LyraHighlightLayer>(html`<lr-highlight-layer></lr-highlight-layer>`);
     expect(el.items).to.deep.equal([]);
@@ -32,6 +53,20 @@ describe('lr-highlight-layer', () => {
     expect(rects).to.have.length(2);
     expect((rects[0] as HTMLElement).style.left).to.equal('10%');
     expect((rects[0] as HTMLElement).getAttribute('data-tone')).to.equal('accent');
+  });
+
+  it('keeps the Narrow320 story inside a narrower Storybook allocation', async () => {
+    const { Narrow320 } = await import('./highlight-layer.stories.js');
+    const allocation = await fixture<HTMLElement>(html`
+      <div style="inline-size:256px; overflow:auto">
+        ${Narrow320.render!({}, null as never)}
+      </div>
+    `);
+    const figure = allocation.querySelector('figure') as HTMLElement;
+    const backdrop = figure.querySelector('div') as HTMLElement;
+    expect(allocation.scrollWidth).to.be.at.most(allocation.clientWidth);
+    expect(figure.getBoundingClientRect().width).to.be.at.most(allocation.getBoundingClientRect().width);
+    expect(backdrop.getBoundingClientRect().width).to.equal(figure.getBoundingClientRect().width);
   });
 
   it('lets component-scoped properties theme one highlight tone and flash state', async () => {
@@ -144,6 +179,18 @@ describe('lr-highlight-layer', () => {
     const targets = itemActions(el);
     expect(targets[0].getAttribute('aria-label')).to.equal('Highlight: Zone A');
     expect(targets[1].getAttribute('aria-label')).to.equal('Highlight 2 of 2');
+  });
+
+  it('renumbers action labels after filtering items with no rendered rectangles', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${[
+        { id: 'empty', rects: [] },
+        { id: 'visible-a', rects: [{ x: 1, y: 1, width: 2, height: 2 }] },
+        { id: 'visible-b', rects: [{ x: 4, y: 4, width: 2, height: 2 }] },
+      ]}></lr-highlight-layer>
+    `);
+    expect(itemActions(el).map((action) => action.getAttribute('aria-label')))
+      .to.deep.equal(['Highlight 1 of 2', 'Highlight 2 of 2']);
   });
 
   it('emits lr-highlight-activate on rect click', async () => {
@@ -276,6 +323,18 @@ describe('lr-highlight-layer', () => {
     el.items = ITEMS.map((item) => ({ ...item }));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[data-flash]') === null).to.be.true;
+  });
+
+  it('does not retain a flash requested while detached after reconnecting', async () => {
+    const el = await fixture<LyraHighlightLayer>(html`
+      <lr-highlight-layer .items=${ITEMS}></lr-highlight-layer>
+    `);
+    const parent = el.parentElement!;
+    el.remove();
+    el.flash('a');
+    parent.append(el);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[data-flash]').length).to.equal(0);
   });
 
   it('adds a transparent minimum pointer area around small percentage rects', async () => {

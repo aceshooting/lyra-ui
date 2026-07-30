@@ -19,7 +19,9 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''`; `hideIngestion: boolean = false`.
+`label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
+`hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
+normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 
 **Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the

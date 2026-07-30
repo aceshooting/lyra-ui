@@ -971,6 +971,43 @@ it('keeps the clear button disabled while the control is readonly', async () => 
   expect(clearBtn?.disabled).to.be.true;
 });
 
+it('tears down an open popover when disabled, fieldset-disabled, or made readonly', async () => {
+  const form = (await fixture(html`
+    <form><fieldset><lr-date-input value="2026-01-01"></lr-date-input></fieldset></form>
+  `)) as HTMLFormElement;
+  const fieldset = form.querySelector('fieldset') as HTMLFieldSetElement;
+  const el = form.querySelector('lr-date-input') as LyraDateInput;
+  const cleanupState = el as unknown as { cleanupFn?: () => void };
+  let hides = 0;
+  el.addEventListener('lr-hide', () => hides++);
+
+  el.show();
+  await el.updateComplete;
+  expect(cleanupState.cleanupFn).to.be.a('function');
+  el.disabled = true;
+  await el.updateComplete;
+  expect(el.open, 'own disabled state closes the popup').to.be.false;
+  expect(cleanupState.cleanupFn).to.equal(undefined);
+
+  el.disabled = false;
+  el.show();
+  await el.updateComplete;
+  fieldset.disabled = true;
+  await el.updateComplete;
+  expect(el.open, 'fieldset-disabled state closes the popup').to.be.false;
+  expect(cleanupState.cleanupFn).to.equal(undefined);
+
+  fieldset.disabled = false;
+  el.show();
+  await el.updateComplete;
+  el.readonly = true;
+  await el.updateComplete;
+  expect(el.open, 'readonly closes the popup').to.be.false;
+  expect(cleanupState.cleanupFn).to.equal(undefined);
+  expect(hides).to.equal(3);
+  expect(el.shadowRoot!.querySelector('[part="expand-button"]')!.getAttribute('aria-expanded')).to.equal('false');
+});
+
 it('re-binds positioning after a disconnect+reconnect while open', async () => {
   const el = (await fixture(html`<lr-date-input open></lr-date-input>`)) as LyraDateInput;
   await el.updateComplete;

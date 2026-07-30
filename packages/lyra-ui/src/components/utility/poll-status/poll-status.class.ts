@@ -56,6 +56,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
   @state() private due = false;
   private tickTimer?: ReturnType<typeof setInterval>;
   private targetAt = 0;
+  private deadlineConsumed = false;
 
   /** True only until the component's first completed update -- gates the pause/resume
    *  announcement below so mounting with `paused`'s default `false` value never announces
@@ -73,7 +74,9 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     // so targetAt is still its 0 default) must not start a ticker -- it
     // would immediately see targetAt - Date.now() <= 0 on its very first
     // tick and fire a spurious lr-poll-due for a countdown that never ran.
-    if (this.active && !this.paused && this.nextInMs != null) this.armTicker();
+    if (this.active && !this.paused && this.nextInMs != null && !this.deadlineConsumed) {
+      this.armTicker();
+    }
   }
 
   override disconnectedCallback(): void {
@@ -95,9 +98,11 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         // got in.
         const nextInMs = finiteDuration(this.nextInMs, 0, 0);
         this.targetAt = Date.now() + nextInMs;
+        this.deadlineConsumed = false;
         this.due = false;
         this.remainingMs = nextInMs;
       } else {
+        this.deadlineConsumed = false;
         this.due = false;
         this.remainingMs = 0;
       }
@@ -112,7 +117,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
     const wasMounting = this.isMounting;
     this.isMounting = false;
     if (changed.has('nextInMs')) {
-      if (this.nextInMs != null && this.active && !this.paused) {
+      if (this.nextInMs != null && this.active && !this.paused && !this.deadlineConsumed) {
         this.armTicker();
       } else {
         // Clearing next-in-ms (e.g. between poll cycles) must stop the
@@ -131,21 +136,49 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
         // screen-reader user about.
         if (!wasMounting) this.announce(this.localize('pollPausedAnnounce'));
       } else {
-        if (this.active && this.nextInMs != null) this.armTicker();
+        if (this.active && this.nextInMs != null && !this.deadlineConsumed) this.armTicker();
         if (!wasMounting) this.announce(this.localize('pollResumedAnnounce'));
       }
     }
     if (changed.has('active')) {
-      if (this.active && !this.paused && this.nextInMs != null) this.armTicker();
-      else this.disarmTicker();
+      if (this.active && !this.paused && this.nextInMs != null && !this.deadlineConsumed) {
+        this.armTicker();
+      } else {
+        this.disarmTicker();
+      }
     }
+  }
+
+  /**
+   * Restarts the configured `nextInMs` delay from now, including after its previous deadline was
+   * consumed. Reassigning the same `nextInMs` value is intentionally a no-op under Lit's normal
+   * change detection; use this method when the delay value stays the same but the cycle is new.
+   */
+  restart(): void {
+    this.disarmTicker();
+    if (this.nextInMs == null) {
+      this.deadlineConsumed = false;
+      this.due = false;
+      this.remainingMs = 0;
+      return;
+    }
+    const nextInMs = finiteDuration(this.nextInMs, 0, 0);
+    this.targetAt = Date.now() + nextInMs;
+    this.deadlineConsumed = false;
+    this.due = false;
+    this.remainingMs = nextInMs;
+    if (this.isConnected && this.active && !this.paused) this.armTicker();
   }
 
   private armTicker(): void {
     this.disarmTicker();
+    if (!this.isConnected || !this.active || this.paused || this.nextInMs == null || this.deadlineConsumed) {
+      return;
+    }
     this.tickTimer = setInterval(() => {
       this.remainingMs = Math.max(0, this.targetAt - Date.now());
       if (this.remainingMs === 0 && !this.due) {
+        this.deadlineConsumed = true;
         this.due = true;
         this.disarmTicker();
         this.emit('lr-poll-due');

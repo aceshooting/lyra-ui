@@ -306,14 +306,35 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private resizePointerId?: number;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
+  private managedItems = new Set<HTMLElement>();
 
   private syncSlottedItems(): void {
     const slot = this.shadowRoot?.querySelector<HTMLSlotElement>('[part="nav"] > slot');
-    for (const item of slot?.assignedElements({ flatten: true }) ?? []) {
-      if (item.localName === tag('app-rail-item')) {
-        item.toggleAttribute('icon-only', this._mode === 'icon-only');
+    const itemTag = tag('app-rail-item');
+    const railTag = tag('app-rail');
+    const next = new Set(
+      (slot?.assignedElements({ flatten: true }) ?? []).filter(
+        (item): item is HTMLElement =>
+          item instanceof HTMLElement && item.localName === itemTag,
+      ),
+    );
+    for (const item of this.managedItems) {
+      if (next.has(item)) continue;
+      const newOwner = item.closest(railTag) as LyraAppRail | null;
+      if (
+        newOwner &&
+        newOwner !== this &&
+        item.parentElement === newOwner &&
+        !item.hasAttribute('slot')
+      ) {
+        item.toggleAttribute('icon-only', newOwner.mode === 'icon-only');
+      } else {
+        item.removeAttribute('icon-only');
       }
     }
+    for (const item of next)
+      item.toggleAttribute('icon-only', this._mode === 'icon-only');
+    this.managedItems = next;
   }
 
   /**
@@ -430,6 +451,13 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (
+      (changed.has('resizable') || changed.has('mode')) &&
+      (!this.resizable || this._mode !== 'full')
+    ) {
+      this.endResizerGesture();
+    }
     if (!this.hasUpdated) {
       this.hasHeaderSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'header');
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
@@ -517,6 +545,11 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       if (!this.releaseScrollLock) this.releaseScrollLock = lockScroll(this.ownerDocument);
       queueMicrotask(() => this.overlayHandle?.focusInitial());
     }
+    if (this.hasUpdated) {
+      queueMicrotask(() => {
+        if (this.isConnected) this.syncSlottedItems();
+      });
+    }
   }
 
   override disconnectedCallback(): void {
@@ -525,12 +558,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.releaseScrollLock?.();
     this.releaseScrollLock = undefined;
     this.overlayHandle?.suspend();
-    this.dragging = false;
-    this.resizePointerId = undefined;
-    window.removeEventListener('pointermove', this.onResizerPointerMove);
-    window.removeEventListener('pointerup', this.onResizerPointerUp);
-    window.removeEventListener('pointercancel', this.onResizerPointerUp);
-    window.removeEventListener('lostpointercapture', this.onResizerPointerUp);
+    this.endResizerGesture();
   }
 
   private activateMobileOverlay(): void {
@@ -646,6 +674,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   };
 
   private onResizerPointerDown = (e: PointerEvent): void => {
+    if (!this.resizable || this._mode !== 'full' || this.resizePointerId !== undefined) return;
     this.resizePointerId = e.pointerId;
     this.resizeStartX = e.clientX;
     this.resizeStartWidth = this.effectiveRailWidthPx;
@@ -659,6 +688,10 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private onResizerPointerMove = (e: PointerEvent): void => {
     if (e.pointerId !== this.resizePointerId) return;
+    if (!this.resizable || this._mode !== 'full') {
+      this.endResizerGesture();
+      return;
+    }
     let delta = e.clientX - this.resizeStartX;
     if (isRtl(this)) delta = -delta;
     const next = Math.min(this.safeMaxRailWidthPx, Math.max(this.safeMinRailWidthPx, this.resizeStartWidth + delta));
@@ -668,13 +701,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
 
   private onResizerPointerUp = (e: PointerEvent): void => {
     if (e.pointerId !== this.resizePointerId) return;
+    this.endResizerGesture();
+  };
+
+  private endResizerGesture(): void {
     this.resizePointerId = undefined;
     this.dragging = false;
     window.removeEventListener('pointermove', this.onResizerPointerMove);
     window.removeEventListener('pointerup', this.onResizerPointerUp);
     window.removeEventListener('pointercancel', this.onResizerPointerUp);
     window.removeEventListener('lostpointercapture', this.onResizerPointerUp);
-  };
+  }
 
   private onResizerKeyDown = (e: KeyboardEvent): void => {
     const rtl = isRtl(this);

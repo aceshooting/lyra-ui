@@ -12,6 +12,11 @@ type DragState = 'default' | 'accept' | 'reject';
 
 export const DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
+const INTERACTIVE_CONTENT_SELECTOR =
+  'a[href], area[href], button, input, select, textarea, summary, ' +
+  '[contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], ' +
+  '[tabindex]:not([tabindex="-1"])';
+
 export interface RejectedFile {
   file: File;
   reason: 'type' | 'count' | 'size' | 'directory';
@@ -34,7 +39,8 @@ export interface LyraFileInputEventMap {
  * @event lr-files - `detail: { files, rejected }`, fired on drop and manual selection.
  * @event focus - Fired when the semantic dropzone receives focus.
  * @event blur - Fired when the semantic dropzone loses focus.
- * @csspart base - The dropzone's root, clickable/focusable container.
+ * @csspart base - The native dropzone button, visually backing the slotted content while remaining
+ *   its sibling in the accessibility tree so arbitrary slotted controls are never nested in it.
  * @csspart input - The visually-hidden native `<input type="file">`.
  * @csspart status - The visually-hidden live region announcing drag accept/reject state and
  * accepted/rejected selection counts.
@@ -276,9 +282,10 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
   };
 
   private onInputChange = (e: Event): void => {
-    const files = [...((e.target as HTMLInputElement).files ?? [])];
-    (e.target as HTMLInputElement).value = '';
-    if (files.length) this.emitFiles(files);
+    const input = e.target as HTMLInputElement;
+    const files = [...(input.files ?? [])];
+    input.value = '';
+    if (!this.disabled && files.length) this.emitFiles(files);
   };
   // Bridged off [part="base"] (the actual keyboard-focusable dropzone), not the visually-hidden,
   // tabindex="-1", aria-hidden native `<input type="file">` — that input is never focused by a
@@ -296,6 +303,19 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
       e.preventDefault();
       this.openPicker();
     }
+  };
+
+  private onDropzoneClick = (event: MouseEvent): void => {
+    const path = event.composedPath();
+    // The native base button owns its own activation handler below. Any other interactive node
+    // in arbitrary slotted content keeps its own click instead of also opening the file picker.
+    if (
+      path.includes(this.baseEl as EventTarget) ||
+      path.some((node) => node instanceof Element && node.matches(INTERACTIVE_CONTENT_SELECTOR))
+    ) {
+      return;
+    }
+    this.openPicker();
   };
 
   private statusText(): string {
@@ -319,23 +339,29 @@ export class LyraFileInput extends LyraElement<LyraFileInputEventMap> {
     const accessibleLabel = this.accessibleLabel || label;
     return html`
       <div
-        part="base"
-        role="button"
-        tabindex=${this.disabled ? '-1' : '0'}
-        aria-disabled=${this.disabled ? 'true' : 'false'}
-        aria-label=${accessibleLabel}
-        data-drag-state=${this.dragState}
+        class="dropzone"
         @dragenter=${this.onDragEnter}
         @dragover=${this.onDragOver}
         @dragleave=${this.onDragLeave}
         @drop=${this.onDrop}
         @paste=${this.onPaste}
-        @click=${() => !this.disabled && this.openPicker()}
-        @keydown=${this.onKeyDown}
-        @focus=${this.onFocus}
-        @blur=${this.onBlur}
+        @click=${this.onDropzoneClick}
       >
-        <slot>${label}</slot>
+        <button
+          part="base"
+          type="button"
+          role="button"
+          tabindex=${this.disabled ? '-1' : '0'}
+          aria-disabled=${this.disabled ? 'true' : 'false'}
+          aria-label=${accessibleLabel}
+          data-drag-state=${this.dragState}
+          ?disabled=${this.disabled}
+          @click=${this.openPicker}
+          @keydown=${this.onKeyDown}
+          @focus=${this.onFocus}
+          @blur=${this.onBlur}
+        ></button>
+        <div class="dropzone-content"><slot>${label}</slot></div>
       </div>
       <div part="status" class="sr-only" role="status" aria-live="polite">${this.statusText()}</div>
       ${this.rejectedFiles.length

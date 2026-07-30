@@ -178,7 +178,14 @@ export class LyraSourceCard extends StripHostTitleAttribute(LyraSourceCardBase) 
   override render(): TemplateResult {
     return html`
       <div part="base">
-        <button part="title" type="button" @click=${this.onTitleClick}>${this.titleText}</button>
+        <button
+          part="title"
+          type="button"
+          aria-label=${this.getAttribute('aria-label') || nothing}
+          @click=${this.onTitleClick}
+        >
+          ${this.titleText}
+        </button>
         <div part="excerpt" ?hidden=${!this.hasExcerptSlot}>
           <slot name="excerpt" @slotchange=${this.onExcerptSlotChange}></slot>
         </div>
@@ -207,4 +214,3 @@ declare global {
     'lr-source-card': LyraSourceCard;
   }
 }
-

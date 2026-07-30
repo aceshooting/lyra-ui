@@ -68,11 +68,105 @@ it('disables activation and exposes busy state while loading', async () => {
   const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
   expect(trigger.disabled).to.be.true;
   expect(trigger.getAttribute('aria-busy')).to.equal('true');
+  expect(el.getAttribute('aria-busy')).to.equal('true');
   expect(el.hasAttribute('loading')).to.be.true;
   let exported = false;
   el.addEventListener('lr-export', () => (exported = true));
   trigger.click();
   expect(exported).to.be.false;
+  el.loading = false;
+  await el.updateComplete;
+  expect(trigger.getAttribute('aria-busy')).to.equal('false');
+  expect(el.getAttribute('aria-busy')).to.equal('false');
+});
+
+it('preserves focus ownership when loading/disabled invalidates the focused control', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  const item = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  item.focus();
+
+  el.loading = true;
+  await el.updateComplete;
+  expect(document.activeElement?.tagName).to.equal('LR-EXPORT-BUTTON');
+  expect(el.open).to.be.false;
+
+  el.loading = false;
+  await el.updateComplete;
+  el.focus();
+  expect((el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute('part')).to.equal('trigger');
+  el.disabled = true;
+  await el.updateComplete;
+  expect(document.activeElement?.tagName).to.equal('LR-EXPORT-BUTTON');
+});
+
+it('preserves focus ownership when the owner realm exposes focus through a receiver-sensitive accessor', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  const item = el.shadowRoot!.querySelector('[part="menu-item"]') as HTMLButtonElement;
+  item.focus();
+
+  const ownerWindow = el.ownerDocument.defaultView!;
+  const prototype = ownerWindow.HTMLElement.prototype;
+  const focusDescriptor = Object.getOwnPropertyDescriptor(prototype, 'focus')!;
+  const nativeFocus = Reflect.get(prototype, 'focus', el) as HTMLElement['focus'];
+  Object.defineProperty(prototype, 'focus', {
+    configurable: true,
+    enumerable: focusDescriptor.enumerable,
+    get(this: HTMLElement) {
+      if (!(this instanceof ownerWindow.HTMLElement)) throw new TypeError('Illegal invocation');
+      return nativeFocus;
+    },
+  });
+
+  try {
+    el.loading = true;
+    await el.updateComplete;
+    expect(el.ownerDocument.activeElement?.tagName).to.equal('LR-EXPORT-BUTTON');
+  } finally {
+    Object.defineProperty(prototype, 'focus', focusDescriptor);
+  }
+});
+
+it('rejects open state when there is no format menu and emits no show event', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  let shows = 0;
+  el.addEventListener('lr-show', () => shows++);
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
+  expect(el.shadowRoot!.querySelector('[part="menu"]')).to.not.exist;
+  expect(shows).to.equal(0);
+});
+
+it('closes stale open state when formats shrink without a focused menu item', async () => {
+  const wrapper = await fixture(html`
+    <div>
+      <button id="outside">Outside</button>
+      <lr-export-button></lr-export-button>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-export-button') as LyraExportButton;
+  const outside = wrapper.querySelector('#outside') as HTMLButtonElement;
+  el.formats = ['csv', 'json'];
+  await el.updateComplete;
+  el.open = true;
+  await el.updateComplete;
+  outside.focus();
+  expect(document.activeElement?.id).to.equal('outside');
+
+  el.formats = ['csv'];
+  await el.updateComplete;
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+  expect(el.hasAttribute('open')).to.be.false;
 });
 
 it('reflects open as a host attribute so the menu becomes visible', async () => {
@@ -181,6 +275,44 @@ it('exports JSON and applies the same columns allow-list CSV uses', async () => 
   expect(capturedBlob).to.exist;
   const text = await capturedBlob!.text();
   expect(JSON.parse(text)).to.deep.equal([{ id: 'a', name: 'Alpha' }]);
+});
+
+it('preserves an own enumerable "__proto__" column in JSON exports', async () => {
+  const row = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(row, '__proto__', {
+    value: { retained: true },
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+  row['safe'] = 'value';
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.rows = [row];
+  el.columns = [
+    { key: '__proto__', label: '__proto__' },
+    { key: 'safe', label: 'safe' },
+  ];
+  el.formats = ['json'];
+  await el.updateComplete;
+
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const complete = oneEvent(el, 'lr-export-complete');
+  try {
+    (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+    await complete;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+
+  const parsed = JSON.parse(await capturedBlob!.text()) as Record<string, unknown>[];
+  expect(Object.prototype.hasOwnProperty.call(parsed[0], '__proto__')).to.be.true;
+  expect(parsed[0]!['__proto__']).to.deep.equal({ retained: true });
+  expect(parsed[0]!['safe']).to.equal('value');
 });
 
 it('reports non-serializable built-in JSON data through lr-export-error without throwing or completing', async () => {

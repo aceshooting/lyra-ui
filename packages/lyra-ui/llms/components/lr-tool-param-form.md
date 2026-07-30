@@ -63,13 +63,19 @@ and makes the form invalid instead of being silently accepted.
   updates `ElementInternals`, and returns validity without revealing inline errors.
 - `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
   errors, focuses the first invalid generated field when one exists, and delegates to native
-  `ElementInternals.reportValidity()`.
+  `ElementInternals.reportValidity()`. If `required` contains an unmet key absent from
+  `properties`, there is no generated control to focus, so a localized, programmatically focusable
+  root error names that dangling key instead.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
 (`detail: { valid: boolean; errors: Record<string, string> }` — fired whenever overall validity or
 the field-error set changes, including once up front at connect time; serialization-only failures
-set `valid: false` while `formError`, rather than a fabricated field key, carries the root message)
+set `valid: false` while `formError`, rather than a fabricated field key, carries the root message),
+and no-detail `focus`/`blur` events for generated native text/number inputs. The composed
+`<lr-select>`/`<lr-checkbox>` controls already bubble their own focus/blur bridges through the host.
+Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
+are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
 
 **Slots:** none.
 
@@ -112,13 +118,16 @@ This component owns no Submit/Cancel/Approve chrome — a consumer composes it i
 `<lr-option>`s; a plain `'string'` renders a text `<input>`; `'number'`/`'integer'` render a numeric
 `<input type="number">` (`step="1"` for integer, `step="any"` for number); `'boolean'` renders a
 `<lr-checkbox>` with the field's label projected into its default slot — real slotted content, since
-that's `<lr-checkbox>`'s documented way to give itself an accessible name, unlike `aria-describedby`
-(neither `<lr-select>` nor `<lr-checkbox>` forward a host-level `aria-describedby` to their
-internal focusable element, so for the enum-select case the error message is folded into `aria-label`
-instead, alongside the always-visible adjacent `[part="description"]` text). The outer component owns
-schema validity rather than forwarding HTML `required` constraints: JSON Schema `required` means an
-own property is present, so `''`, `0`, and `false` are valid present values. Use
-`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox.
+that's `<lr-checkbox>`'s documented way to give itself an accessible name. Enum descriptions/errors
+flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. Boolean descriptions/errors stay
+adjacent `[part="description"]`/`[part="error"]` nodes whose ids are passed through the checkbox
+host's `aria-describedby`; `<lr-checkbox>` resolves those ids onto its internal `role="checkbox"`
+through `ariaDescribedByElements`. Supporting text therefore keeps description semantics instead of
+being folded into an `aria-label`. The outer component owns JSON Schema validity: `required` means
+an own property is present, so `''`, `0`, and `false` are valid present values. A plain required
+boolean consequently does not set `<lr-checkbox>.required`'s must-check semantics. Use
+`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox; that exact
+combination does set the nested checkbox's matching native/ARIA required state.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
@@ -139,6 +148,9 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   after an explicit `reportValidity()` call — `checkValidity()` alone never reveals them, matching
   every other form control in this library (`<lr-select>`/`<lr-combobox>`/`<lr-model-select>`
   all avoid flashing red before the user has touched anything).
+- a key listed in `schema.required` but absent from `schema.properties` still fails closed. Because
+  no field exists for that dangling reference, `reportValidity()` renders and focuses a localized
+  root error naming the key rather than leaving an invisible, unreachable validity failure.
 - `effectiveValue` distinguishes "key absent from `value`" (falls back to `default`) from "key present
   but `undefined`" (stays cleared and counts as absent for `required`) via `hasOwnProperty`, not an
   `=== undefined` fallback check.

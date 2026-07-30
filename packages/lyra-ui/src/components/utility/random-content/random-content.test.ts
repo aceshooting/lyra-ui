@@ -525,6 +525,58 @@ it('suppresses the initial mount announcement, then enables polite announcements
   expect(autoBase.getAttribute('aria-atomic')).to.equal('true');
 });
 
+it('enables the live region before the first manual selection mutates visible content', async () => {
+  const el = (await fixture(html`
+    <lr-random-content mode="sequence">
+      <div id="first">First</div>
+      <div id="second">Second</div>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const first = el.querySelector('#first') as HTMLElement;
+  const originalToggle = first.toggleAttribute.bind(first);
+  let liveAtFirstMutation = '';
+  first.toggleAttribute = ((name: string, force?: boolean) => {
+    liveAtFirstMutation ||= base.getAttribute('aria-live') ?? '';
+    return originalToggle(name, force);
+  }) as typeof first.toggleAttribute;
+  try {
+    el.randomize();
+  } finally {
+    delete (first as Partial<HTMLElement>).toggleAttribute;
+  }
+  expect(liveAtFirstMutation).to.equal('polite');
+});
+
+it('ignores queued focusout and slotchange work after disconnect', async () => {
+  const el = (await fixture(html`
+    <lr-random-content autoplay autoplay-interval="1000">
+      <button id="first">First</button>
+      <button id="second">Second</button>
+    </lr-random-content>
+  `)) as LyraRandomContent;
+  await el.updateComplete;
+  let changes = 0;
+  el.addEventListener('lr-content-change', () => changes++);
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  base.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+  el.remove();
+  const changesAtDisconnect = changes;
+
+  const added = document.createElement('button');
+  added.textContent = 'Added while detached';
+  el.append(added);
+  (el.shadowRoot!.querySelector('slot') as HTMLSlotElement).dispatchEvent(new Event('slotchange'));
+  await Promise.resolve();
+
+  expect((el as unknown as { timer?: number }).timer).to.equal(undefined);
+  expect(changes).to.equal(changesAtDisconnect);
+  for (const child of Array.from(el.children) as HTMLElement[]) {
+    expect(child.hidden).to.be.false;
+  }
+});
+
 it('restores every author-supplied hidden/aria-hidden state when it stops managing a child', async () => {
   const el = (await fixture(html`
     <lr-random-content mode="sequence">

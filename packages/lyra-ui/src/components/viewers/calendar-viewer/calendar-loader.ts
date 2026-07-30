@@ -7,7 +7,12 @@ export async function loadIcalDeps(
 ): Promise<OptionalPeerApi | null> {
   try {
     const module = await importIcal();
-    return module.default ?? module;
+    const candidate = module.default ?? module;
+    return typeof candidate.parse === 'function' &&
+      typeof candidate.Component === 'function' &&
+      typeof candidate.Event === 'function'
+      ? candidate
+      : null;
   } catch (error) {
     console.warn(
       '<lr-calendar-viewer> needs the optional peer dependency `ical.js` to parse .ics calendars — install it with `pnpm add ical.js`:',

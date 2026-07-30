@@ -38,6 +38,9 @@ export interface ResolvedText {
 
 export interface ResolvedElement {
   key: string;
+  /** Collision-free internal identity. Unlike the public/authored `key`, this remains unique when
+   * an agent supplies the same `id` at more than one tree position. */
+  identityKey: string;
   kind: 'builtin-row' | 'builtin-col' | 'builtin-text' | 'mapped';
   tag?: string;
   /** Whether the mapped type exposes an action contract and therefore must not contain another
@@ -61,6 +64,8 @@ export interface ResolveContext {
    *  component instance's `tree` value, so a repeated unknown type/prop warns exactly once. */
   warned: Set<string>;
   warn?: (message: string) => void;
+  /** Populated by `resolveTree()` for collision-free authored-id handling. */
+  authoredIdCounts?: ReadonlyMap<string, number>;
 }
 
 const MAX_DEPTH = 32;
@@ -190,7 +195,12 @@ function resolveNode(
   }
   if (budgetExceeded(budget, ctx)) return null;
 
-  const key = node.id ?? path;
+  const authoredId = typeof node.id === 'string' ? node.id : undefined;
+  const key = authoredId ?? path;
+  const identityKey =
+    authoredId !== undefined && ctx.authoredIdCounts?.get(authoredId) === 1
+      ? `id:${authoredId}`
+      : `path:${path}`;
 
   let kind: ResolvedElement['kind'];
   let tag: string | undefined;
@@ -248,6 +258,7 @@ function resolveNode(
 
   return {
     key,
+    identityKey,
     kind,
     tag,
     interactive,
@@ -261,11 +272,44 @@ function resolveNode(
   };
 }
 
+function countAuthoredIds(root: WidgetNode, registry: WidgetTypeRegistry): Map<string, number> {
+  const counts = new Map<string, number>();
+  const pending: Array<{ node: WidgetNode; depth: number }> = [{ node: root, depth: 0 }];
+  let remaining = MAX_NODES;
+
+  while (pending.length > 0 && remaining > 0) {
+    const current = pending.pop()!;
+    if (current.depth > MAX_DEPTH) continue;
+    remaining--;
+
+    const { node } = current;
+    const isBuiltin = node.type === 'row' || node.type === 'col' || node.type === 'text';
+    if (!isBuiltin && !registry.has(node.type)) continue;
+
+    if (typeof node.id === 'string') {
+      counts.set(node.id, (counts.get(node.id) ?? 0) + 1);
+    }
+    if (!Array.isArray(node.children)) continue;
+    for (let index = node.children.length - 1; index >= 0; index--) {
+      const child = node.children[index];
+      if (child && typeof child === 'object' && !Array.isArray(child)) {
+        pending.push({ node: child, depth: current.depth + 1 });
+      }
+    }
+  }
+
+  return counts;
+}
+
 /** Resolves `root` through `ctx.registry`'s allowlist. Returns `null` for a structurally unusable
  *  root (non-object) or a root whose own `type` is unknown/over-cap -- the caller treats a `null`
  *  result for a non-null `root` input as a render error. */
 export function resolveTree(root: WidgetNode | null | undefined, ctx: ResolveContext): ResolvedNode | null {
   if (root == null || typeof root !== 'object') return null;
   const budget = { remaining: MAX_NODES };
-  return resolveNode(root, ctx, '0', 0, budget);
+  const resolveContext: ResolveContext = {
+    ...ctx,
+    authoredIdCounts: countAuthoredIds(root, ctx.registry),
+  };
+  return resolveNode(root, resolveContext, '0', 0, budget);
 }

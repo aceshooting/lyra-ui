@@ -39,7 +39,8 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
 
   /** Rendered in array order; alternation is the intended shape but not enforced. */
   @property({ attribute: false }) path: LyraPathElement[] = [];
-  /** Accessible name; falls back to the localized `pathStripLabel`. */
+  /** Accessible-name fallback when the host has no `aria-label`; otherwise falls back to the
+   *  localized `pathStripLabel`. */
   @property() label = '';
 
   @state() private activeIndex = 0;
@@ -171,7 +172,8 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     if (this.path.length === 0) {
       return html`<div part="base"><div part="empty">${this.localize('noData')}</div></div>`;
     }
-    const label = this.label || this.localize('pathStripLabel');
+    const label =
+      this.getAttribute('aria-label') || this.label || this.localize('pathStripLabel');
     return html`
       <div part="base" @keydown=${this.onKeyDown}>
         <lr-scroller orientation="horizontal" controls label=${label}>

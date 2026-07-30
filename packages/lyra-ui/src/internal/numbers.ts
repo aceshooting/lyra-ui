@@ -45,6 +45,82 @@ export function finiteDuration(
   return finiteRange(value, fallback, min, Math.min(max, MAX_TIMEOUT_MS));
 }
 
+/**
+ * Returns `value`'s clamped position from `start` (0) to `end` (1) without
+ * overflowing when the finite endpoints span the full number range.
+ */
+export function finiteRatio(
+  value: number,
+  start: number,
+  end: number,
+  fallback = 0,
+): number {
+  const safeFallback = Math.min(1, Math.max(0, finiteNumber(fallback, 0)));
+  if (!Number.isFinite(value) || !Number.isFinite(start) || !Number.isFinite(end)) {
+    return safeFallback;
+  }
+  if (start === end) return safeFallback;
+
+  const reversed = start > end;
+  const lo = reversed ? end : start;
+  const hi = reversed ? start : end;
+  let ratio: number;
+  if (value <= lo) ratio = 0;
+  else if (value >= hi) ratio = 1;
+  else {
+    const span = hi - lo;
+    if (Number.isFinite(span) && span > 0) {
+      ratio = (value - lo) / span;
+    } else {
+      const scale = Math.max(Math.abs(lo), Math.abs(hi), 1);
+      const scaledLo = lo / scale;
+      const scaledHi = hi / scale;
+      ratio = (value / scale - scaledLo) / (scaledHi - scaledLo);
+    }
+    ratio = Math.min(1, Math.max(0, finiteNumber(ratio, safeFallback)));
+  }
+  return reversed ? 1 - ratio : ratio;
+}
+
+/**
+ * Interpolates between two finite endpoints without forming an overflowing
+ * `end - start` intermediate. The ratio is clamped to `[0, 1]`.
+ */
+export function finiteInterpolate(start: number, end: number, ratio: number): number {
+  const safeStart = finiteNumber(start, 0);
+  const safeEnd = finiteNumber(end, safeStart);
+  const t = Math.min(1, Math.max(0, finiteNumber(ratio, 0)));
+  if (t === 0 || safeStart === safeEnd) return safeStart;
+  if (t === 1) return safeEnd;
+
+  const span = safeEnd - safeStart;
+  let result = Number.isFinite(span)
+    ? safeStart + span * t
+    : safeStart * (1 - t) + safeEnd * t;
+  if (!Number.isFinite(result)) {
+    const scale = Math.max(Math.abs(safeStart), Math.abs(safeEnd), 1);
+    result = ((safeStart / scale) * (1 - t) + (safeEnd / scale) * t) * scale;
+  }
+  if (!Number.isFinite(result)) {
+    result = result < 0 ? -Number.MAX_VALUE : Number.MAX_VALUE;
+  }
+  return Math.min(Math.max(result, Math.min(safeStart, safeEnd)), Math.max(safeStart, safeEnd));
+}
+
+/** Returns the arithmetic midpoint of two finite values without overflowing their difference. */
+export function finiteMidpoint(start: number, end: number): number {
+  return finiteInterpolate(start, end, 0.5);
+}
+
+/** Adds finite values, saturating at the largest representable magnitude on overflow. */
+export function finiteAdd(left: number, right: number, fallback = 0): number {
+  const safeLeft = finiteNumber(left, fallback);
+  const safeRight = finiteNumber(right, 0);
+  const result = safeLeft + safeRight;
+  if (Number.isFinite(result)) return result;
+  return safeLeft < 0 && safeRight < 0 ? -Number.MAX_VALUE : Number.MAX_VALUE;
+}
+
 /** Whether `key` is one of the four arrow keys. */
 export function isArrowKey(key: string): boolean {
   return key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowDown';

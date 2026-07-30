@@ -8,6 +8,9 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    box-sizing: border-box;
     text-align: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-l);
@@ -36,6 +39,8 @@ export const styles = css`
     display: none;
   }
   [part='heading'] {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-weight: var(--lr-font-weight-semibold);
     color: var(--lr-color-text);
     margin: 0;
@@ -53,6 +58,8 @@ export const styles = css`
     font-size: var(--lr-empty-compact-font-size);
   }
   [part='description'] {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     font-size: var(--lr-font-size-md-sm);
     margin: 0;
   }
@@ -61,5 +68,10 @@ export const styles = css`
   }
   [part='actions'][hidden] {
     display: none;
+  }
+  [part='actions'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 `;

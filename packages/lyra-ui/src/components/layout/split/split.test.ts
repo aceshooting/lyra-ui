@@ -180,6 +180,16 @@ it("splits children evenly by default", async () => {
   );
 });
 
+it("formats divider indices with the effective locale", async () => {
+  const el = (await fixture(
+    html`<lr-split lang="ar-EG"><div>A</div><div>B</div></lr-split>`
+  )) as LyraSplit;
+  const label = el.shadowRoot!.querySelector('[part="divider"]')!.getAttribute("aria-label")!;
+  const number = new Intl.NumberFormat("ar-EG");
+  expect(label).to.include(number.format(1));
+  expect(label).to.include(number.format(2));
+});
+
 it("resizes via keyboard on a divider and emits lr-resize", async () => {
   const el = (await fixture(
     html`<lr-split
@@ -985,6 +995,37 @@ it("computes aria-valuemax per divider from its two adjacent panels for 3+ panel
   expect(dividers[1].getAttribute("aria-valuemax")).to.equal("40");
 });
 
+it("reports each divider's achievable ARIA range from both adjacent panel constraints", async () => {
+  const el = (await fixture(
+    html`<lr-split
+      ><div>A</div>
+      <div>B</div>
+      <div>C</div></lr-split
+    >`
+  )) as LyraSplit;
+  el.sizes = [50, 30, 20];
+  el.panelConstraints = [
+    { minPercent: 20, maxPercent: 60 },
+    { minPercent: 15, maxPercent: 35 },
+    { minPercent: 10, maxPercent: 40 },
+  ];
+  await elementUpdated(el);
+  const dividers = [
+    ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="divider"]'),
+  ];
+
+  expect(
+    dividers.map((divider) => [
+      divider.getAttribute("aria-valuenow"),
+      divider.getAttribute("aria-valuemin"),
+      divider.getAttribute("aria-valuemax"),
+    ])
+  ).to.deep.equal([
+    ["50", "45", "60"],
+    ["30", "15", "35"],
+  ]);
+});
+
 it("falls back to 0 for a divider's sizes-derived values when sizes is momentarily shorter than panelCount, without throwing", async () => {
   const el = (await fixture(
     html`<lr-split
@@ -1393,6 +1434,45 @@ it("persists sizes to localStorage on pointerup, not just via keyboard commit", 
   const stored = localStorage.getItem(`lr-split:${storageKey}:2`);
   expect(stored).to.not.be.null;
   expect(JSON.parse(stored!)).to.deep.equal(el.sizes);
+});
+
+it("keeps live sizes but does not persist a pointercancel/lostpointercapture gesture", async () => {
+  for (const [index, endType] of (
+    ["pointercancel", "lostpointercapture"] as const
+  ).entries()) {
+    const storageKey = `test-split-canceled-persist-${endType}-${Math.random()}`;
+    const fullKey = `lr-split:${storageKey}:2`;
+    localStorage.removeItem(fullKey);
+    const el = (await fixture(
+      html`<lr-split storage-key=${storageKey}
+        ><div>A</div>
+        <div>B</div></lr-split
+      >`
+    )) as LyraSplit;
+    await elementUpdated(el);
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    mockWidth(base, 200);
+    const divider = el.shadowRoot!.querySelector(
+      '[part="divider"]'
+    ) as HTMLElement;
+    divider.setPointerCapture = () => {};
+    const before = [...el.sizes];
+    let resizeEvents = 0;
+    el.addEventListener("lr-resize", () => resizeEvents++);
+    const pointerId = 100 + index;
+
+    pointerDown(divider, pointerId, 100);
+    pointerMove(pointerId, 140);
+    expect(el.sizes, endType).to.not.deep.equal(before);
+    expect(resizeEvents, endType).to.equal(1);
+    expect(localStorage.getItem(fullKey), endType).to.be.null;
+
+    window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+
+    expect(el.sizes, endType).to.not.deep.equal(before);
+    expect(resizeEvents, endType).to.equal(1);
+    expect(localStorage.getItem(fullKey), endType).to.be.null;
+  }
 });
 
 it("gives each divider a distinguishing accessible name", async () => {
@@ -1895,7 +1975,7 @@ it("splits :hover and :focus-visible into separate divider rules with a token-dr
 
 // -- Responsive collapse (collapse="start"/"end") -------------------------
 
-it('defaults collapse to "none", leaving dividers/panels byte-for-byte unaffected (no data-collapse-state, no aria-disabled, tabindex="0")', async () => {
+it('defaults collapse to "none", leaving dividers enabled with explicit aria-disabled="false"', async () => {
   const el = (await fixture(
     html`<lr-split
       ><div>A</div>
@@ -1911,7 +1991,7 @@ it('defaults collapse to "none", leaving dividers/panels byte-for-byte unaffecte
   const divider = el.shadowRoot!.querySelector(
     '[part="divider"]'
   ) as HTMLElement;
-  expect(divider.hasAttribute("aria-disabled")).to.be.false;
+  expect(divider.getAttribute("aria-disabled")).to.equal("false");
   expect(divider.getAttribute("tabindex")).to.equal("0");
 });
 
@@ -2253,7 +2333,7 @@ it("leaves a non-adjacent divider fully draggable while a different pane is coll
     // divider[0] sits between panel0/panel1 -- adjacent to the collapsed panel0.
     expect(dividers[0].getAttribute("aria-disabled")).to.equal("true");
     // divider[1] sits between panel1/panel2 -- not adjacent, stays enabled.
-    expect(dividers[1].hasAttribute("aria-disabled")).to.be.false;
+    expect(dividers[1].getAttribute("aria-disabled")).to.equal("false");
 
     const before = el.sizes[1];
     dividers[1].dispatchEvent(
@@ -2292,7 +2372,7 @@ it('reverts to plain wide/percent styling and clears data-collapse-state when co
     const divider = el.shadowRoot!.querySelector(
       '[part="divider"]'
     ) as HTMLElement;
-    expect(divider.hasAttribute("aria-disabled")).to.be.false;
+    expect(divider.getAttribute("aria-disabled")).to.equal("false");
   } finally {
     spy.restore();
   }

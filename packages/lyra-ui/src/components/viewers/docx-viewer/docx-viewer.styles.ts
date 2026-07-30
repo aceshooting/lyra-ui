@@ -97,6 +97,34 @@ export const styles = css`
     padding: var(--lr-space-l);
   }
 
+  [part='highlight-actions'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-space-xs);
+    margin-block-start: var(--lr-space-m);
+  }
+
+  [part='highlight-action'] {
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-xs) var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-brand);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  [part='highlight-action']:hover {
+    background: var(--lr-color-brand-quiet);
+  }
+
+  [part='highlight-action']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
   /* Painted text-quote highlights: the CSS Custom Highlight API path styles the browser-native
      ::highlight() pseudo (no element exists to select, so a [part='content'] mark[...] selector
      below never matches on that path); the <mark>-wrap fallback path styles the real elements

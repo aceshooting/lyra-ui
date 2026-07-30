@@ -21,8 +21,9 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
+precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and

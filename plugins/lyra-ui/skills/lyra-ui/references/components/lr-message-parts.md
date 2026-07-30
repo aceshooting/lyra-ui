@@ -26,7 +26,11 @@ part to the built-in renderer; `label: string = ''`; `accessibleLabel: string | 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
 discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
+events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
+`lr-highlight-activate`, `lr-link-click`, `lr-preview`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`,
+`lr-tool-chip-select`, `lr-widget-action`, and `lr-widget-state-change`.
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.

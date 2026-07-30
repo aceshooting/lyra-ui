@@ -26,7 +26,8 @@ design (an item's `title`/`description` routinely hold focusable content, so wra
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
 `accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
-`itemCount: number` is the live default-slot child count.
+`itemCount: number` is the live count of direct default-slot `<lr-timeline-item>` children;
+unrelated slotted elements and text nodes are ignored.
 
 **`lr-timeline-item` properties:** `timestamp?: Date | string | number` (attribute: false — `Date`
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),

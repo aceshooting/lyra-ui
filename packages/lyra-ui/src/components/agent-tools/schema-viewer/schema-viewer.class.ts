@@ -39,6 +39,7 @@ interface SchemaRenderBudget {
 }
 
 const MAX_RENDERED_SCHEMA_NODES = 500;
+const MAX_RENDERED_SCHEMA_ISSUES = 500;
 const MAX_SCHEMA_DEPTH = 100;
 
 /**
@@ -60,6 +61,7 @@ const MAX_SCHEMA_DEPTH = 100;
  * @csspart constraints - Recognized schema constraints.
  * @csspart issue - One caller-supplied validation issue.
  * @csspart limit - Resource-ceiling status shown when additional nodes are omitted.
+ * @csspart issue-limit - Resource-ceiling status shown when additional validation issues are omitted.
  * @csspart empty - The empty state.
  * @cssprop [--lr-schema-viewer-selected-border=var(--lr-color-brand)] - Selected node branch.
  * @cssprop [--lr-schema-viewer-error-border=var(--lr-color-danger)] - Error issue border.
@@ -110,6 +112,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
     depth: number,
     ancestors: Set<object>,
     budget: SchemaRenderBudget,
+    issuesByPath: ReadonlyMap<string, readonly SchemaValidationIssue[]>,
   ): TemplateResult | typeof nothing {
     if (budget.remaining <= 0) {
       budget.truncated = true;
@@ -123,7 +126,7 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
     const nextAncestors = new Set(ancestors).add(schema);
     const type = Array.isArray(schema.type) ? schema.type.join(' | ') : schema.type ?? (schema.properties ? 'object' : '');
     const constraints = this.constraints(schema);
-    const issues = this.issues.filter((issue) => issue.path === path);
+    const issues = issuesByPath.get(path) ?? [];
     const children: Array<{ name: string; node: JsonSchemaNode; path: string; required: boolean }> = [];
     const addChild = (child: { name: string; node: JsonSchemaNode; path: string; required: boolean }): boolean => {
       if (children.length >= budget.remaining) {
@@ -185,7 +188,16 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
         )}
         ${children.length
           ? html`<ul>${children.map((child) =>
-              this.renderNode(child.name, child.node, child.path, child.required, depth + 1, nextAncestors, budget),
+              this.renderNode(
+                child.name,
+                child.node,
+                child.path,
+                child.required,
+                depth + 1,
+                nextAncestors,
+                budget,
+                issuesByPath,
+              ),
             )}</ul>`
           : nothing}
       </li>
@@ -200,7 +212,25 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
       </section>`;
     }
     const budget: SchemaRenderBudget = { remaining: MAX_RENDERED_SCHEMA_NODES, truncated: false };
-    const tree = this.renderNode(this.schema.title || '$', this.schema, '', false, 0, new Set(), budget);
+    const issuesByPath = new Map<string, SchemaValidationIssue[]>();
+    const visibleIssueCount = Math.min(this.issues.length, MAX_RENDERED_SCHEMA_ISSUES);
+    for (let index = 0; index < visibleIssueCount; index++) {
+      const issue = this.issues[index];
+      if (!issue) continue;
+      const pathIssues = issuesByPath.get(issue.path) ?? [];
+      pathIssues.push(issue);
+      issuesByPath.set(issue.path, pathIssues);
+    }
+    const tree = this.renderNode(
+      this.schema.title || '$',
+      this.schema,
+      '',
+      false,
+      0,
+      new Set(),
+      budget,
+      issuesByPath,
+    );
     return html`
       <section part="base" aria-label=${label}>
         <ul part="tree">
@@ -209,6 +239,11 @@ export class LyraSchemaViewer extends LyraElement<LyraSchemaViewerEventMap> {
         ${budget.truncated
           ? html`<p part="limit" role="status">${this.localize('schemaViewerLimit', undefined, {
                 count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_NODES),
+              })}</p>`
+          : nothing}
+        ${this.issues.length > MAX_RENDERED_SCHEMA_ISSUES
+          ? html`<p part="issue-limit" role="status">${this.localize('schemaViewerIssueLimit', undefined, {
+                count: getNumberFormat(this.effectiveLocale).format(MAX_RENDERED_SCHEMA_ISSUES),
               })}</p>`
           : nothing}
       </section>

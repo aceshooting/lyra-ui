@@ -31,4 +31,12 @@ export const styles = css`
      ancestor fieldset had effectiveDisabled correctly gating the internal <textarea>, but the host
      still rendered at full opacity with a normal cursor (same fix as lr-chat-composer). */
   :host(:disabled) { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
+  [part='form-control'],
+  [part~='form-control-label'],
+  [part='hint'],
+  [part='error'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
 `;

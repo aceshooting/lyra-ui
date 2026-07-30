@@ -27,19 +27,22 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='node'] {
-    fill: var(--lr-color-border-strong);
+    fill: var(--lr-flow-minimap-node-color, var(--lr-color-border-strong));
+  }
+  [part='node'][data-status='pending'] {
+    fill: var(--lr-flow-minimap-node-pending-color, var(--lr-color-border-strong));
   }
   [part='node'][data-status='running'] {
-    fill: var(--lr-color-brand);
+    fill: var(--lr-flow-minimap-node-running-color, var(--lr-color-brand));
   }
   [part='node'][data-status='success'] {
-    fill: var(--lr-color-success);
+    fill: var(--lr-flow-minimap-node-success-color, var(--lr-color-success));
   }
   [part='node'][data-status='error'] {
-    fill: var(--lr-color-danger);
+    fill: var(--lr-flow-minimap-node-error-color, var(--lr-color-danger));
   }
   [part='node'][data-status='denied'] {
-    fill: var(--lr-color-warning);
+    fill: var(--lr-flow-minimap-node-denied-color, var(--lr-color-warning));
   }
   [part='viewport'] {
     fill: color-mix(in srgb, var(--lr-color-brand) 15%, transparent);

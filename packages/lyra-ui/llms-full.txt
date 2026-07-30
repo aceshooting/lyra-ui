@@ -727,6 +727,8 @@ number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: str
 boolean }` — the row shape used by the async `source` path. `icon` renders as a decorative leading
 visual, `badge` as trailing metadata, `accessibleLabel` can provide richer spoken text than the
 visible label, and `data` is retained without being rendered for retrieval through `selectedRows`.
+`dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
+render a transparent dot.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group fields to the same
 internal row model.
 
@@ -749,7 +751,6 @@ selection. It is the supported way to read that text; reaching into the shadow r
 carrying different strings. It fires for user input only: picking a row, the clear button,
 `form.reset()`, dismissing the listbox, a programmatic `value` write, and `setRangeText()` all blank
 the filter silently, mirroring how `<lr-input>`'s `lr-input` only reports user edits.
-
 `lr-show` and `lr-hide` report listbox visibility transitions.
 The internal input's `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
@@ -852,8 +853,11 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
 - `dotColor: string = ''` (attribute `dot-color` — optional CSS color for a small leading status
-  dot, any valid CSS color)
+  dot; invalid values, declaration-breaking input, and `url()` render the dot transparently)
 - `label` is a **read-only getter**: explicit `label` attribute wins, else trimmed `textContent`.
+
+**Events:** `lr-option-change` — bubbles when the option's label or selectable data changes so
+its parent `lr-combobox` or `lr-select` can refresh its normalized option rows.
 
 ```html
 <lr-combobox id="cb" label="Country" placeholder="Search…" with-clear>
@@ -1319,7 +1323,7 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | --- | --- | --- | --- | --- |
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
-| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). |
+| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
@@ -2217,10 +2221,12 @@ named colors, the shape apps otherwise hand-roll as a row of round accent-color 
 
 **Properties:**
 - `options: SwatchOption[] = []` (attribute: false) — `SwatchOption { value: string; color: string;
-  label: string; icon?: unknown; gemstone?: GemstoneKey }`; `color` is any CSS color string used as
-  the swatch fill, `label` is each swatch's accessible name and `title`. `icon` is an optional
-  custom shape rendered *instead of* the plain filled circle; `gemstone` selects the canonical
-  faceted glyph when `mode="gemstone"`. An explicit `icon` wins over `gemstone`.
+  label: string; icon?: unknown; gemstone?: GemstoneKey }`; a valid CSS `color` is used as the
+  swatch fill, while invalid values, declaration-breaking input, and `url()` are ignored (and are
+  never interpolated into a gemstone SVG). `label` is each swatch's accessible name and `title`.
+  `icon` is an optional custom shape rendered *instead of* the plain filled circle; `gemstone`
+  selects the canonical faceted glyph when `mode="gemstone"`. An explicit `icon` wins over
+  `gemstone`.
 - `value: string | null = null` — the currently selected option's `value` (controlled); `null`
   leaves nothing selected while keeping the first swatch tabbable.
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — scales the swatch hit-area and
@@ -2444,7 +2450,8 @@ control's visible, clickable label (same as `<lr-checkbox>`).
   slotted `error` content). Unset: no error chrome renders.
 
 **Events:** `lr-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
-Space/Enter); not fired for a programmatic `.checked` assignment.
+Space/Enter); not fired for a programmatic `.checked` assignment. The internal control's native
+`focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
 
@@ -2592,11 +2599,15 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
+An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
 `blur()`, and `click()` forward to the internal radio control.
 
-**Events:** native-style composed `input` and `change`, plus `lr-change` with
-`{ checked, value }`.
+**Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
+with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
+the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
+differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
+bubbling, composed host events.
 
 **Slots:** default label content.
 
@@ -2628,7 +2639,10 @@ focus; arrow navigation selects the next enabled radio.
 **Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`, and
 `aria-label` (through `accessibleLabel`).
 
-**Events:** `lr-change` with `{ value, radio }`.
+**Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
+including keyboard activation. The selected child does not emit its standalone alias. Ownership is
+resolved synchronously, so immediate removal restores standalone behavior and immediate reparenting
+routes the event to the new group without waiting for a mutation-observer turn.
 
 **Slots:** default radios, `label`, `hint`, `error`.
 
@@ -2673,11 +2687,13 @@ the last token. `value` is a `string[]` and repeated values are submitted under 
 
 **Properties:** `value`, `label`, `hint`, `errorText` (`error-text`), `placeholder`, `name`,
 `required`, `disabled`, `accessibleLabel` (attribute `aria-label` — forwarded to the internal text
-input), `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-input`'s
-`size`, scaling the input-wrapper's row height and text size across six tiers; the remove button's
-hit area stays fixed at `40px` across all sizes), `allowDuplicates` (`allow-duplicates`, default
-`false`), `editable` (reflected, default `false` — see below), and `delimiter: string | null` (default
-`','` — see below).
+input), `spellcheck: boolean = true`, `autocapitalize: string = ''`, and `autoCorrect: string = ''`
+(attribute `autocorrect`) — all three native text-entry hints are forwarded to both the draft input
+and the inline token editor — `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected —
+same scale as `lr-input`'s `size`, scaling the input-wrapper's row height and text size across six
+tiers; the remove button's hit area stays fixed at `40px` across all sizes), `allowDuplicates`
+(`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
+`delimiter: string | null` (default `','` — see below).
 **Slots:** `label`, `hint`, `error`.
 **Events:** native-style `input` and `change` (`detail: { value: string[] }`), bubbling/composed
 `focus` and `blur` re-dispatched from the internal text input, `lr-add` (`detail: { value }`),
@@ -2753,7 +2769,7 @@ optional line-number gutter. No syntax highlighting: `language` is metadata only
   `placeholder: string = ''`
 - `readonly: boolean = false` (reflected) — also disables Tab indentation
 - `resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both'` — written as the textarea's inline
-  `resize`
+  `resize`; an invalid runtime value falls back to `'both'`
 - `wrap: 'off' | 'soft' | 'hard' = 'off'` — native textarea wrapping; `'off'` (the default) makes
   the `editor` part the single horizontal scroll viewport
 - `spellcheck: boolean = false` — off by default for code, and parsed with a string-aware converter
@@ -3183,10 +3199,12 @@ transparent)`) — text/background of `[part="trend"]` when its polarity (per `g
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
-which keeps reading the shared `--lr-color-success`/`--lr-color-danger` tokens directly — retinting
-the trend pill doesn't also recolor the value, and vice versa. Otherwise shared tokens only
-(`--lr-color-success/-warning/-danger` drive the `variant`-colored value text; `--lr-color-brand`
-drives `emphasis`'s accent edge and value tint).
+so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-success-color` (default `var(--lr-color-success)`),
+`--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
+`--lr-stat-value-danger-color` (default `var(--lr-color-danger)`) independently color the headline
+value for each non-neutral `variant`. `--lr-color-brand` still drives `emphasis`'s accent edge and
+value tint.
 
 **Optional peer deps:** none.
 
@@ -3718,6 +3736,10 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 ```
 
 **Known gotchas:**
+- SVG text cannot wrap. When a caller-supplied visible `label` or `valueLabel` exceeds the
+  single-line capacity, the component applies SVG `textLength` fitting so the complete string stays
+  inside the fixed radial/ring viewBox or its half of the linear viewBox; the host's accessible
+  label and `aria-valuetext` retain the original text.
 - setting `valueLabel` (e.g. `"72°F"`) now also sets `aria-valuetext` on the host (in addition to
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are
@@ -3755,8 +3777,9 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
 - `words: WordCloudWord[] = []` (attribute: false) — `{ text: string, weight: number, color?:
   string, group?: string }`; `weight` drives font size (a negative/non-finite `weight` is clamped to
   `0` for sizing purposes only — the original value is still echoed verbatim in `lr-word-click`'s
-  `detail`), `color` overrides the palette for that word, `group` shares one palette color across
-  every word with the same `group` value
+  `detail`), a valid CSS `color` overrides the palette for that word (invalid values,
+  declaration-breaking input, and `url()` fall back to the palette), and `group` shares one palette
+  color across every word with the same `group` value
 - `minFontSize: number = 12` (attribute `min-font-size`) — px, applied to the lowest-weight word;
   layout clamps positive finite values to at most 512px and uses 1px for invalid/non-positive values
 - `maxFontSize: number = 48` (attribute `max-font-size`) — px, applied to the highest-weight word;
@@ -3766,10 +3789,12 @@ visually-hidden `[part="live-region"]` (`role="status" aria-live="polite"`) anno
 - `orientations: 'horizontal'|'mixed' = 'horizontal'` — `mixed` lets ~25% of words render rotated
   90° for denser packing
 - `palette?: string[]` (attribute: false) — custom categorical colors, cycled by word index (or by
-  `group`); defaults to the `--lr-word-cloud-color-1..8` tokens
+  `group`); invalid CSS colors, declaration-breaking input, and `url()` entries are skipped, and an
+  all-invalid palette defaults to the `--lr-word-cloud-color-1..8` tokens
 - `legend: WordCloudLegendItem[] = []` (attribute: false) — optional named `{ label, color }`
   entries for explaining explicit `words[].color`/group color overrides; when omitted, the
-  component derives entries from grouped and explicitly colored words
+  component derives entries from grouped and explicitly colored words. An invalid legend color
+  renders a transparent swatch.
 - `showLegend: boolean = false` (attribute `show-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection
@@ -3963,16 +3988,17 @@ focus; it continues to emit `lr-cell-click` and leaves selection state consumer-
   exact ramp steps instead of linearly interpolating between `--lr-heatmap-scale-lo`/`-hi`;
   governs both `mode`s and both `scale` values, discretizing whichever scale would otherwise
   interpolate continuously into `colorSteps.length` buckets instead. Unset (the default, or fewer
-  than 2 entries) keeps today's 2-endpoint interpolation exactly.
+  than 2 entries) keeps today's 2-endpoint interpolation exactly. Invalid colors use the canvas
+  fallback color and prevent the custom legend gradient from being assigned.
 - `legendStops?: HeatmapLegendStop[]` (attribute: false) — `HeatmapLegendStop { value: number;
   color?: string; label?: string }`: a discrete legend key rendered **instead of** the
   `--lr-heatmap-scale-lo`/`-hi` gradient bar and its `[part="legend-lo"]`/`[part="legend-hi"]`
   endpoint labels — one `[part="legend-stop"]` per entry, in array order, each a
   `[part="legend-swatch"]` filled with that entry's `color` plus a `[part="legend-stop-label"]`.
-  `color` is optional: omit it (or pass an empty string) for a **caption-only** stop, which renders
-  its `[part="legend-stop-label"]` alone with no `[part="legend-swatch"]` element in the DOM at all —
-  so a leading "0" or trailing "more" caption around a run of colored stops doesn't leave an empty
-  swatch box in the row.
+  `color` is optional: omit it, pass an empty string, or pass an invalid CSS color for a
+  **caption-only** stop, which renders its `[part="legend-stop-label"]` alone with no
+  `[part="legend-swatch"]` element in the DOM at all — so a leading "0" or trailing "more" caption
+  around a run of colored stops doesn't leave an empty swatch box in the row.
   A stop's label defaults to the component's own locale-aware numeric formatting of `value`, so an
   explicit `label` is only needed when the number isn't the right caption ("none", "≥ 90%"). Exists
   for the consumer who supplies `cellColor`: because that callback overrides a cell's color
@@ -4059,6 +4085,8 @@ same color as `--lr-heatmap-focus-ring-color`).
 ```
 
 **Known gotchas:**
+- The legend is a wrapping flex row. Long unbroken stop labels, the trailing `valueLabel`, and
+  annotation labels wrap within the host instead of forcing the heatmap wider than its allocation.
 - `legendStops` *replaces* the lo/hi gradient bar rather than adding to it: supplying it removes
   `[part="legend-lo"]`, `[part="legend-hi"]` and the bar from the DOM, so a stylesheet targeting
   those parts silently stops applying. It is also presentation-only — it never feeds back into the
@@ -4103,11 +4131,12 @@ is a labeled `role="list"` and each cell a named `role="listitem"` (`aria-label`
 `aria-setsize`), so the sequence is walkable item by item rather than collapsed into one summary
 string. Exactly one cell is tabbable at a time (roving `tabindex`); ArrowLeft/ArrowRight and
 Home/End move the stop — direction-aware, so the arrows swap under RTL — and focusing a cell shows
-the same `[part="tooltip"]` detail that pointer hover does, wired through `aria-describedby`. Cells
-are inspectable, not actionable: there is no per-cell click/activation event, so unlike
-`<lr-heatmap>` there is nothing to fire on Enter/Space. Setting `showLegend` additionally renders a
-static `[part="legend"]` key below the strip, so the color-to-category mapping is readable without
-visiting each cell.
+the same `[part="tooltip"]` detail that pointer hover does. The tooltip is visual only and is not
+wired through `aria-describedby`, because the cell's own `aria-label` already exposes the identical
+text and describing it again would duplicate the announcement. Cells are inspectable, not
+actionable: there is no per-cell click/activation event, so unlike `<lr-heatmap>` there is nothing
+to fire on Enter/Space. Setting `showLegend` additionally renders a static `[part="legend"]` key
+below the strip, so the color-to-category mapping is readable without visiting each cell.
 
 **Properties:**
 - `items: SequenceStripItem[] = []` (attribute: false) — `{ id, category, marker?, label? }`;
@@ -4117,9 +4146,10 @@ visiting each cell.
   `key`) when unset — it is not read by `[part="base"]`'s auto-generated `aria-label`, which
   summarizes by category/count only
 - `categories: SequenceStripCategory[] = []` (attribute: false) — `{ key, color, label? }`; `color`
-  is the cell background for every item whose `category` matches `key` (an item whose `category`
-  matches no entry renders `transparent`); `label` is used in the auto-generated `aria-label` summary
-  and as the hover-tooltip fallback text, falling back to `key` itself when unset
+  is the cell background for every item whose `category` matches `key`; invalid CSS colors,
+  declaration-breaking input, `url()`, and unmatched categories render `transparent`. `label` is
+  used in the auto-generated `aria-label` summary and as the hover-tooltip fallback text, falling
+  back to `key` itself when unset
 - `orientation: 'horizontal' = 'horizontal'` (reflected) — only `'horizontal'` is supported today;
   vertical is plausible future scope, not built speculatively without a motivating case
 - `accessibleLabel?: string` (attribute `accessible-label`) — overrides the auto-generated
@@ -4234,6 +4264,8 @@ moves focus to its parent. Home/End jump to the first/last visible node. Enter/S
 node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
 browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
 binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
+If a same-id data refresh disables an expanded branch, that reused branch collapses immediately;
+enabled descendants are never left visibly stranded outside this navigation walk.
 
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
@@ -4299,8 +4331,15 @@ is applied to the legacy singular badge and to every `badges` chip; additive chi
 groups the primary label and optional wrapping secondary description while preserving one
 interactive treeitem per row.
 
-**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for
-indentation), plus the shared tokens listed above.
+**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
+`--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
+`--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
+`--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
+badge property falls back to its corresponding shared semantic token. The expanded names are
+`--lr-tree-badge-neutral-color`, `--lr-tree-badge-neutral-bg`, `--lr-tree-badge-brand-color`,
+`--lr-tree-badge-brand-bg`, `--lr-tree-badge-success-color`, `--lr-tree-badge-success-bg`,
+`--lr-tree-badge-warning-color`, `--lr-tree-badge-warning-bg`, `--lr-tree-badge-danger-color`,
+and `--lr-tree-badge-danger-bg`.
 
 **Optional peer deps:** none.
 
@@ -4520,7 +4559,13 @@ hijacking the library-wide `--lr-color-brand` token and repainting everything el
 `status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
 of the two states without the other following along — and `--lr-flow-node-running-glow` (default
 `var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
-the pulse keyframes' peak color.
+the pulse keyframes' peak color. The status dot has independent
+`--lr-flow-node-status-{pending|running|success|error|denied}-color` hooks, defaulting respectively
+to the shared border-strong, brand, success, danger, and warning tokens;
+`--lr-flow-node-status-color` controls the no-status fallback. The expanded status names are
+`--lr-flow-node-status-pending-color`, `--lr-flow-node-status-running-color`,
+`--lr-flow-node-status-success-color`, `--lr-flow-node-status-error-color`, and
+`--lr-flow-node-status-denied-color`.
 
 **Optional peer deps:** none.
 
@@ -4563,7 +4608,13 @@ disagree.
 draggable, focusable view rectangle).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`).
+`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-node-color` for a node without
+an execution status, and `--lr-flow-minimap-node-{pending|running|success|error|denied}-color` for
+each status-specific rectangle. The status hooks default to the shared border-strong, brand,
+success, danger, and warning colors respectively. Their expanded names are
+`--lr-flow-minimap-node-pending-color`, `--lr-flow-minimap-node-running-color`,
+`--lr-flow-minimap-node-success-color`, `--lr-flow-minimap-node-error-color`, and
+`--lr-flow-minimap-node-denied-color`.
 
 **Optional peer deps:** none.
 
@@ -4638,7 +4689,8 @@ hit area, unchanged by `appearance`), `--lr-shadow`, `--lr-color-surface`, `--lr
 
 Execution-state presentation for a `lr-flow-canvas`: pushes a `FlowRunDecorations` map into the
 resolved canvas (the canvas itself renders the node/edge paint) and renders a compact run-summary
-strip. Does not execute, poll, or time anything — pure pushed state; `durationMs` is host-computed.
+strip. Summary/count text and slotted host chrome wrap within narrow allocations. Does not execute,
+poll, or time anything — pure pushed state; `durationMs` is host-computed.
 
 **Properties:**
 - `for: string = ''` — id of the target `lr-flow-canvas`; empty resolves to the nearest ancestor
@@ -4660,7 +4712,13 @@ badge).
 **CSS parts:** `base`, `summary` (the "{done} of {total} steps complete" line), `count` (one per
 status present, text + tone dot, never color-only), `live-region` (step-transition announcement).
 
-**Themeable custom properties:** shared tokens only.
+**Themeable custom properties:** `--lr-flow-run-overlay-status-color` controls a count dot without
+an execution status. `--lr-flow-run-overlay-status-{pending|running|success|error|denied}-color`
+independently retints each status count, defaulting respectively to the shared border-strong,
+brand, success, danger, and warning tokens. Their expanded names are
+`--lr-flow-run-overlay-status-pending-color`, `--lr-flow-run-overlay-status-running-color`,
+`--lr-flow-run-overlay-status-success-color`, `--lr-flow-run-overlay-status-error-color`, and
+`--lr-flow-run-overlay-status-denied-color`.
 
 **Optional peer deps:** none.
 
@@ -4812,10 +4870,10 @@ a selected (`data-selected="true"`) day cell. Component-scoped indirection over 
 without also recoloring `[part='nav']:hover`/`[part='agenda-event']:hover`, which read that shared
 token directly for a visually distinct purpose (transient hover feedback).
 
-**Gotcha:** month-view `[part='event']` markers are a mouse-only quick-select affordance — they sit
-inside the day `<button>`, which may not contain focusable descendants. Agenda view renders each
-event as a real `<button part="agenda-event">` and is the keyboard-accessible path to
-`lr-event-select`.
+Month-view `[part='event']` markers are real keyboard-focusable buttons inside a non-interactive
+`role="gridcell"` day container; Enter/Space activates the same `lr-event-select` path as a pointer.
+Their target stays at least 24×24 CSS px even in the narrow month layout. Agenda view likewise
+renders each event as a `<button part="agenda-event">`.
 
 ## `lr-timeline` and `lr-timeline-item`
 
@@ -4831,7 +4889,8 @@ design (an item's `title`/`description` routinely hold focusable content, so wra
 opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
 `accessibleLabel: string = ''` (attribute `aria-label`) overrides the localized `"Timeline"` name
 (the `role="list"` element is in the shadow root and never inherits a host attribute). Read-only
-`itemCount: number` is the live default-slot child count.
+`itemCount: number` is the live count of direct default-slot `<lr-timeline-item>` children;
+unrelated slotted elements and text nodes are ignored.
 
 **`lr-timeline-item` properties:** `timestamp?: Date | string | number` (attribute: false — `Date`
 isn't attribute-serializable; invalid input normalizes to unset and renders no timestamp UI),
@@ -4892,7 +4951,8 @@ git-status/diff-count badges, lazy directory loading, and select/open events.
 
 A masked key/value list for environment variables and secrets, with per-row reveal and copy.
 Masking is presentational, not a security boundary: the real value sits in a DOM property
-regardless of mask state.
+regardless of mask state. Names, revealed values, and localized action text wrap within narrow
+allocations; the name track uses at most 40% of the available inline size.
 
 **Properties:** `entries: EnvEntry[] = []` (attribute: false), `revealable: boolean = true`
 (reflected), `copyable: boolean = true` (reflected), and `label: string = ''`.
@@ -5220,14 +5280,16 @@ position) survives the transition.
 - `collapsed: boolean = false` (reflected)
 - `expandable: boolean = false` (reflected — shows the fullscreen toggle button)
 - `fullscreen: boolean = false` (reflected)
-- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — raw CSS `inset` shorthand applied to
+- `fullscreenInset: string = ''` (attribute `fullscreen-inset`) — CSS `inset` shorthand applied to
   `[part="base"]` and `[part="backdrop"]` while fullscreen instead of the default per-side
   `max(var(--lr-space-l), <safe-area inset>)`, e.g. `"0 0 0 240px"` to leave a 240px persistent
-  sidebar/toolbar visible during fullscreen
+  sidebar/toolbar visible during fullscreen. Invalid values, declaration-breaking input, and
+  `url()` are ignored.
 - `compact: boolean = false` (reflected) — tighter header/body padding, same convention as
   `lr-empty`'s `compact`
 - `backdropInset: string = ''` (attribute `backdrop-inset`) — overrides the fullscreen backdrop's
-  CSS `inset` independently from `fullscreenInset`; when empty, it follows `fullscreenInset`
+  CSS `inset` independently from `fullscreenInset`; when empty or invalid, it follows a valid
+  `fullscreenInset`
 - `views: WidgetView[] = []` (attribute: false) — named alternate views for the panel body, e.g. a
   chart/table toggle inside the same card chrome; `WidgetView { id: string; label?: string; icon?:
   TemplateResult; ariaLabel?: string }`. Each entry gets a header toggle button
@@ -5350,6 +5412,8 @@ navigation.
 
 **Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
 `lr-slide-change` (`detail: { index }`).
+
+**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes.
 
 **CSS parts:** `base` (the `role="region"` landmark), `viewport` (the keyboard-focusable slide
 viewport), `track`, `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
@@ -5837,6 +5901,8 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
+The compact `2xs` track has a 24px minimum block size, and every `2xs`/`xs` segment retains at least
+a 24×24px activation target even when its label is very short.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default
@@ -6573,7 +6639,9 @@ called with no second argument, so `event.detail` is `null`, not `undefined`; fi
 when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
 roving-focused item), `lr-menu-item-change` (`detail: { value, checked }` — fired when a
 `type="checkbox"` item is activated and its `checked` state toggled, in addition to — never instead
-of — `lr-menu-item-select`; never fired for `type="normal"`)
+of — `lr-menu-item-select`; never fired for `type="normal"`),
+`lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
+state changes so the parent menu can repair its roving-tabindex state immediately)
 
 **Slots:** default (the item's label content), `icon` (optional leading icon)
 
@@ -6994,6 +7062,7 @@ draggable/resizable target; set it to `transparent` to opt out of the hover trea
 **Additional API surface:**
 
 - `--lr-dashboard-grid-collision-outline-color` — Outline color of a cell whose current drag/resize preview collides with another cell. Default: `var(--lr-color-danger)`.
+- `--lr-dashboard-grid-interaction-shadow` — Box shadow applied during a cell drag or resize. Default: `var(--lr-shadow)`.
 
 ## `lr-drilldown-panel`
 
@@ -7201,12 +7270,18 @@ at another, since `placement` is a per-call option rather than a single global r
 - the close button's accessible name is derived from the toast's own message text (`"Close: <first
   40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
-  switch-access user needs to tell their close buttons apart without activating one first.
+  switch-access user needs to tell their close buttons apart without activating one first. Rich
+  non-interactive message markup contributes its text, named-slot/icon and actionable content do
+  not, and live message text mutations update the name.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
   gets `aria-disabled="true"` once hiding starts, so a stray extra click/Enter during the hide
-  animation can't re-enter it.
+  animation can't re-enter it. A disconnect during that animation pauses completion; reconnecting
+  the same item resumes it and emits/removes exactly once.
+- When the focused close/action control's toast finishes hiding, focus moves to an adjacent toast's
+  close control, or back to the connected element that held focus before the toast when no adjacent
+  item remains.
 - Prefer the `toast()` helper over manually creating `<lr-toast>`/`<lr-toast-item>` — it already
   handles the singleton-region and remount-if-removed logic.
 
@@ -7369,8 +7444,9 @@ hand-building that chrome isn't worth it.
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
 computed accessible name outright, winning over every other source below (a slotted heading,
-`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. Left unset, the
-existing three-tier fallback below is unchanged.
+`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. It changes naming
+only: a `heading` property still renders its visible header chrome. Left unset, the existing
+three-tier fallback below is unchanged.
 
 **Methods:** `close(reason: DialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-dialog-close` with `reason`, and returns focus to whatever had it right before the dialog
@@ -7382,8 +7458,10 @@ own `close()` (a consumer's own cleanup code, a parent re-render that drops it);
 whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or `confirm()`'s
 own `'confirm'`/`'cancel'`).
 
-**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — fired on every dismissal path
-(Escape, backdrop click, any `close()` call, or an `'unmount'` removal as above).
+**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — a cancelable event fired on every
+dismissal path (Escape, backdrop click, the built-in close button, any `close()` call, or an
+`'unmount'` removal as above). Calling `preventDefault()` keeps a connected dialog open for every
+dismissal path; `'unmount'` cannot practically be vetoed because removal already happened.
 
 **Stacking:** participates in the shared per-document overlay stack described above. A dialog can be
 stacked with another dialog or any other modal family; only the visually topmost overlay receives
@@ -7433,19 +7511,20 @@ clipped; the viewport is still a hard limit either way), plus shared tokens `--l
 
 Accessible name / visible header, in priority order: (0) if the host element itself has an
 `aria-label` attribute set, its value becomes `aria-label` on the panel outright, overriding every
-source below (including a slotted heading) and suppressing the visible header/`heading` row and the
-sr-only `label` element from rendering at all — the standard ARIA convention for a consumer that
-wants full control over the announced name regardless of whatever `heading`/`label` props are also
-set; (1) otherwise, if a heading element (`h1`–`h6` or
+source below (including a slotted heading) while leaving visible `heading` chrome intact — the
+standard ARIA convention for a consumer that wants full control over the announced name regardless
+of whatever `heading`/`label` props are also set; (1) otherwise, if a heading element (`h1`–`h6` or
 `[role="heading"]`) is a *direct child* (not inside `slot="footer"`), its text content becomes
 `aria-label` on the panel — takes priority over `heading` below so an existing consumer that already
 slots its own heading keeps rendering it exactly as before; (2) otherwise, when `heading` is set, a
 visible header row (`[part="header"]`) renders containing that text (`[part="heading"]`), which
 becomes the `aria-labelledby` target; (3) otherwise, when `label` is set, an invisible (`.sr-only`,
 exposed as the `label` part) element carrying that text is rendered inside the panel and
-`aria-labelledby` points at it instead. Only one of cases 2/3 ever renders at a time. `label` itself
-never renders visible chrome on its own — `::part(label)` can be restyled to make the sr-only text
-visible, or `heading` can be set instead, for visible chrome without slotting a real heading element.
+`aria-labelledby` points at it instead. Only one of cases 2/3 supplies `aria-labelledby` at a time;
+case 0 can coexist with case 2's visible heading, but its explicit `aria-label` remains the name.
+`label` itself never renders visible chrome on its own — `::part(label)` can be restyled to make the
+sr-only text visible, or `heading` can be set instead, for visible chrome without slotting a real
+heading element.
 The slotted-heading case (1) deliberately uses `aria-label` (a copied string) rather than
 `aria-labelledby` pointing at the heading's `id`, because the heading is light-DOM content while
 `[part="panel"]` lives in shadow DOM and an ID-reference attribute can't resolve across that
@@ -7455,9 +7534,8 @@ root it labels.
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
   inspecting closed markup won't show them.
-- Heading detection only rescans on `slotchange`, not on every render — mutating an already-slotted
-  heading's `textContent` in place (rather than replacing the node) won't retroactively update
-  `aria-label`; set `label` instead for a title that needs to change live.
+- Heading detection observes child, subtree, and character-data changes, so mutating an
+  already-slotted direct heading's text updates the copied panel `aria-label` live.
 - Only *direct* children are scanned for a heading — one nested several layers deep, or inside a
   slotted custom element's own shadow root, is left to the consumer to label explicitly via `label`.
 - A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
@@ -7504,7 +7582,8 @@ used is still a `--lr-*` token reference, never a raw literal.
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
   `<lr-dialog>`'s own `close()`/`lr-dialog-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
-  `.remove()` itself.
+  `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
+  dispatch and remains pending/mounted when a listener calls `preventDefault()`.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
   tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each token chains through Web
   Awesome's matching `*-on-loud` semantic role and has contrast-tested standalone light/dark
@@ -7671,7 +7750,9 @@ library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherw
 Since CSS alone can't parameterize `:nth-child` on a runtime prop, `<lr-chip-group>` reaches
 directly into the light DOM and sets each excess child's own `hidden` property once `max-visible` is
 exceeded — the same approach `<lr-split>` uses to set each panel's inline `flex`/`order`, rather
-than a stylesheet-only solution.
+than a stylesheet-only solution. It observes live author changes to each managed child's `hidden`
+state and restores the latest author-owned value when ownership ends or the group disconnects;
+reconnecting reapplies the current collapsed state.
 
 **Known gotchas:**
 - `<lr-chip>`'s accessible remove-button label ("Remove {text}") is computed only from the default
@@ -7718,8 +7799,9 @@ resolves a full `keys` string with the same optional localization callback.
 **Slots:** default — an escape hatch for fully custom key-cap content (e.g. an icon instead of a
 text glyph). When it has any real (non-whitespace) content, it replaces the `keys`-driven rendering
 entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
-content to carry its own accessible name — a host-supplied `aria-label` attribute is still forwarded
-onto the rendered chip in either mode, custom content included.
+content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
+to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
+leaves the slotted content's own semantics exposed.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
@@ -7772,7 +7854,8 @@ track ancestor scroll/resize against — pass `rect.contextElement` (a real, sti
 near the virtual point) when one is available to give it something to observe; otherwise, or when
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
-`showAt()` behaves exactly as before.
+`showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
+the current open/anchor state unchanged.
 `hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
 dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
@@ -7794,7 +7877,8 @@ contextElement? }, options?: { returnFocusTo?: HTMLElement })` — same virtual-
 Escape returns focus to `options.returnFocusTo` or skips focus-return, re-call with fresh
 coordinates to re-anchor a moving point). Opens immediately, bypassing `delay`/`manual` (both are
 hover-debounce concerns for a slotted trigger, not a deliberate programmatic call); close it the
-same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, default content.
+same way any tooltip closes, by setting `open = false`. Non-finite coordinates or dimensions are a
+no-op. **Slots:** `trigger`, default content.
 **CSS parts:** `trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size`
 (default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
@@ -7806,6 +7890,16 @@ not the shadow-private popup. Native triggers resolve that ID directly. `lr-butt
 intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
 author-provided descriptions are merged while open and restored when the trigger is replaced or
 the tooltip disconnects.
+
+Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
+default-slot subtree — including inside a nested custom element's open shadow root — the popup
+promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
+from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+While open, rootless custom-element content receives a bounded initialization grace period for an
+upgrade or newly attached open shadow root; later observable content mutations start a fresh
+grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
+work for a legitimate custom element that intentionally has no shadow root. Use `lr-popover` when
+click-to-open ownership is desired.
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
@@ -7852,7 +7946,9 @@ names `[part="base"]`'s `role="status"`; unset falls back to the localized "Load
 **Events:** none.
 
 **Slots:** default — optional label text. `label-placement="after"` renders it inline next to the
-indicator; `'none'` (the default) keeps it visually clipped but still in the DOM.
+indicator and its text becomes the status name unless `aria-label` overrides it. `'none'` (the
+default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
+the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
 
 **CSS parts:** `base` (the `role="status"` wrapper), `spinner` (the animated ring; `aria-hidden`),
 `label` (the default-slot wrapper).
@@ -7869,7 +7965,8 @@ A determinate or indeterminate progress bar.
 **Properties:** `value`, `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
 `accessibleLabel` (`accessible-label`).
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
-determinate.
+determinate. When `show-value` exposes label-slot text, that visible text names the progressbar
+unless host `aria-label`/`accessible-label` overrides it; live label mutations stay synchronized.
 
 **Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
 **Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
@@ -7885,7 +7982,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0`, `max: number = 100`, `indeterminate: boolean = false`
 (reflected), and `accessibleLabel: string = ''` (attribute `accessible-label`; unset falls back to
-the localized "Progress"). Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
+the visible default-slot text when supplied, then the localized "Progress"). Non-finite/out-of-range
+`value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
@@ -7955,8 +8053,14 @@ A keyboard-accessible star rating control with slider semantics. **Properties:**
 `lr-change` with `{ value }`. **CSS parts:** `base`, `star`, `star-fill` (the filled overlay
 inside each star, clipped to the fractional `precision` value). **Themeable custom properties:**
 `--lr-rating-fill` (default `--lr-color-warning` — filled-star color), `--lr-rating-empty-color`
-(default `--lr-color-border` — unfilled-star color), and `--lr-rating-size` (default
+(default `--lr-color-border` — unfilled-star color, also retained during hover preview), and
+`--lr-rating-size` (default
 `--lr-font-size-xl` — star size).
+
+Pointer selection resolves the position within the clicked star and snaps upward to `precision`
+(with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
+input as well as keyboard/value updates. The semantic slider's base keeps a 40×40px minimum
+activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
 
 **Additional API surface:**
 
@@ -8042,7 +8146,7 @@ Package-level CSV utilities (used internally, also exported for standalone use �
 escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
 ```ts
-escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes formula-injection (=,+,@,tab,CR) with a leading apostrophe — a bare leading '-' is deliberately left alone (OWASP guidance: it's not itself formula syntax, and guarding it would mangle ordinary negative numbers)
+escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string): void      // triggers a browser download
 ```
@@ -8054,6 +8158,10 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
   for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
+- `open` is valid only when `formats` contains more than one choice. An invalid open request is
+  normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
+  or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves
+  an own enumerable column literally named `__proto__`.
 - the multi-format menu (`role="menu"`) supports full arrow-key navigation — ArrowUp/ArrowDown move
   between items (opening the menu and seeding the right one focused, if it was closed), Home/End
   jump to the first/last item once open, Escape closes it and returns focus to the trigger button,
@@ -8103,6 +8211,8 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 - best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
   and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
   with the intended text so a consumer can always show its own confirmation/fallback UI.
+- Changing `value` clears any in-progress "Copied" feedback immediately, so the confirmation can
+  never describe stale text.
 
 **Additional API surface:**
 
@@ -8169,7 +8279,9 @@ stack overflow on cyclic `data`.
 - `collapsedDepth?: number` (attribute `collapsed-depth`) — nodes at or beyond this nesting depth
   (root = `0`) start collapsed; omitted/`undefined` means nothing auto-collapses
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
-  viewer scrolls internally past this height instead of growing the page
+  viewer scrolls internally past this height instead of growing the page. Values that do not parse
+  as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
+  `--lr-json-viewer-max-height` in control
 - `copyable: boolean = false` (reflected) — shows copy-to-clipboard affordances: one for the whole
   value, plus one per node
 - `search: string = ''` — case-insensitive substring match against keys/values; matches are
@@ -8196,7 +8308,8 @@ search query, match count, or active-match cursor changes, from `runSearch()`/`s
 
 **CSS parts:** `base` (root scroll container, respects `max-height`), `toolbar` (wrapper around the
 top-level copy button, only rendered when `copyable`), `tree` (wrapper around the rendered node
-tree), `key` (an object property key or array index label, `data-match` while it matches `search`,
+tree; a host `aria-label` is forwarded here), `row` (every structural opening/value and
+closing-delimiter row), `key` (an object property key or array index label, `data-match` while it matches `search`,
 `data-active` while it is the current `searchNext()`/`searchPrevious()` cursor position),
 `value` (a primitive value's text — carries `data-type` of
 `string`/`number`/`boolean`/`null`/`undefined`/`circular` for per-type coloring, `data-match`
@@ -8214,6 +8327,8 @@ until `max-height` is set), `--lr-json-viewer-font` (default `var(--lr-font-mono
 box-shadow, of a key/value that currently matches `search`. Component-scoped indirection over the
 shared `--lr-color-warning-quiet` token, so a consumer can retheme just this search-match highlight
 without repainting every other warning-toned surface that reads the same shared token;
+`--lr-json-viewer-row-hover-bg` (default `var(--lr-color-brand-quiet)`) — structural-row hover
+background;
 `--lr-json-viewer-active-outline` (default `var(--lr-focus-ring-color)`) — outline color for the
 current imperative search match; `--lr-json-viewer-string-color` (default
 `var(--lr-color-success)`), `--lr-json-viewer-number-color` (default `var(--lr-color-brand)`),
@@ -8252,6 +8367,8 @@ html`<lr-json-viewer .data=${apiResponse} copyable max-height="24rem" search=${q
   a different shape.
 - Per-node copy buttons call `stopPropagation()` on click so clicking one doesn't also toggle the
   row's expand/collapse state.
+- Whole-value copy always produces text, including for a root `undefined`, `Symbol`, or function
+  that native `JSON.stringify()` would otherwise return as no value.
 
 ---
 
@@ -8370,6 +8487,9 @@ accessible phase-transition announcements.
 `paused`), `lr-pause-change` (`detail: boolean` — fired when `paused` changes via the built-in
 button).
 
+**Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
+including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
@@ -8396,14 +8516,16 @@ repainting every other component that reuses the same shared success token. Plus
 
 Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
 than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Reassigning `nextInMs` at any time restarts the countdown from that new
-value; pausing/resuming, or toggling `active`, starts or stops the ticker without discarding the
-current remaining time. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announced
-via an internal `<lr-live-region>` in polite mode.
+and timers were throttled. Assigning a *changed* `nextInMs` value starts a fresh deadline; assigning
+the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
+Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
+event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
+changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are
+announced via an internal `<lr-live-region>` in polite mode.
 
 **Known gotchas:**
-- there's no built-in "reset" or "extend" method beyond reassigning `nextInMs` — a host that wants to
-  push the deadline back out on user activity re-sets `nextInMs` itself.
+- `restart()` is the explicit reset/extend path when the configured delay value itself has not
+  changed.
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires
   `lr-pause-change` — that event is scoped to the built-in pause button's own toggle, not to
   `active`.
@@ -8558,8 +8680,11 @@ fresh `query` is the proxy for "the caret may have moved").
 - A caret that moves for a reason other than typing (e.g. a mouse click elsewhere in the text while
   the popover happens to still be open) is not separately tracked — force a re-measure by toggling
   `open` or reassigning `anchor`.
-- `activeIndex` resets to `0` whenever `query` or `items` changes, but not when only `anchor`
-  changes — reassigning `anchor` alone preserves whatever row was last highlighted.
+- `activeIndex` resets to `0` whenever `query`, `items`, or `filter` changes, but not when only
+  `anchor` changes — reassigning `anchor` alone preserves whatever row was last highlighted. If
+  fallback focus currently lives in the listbox and filtering removes every option, closing,
+  emptying, or disconnecting the popover returns focus to the connected anchor before removing the
+  active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
   here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the
@@ -8643,6 +8768,7 @@ consumer can compute or unit-test the same alignment without instantiating the e
   explicit performance-risk opt-out.
 - the computed `diffOps` state is cached and recomputed only when `oldText`, `newText`, or
   `maxLines` changes. Copy-confirmation and other unrelated renders reuse the cached alignment.
+- Changing either `oldText` or `newText` clears any in-progress "Copied" feedback immediately.
 
 **Additional API surface:**
 
@@ -8672,7 +8798,9 @@ Dependency-free SVG path icon: no icon font, no sprite sheet, no network fetch. 
 **Slots:** (default) — custom SVG geometry, rendered only when neither `path` nor a known `name`
 resolves. Slotted nodes are cloned into the component-owned `<svg>` (Chromium does not paint SVG
 geometry distributed through a slot that sits inside an SVG), so pass plain `<path>`/`<circle>`/
-`<g>` elements, not a whole `<svg>`.
+`<g>` elements, not a whole `<svg>`. Attribute and descendant mutations to assigned geometry are
+mirrored live while connected; observation stops on detach and a reconnect synchronizes the latest
+source tree.
 
 **CSS parts:** `svg`
 
@@ -8682,7 +8810,8 @@ the surrounding text with no configuration.
 
 ## `lr-divider`
 
-A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`.
+A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
+`aria-label` is forwarded to that inner semantic owner.
 
 **Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected).
 
@@ -8709,6 +8838,9 @@ inherited `lang`; see `llms/shared.md`) and is passed to `Intl` as `undefined` w
 empty, which means "the runtime's default locale". Every `Intl` instance is pulled from the shared
 memoized `internal/intl-cache.ts` (one instance per locale + options pair, LRU-capped), so these are
 cheap to use per row in a large table or feed.
+
+Malformed runtime options fall back to a safe option set without discarding an otherwise-valid
+effective locale. Only a malformed locale itself falls back to the runtime default.
 
 **Properties:**
 - `value: number = 0`
@@ -8764,7 +8896,8 @@ name is localized too. Text-only host — no CSS parts, events, or own tokens; l
 
 The unit ladder is fixed at `byte`, `kilobyte`, `megabyte`, `gigabyte`, `terabyte`, `petabyte` and
 saturates at the top; the index is `floor(log|value| / log(unitStep))`, and `0` always formats as
-bytes. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
+bytes. Magnitudes below one byte, including negative values, stay in the `byte` unit rather than
+forming a negative unit index. `unitStep` is normalized to a finite number `> 1` (a step of exactly `1` would divide by
 `log(1) === 0`) falling back to `1024`; `decimals` is clamped to `[0, 10]` — an out-of-range value
 would otherwise throw a `RangeError` from `maximumFractionDigits`. Note that `unitStep: 1024` still
 prints the SI-named `kB`/`MB` units, not `KiB`/`MiB` — `Intl` has no binary unit names.
@@ -8823,7 +8956,8 @@ field currently has focus.
 
 **Events:** `input` (every keystroke), `change` (a field blur where the composite value newly
 transitioned), plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
-leaves all three fields, not per field-to-field Tab). `input`/`change` detail is
+leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
+exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
 
@@ -8942,6 +9076,8 @@ directional `fade-*` effects).
 - The host is `display: block`. For an inline text-fragment swap inside a sentence, override
   `lr-random-content { display: inline; }` from outside; `display: contents` is deliberately not
   used (a11y-tree inconsistencies across engines).
+- Slot/focus microtasks and autoplay never queue new selection work while detached; reconnecting
+  starts again from current state rather than replaying stale work.
 
 ## `lr-tour`
 
@@ -8956,8 +9092,8 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   `start()`/`end()`
 - `steps: TourStep[] = []` (attribute: false) — empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to
-  `[0, steps.length - 1]`, including for a direct property/attribute write that bypasses
-  `goToStep()`
+  `[0, steps.length - 1]` as a finite integer, including for a direct property/attribute write that
+  bypasses `goToStep()`; fractions floor and non-finite values fall back to `0`
 - `placement: Placement = 'bottom'` (reflected) — tour-level Floating UI default, overridable per
   step; resolved through `rtlAwarePlacement()`
 - `distance: number = 12` — px offset between target and popover. Tour-level only (no per-step
@@ -8974,9 +9110,11 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 **Exported types:** `TourStep { id: string; target: TourTarget; heading: string; content?: string;
 placement?: Placement; spotlightPadding?: number; interactiveTarget?: boolean; hidePrevious?: boolean }`;
 `TourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
-`ownerDocument.querySelector` (top-level light DOM only), and every form is re-resolved on each step
-activation, never cached, so a target mounted later still resolves. `heading` is required and
-becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
+`ownerDocument.querySelector` (top-level light DOM only). Every form resolves exactly once when the
+step becomes active and is kept as one connected snapshot for that activation, then resolves again
+on a later activation/reconnect. Invalid selectors, throwing resolvers, non-`HTMLElement` results,
+and detached elements use the normal missing-target path instead of throwing. `heading` is required
+and becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
 `TourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
@@ -8998,8 +9136,9 @@ step: a consumer needing different rich content per step swaps the slotted child
 
 **CSS parts:** `backdrop` (the full-viewport `<svg>` scrim with the cutout, `aria-hidden`),
 `spotlight` (the decorative ring around the padded target rect, `pointer-events: none`),
-`popover` (the step panel, `role="dialog" aria-modal="true"`, `data-unanchored` when the target
-didn't resolve), `heading` (the `aria-labelledby` target), `body` (slot or `step.content`),
+`popover` (the step panel, `role="dialog"`, `aria-modal="true"` for default steps and `"false"` for
+an `interactiveTarget` step, `data-unanchored` when the target didn't resolve), `heading` (the
+`aria-labelledby` target), `body` (slot or `step.content`),
 `progress` (wrapper), `progress-text` (the "Step X of Y" text — an `aria-describedby` target),
 `progress-dot` (one decorative dot per step, `data-current` on the active one, `aria-hidden`),
 `footer` (the control row), `previous-button`, `skip-button`, `next-button` (the Next control's
@@ -9024,23 +9163,23 @@ rather than per component.
 **Known gotchas:**
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
-  Set `step.interactiveTarget` to clip the backdrop around the target so clicks fall through — that
-  restores pointer reachability only. The focus trap still confines Tab to the popover regardless,
-  so for a keyboard-reachable demonstrated interaction have the app's own listener call `next()`.
-- Uses the overlay manager with `modal: false` deliberately: `modal: true` would mark the whole page
-  (including the target, which lives outside this element) `inert`. `role="dialog"` +
-  `aria-modal="true"` are still rendered on the panel so screen readers confine their virtual cursor.
+  A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to
+  clip the backdrop around the target, switch the panel to nonmodal semantics, and install an
+  explicit two-way Tab route between the panel and the live target, so both pointer and keyboard
+  interaction remain reachable.
 - Each step transition mounts a genuinely new popover node (keyed on `step.id`) so focus reliably
   re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
 - No `Home`/`End` shortcut and no click-to-jump progress dots (unlike `lr-stepper`): later steps may
   depend on an earlier step's side effect having run. `goToStep()` is available for a caller that
   knows better. ArrowRight/ArrowLeft do move between steps (swapped under RTL), except while focus
   is in an `input`/`textarea`/`contenteditable` inside slotted content.
-- A direct `HTMLElement` target is re-checked for `isConnected` on every activation and treated as
-  missing if it was remounted — prefer a selector string or resolver function for targets that can
-  be replaced mid-tour.
+- A direct `HTMLElement` target must be connected at activation and is treated as missing after a
+  remount; prefer a selector string or resolver function for targets that can be replaced between
+  activations.
 - The active step's target is `scrollIntoView({ block: 'center' })`'d on activation, smoothly unless
   `prefers-reduced-motion: reduce`.
+- Changing `placement`, `distance`, or tour-level `spotlightPadding` while open repositions/repaints
+  the current step live without scrolling again or emitting a duplicate `lr-tour-target-missing`.
 
 # Media, files & maps (`components/media/`)
 
@@ -9299,7 +9438,9 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   content, sanitize anything derived from user input first; prefer `label` (`Popup.setText()`,
   escaped) when the content is plain text. A marker whose `color` changes for a persisting `id`
   can't be recolored in place (no `Marker.setColor()`) and is torn down/reconstructed instead — see
-  gotchas.
+  gotchas. Entries with non-finite coordinates or latitude outside `[-90, 90]` are skipped without
+  aborting valid siblings. `color` is used only when the browser accepts it as CSS `color`;
+  declaration breaks and `url()` paint servers fall back to MapLibre's default marker color.
 - `dataLayers: GeoJsonDataLayer[] = []` (attribute: false) — `GeoJsonDataLayer { sourceId: string;
   geojson: GeoJSON.Feature | GeoJSON.FeatureCollection; tone?: 'accent' | 'success' | 'warning' |
   'danger' | 'neutral' }`. Each entry adds one GeoJSON source plus three layers
@@ -9311,10 +9452,9 @@ and additive plain-GeoJSON `dataLayers`, plus a raw `map` escape hatch for anyth
   is: an entry whose `sourceId` persists across a `dataLayers` reassignment gets its GeoJSON updated
   in place (`setData()`), one that's dropped has its source/layers removed, and a genuinely new
   `sourceId` gets a new source/layers — nothing leaks on removal, style change, or disconnect.
-- `label: string = ''` — accessible name for the map region, applied as `[part="base"]`'s
-  `aria-label`. A plain `aria-label` attribute on the host itself is honored as a fallback when
-  `label` is left unset, matching `lr-slider`/`lr-checkbox`/`lr-switch`; with neither set, it
-  falls back to the localized `'map'` message.
+- `label: string = ''` — accessible-name fallback for MapLibre's actual focusable canvas. A plain
+  host `aria-label` takes precedence over `label`; with neither set, the canvas uses the localized
+  `'map'` message. The non-semantic `[part="base"]` wrapper is not named instead.
 
 **Getters:** `map` → the raw `maplibregl.Map` instance.
 
@@ -9373,6 +9513,10 @@ https://maplibre.org/maplibre-gl-js/docs/#esm.
   layer/source maplibre-gl knows about.
 - Point markers now have a declarative API (`markers`, above) with popup support — the `.map` escape
   hatch and manual `new maplibregl.Marker()` are no longer the only way to place pins.
+- A marker uses `label` as its accessible name, falling back to the localized map label. Popup
+  ownership is exposed through `aria-controls`/`aria-expanded`; an open popup is a named
+  `role="dialog"` and its close button is localized. The map canvas, markers, popups, and MapLibre's
+  own control strings all follow the component's effective locale.
 - a marker whose `color` changes for a persisting `id` is torn down and reconstructed (maplibre-gl's
   `Marker` has no `setColor()`) rather than mutated in place — this also closes any popup the user
   currently has open on that marker (a fresh, closed `Popup` is built for the new instance); an
@@ -9447,10 +9591,14 @@ file can be selected at a time.'`), and — for `'directory'` — the pre-existi
 itself. The region is cleared (and unrendered) as soon as a subsequent selection rejects nothing.
 
 **Slots:** default slot — custom dropzone content, overrides the `label` attribute text when
-provided. The accessible name always comes from `label` regardless, so icon-only slot content still
-announces correctly.
+provided. The semantic button's accessible name comes from `accessibleLabel`/host `aria-label`,
+then `label`, so icon-only slot content still announces correctly. Slotted content is a sibling of
+the button rather than nested inside it: links, buttons, inputs, and other interactive slotted
+controls keep their own activation and do not also open the picker; clicking non-interactive custom
+content still activates the dropzone.
 
-**CSS parts:** `base`, `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
+**CSS parts:** `base` (the native dropzone button, visually behind but semantically beside the
+slotted content), `input`, `status` (a visually-hidden `role="status" aria-live="polite"`
 element carrying the drag accept/reject announcement and the aggregate accepted/rejected count),
 `rejection` (a **visible** `role="alert"` region, rendered only while a rejection exists, listing
 each currently-rejected file next to a per-reason message — in addition to, never in place of, the
@@ -9725,7 +9873,9 @@ type wins; filename extension fallback is used only for an empty or `application
 MIME type. Unknown values return a generic file result.
 
 **Properties:** `mimeType` (attribute `mime-type`), `name`, `size` (bytes; `0` renders no size),
-`label`, `decorative`, and `variant: 'icon' | 'label'`.
+`label`, `decorative`, and `variant: 'icon' | 'label'`. A host `aria-label` wins over the computed
+localized file-type/size name. `decorative` changes the semantic owner to presentation and renders
+`aria-hidden="true"` explicitly.
 
 **CSS parts:** `base`, `icon`, `label`, and `size`.
 
@@ -9762,7 +9912,9 @@ final.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"16rem"`); once set,
   overrides the `--lr-media-card-max-height` custom property for this instance only (applied
   inline on `[part="base"]`, so it reliably wins over a `:host{}`-declared default from outside the
-  shadow root) — same contract as `<lr-document-preview>`'s identically-named prop.
+  shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
+  not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
+  the stylesheet token in control.
 - `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
   `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
   box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
@@ -9864,10 +10016,10 @@ capability as a row.
   attribute.
 - `disabled: boolean = false` (reflected)
 - `triggerLabel?: string` (attribute `trigger-label`) — overrides the single-capability trigger
-  button's `aria-label`, which otherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.
-  `'Attach files'`); only affects the single-capability button (`[part='trigger']`) — the
-  multi-capability menu's own trigger keeps its fixed `'Add attachment'` label regardless. Unset
-  (the default) keeps the built-in English default.
+  button's accessible-name fallback, which otherwise comes from the localized capability metadata
+  (e.g. `'Attach files'`); only affects the single-capability button (`[part='trigger']`). The
+  multi-capability trigger uses its localized `'Add attachment'` fallback. A host `aria-label`
+  takes precedence on either trigger shape.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 
@@ -9880,8 +10032,8 @@ default) — fired when the `camera` / `audio` capability is activated; this com
 capture UI of its own, the host owns everything from here (there's no single right answer for
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
-blob to `<lr-attachment-chip>`). Internal `focus`/`blur` from the hidden input are re-emitted as
-host events.
+blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
+are re-emitted as bubbling, composed host events; the hidden file input is not the focus owner.
 
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
@@ -9918,6 +10070,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 - The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
+- Setting `disabled` closes an open capability menu, disables its items as well as the trigger, and
+  discards a native file selection that arrives after the component became disabled.
 
 **Additional API surface:**
 
@@ -9951,10 +10105,10 @@ it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 
 **Events:** none.
 
-**Slots:** default slot — icon/glyph content (e.g. an inline SVG), shown in place of the image and
-initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role glyph. Takes priority over both
-`src` and `initials`. The glyph is treated as decorative (`aria-hidden`) — set `alt` alongside it
-for an accessible name.
+**Slots:** default slot — icon/glyph content (e.g. an inline SVG or non-whitespace text/emoji),
+shown in place of the image and initials, e.g. to mark a chat avatar as "AI" vs. "user" with a role
+glyph. Takes priority over both `src` and `initials`. The glyph is treated as decorative
+(`aria-hidden`) — set `alt` alongside it for an accessible name.
 
 **CSS parts:** `base` (the outer circle/square container), `icon` (wrapper around the slotted
 icon/glyph, only shown while the slot has assigned content), `image` (the `<img>`, only rendered
@@ -9983,7 +10137,8 @@ override it on the element for a size the built-in scale doesn't cover. Plus sha
 
 **Known gotchas:**
 - an image load failure falls back to `initials` automatically. Changing `src` clears the failure
-  state so the replacement URL gets its own load attempt.
+  state so the replacement URL gets its own load attempt, including when a later transition returns
+  to a URL that failed previously.
 - when `alt` or host `aria-label` supplies a name, the base preserves that name through the
   initials fallback while hiding duplicate initials text from assistive technology.
 
@@ -10043,6 +10198,8 @@ backgrounded circle around the button; only rendered once loaded and error-free)
 - both `image` and `canvas` stay mounted at all times (never `display: none`/removed) so the
   browser's native decode loop keeps running while visually covered; only opacity and `aria-hidden`
   swap.
+- reduced-motion arbitration is re-evaluated on every reconnect, so a preference change made while
+  the element was detached cannot leave `playing` stale.
 
 **Additional API surface:**
 
@@ -10079,7 +10236,7 @@ Declaratively animates one slotted element through the native Web Animations API
   `threshold: number | number[] = 0` (both attribute: false) plus `rootMargin: string = '0px'`
   (attribute `root-margin`) configure that observer.
 - `currentTime: number` — the underlying `Animation.currentTime` (`0` when no animation exists);
-  writable, forwarded to the animation when one exists.
+  writable, forwarded to the animation when one exists. Non-finite assignments are ignored.
 
 **Methods:** `start()` (sugar for `play = true` — named `start` because `play` is already a
 property), `pause()` (`play = false`), `finish()`, `cancel()`.
@@ -10152,6 +10309,9 @@ badge label. `size` swaps it per tier (`var(--lr-font-size-xs)` at `sm`, `var(--
 caps read at the same optical weight; override it alongside `--lr-avatar-font-size` on the avatars
 themselves when tuning a custom tier.
 
+The overflow badge keeps a 40×40px minimum activation target at `sm`, `md`, and `lg`; this does not
+change the visible avatar circles themselves.
+
 **Optional peer deps:** none.
 
 ```html
@@ -10189,16 +10349,17 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
-- `showCounter: boolean = true` (attribute `show-counter`) — shows `[part="counter"]` and its
-  live-region announcement.
+- `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
+  The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-zoomable-frame>`, which does the
   normalizing.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
 
-**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `reason` defaults to `'api'`
-and is forwarded as the close event's detail.
+**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
+index without changing state or emitting `lr-index-change`; `reason` defaults to `'api'` and is
+forwarded as the close event's detail.
 
 **Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks
@@ -10243,12 +10404,14 @@ photo content.
 
 ## `lr-qr-code`
 
-Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`, `label`,
-`size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas owns `role="img"`;
-its accessible name uses `label`, host `aria-label`, then `value`. Empty values render an empty state.
+Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
+`label`, `size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas
+owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`. Empty
+values render an empty state.
 **CSS parts:** `base`, `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
-`--lr-qr-code-fill` and `--lr-qr-code-background`. Call `refreshTheme()` after external theme changes
-when the computed QR colors need to be redrawn immediately.
+`--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
+changes redraw automatically. Call `refreshTheme()` only for consumer-owned token changes that
+aren't represented by those signals.
 
 ## `lr-image-viewer`
 
@@ -10278,6 +10441,11 @@ zoom }`), `lr-rotation-change` (`detail: { rotation }`), `lr-fit-change` (`detai
 **CSS parts:** `base`, `toolbar`, `fit-control`, `rotate-button`, `annotate-toggle`, `frame` (the
 embedded `lr-zoomable-frame`), `image-wrapper`, `image`, `highlight-layer`, `highlight` (carries
 `data-tone`/`data-active`), `highlight-label`, `annotation-box`, and `error`.
+
+While `annotatable`, `image-wrapper` is a named `role="group"` with the localized annotation hint.
+Only `region` highlights whose `rect` contains finite numeric `x`/`y`/`width`/`height` and
+nonnegative dimensions are rendered; malformed rectangles are omitted rather than reaching inline
+styles or anchor hit testing.
 
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
@@ -10318,9 +10486,17 @@ number[] = []` (attribute: false), and `tracks: LyraAvTrack[] = []` (attribute: 
 `LyraAvCue = { id, start, end?, text, speaker? }`; `LyraAvTrack = { src, kind: 'subtitles' |
 'captions' | 'descriptions', srclang, label, default? }`.
 
-**Methods:** `play()`, `pause()`, and `toggle()` proxy the native media element. `seek(seconds)`
-sets `currentTime` and forces an immediate `lr-time-change`. `search(query)` resolves the match
-count; `searchNext()`/`searchPrevious()` wrap; `clearSearch()` resets.
+Runtime numeric input is normalized before it reaches media, canvas, or `Intl`: cue/highlight times
+and waveform peaks are clamped to their valid ranges; non-finite native duration/current time
+cannot leak into state or events. `rates` keeps only unique finite values in the supported
+`0.0625..16` range, while always including the normalized current `playbackRate`.
+
+**Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
+promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
+`toggle()` proxy the native element; an internal toggle that cannot start playback renders the
+error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
+`lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap;
+`clearSearch()` resets.
 
 **Events:** `lr-play`, `lr-pause`, `lr-load` (`detail: { duration, kind }`), `lr-time-change`
 (`detail: { currentTime }`, throttled to at most 4/s while playing plus one extra per `seek()`),
@@ -10389,9 +10565,12 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   unknown runtime attribute/property values fall back to `line` before reaching Chart.js
 - `labels: string[] = []` (attribute: false)
 - `datasets: Series[] = []` (attribute: false) — `Series { label: string; data?: (number|null)[];
-  points?: {x,y,label?}[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
+  points?: ChartPoint[]; color?: string|string[]; fill?: boolean; width?: number; dash?: boolean;
   noTooltip?: boolean; axis?: 'y'|'y2'; pointColors?: string[]; pointRadius?: number|number[];
-  segmentColors?: string[]; type?: 'line'|'bar' }`
+  segmentColors?: string[]; type?: 'line'|'bar' }`. Both the package root and granular chart entry
+  export `ChartPoint { x: number; y: number; r?: number; label?: string }`: `r` is the bubble
+  radius, and the optional per-point `label` is retained by events, CSV export, keyboard
+  announcements, generated summaries, and the accessible table.
   - `pointRadius` takes a single number (applied to every point) **or** an array matching `data`'s
     length that sizes each point independently — passed straight through to Chart.js, which
     supports both natively. Useful for emphasizing a single outlier or the latest reading without
@@ -10402,7 +10581,11 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering exactly as before.
-- `legend: boolean = false`
+- `legend: boolean = false` — renders a wrapping DOM legend whose keyboard-operable buttons toggle
+  dataset visibility. The DOM surface preserves long public labels that a canvas legend would clip.
+  Its pressed state honors an effective dataset's declarative `hidden` value before Chart.js is
+  ready and across chart type/plugin rebuilds, while an in-place redraw preserves an explicit
+  legend-button toggle.
 - `legendPosition: LyraChartLegendPosition = 'top'` (attribute `legend-position`) — places the
   legend at `top`, `right`, `bottom`, or `left`; `auto` chooses right above 480px and bottom below
   that allocation width
@@ -10440,6 +10623,11 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
 - `config?: Partial<ChartConfiguration>` (attribute: false) — deep-merged over the generated
   config; any nested key wins without clobbering sibling generated keys. This is the raw Chart.js
   escape hatch, so a caller-supplied `config.type` is passed through rather than normalized.
+  Explicit `config.data.labels` and `config.data.datasets` arrays are authoritative independently:
+  an omitted member still comes from the simplified `labels`/`datasets` properties, while an
+  explicit array replaces that generated member rather than concatenating with it. This effective
+  model drives canvas rendering, `appendData()`, export, the accessible name/summary, keyboard
+  navigation and activation events, the DOM legend, and the generated fallback table.
 - `accessibleLabel: string = ''` (attribute `accessible-label`) — canvas name override; a host
   `aria-label` has highest precedence
 - `accessibleDescription: string = ''` (attribute `accessible-description`) — overrides the
@@ -10450,15 +10638,23 @@ Chart.js wrapper every other `lr-*-chart` tag subclasses; supports both a simpli
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
 - `appendData(label, values, maxPoints?)` — appends one aligned numeric category and optionally
-  keeps only the newest `maxPoints`; point-based scatter/bubble series are left unchanged
+  keeps only the newest `maxPoints`. Each labels/datasets member is written back to the surface
+  that owns it: an explicitly overridden `config.data` member stays in `config`, while an omitted
+  member continues through the simplified property and retains its generated Chart.js styling.
+  Point-based scatter/bubble series are left unchanged because appending their x/y/r coordinates
+  needs a richer caller-defined contract.
 
 **Methods:** `resetZoom()` resets any active zoom/pan to the original view. `refreshTheme()` forces
 a redraw so the `--lr-chart-*` tokens below are re-read from the current computed style. A
 built-in `ThemeWatcher` now calls this automatically when `prefers-color-scheme` flips or an
 ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates — the most common
 theme-toggle mechanisms — so a consumer rarely needs to call it by hand; it remains public as the
-escape hatch for theme changes those signals can't observe. `exportData('csv' | 'png')` returns a
-spreadsheet-safe CSV snapshot or the current PNG data URL when Chart.js is loaded.
+escape hatch for theme changes those signals can't observe. Canvas redraw remains visibility-gated;
+when a DOM legend is present its computed swatch colors are refreshed too.
+`exportData('csv' | 'png')` returns a spreadsheet-safe CSV snapshot or the current PNG data URL
+when Chart.js is loaded. Numeric datasets retain the compact one-column-per-series CSV shape.
+Point datasets expand into `<series> x`, `<series> y`, and, when present, `<series> r` and
+`<series> label` columns so radius and per-point labels are not flattened away.
 
 The instance method `seriesPalette(): string[]` resolves the categorical series ramp
 (`--lr-color-chart-1..8`) through `getComputedStyle` and returns the concrete, theme-aware colors —
@@ -10484,20 +10680,26 @@ const series = [
 ```
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`, fired on zoom-complete and on
-`resetZoom()`), `lr-point-click` (fired when a click lands on, or nearest to — intersect-only —
-a data point/segment, for any chart type, not just bar; `detail: { datasetIndex: number, index:
-number, label: string | undefined, value: unknown }`)
+`resetZoom()`), `lr-point-click` (fired when pointer input lands on an intersecting data
+point/segment, when a generated-table value is activated, or when Enter/Space activates the
+keyboard-current canvas datum; `detail: { datasetIndex: number, index: number, label: string |
+undefined, value: unknown }`). For scatter/bubble points, `label` prefers the per-point label and
+`value` is the complete `ChartPoint`, including optional `r` and `label`.
 
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative; `center` —
 optional overlay content positioned at the chart area's center, useful for doughnut and pie totals.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center` (the
-chart-area-centered wrapper for the `center` slot), `error` (`role="alert"` message rendered in
-place of `canvas` when the optional `chart.js` peer dependency fails to load)
+**CSS parts:** `base`, `plot` (the fixed-height canvas/overlay region), `canvas`, `legend` (the
+wrapping DOM legend), `legend-item` (a dataset-visibility button), `legend-swatch`,
+`reset-zoom-button`, `description`, `data-table`, `center` (the chart-area-centered wrapper for the
+`center` slot), `error` (`role="alert"` message rendered in place of `canvas` when the optional
+`chart.js` peer dependency fails to load)
 
 **Themeable custom properties:** `--lr-chart-height` (set programmatically on the host from the
-`height` property — must be read from the host, not a shadow-tree descendant, since custom
-properties only cascade downward); `--lr-chart-grid-color` (default `var(--lr-color-border)`),
+`height` property; sizes the `plot` region and the host's minimum block size, while a visible table
+or wrapping legend grows the host in normal flow — it must be read from the host, not a shadow-tree
+descendant, since custom properties only cascade downward);
+`--lr-chart-grid-color` (default `var(--lr-color-border)`),
 `--lr-chart-tick-color` (default `var(--lr-color-text-quiet)`), `--lr-chart-legend-color`
 (default `var(--lr-color-text)`), `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`),
 `--lr-chart-tooltip-text` (default `var(--lr-color-text)`) — each resolved fresh via
@@ -10533,9 +10735,14 @@ subset actually used.
   property values fall back to `line`. Each typed `lr-*-chart` subclass (e.g.
   `llms/components/lr-bar-chart.md`) locks its *own* `type` via a real prototype accessor — a
   genuine runtime lock, not just a compile-time default.
-- a built-in `ThemeWatcher` auto-retheme an already-drawn chart when `prefers-color-scheme` flips or
-  an ancestor's `class`/`style`/`data-theme`/`data-color-scheme` attribute mutates (coalesced to one
-  redraw). `refreshTheme()` stays public for out-of-band theme changes those signals can't observe.
+- a built-in `ThemeWatcher` automatically rethemes an already-drawn chart when
+  `prefers-color-scheme` flips or an ancestor's `class`/`style`/`data-theme`/`data-color-scheme`
+  attribute mutates (coalesced to one redraw). `refreshTheme()` stays public for out-of-band theme
+  changes those signals can't observe.
+- the focusable canvas is an interactive `application`, not a static image: Arrow keys move through
+  finite data, Home/End jump to the endpoints, and Enter/Space activates the current datum. Its
+  localized `aria-roledescription` identifies the application as a chart; the generated table is
+  the non-canvas alternative.
 - generated `scales` are keyed off the *effective* type (`config.type` ?? `type`, see
   `effectiveType()`) and are type-appropriate: no scale at all for `type="pie"`/`"doughnut"` (true of
   `<lr-chart type="pie">` directly, not just the `lr-pie-chart`/`lr-doughnut-chart` subclasses),
@@ -10561,11 +10768,14 @@ subset actually used.
   single redraw fires once it re-enters the viewport). Independently, `updated()` only reaches
   Chart.js when at least one of `type`, `labels`, `datasets`, `legend`, `legendPosition`, the
   internal resolved auto legend position, `valueFormatter`, `area`, `height`, `xLabel`, `yLabel`,
-  `y2Label`, `beginAtZero`, `horizontal`, `stacked`, `config`, `zoom`, `locale`, `strings`, or the
-  internal loading state actually changed in that update (so an unrelated property/state update, or
-  a bare `requestUpdate()`, draws nothing). `refreshTheme()` calls `draw()` directly and is
-  unaffected by either gate — it always redraws, since a theme change isn't reflected in any tracked
-  property.
+  `y2Label`, `beginAtZero`, `horizontal`, `stacked`, `dataLabels`, `stackTotals`, `config`, `zoom`,
+  `locale`, `strings`, or the internal loading state actually changed in that update (so an
+  unrelated property/state update, or a bare `requestUpdate()`, draws nothing). Resize callbacks
+  ignore unchanged inline sizes and coalesce into one animation-frame task; a responsive legend
+  position change and its reactive update share that same single redraw. `refreshTheme()`, resize,
+  optional-plugin completion, and histogram data changes all use the same connected/visible gate.
+  A theme refresh may still rerender the cheap DOM legend while off-screen so its computed swatches
+  do not go stale, but it does not repaint the canvas there.
 - Chart.js receives `effectiveLocale`; generated summary values use the same locale. Cartesian y/y2
   axes swap logical sides under RTL, and host `aria-label` is forwarded to the canvas and data-table
   caption.
@@ -10585,9 +10795,11 @@ passthrough). Not a subclass of `LyraChart`.
 - `type: LyraLiteChartType = 'bar'` — `'bar' | 'line'`
 - `labels: string[] = []` (attribute: false)
 - `datasets: LiteSeries[] = []` (attribute: false) — `LiteSeries { label: string; data:
-  (number|null)[]; color?: string }`
+  (number|null)[]; color?: string }`; `color` accepts a valid CSS `color`, while invalid values,
+  declaration-breaking input, and `url()` paint servers fall back to the built-in palette
 - `legend: boolean = false`
-- `height: string = '280px'`
+- `height: string = '280px'` — accepts a valid CSS `height`; invalid values, declaration-breaking
+  input, and `url()` leave the stylesheet's `--lr-chart-height` default/consumer override in control
 - `xLabel: string = ''` (attribute `x-label`)
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
@@ -10614,16 +10826,19 @@ passthrough). Not a subclass of `LyraChart`.
 - `maxLabels?: number` (attribute `max-labels`, type Number) — decimates which category axis labels
   actually render *text* when `labels.length > maxLabels` (bars themselves are never decimated, only
   their axis `<text>` labels): always shows the first and last label, and roughly evenly distributes
-  the rest between them. Works in either `layout` mode. Unset (the default) renders every label,
-  unchanged.
+  the rest between them. Works in either `layout` mode. Unset (the default) renders every label.
+  Each rendered category label is allocation-aware: narrow/long text is ellipsized before paint,
+  with the complete caller label retained as its accessible name.
 - `barX?: (index: number) => number` (attribute: false, bar type only) — overrides the internal
   per-category x-origin formula (`plotX + i * slot`) used by both bars and their axis labels, so a
   consumer can pixel-align this chart's bars with a sibling `<lr-heatmap>` calendar's week columns
   (see that component's own `columnX`) by supplying the same coordinate function to both. Unset (the
   default) is the original formula, unchanged.
 - `pointText?: (label: string, value: number, datasetIndex: number) => string` (attribute: false) —
-  overrides the per-bar/per-point `<title>`/`aria-label` tooltip text (mirrors `lr-heatmap`'s
-  `cellText`). Falls back to the built-in raw-value template when unset.
+  overrides the per-bar/per-point native SVG `<title>` text (mirrors `lr-heatmap`'s `cellText`).
+  That one `<title>` supplies both the browser tooltip and the mark's accessible name; the component
+  does not duplicate the same string through `aria-label`. Falls back to the built-in raw-value
+  template when unset.
 - `legendText?: (label: string, datasetIndex: number) => string` (attribute: false) — appends
   formatter-supplied text (e.g. a value or percentage share) after each series' label in the
   built-in legend row, mirroring `pointText`/`tickFormat`'s opt-in-hook convention. Falls back to
@@ -10644,14 +10859,14 @@ passthrough). Not a subclass of `LyraChart`.
   ignores it entirely.
 - `hideAxis: boolean = false` (attribute `hide-axis`) — suppresses gridlines/y-axis tick labels
   altogether; x-axis category labels (rendered separately) are unaffected.
-- `selectedIndex: number[] = []` (attribute: false) — category indexes to mark `data-selected` on
-  every bar/segment at that index, across every dataset — e.g. to highlight a whole selected week's
-  column in a stacked chart. Empty (the default) reproduces the exact existing output: no bar
-  carries `data-selected`. This component takes no opinion on what the highlight looks like, only
-  which bars it applies to — style the highlight via the `--lr-lite-chart-selected-outline-color`
-  custom property (documented below). Note `::part(bar)[data-selected]` is **invalid CSS** — Shadow
-  Parts forbids an attribute selector after `::part()` — so it silently never matches; the outline
-  is painted inside the shadow root and exposed through that token instead.
+- `selectedIndex: number[] = []` (attribute: false) — applies to every interactive data mark for
+  both `type="bar"` and `type="line"`: matching bars and line points receive `data-selected` and
+  explicit `aria-pressed="true"`; all other marks render `aria-pressed="false"`. For a multi-series
+  chart, the category index selects the matching mark in every dataset. Empty is the default.
+  Style the built-in highlight through `--lr-lite-chart-selected-outline-color`. Note
+  `::part(bar)[data-selected]` and `::part(point)[data-selected]` are **invalid CSS** — Shadow Parts
+  forbids an attribute selector after `::part()` — so they silently never match; the outline is
+  painted inside the shadow root and exposed through that token instead.
 - `minBarHeight?: number` (attribute `min-bar-height`) — optional minimum visible bar height for
   small non-zero values
 - `accessibleLabel?: string` (attribute `accessible-label`) — SVG accessible-name override; a host
@@ -10659,9 +10874,11 @@ passthrough). Not a subclass of `LyraChart`.
 - `appendData(label, values, maxPoints?)` — appends one aligned category and optionally trims the
   oldest categories
 
-**Events:** `lr-point-click` — fired when a bar/point is activated (click, or Enter/Space while
-focused). `detail: { datasetIndex: number, index: number, label: string | undefined, value: number
-| null }` — same shape as `lr-chart`'s `lr-point-click`.
+**Events:** `lr-point-click` — fired for bars and line points on pointer activation or Enter/Space
+while focused. `detail: { datasetIndex: number, index: number, label: string | undefined, value:
+number | null }` — same shape as `lr-chart`'s `lr-point-click`. When different series' expanded
+line-point targets overlap, pointer activation selects the closest rendered point in two-dimensional
+screen space; an exact distance tie retains the point whose target received the click.
 
 **Methods:** `exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the current SVG
 markup. The method does not download a file; pair it with `lr-export-button` for download UX.
@@ -10676,13 +10893,13 @@ fresh, small SVG render is cheaper and more correct than a lossy cache.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` (each bar rect; carries
-`data-selected` when its category index is in `selectedIndex`), `line`, `point`, `legend`,
-`legend-item`, `legend-swatch`, `legend-text` (extra per-item text after the series label,
-rendered only when `legendText` is set), `live-region` (the current mark announcement for keyboard
-users), `data-list` (a visually hidden list of all plotted data points — single-series only),
-`data-table` (a visually hidden category×series data table, rendered instead of `data-list` when
-there is more than one dataset).
+**CSS parts:** `base`, `grid-line`, `axis-label`, `axis-title`, `bar` and `point` (each carries
+`data-selected` when its category index is in `selectedIndex`, with explicit pressed state on every
+mark), `line`, `legend`, `legend-item`, `legend-swatch`, `legend-text` (extra per-item text after
+the series label, rendered only when `legendText` is set), `live-region` (the current mark
+announcement for keyboard users), `data-list` (a visually hidden list of all plotted data points —
+single-series only), `data-table` (a visually hidden category×series data table, rendered instead
+of `data-list` when there is more than one dataset).
 
 **Screen-reader data alternative:** a single dataset renders the flat `data-list` (one `<li>` per
 plotted point, matching the roving-tabindex mark order). More than one dataset instead renders a
@@ -10699,10 +10916,9 @@ blank instead of reporting a misleading zero.
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
 `--lr-lite-chart-selected-outline-color` (default `var(--lr-color-brand)`) — the stroke drawn on
-`[part='bar'][data-selected]`, i.e. bars whose category index is in `selectedIndex` (bars only;
-`[part='point']` is never marked `data-selected`, and the stroke width is a fixed 2px). Unlike
-`lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this is
-plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
+selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`.
+Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
+is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
 `refreshTheme()` method needed (there's nothing to go stale).
 
 **Optional peer deps:** none. This is the point of the component.
@@ -10724,10 +10940,18 @@ plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution s
   always vertical.
 - No dual y-axis (`Series.axis: 'y2'`) — every series shares one y-axis/domain.
 - Series colors default to a fixed built-in 8-color categorical palette (round-robin by dataset
-  index) when `color` is unset — not configurable beyond passing `color` per series.
-- Bar/point elements are real focusable DOM nodes (`tabindex="0" role="button"`, each with its own
-  `aria-label`), so the `<svg>` itself uses `role="group"`, not `role="img"` — an "img" role would
-  conflict with genuinely interactive descendants (axe's `nested-interactive` rule).
+  index) when `color` is unset or invalid — not configurable beyond passing a valid CSS `color`
+  per series.
+- Bar/point elements are real focusable DOM nodes (`role="button"` with one roving `tabindex="0"`);
+  each native SVG `<title>` is the mark's sole accessible name and tooltip. The `<svg>` itself uses
+  `role="group"`, not `role="img"` — an image role would conflict with genuinely interactive
+  descendants (axe's `nested-interactive` rule).
+- Dense transparent hit regions expand toward 24px only while remaining inside the neighboring
+  mark's midpoint lane; stacked segments keep their own vertical region. This prevents a
+  later-painted mark from stealing pointer input from an adjacent datum. Cross-series line targets
+  are additionally arbitrated by two-dimensional screen distance.
+- In narrow allocations, category labels are ellipsized to their available lane and retain the
+  complete label through `aria-label`; SVG overflow is contained within the host.
 - Tick values use a standard "nice numbers" (1/2/5 × 10ⁿ) rounding step, not exact data min/max —
   intentional (readable axis labels), matches how most charting libraries pick tick steps.
 
@@ -10754,16 +10978,18 @@ of every entry in these lists.**
 (`show-data-table`), `chartArea` (readonly). `type` is the only member that differs: read-only,
 locked to this tag's value.
 
-**Methods:** `resetZoom()`, `refreshTheme()`.
+**Methods:** `appendData(label, values, maxPoints?)`, `exportData('csv' | 'png')`, `resetZoom()`,
+`refreshTheme()`.
 
 **Events:** `lr-zoom` (`detail: { zoomed: boolean }`), `lr-point-click` (`detail: { datasetIndex,
 index, label, value }`).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
-`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
-dependency fails to load — see `llms/components/lr-chart.md`).
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load — see
+`llms/components/lr-chart.md`).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -10790,9 +11016,9 @@ same set, so one rule retunes them together.
 - `type` truly is locked per subclass: `<lr-pie-chart type="bar">` or `el.type = 'bar'` at runtime
   is a genuine no-op (the accessor's setter silently ignores the write), not a footgun like a plain
   overridden class-field default would be.
-- `lr-bubble-chart` needs `Series.points` entries with an `x`/`y`/`r` triple, but `Series.points`
-  is typed as `{x, y, label?}[]` with no `r` field — cast the array through `as unknown as
-  Series['points']` (or a local `BubblePoint` type) when constructing bubble data.
+- `lr-bubble-chart` consumes the exported `ChartPoint` shape directly. Set `x`/`y`, optional `r`
+  for bubble radius, and optional `label` for the point-level accessible/event/export label; no
+  runtime cast is needed.
 
 ---
 
@@ -10820,16 +11046,20 @@ Bins `values` into `bins` equal-width buckets and renders as a bar chart (extend
   (`accessible-label`), `accessibleDescription` (`accessible-description`), `showDataTable`
   (`show-data-table`), `chartArea` (readonly).
 
-**Methods:** `resetZoom()`, `refreshTheme()` — both inherited.
+**Methods:** `resetZoom()`, `refreshTheme()` — both inherited; plus
+`appendData(_label, values, maxPoints?)`, which appends finite raw samples to `values` and
+optionally retains only the newest `maxPoints`. The label argument is ignored because bucket
+labels are regenerated from the rebinned sample range.
 
 **Events:** `lr-zoom`, `lr-point-click` — inherited; `lr-point-click`'s `index` is the bucket index
 and `label` the generated bucket range string (`"lo–hi"`, both bounds at one decimal place).
 
 **Slots:** `data-table`, `center`.
 
-**CSS parts:** `base`, `canvas`, `reset-zoom-button`, `description`, `data-table`, `center`,
-`error` (`role="alert"` message rendered in place of `canvas` when the optional `chart.js` peer
-dependency fails to load — inherited from `LyraChart`, unaffected by the binning logic).
+**CSS parts:** `base`, `plot`, `canvas`, `legend`, `legend-item`, `legend-swatch`,
+`reset-zoom-button`, `description`, `data-table`, `center`, `error` (`role="alert"` message
+rendered in place of `canvas` when the optional `chart.js` peer dependency fails to load —
+inherited from `LyraChart`, unaffected by the binning logic).
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
 `--lr-chart-tick-color`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
@@ -10855,6 +11085,9 @@ their semantics, defaults, and gotchas.
   property write from requesting an unbounded bucket array.
 - non-finite samples in `values` are dropped before bucketing rather than corrupting bucket-index
   math; constant data (every sample equal) lands wholly in the **first** bucket, not the last.
+- `values`/`bins`/`label` changes join the inherited connected-and-visible redraw path. There is no
+  second post-update refresh, so a same-tick disconnect cannot recreate Chart.js on a detached
+  canvas and off-screen sample updates do not repaint it.
 
 ---
 
@@ -10867,7 +11100,8 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 - `labels: string[] = []` (attribute: false)
 - `boxes: BoxPlotSeries[] = []` (attribute: false) — `BoxPlotSeries { label: string; data:
   BoxPlotPoint[]; color?: string }`, `BoxPlotPoint { min, q1, median, q3, max }`
-- `legend: boolean = false`
+- `legend: boolean = false` — renders a wrapping DOM legend whose buttons toggle box-series
+  visibility without clipping long labels.
 - `height: string = '280px'`
 - `yLabel: string = ''` (attribute `y-label`)
 - `beginAtZero: boolean = true` (attribute `begin-at-zero`)
@@ -10877,13 +11111,16 @@ browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
   localized five-number summary
 - `showDataTable: boolean = false` (attribute `show-data-table`) — reveals the accessible data table
 
-**Methods:** `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme change.
+**Methods:** `refreshTheme()` re-reads canvas theme custom properties after an ancestor theme
+change. Canvas work remains connected/visible-gated, while a rendered DOM legend also refreshes
+its computed color swatches.
 
 **Events:** none.
 
 **Slots:** `data-table` — an optional consumer-provided accessible table alternative.
 
-**CSS parts:** `base`, `canvas`, `description`, `data-table`, `error` (`role="alert"` message shown
+**CSS parts:** `base`, `plot` (the fixed-height canvas region), `canvas`, `legend`,
+`legend-item`, `legend-swatch`, `description`, `data-table`, `error` (`role="alert"` message shown
 instead of `canvas` when the optional box-plot peer fails to load)
 
 **Themeable custom properties:** `--lr-chart-height`, `--lr-chart-grid-color`,
@@ -10908,8 +11145,12 @@ through the same cached `chart-loader.ts` used by `lr-chart`.
 - no raw `config` passthrough — limited to the properties above; can't reach the underlying
   controller's own options (`itemRadius`, `outlierRadius`, `coef`).
 - Chart.js receives `effectiveLocale`; generated numeric summaries use it, the y axis moves to
-  logical start in RTL, canvas tooltip/axis colors are token-driven, and animation is disabled
-  under reduced motion.
+  logical start in RTL, and live ancestor `lang`/`dir` changes redraw the already-mounted canvas
+  without requiring another box property write. Canvas tooltip/axis colors are token-driven, and
+  animation is disabled under reduced motion.
+- `--lr-chart-height` fixes the `plot` height and the host's minimum height, not the complete host.
+  A visible or slotted table and the wrapping legend remain in normal document flow, grow the
+  component, and cannot overlap following content; oversized tables scroll inside the host.
 - If `@sgratzl/chartjs-chart-boxplot` fails to load, the component warns to the console and
   fails closed with a localized `role="alert"` error part rather than leaving a blank canvas.
 
@@ -10919,10 +11160,13 @@ through the same cached `chart-loader.ts` used by `lr-chart`.
 
 `lr-lite-chart` and `lr-chart` expose additive imperative helpers for live dashboards:
 `appendData(label, values, maxPoints?)` appends one aligned category and optionally trims the oldest
-points. `lr-lite-chart.exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot or the
-current SVG markup. `lr-chart.exportData('csv' | 'png')` returns a CSV snapshot or Chart.js's current
-PNG data URL when the optional peer is loaded. These helpers do not download files; compose them
-with `lr-export-button` so the host owns filenames and download policy.
+points. `lr-histogram` retains the same method signature but treats `values` as finite raw samples,
+ignores the category label, rebins the complete retained sample window, and applies `maxPoints` to
+that raw history. `lr-lite-chart.exportData('csv' | 'svg')` returns a spreadsheet-safe CSV snapshot
+or the current SVG markup. `lr-chart.exportData('csv' | 'png')` returns a CSV snapshot or Chart.js's
+current PNG data URL when the optional peer is loaded; point datasets expand x/y and optional
+radius/point-label columns. These helpers do not download files; compose them with
+`lr-export-button` so the host owns filenames and download policy.
 
 # Document & file viewers (`components/viewers/`)
 
@@ -10980,13 +11224,15 @@ image path — and the generic fallback simply omits `[part="download-link"]` en
   `status="error"`.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"24rem"`); once set,
   `[part="body"]` scrolls internally past this height instead of growing the page — same contract as
-  `lr-json-viewer`'s identically-named prop.
+  `lr-json-viewer`'s identically-named prop. Invalid CSS `max-height` values, declaration breaks,
+  and `url()` are ignored, leaving the stylesheet token in control.
 - `zoomable: boolean = false` (reflected) — wraps the rendered image (image format only) in an
   internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
   inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome
   viewport; an inspection surface opts in.
 - `highlights: LyraHighlight[] = []` (attribute: false) — display-only `region` highlights painted
-  over the image-format preview; ignored for the `text`/`generic` formats.
+  over the image-format preview; ignored for the `text`/`generic` formats. A rectangle renders only
+  when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its `region-highlight`).
 - `anchorKinds` is a readonly `['region']` (this viewer's supported `LyraAnchor.kind` values for the
@@ -11123,8 +11369,10 @@ type. First-party invention.
 - `mimeType: string = ''` (attribute `mime-type`) — MIME type used for exact renderer dispatch.
 - `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
-  the module-level registry is used when unset.
-- `alt: string = ''` — media alt text forwarded to the resolved renderer, for image-like renderers.
+  the module-level registry is used when unset. A throwing consumer matcher or renderer is
+  contained as the localized error state rather than escaping the update.
+- `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
+  Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
@@ -11147,6 +11395,7 @@ type. First-party invention.
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
+it renders explicit `aria-busy="true"|"false"`, and the loading text itself owns `role="status"`;
 `download-link` — the native download action, rendered when `src` passes Lyra's safe-link policy.
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
@@ -11185,6 +11434,9 @@ registerDocumentRenderer('application/x-example', {
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images
 inline and provides a safe generic fallback for other formats.
 
+If a consumer matcher/renderer throws while an anchor is pending, the viewer renders a localized
+`role="alert"` and emits exactly one `lr-anchor-result` with `{ found: false }`.
+
 ## `lr-docx-viewer`
 
 Fetches a `.docx` Word document as an `ArrayBuffer`, converts it to semantic HTML with the optional
@@ -11196,10 +11448,13 @@ hatch: if `dompurify` is unavailable, rendering is blocked even when Mammoth con
 Every rendered heading's slug (the same GitHub-slugger-style algorithm `<lr-markdown>` uses) is
 stamped as its `id` and cached into `getHeadingTree()`'s document-ordered outline. Adopts
 `DocumentAnchorTarget`: `fragment` anchors resolve against that outline, `text-quote` anchors via
-the shared quote-scoping helpers; `highlights` re-resolve by quote after every render.
+the shared quote-scoping helpers; `highlights` re-resolve by quote after every render. Native
+keyboard actions are exposed only for highlights whose quote resolves in the currently loaded
+document; unresolved highlights and idle/loading/error states never expose an enabled no-op.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable document body. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
+the scrollable document body; invalid CSS `max-height` values, declaration breaks, and `url()` are
+ignored. `anchorKinds` is a readonly `['fragment', 'text-quote']` (this
 viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getHeadingTree()` returns the document-ordered outline as `DocxHeadingItem[]` (`{ id,
@@ -11212,14 +11467,17 @@ painted marks.
 **Events:** `lr-render-error` with `detail.error` when fetching, conversion, sanitization, or a
 non-fatal Mammoth conversion message occurs. `lr-search-change` (`detail: { query, matchCount,
 activeIndex }`) — from `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`.
-`lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked.
+`lr-highlight-activate` (`detail: { id }`) — a painted `text-quote` highlight was clicked or its
+resolved keyboard action was activated.
 `lr-text-select` (`detail: { text, anchor, rects }`) — fired on selection end inside the rendered
 content. `lr-anchor-result` (`detail: { found }`) — fired after an `anchor` assignment or a
 `scrollToAnchor()` call.
 
 **CSS parts:** `base`, `body`, `content`, `spinner`, `error`, `highlight` (a painted `text-quote`
-highlight), `search-match` (a painted in-document search match), and `search-match-active` (the
-currently active search match, also carries `search-match`).
+highlight), `highlight-actions` (keyboard-accessible actions for resolved highlights),
+`highlight-action` (one native highlight activation button), `search-match` (a painted in-document
+search match), and `search-match-active` (the currently active search match, also carries
+`search-match`).
 
 **Themeable custom properties:** `--lr-docx-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
@@ -11262,8 +11520,9 @@ downloading, or object-URL'ing them is the host's job (e.g.
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the message.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `foldQuotes:
-boolean = false` (attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. `foldQuotes: boolean = false`
+(attribute `fold-quotes`) — collapses trailing quoted-reply text/HTML behind a
 localized show/hide toggle. `false` (the default) preserves the full body rendering. A host
 `aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
@@ -11299,8 +11558,9 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. No HTML is injected.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
+precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -11333,18 +11593,33 @@ fully decompressing only the rare entry missing that header field. The list comp
 contract: `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, and `clearSearch()` provide
-case-insensitive text search over rendered entry names; `scrollToAnchor()` resolves text-quote and
-fragment anchors and emits `lr-anchor-result`.
+case-insensitive text search over every loaded entry path; next/previous wrap and scroll the active
+virtualized row into view. `scrollToAnchor()` resolves text-quote and fragment anchors and emits
+`lr-anchor-result`. A fragment id is the exact ZIP entry path. A text quote resolves within one
+complete entry path; both forms first mount the absolute virtualized row and only then perform the
+shared DOM-level anchor resolution.
 
-**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails.
+**Events:** `lr-render-error` with `detail.error` when fetching or parsing fails;
+`lr-search-change` (`detail: { query, matchCount, activeIndex }`) from search, navigation, and
+clear; `lr-text-select` (`detail: { text, anchor, rects }`) for a selection contained within one
+entry path; and `lr-anchor-result` (`detail: { found }`) after anchor resolution.
 
 **CSS parts:** `base`, `body`, `entry`, `entry-icon`, `entry-name`, `entry-name-dir`, `entry-size`,
-`spinner`, and `error`. A directory row's name element carries both `entry-name` and
+`highlight` (the `<mark>` fallback for a painted entry-path quote), `spinner`, and `error`. A
+directory row's name element carries both `entry-name` and
 `entry-name-dir` (a part list), so `::part(entry-name-dir)` selects only directory names while
 `::part(entry-name)` still selects every name. Entry rows are rendered into the embedded
 `<lr-virtual-list>`'s own shadow root and forwarded with `exportparts`, so
 `lr-archive-viewer::part(entry)` (and every other row part above) reaches them from a consuming
 stylesheet.
+
+**Themeable custom properties:** `--lr-archive-viewer-highlight-accent-background`,
+`--lr-archive-viewer-highlight-success-background`,
+`--lr-archive-viewer-highlight-warning-background`,
+`--lr-archive-viewer-highlight-danger-background`, and
+`--lr-archive-viewer-highlight-neutral-background` control tone backgrounds.
+`--lr-archive-viewer-highlight-active-background` and
+`--lr-archive-viewer-highlight-active-outline` control the active quote.
 
 **Exports:** `ArchiveEntry` — `{ name: string; dir: boolean; size: number }`.
 
@@ -11371,8 +11646,9 @@ the reading region's accessible name. `location: string = ''` (not reflected —
 a CFI or spine href identifying the current reading position: set before the book finishes
 loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
 `relocated` event keeps it in sync with user navigation without re-triggering its own `display()`
-call. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this viewer's supported `LyraAnchor.kind`
-values for the shared anchor-target contract).
+call. A controlled `location` assignment made synchronously inside `lr-location-change` wins over
+the peer-reported CFI and is displayed. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this
+viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
 populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
@@ -11380,16 +11656,20 @@ label, href, level }`, `level` starting at 1 for a top-level entry, `id` falling
 when a navigation entry has none), `[]` before a book has loaded. `search(query)` resolves the
 match count across every spine section, in document order, via epub.js's own `item.load()`/
 `item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
-`search()` call or a `src` change aborts an in-flight scan); `searchNext()`/`searchPrevious()`
+`search()` call or a `src` change aborts an in-flight scan; peer output is capped at 10,000
+matches); `searchNext()`/`searchPrevious()`
 advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
 clears the query, matches, and painted search annotation.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
 `lr-search-change` (`detail: { query, matchCount, activeIndex }`) from `search()`/`searchNext()`/
-`searchPrevious()`/`clearSearch()`.
+`searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
+applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
+`lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 
-**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
+**CSS parts:** `base` (explicit `aria-busy="true"|"false"`; loading text owns `role="status"`),
+`toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
 `mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
 announce through).
 
@@ -11399,7 +11679,8 @@ unambiguous beside other previous/next controls and are overridable through `.st
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
 matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
-search: true, textSelect: true }` capabilities.
+search: true, textSelect: true }` capabilities and forwarding `anchor`/`highlights` to the mounted
+viewer. The peer loader requires the callable EPUB factory; malformed module shapes fail closed.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
@@ -11412,6 +11693,10 @@ this component's own shadow DOM — `lr-text-select` mirrors epub.js's own `sele
 same reason. `highlights` (kind `cfi`) paint via `rendition.annotations.highlight()` and are
 re-applied whenever the rendition is recreated (a `src` change, or a reconnect remount), since
 epub.js doesn't persist annotations across a fresh `renderTo()`.
+
+Rejected or synchronous failures from display, previous/next navigation, search annotation, or
+anchor application enter the localized error state and emit `lr-render-error`. Anchor failures
+emit one `{ found: false }`, and superseded async anchor/search work cannot mutate the current book.
 
 ## `lr-pptx-viewer`
 
@@ -11455,7 +11740,8 @@ here — a sanitized SVG document has neither pages nor extractable text to quot
 its registry entry declares `capabilities: { anchors: ['region'], search: false, textSelect: false }`.
 
 **Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `maxHeight` caps
-the scrollable body. `zoomable: boolean = false` (reflected) — wraps the rendered content in an
+the scrollable body; invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
+`zoomable: boolean = false` (reflected) — wraps the rendered content in an
 internal `<lr-zoomable-frame>`. `false` (the default) preserves the exact pre-`zoomable` DOM — an
 inline thumbnail (e.g. in a chat stream) must not unexpectedly grow a focusable zoom-chrome viewport;
 an inspection surface opts in. `anchor: LyraAnchor | string | null = null` (attribute: false) —
@@ -11463,7 +11749,9 @@ declaratively jump to an anchor (a `LyraAnchor` object, or a `highlights` entry'
 calls `scrollToAnchor()` and fires `lr-anchor-result`; re-assigning the same value re-triggers the
 scroll, it is not reference-gated. `highlights: LyraHighlight[] = []` (attribute: false) —
 display-only `region` highlights painted over the rendered SVG; unchanged behavior, now inherited
-from `DocumentAnchorTarget` rather than declared locally. `activeHighlightId: string | null = null`
+from `DocumentAnchorTarget` rather than declared locally. A region rectangle renders/resolves only
+when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnegative.
+`activeHighlightId: string | null = null`
 (attribute `active-highlight-id`) — the `highlights` entry, if any, currently treated as active
 (`data-active` on its `region-highlight`). `anchorKinds` is a readonly `['region']` (this viewer's
 supported `LyraAnchor.kind` values for the shared anchor-target contract).
@@ -11515,8 +11803,9 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 Fetches an HTML document, sanitizes it with the optional `dompurify` peer, and renders the safe markup
 inside a bounded, scrollable body.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
+precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -11550,9 +11839,10 @@ is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed
 the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `anchorKinds` is
-a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
+`['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every body cell's raw string value, ordered row then column (empty/whitespace query behaves like
@@ -11599,8 +11889,9 @@ label when `FN` is absent).
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the contacts.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
+precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
@@ -11634,9 +11925,12 @@ to tell that apart from a genuine activation click.
 **Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
-page list — declaratively, writing it inline on `[part="base"]`. `anchorKinds` is a readonly
+ page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
+ declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
 `['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+anchor-target contract). Page and page-addressed region anchors require an in-range integer page
+and are rejected rather than clamped; region rectangles also require finite coordinates and
+nonnegative dimensions.
 
 **Events:**
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
@@ -11663,7 +11957,8 @@ of one page (per-page LRU-cached, 64 pages), rejecting on no loaded document or 
 `options.width` CSS px (default 96), devicePixelRatio-aware, resolving `false` when not ready or out
 of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `true` once mounted (or
 `false` for an out-of-range value, without changing `page`). `getOutline()` resolves the document's
-table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none.
+table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none;
+peer output is capped at 10,000 unique items and 100 levels, with cycles ignored.
 `search(query)` resolves the match count across all pages (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
@@ -11702,6 +11997,9 @@ rendering without it.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the PDF.
+
+Anchor navigation is generation-guarded: a newer anchor, document replacement, or disconnect
+prevents stale page/text/region work from scrolling or reporting success.
 
 ## `lr-spreadsheet-viewer`
 
@@ -11762,9 +12060,9 @@ row/column into view via the virtualized list's `active-id`. `highlights` paint 
 **Properties:** `src` and `name` are strings. `hasHeaderRow: boolean = true` (attribute
 `has-header-row`) controls whether the first parsed row is rendered as a sticky header.
 `maxHeight: string = ''` (attribute `max-height`) is a CSS length that caps the scrollable body —
-setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`. `anchorKinds` is a
-readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+setting it writes `--lr-csv-viewer-max-height` inline on `[part="base"]`; invalid CSS `max-height`
+values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly `['cell-range']`
+(this viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring match over
 the same stringified cell values `cell()` renders, ordered row then column (empty/whitespace query
@@ -11814,8 +12112,8 @@ raw injection option is omitted, not shipped as a no-op).
 
 A bare primitive: no label/hint/error chrome, no implicit role, no computed accessible name, and no
 `aria-live` wrapper (the fragment can carry its own landmarks; wrapping the host would re-announce
-all of it on every load). `aria-busy="true"` is set on the host while a fetch is in flight and
-removed once it settles either way. Build error UI from `lr-include-error`.
+all of it on every load). The host always carries explicit `aria-busy="true"|"false"`: true only
+while a fetch is in flight. Build error UI from `lr-include-error`.
 
 **Properties:**
 - `src: string = ''` (reflected) — URL of the fragment, validated through the shared `safeFetchUrl()`
@@ -11830,7 +12128,8 @@ removed once it settles either way. Build error UI from `lr-include-error`.
 The shared text-viewer contract is also available for the sanitized light-DOM fragment:
 `highlights`, `activeHighlightId`, `anchor`, and `anchorKinds` (`['text-quote', 'fragment']`).
 `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and `scrollToAnchor()`
-operate on the included text.
+operate on the included text. A successful replacement explicitly recomputes any active search
+against the new fragment rather than leaving results from the previous content.
 
 **Events:**
 - `lr-load` — `detail: { src }` — the fragment was sanitized and written into the light DOM.
@@ -11860,7 +12159,8 @@ positioned ancestor.
 
 **Properties:** `items: HighlightLayerItem[] = []` (attribute: false), `activeId: string | null =
 null` (attribute `active-id`), and `interactive: boolean = true` (reflected) — gates click/keyboard
-activation.
+activation. A rectangle is eligible only when `x`/`y`/`width`/`height` are finite numbers and both
+dimensions are nonnegative; invalid rectangles are omitted from paint, focus, and activation.
 
 **Methods:** `flash(id)` briefly re-triggers the flash styling for an already-rendered rect (e.g. a
 re-click of the same source citation).
@@ -11903,6 +12203,11 @@ truth.
 **Events:** `lr-page-select` — a page row was activated (click, or Enter/Space on a focused row).
 `detail: { page }`. In wired mode the rail also sets `viewer.page` itself.
 
+If `pageCount` shrinks past the currently focused row, focus moves to the absolute last remaining
+page instead of using the rendered window's local index or being lost with the virtualized row.
+Rapid consecutive shrinks supersede an in-flight repair, so focus lands on the latest count. The
+numeric type-ahead buffer is cleared on detach.
+
 **CSS parts:** `base` (the rail), `pages` (the embedded `<lr-virtual-list>`), `page` (one page
 button), `page-current` (the button for the current `page`), `thumbnail` (the thumbnail canvas
 wrapper), `page-number` (the visible page number), `heat` (the heat-marker cluster), `heat-dot` (one
@@ -11944,9 +12249,10 @@ JSON text; wins over `src` and is parsed (and validated) synchronously. `name: s
 accessible label, and matched against a `fragment` anchor's cell id. `outputCollapseLines: number =
 40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
 collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
-`max-height`) — once set, the notebook scrolls internally past this height. `anchorKinds` is a
-readonly `['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the
-shared anchor-target contract).
+`max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
+`['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
@@ -11998,6 +12304,9 @@ the element or on any ancestor.
 A notebook major version outside 4.0–4.5, an invalid shape, or more than 2,000 cells renders a
 localized error and fires `lr-render-error` instead of the notebook.
 
+PNG/JPEG outputs use their `text/plain` representation as alt text, falling back to a localized
+code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the same fallback.
+
 ## `lr-xml-viewer`
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
@@ -12016,7 +12325,8 @@ boolean = false` (reflected) — shows copy-to-clipboard affordances, one for th
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds` is a readonly
 `['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
 contract) — each numeric path segment is the 0-based index within the parent's *element* children,
-and an optional trailing string segment `'@attrName'` addresses one attribute.
+and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
+attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
@@ -12068,7 +12378,8 @@ await viewer.search(query);
 ```
 
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
-tree.
+tree. A collapsed element's child count includes element, text, comment, CDATA, and processing-
+instruction children rather than only element descendants.
 
 ## `lr-document-compare`
 
@@ -12128,17 +12439,24 @@ approximation weighting latitude span ~2x, with 40% padding), then hands the par
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
 collapsed-depth="2">` of the raw value instead of the map.
 
+The root owns the named `region` landmark while loading, in fallback/error/idle states, and while a
+lazy map initializes. After `lr-map-load`, landmark ownership transfers to the map canvas so there
+is exactly one named region. Serialized metadata is locally inline-scrollable, preventing long
+unbroken values from widening a 320px allocation.
+
 **Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
 `geojsonViewLabel` when unset). A host `aria-label` takes precedence over `name`. The shared
 text-viewer contract adds `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`), plus `search()`, `searchNext()`, `searchPrevious()`,
-`clearSearch()`, and `scrollToAnchor()` for rendered feature metadata and status text.
+`clearSearch()`, and `scrollToAnchor()` for the ordinary-DOM serialized feature metadata and status
+text, independent of whether the optional map peer is available.
 
 **Events:** `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure.
 
 **CSS parts:** `base` (the root container), `status` (the feature-count status line, `role="status"`,
-shown only in the `<lr-map>` path), `missing-library` (the missing-`maplibre-gl` callout shown
+shown only in the `<lr-map>` path), `metadata` (selectable/searchable serialized GeoJSON `<pre>`,
+rendered in both map and fallback paths), `missing-library` (the missing-`maplibre-gl` callout shown
 alongside the `lr-json-viewer` fallback), `error` (the error region, `role="alert"`), `spinner`
 (the loading status region).
 
@@ -13144,7 +13462,9 @@ combination (`catalog` empty/unset, or `allowCustom` true) renders the free-text
 (`[part="combobox"]`/`[part="combobox-input"]`) with live substring filtering against the catalog (id or
 label, case-insensitive). The mode is re-evaluated on every render, so toggling `allowCustom` or clearing
 `catalog` at runtime switches modes live, repositioning the shared `[part="listbox"]` popover against
-whichever element is the active anchor.
+whichever element is the active anchor. Replacing `catalog` while free-text mode remains open
+refilters suggestions without erasing the user's current draft; controlled `value` changes and
+actual mode switches still rebase the input to the committed value.
 
 A `value` that isn't present in `catalog` (e.g. a model id saved from a provider whose live catalog has
 since changed) is never silently dropped: it's appended to the rendered option list as a synthetic,
@@ -13159,6 +13479,8 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
 - `change` (`Event`, no detail) — fired alongside `lr-change`, mirroring `<lr-select>`/
   `<lr-combobox>`'s native-style value-change pair so native form bindings/framework `v-model`
   handlers behave consistently across the picker family.
+- `input` (`Event`, no detail) — fired immediately before `change` alongside each committed
+  `lr-change`, providing the same native-style value-event pair as `<lr-select>`/`<lr-combobox>`.
 - `blur` (no detail) — re-dispatched from the free-text mode's internal `<input>`'s own `blur`,
   bubbling and composed unlike the native event. Closed-dropdown mode's trigger `<button>` has no
   equivalent re-dispatch, matching `<lr-select>`'s own trigger.
@@ -13878,7 +14200,8 @@ rating opens the detail panel, and `disabled: boolean = false` (reflected) for a
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
 string }`, fired by the panel's submit button (`value` is never `null` here — the panel only exists
-for a set rating).
+for a set rating). The optional comment `<textarea>`'s native `focus` and `blur` are re-dispatched
+as bubbling, composed host events.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or
@@ -14615,7 +14938,11 @@ part to the built-in renderer; `label: string = ''`; `accessibleLabel: string | 
 `MessagePartRenderer = (part: MessagePart, index: number) => unknown`; `MessagePart` and its
 discriminated part shapes come from the `@aceshooting/lyra-ui/ai` subpath.
 
-**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`).
+**Events:** `lr-citation-select` (`{ citation }`), `lr-part-retry` (`{ part }`). Composed child
+events pass through unchanged: `lr-anchor-result`, `lr-citation-open`, `lr-copy`,
+`lr-highlight-activate`, `lr-link-click`, `lr-preview`, `lr-remove`, `lr-render-error`, `lr-retry`,
+`lr-search-change`, `lr-text-select`, `lr-toggle`, `lr-tool-call-chip-select`,
+`lr-tool-chip-select`, `lr-widget-action`, and `lr-widget-state-change`.
 
 **CSS parts:** `base`, `part`, `part-streaming`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `citation`, `attachment`, `data`, `audio`, `audio-transcript`, `error`, `retry`.
@@ -14728,6 +15055,8 @@ Nonmodal, Escape-dismissible text-selection toolbar carrying selected text plus 
 **Events:** `lr-selection-action` (`SelectionActionDetail = { action, text, anchor }`);
 `lr-dismiss` (Escape); `lr-copy-error` (`{ error }`). Copy uses the Clipboard API when available;
 the action event still reports the user intent if writing fails, alongside `lr-copy-error`.
+Detaching and later reinserting the same open instance re-establishes positioning and Escape
+ownership even when the detach lasts past an event-loop turn.
 
 **CSS parts:** `toolbar`, `action`, `action-ask`, `action-quote`, `action-cite`, `action-copy`.
 
@@ -15190,11 +15519,12 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 - `ToolSelectDialogTool { id: string; name: string; description?: string; category?: string; icon?:
   string; disabled?: boolean; disabledReason?: string }` — one selectable agent tool. `category` groups
   the row into a heading; tools with no `category` (or an empty/whitespace-only one) fall into a
-  trailing "Other" bucket. `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque
-  string, not a registry lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled`
-  individually gates a tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin
-  approval); `disabledReason` is supporting text shown under a disabled row, ignored when `disabled` is
-  falsy.
+  trailing localized "Other" bucket. A caller category literally named `"Other"` remains its own
+  ordinary, first-seen category and is not merged into or reordered with that uncategorized bucket.
+  `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque string, not a registry
+  lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled` individually gates a
+  tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin approval);
+  `disabledReason` is supporting text shown under a disabled row, ignored when `disabled` is falsy.
 - `ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean` — a predicate deciding
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
@@ -15229,7 +15559,8 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the enabled-tool selection or the
 `useDefaults` toggle changed), `lr-close` (`detail: ToolSelectDialogCloseReason` — fired exactly once
-per dismissal, via Escape, a backdrop click, or a `close()` call)
+per dismissal, via Escape, a backdrop click, or a `close()` call), and no-detail `focus`/`blur`
+events re-dispatched when the internal search input gains or loses focus.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -15284,7 +15615,9 @@ checkboxes for editing.
 - `disabledReason` text only renders when both `tool.disabled` and `tool.disabledReason` are set.
 - Categories are grouped in first-seen order across `tools`; an empty/whitespace-only `category` folds
   into a trailing "Other" bucket that's always rendered last. A category left with zero matches after
-  filtering is dropped entirely, not rendered as an empty heading.
+  filtering is dropped entirely, not rendered as an empty heading. A caller-supplied category
+  literally named `"Other"` is not the internal uncategorized sentinel: it stays in first-seen order
+  and remains separate even when uncategorized tools are also present.
 - Reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
   instance) resumes its shared overlay registration and re-acquires the scroll lock dropped in
   `disconnectedCallback`.
@@ -15324,7 +15657,9 @@ jump-to-latest action of its own.
 **Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default `16rem` —
 consumer-overridable cap on how tall `[part="body"]` grows before it scrolls internally; not
 exposed as a component property since it's a pure layout knob, not something a template branches
-on), plus shared `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
+on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
+pending duration/toggle accent without changing the shared brand token. Plus shared
+`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
 
@@ -15416,7 +15751,11 @@ toggle for a run of internal frames), `raw` (the verbatim fallback when zero str
 parsed), `copy-button` (only rendered while `copyable`).
 
 **Themeable custom properties:** `--lr-stack-trace-max-height` (default `none`),
-`--lr-stack-trace-font` (default `var(--lr-font-mono)`), plus shared tokens
+`--lr-stack-trace-font` (default `var(--lr-font-mono)`),
+`--lr-stack-trace-internal-frame-color` (default `var(--lr-color-text-quiet)`) — internal-frame
+foreground, and `--lr-stack-trace-interactive-color` (default `var(--lr-color-brand)`) — frame
+hover/focus, internal-toggle, and copy-button-hover accent. The scoped color hooks avoid changing
+the shared quiet/brand tokens used by surrounding UI. Plus shared tokens
 `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`, `--lr-radius`,
 `--lr-border-width-thin`, `--lr-space-xs`/`-s`/`-2xs`, `--lr-font-size-sm`/`-xs`,
 `--lr-font-weight-bold`/`-semibold`, `--lr-focus-ring-*`.
@@ -15504,7 +15843,8 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click, the Approve/Deny buttons, or a `close()` call)
+click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+re-dispatched when the raw-JSON editor gains or loses focus.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
 rendered before the built-in Deny/Edit/Approve buttons.
@@ -15571,12 +15911,10 @@ shared composed-tree focus traversal used by the other modal families.
   disconnect/reconnect fire back-to-back with no update in between.
 - the Approve button's native `disabled` attribute (while the draft is invalid JSON) automatically
   excludes it from the shared Tab trap, whose focusable-set computation skips disabled controls.
-- the raw-JSON `args-editor` textarea always hardcodes `spellcheck="false"`, `autocapitalize="off"`,
-  and `autocorrect="off"` — not exposed as configurable properties, unlike `<lr-textarea>`'s/
-  `<lr-chat-composer>`'s passthrough props — since its content is always JSON, never prose; without
-  this a mobile browser (notably iOS Safari, which defaults textarea `autocapitalize` to
-  `'sentences'`) could auto-capitalize or auto-correct key/value text as the user edits, silently
-  corrupting the JSON.
+- the raw-JSON `args-editor` textarea defaults to `spellcheck="false"`, `autocapitalize="off"`,
+  `autocorrect="off"`, and `autocomplete="off"` because its content is JSON, never prose. These
+  native editing-assistance values remain configurable through the corresponding properties for
+  integrations that intentionally need different browser behavior.
 - `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — this
   component has no `tone` property) — `--lr-button-*` theming reaches them directly. A consumer
   previously styling `::part(deny-button)`/`::part(approve-button)` for
@@ -15642,13 +15980,19 @@ and makes the form invalid instead of being silently accepted.
   updates `ElementInternals`, and returns validity without revealing inline errors.
 - `reportValidity(): boolean` — performs the same resynchronization, reveals all current field/root
   errors, focuses the first invalid generated field when one exists, and delegates to native
-  `ElementInternals.reportValidity()`.
+  `ElementInternals.reportValidity()`. If `required` contains an unmet key absent from
+  `properties`, there is no generated control to focus, so a localized, programmatically focusable
+  root error names that dangling key instead.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`
 (`detail: { valid: boolean; errors: Record<string, string> }` — fired whenever overall validity or
 the field-error set changes, including once up front at connect time; serialization-only failures
-set `valid: false` while `formError`, rather than a fabricated field key, carries the root message)
+set `valid: false` while `formError`, rather than a fabricated field key, carries the root message),
+and no-detail `focus`/`blur` events for generated native text/number inputs. The composed
+`<lr-select>`/`<lr-checkbox>` controls already bubble their own focus/blur bridges through the host.
+Their implementation events (`input`, `change`, `lr-change`, select show/hide, and option mutation)
+are contained at the form boundary; consumers receive the single form-level `lr-input` contract.
 
 **Slots:** none.
 
@@ -15691,13 +16035,16 @@ This component owns no Submit/Cancel/Approve chrome — a consumer composes it i
 `<lr-option>`s; a plain `'string'` renders a text `<input>`; `'number'`/`'integer'` render a numeric
 `<input type="number">` (`step="1"` for integer, `step="any"` for number); `'boolean'` renders a
 `<lr-checkbox>` with the field's label projected into its default slot — real slotted content, since
-that's `<lr-checkbox>`'s documented way to give itself an accessible name, unlike `aria-describedby`
-(neither `<lr-select>` nor `<lr-checkbox>` forward a host-level `aria-describedby` to their
-internal focusable element, so for the enum-select case the error message is folded into `aria-label`
-instead, alongside the always-visible adjacent `[part="description"]` text). The outer component owns
-schema validity rather than forwarding HTML `required` constraints: JSON Schema `required` means an
-own property is present, so `''`, `0`, and `false` are valid present values. Use
-`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox.
+that's `<lr-checkbox>`'s documented way to give itself an accessible name. Enum descriptions/errors
+flow through `<lr-select>`'s `.hint`/`.errorText` control chrome. Boolean descriptions/errors stay
+adjacent `[part="description"]`/`[part="error"]` nodes whose ids are passed through the checkbox
+host's `aria-describedby`; `<lr-checkbox>` resolves those ids onto its internal `role="checkbox"`
+through `ariaDescribedByElements`. Supporting text therefore keeps description semantics instead of
+being folded into an `aria-label`. The outer component owns JSON Schema validity: `required` means
+an own property is present, so `''`, `0`, and `false` are valid present values. A plain required
+boolean consequently does not set `<lr-checkbox>.required`'s must-check semantics. Use
+`{ type: 'boolean', const: true }` together with `required` for a must-confirm checkbox; that exact
+combination does set the nested checkbox's matching native/ARIA required state.
 
 Optional native `<form>` participation is implemented via `ElementInternals` attached directly in the
 constructor (`static formAssociated = true`) rather than a string-value mixin, since this component's
@@ -15718,6 +16065,9 @@ a JSON object, falls back to `{}` for malformed/non-object state, and does not e
   after an explicit `reportValidity()` call — `checkValidity()` alone never reveals them, matching
   every other form control in this library (`<lr-select>`/`<lr-combobox>`/`<lr-model-select>`
   all avoid flashing red before the user has touched anything).
+- a key listed in `schema.required` but absent from `schema.properties` still fails closed. Because
+  no field exists for that dangling reference, `reportValidity()` renders and focuses a localized
+  root error naming the key rather than leaving an invisible, unreachable validity failure.
 - `effectiveValue` distinguishes "key absent from `value`" (falls back to `default`) from "key present
   but `undefined`" (stays cleared and counts as absent for `required`) via `hasOwnProperty`, not an
   `=== undefined` fallback check.
@@ -15844,6 +16194,8 @@ scroll position. `disabled: boolean = false` (reflected) disables every vote but
 output), and `prompt` (optional shared-input header above both panes).
 
 **Events:** `lr-vote` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
+This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
+the prior vote.
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the
 `prompt` slot is empty), `panes` (the row, or under 640px column, wrapping both panes), `pane-a`,
@@ -15852,7 +16204,11 @@ output), and `prompt` (optional shared-input header above both panes).
 internal vote-announcement live region).
 
 **Themeable custom properties:** `--lr-compare-panel-max-height` (default `var(--lr-size-24rem)`) —
-cap on each pane's scroll region before it scrolls internally.
+cap on each pane's scroll region before it scrolls internally;
+`--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
+`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`) style the selected vote
+button without changing shared brand tokens.
 
 ## `lr-span-waterfall`
 
@@ -15881,10 +16237,22 @@ Space).
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), and `live-region`.
 
+The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
+keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
+cannot leave the component with no `tabindex="0"` stop.
+
 **Themeable custom properties:** `--lr-span-waterfall-name-width` (default `8rem`),
 `--lr-span-waterfall-stripe-speed` (a `running` span's striped-bar animation duration; defaults to
 `--lr-transition-ambient`), and `--lr-span-waterfall-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row.
+Status-scoped bar hooks are `--lr-span-waterfall-success-color` (default
+`var(--lr-color-success)`), `--lr-span-waterfall-error-color` (default
+`var(--lr-color-danger)`), `--lr-span-waterfall-denied-color` (default
+`var(--lr-color-warning)`), `--lr-span-waterfall-running-color` (default
+`var(--lr-color-brand)`) for the running stripe foreground,
+`--lr-span-waterfall-running-stripe-color` (default `var(--lr-color-brand-quiet)`) for its
+contrasting background, and `--lr-span-waterfall-pending-border-color` (default
+`var(--lr-color-border-strong)`) for pending bars.
 
 That last one follows the convention every **state-scoped** custom property in this family uses, and
 it is worth reading once: it is an inline `var()` fallback at its point of use and is deliberately
@@ -15938,7 +16306,12 @@ label/summary/toggle while `compact`, one step tighter than the header's uncompa
 `--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
-var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;
+`--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
+`--lr-task-list-running-color` (default `var(--lr-color-brand)`),
+`--lr-task-list-success-color` (default `var(--lr-color-success)`), and
+`--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
+status icons without changing shared status tokens.
 
 ## `lr-terminal`
 
@@ -15965,7 +16338,10 @@ line-granular (a match identifies a whole line, not a character range) and cappe
 stops climbing on a pathologically repetitive buffer. `getPlainText()` returns the SGR-stripped
 plain text of the whole buffer.
 
-**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`),
+**Events:** `lr-copy` (`detail: { text }`), `lr-download` (`detail: { filename }`, cancelable — by
+default the component creates a plain-text `Blob`/object URL and activates a synthetic
+`<a download>`; `preventDefault()` suppresses that built-in download so the host can substitute
+server-side or other handling),
 `lr-follow-change` (`detail: { following }`), `lr-search-change` (`detail: { query, matchCount,
 activeIndex }`), `lr-highlight-activate` (`detail: { id }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`).
@@ -15996,6 +16372,15 @@ beat it without `!important`.
 - `--lr-terminal-search-outline-color` — Outline color for a line containing a non-active search match. Default: `var(--lr-color-warning)`.
 - `--lr-terminal-search-active-outline-color` — Outline color for the active search match's line. Default: `var(--lr-color-brand)`.
 
+While a search query is active, writes, scrollback trimming, `content` replacement, and `clear()`
+recompute the exact match count and emit `lr-search-change` only when that public search snapshot
+actually changes. Pending output announcements are canceled by clear/replacement, disabling
+`announceOutput`, or disconnect, so stale text is never announced after it has been removed.
+A multi-line highlight paints every retained covered line but exposes exactly one keyboard/click
+owner at the anchor's start, or at the first surviving covered line after scrollback trims that
+start. Its accessible name combines the caller label with visible line text (or a localized line
+number for an empty line), avoiding duplicate tab stops for one logical highlight.
+
 ## `lr-trace-tree`
 
 A collapsible span hierarchy for one agent/LLM trace (Langfuse/LangSmith run-tree style): kind icon,
@@ -16009,6 +16394,9 @@ as a root rather than being dropped. `activeSpanId: string | null = null`
 (attribute `active-span-id`), `label: string = ''`, `showTokens: boolean = false` (attribute
 `show-tokens`) — surfaces `tokensIn`/`tokensOut`, `showCost: boolean = false` (attribute
 `show-cost`) — surfaces `costText`, and `hideBars: boolean = false` (attribute `hide-bars`).
+Token counts render only when finite and non-negative; invalid metrics are omitted rather than
+reaching `Intl.NumberFormat`. A row's accessible name includes its optional `detail` text as well
+as its name/status/metrics, and updates when the supplied span data changes.
 
 **Methods:** `expandAll()` and `collapseAll()` set every row's expanded state at once.
 
@@ -16148,16 +16536,30 @@ name: string; tests: TestCaseResult[] }` and `TestCaseResult { id: string; name:
 TestStatus; durationMs?: number; message?: string }`, with `TestStatus = 'passed' | 'failed' |
 'skipped' | 'running'` (all three exported here). `statusFilter: TestStatus[] =
 []` (attribute: false) — empty shows every status; and `autoExpandFailures: boolean = true`
-(attribute `auto-expand-failures`).
+(attribute `auto-expand-failures`). A duration renders only when it is finite and non-negative;
+invalid/negative values are omitted rather than reaching `Intl.NumberFormat`.
 
-**Slots:** `detail-{testId}` — rich failure detail for that test, rendered after its plain `message`
-text once the row is expanded.
+**Slots:** `detail-{encodedSuiteId}:{encodedTestId}` — collision-free suite-scoped rich detail for
+a test, where each encoded segment is `encodeURIComponent(id)`. It renders after the plain
+`message` once expanded (for example, suite `unit` and test `same` use
+`slot="detail-unit:same"`). This canonical form distinguishes duplicate and delimiter-containing
+ids and wins when multiple forms are supplied. The prior
+`detail-{suiteId}-{testId}` form remains an unambiguous compatibility fallback; it is ignored when
+the same name could address multiple rows or collide with another row's canonical name. The older
+`detail-{testId}` form remains supported only while that test id is globally unique across all
+suites. Slot listeners remain mounted while detail is absent, so appending matching slotted
+content after the component's first render immediately enables the row's disclosure.
 
 **Events:** `lr-test-select` (`detail: { suiteId: string; testId: string }`, a test row's name was
 activated), `lr-filter-change` (`detail: { statuses: TestStatus[] }` — the complete next filter set; the
 component updates its own `statusFilter` first, then emits),
-and `lr-toggle` (`detail: { id: string; expanded: boolean }`, a row's failure detail was
-expanded/collapsed).
+and `lr-toggle` (`detail: { id: string; suiteId?: string; expanded: boolean }`, a row's failure
+detail was expanded/collapsed). To preserve the established exact event shape, `suiteId` is omitted
+for a globally unique test id and included when the id occurs in more than one suite. Manual
+expansion state is always keyed by the suite+test pair, so toggling one duplicate never toggles its
+sibling.
+Each expand/collapse action's localized accessible name includes both suite and test names, so
+repeated row controls remain distinguishable.
 
 **CSS parts:** `base`, `summary` (the status-count strip), `count` (carries `data-status`), `filter`,
 `filter-toggle` (carries `data-status`/`aria-pressed`), `suite`, `suite-header`, `test` (carries
@@ -16173,7 +16575,11 @@ filter toggle. All three follow the state-scoped-property convention described u
 the element or on any ancestor. They exist because
 `::part(filter-toggle)[aria-pressed='true']` is invalid CSS — Shadow Parts forbids an attribute
 selector after `::part()` — so restyling the pressed state otherwise meant overriding the
-library-wide brand tokens.
+library-wide brand tokens. Per-result status foregrounds are independently exposed through
+`--lr-test-results-passed-color` (default `var(--lr-color-success)`),
+`--lr-test-results-failed-color` (default `var(--lr-color-danger)`),
+`--lr-test-results-skipped-color` (default `var(--lr-color-text-quiet)`), and
+`--lr-test-results-running-color` (default `var(--lr-color-brand)`).
 
 ## `lr-confirm-bar`
 
@@ -16584,6 +16990,8 @@ Rubric scoring and human-review surface for comparing the runs of one evaluation
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
+The table's accessible name is the localized evaluation-runs label by default; a host
+`aria-label` on `<lr-eval-result>` overrides it.
 
 **Properties:**
 - `runs: EvalRunResult[] = []` (attribute: false) — `EvalRunResult { id: string; label: string;
@@ -16717,12 +17125,17 @@ primitives, with retry counts and sensitive-field redaction.
 unknown }`, extending the shared detail from `@aceshooting/lyra-ui/ai`). `args` is present only when
 `approved` is `true`, and may differ from what the entry originally proposed — the dialog's inline
 edit step can hand back different arguments. A listener that only needs `{ invocationId, approved }`
-can ignore it; one actually executing the tool needs it.
+can ignore it; one actually executing the tool needs it. This is a cancelable veto point:
+`preventDefault()` preserves the pending approval dialog and its current inline argument edits
+instead of closing/resetting them, so asynchronous host validation can finish before resolving the
+decision.
 
 **CSS parts:** `base`,
 `entry`, `entry-marker`, `entry-header`, `entry-timestamp`, `entry-body`, `entry-details`,
 `entry-result`, `entry-error`, `entry-retries`, `entry-retries-count`, `entry-retries-label`,
 `entry-redacted-indicator`, `entry-approval-status`, `approval-dialog`.
+Each entry's `lr-details` disclosure has a localized contextual summary naming that tool call, not a
+repeated bare "Details" label.
 
 **Themeable custom properties:** `--lr-tool-timeline-gap` (default `var(--lr-space-l)`) — vertical
 gap between entries; `--lr-tool-timeline-marker-size` (default `var(--lr-size-0-625rem)`) — the
@@ -16779,6 +17192,8 @@ It never executes tools or persists decisions.
 
 **Events:** `lr-approval-select` (`{ invocationId }`), `lr-approval-decision` (`{ invocationId,
 approved, args? }`), and `lr-approval-close` (`{ invocationId, reason }`).
+`lr-approval-decision` is cancelable; calling `preventDefault()` vetoes the nested approve/deny
+request and keeps the decision dialog pending.
 
 **CSS parts:** `base`, `heading-row`, `heading`, `count`, `list`, `request`, `request-info`,
 `tool-name`, `request-id`, `status`, `empty`. The `[part='request']` row matching `selectedId`
@@ -16823,6 +17238,12 @@ request. Both are no-ops before a frame exists.
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
+Changing `resource` mounts a fresh iframe/window generation; messages from the prior
+`contentWindow` are ignored even when two opaque-origin inline documents otherwise look alike.
+Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
+to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
+locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.
+
 **CSS parts:** `base`, `frame`, `loading`, `error`.
 
 **Slots:** none. **Optional peer deps:** none.
@@ -16858,6 +17279,10 @@ PromptStudioMessage[]; variables?: PromptStudioVariable[]; createdAt?: string }`
 `message-content`, `remove-message`, `add-message`, `variables`, `variable`, `versions`, `version`,
 `preview`, `save`, `run`.
 
+Each message's role select and content editor has a localized contextual accessible name containing
+its one-based message index and purpose (plus the current role for content), so repeated controls do
+not collapse to indistinguishable generic names.
+
 **Slots:** none. **Optional peer deps:** none.
 
 ```ts
@@ -16890,7 +17315,9 @@ keywords. `SchemaValidationIssue = { path: string; message: string; severity?: '
 **Events:** `lr-schema-select` (`{ path, schema }`, with an RFC 6901-style JSON Pointer).
 
 **CSS parts:** `base`, `tree`, `node`, `node-selected`, `node-trigger`, `name`, `type`, `required`,
-`description`, `constraints`, `issue`, `limit`, `empty`.
+`description`, `constraints`, `issue`, `limit`, `issue-limit`, `empty`. `issue-limit` is the
+localized resource-ceiling status shown when caller-supplied validation issues exceed the rendered
+issue cap.
 
 `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
@@ -16904,8 +17331,10 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 **Themeable custom properties:** `--lr-schema-viewer-info-border`, `--lr-schema-viewer-info-bg` (see
 above); otherwise shared tokens only.
 
-Rendering is capped at 500 schema nodes; `limit` reports truncation. Cycles stop at the repeated
-node rather than recursing. **Slots:** none. **Optional peer deps:** none.
+Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
+`issue-limit` report their respective truncation. Issues are indexed by path once before recursive
+rendering instead of rescanning the full input for every node. Cycles stop at the repeated node
+rather than recursing. **Slots:** none. **Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.js';
@@ -16914,6 +17343,7 @@ import '@aceshooting/lyra-ui/components/agent-tools/schema-viewer/schema-viewer.
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
+- `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
 - `--lr-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
 - `--lr-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
@@ -16938,7 +17368,10 @@ Record<string, unknown> }`.
 `task`, `model`, `progress`, `actions`, `cancel`, `retry`, `limit`, `empty`.
 
 At most 500 runs render, and visual indentation is capped at 12 levels while ARIA hierarchy keeps
-the logical depth. Progress is finite and clamped. **Slots:** none. **Optional peer deps:** none.
+the logical depth. The roving treeitem accepts Enter/Space as well as pointer activation for
+`lr-run-select`; cancel/retry action names include the run label so repeated row actions remain
+distinguishable to assistive technology. Progress is finite and clamped. **Slots:** none.
+**Optional peer deps:** none.
 
 ```ts
 import '@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.js';
@@ -16980,8 +17413,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   boolean; color?: string; dash?: number[] }` (source/target are node ids). `directed` adds an
   arrowhead; `color` and `dash` style the individual stroke; `label` provides a spoken-name and SVG
   tooltip fallback but is not rendered as visible edge text; `accessibleLabel` and `description`
-  can override the spoken name and tooltip independently. A link whose `source` id doesn't resolve
-  to a real node is still dropped entirely
+  can override the spoken name and tooltip independently. `width` is normalized before reaching
+  SVG, canvas paint, or canvas picking: negative values clamp to `0`, while a non-finite or unset
+  value uses `1.5`. A link whose `source` id doesn't resolve to a real node is still dropped entirely
   (there's no position to draw a stub from). A link whose `target` id doesn't resolve instead renders
   as a short, dashed, non-interactive stub off `source`'s own position
   (`[part='link'][data-dangling]`, `aria-hidden="true"`) rather than being silently dropped — e.g. for
@@ -17024,7 +17458,9 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `::part(node)`/`::part(link)` styling (pixels, not elements — theme via cssprops instead), no
   native SVG `<title>` tooltip (replaced by `part="tooltip"`), and a drawn focus ring instead of a
   CSS one. Keyboard roving/announcements are preserved through an offscreen `part="cursor-item"`
-  button per node/link/hull.
+  button per node/link/hull. In both renderers, node, link, and community-hull picking keeps at
+  least 24 CSS px of screen-space geometry as the viewport zoom changes; this enlarges interaction
+  only, not the visible marks.
 
 **Methods:** `focusNode(id, options?: { zoom? })` and `fit(options?: { padding?: number })` control the
 camera; `getNodePosition(id)` returns the current `{ x, y }` in graph-local drawing coordinates, or
@@ -17037,7 +17473,9 @@ id? }`; the optional `id` is the stable `GraphLink.id` supplied by the caller), 
 `lr-link-enter`/`lr-link-leave` (`detail: { source, target, id? }`, same hover contract),
 `lr-node-expand` (`detail: { id }`, a node was double-activated — native `dblclick`, or two
 Enter/Space activations within 500ms — regardless of `GraphNode.expandable`), `lr-community-click`
-(`detail: { id }`, a hull was activated)
+(`detail: { id }`, a hull was activated), `lr-selection-change`
+(`detail: { nodeIds, linkIds }`, a controlled selection intent), and `lr-viewport-change`
+(`detail: { k, x, y }`, a frame-coalesced camera/layout signal)
 
 **Slots:** none.
 
@@ -17073,8 +17511,10 @@ Under `renderer="canvas"` these five are read from computed style at paint time 
 per-node elements to inherit them), so they must be set on or above the `<lr-graph>` host itself.
 
 **Optional peer deps:** `d3-force`, `d3-drag`, `d3-zoom`, `d3-selection` (all four required
-together; lazy-`import()`ed once per page, `console.warn` once and renders empty if missing —
-install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
+together; lazy-`import()`ed once per page). Each loaded module is validated for the named callable
+capabilities the graph uses; a missing package or malformed module fails closed through the
+localized `part="error"` alert. Install with
+`pnpm add d3-force d3-drag d3-zoom d3-selection`.
 
 ```html
 <lr-graph style="display:block;height:500px"></lr-graph>
@@ -17116,12 +17556,11 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
   `<lr-skeleton>` sized to `width`/`height` with `aria-busy="true"`. If they fail to load (for
   example, because they are not installed), the graph fails closed with a localized
   `part="error"` / `role="alert"` message instead of leaving an empty SVG.
-- `GraphNode.color` is sanitized (rejects `;`/`{`/`}`) before being written into the
-  `--lr-node-fill` inline custom property, so an untrusted color string can't break out of that
-  CSS declaration.
-- `GraphLink.color` applies the same declaration-delimiter sanitization. `GraphLink.dash` is used
-  only when every entry is finite and non-negative; an empty or invalid array falls back to a solid
-  line rather than partially applying malformed SVG stroke data.
+- `GraphNode.color`, node-type colors, `GraphLink.color`, and community colors are accepted only
+  when the browser parses them as CSS `color`; declaration breaks and `url()` paint servers are
+  ignored in favor of the normal token/palette fallback. `GraphLink.dash` is used only when every
+  entry is finite and non-negative; an empty or invalid array falls back to a solid line rather
+  than partially applying malformed SVG stroke data.
 - a structural `nodes`/`links` change now carries over each already-settled node's position (and any
   in-progress drag) by id when rebuilding the simulation, instead of discarding every node's (x, y)
   and re-running the whole ~300-tick random-start settle from scratch — only genuinely new ids get a
@@ -17130,6 +17569,8 @@ install with `pnpm add d3-force d3-drag d3-zoom d3-selection`).
 - under `prefers-reduced-motion: reduce`, or whenever `seed` is set, the simulation converges
   synchronously (ticked in a loop down to `alphaMin` before first paint) instead of animating over
   ~300 rendered frames; user-initiated motion (dragging a node) is unaffected either way.
+- in canvas mode, `pointercancel`, lost pointer capture, and disconnect all release a live node's
+  force pin and reset the simulation target; a canceled drag never leaves the node pinned.
 - the `<svg part="svg">` now carries `role="group"` and an `aria-label` summarizing the node/link
   counts (e.g. "Node-link diagram with 5 nodes and 4 links"), and node `<text part="label">`s are
   `aria-hidden="true"` (their content is already covered by each node's own `aria-label`).
@@ -17237,7 +17678,8 @@ same event-decoupled contract every sibling in this family follows.
 **Properties:**
 - `types: LyraGraphLegendType[] = []` (attribute: false) — `{ id: string; label: string; color?:
   string; shape?: 'circle' | 'square' | 'diamond' }`, the exact `lr-graph.nodeTypes` entry shape
-  (declared locally, not imported, so this stays a zero-dependency component)
+  (declared locally, not imported, so this stays a zero-dependency component). A color is used only
+  when valid for CSS `color`; declaration breaks and `url()` fall back to the categorical palette
 - `counts?: Record<string, number>` (attribute: false) — optional per-type count shown alongside the
   label
 - `hiddenTypes: string[] = []` (attribute: false) — controlled; the host assigns this back from
@@ -17257,7 +17699,8 @@ after each toggle).
 **Themeable custom properties:** `--lr-graph-legend-hidden-color` (default
 `var(--lr-color-text-quiet)`) — text color of a filtered-out (hidden) row's `label`/`count`,
 independent of the shared quiet-text token so a host can retint "hidden" rows without repainting
-every other quiet-text surface. Also reads `--lr-graph-cat-1` through `-8`
+every other quiet-text surface; `--lr-graph-legend-hidden-swatch-opacity` (default `0.5`) controls
+only that row's decorative swatch opacity. Also reads `--lr-graph-cat-1` through `-8`
 (the same computed-style fallback palette `lr-graph`/`lr-word-cloud` use) plus shared tokens.
 
 **Optional peer deps:** none.
@@ -17625,7 +18068,8 @@ stance `lr-tool-select-dialog` already takes.
 - `sources: LyraSourceEntry[] = []` (attribute: false) — `LyraSourceEntry { id: string; label:
   string; mimeType?: string; name?: string; children?: LyraSourceEntry[] }`; flat (no `children`) or
   a tree — presence of `children` makes a row a group/folder with tri-state select
-- `selectedIds: string[] = []` (attribute: false) — controlled; the host assigns this back from
+- `selectedIds: string[] = []` (attribute: false) — controlled; duplicates and ids that are not
+  leaves in the current `sources` tree are pruned, and the host assigns updates back from
   `lr-sources-change`
 - `showSelectAll: boolean = true` (attribute `show-select-all`)
 - `searchable: boolean = true`
@@ -17641,7 +18085,8 @@ fired after every toggle including select-all).
 
 **CSS parts:** `base`, `search` (the built-in filter `lr-input`, only when `searchable`),
 `select-all` (only when `showSelectAll`), `summary` ("{selected} of {total} selected"), `tree`
-(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's expand/collapse button),
+(`role="tree"`), `item` (`role="treeitem"`), `disclosure` (a folder row's pointer-only
+expand/collapse indicator; the surrounding treeitem owns keyboard expansion),
 `checkbox` (tri-state glyph), `icon` (the `lr-file-icon` type badge), `label`, `empty` (`noData`
 when `sources` is empty, `noMatches` when a filter empties the tree).
 
@@ -17797,8 +18242,9 @@ anything about `<lr-source-card>`, it only carries the id through its event deta
   echoed back verbatim in both events; never read or validated by this component.
 - `href: string = ''` — optional direct link target for the citation's source, carried into
   `lr-citation-open`'s detail as-is; this component never navigates.
-- `label: string = ''` — overrides the computed accessible name. The built-in citation/status
-  summary is a complete localized template; a host `aria-label` has highest precedence.
+- `label: string = ''` — adds caller-supplied context to the localized citation name while retaining
+  the visible citation number (for example, `"Citation 3, Annual report"`). A host `aria-label`
+  remains the exact highest-precedence override.
 
 **Events:**
 - `lr-citation-activate` (`detail: { sourceId: string; index: number }`) — fires on click, or on
@@ -17901,7 +18347,8 @@ handy for building a `label-plural` string reactively, e.g. `` list.labelPlural 
 collapsing the list.
 
 **Slots:** default — `<lr-source-card>` elements (or any content, though the card pairing is the
-intended usage).
+intended usage). While connected, each assigned element receives `role="listitem"`; its author
+role is retained across live changes and restored when it leaves the list or the list disconnects.
 
 **CSS parts:** `base` (outer container), `header` (the clickable `<button>` toggling `expanded`),
 `toggle` (the chevron indicator inside the header), `list` (wrapper around the default slot, `hidden`
@@ -18099,7 +18546,8 @@ and `lr-citation-badge` for each evidence entry.
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s own `lr-citation-activate` (`detail: { sourceId, index }`) still
 bubbles through unmodified; this richer event exists because a bare `sourceId`/`index` pair can't
-tell a host which exact evidence *span* to jump to.
+tell a host which exact evidence *span* to jump to. The composed `lr-claim-evidence` also surfaces
+`lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
 
 **Slots:** none.
 
@@ -18142,7 +18590,8 @@ embedding counts, retry attempts, errors, and retry/cancel requests. Never inges
 **Events:**
 - `lr-retry` (`detail: IngestionRetryEventDetail` = `RetryEventDetail & { itemId: string }` =
   `{ attempt: number; messageId?: string; itemId: string }`) — `attempt` is the attempt about to be
-  made, `(item.attempts ?? 0) + 1`. Only offered on `'failed'` rows.
+  made: the displayed nonnegative finite-integer `item.attempts` value plus one (invalid, negative,
+  or fractional inputs are normalized first). Only offered on `'failed'` rows.
 - `lr-cancel` (`detail: IngestionCancelEventDetail` = `CancelEventDetail & { itemId: string }` =
   `{ reason?: string; itemId: string }`) — this component never supplies `reason` itself. Only
   offered on non-terminal rows (`'queued'` plus the five active stages).
@@ -18253,7 +18702,8 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 (self-managed but presettable/observable — this component toggles its own copy on interaction, the
 same self-toggle-then-emit contract `lr-graph-legend` uses, so every feature works with zero host wiring)
 - `hiddenTypes: string[] = []` (attribute: false) — forwarded to both `lr-graph.hiddenTypes` and
-  `lr-graph-legend.hiddenTypes`
+  `lr-graph-legend.hiddenTypes`; hidden nodes are also excluded from explorer search results,
+  neighbor rows, and activation
 - `selectedNodeId: string | null = null` (attribute `selected-node-id`) — drives the details popover
   and `lr-graph.selectedNodeIds`; `null` shows no selection and keeps the popover closed
 - `pinnedNodeIds: string[] = []` (attribute: false) — exactly two pinned nodes reveals the "Find
@@ -18537,6 +18987,8 @@ is non-empty and not `loading`), `empty` (only when `empty` and neither `loading
 - Submitting while `loading` is already true **supersedes** the in-flight request: `lr-cancel` fires
   immediately before the new `lr-search`. Clicking the submit button (rather than pressing Enter)
   while `loading` only emits `lr-cancel` and does not resubmit.
+- Long unbroken filter keys, values, and scope labels are contained within the search allocation;
+  the removable chip label truncates while its remove action remains available.
 
 ---
 
@@ -18624,7 +19076,8 @@ the component only normalizes them into SVG, colors optional clusters, and emits
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
 y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
 `accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
-omitted.
+omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
+keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
 
 **Events:** `lr-point-select` (`{ point }`), activated by click or Enter/Space.
 
@@ -18641,7 +19094,9 @@ permissions, and connector settings go in the `settings` slot.
 
 **Properties:** `sources: KnowledgeSource[] = []` (attribute: false); `ingestionItems:
 IngestionQueueItem[] = []` (attribute: false); `activeTab: 'sources' | 'ingestion' = 'sources'`;
-`label: string = ''`; `hideIngestion: boolean = false`.
+`label: string = ''` (visible heading and accessible-name fallback; a host `aria-label` wins);
+`hideIngestion: boolean = false`. If ingestion is active when it becomes hidden, `activeTab`
+normalizes to `'sources'`, emits `lr-tab-change`, and moves focus to the Sources tab when needed.
 
 **Events:** `lr-tab-change` (`{ tab }`), `lr-source-create`, `lr-source-sync`, `lr-source-pause`,
 `lr-source-delete`, `lr-ingestion-retry`, and `lr-ingestion-cancel` (the latter four preserve the

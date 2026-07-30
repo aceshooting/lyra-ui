@@ -39,7 +39,7 @@ export async function loadD3Modules(
       importZoom(),
       importSelection(),
     ]);
-    return {
+    const modules = {
       forceSimulation: force.forceSimulation,
       forceLink: force.forceLink,
       forceManyBody: force.forceManyBody,
@@ -51,6 +51,32 @@ export async function loadD3Modules(
       zoomTransform: zoomMod.zoomTransform,
       select: selectionMod.select,
     };
+    const callableNames = [
+      'forceSimulation',
+      'forceLink',
+      'forceManyBody',
+      'forceCenter',
+      'forceCollide',
+      'drag',
+      'zoom',
+      'zoomTransform',
+      'select',
+    ] as const;
+    const missing = callableNames.find((name) => typeof modules[name] !== 'function');
+    const identity = modules.zoomIdentity;
+    if (
+      missing ||
+      !identity ||
+      typeof identity.translate !== 'function' ||
+      typeof identity.scale !== 'function'
+    ) {
+      throw new TypeError(
+        missing
+          ? `The optional d3 peers do not provide the required ${missing}() function.`
+          : 'The optional d3-zoom peer does not provide a usable zoomIdentity transform.',
+      );
+    }
+    return modules;
   } catch (err) {
     console.warn(
       '<lr-graph> needs the optional peer dependencies `d3-force`, `d3-drag`, ' +

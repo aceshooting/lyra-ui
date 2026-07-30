@@ -3,9 +3,18 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { finiteNumber, finiteRange, isSliderKey, decimalPlaces } from '../../../internal/numbers.js';
+import {
+  decimalPlaces,
+  finiteInterpolate,
+  finiteMidpoint,
+  finiteNumber,
+  finiteRange,
+  finiteRatio,
+  isSliderKey,
+} from '../../../internal/numbers.js';
 import { styles } from './slider.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** PageUp/PageDown move by a larger increment than a single Arrow step,
  *  matching the WAI-ARIA APG slider pattern's expected keyboard interactions
@@ -116,14 +125,12 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     this.requestUpdate('step', old);
     this.sanitizeCurrentValue();
   }
-  /** Accessible name for the slider, used when no visible label context
-   *  exists around it (e.g. no wrapping `<label>` or adjacent heading). Set
-   *  as `aria-label` on the interactive `role="slider"` element. A plain
-   *  `aria-label` attribute on the host itself is honored as a fallback when
-   *  this is left unset, matching `<lr-checkbox>`/`<lr-switch>`; with
-   *  neither, the localized generic `sliderLabel` message applies so the
-   *  focusable thumb is never nameless (the same pattern as
-   *  `<lr-input>`/`<lr-textarea>`'s built-in generic labels). */
+  /** Accessible-name fallback for the slider when the host has no `aria-label`, used when no
+   *  visible label context exists around it (e.g. no wrapping `<label>` or adjacent heading).
+   *  The resolved name is set on the interactive `role="slider"` element. With neither a host
+   *  `aria-label` nor this property, the localized generic `sliderLabel` message applies so the
+   *  focusable thumb is never nameless (the same pattern as `<lr-input>`/`<lr-textarea>`'s
+   *  built-in generic labels). */
   @property() label = '';
 
   /** Optional human-readable formatter for the thumb's `aria-valuetext`.
@@ -150,6 +157,23 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   // between-gesture layout change is always picked up.
   private dragTrackRect: DOMRect | null = null;
   private dragRtl = false;
+
+  override get disabled(): boolean {
+    return super.disabled;
+  }
+
+  override set disabled(next: boolean) {
+    super.disabled = next;
+    if (next) this.keyboardChanged = false;
+  }
+
+  formDisabledCallback(disabled: boolean): void {
+    const parent = Object.getPrototypeOf(LyraSlider.prototype) as {
+      formDisabledCallback: (this: LyraSlider, disabled: boolean) => void;
+    };
+    parent.formDisabledCallback.call(this, disabled);
+    if (disabled) this.keyboardChanged = false;
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -266,18 +290,13 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
 
   private defaultNumericValue(): number {
     const { lo, hi } = this.domain();
-    return this.clampValue(lo + (hi - lo) / 2);
+    return this.clampValue(finiteMidpoint(lo, hi));
   }
 
   private percentOf(value: number): number {
     const { lo, hi } = this.domain();
     const safeValue = finiteRange(value, lo, lo, hi);
-    const span = hi - lo;
-    const ratio =
-      Number.isFinite(span) && span !== 0
-        ? (safeValue - lo) / span
-        : (safeValue / 2 - lo / 2) / (hi / 2 - lo / 2 || 1);
-    return Math.min(1, Math.max(0, finiteNumber(ratio, 0))) * 100;
+    return finiteRatio(safeValue, lo, hi) * 100;
   }
 
   private clampValue(raw: number): number {
@@ -418,7 +437,9 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     // Mirrors onPointerMove's own RTL handling below.
     const ratio = Math.min(1, Math.max(0, isRtl(this) ? 1 - raw : raw));
     const { lo, hi } = this.domain();
-    if (this.setValue(lo + ratio * (hi - lo), false)) this.changedPointers.add(e.pointerId);
+    if (this.setValue(finiteInterpolate(lo, hi, ratio), false)) {
+      this.changedPointers.add(e.pointerId);
+    }
     this.beginDrag(e.pointerId, thumb);
     // Keyboard interaction (arrow keys, Home/End, ...) can continue
     // seamlessly right after the click, exactly as if the user had tabbed to
@@ -445,11 +466,13 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
     // rightward drag would move the thumb the wrong way.
     const ratio = Math.min(1, Math.max(0, this.dragRtl ? 1 - raw : raw));
     const { lo, hi } = this.domain();
-    if (this.setValue(lo + ratio * (hi - lo), false)) this.changedPointers.add(e.pointerId);
+    if (this.setValue(finiteInterpolate(lo, hi, ratio), false)) {
+      this.changedPointers.add(e.pointerId);
+    }
   };
 
   private onPointerUp = (e: PointerEvent): void => {
-    this.endDrag(e.pointerId, true);
+    this.endDrag(e.pointerId, e.type === 'pointerup');
   };
 
   /** Stop the drag owned by `pointerId`, optionally committing a final lr-change. */
@@ -472,10 +495,10 @@ export class LyraSlider extends FormAssociated(LyraSliderBase) {
   override render(): TemplateResult {
     const num = this.valueAsNumber;
     const pct = this.percentOf(num);
-    const text = String(num);
+    const text = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 20 }).format(num);
     const valueText = this.valueFormatter ? this.valueFormatter(num) : text;
     const { lo, hi } = this.domain();
-    const ariaLabel = this.label || this.getAttribute('aria-label') || this.localize('sliderLabel');
+    const ariaLabel = this.getAttribute('aria-label') || this.label || this.localize('sliderLabel');
     return html`
       <div part="base" @pointerdown=${this.onBasePointerDown}>
         <div part="track"></div>

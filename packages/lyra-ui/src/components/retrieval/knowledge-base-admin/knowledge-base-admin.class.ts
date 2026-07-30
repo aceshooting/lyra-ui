@@ -1,4 +1,4 @@
-import { html, nothing, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
@@ -54,14 +54,16 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   @property({ attribute: false }) sources: KnowledgeSource[] = [];
   /** Documents currently moving through ingestion. */
   @property({ attribute: false }) ingestionItems: IngestionQueueItem[] = [];
-  /** Active tab. Controlled by the host after `lr-tab-change` if desired. */
+  /** Active tab. Controlled by the host after `lr-tab-change` if desired. If the ingestion tab
+   * becomes unavailable, this normalizes to `'sources'` through the same event contract. */
   @property({ attribute: 'active-tab', reflect: true }) activeTab: KnowledgeBaseAdminTab = 'sources';
   /** Accessible name and visible heading. */
   @property() label = '';
-  /** Hides the ingestion tab and queue. */
+  /** Hides the ingestion tab and queue. An active/focused ingestion tab moves to Sources. */
   @property({ type: Boolean, attribute: 'hide-ingestion' }) hideIngestion = false;
 
   private readonly idPrefix = `lr-knowledge-base-admin-${++knowledgeBaseAdminInstance}`;
+  private focusSourcesAfterUpdate = false;
 
   private tabId(tab: KnowledgeBaseAdminTab): string {
     return `${this.idPrefix}-${tab}-tab`;
@@ -75,6 +77,24 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     if (tab === 'ingestion' && this.hideIngestion) return;
     this.activeTab = tab;
     this.emit('lr-tab-change', { tab });
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (!this.hideIngestion || this.activeTab !== 'ingestion') return;
+    this.focusSourcesAfterUpdate =
+      this.shadowRoot?.activeElement?.id === this.tabId('ingestion');
+    this.activeTab = 'sources';
+    this.emit('lr-tab-change', { tab: 'sources' });
+  }
+
+  protected override updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    if (!this.focusSourcesAfterUpdate) return;
+    this.focusSourcesAfterUpdate = false;
+    this.shadowRoot
+      ?.querySelector<HTMLButtonElement>(`#${this.tabId('sources')}`)
+      ?.focus();
   }
 
   private handleTabKeydown(event: KeyboardEvent, current: KnowledgeBaseAdminTab): void {
@@ -107,11 +127,12 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
   }
 
   override render(): TemplateResult {
-    const label = this.label || this.localize('knowledgeBaseAdminLabel');
+    const visibleLabel = this.label || this.localize('knowledgeBaseAdminLabel');
+    const accessibleLabel = this.getAttribute('aria-label') || visibleLabel;
     const tab = this.hideIngestion && this.activeTab === 'ingestion' ? 'sources' : this.activeTab;
-    return html`<section part="base" aria-label=${label}>
-      <h2 part="heading">${label}</h2>
-      <div part="tabs" role="tablist" aria-label=${label}>
+    return html`<section part="base" aria-label=${accessibleLabel}>
+      <h2 part="heading">${visibleLabel}</h2>
+      <div part="tabs" role="tablist" aria-label=${accessibleLabel}>
         <button
           part="tab"
           id=${this.tabId('sources')}

@@ -627,6 +627,24 @@ it('auto-loads a default emoji set on connect when groups is left unset', async 
   expect(el.shadowRoot!.querySelector('[part="emoji"]')!.textContent).to.equal('😀');
 });
 
+it('preserves an explicitly assigned empty groups array from before connection', async () => {
+  const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
+  let loaderCalls = 0;
+  (el as unknown as { loadGroups: () => Promise<EmojiPickerGroup[] | null> }).loadGroups = async () => {
+    loaderCalls += 1;
+    return groups;
+  };
+  el.groups = [];
+  created.push(el);
+  document.body.append(el);
+  await el.updateComplete;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(loaderCalls, 'an explicit empty data set opts out of convenience loading').to.equal(0);
+  expect(el.groups).to.deep.equal([]);
+  expect(el.shadowRoot!.querySelectorAll('[part="emoji"]').length).to.equal(0);
+});
+
 it('does not let a slow auto-load overwrite an explicitly-set groups value', async () => {
   const el = document.createElement('lr-emoji-picker') as LyraEmojiPicker;
   // Resolves asynchronously (a real microtask round-trip) rather than synchronously, so the

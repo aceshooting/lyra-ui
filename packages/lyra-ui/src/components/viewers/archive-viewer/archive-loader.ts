@@ -9,7 +9,10 @@ export async function loadArchiveLibrary(
   try {
     const module = await importJSZip();
     const candidate = (module as { default?: ArchiveLibraryApi }).default;
-    return candidate && typeof candidate.loadAsync === 'function' ? candidate : (module as ArchiveLibraryApi);
+    if (candidate && typeof candidate.loadAsync === 'function') return candidate;
+    return typeof (module as ArchiveLibraryApi).loadAsync === 'function'
+      ? (module as ArchiveLibraryApi)
+      : null;
   } catch (error) {
     console.warn('<lr-archive-viewer> needs the optional peer dependency `jszip` to read .zip archives — install it with `pnpm add jszip`:', error);
     return null;

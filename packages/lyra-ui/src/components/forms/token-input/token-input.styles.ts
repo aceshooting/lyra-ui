@@ -93,4 +93,11 @@ export const styles = css`
      the bracket-attribute selector would miss entirely (mirrors lr-select's/lr-combobox's
      identical fix). */
   :host(:disabled) { opacity: var(--lr-opacity-disabled); }
+  [part='form-control-label'],
+  [part='hint'],
+  [part='error'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
 `;

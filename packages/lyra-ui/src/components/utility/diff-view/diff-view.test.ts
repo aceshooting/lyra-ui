@@ -155,6 +155,26 @@ describe('lr-diff-view', () => {
     expect(el.shadowRoot!.querySelector('[part="copy-button"]')!.textContent!.trim()).to.equal('Copy');
   });
 
+  it('clears copied feedback immediately when either source changes', async () => {
+    const el = (await fixture(
+      html`<lr-diff-view copyable .oldText=${'old'} .newText=${'new'}></lr-diff-view>`,
+    )) as LyraDiffView;
+    const button = el.shadowRoot!.querySelector('[part="copy-button"]') as HTMLButtonElement;
+    button.click();
+    await el.updateComplete;
+    expect(button.textContent!.trim()).to.equal('Copied!');
+
+    el.newText = 'newer';
+    await el.updateComplete;
+    expect(button.textContent!.trim()).to.equal('Copy');
+
+    button.click();
+    await el.updateComplete;
+    el.oldText = 'older';
+    await el.updateComplete;
+    expect(button.textContent!.trim()).to.equal('Copy');
+  });
+
   it('does not recompute the diff when only the copy-confirmation state toggles, only when oldText/newText change', async () => {
     const el = (await fixture(html`
       <lr-diff-view copyable .oldText=${'a\nb'} .newText=${'a\nX'}></lr-diff-view>

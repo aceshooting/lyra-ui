@@ -1,8 +1,17 @@
 import { css } from 'lit';
 
 export const styles = css`
-  :host { display: inline-flex; vertical-align: middle; }
-  [part='base'] { display: inline-flex; align-items: center; gap: var(--lr-space-xs); min-inline-size: 0; }
+  :host { display: inline-flex; vertical-align: middle; min-inline-size: 0; max-inline-size: 100%; }
+  :host([variant='label']) { inline-size: 100%; }
+  [part='base'] {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    inline-size: 100%;
+    box-sizing: border-box;
+  }
   [part='icon'] {
     display: inline-flex;
     align-items: center;
@@ -22,6 +31,15 @@ export const styles = css`
     font-weight: var(--lr-font-weight-bold);
     line-height: var(--lr-line-height-none);
     text-transform: uppercase;
+    flex: 0 0 auto;
   }
-  [part='label'] { min-inline-size: 0; color: var(--lr-color-text); }
+  [part='label'],
+  [part='size'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  [part='label'] { color: var(--lr-color-text); }
+  [part='label'] { flex: 1 1 0; }
+  [part='size'] { flex: 0 1 auto; }
 `;

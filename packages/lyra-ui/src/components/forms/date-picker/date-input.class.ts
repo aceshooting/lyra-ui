@@ -89,7 +89,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @customElement lr-date-input
  * @event input - Fired on edits.
  * @event change - Fired on committed date transitions.
- * @event lr-show / lr-hide - Calendar popover lifecycle.
+ * @event lr-show - The calendar popover opened.
+ * @event lr-hide - The calendar popover closed.
  * @event lr-clear - The clear button was used.
  * @event blur - Re-dispatched from the internal `<input>`'s own `blur`, bubbling and composed
  *   unlike the native event.
@@ -275,8 +276,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     const old = this._readonly;
     this._readonly = Boolean(next);
     this.toggleAttribute('readonly', this._readonly);
+    if (this._readonly) this.hide();
     this.updateValidity();
     this.requestUpdate('readonly', old);
+  }
+
+  override get disabled(): boolean {
+    return super.disabled;
+  }
+
+  override set disabled(next: boolean) {
+    super.disabled = next;
+    if (next) this.hide();
   }
 
   get disablePast(): boolean {
@@ -754,6 +765,14 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   override formResetCallback(): void {
     super.formResetCallback();
     this.touched = false;
+  }
+
+  formDisabledCallback(disabled: boolean): void {
+    const parent = Object.getPrototypeOf(LyraDateInput.prototype) as {
+      formDisabledCallback: (this: LyraDateInput, disabled: boolean) => void;
+    };
+    parent.formDisabledCallback.call(this, disabled);
+    if (disabled) this.hide();
   }
 
   private onHintSlotChange = (e: Event): void => {

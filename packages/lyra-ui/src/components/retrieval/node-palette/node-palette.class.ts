@@ -24,6 +24,8 @@ export interface PaletteItem {
 export interface LyraNodePaletteEventMap {
   'lr-palette-place': CustomEvent<{ type: string }>;
   'lr-select': CustomEvent<{ item: PaletteItem }>;
+  focus: CustomEvent<undefined>;
+  blur: CustomEvent<undefined>;
 }
 
 /**

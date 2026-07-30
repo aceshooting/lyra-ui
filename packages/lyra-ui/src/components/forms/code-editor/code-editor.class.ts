@@ -1,10 +1,12 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './code-editor.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { sanitizeCssResize } from '../../../internal/safe-css.js';
 
 export interface LyraCodeEditorEventMap { input: CustomEvent<{ value: string }>; change: CustomEvent<{ value: string }>; blur: CustomEvent<undefined>; focus: CustomEvent<undefined>; }
 class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
@@ -34,6 +36,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @slot error - Validation message.
  * @event input - User edited the code.
  * @event change - Native change timing.
+ * @event focus - The internal textarea received focus; re-dispatched as a bubbling, composed event.
+ * @event blur - The internal textarea lost focus; re-dispatched as a bubbling, composed event.
  * @csspart form-control - Outer wrapper.
  * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
  * @csspart label - Alias of `form-control-label`.
@@ -90,6 +94,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
   @property({ attribute: 'error-text' }) errorText = '';
   @property() placeholder = '';
   @property({ type: Boolean, reflect: true }) readonly = false;
+  /** Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`. */
   @property() resize: 'none' | 'both' | 'horizontal' | 'vertical' = 'both';
   @property({ attribute: 'wrap' }) wrap: 'off' | 'soft' | 'hard' = 'off';
   @property({ converter: { fromAttribute: (value: string | null) => value !== 'false', toAttribute: (value: boolean) => value ? 'true' : 'false' } }) override spellcheck = false;
@@ -166,7 +171,12 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     // Write the token, not `tab-size` itself: the stylesheet's `tab-size: var(--lr-code-editor-tab-size)`
     // resolves it, so an untouched `tabSize` leaves a host-level override of that token in charge
     // instead of being overwritten by an inline declaration on every update.
-    const tabWidthStyle = this.tabSizeAssigned ? `;--lr-code-editor-tab-size:${this._tabSize}` : '';
+    const textareaStyle = {
+      resize: sanitizeCssResize(this.resize, 'both'),
+      ...(this.tabSizeAssigned
+        ? { '--lr-code-editor-tab-size': String(this._tabSize) }
+        : {}),
+    };
     const hasLabel = this.hasLabelSlot || this.label.length > 0;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
@@ -180,7 +190,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
               ? Array.from({ length: lineCount }, (_v, i) => html`<div>${i + 1}</div>`)
               : html`<span>${Array.from({ length: lineCount }, (_v, i) => i + 1).join('\n')}</span>`}</div>`
           : nothing}
-        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${`resize:${this.resize}${tabWidthStyle}`} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
+        <textarea id="textarea" part="textarea" .value=${this.value} aria-label=${label} aria-describedby=${describedBy || nothing} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'} placeholder=${this.placeholder} ?readonly=${this.readonly} ?disabled=${this.effectiveDisabled} spellcheck=${this.spellcheck} autocapitalize=${this.autocapitalize} autocorrect=${this.autoCorrect} wrap=${this.wrap} style=${styleMap(textareaStyle)} @input=${this.onInput} @change=${this.onChange} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}></textarea>
       </div>
       <div id="textarea-hint" part="hint" ?hidden=${!hasHint}>${this.hint}<slot name="hint" @slotchange=${this.onHintSlotChange}></slot></div>
       <div id="textarea-error" part="error" ?hidden=${!hasError}>${this.errorText}<slot name="error" @slotchange=${this.onErrorSlotChange}></slot></div>

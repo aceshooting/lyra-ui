@@ -22,11 +22,12 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 - `ToolSelectDialogTool { id: string; name: string; description?: string; category?: string; icon?:
   string; disabled?: boolean; disabledReason?: string }` — one selectable agent tool. `category` groups
   the row into a heading; tools with no `category` (or an empty/whitespace-only one) fall into a
-  trailing "Other" bucket. `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque
-  string, not a registry lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled`
-  individually gates a tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin
-  approval); `disabledReason` is supporting text shown under a disabled row, ignored when `disabled` is
-  falsy.
+  trailing localized "Other" bucket. A caller category literally named `"Other"` remains its own
+  ordinary, first-seen category and is not merged into or reordered with that uncategorized bucket.
+  `icon` is a literal glyph (e.g. an emoji) rendered next to `name` — an opaque string, not a registry
+  lookup, the same convention `<lr-tool-call-chip>`'s `icon` uses. `disabled` individually gates a
+  tool regardless of `useDefaults`/`selected` (e.g. a tool requiring admin approval);
+  `disabledReason` is supporting text shown under a disabled row, ignored when `disabled` is falsy.
 - `ToolSelectFilter = (tool: ToolSelectDialogTool, query: string) => boolean` — a predicate deciding
   whether `tool` matches an already-trimmed, already-lowercased `query`. Assign `filter` to replace the
   built-in case-insensitive name/description substring match entirely (mirrors `<lr-combobox>`'s
@@ -61,7 +62,8 @@ shared overlay stack. First-party invention (no Web Awesome equivalent).
 
 **Events:** `lr-change` (`detail: ToolSelectionChangeDetail` — the enabled-tool selection or the
 `useDefaults` toggle changed), `lr-close` (`detail: ToolSelectDialogCloseReason` — fired exactly once
-per dismissal, via Escape, a backdrop click, or a `close()` call)
+per dismissal, via Escape, a backdrop click, or a `close()` call), and no-detail `focus`/`blur`
+events re-dispatched when the internal search input gains or loses focus.
 
 **Slots:** `footer` — optional action buttons (e.g. a "Done" button), rendered in a bottom row. Changes
 already apply live via `lr-change`, so this slot is purely optional; only visually shown once it has
@@ -116,7 +118,9 @@ checkboxes for editing.
 - `disabledReason` text only renders when both `tool.disabled` and `tool.disabledReason` are set.
 - Categories are grouped in first-seen order across `tools`; an empty/whitespace-only `category` folds
   into a trailing "Other" bucket that's always rendered last. A category left with zero matches after
-  filtering is dropped entirely, not rendered as an empty heading.
+  filtering is dropped entirely, not rendered as an empty heading. A caller-supplied category
+  literally named `"Other"` is not the internal uncategorized sentinel: it stays in first-seen order
+  and remains separate even when uncategorized tools are also present.
 - Reconnecting the element while still `open` (e.g. a drag-and-drop reparent that keeps the same
   instance) resumes its shared overlay registration and re-acquires the scroll lock dropped in
   `disconnectedCallback`.

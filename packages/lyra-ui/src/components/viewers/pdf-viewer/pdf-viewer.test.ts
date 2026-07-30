@@ -553,6 +553,48 @@ describe('lr-pdf-viewer', () => {
   });
 });
 
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-pdf-viewer-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-pdf-viewer-height')).to.equal('calc(10rem + 2px)');
+});
+
+it('filters invalid public region rectangles before forwarding them to a page layer', async () => {
+  const el = await fixture<LyraPdfViewer>(html`<lr-pdf-viewer></lr-pdf-viewer>`);
+  const resolve = (
+    el as unknown as {
+      resolveHighlightRectsForPage(
+        anchor: unknown,
+        page: number,
+        scope: undefined,
+        pageRect: DOMRect,
+      ): Array<{ x: number; y: number; width: number; height: number }>;
+    }
+  ).resolveHighlightRectsForPage.bind(el);
+  expect(
+    resolve(
+      { kind: 'region', page: 1, rect: { x: 0, y: Infinity, width: 10, height: 10 } },
+      1,
+      undefined,
+      new DOMRect(0, 0, 100, 100),
+    ),
+  ).to.deep.equal([]);
+  expect(
+    resolve(
+      { kind: 'region', page: 1, rect: { x: 10, y: 20, width: 30, height: 40 } },
+      1,
+      undefined,
+      new DOMRect(0, 0, 100, 100),
+    ),
+  ).to.deep.equal([{ x: 10, y: 20, width: 30, height: 40 }]);
+});
+
 describe('anchor-target adoption', () => {
   it('exposes anchorKinds and defaults highlights/activeHighlightId/anchor', async () => {
     const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
@@ -585,6 +627,28 @@ describe('anchor-target adoption', () => {
       const ok = await el.scrollToAnchor({ kind: 'page', page: 3 });
       expect(ok).to.be.true;
       expect(el.page).to.equal(3);
+    } finally {
+      restore();
+    }
+  });
+
+  it('prevents a delayed stale text-quote anchor from changing page after a newer anchor', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const delayedText = deferred<string>();
+      (el as unknown as { getPageText: (page: number) => Promise<string> }).getPageText =
+        (page: number) => page === 1 ? delayedText.promise : Promise.resolve('');
+      const stale = el.scrollToAnchor({ kind: 'text-quote', quote: 'stale quote', page: 1 });
+      await aTimeout(0);
+      expect(await el.scrollToAnchor({ kind: 'page', page: 2 })).to.be.true;
+      delayedText.resolve('stale quote');
+      expect(await stale).to.be.false;
+      await el.updateComplete;
+      expect(el.page).to.equal(2);
     } finally {
       restore();
     }
@@ -662,6 +726,26 @@ describe('anchor-target adoption', () => {
       const ok = await el.scrollToAnchor({ kind: 'region', page: 2, rect: { x: 10, y: 20, width: 30, height: 15 } });
       expect(ok).to.be.true;
       expect(el.page).to.equal(2);
+    } finally {
+      restore();
+    }
+  });
+
+  it('rejects out-of-range page and region anchors instead of clamping them', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const rect = { x: 10, y: 20, width: 30, height: 15 };
+      expect(await el.scrollToAnchor({ kind: 'page', page: 0 })).to.be.false;
+      expect(await el.scrollToAnchor({ kind: 'page', page: 999 })).to.be.false;
+      expect(await el.scrollToAnchor({ kind: 'region', page: 0, rect })).to.be.false;
+      expect(await el.scrollToAnchor({ kind: 'region', page: 999, rect })).to.be.false;
+      expect(el.page).to.equal(1);
     } finally {
       restore();
     }
@@ -1385,6 +1469,65 @@ describe('getOutline', () => {
       el.src = 'https://example.test/report.pdf';
       await waitFor(el, '[part="toolbar"]');
       expect(await el.getOutline()).to.deep.equal([{ title: 'Broken' }]);
+    } finally {
+      restore();
+    }
+  });
+
+  it('caps a peer-produced outline at 10,000 items', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const outline = Array.from({ length: 10_001 }, (_unused, index) => ({
+      title: `Item ${index}`,
+      items: [],
+    }));
+    installFakeLoader(el, fakeDocumentWithText(['a'], outline) as unknown as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect((await el.getOutline()).length).to.equal(10_000);
+    } finally {
+      restore();
+    }
+  });
+
+  it('caps peer-produced outline nesting at 100 levels', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const root: { title: string; items: unknown[] } = { title: 'Level 1', items: [] };
+    let cursor = root;
+    for (let level = 2; level <= 102; level++) {
+      const child: { title: string; items: unknown[] } = { title: `Level ${level}`, items: [] };
+      cursor.items = [child];
+      cursor = child;
+    }
+    installFakeLoader(el, fakeDocumentWithText(['a'], [root]) as unknown as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      const outline = await el.getOutline();
+      let depth = 0;
+      let item = outline[0];
+      while (item) {
+        depth++;
+        item = item.children?.[0];
+      }
+      expect(depth).to.equal(100);
+    } finally {
+      restore();
+    }
+  });
+
+  it('ignores a cyclic peer-produced outline child', async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    const cyclic: { title: string; items: unknown[] } = { title: 'Cycle', items: [] };
+    cyclic.items = [cyclic];
+    installFakeLoader(el, fakeDocumentWithText(['a'], [cyclic]) as unknown as ReturnType<typeof fakeDocument>);
+    const restore = stubFetch();
+    try {
+      el.src = 'https://example.test/report.pdf';
+      await waitFor(el, '[part="toolbar"]');
+      expect(await el.getOutline()).to.deep.equal([{ title: 'Cycle' }]);
     } finally {
       restore();
     }

@@ -56,7 +56,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   /** Source URL passed to the renderer or fallback preview. */
   @property() src = '';
 
-  /** Optional per-instance registry; the default registry is used when unset. */
+  /** Optional per-instance registry; the default registry is used when unset. A consumer matcher
+   * or renderer that throws is contained as the localized error state, and a pending anchor
+   * completes once with `{ found: false }`. */
   @property({ attribute: false }) registry?: DocumentRendererRegistry;
 
   /** Declarative scroll-to-anchor target, forwarded to the resolved renderer. A string is a
@@ -68,8 +70,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
   /** Highlights forwarded to the resolved renderer. */
   @property({ attribute: false }) highlights: LyraHighlight[] = [];
 
-  /** Media alt text forwarded to the resolved renderer, for image-like renderers. */
-  @property() alt = '';
+  /** Media alt text forwarded to the resolved renderer, for image-like renderers. Unset lets the
+   *  renderer derive a fallback name; an explicit empty string marks decorative media. */
+  @property() alt?: string;
 
   @state()
   private renderState:
@@ -113,7 +116,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       src: this.src,
       anchor: this.anchor ?? undefined,
       highlights: this.highlights,
-      alt: this.alt || undefined,
+      alt: this.alt,
     };
   }
 
@@ -121,7 +124,13 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     const generation = ++this.generation;
     const file = this.currentFile();
     const registry = this.registry ?? getDefaultDocumentRendererRegistry();
-    const def = findDocumentRenderer(file, registry);
+    let def: DocumentRendererDefinition | undefined;
+    try {
+      def = findDocumentRenderer(file, registry);
+    } catch {
+      this.failResolution(file, generation);
+      return;
+    }
 
     if (!def) {
       this.resolvedLazy = undefined;
@@ -131,14 +140,20 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
 
     if (this.resolvedLazy?.def === def) {
-      this.renderWith(this.resolvedLazy.resolved, file);
+      if (!this.renderWith(this.resolvedLazy.resolved, file)) {
+        this.failResolution(file, generation);
+        return;
+      }
       this.finishAnchorResult(this.resolvedLazy.resolved, file, generation);
       return;
     }
 
     if (!def.load) {
       this.resolvedLazy = { def, resolved: def };
-      this.renderWith(def, file);
+      if (!this.renderWith(def, file)) {
+        this.failResolution(file, generation);
+        return;
+      }
       this.finishAnchorResult(def, file, generation);
       return;
     }
@@ -156,8 +171,23 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     }
     if (generation !== this.generation) return;
     this.resolvedLazy = { def, resolved };
-    this.renderWith(resolved, file);
+    if (!this.renderWith(resolved, file)) {
+      this.failResolution(file, generation);
+      return;
+    }
     this.finishAnchorResult(resolved, file, generation);
+  }
+
+  /** Consumer registries are extension points, so a throwing matcher/renderer must fail like a
+   * rejected lazy loader instead of escaping `resolve()` as an unhandled rejection. */
+  private failResolution(file: DocumentFile, generation: number): void {
+    if (generation !== this.generation) return;
+    this.renderState = { kind: 'error' };
+    if (file.anchor == null) return;
+    this.scheduleAfterUpdate(() => {
+      if (generation !== this.generation) return;
+      this.emit<AnchorResultDetail>('lr-anchor-result', { found: false });
+    });
   }
 
   /** Delegates to the fallback preview and emits its actual anchor result when there is no resolved
@@ -193,12 +223,14 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
     return anchors.includes(anchor.kind);
   }
 
-  private renderWith(def: DocumentRendererDefinition, file: DocumentFile): void {
-    if (!def.render) {
-      this.renderState = { kind: 'error' };
-      return;
+  private renderWith(def: DocumentRendererDefinition, file: DocumentFile): boolean {
+    if (!def.render) return false;
+    try {
+      this.renderState = { kind: 'rendered', template: def.render(file) };
+      return true;
+    } catch {
+      return false;
     }
-    this.renderState = { kind: 'rendered', template: def.render(file) };
   }
 
   private onDialogClose = (event: CustomEvent<DialogCloseReason>): void => {
@@ -216,7 +248,7 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
       case 'rendered':
         return this.renderState.template;
       case 'loading':
-        return html`<p>${this.localize('loadingDocument')}</p>`;
+        return html`<p role="status">${this.localize('loadingDocument')}</p>`;
       case 'error':
         return html`<div role="alert">${this.localize('documentPreviewGenericError')}</div>`;
       case 'fallback':
@@ -245,7 +277,9 @@ export class LyraDocumentViewer extends LyraElement<LyraDocumentViewerEventMap> 
         closable
         @lr-dialog-close=${this.onDialogClose}
       >
-        <div part="body">${this.open ? this.renderBody() : nothing}</div>
+        <div part="body" aria-busy=${this.renderState.kind === 'loading' ? 'true' : 'false'}
+          >${this.open ? this.renderBody() : nothing}</div
+        >
         ${downloadHref
           ? html`
               <a

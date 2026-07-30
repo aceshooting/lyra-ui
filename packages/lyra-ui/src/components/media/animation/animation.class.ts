@@ -446,7 +446,7 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   }
 
   set currentTime(value: number) {
-    if (this.animation) this.animation.currentTime = value;
+    if (this.animation && Number.isFinite(value)) this.animation.currentTime = value;
   }
 
   /** Convenience sugar for `this.play = true`. Named `start()`, not `play()`,

@@ -17,7 +17,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0`, `max: number = 100`, `indeterminate: boolean = false`
 (reflected), and `accessibleLabel: string = ''` (attribute `accessible-label`; unset falls back to
-the localized "Progress"). Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
+the visible default-slot text when supplied, then the localized "Progress"). Non-finite/out-of-range
+`value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).

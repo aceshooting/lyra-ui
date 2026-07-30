@@ -33,7 +33,8 @@ track ancestor scroll/resize against — pass `rect.contextElement` (a real, sti
 near the virtual point) when one is available to give it something to observe; otherwise, or when
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
-`showAt()` behaves exactly as before.
+`showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
+the current open/anchor state unchanged.
 `hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
 dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual

@@ -1,9 +1,9 @@
-import { html, nothing, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { styles } from './attachment-trigger.styles.js';
-import type { MenuSelectDetail } from '../../layout/menu/menu.class.js';
+import type { LyraMenu, MenuSelectDetail } from '../../layout/menu/menu.class.js';
 import '../../layout/menu/menu.class.js';
 import '../../layout/menu/menu-item.class.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
@@ -149,6 +149,8 @@ export interface LyraAttachmentTriggerEventMap {
  * @event lr-audio-request - The `audio` capability was activated. No
  * detail payload — same request-only scope as `lr-camera-request`; the
  * host implements the actual recording flow (typically `<lr-push-to-talk>`).
+ * @event focus - Re-dispatched from the active trigger button as a bubbling, composed event.
+ * @event blur - Re-dispatched from the active trigger button as a bubbling, composed event.
  * @csspart trigger - The single-capability icon button. Only rendered when `capabilities.length === 1`.
  * @csspart menu - The `<lr-menu>` wrapper. Only rendered when `capabilities.length > 1`.
  * @csspart menu-trigger - The multi-capability button slotted into `<lr-menu>`'s own `trigger` slot. Only rendered when `capabilities.length > 1`.
@@ -157,9 +159,9 @@ export interface LyraAttachmentTriggerEventMap {
  *   picker. Hidden (`display: none`) by default; exposed as a part only so a consumer can override
  *   that with `::part(hidden-input)` in the unlikely case their integration needs to.
  *
- * `triggerLabel` lets a host override the single-capability trigger button's
- * `aria-label` (i18n) — see that property's own doc for exactly what it
- * does and doesn't affect.
+ * `triggerLabel` supplies a fallback for the single-capability trigger button's
+ * accessible name (i18n) — see that property's own doc for exactly what it
+ * does and doesn't affect. A host `aria-label` wins on either trigger shape.
  */
 export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -173,12 +175,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
    *  `files`/`image` capabilities — see the class doc for how each uses it. */
   @property() accept = '';
 
-  /** Overrides the single-capability trigger button's `aria-label`, which
-   *  otherwise comes from `this.localize()` (e.g. `'Attach files'`, localizable
-   *  via `.strings`/`registerLyraLocale()`). Set this for a one-off override;
-   *  leave it unset to keep the localized default. Only affects the
-   *  single-capability button ([part='trigger']) — the multi-capability
-   *  menu's own trigger keeps its own `'Add attachment'` label regardless. */
+  /** Accessible-name fallback for the single-capability trigger button when the host has no
+   *  `aria-label`; otherwise the name comes from `this.localize()` (e.g. `'Attach files'`,
+   *  localizable via `.strings`/`registerLyraLocale()`). Only affects the single-capability button
+   *  (`[part='trigger']`) — the multi-capability menu uses its own localized `'Add attachment'`
+   *  fallback. */
   @property({ attribute: 'trigger-label' }) triggerLabel?: string;
 
   /** Forwards to the internal trigger button(s)' native `title` attribute — a sighted mouse
@@ -194,6 +195,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   @property({ type: Boolean, reflect: true }) disabled = false;
 
   @query('input[type="file"]') private inputEl?: HTMLInputElement;
+  @query('lr-menu') private menuEl?: LyraMenu;
 
   // Which file-backed capability the hidden input's next 'change' event
   // belongs to -- set synchronously right before the synthetic .click(), so
@@ -203,6 +205,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private get hasFileCapability(): boolean {
     return this.capabilities.includes('files') || this.capabilities.includes('image');
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>): void {
+    super.willUpdate(changed);
+    if (changed.has('disabled') && this.disabled) this.menuEl?.hide();
   }
 
   private effectiveAccept(capability: FileBackedCapability): string {
@@ -240,7 +247,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   private onInputChange = (e: Event): void => {
     const input = e.target as HTMLInputElement;
     const selected = input.files;
-    if (selected && selected.length > 0) {
+    if (!this.disabled && selected && selected.length > 0) {
       // `input.files` is a *live* view of the input's own current
       // selection, not a frozen snapshot -- clearing `.value` below (so
       // re-picking the exact same file still fires another 'change' next
@@ -308,12 +315,14 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderSingleTrigger(capability: AttachmentCapability): TemplateResult {
     const meta = CAPABILITY_META[capability];
+    const label =
+      this.getAttribute('aria-label') || this.localize(meta.triggerKey, this.triggerLabel);
     return html`
       <button
         part="trigger"
         class="trigger-button"
         type="button"
-        aria-label=${this.localize(meta.triggerKey, this.triggerLabel)}
+        aria-label=${label}
         title=${this.triggerTitle ?? nothing}
         ?disabled=${this.disabled}
         @click=${this.onTriggerClick}
@@ -327,10 +336,11 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
 
   private renderMenu(): TemplateResult {
     const addLabel = this.localize('attachmentAdd');
+    const accessibleLabel = this.getAttribute('aria-label') || addLabel;
     return html`
       <lr-menu
         part="menu"
-        label=${addLabel}
+        label=${accessibleLabel}
         @lr-menu-select=${this.onMenuSelect}
         @lr-show=${this.stopInternalEvent}
         @lr-hide=${this.stopInternalEvent}
@@ -340,7 +350,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
           part="menu-trigger"
           class="trigger-button"
           type="button"
-          aria-label=${addLabel}
+          aria-label=${accessibleLabel}
           title=${this.triggerTitle ?? nothing}
           ?disabled=${this.disabled}
           @focus=${this.onControlFocus}
@@ -352,7 +362,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
         ${this.capabilities.map((capability) => {
           const meta = CAPABILITY_META[capability];
           return html`
-            <lr-menu-item value=${capability}>
+            <lr-menu-item value=${capability} ?disabled=${this.disabled}>
               <span slot="icon">${meta.icon()}</span>
               ${this.localize(meta.menuKey)}
             </lr-menu-item>

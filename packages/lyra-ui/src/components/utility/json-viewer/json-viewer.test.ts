@@ -147,6 +147,15 @@ it('exposes nested JSON membership through list/listitem relationships', async (
   expect(items.some((item) => item.querySelector(':scope > [role="list"]'))).to.be.true;
 });
 
+it('forwards a host aria-label to the root list owner', async () => {
+  const el = (await fixture(
+    html`<lr-json-viewer aria-label="Response payload" .data=${sample}></lr-json-viewer>`,
+  )) as LyraJsonViewer;
+  const tree = el.shadowRoot!.querySelector('[part="tree"]')!;
+  expect(tree.getAttribute('role')).to.equal('list');
+  expect(tree.getAttribute('aria-label')).to.equal('Response payload');
+});
+
 it('does not render a copy button by default', async () => {
   const el = await withData(sample);
   expect(el.shadowRoot!.querySelector('[part="copy-button"]')).to.not.exist;
@@ -224,6 +233,33 @@ it('copies the literal string "undefined" when the root data is undefined', asyn
   setTimeout(() => toolbarButton.click());
   const event = await oneEvent(el, 'lr-copy');
   expect(event.detail.text).to.equal('undefined');
+});
+
+it('copies root Symbol/function values as strings instead of emitting undefined', async () => {
+  for (const value of [Symbol('root'), function rootValue() {}]) {
+    const el = await withData(value);
+    el.copyable = true;
+    await el.updateComplete;
+    const listener = oneEvent(el, 'lr-copy');
+    (el.shadowRoot!.querySelector('[part="toolbar"] [part="copy-button"]') as HTMLButtonElement).click();
+    const event = await listener;
+    expect(typeof event.detail.text).to.equal('string');
+    expect(event.detail.text).to.equal(String(value));
+  }
+});
+
+it('exposes every rendered JSON row as a public row part', async () => {
+  const el = await withData({ nested: { value: 1 } });
+  const rows = el.shadowRoot!.querySelectorAll('.row');
+  expect(rows.length).to.be.greaterThan(0);
+  expect(el.shadowRoot!.querySelectorAll('.row[part~="row"]').length).to.equal(rows.length);
+});
+
+it('routes row hover fill through --lr-json-viewer-row-hover-bg', () => {
+  const css = styles.cssText.replace(/\s+/g, ' ');
+  expect(css).to.match(
+    /\.row:hover\s*\{[^}]*background:\s*var\(--lr-json-viewer-row-hover-bg,\s*var\(--lr-color-brand-quiet\)\)/,
+  );
 });
 
 it('highlights matching keys/values with data-match when search is set', async () => {
@@ -510,6 +546,18 @@ it('respects max-height by setting the scoped custom property on the base part',
   await el.updateComplete;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   expect(base.style.getPropertyValue('--lr-json-viewer-max-height')).to.equal('10rem');
+});
+
+it('rejects declaration-breaking maxHeight values', async () => {
+  const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer></lr-json-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-json-viewer-max-height')).to.equal('');
+  el.maxHeight = 'var(--viewer-height)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-json-viewer-max-height')).to.equal('var(--viewer-height)');
 });
 
 it('keeps the tree LTR in RTL: a collapsed chevron still points right, expanded points down', async () => {

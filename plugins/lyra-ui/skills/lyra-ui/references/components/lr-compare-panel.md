@@ -6,7 +6,7 @@
 - **Class** `LyraComparePanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/compare-panel/compare-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 9 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,6 +29,8 @@ scroll position. `disabled: boolean = false` (reflected) disables every vote but
 output), and `prompt` (optional shared-input header above both panes).
 
 **Events:** `lr-vote` — `detail: { choice: 'a' | 'b' | 'tie' | 'both-bad'; itemId: string }`.
+This is a cancelable veto point emitted before `vote` changes; call `preventDefault()` to preserve
+the prior vote.
 
 **CSS parts:** `base` (the outer wrapper), `prompt` (the optional prompt header, hidden when the
 `prompt` slot is empty), `panes` (the row, or under 640px column, wrapping both panes), `pane-a`,
@@ -37,4 +39,8 @@ output), and `prompt` (optional shared-input header above both panes).
 internal vote-announcement live region).
 
 **Themeable custom properties:** `--lr-compare-panel-max-height` (default `var(--lr-size-24rem)`) —
-cap on each pane's scroll region before it scrolls internally.
+cap on each pane's scroll region before it scrolls internally;
+`--lr-compare-panel-selected-background` (default `var(--lr-color-brand-quiet)`),
+`--lr-compare-panel-selected-border-color` (default `var(--lr-color-brand)`), and
+`--lr-compare-panel-selected-color` (default `var(--lr-color-brand)`) style the selected vote
+button without changing shared brand tokens.

@@ -48,6 +48,10 @@ Dependency-free SVG radial, full-circle ring, or linear meter (no charting libra
 ```
 
 **Known gotchas:**
+- SVG text cannot wrap. When a caller-supplied visible `label` or `valueLabel` exceeds the
+  single-line capacity, the component applies SVG `textLength` fitting so the complete string stays
+  inside the fixed radial/ring viewBox or its half of the linear viewBox; the host's accessible
+  label and `aria-valuetext` retain the original text.
 - setting `valueLabel` (e.g. `"72°F"`) now also sets `aria-valuetext` on the host (in addition to
   changing the visible SVG text), so a screen reader announces your formatted string instead of the
   raw `aria-valuenow` number; the SVG `<text part="value">`/`<text part="label">` elements are

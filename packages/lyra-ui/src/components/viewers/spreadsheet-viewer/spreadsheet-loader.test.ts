@@ -13,8 +13,13 @@ it('loads and caches the real xlsx API', async () => {
 });
 
 it('supports injected imports and reports a missing peer', async () => {
-  const fake = { read: () => null, utils: {} };
-  expect(await loadSheetJs(() => Promise.resolve(fake))).to.equal(fake);
+  const fake = { read: () => null, utils: { sheet_to_json: () => [] } };
+  expect((await loadSheetJs(() => Promise.resolve(fake))) === fake).to.be.true;
+  expect((await loadSheetJs(() => Promise.resolve({ default: fake }))) === fake).to.be.true;
+  const mixed = { ...fake, default: { read: () => null, utils: {} } };
+  expect((await loadSheetJs(() => Promise.resolve(mixed as never))) === mixed).to.be.true;
+  const incomplete = { read: () => null, utils: {} };
+  expect(await loadSheetJs(() => Promise.resolve(incomplete as never))).to.equal(null);
   const originalWarn = console.warn;
   const calls: unknown[][] = [];
   console.warn = (...args: unknown[]) => calls.push(args);

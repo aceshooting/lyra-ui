@@ -29,9 +29,25 @@ describe('lr-env-list', () => {
     )) as LyraEnvList;
     await el.updateComplete;
     const values = [...el.shadowRoot!.querySelectorAll('[part="value"]')] as HTMLElement[];
-    expect(values[0].textContent!.trim()).to.equal('•'.repeat(8));
-    expect(values[1].textContent!.trim()).to.equal('•'.repeat(8));
+    expect(values[0].querySelector('[aria-hidden="true"]')!.textContent).to.equal('•'.repeat(8));
+    expect(values[1].querySelector('[aria-hidden="true"]')!.textContent).to.equal('•'.repeat(8));
     expect(values[0].dataset.masked).to.equal('true');
+  });
+
+  it('exposes the localized hidden-value meaning as text and hides decorative mask glyphs', async () => {
+    const el = (await fixture(
+      html`<lr-env-list
+        .entries=${[{ name: 'API_KEY', value: 'secret', secret: true }]}
+        .strings=${{ envListValueHidden: 'Confidential value' }}
+      ></lr-env-list>`,
+    )) as LyraEnvList;
+    const value = el.shadowRoot!.querySelector('[part="value"]') as HTMLElement;
+    const hiddenText = value.querySelector('.sr-only') as HTMLElement | null;
+    const mask = value.querySelector('[aria-hidden="true"]') as HTMLElement | null;
+
+    expect(value.querySelectorAll('[aria-label]').length).to.equal(0);
+    expect(hiddenText?.textContent).to.equal('Confidential value');
+    expect(mask?.textContent).to.equal('•'.repeat(8));
   });
 
   it('defaults secret to true when omitted', async () => {
@@ -210,5 +226,25 @@ describe('lr-env-list', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='reveal-button'\]:hover/);
     expect(css).to.match(/\[part='copy-button'\]:hover/);
+  });
+
+  it('contains long unbroken names, revealed values, and action labels in a 320px allocation', async () => {
+    const token = `ENV_${'IDENTIFIER'.repeat(40)}`;
+    const wrapper = (await fixture(html`
+      <div style="inline-size: 320px; max-inline-size: 320px;">
+        <lr-env-list .entries=${[{ name: token, value: token, secret: true }]}></lr-env-list>
+      </div>
+    `)) as HTMLElement;
+    const el = wrapper.querySelector('lr-env-list') as LyraEnvList;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('[part="reveal-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.scrollWidth).to.be.at.most(Math.ceil(base.getBoundingClientRect().width) + 1);
+    for (const part of ['name', 'value-cell', 'value', 'reveal-button', 'copy-button']) {
+      const node = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
+      expect(node.scrollWidth, part).to.be.at.most(Math.ceil(node.getBoundingClientRect().width) + 1);
+    }
   });
 });

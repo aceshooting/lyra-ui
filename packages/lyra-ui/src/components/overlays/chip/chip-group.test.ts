@@ -79,6 +79,46 @@ it('preserves author-owned hidden state across collapse, expansion, and disconne
   expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, false]);
 });
 
+it('reapplies collapsed visibility after disconnect and reconnect', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="1">
+      <lr-chip>one</lr-chip><lr-chip>two</lr-chip><lr-chip>three</lr-chip>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  const parent = el.parentElement!;
+  const chips = Array.from(el.querySelectorAll('lr-chip')) as HTMLElement[];
+  expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, true]);
+
+  el.remove();
+  expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, false, false]);
+  parent.append(el);
+  await el.updateComplete;
+
+  expect(chips.map((chip) => chip.hidden)).to.deep.equal([false, true, true]);
+});
+
+it('tracks live author hidden edits instead of restoring the initial snapshot', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group max-visible="1">
+      <lr-chip>one</lr-chip><lr-chip>two</lr-chip><lr-chip>three</lr-chip>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  const second = el.querySelectorAll<HTMLElement>('lr-chip')[1]!;
+
+  second.hidden = false;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  expect(second.hidden, 'the group must continue enforcing collapse after an author removal').to.be.true;
+
+  (el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement).click();
+  await el.updateComplete;
+  expect(second.hidden).to.be.false;
+
+  second.hidden = true;
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  el.remove();
+  expect(second.hidden, 'disconnect must restore the latest authored hidden state').to.be.true;
+});
+
 it('sanitizes a NaN/negative maxVisible to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
   const el = (await fixture(fiveChips())) as LyraChipGroup;
 
@@ -341,6 +381,19 @@ it('is accessible with no overflow', async () => {
     </lr-chip-group>
   `)) as LyraChipGroup;
   await expect(el).to.be.accessible();
+});
+
+it('formats overflow counts with the effective locale in visible and accessible labels', async () => {
+  const el = (await fixture(html`
+    <lr-chip-group lang="ar-EG" max-visible="3">
+      <lr-chip>one</lr-chip><lr-chip>two</lr-chip><lr-chip>three</lr-chip>
+      <lr-chip>four</lr-chip><lr-chip>five</lr-chip>
+    </lr-chip-group>
+  `)) as LyraChipGroup;
+  const indicator = el.shadowRoot!.querySelector('[part="overflow-indicator"]')!;
+  const formatted = new Intl.NumberFormat('ar-EG').format(2);
+  expect(indicator.textContent).to.include(formatted);
+  expect(indicator.getAttribute('aria-label')).to.include(formatted);
 });
 
 it('is accessible in an overflowing, collapsed state', async () => {

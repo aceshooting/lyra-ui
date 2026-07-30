@@ -331,6 +331,32 @@ describe('lr-tour', () => {
     expect(tour.activeIndex).to.equal(0);
   });
 
+  it('normalizes non-finite and fractional public indices before events or transitions', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(3)}></lr-tour>
+        ${targetButtons(3)}
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+
+    const started = oneEvent(tour, 'lr-tour-start');
+    tour.start(1.9);
+    expect((await started as CustomEvent<{ index: number }>).detail.index).to.equal(1);
+    expect(tour.activeIndex).to.equal(1);
+    await tour.updateComplete;
+
+    const changed = oneEvent(tour, 'lr-tour-step-change');
+    tour.goToStep(2.8);
+    expect((await changed as CustomEvent<{ index: number }>).detail.index).to.equal(2);
+    expect(tour.activeIndex).to.equal(2);
+
+    const fallback = oneEvent(tour, 'lr-tour-step-change');
+    tour.goToStep(Number.POSITIVE_INFINITY);
+    expect((await fallback as CustomEvent<{ index: number }>).detail.index).to.equal(0);
+    expect(tour.activeIndex).to.equal(0);
+  });
+
   it('the built-in Skip button calls end("skip"), cancelable via preventDefault()', async () => {
     const el = (await fixture(
       html`<div>
@@ -659,6 +685,84 @@ describe('lr-tour', () => {
     await waitFor(() => cutout().getAttribute('width'), (v) => v !== initialWidth, 3000);
     expect(Number(cutout().getAttribute('width'))).to.be.greaterThan(Number(initialWidth));
     expect(parseFloat(spotlight().style.width)).to.be.greaterThan(0);
+  });
+
+  it('repositions and repaints live when placement, distance, or spotlightPadding changes', async () => {
+    const el = (await fixture(
+      html`<div>
+        <lr-tour .steps=${makeSteps(1)} placement="bottom" distance="4" spotlight-padding="4"></lr-tour>
+        <button
+          id="tour-target-0"
+          style="position:fixed; top:300px; left:300px; width:80px; height:30px;"
+        >
+          target 0
+        </button>
+      </div>`,
+    )) as HTMLDivElement;
+    const tour = el.querySelector('lr-tour') as LyraTour;
+    tour.start();
+    await tour.updateComplete;
+    const popover = tour.shadowRoot!.querySelector('[part="popover"]') as HTMLElement;
+    const cutout = () => tour.shadowRoot!.querySelector('[part="backdrop"] .cutout') as SVGRectElement;
+    await waitFor(() => popover.style.top, (value) => value !== '');
+    await waitFor(() => cutout().getAttribute('x'), (value) => value !== null);
+    const initialTop = popover.style.top;
+    const initialX = cutout().getAttribute('x');
+
+    tour.placement = 'top';
+    tour.distance = 36;
+    tour.spotlightPadding = 20;
+    await tour.updateComplete;
+    await waitFor(() => cutout().getAttribute('x'), (value) => value !== initialX);
+    await waitFor(() => popover.style.top, (value) => value !== initialTop);
+    expect(Number(cutout().getAttribute('x'))).to.be.closeTo(280, 0.5);
+  });
+
+  it('resolves a target resolver exactly once per activation and uses that connected snapshot', async () => {
+    const target = document.createElement('button');
+    target.id = 'single-resolution-target';
+    document.body.append(target);
+    let calls = 0;
+    try {
+      const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
+      tour.steps = [{
+        id: 'resolver',
+        target: () => {
+          calls += 1;
+          return target;
+        },
+        heading: 'Resolver',
+      }];
+      tour.start();
+      await tour.updateComplete;
+      expect(calls).to.equal(1);
+      expect(tour.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('data-unanchored')).to.be.false;
+    } finally {
+      target.remove();
+    }
+  });
+
+  it('normalizes invalid, throwing, and detached targets to the missing-target path', async () => {
+    const detached = document.createElement('button');
+    const targets: TourStep['target'][] = [
+      '[',
+      () => {
+        throw new Error('resolver failed');
+      },
+      () => detached,
+    ];
+    for (const target of targets) {
+      const tour = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
+      tour.steps = [{ id: 'bad-target', target, heading: 'Missing' }];
+      let missing = 0;
+      tour.addEventListener('lr-tour-target-missing', () => missing++);
+      tour.start();
+      await tour.updateComplete;
+      expect(missing).to.equal(1);
+      expect(tour.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('data-unanchored')).to.be.true;
+      tour.end('api');
+      await tour.updateComplete;
+    }
   });
 
   it('emits lr-tour-target-missing and renders an unanchored, centered popover for a step whose target does not resolve', async () => {

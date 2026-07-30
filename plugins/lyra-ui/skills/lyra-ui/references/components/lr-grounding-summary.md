@@ -43,7 +43,8 @@ and `lr-citation-badge` for each evidence entry.
 `@aceshooting/lyra-ui/ai` = `{ citation: Citation }`) — emitted when an evidence badge is activated.
 The inner `lr-citation-badge`'s own `lr-citation-activate` (`detail: { sourceId, index }`) still
 bubbles through unmodified; this richer event exists because a bare `sourceId`/`index` pair can't
-tell a host which exact evidence *span* to jump to.
+tell a host which exact evidence *span* to jump to. The composed `lr-claim-evidence` also surfaces
+`lr-claim-select` (`detail: { claim }`) unchanged when a claim is activated.
 
 **Slots:** none.
 

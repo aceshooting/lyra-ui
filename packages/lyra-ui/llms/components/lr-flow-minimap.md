@@ -6,7 +6,7 @@
 - **Class** `LyraFlowMinimap`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-minimap/flow-minimap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -33,7 +33,13 @@ disagree.
 draggable, focusable view rectangle).
 
 **Themeable custom properties:** `--lr-flow-minimap-inline-size` (default `12rem`),
-`--lr-flow-minimap-block-size` (default `8rem`).
+`--lr-flow-minimap-block-size` (default `8rem`), `--lr-flow-minimap-node-color` for a node without
+an execution status, and `--lr-flow-minimap-node-{pending|running|success|error|denied}-color` for
+each status-specific rectangle. The status hooks default to the shared border-strong, brand,
+success, danger, and warning colors respectively. Their expanded names are
+`--lr-flow-minimap-node-pending-color`, `--lr-flow-minimap-node-running-color`,
+`--lr-flow-minimap-node-success-color`, `--lr-flow-minimap-node-error-color`, and
+`--lr-flow-minimap-node-denied-color`.
 
 **Optional peer deps:** none.
 

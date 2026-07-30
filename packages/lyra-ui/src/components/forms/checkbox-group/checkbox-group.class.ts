@@ -386,9 +386,15 @@ export class LyraCheckboxGroup extends LyraElement<LyraCheckboxGroupEventMap> {
 
   override render(): TemplateResult {
     const described = [this.hasHintSlot || this.hint ? this.hintId : '', this.hasErrorSlot || this.errorText ? this.errorId : ''].filter(Boolean).join(' ') || nothing;
-    return html`<fieldset part="form-control" ?disabled=${this.effectiveDisabled} aria-describedby=${described}>
+    return html`<fieldset
+      part="form-control"
+      ?disabled=${this.effectiveDisabled}
+      aria-label=${this.accessibleLabel || nothing}
+      aria-describedby=${described}
+      aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}
+    >
       <legend part="form-control-label" id=${this.labelId} ?hidden=${!this.label && !this.hasLabelSlot}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot>${this.required ? html`<span aria-hidden="true">*</span>` : nothing}</legend>
-      <div part="options" role="group" aria-label=${this.accessibleLabel || nothing} aria-labelledby=${this.accessibleLabel ? nothing : this.labelId} aria-invalid=${this.touched && !this.internals.validity.valid ? 'true' : 'false'}>
+      <div part="options">
         <slot @slotchange=${this.onSlotChange}></slot>
       </div>
       <div part="hint" id=${this.hintId} ?hidden=${!this.hint && !this.hasHintSlot}><slot name="hint" @slotchange=${this.onSlotChange}>${this.hint}</slot></div>

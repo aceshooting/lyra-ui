@@ -29,7 +29,8 @@ boolean = false` (reflected) — shows copy-to-clipboard affordances, one for th
 one per element. `maxHeight: string = ''` (attribute `max-height`). `anchorKinds` is a readonly
 `['node-path']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
 contract) — each numeric path segment is the 0-based index within the parent's *element* children,
-and an optional trailing string segment `'@attrName'` addresses one attribute.
+and an optional trailing string segment `'@attrName'` addresses one existing, nonempty-named
+attribute. Invalid CSS `max-height` values, declaration breaks, and `url()` are ignored.
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every element's tag name, attribute names/values, and own text (empty/whitespace query behaves like
@@ -81,4 +82,5 @@ await viewer.search(query);
 ```
 
 Node cap: 50,000 — exceeding it renders the localized `xmlViewerTooManyNodes` error instead of the
-tree.
+tree. A collapsed element's child count includes element, text, comment, CDATA, and processing-
+instruction children rather than only element descendants.

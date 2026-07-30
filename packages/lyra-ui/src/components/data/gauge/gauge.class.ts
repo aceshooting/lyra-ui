@@ -1,8 +1,8 @@
-import { html, svg, type TemplateResult } from 'lit';
+import { html, svg, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteNumber } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './gauge.styles.js';
 
 export type GaugeType = 'radial' | 'ring' | 'linear';
@@ -21,6 +21,17 @@ const LINEAR_BAR_Y = 15;
 const LINEAR_TEXT_Y = 8;
 // Length of the x1=0 -> x2=100 horizontal fill/track line (Euclidean, y1==y2).
 const LINEAR_LENGTH = 100;
+// SVG text has no native line wrapping or ellipsis. Long caller-supplied labels are compressed
+// only once they exceed the ordinary single-line capacity, keeping their full visible text while
+// preventing it from painting outside the fixed viewBox.
+const RADIAL_TEXT_LENGTH = 76;
+const RADIAL_TEXT_FIT_THRESHOLD = 12;
+const LINEAR_TEXT_LENGTH = 46;
+const LINEAR_TEXT_FIT_THRESHOLD = 10;
+
+function needsSvgTextFit(value: string, threshold: number): boolean {
+  return Array.from(value).length > threshold;
+}
 
 function polarToCartesian(angleDeg: number): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
@@ -85,9 +96,7 @@ export class LyraGauge extends LyraElement {
   private get ratio(): number {
     if (!Number.isFinite(this.value)) return 0;
     const { lo, hi } = this.domain;
-    if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0;
-    const span = hi - lo || 1;
-    return Math.min(1, Math.max(0, (this.value - lo) / span));
+    return finiteRatio(this.value, lo, hi);
   }
 
   /** The text rendered/announced for the current value: `valueLabel` when set,
@@ -142,6 +151,8 @@ export class LyraGauge extends LyraElement {
 
   private renderRadial(): TemplateResult {
     const text = this.displayText;
+    const fitValue = needsSvgTextFit(text, RADIAL_TEXT_FIT_THRESHOLD);
+    const fitLabel = needsSvgTextFit(this.label, RADIAL_TEXT_FIT_THRESHOLD);
     // Dashoffset counts down from the full arc length (nothing revealed) to 0
     // (whole sweep revealed) as ratio goes 0 -> 1 — the classic "draw an SVG
     // path" technique, which transitions smoothly via plain CSS.
@@ -155,13 +166,31 @@ export class LyraGauge extends LyraElement {
         stroke-dasharray=${RADIAL_ARC_LENGTH}
         stroke-dashoffset=${dashoffset}
       ></path>
-      <text part="value" x="50" y="52" aria-hidden="true">${text}</text>
-      ${this.label ? svg`<text part="label" x="50" y="68" aria-hidden="true">${this.label}</text>` : ''}
+      <text
+        part="value"
+        x="50"
+        y="52"
+        aria-hidden="true"
+        textLength=${fitValue ? RADIAL_TEXT_LENGTH : nothing}
+        lengthAdjust=${fitValue ? 'spacingAndGlyphs' : nothing}
+      >${text}</text>
+      ${this.label
+        ? svg`<text
+            part="label"
+            x="50"
+            y="68"
+            aria-hidden="true"
+            textLength=${fitLabel ? RADIAL_TEXT_LENGTH : nothing}
+            lengthAdjust=${fitLabel ? 'spacingAndGlyphs' : nothing}
+          >${this.label}</text>`
+        : ''}
     </svg>`;
   }
 
   private renderLinear(): TemplateResult {
     const text = this.displayText;
+    const fitValue = needsSvgTextFit(text, LINEAR_TEXT_FIT_THRESHOLD);
+    const fitLabel = needsSvgTextFit(this.label, LINEAR_TEXT_FIT_THRESHOLD);
     const dashoffset = LINEAR_LENGTH * (1 - this.ratio);
     // Under RTL the meter must still visually fill and read in the same
     // start-to-end order as the surrounding text, so the physical x=0/x=100
@@ -184,14 +213,30 @@ export class LyraGauge extends LyraElement {
         stroke-dashoffset=${dashoffset}
       ></line>
       ${this.label
-        ? svg`<text part="label" x=${startX} y=${LINEAR_TEXT_Y} aria-hidden="true">${this.label}</text>`
+        ? svg`<text
+            part="label"
+            x=${startX}
+            y=${LINEAR_TEXT_Y}
+            aria-hidden="true"
+            textLength=${fitLabel ? LINEAR_TEXT_LENGTH : nothing}
+            lengthAdjust=${fitLabel ? 'spacingAndGlyphs' : nothing}
+          >${this.label}</text>`
         : ''}
-      <text part="value" x=${endX} y=${LINEAR_TEXT_Y} aria-hidden="true">${text}</text>
+      <text
+        part="value"
+        x=${endX}
+        y=${LINEAR_TEXT_Y}
+        aria-hidden="true"
+        textLength=${fitValue ? LINEAR_TEXT_LENGTH : nothing}
+        lengthAdjust=${fitValue ? 'spacingAndGlyphs' : nothing}
+      >${text}</text>
     </svg>`;
   }
 
   private renderRing(): TemplateResult {
     const text = this.displayText;
+    const fitValue = needsSvgTextFit(text, RADIAL_TEXT_FIT_THRESHOLD);
+    const fitLabel = needsSvgTextFit(this.label, RADIAL_TEXT_FIT_THRESHOLD);
     const dashoffset = RING_CIRCUMFERENCE * (1 - this.ratio);
     return html`<svg part="base" viewBox="0 0 100 100">
       <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
@@ -205,8 +250,24 @@ export class LyraGauge extends LyraElement {
         stroke-dashoffset=${dashoffset}
         transform="rotate(-90 50 50)"
       ></circle>
-      <text part="value" x="50" y="52" aria-hidden="true">${text}</text>
-      ${this.label ? svg`<text part="label" x="50" y="68" aria-hidden="true">${this.label}</text>` : ''}
+      <text
+        part="value"
+        x="50"
+        y="52"
+        aria-hidden="true"
+        textLength=${fitValue ? RADIAL_TEXT_LENGTH : nothing}
+        lengthAdjust=${fitValue ? 'spacingAndGlyphs' : nothing}
+      >${text}</text>
+      ${this.label
+        ? svg`<text
+            part="label"
+            x="50"
+            y="68"
+            aria-hidden="true"
+            textLength=${fitLabel ? RADIAL_TEXT_LENGTH : nothing}
+            lengthAdjust=${fitLabel ? 'spacingAndGlyphs' : nothing}
+          >${this.label}</text>`
+        : ''}
     </svg>`;
   }
 

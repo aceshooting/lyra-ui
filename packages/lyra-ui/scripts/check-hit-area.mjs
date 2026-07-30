@@ -7,6 +7,13 @@
 // and <lr-emoji-picker>'s `[part="emoji"]` (32px) shipped without that
 // floor -- this script catches that class of gap in future components.
 //
+// Runtime-sensitive SVG/canvas geometry and the WCAG spacing exception
+// cannot be inferred soundly from stylesheet text. targetHitAreaContract()
+// therefore carries the exact state boundary for those targets, and
+// check-hit-area.test.mjs exercises both its included and excluded fixtures.
+// Component behavior tests remain responsible for measuring rendered boxes
+// and camera/allocation-dependent pick geometry.
+//
 // This is a heuristic, text-based check (like check-manifest.mjs's own
 // part="..." extraction, which it reuses the same balanced-scanning style
 // from) -- it cannot resolve arbitrary `calc()`, run a real layout engine, or
@@ -25,6 +32,113 @@ const FLOOR_PX = 40; // --lr-icon-button-size == 2.5rem == 40px at the default 1
 const REM_PX = 16;
 const ICON_BUTTON_TOKEN = '--lr-icon-button-size';
 const ESCAPE_HATCH = 'hit-area-exempt';
+
+/**
+ * Returns the physical-target contract for one rendered-state
+ * fixture, or `null` when that state is deliberately outside this policy.
+ *
+ * This is intentionally an exact allowlist. The repository's 40px compact
+ * control convention is not a blanket minimum for ordinary text, full-row,
+ * or native controls. WCAG 2.5.8's 24px/spacing boundary likewise applies
+ * here only to the component states whose physical geometry can
+ * become too small.
+ */
+export function targetHitAreaContract(target) {
+  const { component, part } = target;
+
+  if (
+    component === 'lr-avatar-group' &&
+    part === 'overflow-badge' &&
+    (target.size == null || target.size === '' || target.size === 'md' || target.size === 'sm')
+  ) {
+    return { minimumPx: 40, kind: 'compact' };
+  }
+
+  if (
+    component === 'lr-rating' &&
+    part === 'base' &&
+    Number.isFinite(target.max) &&
+    target.max <= 1
+  ) {
+    return { minimumPx: 40, kind: 'compact' };
+  }
+
+  if (component === 'lr-calendar' && part === 'event') {
+    return { minimumPx: 24, kind: 'wcag' };
+  }
+
+  if (
+    component === 'lr-segmented' &&
+    part === 'segment' &&
+    (target.size === '2xs' || target.size === 'xs')
+  ) {
+    return { minimumPx: 24, kind: 'wcag' };
+  }
+
+  if (
+    component === 'lr-embedding-explorer' &&
+    part === 'point' &&
+    Number.isFinite(target.allocationPx) &&
+    target.allocationPx < 384
+  ) {
+    return { minimumPx: 24, kind: 'wcag' };
+  }
+
+  if (
+    component === 'lr-graph' &&
+    (target.renderer === 'svg' || target.renderer === 'canvas') &&
+    (part === 'node' || part === 'link' || (part === 'hull' && target.needsExpandedHullPick === true))
+  ) {
+    return { minimumPx: 24, kind: 'wcag' };
+  }
+
+  return null;
+}
+
+/**
+ * Checks measured fixture boxes against targetHitAreaContract(). A compact
+ * target must meet the 40px floor in both axes. A WCAG target may instead use
+ * the 2.5.8 spacing exception: an undersized target passes when the nearest
+ * other target centre is at least 24px away.
+ */
+export function findMeasuredHitAreaViolations(targets) {
+  const findings = [];
+  for (const target of targets) {
+    const contract = targetHitAreaContract(target);
+    if (!contract) continue;
+
+    const width = Number(target.widthPx);
+    const height = Number(target.heightPx);
+    const hasMinimumBox =
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      width >= contract.minimumPx &&
+      height >= contract.minimumPx;
+    const hasWcagSpacing =
+      contract.kind === 'wcag' &&
+      (target.nearestTargetCenterDistancePx === Number.POSITIVE_INFINITY ||
+        (Number.isFinite(target.nearestTargetCenterDistancePx) &&
+          target.nearestTargetCenterDistancePx >= contract.minimumPx));
+    if (hasMinimumBox || hasWcagSpacing) continue;
+
+    const state = [
+      target.size != null && `size=${String(target.size)}`,
+      target.max != null && `max=${String(target.max)}`,
+      target.renderer && `renderer=${String(target.renderer)}`,
+      target.allocationPx != null && `allocation=${String(target.allocationPx)}px`,
+      target.cameraScale != null && `cameraScale=${String(target.cameraScale)}`,
+    ]
+      .filter(Boolean)
+      .join(', ');
+    findings.push(
+      `${target.component}::part(${target.part})${state ? ` (${state})` : ''} measures ` +
+        `${Number.isFinite(width) ? width : 'invalid'}x${Number.isFinite(height) ? height : 'invalid'}px; ` +
+        `the ${contract.kind === 'compact' ? 'compact-control' : 'WCAG 2.5.8'} floor is ` +
+        `${contract.minimumPx}px${contract.kind === 'wcag' ? ' unless target spacing is sufficient' : ''}`,
+    );
+  }
+  return findings;
+}
 
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -687,29 +801,25 @@ function hasEscapeHatch(rawLines, tagLineNumber) {
   return false;
 }
 
-// ---- main -------------------------------------------------------------
-
-const classFiles = walk(sourceDir)
-  .filter((file) => file.endsWith('.class.ts'))
-  .sort();
-
-const errors = [];
-let candidateCount = 0;
-let exemptCount = 0;
-
-for (const classFile of classFiles) {
-  const rawSource = fs.readFileSync(classFile, 'utf8');
+/**
+ * Runs the stylesheet-backed 40px icon-button heuristic against one class
+ * source and its styles. Exported so the blocking companion can exercise the
+ * same parser and diagnostics as the repository scan.
+ */
+export function checkStaticHitAreaFixture(
+  rawSource,
+  rawStyleSources,
+  relPath = 'fixture.class.ts',
+) {
   const strippedSource = stripComments(rawSource);
   const rawLines = rawSource.split('\n');
-  const relPath = path.relative(packageDir, classFile).replaceAll(path.sep, '/');
-
-  const styleSources = resolveStylesSources(classFile, rawSource).map(stripComments);
+  const styleSources = rawStyleSources.map(stripComments);
   const candidates = findCandidates(strippedSource, styleSources);
-  if (candidates.length === 0) continue;
+  const errors = [];
+  let exemptCount = 0;
 
   for (const candidate of candidates) {
     const tagLine = lineAt(strippedSource, candidate.tagStart);
-    candidateCount++;
     if (hasEscapeHatch(rawLines, tagLine)) {
       exemptCount++;
       continue;
@@ -725,7 +835,12 @@ for (const classFile of classFiles) {
         continue;
       }
       if (!guard.sawInline || !guard.sawBlock) {
-        const missing = [!guard.sawInline && 'min-inline-size', !guard.sawBlock && 'min-block-size'].filter(Boolean).join(' and ');
+        const missing = [
+          !guard.sawInline && 'min-inline-size',
+          !guard.sawBlock && 'min-block-size',
+        ]
+          .filter(Boolean)
+          .join(' and ');
         errors.push(
           `${relPath}:${tagLine}: <${candidate.tagName} part="${partName}"> is missing ${missing} on its [part='${partName}'] rule(s) -- floor is ${FLOOR_PX}px (${ICON_BUTTON_TOKEN})`,
         );
@@ -738,12 +853,47 @@ for (const classFile of classFiles) {
       }
     }
   }
+
+  return { errors, candidateCount: candidates.length, exemptCount };
 }
 
-if (errors.length) {
-  console.error(`Hit-area contract failed with ${errors.length} finding(s) (${candidateCount} candidate(s) checked, ${exemptCount} exempted):`);
-  for (const error of errors) console.error(`- ${error}`);
-  process.exitCode = 1;
-} else {
-  console.log(`Hit-area contract passed: ${candidateCount} icon-button candidate(s) checked across ${classFiles.length} components (${exemptCount} exempted).`);
+// ---- main -------------------------------------------------------------
+
+function main() {
+  const classFiles = walk(sourceDir)
+    .filter((file) => file.endsWith('.class.ts'))
+    .sort();
+
+  const errors = [];
+  let candidateCount = 0;
+  let exemptCount = 0;
+
+  for (const classFile of classFiles) {
+    const rawSource = fs.readFileSync(classFile, 'utf8');
+    const relPath = path.relative(packageDir, classFile).replaceAll(path.sep, '/');
+    const result = checkStaticHitAreaFixture(
+      rawSource,
+      resolveStylesSources(classFile, rawSource),
+      relPath,
+    );
+    errors.push(...result.errors);
+    candidateCount += result.candidateCount;
+    exemptCount += result.exemptCount;
+  }
+
+  if (errors.length) {
+    console.error(
+      `Hit-area contract failed with ${errors.length} finding(s) (${candidateCount} candidate(s) checked, ${exemptCount} exempted):`,
+    );
+    for (const error of errors) console.error(`- ${error}`);
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `Hit-area contract passed: ${candidateCount} icon-button candidate(s) checked across ${classFiles.length} components (${exemptCount} exempted).`,
+    );
+  }
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
 }

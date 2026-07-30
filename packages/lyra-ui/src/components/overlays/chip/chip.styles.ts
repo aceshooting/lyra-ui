@@ -206,8 +206,9 @@ export const styles = css`
     justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
-    margin: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2);
-    margin-inline-end: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2 + var(--lr-size-neg-0-15rem));
+    margin-block: calc((var(--lr-icon-button-size) - var(--lr-size-1-25rem)) / -2);
+    margin-inline-start: calc(var(--lr-size-1-25rem) - var(--lr-icon-button-size));
+    margin-inline-end: 0;
     padding: 0;
     border: none;
     border-radius: var(--lr-chip-radius);

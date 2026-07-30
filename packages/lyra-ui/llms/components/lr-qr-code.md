@@ -13,9 +13,11 @@
 
 ## `lr-qr-code`
 
-Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`, `label`,
-`size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas owns `role="img"`;
-its accessible name uses `label`, host `aria-label`, then `value`. Empty values render an empty state.
+Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
+`label`, `size`, `radius`, and `errorCorrection` (`error-correction`, `L`/`M`/`Q`/`H`). The canvas
+owns `role="img"`; its accessible name uses host `aria-label`, then `label`, then `value`. Empty
+values render an empty state.
 **CSS parts:** `base`, `canvas`, `empty`, `loading`, and `error`. **CSS custom properties:**
-`--lr-qr-code-fill` and `--lr-qr-code-background`. Call `refreshTheme()` after external theme changes
-when the computed QR colors need to be redrawn immediately.
+`--lr-qr-code-fill` and `--lr-qr-code-background`. Ancestor theme-attribute and color-scheme
+changes redraw automatically. Call `refreshTheme()` only for consumer-owned token changes that
+aren't represented by those signals.

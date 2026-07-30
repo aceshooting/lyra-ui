@@ -32,6 +32,9 @@ accessible phase-transition announcements.
 `paused`), `lr-pause-change` (`detail: boolean` — fired when `paused` changes via the built-in
 button).
 
+**Methods:** `restart(): void` — restarts the currently configured `nextInMs` delay from now,
+including after its previous deadline fired. With `nextInMs` unset it simply clears the due state.
+
 **Slots:** none.
 
 **CSS parts:** `base`, `indicator` (the pulsing status dot), `countdown` (the `M:SS`, or
@@ -58,14 +61,16 @@ repainting every other component that reuses the same shared success token. Plus
 
 Internally, a 1-second ticker re-derives the remaining time from a captured target timestamp (rather
 than a naive per-tick decrement), so the countdown stays accurate even if the tab was backgrounded
-and timers were throttled. Reassigning `nextInMs` at any time restarts the countdown from that new
-value; pausing/resuming, or toggling `active`, starts or stops the ticker without discarding the
-current remaining time. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are announced
-via an internal `<lr-live-region>` in polite mode.
+and timers were throttled. Assigning a *changed* `nextInMs` value starts a fresh deadline; assigning
+the same value is a normal Lit no-op, so use `restart()` for a new cycle with the same delay.
+Pausing/resuming, toggling `active`, disconnecting/reconnecting, or toggling either after the due
+event stops/starts only an unconsumed ticker: a consumed deadline never replays until `nextInMs`
+changes or `restart()` is called. Phase transitions ("Paused.", "Resumed.", "Refreshing now.") are
+announced via an internal `<lr-live-region>` in polite mode.
 
 **Known gotchas:**
-- there's no built-in "reset" or "extend" method beyond reassigning `nextInMs` — a host that wants to
-  push the deadline back out on user activity re-sets `nextInMs` itself.
+- `restart()` is the explicit reset/extend path when the configured delay value itself has not
+  changed.
 - `active="false"` and `paused` both stop the ticker independently, but only `paused` fires
   `lr-pause-change` — that event is scoped to the built-in pause button's own toggle, not to
   `active`.

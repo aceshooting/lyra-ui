@@ -18,6 +18,30 @@ describe('lr-poll-status', () => {
     expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
   });
 
+  it('exposes restart() for deliberately restarting the same configured delay', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="20"></lr-poll-status>`)) as LyraPollStatus;
+    await oneEvent(el, 'lr-poll-due');
+    const nextDue = oneEvent(el, 'lr-poll-due');
+    el.restart();
+    await nextDue;
+    expect(el.shadowRoot!.querySelector('[part="countdown"]')!.textContent).to.include('Refreshing');
+  });
+
+  it('never replays a consumed deadline when active toggles off and on', async () => {
+    const el = (await fixture(html`<lr-poll-status next-in-ms="20"></lr-poll-status>`)) as LyraPollStatus;
+    let dueCount = 0;
+    el.addEventListener('lr-poll-due', () => dueCount++);
+    await oneEvent(el, 'lr-poll-due');
+    expect(dueCount).to.equal(1);
+
+    el.active = false;
+    await el.updateComplete;
+    el.active = true;
+    await el.updateComplete;
+    await aTimeout(1150);
+    expect(dueCount).to.equal(1);
+  });
+
   it('pauses on the built-in pause button, suppressing lr-poll-due, and announces the transition', async () => {
     const el = (await fixture(html`<lr-poll-status next-in-ms="10000"></lr-poll-status>`)) as LyraPollStatus;
     await el.updateComplete;

@@ -17,6 +17,8 @@ Rubric scoring and human-review surface for comparing the runs of one evaluation
 
 Composes `lr-table` (the comparison table), `lr-rubric-form` (the review surface), and
 `lr-diff-view` (baseline↔selected output diff) rather than re-deriving any of their behavior.
+The table's accessible name is the localized evaluation-runs label by default; a host
+`aria-label` on `<lr-eval-result>` overrides it.
 
 **Properties:**
 - `runs: EvalRunResult[] = []` (attribute: false) — `EvalRunResult { id: string; label: string;

@@ -6,7 +6,7 @@
 - **Class** `LyraSpanWaterfall`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/span-waterfall/span-waterfall.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -38,10 +38,22 @@ Space).
 bar), `meta` (secondary row info, shown inline under 480px), `status-text`, `duration`, `empty` (shown
 when `spans` is empty), and `live-region`.
 
+The terminal axis tick is end-aligned so its label remains inside the allocated chart width. Roving
+keyboard focus is computed from the currently rendered/filtered span ids, so a hidden active span
+cannot leave the component with no `tabindex="0"` stop.
+
 **Themeable custom properties:** `--lr-span-waterfall-name-width` (default `8rem`),
 `--lr-span-waterfall-stripe-speed` (a `running` span's striped-bar animation duration; defaults to
 `--lr-transition-ambient`), and `--lr-span-waterfall-row-active-bg` (default
 `var(--lr-color-brand-quiet)`) — the background of the active (`activeSpanId`) row.
+Status-scoped bar hooks are `--lr-span-waterfall-success-color` (default
+`var(--lr-color-success)`), `--lr-span-waterfall-error-color` (default
+`var(--lr-color-danger)`), `--lr-span-waterfall-denied-color` (default
+`var(--lr-color-warning)`), `--lr-span-waterfall-running-color` (default
+`var(--lr-color-brand)`) for the running stripe foreground,
+`--lr-span-waterfall-running-stripe-color` (default `var(--lr-color-brand-quiet)`) for its
+contrasting background, and `--lr-span-waterfall-pending-border-color` (default
+`var(--lr-color-border-strong)`) for pending bars.
 
 That last one follows the convention every **state-scoped** custom property in this family uses, and
 it is worth reading once: it is an inline `var()` fallback at its point of use and is deliberately

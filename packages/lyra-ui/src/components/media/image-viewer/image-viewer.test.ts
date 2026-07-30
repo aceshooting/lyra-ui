@@ -14,6 +14,30 @@ function stubImageLoad(el: LyraImageViewer, width = 800, height = 600): void {
   img.dispatchEvent(new Event('load'));
 }
 
+it('omits invalid public highlight rectangles and renders finite ones', async () => {
+  const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`);
+  stubImageLoad(el);
+  el.highlights = [
+    {
+      id: 'unsafe',
+      anchor: {
+        kind: 'region',
+        rect: { x: '0;position:fixed', y: 0, width: 10, height: 10 },
+      },
+    } as unknown as LyraHighlight,
+    {
+      id: 'safe',
+      anchor: { kind: 'region', rect: { x: 10, y: 20, width: 30, height: 40 } },
+    },
+  ];
+  await el.updateComplete;
+  const highlights = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="highlight"]')];
+  expect(highlights.length).to.equal(1);
+  expect(highlights[0]!.dataset['tone']).to.equal('accent');
+  expect(highlights[0]!.style.left).to.equal('10%');
+  expect(highlights[0]!.style.position).to.equal('');
+});
+
 describe('defaults', () => {
   it('defaults to empty src/name/alt, fit contain, zoom 1, rotation 0, not annotatable', async () => {
     const el = (await fixture(html`<lr-image-viewer></lr-image-viewer>`)) as LyraImageViewer;
@@ -689,4 +713,40 @@ describe('native control theming', () => {
     const css = styles.cssText.replace(/\s+/g, ' ');
     expect(css).to.match(/\[part='highlight'\]:hover/);
   });
+});
+
+it('names and describes the keyboard annotation focus surface on the initial annotatable render', async () => {
+  const el = (await fixture(html`
+    <lr-image-viewer
+      src=${PNG_SRC}
+      annotatable
+      .strings=${{
+        imageViewerAnnotate: 'Dessiner une zone',
+        imageViewerAnnotationHint: 'Entrée place une zone; les flèches la déplacent.',
+      }}
+    ></lr-image-viewer>
+  `)) as LyraImageViewer;
+  const wrapper = el.shadowRoot!.querySelector('[part="image-wrapper"]') as HTMLElement;
+  expect(wrapper.getAttribute('tabindex')).to.equal('0');
+  expect(wrapper.getAttribute('aria-label')).to.equal('Dessiner une zone');
+  expect(wrapper.getAttribute('aria-description')).to.equal(
+    'Entrée place une zone; les flèches la déplacent.',
+  );
+});
+
+it('contains an unbroken highlight label inside a 320px allocation', async () => {
+  const highlights: LyraHighlight[] = [{
+    id: 'long',
+    label: 'Region'.repeat(250),
+    anchor: { kind: 'region', rect: { x: 0, y: 20, width: 20, height: 20 } },
+  }];
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 320px">
+      <lr-image-viewer src=${PNG_SRC} .highlights=${highlights}></lr-image-viewer>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
+  stubImageLoad(el);
+  await el.updateComplete;
+  expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });

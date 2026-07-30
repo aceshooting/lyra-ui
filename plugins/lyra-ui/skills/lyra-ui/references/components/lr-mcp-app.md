@@ -42,6 +42,12 @@ request. Both are no-ops before a frame exists.
 (`{ level, value }`), and `lr-mcp-resize` (`{ height }`). These are host-authorized requests; the
 component does not execute tools, send messages, or navigate itself.
 
+Changing `resource` mounts a fresh iframe/window generation; messages from the prior
+`contentWindow` are ignored even when two opaque-origin inline documents otherwise look alike.
+Changing only `height`/`maxHeight` updates frame geometry without returning an already-ready frame
+to its loading state. The initial host context reports `effectiveLocale`, so inherited/document
+locale and per-element locale overrides follow the same precedence as the rest of Lyra UI.
+
 **CSS parts:** `base`, `frame`, `loading`, `error`.
 
 **Slots:** none. **Optional peer deps:** none.

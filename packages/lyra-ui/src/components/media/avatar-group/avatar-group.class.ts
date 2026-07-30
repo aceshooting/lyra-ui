@@ -144,6 +144,14 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
     this.childCount = slot.assignedElements({ flatten: true }).length;
   }
 
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // disconnectedCallback() deliberately restores author-owned `hidden` values. A reconnect
+    // does not necessarily schedule a Lit update, so re-establish this component's overflow
+    // ownership synchronously once a prior render already supplied the slot.
+    if (this.hasUpdated) this.syncChildVisibility();
+  }
+
   protected override updated(): void {
     this.syncChildVisibility();
   }

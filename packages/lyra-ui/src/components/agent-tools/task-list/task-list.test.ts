@@ -96,6 +96,16 @@ it('shows a visible completed-of-total summary counting only top-level success i
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('1 of 3 completed');
 });
 
+it('formats the completed-of-total summary with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-task-list lang="ar-EG" .items=${items}></lr-task-list>`,
+  )) as LyraTaskList;
+  const summary = el.shadowRoot!.querySelector('[part="summary"]')!.textContent!;
+  const number = new Intl.NumberFormat('ar-EG');
+  expect(summary).to.include(number.format(1));
+  expect(summary).to.include(number.format(3));
+});
+
 it('toggles expanded and fires lr-toggle on header click when collapsible', async () => {
   const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
   const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLButtonElement;
@@ -309,4 +319,45 @@ it('is accessible expanded, with items, children, and detail text', async () => 
   ];
   const el = (await fixture(html`<lr-task-list .items=${withChildren} expanded></lr-task-list>`)) as LyraTaskList;
   await expect(el).to.be.accessible();
+});
+
+it('contains unbroken public item labels/details in a 256px allocation', async () => {
+  const long = `task-${'identifier'.repeat(180)}`;
+  const el = (await fixture(html`
+    <div style="inline-size:256px">
+      <lr-task-list
+        expanded
+        .items=${[{ id: 'long', label: long, detail: long, status: 'running' }]}
+      ></lr-task-list>
+    </div>
+  `)).querySelector('lr-task-list') as LyraTaskList;
+  await el.updateComplete;
+  const label = el.shadowRoot!.querySelector<HTMLElement>('[part="item-label"]')!;
+  const detail = el.shadowRoot!.querySelector<HTMLElement>('[part="item-detail"]')!;
+  expect(Math.ceil(el.getBoundingClientRect().width)).to.be.at.most(256);
+  expect(label.scrollWidth).to.be.at.most(Math.ceil(label.getBoundingClientRect().width) + 1);
+  expect(detail.scrollWidth).to.be.at.most(Math.ceil(detail.getBoundingClientRect().width) + 1);
+});
+
+it('exposes component-scoped status icon colors', async () => {
+  const el = (await fixture(html`
+    <lr-task-list
+      expanded
+      style="
+        --lr-task-list-running-color: rgb(1, 2, 3);
+        --lr-task-list-success-color: rgb(4, 5, 6);
+        --lr-task-list-error-color: rgb(7, 8, 9);
+      "
+      .items=${[
+        { id: 'run', label: 'Run', status: 'running' },
+        { id: 'ok', label: 'Ok', status: 'success' },
+        { id: 'bad', label: 'Bad', status: 'error' },
+      ]}
+    ></lr-task-list>
+  `)) as LyraTaskList;
+  const color = (id: string) =>
+    getComputedStyle(el.shadowRoot!.querySelector(`[data-id="${id}"] [part="status-icon"]`)!).color;
+  expect(color('run')).to.equal('rgb(1, 2, 3)');
+  expect(color('ok')).to.equal('rgb(4, 5, 6)');
+  expect(color('bad')).to.equal('rgb(7, 8, 9)');
 });

@@ -6,7 +6,7 @@
 - **Class** `LyraTaskList`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/task-list/task-list.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,4 +54,9 @@ label/summary/toggle while `compact`, one step tighter than the header's uncompa
 `--lr-space-xs`, so `compact` tightens the header's *interior* spacing and not just its padding;
 `--lr-task-list-compact-gap` (default `var(--lr-space-2xs)`) — gap between `[part="body"]`'s item
 rows while `compact`; `--lr-task-list-compact-body-padding` (default `var(--lr-space-2xs)
-var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`.
+var(--lr-space-s) var(--lr-space-s)`) — `[part="body"]` padding while `compact`;
+`--lr-task-list-pending-color` (default `var(--lr-color-text-quiet)`),
+`--lr-task-list-running-color` (default `var(--lr-color-brand)`),
+`--lr-task-list-success-color` (default `var(--lr-color-success)`), and
+`--lr-task-list-error-color` (default `var(--lr-color-danger)`) independently retint the matching
+status icons without changing shared status tokens.

@@ -59,7 +59,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   .row:hover {
-    background: var(--lr-color-brand-quiet);
+    background: var(--lr-json-viewer-row-hover-bg, var(--lr-color-brand-quiet));
   }
   /* :where() zeroes the wrapped selectors' specificity contribution, leaving only :hover/
      :focus-within themselves -- (0,1,0) total, so a consumer's own ::part(copy-button):hover

@@ -83,6 +83,8 @@ export const styles = css`
     box-sizing: border-box;
     inline-size: var(--lr-avatar-group-avatar-size);
     block-size: var(--lr-avatar-group-avatar-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     margin-inline-start: var(--lr-avatar-group-overlap);
     border: none;
     border-radius: var(--lr-radius-pill);

@@ -218,6 +218,44 @@ describe('lr-widget-renderer', () => {
     expect(el.shadowRoot!.textContent).to.contain('Ready');
   });
 
+  it('fails closed and emits lr-render-error for an unsupported document version', async () => {
+    const el = await fixture<LyraWidgetRenderer>(html`
+      <lr-widget-renderer
+        .tree=${{ type: 'stat', props: { label: 'Fallback', value: '1' } }}
+      ></lr-widget-renderer>
+    `);
+    let renderError: CustomEvent<{ error: unknown }> | undefined;
+    el.addEventListener('lr-render-error', (event) => {
+      renderError = event;
+    });
+
+    el.document = {
+      version: '2' as never,
+      root: { type: 'stat', props: { label: 'Unsupported', value: '2' } },
+    };
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelectorAll('lr-stat').length).to.equal(0);
+    expect(renderError).to.exist;
+    expect(renderError!.detail.error).to.be.instanceOf(Error);
+  });
+
+  it('renders duplicate agent ids as distinct occurrence-scoped elements', async () => {
+    const el = await fixture<LyraWidgetRenderer>(html`<lr-widget-renderer></lr-widget-renderer>`);
+    el.tree = {
+      type: 'row',
+      children: [
+        { id: 'duplicate', type: 'stat', props: { label: 'First', value: '1' } },
+        { id: 'duplicate', type: 'stat', props: { label: 'Second', value: '2' } },
+      ],
+    };
+    await el.updateComplete;
+
+    const stats = [...el.shadowRoot!.querySelectorAll('lr-stat')] as Array<HTMLElement & { label: string }>;
+    expect(stats.length).to.equal(2);
+    expect(stats.map((stat) => stat.label)).to.deep.equal(['First', 'Second']);
+  });
+
   it('emits controlled state changes from bound mapped controls', async () => {
     const registry = new Map();
     registry.set('field', {

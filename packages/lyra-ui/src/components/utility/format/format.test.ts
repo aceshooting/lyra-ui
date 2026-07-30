@@ -97,6 +97,40 @@ it('falls back safely when an explicit locale is invalid', async () => {
   expect(el.shadowRoot?.textContent?.trim()).to.not.equal('');
 });
 
+it('formats negative sub-byte values without selecting a negative unit index', async () => {
+  const el = (await fixture(html`
+    <lr-format-bytes value="-0.5" locale="en-US"></lr-format-bytes>
+  `)) as LyraFormatBytes;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.match(/-0\.5\s*byte/i);
+});
+
+it('falls back safely when lr-format-bytes receives a malformed locale', async () => {
+  const el = (await fixture(html`
+    <lr-format-bytes value="1024" locale="not_a_locale"></lr-format-bytes>
+  `)) as LyraFormatBytes;
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.match(/1\s?kB/i);
+});
+
+it('preserves a valid effective locale while discarding invalid number options', async () => {
+  const el = (await fixture(html`
+    <lr-format-number value="1234.5" locale="ar-EG"></lr-format-number>
+  `)) as LyraFormatNumber;
+  el.currency = 'x';
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.match(/[٠-٩]/);
+});
+
+it('preserves a valid effective locale while discarding invalid date options', async () => {
+  const el = (await fixture(html`
+    <lr-format-date date="2024-01-01T00:00:00Z" locale="ar-EG" time-zone="UTC"></lr-format-date>
+  `)) as LyraFormatDate;
+  el.year = 'invalid' as Intl.DateTimeFormatOptions['year'];
+  await el.updateComplete;
+  expect(el.shadowRoot?.textContent?.trim()).to.match(/[\u0600-\u06ff]/);
+});
+
 it('inherits locale from an ancestor when no explicit locale is set', async () => {
   const el = await fixture(html`<div lang="de-DE"><lr-format-number value="1234.5"></lr-format-number></div>`);
   expect(el.querySelector('lr-format-number')?.shadowRoot?.textContent).to.contain('1.234,5');

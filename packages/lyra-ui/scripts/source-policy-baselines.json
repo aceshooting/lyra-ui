@@ -4,7 +4,6 @@
     "src/components/overlays/callout/callout.class.ts",
     "src/components/overlays/chip/chip.class.ts",
     "src/components/overlays/dialog/dialog.class.ts",
-    "src/components/data/env-list/env-list.class.ts",
     "src/components/data/file-tree/file-tree.class.ts",
     "src/components/overlays/progress/progress-bar.class.ts",
     "src/components/overlays/progress/progress-ring.class.ts",

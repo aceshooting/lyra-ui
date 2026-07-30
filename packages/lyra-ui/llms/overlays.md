@@ -96,12 +96,18 @@ at another, since `placement` is a per-call option rather than a single global r
 - the close button's accessible name is derived from the toast's own message text (`"Close: <first
   40 chars>…"`, falling back to bare `"Close"` only when the toast has no text content) rather than
   a bare `"Close"` on every instance — useful when several toasts are stacked and a screen-reader or
-  switch-access user needs to tell their close buttons apart without activating one first.
+  switch-access user needs to tell their close buttons apart without activating one first. Rich
+  non-interactive message markup contributes its text, named-slot/icon and actionable content do
+  not, and live message text mutations update the name.
 - pause/resume-on-hover/focus (the component's main accessibility differentiator), including the
   independent-hover-vs-focus pause reasons above, now has regression test coverage.
 - `hide()` is idempotent (a second call while already hiding is a no-op) and `[part="close-button"]`
   gets `aria-disabled="true"` once hiding starts, so a stray extra click/Enter during the hide
-  animation can't re-enter it.
+  animation can't re-enter it. A disconnect during that animation pauses completion; reconnecting
+  the same item resumes it and emits/removes exactly once.
+- When the focused close/action control's toast finishes hiding, focus moves to an adjacent toast's
+  close control, or back to the connected element that held focus before the toast when no adjacent
+  item remains.
 - Prefer the `toast()` helper over manually creating `<lr-toast>`/`<lr-toast-item>` — it already
   handles the singleton-region and remount-if-removed logic.
 
@@ -264,8 +270,9 @@ hand-building that chrome isn't worth it.
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
 computed accessible name outright, winning over every other source below (a slotted heading,
-`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. Left unset, the
-existing three-tier fallback below is unchanged.
+`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. It changes naming
+only: a `heading` property still renders its visible header chrome. Left unset, the existing
+three-tier fallback below is unchanged.
 
 **Methods:** `close(reason: DialogCloseReason = 'api'): void` — closes the dialog, emits
 `lr-dialog-close` with `reason`, and returns focus to whatever had it right before the dialog
@@ -277,8 +284,10 @@ own `close()` (a consumer's own cleanup code, a parent re-render that drops it);
 whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or `confirm()`'s
 own `'confirm'`/`'cancel'`).
 
-**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — fired on every dismissal path
-(Escape, backdrop click, any `close()` call, or an `'unmount'` removal as above).
+**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — a cancelable event fired on every
+dismissal path (Escape, backdrop click, the built-in close button, any `close()` call, or an
+`'unmount'` removal as above). Calling `preventDefault()` keeps a connected dialog open for every
+dismissal path; `'unmount'` cannot practically be vetoed because removal already happened.
 
 **Stacking:** participates in the shared per-document overlay stack described above. A dialog can be
 stacked with another dialog or any other modal family; only the visually topmost overlay receives
@@ -328,19 +337,20 @@ clipped; the viewport is still a hard limit either way), plus shared tokens `--l
 
 Accessible name / visible header, in priority order: (0) if the host element itself has an
 `aria-label` attribute set, its value becomes `aria-label` on the panel outright, overriding every
-source below (including a slotted heading) and suppressing the visible header/`heading` row and the
-sr-only `label` element from rendering at all — the standard ARIA convention for a consumer that
-wants full control over the announced name regardless of whatever `heading`/`label` props are also
-set; (1) otherwise, if a heading element (`h1`–`h6` or
+source below (including a slotted heading) while leaving visible `heading` chrome intact — the
+standard ARIA convention for a consumer that wants full control over the announced name regardless
+of whatever `heading`/`label` props are also set; (1) otherwise, if a heading element (`h1`–`h6` or
 `[role="heading"]`) is a *direct child* (not inside `slot="footer"`), its text content becomes
 `aria-label` on the panel — takes priority over `heading` below so an existing consumer that already
 slots its own heading keeps rendering it exactly as before; (2) otherwise, when `heading` is set, a
 visible header row (`[part="header"]`) renders containing that text (`[part="heading"]`), which
 becomes the `aria-labelledby` target; (3) otherwise, when `label` is set, an invisible (`.sr-only`,
 exposed as the `label` part) element carrying that text is rendered inside the panel and
-`aria-labelledby` points at it instead. Only one of cases 2/3 ever renders at a time. `label` itself
-never renders visible chrome on its own — `::part(label)` can be restyled to make the sr-only text
-visible, or `heading` can be set instead, for visible chrome without slotting a real heading element.
+`aria-labelledby` points at it instead. Only one of cases 2/3 supplies `aria-labelledby` at a time;
+case 0 can coexist with case 2's visible heading, but its explicit `aria-label` remains the name.
+`label` itself never renders visible chrome on its own — `::part(label)` can be restyled to make the
+sr-only text visible, or `heading` can be set instead, for visible chrome without slotting a real
+heading element.
 The slotted-heading case (1) deliberately uses `aria-label` (a copied string) rather than
 `aria-labelledby` pointing at the heading's `id`, because the heading is light-DOM content while
 `[part="panel"]` lives in shadow DOM and an ID-reference attribute can't resolve across that
@@ -350,9 +360,8 @@ root it labels.
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
   inspecting closed markup won't show them.
-- Heading detection only rescans on `slotchange`, not on every render — mutating an already-slotted
-  heading's `textContent` in place (rather than replacing the node) won't retroactively update
-  `aria-label`; set `label` instead for a title that needs to change live.
+- Heading detection observes child, subtree, and character-data changes, so mutating an
+  already-slotted direct heading's text updates the copied panel `aria-label` live.
 - Only *direct* children are scanned for a heading — one nested several layers deep, or inside a
   slotted custom element's own shadow root, is left to the consumer to label explicitly via `label`.
 - A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
@@ -399,7 +408,8 @@ used is still a `--lr-*` token reference, never a raw literal.
 - Every dismissal path (confirm button, cancel button, Escape, backdrop click) funnels through
   `<lr-dialog>`'s own `close()`/`lr-dialog-close` event, so there is exactly one place that
   resolves the promise and tears the dialog down — a consumer never needs to (and shouldn't) call
-  `.remove()` itself.
+  `.remove()` itself. Because the close event is cancelable, `confirm()` waits through the full
+  dispatch and remains pending/mounted when a listener calls `preventDefault()`.
 - The neutral confirm button pairs `--lr-color-on-brand` with `--lr-color-brand`; the danger
   tone pairs `--lr-color-on-danger` with `--lr-color-danger`. Each token chains through Web
   Awesome's matching `*-on-loud` semantic role and has contrast-tested standalone light/dark
@@ -566,7 +576,9 @@ library-wide `--lr-color-text` token. Left unset, rendering is unchanged. Otherw
 Since CSS alone can't parameterize `:nth-child` on a runtime prop, `<lr-chip-group>` reaches
 directly into the light DOM and sets each excess child's own `hidden` property once `max-visible` is
 exceeded — the same approach `<lr-split>` uses to set each panel's inline `flex`/`order`, rather
-than a stylesheet-only solution.
+than a stylesheet-only solution. It observes live author changes to each managed child's `hidden`
+state and restores the latest author-owned value when ownership ends or the group disconnects;
+reconnecting reapplies the current collapsed state.
 
 **Known gotchas:**
 - `<lr-chip>`'s accessible remove-button label ("Remove {text}") is computed only from the default
@@ -613,8 +625,9 @@ resolves a full `keys` string with the same optional localization callback.
 **Slots:** default — an escape hatch for fully custom key-cap content (e.g. an icon instead of a
 text glyph). When it has any real (non-whitespace) content, it replaces the `keys`-driven rendering
 entirely and this component stops *computing* its own `aria-label` from `keys`, leaving the slotted
-content to carry its own accessible name — a host-supplied `aria-label` attribute is still forwarded
-onto the rendered chip in either mode, custom content included.
+content to carry its own accessible name. A host-supplied `aria-label` in custom mode is forwarded
+to `[part="base"]` together with `role="img"`; without one, the wrapper adds no image role and
+leaves the slotted content's own semantics exposed.
 
 **CSS parts:** `base` (the chip root), `key` (one per rendered token).
 
@@ -667,7 +680,8 @@ track ancestor scroll/resize against — pass `rect.contextElement` (a real, sti
 near the virtual point) when one is available to give it something to observe; otherwise, or when
 the anchor point moves on its own (e.g. a graph pan/zoom tick), re-call `showAt()` with fresh
 coordinates to re-anchor — the popover stays open across such a call. A popover that never calls
-`showAt()` behaves exactly as before.
+`showAt()` behaves exactly as before. Non-finite coordinates or dimensions are a no-op and leave
+the current open/anchor state unchanged.
 `hide(options?: { focusTrigger?: boolean })` programmatically closes the popover; pass
 `{ focusTrigger: false }` to opt out of focus restoration. By default, `hide()`, Escape, light
 dismiss, and a bare `el.open = false` all return focus to the slotted trigger, or to a virtual
@@ -689,7 +703,8 @@ contextElement? }, options?: { returnFocusTo?: HTMLElement })` — same virtual-
 Escape returns focus to `options.returnFocusTo` or skips focus-return, re-call with fresh
 coordinates to re-anchor a moving point). Opens immediately, bypassing `delay`/`manual` (both are
 hover-debounce concerns for a slotted trigger, not a deliberate programmatic call); close it the
-same way any tooltip closes, by setting `open = false`. **Slots:** `trigger`, default content.
+same way any tooltip closes, by setting `open = false`. Non-finite coordinates or dimensions are a
+no-op. **Slots:** `trigger`, default content.
 **CSS parts:** `trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size`
 (default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
 `--lr-tooltip-color` (default `--lr-color-on-neutral`).
@@ -701,6 +716,16 @@ not the shadow-private popup. Native triggers resolve that ID directly. `lr-butt
 intentionally leaves the internal control's serialized `aria-describedby` value empty. Existing
 author-provided descriptions are merged while open and restored when the trigger is replaced or
 the tooltip disconnects.
+
+Plain content keeps `role="tooltip"`. If actionable content appears anywhere in the assigned
+default-slot subtree — including inside a nested custom element's open shadow root — the popup
+promotes to a named `role="dialog"` and remains open while pointer or focus is within it. Escape
+from either the trigger or popup closes it; Escape from popup content returns focus to the trigger.
+While open, rootless custom-element content receives a bounded initialization grace period for an
+upgrade or newly attached open shadow root; later observable content mutations start a fresh
+grace period. This catches normal lazy initialization without scheduling perpetual animation-frame
+work for a legitimate custom element that intentionally has no shadow root. Use `lr-popover` when
+click-to-open ownership is desired.
 
 **`showAt()` composed with `lr-graph`** — anchoring a popover to a clicked graph node. Note:
 `lr-graph.getNodePosition()` and the `lr-node-click` event's `{ x, y }` are in the graph's own
@@ -747,7 +772,9 @@ names `[part="base"]`'s `role="status"`; unset falls back to the localized "Load
 **Events:** none.
 
 **Slots:** default — optional label text. `label-placement="after"` renders it inline next to the
-indicator; `'none'` (the default) keeps it visually clipped but still in the DOM.
+indicator and its text becomes the status name unless `aria-label` overrides it. `'none'` (the
+default) applies the native `hidden` state to the label wrapper, removing it from both rendering and
+the accessibility tree; the status then uses `aria-label` or the localized "Loading…" fallback.
 
 **CSS parts:** `base` (the `role="status"` wrapper), `spinner` (the animated ring; `aria-hidden`),
 `label` (the default-slot wrapper).
@@ -764,7 +791,8 @@ A determinate or indeterminate progress bar.
 **Properties:** `value`, `max`, `indeterminate`, `variant`, `showValue` (`show-value`), and
 `accessibleLabel` (`accessible-label`).
 The rendered progressbar exposes `aria-valuemin`, `aria-valuemax`, and `aria-valuenow` when
-determinate.
+determinate. When `show-value` exposes label-slot text, that visible text names the progressbar
+unless host `aria-label`/`accessible-label` overrides it; live label mutations stay synchronized.
 
 **Slots:** `label`. **CSS parts:** `base`, `track`, `indicator`, `label`.
 **Themeable custom properties:** `--lr-progress-height` (default `var(--lr-size-0-5rem)`) — the
@@ -780,7 +808,8 @@ A circular progress indicator with the same value contract as `lr-progress-bar`.
 
 **Properties:** `value: number = 0`, `max: number = 100`, `indeterminate: boolean = false`
 (reflected), and `accessibleLabel: string = ''` (attribute `accessible-label`; unset falls back to
-the localized "Progress"). Non-finite/out-of-range `value`/`max` are normalized (`max <= 0` falls
+the visible default-slot text when supplied, then the localized "Progress"). Non-finite/out-of-range
+`value`/`max` are normalized (`max <= 0` falls
 back to `100`, `value` clamps to `[0, max]`) rather than producing NaN geometry.
 **Slots:** default — replaces the built-in center label, which otherwise renders the rounded
 percentage (and nothing at all while `indeterminate`).
@@ -850,8 +879,14 @@ A keyboard-accessible star rating control with slider semantics. **Properties:**
 `lr-change` with `{ value }`. **CSS parts:** `base`, `star`, `star-fill` (the filled overlay
 inside each star, clipped to the fractional `precision` value). **Themeable custom properties:**
 `--lr-rating-fill` (default `--lr-color-warning` — filled-star color), `--lr-rating-empty-color`
-(default `--lr-color-border` — unfilled-star color), and `--lr-rating-size` (default
+(default `--lr-color-border` — unfilled-star color, also retained during hover preview), and
+`--lr-rating-size` (default
 `--lr-font-size-xl` — star size).
+
+Pointer selection resolves the position within the clicked star and snaps upward to `precision`
+(with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
+input as well as keyboard/value updates. The semantic slider's base keeps a 40×40px minimum
+activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
 
 **Additional API surface:**
 

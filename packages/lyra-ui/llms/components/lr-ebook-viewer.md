@@ -22,8 +22,9 @@ the reading region's accessible name. `location: string = ''` (not reflected —
 a CFI or spine href identifying the current reading position: set before the book finishes
 loading it's recorded and applied once ready, set after it applies immediately, and epub.js's own
 `relocated` event keeps it in sync with user navigation without re-triggering its own `display()`
-call. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this viewer's supported `LyraAnchor.kind`
-values for the shared anchor-target contract).
+call. A controlled `location` assignment made synchronously inside `lr-location-change` wins over
+the peer-reported CFI and is displayed. `anchorKinds` is a readonly `['cfi', 'text-quote']` (this
+viewer's supported `LyraAnchor.kind` values for the shared anchor-target contract).
 
 **Methods:** `getToc()` resolves the EPUB's own navigation document (`book.navigation.toc`,
 populated once `book.ready` resolves) flattened into document-ordered `EbookTocItem[]` (`{ id,
@@ -31,16 +32,20 @@ label, href, level }`, `level` starting at 1 for a top-level entry, `id` falling
 when a navigation entry has none), `[]` before a book has loaded. `search(query)` resolves the
 match count across every spine section, in document order, via epub.js's own `item.load()`/
 `item.find()`/`item.unload()` (empty/whitespace query behaves like `clearSearch()`; a newer
-`search()` call or a `src` change aborts an in-flight scan); `searchNext()`/`searchPrevious()`
+`search()` call or a `src` change aborts an in-flight scan; peer output is capped at 10,000
+matches); `searchNext()`/`searchPrevious()`
 advance/step back through matches (wrapping, resolving `false` when there are none); `clearSearch()`
 clears the query, matches, and painted search annotation.
 
 **Events:** `lr-render-error` with `detail.error` when fetching, opening, or rendering fails;
 `lr-location-change` (`detail: { cfi, href }`) fired from epub.js's own `relocated` event;
 `lr-search-change` (`detail: { query, matchCount, activeIndex }`) from `search()`/`searchNext()`/
-`searchPrevious()`/`clearSearch()`.
+`searchPrevious()`/`clearSearch()`; `lr-anchor-result` (`detail: { found }`) after an anchor is
+applied; `lr-highlight-activate` (`detail: { id }`) when a painted CFI highlight is clicked; and
+`lr-text-select` (`detail: { text, anchor, rects }`) after selection inside a chapter iframe.
 
-**CSS parts:** `base`, `toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
+**CSS parts:** `base` (explicit `aria-busy="true"|"false"`; loading text owns `role="status"`),
+`toolbar`, `previous-button`, `next-button`, `previous-icon`, `next-icon`,
 `mount`, `error`, and `announcer` (the visually-hidden `role="status"` region search results
 announce through).
 
@@ -50,7 +55,8 @@ unambiguous beside other previous/next controls and are overridable through `.st
 
 **Optional peer dependency:** install `epubjs` with `pnpm add epubjs`. The document-viewer registry
 matches `application/epub+zip` and `.epub` filenames, declaring `{ anchors: ['cfi', 'text-quote'],
-search: true, textSelect: true }` capabilities.
+search: true, textSelect: true }` capabilities and forwarding `anchor`/`highlights` to the mounted
+viewer. The peer loader requires the callable EPUB factory; malformed module shapes fail closed.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the ebook.
@@ -63,3 +69,7 @@ this component's own shadow DOM — `lr-text-select` mirrors epub.js's own `sele
 same reason. `highlights` (kind `cfi`) paint via `rendition.annotations.highlight()` and are
 re-applied whenever the rendition is recreated (a `src` change, or a reconnect remount), since
 epub.js doesn't persist annotations across a fresh `renderTo()`.
+
+Rejected or synchronous failures from display, previous/next navigation, search annotation, or
+anchor application enter the localized error state and emit `lr-render-error`. Anchor failures
+emit one `{ found: false }`, and superseded async anchor/search work cannot mutate the current book.

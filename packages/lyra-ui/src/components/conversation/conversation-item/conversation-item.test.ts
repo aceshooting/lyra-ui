@@ -348,6 +348,30 @@ describe('inline rename', () => {
     expect(el.shadowRoot!.activeElement).to.equal(input);
   });
 
+  it('restores rename focus when the same editing row reconnects', async () => {
+    const el = (await fixture(
+      html`<lr-conversation-item title="Old name"></lr-conversation-item>`,
+    )) as LyraConversationItem;
+    (el.shadowRoot!.querySelector('[part="rename-button"]') as HTMLButtonElement).click();
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector('[part="title-input"]') as HTMLInputElement;
+    input.value = 'Draft survives';
+    input.dispatchEvent(new Event('input'));
+
+    const parent = el.parentElement!;
+    el.remove();
+    parent.append(el);
+    await el.updateComplete;
+    await Promise.resolve();
+
+    expect(
+      el.shadowRoot!.querySelector('[part="title-input"]')?.getAttribute('part'),
+    ).to.equal('title-input');
+    expect((el as unknown as { renaming: boolean }).renaming).to.be.true;
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('title-input');
+    expect(input.value).to.equal('Draft survives');
+  });
+
   it('gives the rename input the same row-specific accessible name as the rename button', async () => {
     const el = (await fixture(
       html`<lr-conversation-item title="Migrating the table component"></lr-conversation-item>`,

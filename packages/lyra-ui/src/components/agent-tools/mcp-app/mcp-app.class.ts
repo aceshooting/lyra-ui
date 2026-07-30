@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { keyed } from 'lit/directives/keyed.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -131,6 +132,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private loaded = false;
   @state() private frameHeight = 320;
+  private frameGeneration = 0;
   @query('iframe') private frame?: HTMLIFrameElement;
 
   override connectedCallback(): void {
@@ -145,9 +147,17 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('resource') || changed.has('height') || changed.has('maxHeight')) {
+    if (changed.has('resource')) {
       this.loaded = false;
-      this.frameHeight = finiteRange(this.height, 320, 120, finiteRange(this.maxHeight, 800, 120, 10_000));
+      this.frameGeneration++;
+    }
+    if (changed.has('resource') || changed.has('height') || changed.has('maxHeight')) {
+      this.frameHeight = finiteRange(
+        this.height,
+        320,
+        120,
+        finiteRange(this.maxHeight, 800, 120, 10_000),
+      );
     }
   }
 
@@ -169,7 +179,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
         uri: this.resource?.uri,
         metadata: this.resource?.metadata,
       },
-      locale: this.locale || document.documentElement.lang,
+      locale: this.effectiveLocale,
       direction: this.effectiveDirection,
     });
   }
@@ -244,16 +254,19 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
     }
     return html`<div part="base">
       ${this.loaded ? nothing : html`<p part="loading" role="status">${this.localize('mcpAppLoading')}</p>`}
-      <iframe
-        part="frame"
-        title=${label}
-        sandbox="allow-forms allow-scripts"
-        allow=${permissionPolicy(resource?.permissions)}
-        src=${resource?.html ? nothing : src ?? nothing}
-        .srcdoc=${resource?.html ? withCsp(resource.html, resource.csp) : ''}
-        style=${styleMap({ height: `${this.frameHeight}px` })}
-        @load=${this.onLoad}
-      ></iframe>
+      ${keyed(
+        this.frameGeneration,
+        html`<iframe
+          part="frame"
+          title=${label}
+          sandbox="allow-forms allow-scripts"
+          allow=${permissionPolicy(resource?.permissions)}
+          src=${resource?.html ? nothing : src ?? nothing}
+          .srcdoc=${resource?.html ? withCsp(resource.html, resource.csp) : ''}
+          style=${styleMap({ height: `${this.frameHeight}px` })}
+          @load=${this.onLoad}
+        ></iframe>`,
+      )}
     </div>`;
   }
 }

@@ -156,8 +156,11 @@ fresh `query` is the proxy for "the caret may have moved").
 - A caret that moves for a reason other than typing (e.g. a mouse click elsewhere in the text while
   the popover happens to still be open) is not separately tracked — force a re-measure by toggling
   `open` or reassigning `anchor`.
-- `activeIndex` resets to `0` whenever `query` or `items` changes, but not when only `anchor`
-  changes — reassigning `anchor` alone preserves whatever row was last highlighted.
+- `activeIndex` resets to `0` whenever `query`, `items`, or `filter` changes, but not when only
+  `anchor` changes — reassigning `anchor` alone preserves whatever row was last highlighted. If
+  fallback focus currently lives in the listbox and filtering removes every option, closing,
+  emptying, or disconnecting the popover returns focus to the connected anchor before removing the
+  active option.
 - There's no persisted "selection" the way `<lr-combobox>`'s own listbox has one — a mention is
   either committed (closing the popover) or dismissed with nothing chosen. `aria-selected="true"`
   here marks whichever row is currently *active* (what Enter/Tab would commit right now, per the

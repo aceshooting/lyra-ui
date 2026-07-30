@@ -18,8 +18,14 @@ A keyboard-accessible star rating control with slider semantics. **Properties:**
 `lr-change` with `{ value }`. **CSS parts:** `base`, `star`, `star-fill` (the filled overlay
 inside each star, clipped to the fractional `precision` value). **Themeable custom properties:**
 `--lr-rating-fill` (default `--lr-color-warning` — filled-star color), `--lr-rating-empty-color`
-(default `--lr-color-border` — unfilled-star color), and `--lr-rating-size` (default
+(default `--lr-color-border` — unfilled-star color, also retained during hover preview), and
+`--lr-rating-size` (default
 `--lr-font-size-xl` — star size).
+
+Pointer selection resolves the position within the clicked star and snaps upward to `precision`
+(with the physical fraction mirrored under RTL), so half/quarter-star precision applies to pointer
+input as well as keyboard/value updates. The semantic slider's base keeps a 40×40px minimum
+activation area even for the degenerate `max=0`/`max=1` cases; larger ratings naturally grow wider.
 
 **Additional API surface:**
 

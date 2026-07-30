@@ -16,8 +16,9 @@
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. No HTML is injected.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. A host
-`aria-label` takes precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
+precedence over `name`. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and

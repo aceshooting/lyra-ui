@@ -335,6 +335,7 @@ export class LyraToolTimeline extends LyraElement<LyraToolTimelineEventMap> {
           </div>
           <lr-details
             part="entry-details"
+            .summary=${this.localize('toolTimelineDetailsFor', undefined, { name: entry.name })}
             .open=${detailsOpened}
             @lr-toggle=${(event: CustomEvent<{ open: boolean }>) => this.onDetailsToggle(entry.id, event)}
           >

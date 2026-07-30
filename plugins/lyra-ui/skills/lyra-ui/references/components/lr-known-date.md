@@ -45,7 +45,8 @@ field currently has focus.
 
 **Events:** `input` (every keystroke), `change` (a field blur where the composite value newly
 transitioned), plus re-dispatched bubbling/composed `focus` and `blur` (`blur` fires once when focus
-leaves all three fields, not per field-to-field Tab). `input`/`change` detail is
+leaves all three fields, not per field-to-field Tab; each entry into the control likewise produces
+exactly one public `focus`, with the private trusted focus suppressed). `input`/`change` detail is
 `{ value, day, month, year, field }` — `value` is the canonical ISO date or `''`, `day`/`month`/`year`
 are the live raw typed text, and `field` is `'day' | 'month' | 'year'`, whichever was last edited.
 

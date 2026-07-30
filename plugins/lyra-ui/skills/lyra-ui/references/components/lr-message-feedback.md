@@ -30,7 +30,8 @@ rating opens the detail panel, and `disabled: boolean = false` (reflected) for a
 **Events:** `lr-change` — `detail: { value: 'up' | 'down' | null }`, fired when a thumb's rating
 changes or clears. `lr-submit` — `detail: { value: 'up' | 'down'; reasonIds: string[]; comment:
 string }`, fired by the panel's submit button (`value` is never `null` here — the panel only exists
-for a set rating).
+for a set rating). The optional comment `<textarea>`'s native `focus` and `blur` are re-dispatched
+as bubbling, composed host events.
 
 **CSS parts:** `base` (the root), `thumbs` (wrapper around both thumb buttons), `up-button`,
 `down-button`, `panel` (the inline detail disclosure, only rendered when `reasons` is non-empty or

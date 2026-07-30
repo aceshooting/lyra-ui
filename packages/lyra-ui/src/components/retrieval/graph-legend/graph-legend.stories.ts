@@ -28,7 +28,12 @@ export const Default: Story = {
 };
 
 export const WithHiddenType: Story = {
-  render: () => html`<lr-graph-legend .types=${types} .hiddenTypes=${['org']}></lr-graph-legend>`,
+  render: () =>
+    html`<lr-graph-legend
+      style="--lr-graph-legend-hidden-swatch-opacity: 0.22"
+      .types=${types}
+      .hiddenTypes=${['org']}
+    ></lr-graph-legend>`,
 };
 
 export const ReadOnly: Story = {
@@ -37,6 +42,12 @@ export const ReadOnly: Story = {
 
 export const Narrow: Story = {
   render: () => html`<div style="max-width: 320px; border: 1px dashed var(--lr-color-border); padding: 8px;">
-    <lr-graph-legend .types=${types} .counts=${{ person: 12, org: 4, place: 7 }}></lr-graph-legend>
+    <lr-graph-legend
+      .types=${[
+        ...types,
+        { id: 'long', label: `entity-${'classification'.repeat(16)}` },
+      ]}
+      .counts=${{ person: 12, org: 4, place: 7 }}
+    ></lr-graph-legend>
   </div>`,
 };

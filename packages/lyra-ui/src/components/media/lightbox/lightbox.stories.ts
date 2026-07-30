@@ -46,6 +46,18 @@ export const OpenInitially: Story = {
   render: (_args, context) => html`<lr-lightbox .images=${images} .open=${context.viewMode !== 'docs'}></lr-lightbox>`,
 };
 
+/** Hides only the visible numeric counter. The polite live region remains active so assistive
+ * technology still receives the current image position as navigation occurs. */
+export const CounterHidden: Story = {
+  render: (_args, context) => html`
+    <lr-lightbox
+      .images=${images}
+      .open=${context.viewMode !== 'docs'}
+      .showCounter=${false}
+    ></lr-lightbox>
+  `,
+};
+
 /** The 320px narrow-allocation baseline for the toolbar row (counter + actions slot +
  *  close-button) -- exercises lightbox.styles.ts's own documented `@container (max-inline-size:
  *  20rem)` rule, which shrinks `[part="counter"]`. `:host` is normally `position: fixed; inset:

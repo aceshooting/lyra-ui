@@ -28,9 +28,12 @@ to tell that apart from a genuine activation click.
 **Properties:** `src` and `name` are strings. `page: number = 1` is the one-based current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
-page list — declaratively, writing it inline on `[part="base"]`. `anchorKinds` is a readonly
+ page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
+ declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
 `['page', 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+anchor-target contract). Page and page-addressed region anchors require an in-range integer page
+and are rejected rather than clamped; region rectangles also require finite coordinates and
+nonnegative dimensions.
 
 **Events:**
 - `lr-render-error` — `detail: { error }` — fetching, parsing, or rendering (page canvas or text
@@ -57,7 +60,8 @@ of one page (per-page LRU-cached, 64 pages), rejecting on no loaded document or 
 `options.width` CSS px (default 96), devicePixelRatio-aware, resolving `false` when not ready or out
 of range. `goToPage(page)` scrolls the virtualized list to `page`, resolving `true` once mounted (or
 `false` for an out-of-range value, without changing `page`). `getOutline()` resolves the document's
-table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none.
+table of contents as `PdfOutlineItem[]` (`{ title, page?, children? }`), `[]` when there is none;
+peer output is capped at 10,000 unique items and 100 levels, with cycles ignored.
 `search(query)` resolves the match count across all pages (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()` and `searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and painted marks.
@@ -96,3 +100,6 @@ rendering without it.
 
 Remote resources are capped at 25 MB; exceeding it surfaces the localized
 `documentPreviewResourceTooLarge` message instead of the PDF.
+
+Anchor navigation is generation-guarded: a newer anchor, document replacement, or disconnect
+prevents stale page/text/region work from scrolling or reporting success.

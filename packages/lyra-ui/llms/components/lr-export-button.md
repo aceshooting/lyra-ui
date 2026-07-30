@@ -87,7 +87,7 @@ Package-level CSV utilities (used internally, also exported for standalone use �
 escapeCsvField, buildCsv, downloadBlob } from
 '@aceshooting/lyra-ui/components/utility/export-button/csv.js'`):
 ```ts
-escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes formula-injection (=,+,@,tab,CR) with a leading apostrophe — a bare leading '-' is deliberately left alone (OWASP guidance: it's not itself formula syntax, and guarding it would mangle ordinary negative numbers)
+escapeCsvField(value: unknown): string   // quotes/escapes; neutralizes leading ASCII/fullwidth =,+,-,@ and tab/CR/LF formula prefixes with an apostrophe
 buildCsv(rows: Record<string, unknown>[], columns: CsvColumn[]): string  // CRLF-joined, header row included
 downloadBlob(content: string, filename: string, mime: string): void      // triggers a browser download
 ```
@@ -99,6 +99,10 @@ downloadBlob(content: string, filename: string, mime: string): void      // trig
   for that handler, not automatic filename handling.
 - CSV formula-injection guarding and the deferred (5s) `URL.revokeObjectURL` (works around Safari
   cancelling in-flight downloads on immediate revoke) are genuine, safe-to-rely-on strengths.
+- `open` is valid only when `formats` contains more than one choice. An invalid open request is
+  normalized closed without a false `lr-show`/`lr-hide` pair; shrinking an open menu to one format,
+  or becoming `disabled`/`loading`, closes it and repairs focus. JSON projection safely preserves
+  an own enumerable column literally named `__proto__`.
 - the multi-format menu (`role="menu"`) supports full arrow-key navigation — ArrowUp/ArrowDown move
   between items (opening the menu and seeding the right one focused, if it was closed), Home/End
   jump to the first/last item once open, Escape closes it and returns focus to the trigger button,

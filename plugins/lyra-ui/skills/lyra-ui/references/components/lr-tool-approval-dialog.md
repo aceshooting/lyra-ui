@@ -69,7 +69,8 @@ closing; otherwise always followed by `lr-close` with reason `'approve'`), `lr-d
 default, `event.detail` is `null`, not `undefined`. Cancelable, same `pending` mechanism, setting
 `pending` to `'deny'`; otherwise always followed by `lr-close` with reason `'deny'`), `lr-close`
 (`detail: ToolApprovalDialogCloseReason` — fired exactly once per dismissal, via Escape, a backdrop
-click, the Approve/Deny buttons, or a `close()` call)
+click, the Approve/Deny buttons, or a `close()` call), and no-detail `focus`/`blur` events
+re-dispatched when the raw-JSON editor gains or loses focus.
 
 **Slots:** `footer` — optional supplementary content (e.g. a "remember this choice" checkbox),
 rendered before the built-in Deny/Edit/Approve buttons.
@@ -136,12 +137,10 @@ shared composed-tree focus traversal used by the other modal families.
   disconnect/reconnect fire back-to-back with no update in between.
 - the Approve button's native `disabled` attribute (while the draft is invalid JSON) automatically
   excludes it from the shared Tab trap, whose focusable-set computation skips disabled controls.
-- the raw-JSON `args-editor` textarea always hardcodes `spellcheck="false"`, `autocapitalize="off"`,
-  and `autocorrect="off"` — not exposed as configurable properties, unlike `<lr-textarea>`'s/
-  `<lr-chat-composer>`'s passthrough props — since its content is always JSON, never prose; without
-  this a mobile browser (notably iOS Safari, which defaults textarea `autocapitalize` to
-  `'sentences'`) could auto-capitalize or auto-correct key/value text as the user edits, silently
-  corrupting the JSON.
+- the raw-JSON `args-editor` textarea defaults to `spellcheck="false"`, `autocapitalize="off"`,
+  `autocorrect="off"`, and `autocomplete="off"` because its content is JSON, never prose. These
+  native editing-assistance values remain configurable through the corresponding properties for
+  integrations that intentionally need different browser behavior.
 - `deny-button`/`approve-button` are `<lr-button>` hosts (`variant="neutral"`/`"brand"` — this
   component has no `tone` property) — `--lr-button-*` theming reaches them directly. A consumer
   previously styling `::part(deny-button)`/`::part(approve-button)` for

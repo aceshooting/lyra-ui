@@ -86,6 +86,8 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
     const editorLabel = this.localize('promptQueueItemLabel', undefined, {
       index: formattedIndex,
     });
+    const actionLabel = (action: string): string =>
+      this.localize('promptQueueActionLabel', undefined, { action, index: formattedIndex });
     return html`<li part="item" data-id=${item.id}>
       ${this.editable
         ? html`<lr-textarea
@@ -106,6 +108,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
           data-action="up"
           size="xs"
           appearance="plain"
+          aria-label=${actionLabel(this.localize('moveUp'))}
           .disabled=${this.disabled || index === 0}
           @click=${() => this.move(item, -1)}
         >${this.localize('moveUp')}</lr-button>
@@ -114,6 +117,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
           data-action="down"
           size="xs"
           appearance="plain"
+          aria-label=${actionLabel(this.localize('moveDown'))}
           .disabled=${this.disabled || index === this.items.length - 1}
           @click=${() => this.move(item, 1)}
         >${this.localize('moveDown')}</lr-button>
@@ -122,6 +126,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
           data-action="send"
           size="xs"
           appearance="plain"
+          aria-label=${actionLabel(this.localize('promptQueueSendNow'))}
           .disabled=${this.disabled}
           @click=${() => this.emit('lr-send-now', { item })}
         >${this.localize('promptQueueSendNow')}</lr-button>
@@ -131,6 +136,7 @@ export class LyraPromptQueue extends LyraElement<LyraPromptQueueEventMap> {
           size="xs"
           appearance="plain"
           variant="danger"
+          aria-label=${actionLabel(this.localize('remove'))}
           .disabled=${this.disabled}
           @click=${() => this.removeItem(item)}
         >${this.localize('remove')}</lr-button>

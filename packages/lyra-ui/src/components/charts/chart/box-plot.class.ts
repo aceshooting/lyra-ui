@@ -80,7 +80,11 @@ function loadBoxPlotPlugin(): Promise<OptionalPeerApi | null> {
  *
  * @customElement lr-box-plot
  * @csspart base - The chart wrapper.
+ * @csspart plot - The fixed-height canvas region.
  * @csspart canvas - The box-plot canvas.
+ * @csspart legend - The wrapping DOM legend rendered when `legend` is set.
+ * @csspart legend-item - A keyboard-operable series visibility toggle.
+ * @csspart legend-swatch - The resolved series-color swatch in a legend item.
  * @csspart description - The accessible box-plot summary.
  * @csspart data-table - The optional generated or slotted data table.
  * @csspart error - `role="alert"` message shown instead of the canvas when the optional box-plot
@@ -126,6 +130,8 @@ export class LyraBoxPlot extends LyraElement {
   private chartJsModule?: OptionalPeerApi;
   private loadGeneration = 0;
   private descriptionId = nextId('box-plot-description');
+  private lastDrawnDirection?: 'ltr' | 'rtl';
+  private lastDrawnLocale?: string;
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -135,7 +141,7 @@ export class LyraBoxPlot extends LyraElement {
       this.intersectionObserver = new IntersectionObserver((entries) => {
         const wasVisible = this.visible;
         this.visible = entries[0]?.isIntersecting ?? true;
-        if (this.visible && !wasVisible) this.draw();
+        if (this.visible && !wasVisible) this.drawIfVisible();
       });
       this.intersectionObserver.observe(this);
     }
@@ -170,7 +176,7 @@ export class LyraBoxPlot extends LyraElement {
     const chartMod = await loadChartJs();
     if (generation !== this.loadGeneration || !this.isConnected) return;
     this.chartJsModule = chartMod ?? undefined;
-    this.draw();
+    this.drawIfVisible();
   }
 
   override disconnectedCallback(): void {
@@ -184,11 +190,10 @@ export class LyraBoxPlot extends LyraElement {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (!this.isConnected) return;
-    if (this.loading) this.setAttribute('aria-busy', 'true');
-    else this.removeAttribute('aria-busy');
+    this.setAttribute('aria-busy', String(this.loading));
 
-    // `--lr-chart-height` is read by `:host`'s `block-size` in
-    // `chart.styles.ts` (shared with `lr-chart`). Custom properties only
+    // `--lr-chart-height` is read by the plot region and host minimum size in
+    // `box-plot.styles.ts`. Custom properties only
     // cascade downward (host -> shadow tree), so this must be set on the
     // host element itself, not on the `[part="base"]` div inside the shadow
     // root.
@@ -196,12 +201,18 @@ export class LyraBoxPlot extends LyraElement {
       this.style.setProperty('--lr-chart-height', this.height);
     }
     if (this.loading) return;
-    if (!this.visible) return; // becoming visible again triggers its own draw() via the observer above
     const contentChanged = ['labels', 'boxes', 'legend', 'height', 'yLabel', 'beginAtZero', 'locale', 'strings', 'loading'].some((name) =>
       changed.has(name),
     );
-    if (!contentChanged) return;
-    this.draw();
+    const direction = this.effectiveDirection;
+    const locale = this.effectiveLocale;
+    const contextChanged =
+      (this.lastDrawnDirection !== undefined && this.lastDrawnDirection !== direction) ||
+      (this.lastDrawnLocale !== undefined && this.lastDrawnLocale !== locale);
+    this.lastDrawnDirection = direction;
+    this.lastDrawnLocale = locale;
+    if (!contentChanged && !contextChanged) return;
+    this.drawIfVisible();
   }
 
   /**
@@ -248,7 +259,8 @@ export class LyraBoxPlot extends LyraElement {
         maintainAspectRatio: false,
         animation: prefersReducedMotion() ? false : undefined,
         plugins: {
-          legend: { display: this.legend, labels: { color: theme.legend } },
+          // The normal-flow DOM legend below can wrap long public labels; a canvas legend cannot.
+          legend: { display: false, labels: { color: theme.legend } },
           tooltip: {
             backgroundColor: theme.tooltipBg,
             titleColor: theme.tooltipText,
@@ -316,9 +328,15 @@ export class LyraBoxPlot extends LyraElement {
     this.chart = new this.chartJsModule.Chart(this.canvasEl, config);
   }
 
+  private drawIfVisible(): void {
+    if (!this.isConnected || !this.visible) return;
+    this.draw();
+  }
+
   /** Re-reads canvas theme custom properties after an out-of-band ancestor theme change. */
   refreshTheme(): void {
-    this.draw();
+    this.drawIfVisible();
+    if (this.legend) this.requestUpdate();
   }
 
   private boxPlotDescription(): string {
@@ -407,6 +425,47 @@ export class LyraBoxPlot extends LyraElement {
     return Array.from(this.children).some((child) => child.getAttribute('slot') === 'data-table');
   }
 
+  private toggleDataset(index: number): void {
+    if (!this.chart) return;
+    const visible = this.chart.isDatasetVisible(index);
+    this.chart.setDatasetVisibility(index, !visible);
+    this.chart.update('none');
+    this.requestUpdate();
+  }
+
+  private legendDatasetVisible(index: number): boolean {
+    if (!this.chart) return true;
+    // render() runs before updated() replaces Chart.js's old data. Its out-of-range visibility
+    // answer is false, although a box series appended by this update will be visible after draw().
+    const renderedDatasetCount = this.chart.data.datasets?.length ?? 0;
+    return index >= renderedDatasetCount || this.chart.isDatasetVisible(index);
+  }
+
+  private renderLegend(): TemplateResult | typeof nothing {
+    if (!this.legend) return nothing;
+    const palette = seriesPalette(this);
+    return html`
+      <div part="legend" role="group" aria-label=${this.accessibleName(this.localize('boxPlot'))}>
+        ${this.boxes.map((series, index) => {
+          const fallback = palette[index % palette.length] ?? 'transparent';
+          const color = series.color ? resolveCanvasColor(this, series.color, fallback) : fallback;
+          const visible = this.legendDatasetVisible(index);
+          return html`
+            <button
+              part="legend-item"
+              type="button"
+              aria-pressed=${visible ? 'true' : 'false'}
+              @click=${() => this.toggleDataset(index)}
+            >
+              <span part="legend-swatch" style="background-color:${color}"></span>
+              <span>${series.label}</span>
+            </button>
+          `;
+        })}
+      </div>
+    `;
+  }
+
   override render(): TemplateResult {
     if (this.loading) {
       return html`
@@ -431,7 +490,10 @@ export class LyraBoxPlot extends LyraElement {
     const description = this.boxPlotDescription();
     return html`
       <div part="base">
-        <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
+        <div part="plot">
+          <canvas part="canvas" role="img" aria-label=${label} aria-describedby=${this.descriptionId}></canvas>
+        </div>
+        ${this.renderLegend()}
         <p part="description" id=${this.descriptionId} class="sr-only">${description}</p>
         <div part="data-table">
           <slot name="data-table" @slotchange=${() => this.requestUpdate()}></slot>

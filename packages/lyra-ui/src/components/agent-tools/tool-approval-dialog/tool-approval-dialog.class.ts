@@ -120,6 +120,8 @@ export interface LyraToolApprovalDialogEventMap {
  * once per dismissal — via Escape, a backdrop click, the Approve/Deny
  * buttons, or a `close()` call — so there is one consistent "this dialog is
  * now closed" signal regardless of which path triggered it.
+ * @event focus - Re-dispatched when the raw-JSON editor receives focus.
+ * @event blur - Re-dispatched when the raw-JSON editor loses focus.
  * @csspart backdrop - The full-viewport scrim behind the panel.
  * @csspart panel - The dialog panel itself (`role="dialog"` while open).
  * @csspart header - The wrapper around the heading.

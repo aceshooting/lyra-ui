@@ -15,6 +15,8 @@ export interface LyraOptionEventMap {
  * The label is the element's text content (or an explicit `label` attribute).
  *
  * @customElement lr-option
+ * @event lr-option-change - The option's label or selectable data changed. The parent combobox
+ *   or select consumes this bubbling event to refresh its normalized option rows.
  */
 export class LyraOption extends LyraElement<LyraOptionEventMap> {
   static override styles = [LyraElement.styles, styles];

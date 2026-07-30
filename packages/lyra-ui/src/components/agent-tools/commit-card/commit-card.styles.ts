@@ -3,8 +3,13 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     display: block;
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     border: var(--lr-size-1px) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     padding: var(--lr-space-m);
@@ -64,9 +69,14 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='file'] {
+    box-sizing: border-box;
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: var(--lr-space-s);
     inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     background: none;
     border: none;
     font: inherit;
@@ -74,6 +84,15 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
     padding: var(--lr-space-2xs) 0;
+  }
+  [part='file-path'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  .file-stats {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
   [part='file']:hover {
     background: var(--lr-color-brand-quiet);

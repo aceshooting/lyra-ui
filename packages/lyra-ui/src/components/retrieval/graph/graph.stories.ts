@@ -115,6 +115,32 @@ export const NarrowLongContent: Story = {
   `,
 };
 
+export const NormalizedLinkWidths: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Link widths are normalized consistently in SVG, canvas paint, and canvas picking: ' +
+          'negative values clamp to zero and non-finite values use the 1.5 default.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-graph
+      width="480"
+      height="320"
+      seed="42"
+      style="height: 20rem"
+      .nodes=${nodes}
+      .links=${[
+        { source: 'a', target: 'b', width: Number.NaN },
+        { source: 'a', target: 'c', width: -4 },
+        { source: 'b', target: 'd', width: 2.5 },
+      ] satisfies GraphLink[]}
+    ></lr-graph>
+  `,
+};
+
 export const DimmedNeighborhood: Story = {
   name: 'Dimmed non-neighbors (controlled)',
   parameters: {

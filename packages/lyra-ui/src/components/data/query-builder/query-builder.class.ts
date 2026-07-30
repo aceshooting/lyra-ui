@@ -442,7 +442,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
           aria-label=${valueLabel}
           .value=${current}
           ?disabled=${this.disabled}
-          @input=${(event: Event) =>
+          @lr-input=${(event: Event) =>
             this.consumeChildEvent(event, () => {
               const raw = (event.target as LyraInput).value;
               const parsed = raw === '' ? undefined : Number(raw);
@@ -461,7 +461,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
         aria-label=${valueLabel}
         .value=${current}
         ?disabled=${this.disabled}
-        @input=${(event: Event) =>
+        @lr-input=${(event: Event) =>
           this.consumeChildEvent(event, () =>
             this.setConditionValue(condition.id, (event.target as LyraInput).value),
           )}

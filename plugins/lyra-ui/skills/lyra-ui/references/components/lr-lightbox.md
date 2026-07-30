@@ -27,16 +27,17 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
-- `showCounter: boolean = true` (attribute `show-counter`) — shows `[part="counter"]` and its
-  live-region announcement.
+- `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
+  The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/
   `max-zoom`/`zoom-step`) — pure pass-throughs to the embedded `<lr-zoomable-frame>`, which does the
   normalizing.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the panel's accessible name,
   overriding the localized `lightboxLabel`.
 
-**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `reason` defaults to `'api'`
-and is forwarded as the close event's detail.
+**Methods:** `next()`, `previous()`, `goTo(index)`, `close(reason?)` — `goTo()` ignores a non-finite
+index without changing state or emitting `lr-index-change`; `reason` defaults to `'api'` and is
+forwarded as the close event's detail.
 
 **Events:** `lr-lightbox-close` (`detail: LyraLightboxCloseReason = 'escape' | 'backdrop' |
 'close-button' | 'api' | 'unmount' | (string & {})`; **cancelable** — `preventDefault()` blocks

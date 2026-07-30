@@ -149,6 +149,45 @@ describe('lr-trace-tree', () => {
     expect(label).to.include('Cost: $0.0021');
   });
 
+  it('includes visible detail in the row name and synchronizes it after a spans update', async () => {
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${SPANS}></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    const row = el.shadowRoot!.querySelector('[data-id="search"]')!;
+    expect(row.getAttribute('aria-label')).to.include('Searching flights');
+
+    el.spans = SPANS.map((span) =>
+      span.id === 'search' ? { ...span, detail: 'Comparing fares' } : span,
+    );
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[data-id="search"]')!.getAttribute('aria-label')).to.include(
+      'Comparing fares',
+    );
+  });
+
+  it('omits negative and non-finite token metrics from the DOM and accessible name', async () => {
+    const invalid: LyraSpan[] = [
+      {
+        id: 'invalid',
+        name: 'Invalid metrics',
+        kind: 'llm',
+        status: 'success',
+        startMs: 0,
+        endMs: 1,
+        tokensIn: -1,
+        tokensOut: Number.POSITIVE_INFINITY,
+      },
+    ];
+    const el = (await fixture(
+      html`<lr-trace-tree .spans=${invalid} show-tokens></lr-trace-tree>`,
+    )) as LyraTraceTree;
+    const row = el.shadowRoot!.querySelector('[data-id="invalid"]')!;
+    expect(row.querySelector('[part="tokens-in"]')!.textContent).to.equal('');
+    expect(row.querySelector('[part="tokens-out"]')!.textContent).to.equal('');
+    expect(row.getAttribute('aria-label') ?? '').not.to.include('-1');
+    expect(row.getAttribute('aria-label') ?? '').not.to.include('∞');
+  });
+
   it('formats duration numbers with the effective locale', async () => {
     const el = (await fixture(
       html`<lr-trace-tree

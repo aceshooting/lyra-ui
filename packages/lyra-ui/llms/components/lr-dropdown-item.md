@@ -131,7 +131,9 @@ called with no second argument, so `event.detail` is `null`, not `undefined`; fi
 when the parent `<lr-menu>`'s own Enter/Space keydown handling calls `select()` on the currently
 roving-focused item), `lr-menu-item-change` (`detail: { value, checked }` — fired when a
 `type="checkbox"` item is activated and its `checked` state toggled, in addition to — never instead
-of — `lr-menu-item-select`; never fired for `type="normal"`)
+of — `lr-menu-item-select`; never fired for `type="normal"`),
+`lr-menu-item-state-change` (`detail: { disabled, hidden }` — emitted when either navigability
+state changes so the parent menu can repair its roving-tabindex state immediately)
 
 **Slots:** default (the item's label content), `icon` (optional leading icon)
 

@@ -52,6 +52,24 @@ it('exposes exactly one composed InputEvent when the user types', async () => {
   expect(changeCount).to.equal(0);
 });
 
+it('rejects unsafe option dot colors while preserving valid CSS colors', async () => {
+  const el = await fixture<LyraCombobox>(html`
+    <lr-combobox>
+      <lr-option value="a" dot-color="url(data:image/svg+xml,&lt;svg/&gt;)">A</lr-option>
+    </lr-combobox>
+  `);
+  const dot = el.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement;
+  expect(dot.style.backgroundColor).to.equal('transparent');
+  expect(dot.style.backgroundImage).to.not.contain('url(');
+
+  const safe = await fixture<LyraCombobox>(html`
+    <lr-combobox>
+      <lr-option value="a" dot-color="#123456">A</lr-option>
+    </lr-combobox>
+  `);
+  expect((safe.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement).style.backgroundColor).to.not.equal('');
+});
+
 it('emits lr-change with the new value alongside native-style change/input', async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   el.open = true;
@@ -845,6 +863,22 @@ it('caps rendered rows at maxRender and shows an overflow indicator', async () =
 
   expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(3);
   expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent).to.contain('+7 more');
+});
+
+it('formats the option-overflow count with the effective locale', async () => {
+  const el = (await fixture(
+    html`<lr-combobox lang="ar-EG" max-render="3"></lr-combobox>`,
+  )) as LyraCombobox;
+  for (let i = 0; i < 10; i++) {
+    const opt = document.createElement('lr-option');
+    opt.value = `${i}`;
+    opt.textContent = `Item ${i}`;
+    el.appendChild(opt);
+  }
+  el.open = true;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="option-overflow"]')!.textContent)
+    .to.include(new Intl.NumberFormat('ar-EG').format(7));
 });
 
 it('always keeps the current selection visible even when capped out', async () => {

@@ -33,10 +33,10 @@ capability as a row.
   attribute.
 - `disabled: boolean = false` (reflected)
 - `triggerLabel?: string` (attribute `trigger-label`) — overrides the single-capability trigger
-  button's `aria-label`, which otherwise comes from `CAPABILITY_META[capability].triggerLabel` (e.g.
-  `'Attach files'`); only affects the single-capability button (`[part='trigger']`) — the
-  multi-capability menu's own trigger keeps its fixed `'Add attachment'` label regardless. Unset
-  (the default) keeps the built-in English default.
+  button's accessible-name fallback, which otherwise comes from the localized capability metadata
+  (e.g. `'Attach files'`); only affects the single-capability button (`[part='trigger']`). The
+  multi-capability trigger uses its localized `'Add attachment'` fallback. A host `aria-label`
+  takes precedence on either trigger shape.
 - `triggerTitle?: string` (attribute `trigger-title`) — forwards a sighted-user hover tooltip to
   both the single-capability and multi-capability trigger buttons
 
@@ -49,8 +49,8 @@ default) — fired when the `camera` / `audio` capability is activated; this com
 capture UI of its own, the host owns everything from here (there's no single right answer for
 `getUserMedia` vs. `<input capture>` vs. a native wrapper's own camera API; for `audio` the
 typical host response is opening `<lr-push-to-talk>` in an overlay, then handing the resulting
-blob to `<lr-attachment-chip>`). Internal `focus`/`blur` from the hidden input are re-emitted as
-host events.
+blob to `<lr-attachment-chip>`). `focus`/`blur` from the active single- or multi-capability trigger
+are re-emitted as bubbling, composed host events; the hidden file input is not the focus owner.
 
 **Slots:** none — capabilities are configured entirely via the `capabilities` prop.
 
@@ -87,6 +87,8 @@ hidden via CSS by default, exposed as a part only so a consumer can override tha
 - The `camera`/`audio` capabilities never touch the hidden `<input type="file">` at all — both are
   scope-limited by design to firing `lr-camera-request`/`lr-audio-request` and nothing else. The
   hidden input is only rendered when `capabilities` contains `files` or `image`.
+- Setting `disabled` closes an open capability menu, disables its items as well as the trigger, and
+  discards a native file selection that arrives after the component became disabled.
 
 **Additional API surface:**
 

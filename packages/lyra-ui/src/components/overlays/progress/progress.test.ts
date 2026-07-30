@@ -41,6 +41,26 @@ it('locale-formats visible percentage output and forwards live host naming to bo
   expect(ringBase.getAttribute('aria-label')).to.equal('Sync');
 });
 
+it('uses visible consumer labels in the accessible names of both progress roles', async () => {
+  const bar = (await fixture(html`
+    <lr-progress-bar value="25" show-value><span slot="label">Upload files</span></lr-progress-bar>
+  `)) as LyraProgressBar;
+  const barBase = bar.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(barBase.getAttribute('aria-label')).to.equal('Upload files');
+
+  const ring = await fixture(html`
+    <lr-progress-ring value="25"><strong>Sync files</strong></lr-progress-ring>
+  `);
+  const ringBase = ring.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(ringBase.getAttribute('aria-label')).to.equal('Sync files');
+
+  const label = bar.querySelector('[slot="label"]')!;
+  label.textContent = 'Upload documents';
+  await new Promise<void>((resolve) => queueMicrotask(resolve));
+  await bar.updateComplete;
+  expect(barBase.getAttribute('aria-label')).to.equal('Upload documents');
+});
+
 it('applies --lr-progress-height to the track', async () => {
   const el = (await fixture(
     html`<lr-progress-bar style="--lr-progress-height: 10px"></lr-progress-bar>`,

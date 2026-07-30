@@ -93,6 +93,8 @@ export interface LyraMenuItemEventMap {
  * its `checked` state toggled. `detail: { value, checked }` — the item's own
  * `value` and its new `checked` value. Fired in addition to (never instead
  * of) `lr-menu-item-select` above. Never fired for `type="normal"`.
+ * @event lr-menu-item-state-change - The item's `disabled` or `hidden` state changed.
+ *   `<lr-menu>` consumes this to repair its roving-tabindex state immediately.
  * @csspart base - The row (`role` lives on the host — see the class doc).
  * @csspart icon - Wrapper around the `icon` slot. Not rendered at all when the slot is empty.
  * @csspart label - Wrapper around the default slot.
@@ -145,8 +147,8 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
       // role, rendering, or event differences" guarantee for that default.
       this.removeAttribute('aria-checked');
     }
+    this.setAttribute('aria-disabled', String(this.disabled));
     if (this.disabled) {
-      this.setAttribute('aria-disabled', 'true');
       // Defense-in-depth mirroring connectedCallback's baseline above:
       // <lr-menu>'s roving-tabindex bookkeeping (activeIndex) only gets a
       // chance to resync once real focus actually moves (via its own
@@ -159,8 +161,6 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
         this.tabIndex = -1;
         if (document.activeElement === this) this.blur();
       }
-    } else {
-      this.removeAttribute('aria-disabled');
     }
     if (changed.has('disabled')) {
       this.emit('lr-menu-item-state-change', { disabled: this.disabled, hidden: this.hidden });

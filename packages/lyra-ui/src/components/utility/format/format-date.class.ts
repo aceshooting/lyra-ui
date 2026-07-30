@@ -38,11 +38,18 @@ export class LyraFormatDate extends LyraElement {
         try {
           text = getDateTimeFormat(this.effectiveLocale || undefined, localOptions).format(value);
         } catch {
-          text = getDateTimeFormat(undefined, {
+          const safeOptions: Intl.DateTimeFormatOptions = {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
-          }).format(value);
+          };
+          try {
+            // Invalid formatting options must not silently erase an otherwise-valid locale.
+            text = getDateTimeFormat(this.effectiveLocale || undefined, safeOptions).format(value);
+          } catch {
+            // Only a malformed locale itself reaches this final runtime-locale fallback.
+            text = getDateTimeFormat(undefined, safeOptions).format(value);
+          }
         }
       }
     }

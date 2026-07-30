@@ -3,6 +3,7 @@ import './table.js';
 import '../../forms/select/select.js';
 import type { LyraTable, TableColumn } from './table.js';
 import { styles } from './table.styles.js';
+import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 interface Row {
   id: string;
@@ -153,6 +154,46 @@ it('honors preventDefault() on the drag-end lr-column-resize commit by reverting
   await el.updateComplete;
   // The vetoed drag-end commit reverts the rendered width back to its pre-drag value.
   expect(col().style.inlineSize).to.equal(originalWidth);
+});
+
+it('rolls back the live column-width preview without a terminal commit when pointer capture is canceled', async () => {
+  for (const [index, endType] of (['pointercancel', 'lostpointercapture'] as const).entries()) {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = [
+      { key: 'name', label: 'Name', width: '120px', minWidth: '80px', resizable: true, cell: (r) => r.name },
+      columns[1]!,
+    ];
+    el.rows = rows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const handle = el.shadowRoot!.querySelector('[part="resize-handle"]') as HTMLElement;
+    const col = (): HTMLElement => el.shadowRoot!.querySelector('col') as HTMLElement;
+    handle.setPointerCapture = () => {};
+    handle.releasePointerCapture = () => {};
+    const originalWidth = col().style.inlineSize;
+    let liveEvents = 0;
+    let terminalEvents = 0;
+    el.addEventListener('lr-column-resize', (event) => {
+      if (event.cancelable) terminalEvents++;
+      else liveEvents++;
+    });
+    const pointerId = 40 + index;
+
+    handle.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, pointerId, clientX: 100 }),
+    );
+    window.dispatchEvent(new PointerEvent('pointermove', { pointerId, clientX: 140 }));
+    await el.updateComplete;
+    expect(liveEvents, endType).to.equal(1);
+    expect(col().style.inlineSize, endType).to.not.equal(originalWidth);
+
+    window.dispatchEvent(new PointerEvent(endType, { pointerId }));
+    await el.updateComplete;
+
+    expect(terminalEvents, endType).to.equal(0);
+    expect(col().style.inlineSize, endType).to.equal(originalWidth);
+  }
 });
 
 it('uses the themed minimum width when a resizable column has no explicit minimum', async () => {
@@ -381,6 +422,88 @@ it('commits an inline edit with Enter', async () => {
   const event = await eventPromise;
   expect(event.detail.value).to.equal('Enter name');
   expect(el.shadowRoot!.querySelector('[part="cell-editor"]')).to.not.exist;
+});
+
+it('shows a rendered hover affordance on the public filter control', async () => {
+  const el = (await fixture(html`<lr-table filterable></lr-table>`)) as LyraTable<Row>;
+  el.columns = columns;
+  el.rows = rows;
+  await el.updateComplete;
+
+  const filter = el.shadowRoot!.querySelector('[part="filter"]') as HTMLInputElement;
+  const before = getComputedStyle(filter).backgroundColor;
+  const rect = filter.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(filter).backgroundColor).to.not.equal(before);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('shows a rendered hover affordance on the public cell editor', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+  cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  const editor = el.shadowRoot!.querySelector('[part="cell-editor"]') as HTMLInputElement;
+  const before = getComputedStyle(editor).backgroundColor;
+  const rect = editor.getBoundingClientRect();
+  try {
+    await sendMouse({
+      type: 'move',
+      position: [Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2)],
+    });
+    expect(getComputedStyle(editor).backgroundColor).to.not.equal(before);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('closes a transient editor when its same-key column becomes non-editable', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+  cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(1);
+
+  el.columns = columns;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
+});
+
+it('does not restore a transient editor after its row disappears and later returns', async () => {
+  const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+  el.columns = editableColumns;
+  el.rows = rows;
+  el.rowKey = (r) => r.id;
+  await el.updateComplete;
+
+  const cell = el.shadowRoot!.querySelector('td[data-col-key="name"]') as HTMLElement;
+  cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(1);
+
+  el.rows = [rows[1]!];
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
+
+  el.rows = rows;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="cell-editor"]')).to.have.lengthOf(0);
 });
 
 it('renders grouped row sections without making group headers focus stops', async () => {
@@ -2244,6 +2367,24 @@ describe('heat-tint mode', () => {
     const scoreCells = [...el.shadowRoot!.querySelectorAll('[part="cell"][data-col-key="score"]')] as HTMLElement[];
     expect(scoreCells[0].style.getPropertyValue('--lr-table-heat-t')).to.equal('30.00%'); // Alpha: 3/10
     expect(scoreCells[1].style.getPropertyValue('--lr-table-heat-t')).to.equal('10.00%'); // Beta: 1/10
+  });
+
+  it('keeps full-range finite heat values at the low, midpoint, and high tint stops', async () => {
+    const extremeRows = [
+      { id: 'low', name: 'Low', score: -Number.MAX_VALUE },
+      { id: 'mid', name: 'Mid', score: 0 },
+      { id: 'high', name: 'High', score: Number.MAX_VALUE },
+    ];
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = heatColumns;
+    el.rows = extremeRows;
+    el.rowKey = (r) => r.id;
+    await el.updateComplete;
+
+    const shares = [
+      ...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="cell"][data-col-key="score"]'),
+    ].map((cell) => cell.style.getPropertyValue('--lr-table-heat-t'));
+    expect(shares).to.deep.equal(['0.00%', '50.00%', '100.00%']);
   });
 
   it('skips tinting a cell whose heatValue returns null (not clamped to 0)', async () => {

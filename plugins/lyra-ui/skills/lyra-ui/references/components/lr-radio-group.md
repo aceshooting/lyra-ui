@@ -19,7 +19,10 @@ focus; arrow navigation selects the next enabled radio.
 **Properties:** `label`, `hint`, `errorText` (`error-text`), `name`, `required`, `disabled`, and
 `aria-label` (through `accessibleLabel`).
 
-**Events:** `lr-change` with `{ value, radio }`.
+**Events:** exactly one group-owned `lr-change` with `{ value, radio }` per owned selection,
+including keyboard activation. The selected child does not emit its standalone alias. Ownership is
+resolved synchronously, so immediate removal restores standalone behavior and immediate reparenting
+routes the event to the new group without waiting for a mutation-observer turn.
 
 **Slots:** default radios, `label`, `hint`, `error`.
 

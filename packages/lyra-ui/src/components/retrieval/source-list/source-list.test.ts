@@ -206,3 +206,36 @@ it('exposes slotted cards as list items while preserving author roles on removal
   await new Promise((resolve) => setTimeout(resolve));
   expect(card.hasAttribute('role')).to.be.false;
 });
+
+it('reapplies owned listitem roles after disconnect and reconnect', async () => {
+  const wrapper = (await fixture(
+    html`<div><lr-source-list expanded><lr-source-card role="article"></lr-source-card></lr-source-list></div>`,
+  )) as HTMLElement;
+  const el = wrapper.querySelector('lr-source-list') as LyraSourceList;
+  const card = el.querySelector('lr-source-card')!;
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  expect(card.getAttribute('role')).to.equal('listitem');
+
+  el.remove();
+  expect(card.getAttribute('role')).to.equal('article');
+  wrapper.append(el);
+  await el.updateComplete;
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  expect(card.getAttribute('role')).to.equal('listitem');
+});
+
+it('tracks live author role changes while connected and restores the latest role on release', async () => {
+  const card = document.createElement('lr-source-card');
+  const el = (await fixture(html`<lr-source-list expanded></lr-source-list>`)) as LyraSourceList;
+  el.append(card);
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  expect(card.getAttribute('role')).to.equal('listitem');
+
+  card.setAttribute('role', 'article');
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  expect(card.getAttribute('role')).to.equal('listitem');
+
+  card.remove();
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  expect(card.getAttribute('role')).to.equal('article');
+});

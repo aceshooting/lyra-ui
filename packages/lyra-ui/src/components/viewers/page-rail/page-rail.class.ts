@@ -6,6 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
+import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './page-rail.styles.js';
 
 const DIGIT_BUFFER_MS = 500;
@@ -84,6 +85,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   private thumbnailGeneration = 0;
   private resizeObserver?: ResizeObserver;
   private targetObserver?: MutationObserver;
+  private pendingFocusPage: number | null = null;
+  private focusRepairPending = false;
+  private focusRepairGeneration = 0;
 
   private readonly onViewerLoad = (e: Event): void => {
     this.resolvedPageCount = finiteCount(
@@ -102,6 +106,25 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
+      const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
+      const focused = list?.shadowRoot?.activeElement;
+      const focusedIndex = focused instanceof HTMLElement
+        ? finiteInteger(Number(focused.closest<HTMLElement>('[data-row-index]')?.dataset['rowIndex']), -1, -1)
+        : -1;
+      const nextCount = this.effectivePageCount();
+      if (nextCount <= 0) {
+        if (this.focusRepairPending) {
+          this.pendingFocusPage = null;
+          this.focusRepairPending = false;
+          this.focusRepairGeneration++;
+        }
+      } else if (focusedIndex >= nextCount || this.focusRepairPending) {
+        this.pendingFocusPage = nextCount;
+        this.focusRepairPending = true;
+        this.focusRepairGeneration++;
+      }
+    }
     if (!this.hasUpdated || changed.has('viewer') || changed.has('for')) {
       this.resolveViewer();
       this.observeForTarget();
@@ -139,6 +162,10 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     this.unbindViewer();
     this.thumbnailGeneration++;
     clearTimeout(this.digitTimer);
+    this.digitBuffer = '';
+    this.pendingFocusPage = null;
+    this.focusRepairPending = false;
+    this.focusRepairGeneration++;
     super.disconnectedCallback();
   }
 
@@ -230,6 +257,75 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('thumbWidth') && changed.get('thumbWidth') !== undefined) this.invalidateThumbnails();
+    const pendingFocusPage = this.pendingFocusPage;
+    this.pendingFocusPage = null;
+    if (pendingFocusPage !== null) {
+      void this.focusVirtualPage(pendingFocusPage, this.focusRepairGeneration);
+    }
+  }
+
+  private renderedPageButton(list: LyraVirtualList, index: number): HTMLButtonElement | null {
+    const row = list.renderedRows.find(
+      (candidate) => finiteInteger(Number(candidate.dataset['rowIndex']), -1, -1) === index,
+    );
+    return row?.querySelector<HTMLButtonElement>('[part~="page"]') ?? null;
+  }
+
+  private isCurrentFocusRepair(list: LyraVirtualList, generation: number): boolean {
+    return this.isConnected
+      && generation === this.focusRepairGeneration
+      && this.shadowRoot?.querySelector('lr-virtual-list') === list;
+  }
+
+  private focusRepairIndex(pageNumber: number): number | null {
+    const count = this.effectivePageCount();
+    if (count <= 0) return null;
+    return finiteInteger(pageNumber, count, 1, count) - 1;
+  }
+
+  private finishFocusRepair(generation: number): void {
+    if (generation === this.focusRepairGeneration) this.focusRepairPending = false;
+  }
+
+  private async focusVirtualPage(pageNumber: number, generation: number): Promise<void> {
+    const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
+    if (!list) {
+      this.finishFocusRepair(generation);
+      return;
+    }
+    await list.updateComplete;
+    if (!this.isCurrentFocusRepair(list, generation)) return;
+
+    let index = this.focusRepairIndex(pageNumber);
+    if (index === null) {
+      this.finishFocusRepair(generation);
+      return;
+    }
+    let button = this.renderedPageButton(list, index);
+    if (button) {
+      button.focus();
+      this.finishFocusRepair(generation);
+      return;
+    }
+
+    list.scrollToIndex(index, { align: 'auto', behavior: 'auto' });
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await list.updateComplete;
+      if (!this.isCurrentFocusRepair(list, generation)) return;
+      index = this.focusRepairIndex(pageNumber);
+      if (index === null) {
+        this.finishFocusRepair(generation);
+        return;
+      }
+      button = this.renderedPageButton(list, index);
+      if (button) {
+        button.focus();
+        this.finishFocusRepair(generation);
+        return;
+      }
+    }
+    this.finishFocusRepair(generation);
   }
 
   private invalidateThumbnails(): void {

@@ -143,8 +143,12 @@ async function writeFixture(
   if (withOptionalPeers) dependencies['@aceshooting/lyra-flags'] = `file:${relative(fixtureDir, flagsTarball)}`;
 
   const devDependencies = {
-    typescript: '^7.0.2',
-    vite: '^8.1.4',
+    // These fixtures intentionally use npm as well as pnpm. Floating either edge can make npm
+    // resolve a newly-published, mutually-incompatible Vite/TypeScript pair before any Lyra
+    // declaration or bundle assertion runs, turning this contract test into an upstream
+    // resolver lottery. Pin the exact toolchain already exercised by this repository's lockfile.
+    typescript: '7.0.2',
+    vite: '8.1.5',
   };
   if (withOptionalPeers) {
     Object.assign(devDependencies, {
@@ -173,6 +177,13 @@ async function writeFixture(
         type: 'module',
         dependencies,
         devDependencies,
+        // Rolldown's optional WASI binding currently permits @napi-rs/wasm-runtime ^1.1.6, but
+        // 1.2 switched its @emnapi peers to the incompatible 2.x alpha line while the binding
+        // still installs @emnapi 1.11.1. npm --strict-peer-deps rejects that optional fallback
+        // before reaching any Lyra assertion, even on platforms that use a native binding.
+        overrides: {
+          '@napi-rs/wasm-runtime': '1.1.6',
+        },
       },
       null,
       2,

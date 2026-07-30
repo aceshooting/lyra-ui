@@ -42,6 +42,30 @@ export const Editable: Story = {
   `,
 };
 
+export const ThemedInteractionElevation: Story = {
+  name: 'Themed drag/resize elevation',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Start dragging or resizing a cell to see a component-scoped --lr-dashboard-grid-interaction-shadow override.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-dashboard-grid
+      style="
+        width:100%;
+        --lr-dashboard-grid-interaction-shadow:
+          0 0 var(--lr-space-xs) var(--lr-space-2xs) var(--lr-color-brand);
+      "
+      cells-draggable
+      cells-resizable
+      .layout=${layout}
+    ></lr-dashboard-grid>
+  `,
+};
+
 export const LockedCell: Story = {
   render: () =>
     html`<lr-dashboard-grid

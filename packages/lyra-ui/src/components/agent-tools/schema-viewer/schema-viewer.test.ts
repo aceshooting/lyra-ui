@@ -60,6 +60,30 @@ it('bounds broad schemas and exposes a localized truncation status', async () =>
   );
 });
 
+it('indexes validation issues once and bounds their rendered work independently of the node ceiling', async () => {
+  const properties = Object.fromEntries(
+    Array.from({ length: 499 }, (_, index) => [`property-${index}`, { type: 'string' }]),
+  );
+  const issues = Array.from({ length: 2_000 }, (_, index) => ({
+    path: `/properties/property-${index % 499}`,
+    message: `Issue ${index}`,
+  }));
+  let filterCalls = 0;
+  const nativeFilter = issues.filter;
+  issues.filter = function (...args: Parameters<typeof nativeFilter>) {
+    filterCalls++;
+    return nativeFilter.apply(this, args);
+  };
+  const el = (await fixture(html`
+    <lr-schema-viewer .schema=${{ type: 'object', properties }} .issues=${issues}></lr-schema-viewer>
+  `)) as LyraSchemaViewer;
+  expect(el.shadowRoot!.querySelectorAll('[part="issue"]').length).to.equal(500);
+  expect(filterCalls).to.be.at.most(1);
+  expect(el.shadowRoot!.querySelector('[part="issue-limit"]')?.textContent).to.equal(
+    'Only the first 500 validation issues are shown.',
+  );
+});
+
 it('clamps a hostile maxDepth request so deeply nested schemas stay stack-safe', async () => {
   const root: Record<string, unknown> = { type: 'object', properties: {} };
   let current = root;

@@ -23,8 +23,10 @@ type. First-party invention.
 - `mimeType: string = ''` (attribute `mime-type`) — MIME type used for exact renderer dispatch.
 - `src: string = ''` — source URL passed to the selected renderer or the fallback preview.
 - `registry?: DocumentRendererRegistry` (attribute: false) — optional per-instance registry override;
-  the module-level registry is used when unset.
-- `alt: string = ''` — media alt text forwarded to the resolved renderer, for image-like renderers.
+  the module-level registry is used when unset. A throwing consumer matcher or renderer is
+  contained as the localized error state rather than escaping the update.
+- `alt?: string` — media alt text forwarded to the resolved renderer, for image-like renderers.
+  Unset lets the renderer derive its fallback; an explicit `''` preserves decorative media.
 - `anchor: LyraAnchor | string | null = null` (attribute: false) — declarative scroll-to-anchor
   target forwarded to the resolved renderer; a string is a highlight id in `highlights`.
   `hasChanged: () => true`, so re-assigning the same value (e.g. re-clicking the same citation
@@ -47,6 +49,7 @@ type. First-party invention.
   (a highlight id) counts as supported by any renderer declaring at least one anchor kind.
 
 **CSS parts:** `body` — wrapper around the active renderer, loading/error state, or fallback preview;
+it renders explicit `aria-busy="true"|"false"`, and the loading text itself owns `role="status"`;
 `download-link` — the native download action, rendered when `src` passes Lyra's safe-link policy.
 
 **Themeable custom properties:** `--lr-document-viewer-max-height` (default `70vh`) — maximum block
@@ -84,3 +87,6 @@ registerDocumentRenderer('application/x-example', {
 
 When no renderer matches, the viewer renders `<lr-document-preview>`, which handles text and images
 inline and provides a safe generic fallback for other formats.
+
+If a consumer matcher/renderer throws while an anchor is pending, the viewer renders a localized
+`role="alert"` and emits exactly one `lr-anchor-result` with `{ found: false }`.

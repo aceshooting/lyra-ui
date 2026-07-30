@@ -65,3 +65,23 @@ it('applies per-instance strings to the evaluation region label', async () => {
     'Localized RAG evaluation',
   );
 });
+
+it('preserves an unavailable controlled slice and renders a localized unavailable-filter state', async () => {
+  const el = (await fixture(html`
+    <lr-rag-eval-dashboard
+      slice="missing"
+      .metrics=${metrics}
+      .runs=${runs}
+      .strings=${{ ragEvalDashboardSliceUnavailable: 'Aucune exécution pour {slice}.' }}
+    ></lr-rag-eval-dashboard>
+  `)) as LyraRagEvalDashboard;
+
+  expect(el.slice).to.equal('missing');
+  expect(el.shadowRoot!.querySelectorAll('[part~="slice"][aria-pressed="true"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[part="empty"]')?.getAttribute('heading')).to.equal(
+    'Aucune exécution pour missing.',
+  );
+  expect(el.shadowRoot!.querySelectorAll('[part="run"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelectorAll('lr-stat').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector('lr-lite-chart')).to.equal(null);
+});

@@ -4,6 +4,7 @@ import { LyraElement } from "../../../internal/lyra-element.js";
 import { tag } from "../../../internal/prefix.js";
 import type { LyraReorderItem } from "./reorder-item.class.js";
 import type { LyraLiveRegion } from "../../utility/live-region/live-region.class.js";
+import { getNumberFormat } from "../../../internal/intl-cache.js";
 import { styles } from "./reorder-list.styles.js";
 
 export interface ReorderDetail {
@@ -55,10 +56,9 @@ export interface LyraReorderListEventMap {
 export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
   static override styles = [LyraElement.styles, styles];
 
-  /** Accessible name for the list, set as `aria-label` on the internal `role="list"` element. A
-   *  plain `aria-label` attribute on the host itself is honored as a fallback when this is left
-   *  unset, matching `<lr-control-group>`. Native lists don't require an accessible name, so this
-   *  has no forced fallback string when both are left unset. */
+  /** Accessible-name fallback for the internal `role="list"` element when the host has no
+   *  `aria-label`, matching `<lr-control-group>`. Native lists don't require an accessible name,
+   *  so this has no forced fallback string when both are left unset. */
   @property() label = "";
 
   /** Disables every item's move-up/move-down buttons and the Ctrl/Cmd+Arrow shortcut, without
@@ -208,10 +208,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     this.pendingFocusTarget = { item, buttonPart };
 
     const newItems = this.itemElements;
+    const number = getNumberFormat(this.effectiveLocale);
     this.liveRegion?.announce(
       this.localize("reorderItemMoved", undefined, {
-        index: toIndex + 1,
-        total: newItems.length,
+        index: number.format(toIndex + 1),
+        total: number.format(newItems.length),
       }),
       // A discrete, user-initiated action: never coalesce it behind the announcer's throttle
       // window the way streaming status text is -- matches <lr-tree>'s identical reorder announcement.
@@ -307,7 +308,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       <div
         part="base"
         role="list"
-        aria-label=${this.label || this.getAttribute("aria-label") || nothing}
+        aria-label=${this.getAttribute("aria-label") || this.label || nothing}
         @lr-move-request=${this.onMoveRequest}
         @keydown=${this.onKeyDown}
       >

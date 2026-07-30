@@ -1,4 +1,4 @@
-import { html, svg, type TemplateResult, type SVGTemplateResult } from 'lit';
+import { html, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration } from '../../../internal/numbers.js';
@@ -85,6 +85,15 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   @query('[part="base"]') private buttonEl?: HTMLButtonElement;
 
   private copyTimeoutId?: ReturnType<typeof setTimeout>;
+
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (this.hasUpdated && changed.has('value') && this.justCopied) {
+      clearTimeout(this.copyTimeoutId);
+      this.copyTimeoutId = undefined;
+      this.justCopied = false;
+    }
+  }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();

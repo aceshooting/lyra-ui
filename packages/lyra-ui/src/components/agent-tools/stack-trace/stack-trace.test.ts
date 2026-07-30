@@ -79,6 +79,14 @@ describe('lr-stack-trace', () => {
     expect(toggle.getAttribute('aria-expanded')).to.equal('true');
   });
 
+  it('formats collapsed internal-frame counts with the effective locale', async () => {
+    const el = (await fixture(
+      html`<lr-stack-trace lang="ar-EG" .trace=${trace} collapse-internal></lr-stack-trace>`,
+    )) as LyraStackTrace;
+    const toggle = el.shadowRoot!.querySelector('[part="internal-toggle"]') as HTMLButtonElement;
+    expect(toggle.textContent).to.include(new Intl.NumberFormat('ar-EG').format(2));
+  });
+
   it('emits lr-frame-select with file/line/column on frame activation', async () => {
     const el = (await fixture(html`<lr-stack-trace .trace=${trace}></lr-stack-trace>`)) as LyraStackTrace;
     await el.updateComplete;
@@ -196,7 +204,9 @@ describe('lr-stack-trace chrome', () => {
     expect(s.borderTopWidth).to.equal('1px');
     expect(s.backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
     const css = styles.cssText.replace(/\s+/g, ' ');
-    expect(css).to.include("[part='frame']:hover, [part='frame']:focus-visible { color: var(--lr-color-brand); }");
+    expect(css).to.include(
+      "[part='frame']:hover, [part='frame']:focus-visible { color: var(--lr-stack-trace-interactive-color, var(--lr-color-brand)); }",
+    );
   });
 
   it('gives internal-toggle a hover state', () => {
@@ -211,4 +221,28 @@ describe('lr-stack-trace chrome', () => {
     await el.updateComplete;
     await expect(el).to.be.accessible();
   });
+});
+
+it('exposes component-scoped internal-frame and interactive colors', async () => {
+  const el = (await fixture(html`
+    <lr-stack-trace
+      collapse-internal="false"
+      style="
+        --lr-stack-trace-internal-frame-color: rgb(1, 2, 3);
+        --lr-stack-trace-interactive-color: rgb(4, 5, 6);
+      "
+      .trace=${trace}
+    ></lr-stack-trace>
+  `)) as LyraStackTrace;
+  const internal = el.shadowRoot!.querySelector<HTMLElement>('[part="frame"][data-internal]')!;
+  const toggle = (await fixture(html`
+    <lr-stack-trace
+      style="--lr-stack-trace-interactive-color: rgb(4, 5, 6)"
+      .trace=${trace}
+    ></lr-stack-trace>
+  `)) as LyraStackTrace;
+  expect(getComputedStyle(internal).color).to.equal('rgb(1, 2, 3)');
+  expect(getComputedStyle(toggle.shadowRoot!.querySelector('[part="internal-toggle"]')!).color).to.equal(
+    'rgb(4, 5, 6)',
+  );
 });

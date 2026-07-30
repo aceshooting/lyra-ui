@@ -6,7 +6,7 @@
 - **Class** `LyraTreeNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/tree/tree-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 8 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tree` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -51,6 +51,8 @@ moves focus to its parent. Home/End jump to the first/last visible node. Enter/S
 node within its own parent's child list instead of navigating. Ctrl/Cmd rather than Alt: Alt+Arrow is
 browser back/forward on Windows and Linux. ArrowUp/ArrowDown are not direction-sensitive, so this
 binding is deliberately **not** RTL-swapped — "down" always means later in the sibling list.
+If a same-id data refresh disables an expanded branch, that reused branch collapses immediately;
+enabled descendants are never left visibly stranded outside this navigation walk.
 
 **Methods:** `expandAll()`, `collapseAll()` (both recursive, properly sequenced around Lit's render
 cycle).
@@ -116,8 +118,15 @@ is applied to the legacy singular badge and to every `badges` chip; additive chi
 groups the primary label and optional wrapping secondary description while preserving one
 interactive treeitem per row.
 
-**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for
-indentation), plus the shared tokens listed above.
+**Themeable custom properties:** `--lr-tree-depth` (internal, set inline per row for indentation);
+`--lr-tree-selected-color` and `--lr-tree-selected-bg` for the selected row; and paired
+`--lr-tree-badge-{neutral|brand|success|warning|danger}-color` /
+`--lr-tree-badge-{neutral|brand|success|warning|danger}-bg` properties for each badge tone. Each
+badge property falls back to its corresponding shared semantic token. The expanded names are
+`--lr-tree-badge-neutral-color`, `--lr-tree-badge-neutral-bg`, `--lr-tree-badge-brand-color`,
+`--lr-tree-badge-brand-bg`, `--lr-tree-badge-success-color`, `--lr-tree-badge-success-bg`,
+`--lr-tree-badge-warning-color`, `--lr-tree-badge-warning-bg`, `--lr-tree-badge-danger-color`,
+and `--lr-tree-badge-danger-bg`.
 
 **Optional peer deps:** none.
 

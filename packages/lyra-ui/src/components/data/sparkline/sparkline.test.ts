@@ -68,6 +68,23 @@ it('renders a visible flat line for single-value data', async () => {
   expect(d).to.match(/^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+$/);
 });
 
+it('maps full-range finite values to finite top, middle, and bottom points', async () => {
+  const el = (await fixture(`<lr-sparkline></lr-sparkline>`)) as LyraSparkline;
+  el.values = [-Number.MAX_VALUE, 0, Number.MAX_VALUE];
+  await el.updateComplete;
+  const points = (
+    el as unknown as {
+      points(): ReadonlyArray<readonly [number, number]>;
+    }
+  ).points();
+
+  expect(points.length).to.equal(3);
+  expect(points.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))).to.be.true;
+  expect(points[0]![1]).to.be.closeTo(100, 0.001);
+  expect(points[1]![1]).to.be.closeTo(50, 0.001);
+  expect(points[2]![1]).to.be.closeTo(0, 0.001);
+});
+
 it('clamps bar height instead of going negative when a value is below an explicit min', async () => {
   const el = (await fixture(
     `<lr-sparkline type="bar" min="3"></lr-sparkline>`,

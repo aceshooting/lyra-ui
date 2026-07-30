@@ -1,11 +1,11 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
-  LyraHighlight,
   HighlightActivateDetail,
   AnchorResultDetail,
 } from '../../viewers/document-viewer/anchors.js';
@@ -17,9 +17,11 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { chevronIcon } from '../../../internal/icons.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './image-viewer.styles.js';
+import { sanitizePercentRect } from '../../../internal/safe-css.js';
 
 export type ImageFit = 'contain' | 'width' | 'actual';
 export type ImageRotation = 0 | 90 | 180 | 270;
+/** Finite percentage coordinates. Negative widths/heights are rejected when rendered. */
 export interface ImageRegionRect {
   x: number;
   y: number;
@@ -376,9 +378,11 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   };
 
   private renderHighlights(): TemplateResult | typeof nothing {
-    const regionHighlights = this.highlights.filter(
-      (h): h is LyraHighlight & { anchor: { kind: 'region'; rect: ImageRegionRect } } => h.anchor.kind === 'region',
-    );
+    const regionHighlights = this.highlights.flatMap((highlight) => {
+      if (highlight.anchor.kind !== 'region') return [];
+      const rect = sanitizePercentRect(highlight.anchor.rect);
+      return rect ? [{ highlight, rect }] : [];
+    });
     if (!regionHighlights.length) return nothing;
     const formatter = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,
@@ -390,13 +394,18 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
     // pointer math (clientX - rect.left) and the physical-arrow keyboard model above.
     return html`<div part="highlight-layer" role="group" aria-label=${this.localize('imageViewerHighlightsLabel')}>
       ${regionHighlights.map(
-        (h, index) => html`
+        ({ highlight: h, rect }, index) => html`
         <button
           part="highlight"
           type="button"
           data-tone=${h.tone ?? 'accent'}
           ?data-active=${this.activeHighlightId === h.id}
-          style="left:${h.anchor.rect.x}%;top:${h.anchor.rect.y}%;width:${h.anchor.rect.width}%;height:${h.anchor.rect.height}%"
+          style=${styleMap({
+            left: `${rect.x}%`,
+            top: `${rect.y}%`,
+            width: `${rect.width}%`,
+            height: `${rect.height}%`,
+          })}
           aria-label=${h.label || this.localize('imageViewerUnlabeledHighlight', undefined, {
             index: formatter.format(index + 1),
           })}
@@ -434,6 +443,9 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
       <div
         part="image-wrapper"
         tabindex=${this.annotatable ? '0' : '-1'}
+        role=${this.annotatable ? 'group' : nothing}
+        aria-label=${this.annotatable ? this.localize('imageViewerAnnotate') : nothing}
+        aria-description=${this.annotatable ? this.localize('imageViewerAnnotationHint') : nothing}
         style="transform:rotate(${this.safeRotation}deg)"
         @keydown=${this.onWrapperKeyDown}
         @pointerdown=${this.onWrapperPointerDown}

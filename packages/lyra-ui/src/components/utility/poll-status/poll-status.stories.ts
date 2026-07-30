@@ -52,8 +52,8 @@ export const PauseResume: Story = {
       status.addEventListener('lr-poll-due', () => line('lr-poll-due fired'));
 
       root.querySelector('[data-restart]')!.addEventListener('click', () => {
-        status.nextInMs = 8000;
-        line('nextInMs = 8000 (restarted)');
+        status.restart();
+        line('restart() (same 8000ms delay)');
       });
     }
 

@@ -144,7 +144,7 @@ describe("lr-segmented", () => {
     expect(el.value).to.equal("month"); // 'week' is disabled, skipped
   });
 
-  it("sets aria-label on the radiogroup from the label prop, falling back to a forwarded host aria-label", async () => {
+  it("lets a forwarded host aria-label win on the radiogroup while retaining the label prop fallback", async () => {
     const labeled = (await fixture(
       html`<lr-segmented label="View" .items=${items()}></lr-segmented>`
     )) as LyraSegmented;
@@ -163,6 +163,18 @@ describe("lr-segmented", () => {
       '[part="base"]'
     ) as HTMLElement;
     expect(base2.getAttribute("aria-label")).to.equal("Forwarded label");
+
+    const hostOverride = (await fixture(
+      html`<lr-segmented
+        label="View"
+        aria-label="Author label"
+        .items=${items()}
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    const base3 = hostOverride.shadowRoot!.querySelector(
+      '[part="base"]'
+    ) as HTMLElement;
+    expect(base3.getAttribute("aria-label")).to.equal("Author label");
   });
 
   it("is accessible", async () => {
@@ -237,6 +249,30 @@ describe("lr-segmented", () => {
     expect(el.shadowRoot!.activeElement).to.equal(buttons[1]);
     expect(buttons[1]!.getAttribute("aria-checked")).to.equal("true");
     expect(buttons[0]!.getAttribute("aria-checked")).to.equal("false");
+  });
+
+  it("reconciles and rehomes focus when the selected item is disabled in place", async () => {
+    const mutableItems = items();
+    const el = (await fixture(
+      html`<lr-segmented
+        .items=${mutableItems}
+        value="week"
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    let buttons = segmentButtons(el);
+    buttons[1]!.focus();
+
+    mutableItems[1]!.disabled = true;
+    el.items = [...mutableItems];
+    await el.updateComplete;
+    buttons = segmentButtons(el);
+
+    expect(buttons[1]!.getAttribute("aria-checked")).to.equal("false");
+    expect(buttons[1]!.tabIndex).to.equal(-1);
+    expect(buttons.filter((button) => button.tabIndex === 0)).to.have.length(1);
+    expect(
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.dataset["index"]
+    ).to.equal("0");
   });
 });
 
@@ -553,7 +589,7 @@ describe("track height", () => {
     // declaration would be a valid value that always wins, making the per-tier
     // --lr-segmented-track-min-height fallback dead code (the trap lr-select fell into).
     const floors = new Map([
-      ["2xs", "20px"],
+      ["2xs", "24px"],
       ["xs", "24px"],
       ["s", "30px"],
       ["m", "40px"],
@@ -618,6 +654,30 @@ describe("size", () => {
       html`<lr-segmented size="xl" .items=${items()}></lr-segmented>`
     )) as LyraSegmented;
     expect(el.getAttribute("size")).to.equal("xl");
+  });
+
+  it("keeps 2xs/xs segment targets and adjacent centers at least 24px apart", async () => {
+    const narrowItems = [
+      { value: "i", label: "I" },
+      { value: "j", label: "J" },
+    ];
+    for (const size of ["2xs", "xs"] as const) {
+      const el = (await fixture(
+        html`<lr-segmented
+          size=${size}
+          .items=${narrowItems}
+          value="i"
+        ></lr-segmented>`
+      )) as LyraSegmented;
+      const buttons = segmentButtons(el);
+      const rects = buttons.map((button) => button.getBoundingClientRect());
+      for (const rect of rects) {
+        expect(rect.width, `${size} width`).to.be.at.least(24);
+        expect(rect.height, `${size} height`).to.be.at.least(24);
+      }
+      const centers = rects.map((rect) => rect.left + rect.width / 2);
+      expect(centers[1]! - centers[0]!, `${size} adjacent centers`).to.be.at.least(24);
+    }
   });
 });
 

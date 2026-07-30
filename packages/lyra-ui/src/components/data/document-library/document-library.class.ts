@@ -149,6 +149,16 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
         this.selectedIds = normalized;
       }
     }
+    if ((changed.has('documents') || changed.has('tagFilter')) && this.tagFilter.length > 0) {
+      const availableTags = new Set(this.documents.flatMap((document) => document.tags ?? []));
+      const normalized = [...new Set(this.tagFilter.filter((tag) => availableTags.has(tag)))];
+      if (
+        normalized.length !== this.tagFilter.length ||
+        normalized.some((tag, index) => tag !== this.tagFilter[index])
+      ) {
+        this.tagFilter = normalized;
+      }
+    }
   }
 
   private normalizeDate(value: Date | string | undefined): Date | undefined {

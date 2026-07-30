@@ -1,7 +1,9 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
+import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './sequence-strip.styles.js';
 
 export interface SequenceStripItem {
@@ -17,6 +19,7 @@ export interface SequenceStripItem {
 
 export interface SequenceStripCategory {
   key: string;
+  /** A CSS color. Invalid values and `url()` paint servers render transparently. */
   color: string;
   /** Human-readable name used in the auto-generated `aria-label` summary and as the hover-tooltip
    *  fallback text for items with no `label` of their own. Falls back to `key` itself when unset. */
@@ -94,7 +97,7 @@ export class LyraSequenceStrip extends LyraElement {
   }
 
   private categoryColor(key: string): string {
-    return this.categories.find((c) => c.key === key)?.color ?? 'transparent';
+    return sanitizeCssColor(this.categories.find((c) => c.key === key)?.color) ?? 'transparent';
   }
 
   private autoSummary(): string {
@@ -166,7 +169,10 @@ export class LyraSequenceStrip extends LyraElement {
         ${this.categories.map(
           (category) => html`
             <span part="legend-item">
-              <span part="legend-swatch" style="background-color:${category.color}"></span>
+              <span
+                part="legend-swatch"
+                style=${styleMap({ backgroundColor: sanitizeCssColor(category.color) ?? 'transparent' })}
+              ></span>
               <span part="legend-label">${category.label ?? category.key}</span>
             </span>
           `,
@@ -198,9 +204,8 @@ export class LyraSequenceStrip extends LyraElement {
               aria-label=${this.itemLabel(item)}
               aria-posinset=${index + 1}
               aria-setsize=${this.items.length}
-              aria-describedby=${this.keyboardIndex === index ? 'sequence-strip-tooltip' : nothing}
               tabindex=${index === tabStop ? '0' : '-1'}
-              style="background-color:${this.categoryColor(item.category)}"
+              style=${styleMap({ backgroundColor: this.categoryColor(item.category) })}
               @pointerenter=${() => this.onCellEnter(index)}
               @pointerleave=${() => this.onCellLeave()}
               @focus=${() => this.onCellFocus(index)}

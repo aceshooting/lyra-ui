@@ -1,8 +1,22 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { LYRA_DEFAULT_STRINGS } from '../../../internal/localization.js';
 import './archive-viewer.js';
 import type { LyraArchiveViewer } from './archive-viewer.js';
 import type { ArchiveLibraryApi } from './archive-loader.js';
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T): void;
+  reject(error: unknown): void;
+} {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
 
 async function buildZip(files: Record<string, string>): Promise<ArrayBuffer> {
   const module = (await import('jszip')) as unknown as { default: new () => ArchiveLibraryApi };
@@ -13,6 +27,62 @@ async function buildZip(files: Record<string, string>): Promise<ArrayBuffer> {
 }
 function stubFetch(buffer: ArrayBuffer, ok = true): () => void { const original = window.fetch; window.fetch = (() => Promise.resolve({ ok, status: ok ? 200 : 404, statusText: ok ? 'OK' : 'Not Found', arrayBuffer: () => Promise.resolve(buffer) } as Response)) as typeof window.fetch; return () => { window.fetch = original; }; }
 function useLibrary(el: LyraArchiveViewer, library: ArchiveLibraryApi | null): void { (el as unknown as { loadLibrary: () => Promise<ArchiveLibraryApi | null> }).loadLibrary = () => Promise.resolve(library); }
+function libraryWithEntries(names: string[]): ArchiveLibraryApi {
+  return {
+    loadAsync: async () => ({
+      forEach(callback: (path: string, file: {
+        name: string;
+        dir: boolean;
+        _data: { uncompressedSize: number };
+      }) => void) {
+        for (const name of names) {
+          callback(name, {
+            name,
+            dir: name.endsWith('/'),
+            _data: { uncompressedSize: name.endsWith('/') ? 0 : 1 },
+          });
+        }
+      },
+    }),
+  } as unknown as ArchiveLibraryApi;
+}
+
+async function listingWithEntries(names: string[]): Promise<{
+  el: LyraArchiveViewer;
+  list: HTMLElement & {
+    items: { name: string }[];
+    rowHeight: string;
+    scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void;
+    updateComplete: Promise<boolean>;
+  };
+  restore: () => void;
+}> {
+  const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+  useLibrary(el, libraryWithEntries(names));
+  const restore = stubFetch(new ArrayBuffer(0));
+  el.src = 'https://example.test/archive.zip';
+  await waitUntil(() => {
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as
+      | { items?: unknown[]; shadowRoot?: ShadowRoot }
+      | null;
+    return list?.items?.length === names.length
+      && list.shadowRoot?.querySelector('[part~="entry-name"]') !== null;
+  });
+  return {
+    el,
+    list: el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & {
+      items: { name: string }[];
+      rowHeight: string;
+      scrollToIndex(index: number, options?: { behavior?: ScrollBehavior }): void;
+      updateComplete: Promise<boolean>;
+    },
+    restore,
+  };
+}
+
+async function settleVirtualList(): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
 
 describe('archive localization', () => { it('defines archive messages', () => { expect(LYRA_DEFAULT_STRINGS.archiveViewerUnavailable).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerEmpty).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFolder).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFile).to.be.a('string'); }); });
 
@@ -21,6 +91,29 @@ describe('lr-archive-viewer', () => {
   it('lists ZIP entries and computes file sizes', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`); const buffer = await buildZip({ 'README.txt': 'hello world', 'src/index.js': 'console.log(1);' }); const restore = stubFetch(buffer);
     try { el.src = 'https://example.test/archive.zip'; await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null || el.shadowRoot!.querySelector('[part="error"]') !== null, undefined, { timeout: 5000 }); expect(el.shadowRoot!.querySelector('[part="error"]')).to.not.exist; const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { items: { name: string; dir: boolean; size: number }[] }; await waitUntil(() => list.items?.length === 3, undefined, { timeout: 5000 }); expect(list.items.map((item) => item.name).sort()).to.deep.equal(['README.txt', 'src/', 'src/index.js']); expect(list.items.find((item) => item.name === 'README.txt')!.size).to.equal(11); expect(list.items.find((item) => item.name === 'src/')!.dir).to.be.true; } finally { restore(); }
+  });
+  it('searches virtualized archive entry names and navigates the matching entry', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const restore = stubFetch(await buildZip({
+      'README.txt': 'hello world',
+      'src/index.js': 'console.log(1);',
+    }));
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => el.shadowRoot!.querySelector('lr-virtual-list') !== null);
+      const eventPromise = oneEvent(el, 'lr-search-change');
+      expect(await el.search('INDEX.JS')).to.equal(1);
+      expect((await eventPromise).detail).to.deep.equal({
+        query: 'INDEX.JS',
+        matchCount: 1,
+        activeIndex: 0,
+      });
+      const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeId: string };
+      expect(list.activeId).to.equal('src/index.js');
+      expect(await el.searchNext()).to.be.true;
+    } finally {
+      restore();
+    }
   });
   it('does not expose the internal virtual-list range event', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
@@ -209,6 +302,96 @@ describe('lr-archive-viewer', () => {
     }
   });
 
+  it('invalidates a stale archive rejection before a synchronous reconnect', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const firstLoad = deferred<never>();
+    let loadCalls = 0;
+    useLibrary(el, {
+      loadAsync: () => {
+        loadCalls++;
+        return loadCalls === 1 ? firstLoad.promise : new Promise<never>(() => {});
+      },
+    } as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    const reconnectHost = document.createElement('div');
+    document.body.append(reconnectHost);
+    let errors = 0;
+    el.addEventListener('lr-render-error', () => errors++);
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => loadCalls === 1);
+      el.remove();
+      firstLoad.reject(new Error('stale archive failure'));
+      reconnectHost.append(el);
+      await aTimeout(30);
+      expect(errors).to.equal(0);
+      expect(loadCalls).to.equal(2);
+    } finally {
+      reconnectHost.remove();
+      restore();
+    }
+  });
+
+  it('never accepts stale archive entries resolved before a synchronous reconnect', async () => {
+    const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
+    const assignedStates: string[] = [];
+    let prototype: object | null = el;
+    let stateDescriptor: PropertyDescriptor | undefined;
+    while (prototype && !stateDescriptor) {
+      stateDescriptor = Object.getOwnPropertyDescriptor(prototype, 'fetchState');
+      prototype = Object.getPrototypeOf(prototype) as object | null;
+    }
+    if (!stateDescriptor?.get || !stateDescriptor.set) {
+      throw new Error('fetchState reactive accessor not found');
+    }
+    Object.defineProperty(el, 'fetchState', {
+      configurable: true,
+      get: () => stateDescriptor!.get!.call(el),
+      set: (value: { kind: string }) => {
+        assignedStates.push(value.kind);
+        stateDescriptor!.set!.call(el, value);
+      },
+    });
+    const firstLoad = deferred<{
+      forEach(callback: (path: string, file: {
+        name: string;
+        dir: boolean;
+        _data: { uncompressedSize: number };
+      }) => void): void;
+    }>();
+    let loadCalls = 0;
+    useLibrary(el, {
+      loadAsync: () => {
+        loadCalls++;
+        return loadCalls === 1 ? firstLoad.promise : new Promise<never>(() => {});
+      },
+    } as unknown as ArchiveLibraryApi);
+    const restore = stubFetch(new ArrayBuffer(0));
+    const reconnectHost = document.createElement('div');
+    document.body.append(reconnectHost);
+    try {
+      el.src = 'https://example.test/archive.zip';
+      await waitUntil(() => loadCalls === 1);
+      el.remove();
+      firstLoad.resolve({
+        forEach(callback) {
+          callback('stale/old.txt', {
+            name: 'stale/old.txt',
+            dir: false,
+            _data: { uncompressedSize: 1 },
+          });
+        },
+      });
+      reconnectHost.append(el);
+      await aTimeout(30);
+      expect(assignedStates.includes('loaded')).to.equal(false);
+      expect(loadCalls).to.equal(2);
+    } finally {
+      reconnectHost.remove();
+      restore();
+    }
+  });
+
   it('emits lr-render-error when the optional archive peer is unavailable', async () => {
     const el = await fixture<LyraArchiveViewer>(html`<lr-archive-viewer></lr-archive-viewer>`);
     useLibrary(el, null);
@@ -265,6 +448,63 @@ describe('lr-archive-viewer', () => {
     const hostLabeledBase = hostLabeled.shadowRoot!.querySelector('[part="base"]')!;
     expect(hostLabeledBase.getAttribute('role')).to.equal('region');
     expect(hostLabeledBase.getAttribute('aria-label')).to.equal('Backup contents');
+  });
+});
+
+describe('lr-archive-viewer anchor contract across virtualization', () => {
+  afterEach(async () => {
+    await settleVirtualList();
+  });
+
+  const names = [
+    ...Array.from({ length: 40 }, (_, index) => `ordinary/file-${index}.txt`),
+    'reports/2026/deep-target.csv',
+    ...Array.from({ length: 40 }, (_, index) => `trailing/file-${index}.txt`),
+  ];
+  const targetIndex = 40;
+
+  it('resolves a fragment id as the exact archive-entry path before scrolling its virtual row', async () => {
+    const { el, list, restore } = await listingWithEntries(names);
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      list.rowHeight = '40';
+      await list.updateComplete;
+      expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
+      expect(await el.scrollToAnchor({ kind: 'fragment', id: names[targetIndex]! })).to.be.true;
+      await waitUntil(
+        () => Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+          .some((node) => node.id === names[targetIndex]),
+      );
+      const target = Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+        .find((node) => node.id === names[targetIndex])!;
+      expect(target.id).to.equal(names[targetIndex]);
+      expect(target.closest('[data-row-index]')?.getAttribute('data-row-index')).to.equal(String(targetIndex));
+    } finally {
+      restore();
+    }
+  });
+
+  it('resolves a text quote against every entry path, including an unmounted row', async () => {
+    const { el, list, restore } = await listingWithEntries(names);
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    try {
+      list.rowHeight = '40';
+      await list.updateComplete;
+      expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
+      expect(await el.scrollToAnchor({
+        kind: 'text-quote',
+        quote: 'deep-target.csv',
+        prefix: 'reports/2026/',
+      })).to.be.true;
+      const target = Array.from(list.shadowRoot!.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+        .find((node) => node.id === names[targetIndex])!;
+      expect(target.id).to.equal(names[targetIndex]);
+      expect(target.closest('[data-row-index]')?.getAttribute('data-row-index')).to.equal(String(targetIndex));
+    } finally {
+      restore();
+    }
   });
 });
 
@@ -376,6 +616,65 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     } finally {
       restore();
       sheet.remove();
+    }
+  });
+
+  it('emits one entry-scoped text-quote anchor for a selection inside the nested shadow root', async () => {
+    const { el, vlistRoot, restore } = await listing();
+    const name = Array.from(vlistRoot.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
+      .find((node) => node.textContent === 'README.txt')!;
+    const textNode = Array.from(name.childNodes)
+      .find((node): node is Text => node.nodeType === Node.TEXT_NODE && node.textContent === 'README.txt')!;
+    const range = document.createRange();
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 'README'.length);
+    const selection = (
+      vlistRoot as unknown as { getSelection?: () => Selection | null }
+    ).getSelection?.() ?? window.getSelection()!;
+    const events: CustomEvent[] = [];
+    el.addEventListener('lr-text-select', (event) => events.push(event as CustomEvent));
+    try {
+      selection.removeAllRanges();
+      selection.addRange(range);
+      name.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
+      await aTimeout(30);
+      expect(events).to.have.lengthOf(1);
+      expect(events[0]!.detail.text).to.equal('README');
+      expect(events[0]!.detail.anchor).to.deep.include({
+        kind: 'text-quote',
+        quote: 'README',
+      });
+    } finally {
+      selection.removeAllRanges();
+      restore();
+    }
+  });
+
+  it('paints a visible entry-path text quote in the fallback highlight path', async () => {
+    const originalHighlight = (globalThis as { Highlight?: unknown }).Highlight;
+    (globalThis as { Highlight?: unknown }).Highlight = undefined;
+    try {
+      const { el, vlistRoot, restore } = await listing();
+      try {
+        el.highlights = [{
+          id: 'readme',
+          tone: 'warning',
+          anchor: { kind: 'text-quote', quote: 'README' },
+        }];
+        await el.updateComplete;
+        await waitUntil(
+          () => vlistRoot.querySelector('mark[data-lr-highlight-tone="warning"]') !== null,
+        );
+        const mark = vlistRoot.querySelector<HTMLElement>(
+          'mark[data-lr-highlight-tone="warning"]',
+        )!;
+        expect(mark.getAttribute('part')).to.include('highlight');
+        expect(getComputedStyle(mark).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+      } finally {
+        restore();
+      }
+    } finally {
+      (globalThis as { Highlight?: unknown }).Highlight = originalHighlight;
     }
   });
 

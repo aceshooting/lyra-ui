@@ -24,8 +24,8 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
   `start()`/`end()`
 - `steps: TourStep[] = []` (attribute: false) — empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to
-  `[0, steps.length - 1]`, including for a direct property/attribute write that bypasses
-  `goToStep()`
+  `[0, steps.length - 1]` as a finite integer, including for a direct property/attribute write that
+  bypasses `goToStep()`; fractions floor and non-finite values fall back to `0`
 - `placement: Placement = 'bottom'` (reflected) — tour-level Floating UI default, overridable per
   step; resolved through `rtlAwarePlacement()`
 - `distance: number = 12` — px offset between target and popover. Tour-level only (no per-step
@@ -42,9 +42,11 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 **Exported types:** `TourStep { id: string; target: TourTarget; heading: string; content?: string;
 placement?: Placement; spotlightPadding?: number; interactiveTarget?: boolean; hidePrevious?: boolean }`;
 `TourTarget = string | HTMLElement | (() => HTMLElement | null)` — a string resolves via
-`ownerDocument.querySelector` (top-level light DOM only), and every form is re-resolved on each step
-activation, never cached, so a target mounted later still resolves. `heading` is required and
-becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
+`ownerDocument.querySelector` (top-level light DOM only). Every form resolves exactly once when the
+step becomes active and is kept as one connected snapshot for that activation, then resolves again
+on a later activation/reconnect. Invalid selectors, throwing resolvers, non-`HTMLElement` results,
+and detached elements use the normal missing-target path instead of throwing. `heading` is required
+and becomes the panel's accessible name; `content` renders as plain text (no HTML/markdown parsing).
 `TourEndReason = 'completed' | 'skip' | 'escape' | 'api' | 'unmount' | (string & {})`.
 
 **Methods:** `start(index = 0)` (clamps, opens, emits `lr-tour-start`), `next()` (on the last step
@@ -66,8 +68,9 @@ step: a consumer needing different rich content per step swaps the slotted child
 
 **CSS parts:** `backdrop` (the full-viewport `<svg>` scrim with the cutout, `aria-hidden`),
 `spotlight` (the decorative ring around the padded target rect, `pointer-events: none`),
-`popover` (the step panel, `role="dialog" aria-modal="true"`, `data-unanchored` when the target
-didn't resolve), `heading` (the `aria-labelledby` target), `body` (slot or `step.content`),
+`popover` (the step panel, `role="dialog"`, `aria-modal="true"` for default steps and `"false"` for
+an `interactiveTarget` step, `data-unanchored` when the target didn't resolve), `heading` (the
+`aria-labelledby` target), `body` (slot or `step.content`),
 `progress` (wrapper), `progress-text` (the "Step X of Y" text — an `aria-describedby` target),
 `progress-dot` (one decorative dot per step, `data-current` on the active one, `aria-hidden`),
 `footer` (the control row), `previous-button`, `skip-button`, `next-button` (the Next control's
@@ -92,20 +95,20 @@ rather than per component.
 **Known gotchas:**
 - By default the spotlighted target is **non-interactive**: it stays visible and announceable (not
   `inert`, not `aria-hidden`) but every pointer event over the viewport is captured by the backdrop.
-  Set `step.interactiveTarget` to clip the backdrop around the target so clicks fall through — that
-  restores pointer reachability only. The focus trap still confines Tab to the popover regardless,
-  so for a keyboard-reachable demonstrated interaction have the app's own listener call `next()`.
-- Uses the overlay manager with `modal: false` deliberately: `modal: true` would mark the whole page
-  (including the target, which lives outside this element) `inert`. `role="dialog"` +
-  `aria-modal="true"` are still rendered on the panel so screen readers confine their virtual cursor.
+  A default step uses a modal overlay and traps focus in the panel. Set `step.interactiveTarget` to
+  clip the backdrop around the target, switch the panel to nonmodal semantics, and install an
+  explicit two-way Tab route between the panel and the live target, so both pointer and keyboard
+  interaction remain reachable.
 - Each step transition mounts a genuinely new popover node (keyed on `step.id`) so focus reliably
   re-enters the panel — don't cache a reference to `[part="popover"]` across steps.
 - No `Home`/`End` shortcut and no click-to-jump progress dots (unlike `lr-stepper`): later steps may
   depend on an earlier step's side effect having run. `goToStep()` is available for a caller that
   knows better. ArrowRight/ArrowLeft do move between steps (swapped under RTL), except while focus
   is in an `input`/`textarea`/`contenteditable` inside slotted content.
-- A direct `HTMLElement` target is re-checked for `isConnected` on every activation and treated as
-  missing if it was remounted — prefer a selector string or resolver function for targets that can
-  be replaced mid-tour.
+- A direct `HTMLElement` target must be connected at activation and is treated as missing after a
+  remount; prefer a selector string or resolver function for targets that can be replaced between
+  activations.
 - The active step's target is `scrollIntoView({ block: 'center' })`'d on activation, smoothly unless
   `prefers-reduced-motion: reduce`.
+- Changing `placement`, `distance`, or tour-level `spotlightPadding` while open repositions/repaints
+  the current step live without scrolling again or emitting a duplicate `lr-tour-target-missing`.

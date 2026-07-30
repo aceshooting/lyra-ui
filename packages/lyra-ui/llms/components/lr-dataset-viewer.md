@@ -24,9 +24,10 @@ is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed
 the virtualized list's `active-id`. `highlights` paint as a `part="cell-highlight"` cell wrapping a
 focusable `part="cell-highlight-action"` native button, keeping the ARIA table tree intact.
 
-**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings. `anchorKinds` is
-a readonly `['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared
-anchor-target contract).
+**Properties:** `src`, `name`, and `maxHeight` (attribute `max-height`) are strings; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
+`['cell-range']` (this viewer's supported `LyraAnchor.kind` values for the shared anchor-target
+contract).
 
 **Methods:** `search(query)` resolves the match count via a case-insensitive substring search over
 every body cell's raw string value, ordered row then column (empty/whitespace query behaves like

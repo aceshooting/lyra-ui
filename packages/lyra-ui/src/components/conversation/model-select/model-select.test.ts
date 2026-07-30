@@ -454,6 +454,85 @@ it('suppresses the free-text input blur handler during a mode switch back to the
   ).to.be.false;
 });
 
+it('clears a stale active row when an open catalog is replaced', async () => {
+  const el = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  el.open = true;
+  await el.updateComplete;
+  trigger(el).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }),
+  );
+  await el.updateComplete;
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(0);
+
+  el.catalog = ['replacement', 'another'];
+  await el.updateComplete;
+  let changed = false;
+  el.addEventListener('lr-change', () => (changed = true));
+  trigger(el).dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+  );
+
+  expect(changed).to.be.false;
+  expect(el.value).to.equal('');
+});
+
+it('preserves an open free-text draft while a replacement catalog is refiltered', async () => {
+  const el = (await fixture(
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  const inp = input(el);
+  inp.focus();
+  inp.value = 'fresh';
+  inp.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  el.catalog = ['fresh-model', 'unrelated'];
+  await el.updateComplete;
+
+  expect(input(el).value).to.equal('fresh');
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(-1);
+  expect([...rows(el)].map((row) => row.textContent?.trim())).to.deep.equal(['fresh-model']);
+  expect(el.value, 'a catalog refresh must not commit the draft').to.equal('mistral');
+});
+
+it('rebases an open free-text query when the controlled value changes', async () => {
+  const el = (await fixture(
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  const inp = input(el);
+  inp.focus();
+  inp.value = 'obsolete draft';
+  inp.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  el.value = 'qwen2.5-coder';
+  await el.updateComplete;
+
+  expect(input(el).value).to.equal('qwen2.5-coder');
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(-1);
+});
+
+it('does not revive a stale free-text query after an open mode round trip', async () => {
+  const el = (await fixture(
+    html`<lr-model-select allow-custom value="mistral" .catalog=${CATALOG}></lr-model-select>`,
+  )) as LyraModelSelect;
+  const inp = input(el);
+  inp.focus();
+  inp.value = 'obsolete draft';
+  inp.dispatchEvent(new Event('input'));
+  await el.updateComplete;
+
+  el.allowCustom = false;
+  await el.updateComplete;
+  el.allowCustom = true;
+  await el.updateComplete;
+
+  expect(input(el).value).to.equal('mistral');
+  expect((el as unknown as { activeIndex: number }).activeIndex).to.equal(-1);
+});
+
 describe('shared listbox (onListboxClick)', () => {
   it('selects a suggestion by clicking it in free-text mode (filteredEntries lookup path)', async () => {
     const el = (await fixture(

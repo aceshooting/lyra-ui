@@ -4,17 +4,22 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='base'] {
     display: flex;
     flex-direction: column;
     gap: var(--lr-space-s);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='row'] {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='query'] {
     flex: 1 1 var(--lr-size-12rem);
@@ -56,6 +61,20 @@ export const styles = css`
   }
   [part='filters'] {
     display: flex;
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='filters']::part(base) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  [part='filters'] lr-chip {
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   [part='spinner'] {
     align-self: flex-start;

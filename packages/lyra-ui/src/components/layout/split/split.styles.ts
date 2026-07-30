@@ -4,6 +4,8 @@ export const styles = css`
   :host {
     display: block;
     inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     block-size: 100%;
     /* Component-specific -- not a shared design token, so a consumer can
        retheme it without a raw literal leaking into the public API (same
@@ -24,7 +26,14 @@ export const styles = css`
        overlay panel (set inline by split.ts's updated()). */
     position: relative;
     inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     block-size: 100%;
+  }
+  ::slotted(*) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;

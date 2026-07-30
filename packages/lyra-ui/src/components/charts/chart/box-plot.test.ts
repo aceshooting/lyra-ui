@@ -20,7 +20,7 @@ it('shows a loading skeleton and aria-busy while chart.js/the boxplot plugin loa
   // root cause: Chromium tab throttling when many test files run in parallel).
   await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
-  expect(el.hasAttribute('aria-busy')).to.be.false;
+  expect(el.getAttribute('aria-busy')).to.equal('false');
   expect(el.shadowRoot!.querySelector('lr-skeleton')).to.not.exist;
   expect(el.shadowRoot!.querySelector('canvas')).to.exist;
 });
@@ -79,6 +79,32 @@ it('preserves a legend-toggled hidden dataset across an in-place boxes-only upda
 
   expect(chart.isDatasetVisible(0)).to.be.true;
   expect(chart.isDatasetVisible(1)).to.be.false;
+});
+
+it('renders a newly-added box series as pressed in the DOM legend on its first update', async () => {
+  const el = (await fixture(html`<lr-box-plot legend></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [
+    { label: 'Existing', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const chart = (el as any).chart;
+
+  el.boxes = [
+    { label: 'Existing', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
+    { label: 'Appended', data: [{ min: 3, q1: 4, median: 5, q3: 6, max: 7 }] },
+  ];
+  await el.updateComplete;
+
+  const legendItems = [
+    ...el.shadowRoot!.querySelectorAll('[part="legend-item"]'),
+  ];
+  expect(chart.isDatasetVisible(1)).to.be.true;
+  expect(legendItems.map((item) => item.getAttribute('aria-pressed'))).to.deep.equal([
+    'true',
+    'true',
+  ]);
 });
 
 it('updates in place (same Chart instance) across a bare height change, instead of destroying and recreating the chart', async () => {
@@ -527,6 +553,111 @@ describe('review remediation regressions', () => {
     const computed = getComputedStyle(error);
     expect(computed.paddingTop).to.not.equal('0px');
     expect(computed.textAlign).to.equal('center');
+  });
+});
+
+describe('remediated box-plot context and flow', () => {
+  it('redraws for live inherited lang and dir changes without another reactive property change', async () => {
+    const wrapper = await fixture(html`<div lang="en-US" dir="ltr"><lr-box-plot></lr-box-plot></div>`);
+    const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
+    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    expect((el as any).chart.options.locale).to.equal('en-US');
+    expect((el as any).chart.options.scales.y.position).to.equal('left');
+
+    wrapper.setAttribute('lang', 'de-DE');
+    wrapper.setAttribute('dir', 'rtl');
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect((el as any).chart.options.locale).to.equal('de-DE');
+    expect((el as any).chart.options.scales.y.position).to.equal('right');
+  });
+
+  it('keeps its visible table and a long wrapping legend in normal document flow', async () => {
+    const wrapper = await fixture(html`
+      <div style="inline-size: 256px">
+        <lr-box-plot show-data-table legend></lr-box-plot>
+        <div id="after">After box plot</div>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-box-plot') as LyraBoxPlot;
+    el.labels = ['A'];
+    el.boxes = [{
+      label: 'A deliberately long translated latency distribution label that must remain visible',
+      data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
+    }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    await aTimeout(0);
+
+    const table = el.shadowRoot!.querySelector('[part="data-table"] table') as HTMLTableElement;
+    const legendItem = el.shadowRoot!.querySelector('[part="legend-item"]') as HTMLElement;
+    const after = wrapper.querySelector('#after') as HTMLElement;
+    expect(legendItem).to.exist;
+    expect(legendItem.textContent).to.contain('must remain visible');
+    expect(legendItem.getBoundingClientRect().right).to.be.at.most(
+      el.getBoundingClientRect().right + 0.5,
+    );
+    expect(table.getBoundingClientRect().bottom).to.be.at.most(
+      el.getBoundingClientRect().bottom + 0.5,
+    );
+    expect(after.getBoundingClientRect().top).to.be.at.least(
+      el.getBoundingClientRect().bottom - 0.5,
+    );
+    expect((el as any).buildConfig().options.plugins.legend.display).to.equal(false);
+
+    legendItem.click();
+    await el.updateComplete;
+    expect((el as any).chart.isDatasetVisible(0)).to.equal(false);
+    expect(legendItem.getAttribute('aria-pressed')).to.equal('false');
+  });
+
+  it('re-resolves a public box color for the DOM legend on theme refresh', async () => {
+    const el = (await fixture(html`
+      <lr-box-plot legend style="--box-color: rgb(10, 20, 30)"></lr-box-plot>
+    `)) as LyraBoxPlot;
+    el.boxes = [{
+      label: 'Latency',
+      color: 'var(--box-color)',
+      data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }],
+    }];
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+
+    let swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    expect(swatch.style.backgroundColor).to.equal('rgb(10, 20, 30)');
+
+    el.style.setProperty('--box-color', 'rgb(40, 50, 60)');
+    el.refreshTheme();
+    await el.updateComplete;
+    swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+    expect(swatch.style.backgroundColor).to.equal('rgb(40, 50, 60)');
+  });
+
+  it('wraps long peer-load errors and skips theme redraw while off-screen', async () => {
+    const el = (await fixture(html`<lr-box-plot style="inline-size: 180px"></lr-box-plot>`)) as LyraBoxPlot;
+    el.boxes = [{ label: 'Latency', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+    el.strings = {
+      boxPlotMissingLibrary:
+        'A deliberately long translated dependency error that must wrap safely',
+    };
+    await el.updateComplete;
+    await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
+    const chart = (el as any).chart;
+    const data = chart.data;
+
+    (el as any).visible = false;
+    el.refreshTheme();
+    expect(chart.data).to.equal(data);
+
+    (el as any).loading = false;
+    (el as any).loadFailed = true;
+    await el.updateComplete;
+    const error = el.shadowRoot!.querySelector('[part="error"]') as HTMLElement;
+    expect(getComputedStyle(error).overflowWrap).to.equal('anywhere');
+    expect(error.scrollWidth).to.be.at.most(error.clientWidth);
   });
 });
 

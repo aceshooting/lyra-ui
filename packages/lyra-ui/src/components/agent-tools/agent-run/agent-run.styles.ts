@@ -40,6 +40,8 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     column-gap: var(--lr-space-m);
     row-gap: var(--lr-space-s);
   }
@@ -94,7 +96,9 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-space-s);
-    flex: 0 0 auto;
+    flex: 1 1 0;
+    min-inline-size: 0;
+    max-inline-size: 100%;
     font-size: var(--lr-font-size-sm);
   }
   [part='summary'][hidden] {
@@ -102,9 +106,18 @@ export const styles = css`
   }
   [part='metric'] {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: baseline;
     gap: var(--lr-space-xs);
-    white-space: nowrap;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+  [part='metric-label'],
+  [part='metric-value'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part='metric-label'] {
     color: var(--lr-color-text-quiet);
@@ -123,8 +136,10 @@ export const styles = css`
     color: var(--lr-agent-run-metric-warning-color, var(--lr-color-warning));
   }
   [part='model'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
     color: var(--lr-color-text-quiet);
-    white-space: nowrap;
   }
   [part='actions'] {
     display: flex;

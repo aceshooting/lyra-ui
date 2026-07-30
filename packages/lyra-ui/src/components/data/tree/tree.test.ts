@@ -29,10 +29,29 @@ it('exposes selection and skips disabled items in interaction and roving focus',
 
   expect(loading.getAttribute('aria-disabled')).to.equal('true');
   expect(loading.tabIndex).to.equal(-1);
+  expect(selected.getAttribute('aria-disabled')).to.equal('false');
   expect(selected.getAttribute('aria-selected')).to.equal('true');
   expect(selected.tabIndex).to.equal(0);
   loading.click();
   expect(selections).to.equal(0);
+});
+
+it('does not choose a hidden child of a collapsed disabled branch as the roving stop', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    {
+      id: 'disabled-branch',
+      label: 'Disabled branch',
+      disabled: true,
+      children: [{ id: 'hidden-child', label: 'Hidden child' }],
+    },
+    { id: 'visible', label: 'Visible item' },
+  ];
+  await el.updateComplete;
+  const [disabled, visible] = [...el.querySelectorAll('lr-tree-node')] as HTMLElement[];
+
+  expect(disabled.tabIndex).to.equal(-1);
+  expect(visible.tabIndex).to.equal(0);
 });
 
 it('stops rendering a cyclic item graph instead of recursing indefinitely', async () => {
@@ -264,6 +283,99 @@ it('expandAll()/collapseAll() toggle every parent node', async () => {
   el.collapseAll();
   await el.updateComplete;
   expect(root.expanded).to.be.false;
+});
+
+it('bulk expansion skips disabled branches', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    {
+      id: 'disabled-branch',
+      label: 'Disabled branch',
+      disabled: true,
+      children: [{ id: 'hidden-child', label: 'Hidden child' }],
+    },
+    { id: 'visible', label: 'Visible item' },
+  ];
+  await el.updateComplete;
+  const [disabled, visible] = [...el.querySelectorAll('lr-tree-node')] as LyraTreeNode[];
+
+  await el.expandAll();
+
+  expect(disabled.expanded).to.be.false;
+  expect(disabled.shadowRoot!.querySelectorAll('lr-tree-node').length).to.equal(0);
+  expect((visible as unknown as HTMLElement).tabIndex).to.equal(0);
+});
+
+it('collapseAll closes a branch that became disabled and restores a visible roving stop', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    {
+      id: 'branch',
+      label: 'Branch',
+      children: [{ id: 'child', label: 'Child' }],
+    },
+    { id: 'visible', label: 'Visible item' },
+  ];
+  await el.updateComplete;
+  const branch = el.querySelector('lr-tree-node') as LyraTreeNode;
+  branch.expand();
+  await el.updateComplete;
+  branch.shadowRoot!.querySelector<HTMLElement>('lr-tree-node')!.focus();
+
+  el.data = [
+    {
+      id: 'branch',
+      label: 'Branch',
+      disabled: true,
+      children: [{ id: 'child', label: 'Child' }],
+    },
+    { id: 'visible', label: 'Visible item' },
+  ];
+  await el.updateComplete;
+  el.collapseAll();
+  await el.updateComplete;
+
+  const visible = [...el.querySelectorAll<HTMLElement>('lr-tree-node')][1]!;
+  expect(branch.expanded).to.be.false;
+  expect(visible.tabIndex).to.equal(0);
+  expect(deepActiveElement()?.getAttribute('aria-disabled')).to.not.equal('true');
+});
+
+it('immediately collapses a reused expanded branch when a same-id data refresh disables it', async () => {
+  const el = (await fixture(html`<lr-tree></lr-tree>`)) as LyraTree;
+  el.data = [
+    {
+      id: 'branch',
+      label: 'Branch',
+      children: [{ id: 'child', label: 'Child' }],
+    },
+    { id: 'visible', label: 'Visible item' },
+  ];
+  await el.updateComplete;
+  const branch = el.querySelector('lr-tree-node') as LyraTreeNode;
+  branch.expand();
+  await el.updateComplete;
+  expect(branch.shadowRoot!.querySelector('lr-tree-node')).to.exist;
+
+  el.data = [
+    {
+      id: 'branch',
+      label: 'Branch',
+      disabled: true,
+      children: [{ id: 'child', label: 'Child' }],
+    },
+    { id: 'visible', label: 'Visible item' },
+  ];
+  await el.updateComplete;
+
+  const [branchAfter, visible] = [...el.querySelectorAll('lr-tree-node')] as LyraTreeNode[];
+  expect(branchAfter).to.equal(branch);
+  expect(branchAfter.expanded).to.be.false;
+  expect(branchAfter.shadowRoot!.querySelector('[part="group"]')).to.be.null;
+  expect((visible as unknown as HTMLElement).tabIndex).to.equal(0);
+  expect(
+    [...el.querySelectorAll<HTMLElement>('lr-tree-node')].filter((node) => node.tabIndex === 0),
+  ).to.have.lengthOf(1);
 });
 
 it('expandAll() does not mark leaf nodes as expanded, so a following collapseAll() can still reset every parent', async () => {
@@ -754,6 +866,50 @@ describe('tree-node badges', () => {
     await el.updateComplete;
     const node = el.querySelector('lr-tree-node') as LyraTreeNode;
     expect((node.shadowRoot!.querySelector('[part="badge"]') as HTMLElement).dataset.tone).to.equal('neutral');
+  });
+
+  it('lets each badge tone foreground and background be rethemed independently', async () => {
+    const el = (await fixture(html`
+      <lr-tree
+        style="
+          --lr-tree-badge-neutral-color: rgb(1, 2, 3);
+          --lr-tree-badge-neutral-bg: rgb(4, 5, 6);
+          --lr-tree-badge-brand-color: rgb(7, 8, 9);
+          --lr-tree-badge-brand-bg: rgb(10, 11, 12);
+          --lr-tree-badge-success-color: rgb(13, 14, 15);
+          --lr-tree-badge-success-bg: rgb(16, 17, 18);
+          --lr-tree-badge-warning-color: rgb(19, 20, 21);
+          --lr-tree-badge-warning-bg: rgb(22, 23, 24);
+          --lr-tree-badge-danger-color: rgb(25, 26, 27);
+          --lr-tree-badge-danger-bg: rgb(28, 29, 30);
+        "
+      ></lr-tree>
+    `)) as LyraTree;
+    el.data = [{
+      id: 'a',
+      label: 'x',
+      badges: [
+        { text: 'N', tone: 'neutral' },
+        { text: 'B', tone: 'brand' },
+        { text: 'S', tone: 'success' },
+        { text: 'W', tone: 'warning' },
+        { text: 'D', tone: 'danger' },
+      ],
+    }];
+    await el.updateComplete;
+    const node = el.querySelector('lr-tree-node') as LyraTreeNode;
+    const expected = new Map([
+      ['neutral', ['rgb(1, 2, 3)', 'rgb(4, 5, 6)']],
+      ['brand', ['rgb(7, 8, 9)', 'rgb(10, 11, 12)']],
+      ['success', ['rgb(13, 14, 15)', 'rgb(16, 17, 18)']],
+      ['warning', ['rgb(19, 20, 21)', 'rgb(22, 23, 24)']],
+      ['danger', ['rgb(25, 26, 27)', 'rgb(28, 29, 30)']],
+    ]);
+    for (const badge of node.shadowRoot!.querySelectorAll<HTMLElement>('[part="badge"]')) {
+      const colors = expected.get(badge.dataset.tone ?? '');
+      expect(getComputedStyle(badge).color).to.equal(colors?.[0]);
+      expect(getComputedStyle(badge).backgroundColor).to.equal(colors?.[1]);
+    }
   });
 
   it('is accessible with badges and the legacy badge both present', async () => {

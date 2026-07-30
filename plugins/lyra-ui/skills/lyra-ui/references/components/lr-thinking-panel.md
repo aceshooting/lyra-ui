@@ -6,7 +6,7 @@
 - **Class** `LyraThinkingPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -43,7 +43,9 @@ jump-to-latest action of its own.
 **Themeable custom properties:** `--lr-thinking-panel-max-block-size` (default `16rem` —
 consumer-overridable cap on how tall `[part="body"]` grows before it scrolls internally; not
 exposed as a component property since it's a pure layout knob, not something a template branches
-on), plus shared `--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
+on), and `--lr-thinking-panel-pending-color` (default `var(--lr-color-brand)`) — the live-mode
+pending duration/toggle accent without changing the shared brand token. Plus shared
+`--lr-color-border`/`-surface`/`-text`/`-text-quiet`/`-brand`/`-brand-quiet`,
 `--lr-space-xs`/`-s`/`-m`, `--lr-radius`, `--lr-focus-ring-width`/`-color`/`-offset`,
 `--lr-transition-fast`/`-base`.
 

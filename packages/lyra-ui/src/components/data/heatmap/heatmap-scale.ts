@@ -1,8 +1,8 @@
+import { finiteRatio } from '../../../internal/numbers.js';
+
 /** Maps `value` in `[lo, hi]` to a 0.1-1.0 alpha so the lowest real value still reads as faintly present rather than invisible. */
 export function linearAlpha(value: number, lo: number, hi: number): number {
-  const span = hi - lo || 1;
-  const t = (value - lo) / span;
-  return 0.1 + 0.9 * Math.min(1, Math.max(0, t));
+  return 0.1 + 0.9 * finiteRatio(value, lo, hi);
 }
 
 /**
@@ -54,7 +54,6 @@ export function sqrtStep(count: number, max: number, steps: number): number {
  * scale case (the `'sqrt'` scale already has its own discrete `sqrtStep()`).
  */
 export function linearBucket(value: number, lo: number, hi: number, steps: number): number {
-  const span = hi - lo || 1;
-  const t = Math.min(1, Math.max(0, (value - lo) / span));
+  const t = finiteRatio(value, lo, hi);
   return Math.min(steps - 1, Math.floor(t * steps));
 }

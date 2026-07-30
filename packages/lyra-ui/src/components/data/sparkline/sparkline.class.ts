@@ -2,7 +2,7 @@ import { html, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { finiteNumber } from '../../../internal/numbers.js';
+import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
 
 const VIEW = 100;
@@ -81,10 +81,9 @@ export class LyraSparkline extends LyraElement {
     // the plot still reads as a valid lo <= hi span instead of an inverted one.
     if (lo > hi) [lo, hi] = [hi, lo];
     const v = raw.length > MAX_POINTS ? decimate(raw, MAX_POINTS) : raw;
-    const span = hi - lo;
     return v.map((n, i) => {
       const x = v.length > 1 ? (i / (v.length - 1)) * VIEW : VIEW / 2;
-      const y = span === 0 ? VIEW / 2 : VIEW - ((n - lo) / span) * VIEW;
+      const y = lo === hi ? VIEW / 2 : VIEW - finiteRatio(n, lo, hi) * VIEW;
       return [x, y] as const;
     });
   }

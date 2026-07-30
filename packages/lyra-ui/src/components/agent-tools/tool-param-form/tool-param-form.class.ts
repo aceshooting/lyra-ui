@@ -162,6 +162,9 @@ export interface LyraToolParamFormEventMap {
  * the field that changed.
  * @event lr-validity-change - Overall validity or field errors changed.
  * `detail: { valid: boolean; errors: Record<string, string> }`.
+ * @event focus - Re-dispatched when a generated native text/number input receives focus. Composed
+ * controls (`<lr-select>`/`<lr-checkbox>`) already expose their own bubbling, composed bridge.
+ * @event blur - Re-dispatched when a generated native text/number input loses focus.
  * @csspart base - The outer wrapper around all fields.
  * @csspart field - One property's wrapper (label + control + description + error).
  * @csspart label - A field's label.
@@ -241,22 +244,44 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | undefined {
     const field = this.firstInvalidField();
-    if (!field) return undefined;
-    const input = field.querySelector<HTMLElement>('input.control');
-    if (input) return input;
-    for (const child of field.children) {
-      const anchor = resolveValidityAnchor(child);
-      if (anchor) return anchor;
+    if (field) {
+      const input = field.querySelector<HTMLElement>('input.control');
+      if (input) return input;
+      for (const child of field.children) {
+        const anchor = resolveValidityAnchor(child);
+        if (anchor) return anchor;
+      }
+    }
+    return this.firstMissingPropertyError();
+  }
+
+  private firstInvalidField(): HTMLElement | undefined {
+    if (!this.renderRoot) return undefined;
+    const fields = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="field"]'));
+    for (const key of Object.keys(this._errors)) {
+      const field = fields.find((candidate) => candidate.dataset['key'] === key);
+      if (field) return field;
     }
     return undefined;
   }
 
-  private firstInvalidField(): HTMLElement | undefined {
-    const firstInvalidKey = Object.keys(this._errors)[0];
-    if (!firstInvalidKey || !this.renderRoot) return undefined;
-    return Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part="field"]')).find(
-      (candidate) => candidate.dataset['key'] === firstInvalidKey,
+  private get missingRequiredKeys(): string[] {
+    const properties = this.schemaProperties;
+    return this.requiredKeys.filter(
+      (key) => !Object.prototype.hasOwnProperty.call(properties, key) && Boolean(this._errors[key]),
     );
+  }
+
+  private firstMissingPropertyError(): HTMLElement | undefined {
+    if (!this.renderRoot) return undefined;
+    const errors = Array.from(
+      this.renderRoot.querySelectorAll<HTMLElement>('[part="error"][data-missing-property]'),
+    );
+    for (const key of Object.keys(this._errors)) {
+      const error = errors.find((candidate) => candidate.dataset['key'] === key);
+      if (error) return error;
+    }
+    return undefined;
   }
 
   override connectedCallback(): void {
@@ -486,7 +511,15 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
       this.touchedFields = new Set([...this.touchedFields, ...Object.keys(this._errors)]);
     }
     if (this._formError) this.showFormError = true;
-    return this.internals.reportValidity();
+    const valid = this.internals.reportValidity();
+    if (!valid && !this.firstInvalidField() && this.missingRequiredKeys.length > 0) {
+      void this.updateComplete.then(() => {
+        const error = this.firstMissingPropertyError();
+        this.validityController.refreshAnchor();
+        error?.focus();
+      });
+    }
+    return valid;
   }
 
   formResetCallback(): void {
@@ -631,6 +664,10 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     this.setFieldValue(key, e.detail.checked);
   }
 
+  private stopNestedControlEvent = (e: Event): void => {
+    e.stopPropagation();
+  };
+
   // Native blur/focus neither bubble nor cross the shadow boundary, so a host
   // listener on <lr-tool-param-form> itself never hears them without this --
   // mirrors <lr-tool-approval-dialog>'s/<lr-tool-select-dialog>'s identical
@@ -661,7 +698,12 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
         .required=${required}
         .value=${typeof effective === 'string' ? effective : ''}
         ?disabled=${this.effectiveDisabled}
+        @input=${this.stopNestedControlEvent}
         @change=${(e: Event) => this.onSelectChange(key, e)}
+        @lr-change=${this.stopNestedControlEvent}
+        @lr-show=${this.stopNestedControlEvent}
+        @lr-hide=${this.stopNestedControlEvent}
+        @lr-option-change=${this.stopNestedControlEvent}
       >
         ${prop.enum.map((v) => html`<lr-option value=${v}>${v}</lr-option>`)}
       </lr-select>`;
@@ -709,19 +751,18 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
     if (prop.type === 'boolean') {
       // The label lives inside the slot rather than as a sibling <label> --
       // that slot *is* lr-checkbox's documented way to give it an
-      // accessible name (see checkbox.ts's own @slot doc), and unlike
-      // aria-describedby, this genuinely works since it's real slotted
-      // content, not an inert host attribute. Once there's an error, fold it
-      // into aria-label the same way the enum/select branch above does --
-      // an explicit aria-label overrides the slotted accessible name, so the
-      // normal (no error) case is left alone to keep deriving its name from
-      // the slot per lr-checkbox's own documented contract.
+      // accessible name. The child's documented aria-describedby bridge
+      // resolves this form's adjacent description/error nodes onto its
+      // internal role="checkbox", so supporting text remains description
+      // semantics and is never folded into the accessible name.
       return html`<lr-checkbox
         id=${fieldId}
         aria-describedby=${describedBy || nothing}
-        .required=${required}
+        .required=${required && prop.const === true}
         ?checked=${effective === true}
         ?disabled=${this.effectiveDisabled}
+        @input=${this.stopNestedControlEvent}
+        @change=${this.stopNestedControlEvent}
         @lr-change=${(e: CustomEvent<{ checked: boolean }>) => this.onCheckboxChange(key, e)}
       >
         <span part="label">${label}</span>
@@ -769,10 +810,21 @@ export class LyraToolParamForm extends LyraElement<LyraToolParamFormEventMap> {
   override render(): TemplateResult {
     const props = this.schemaProperties;
     const entries = Object.entries(props);
+    const missingRequiredKeys = this.missingRequiredKeys.filter((key) => this.touchedFields.has(key));
     return html`<div part="base">
       ${entries.length === 0
         ? html`<p part="empty">${this.localize('noData')}</p>`
         : entries.map(([key, prop], i) => this.renderField(key, prop, i))}
+      ${missingRequiredKeys.map(
+        (key) => html`<p
+          part="error"
+          class="form-error missing-property-error"
+          data-missing-property
+          data-key=${key}
+          role="alert"
+          tabindex="-1"
+        >${this.localize('toolParamMissingProperty', undefined, { key })}</p>`,
+      )}
       ${this.showFormError && this._formError
         ? html`<p part="error" class="form-error" role="alert">${this._formError}</p>`
         : nothing}

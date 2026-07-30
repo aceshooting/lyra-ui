@@ -89,13 +89,24 @@ export const styles = css`
     inline-size: var(--lr-size-0-5rem);
     block-size: var(--lr-size-0-5rem);
     border-radius: var(--lr-radius-pill);
-    background: var(--lr-color-border-strong);
+    background: var(--lr-flow-node-status-color, var(--lr-color-border-strong));
     flex: 0 0 auto;
   }
-  [part='status'][data-status='running'] .status-dot { background: var(--lr-color-brand); }
-  [part='status'][data-status='success'] .status-dot { background: var(--lr-color-success); }
-  [part='status'][data-status='error'] .status-dot { background: var(--lr-color-danger); }
-  [part='status'][data-status='denied'] .status-dot { background: var(--lr-color-warning); }
+  [part='status'][data-status='pending'] .status-dot {
+    background: var(--lr-flow-node-status-pending-color, var(--lr-color-border-strong));
+  }
+  [part='status'][data-status='running'] .status-dot {
+    background: var(--lr-flow-node-status-running-color, var(--lr-color-brand));
+  }
+  [part='status'][data-status='success'] .status-dot {
+    background: var(--lr-flow-node-status-success-color, var(--lr-color-success));
+  }
+  [part='status'][data-status='error'] .status-dot {
+    background: var(--lr-flow-node-status-error-color, var(--lr-color-danger));
+  }
+  [part='status'][data-status='denied'] .status-dot {
+    background: var(--lr-flow-node-status-denied-color, var(--lr-color-warning));
+  }
   [part='progress'] {
     inline-size: 100%;
     block-size: var(--lr-size-2px);

@@ -1,5 +1,6 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { DocumentAnchorTarget } from '../../../internal/anchor-target.js';
 import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
@@ -16,6 +17,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { styles } from './xml-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 const MAX_NODES = 50_000;
 const MAX_DEPTH = 256;
@@ -100,7 +102,9 @@ function resolvePath(root: Element, path: PathSegment[]): { element: Element; at
     const segment = path[i]!; // safe: i < path.length
     if (typeof segment === 'string') {
       if (!segment.startsWith('@') || i !== path.length - 1) return null;
-      return { element: current, attr: segment.slice(1) };
+      const attr = segment.slice(1);
+      if (!attr || !current.hasAttribute(attr)) return null;
+      return { element: current, attr };
     }
     const children = elementChildren(current);
     if (segment < 0 || segment >= children.length) return null;
@@ -203,6 +207,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
 
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
    *  instead of growing the page. */
+  /** A CSS `max-height`; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. */
@@ -572,9 +577,15 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
         >
         ${!expanded && hasChildren
           ? html`<span class="preview">${this.localize(
-              children.length === 1 ? 'xmlViewerChildCount' : 'xmlViewerChildCountPlural',
+              children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length === 1
+                ? 'xmlViewerChildCount'
+                : 'xmlViewerChildCountPlural',
               undefined,
-              { count: getNumberFormat(this.effectiveLocale).format(children.length) },
+              {
+                count: getNumberFormat(this.effectiveLocale).format(
+                  children.length + textNodes.length + commentNodes.length + cdataNodes.length + piNodes.length,
+                ),
+              },
             )}</span>`
           : nothing}
         ${this.renderCopyButton(() => new XMLSerializer().serializeToString(el), toggleLabel)}
@@ -602,7 +613,9 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
       <div
         part="base"
         role="region"
-        style=${this.maxHeight ? `--lr-xml-viewer-max-height:${this.maxHeight}` : nothing}
+        style=${sanitizeCssLength(this.maxHeight)
+          ? styleMap({ '--lr-xml-viewer-max-height': sanitizeCssLength(this.maxHeight)! })
+          : nothing}
         aria-label=${label}
         aria-busy=${state.kind === 'loading' ? 'true' : 'false'}
       >

@@ -12,6 +12,9 @@ export type LyraMessageKey =
   | 'jumpToLatest'
   | 'terminalLabel'
   | 'terminalDownload'
+  | 'terminalHighlightLine'
+  | 'schemaViewerIssueLimit'
+  | 'toolParamMissingProperty'
   | 'sequenceStripEmpty'
   | 'sequenceStripCategoryCount'
   | 'noColumns'
@@ -102,6 +105,7 @@ export type LyraMessageKey =
   | 'comboboxLoadError'
   | 'comboboxSelectedOverflow'
   | 'promptQueueItemLabel'
+  | 'promptQueueActionLabel'
   | 'notInCatalog'
   | 'sendMessage'
   | 'stopGenerating'
@@ -320,6 +324,7 @@ export type LyraMessageKey =
   | 'textareaLabel'
   | 'citation'
   | 'citationWithStatus'
+  | 'citationWithCustomLabel'
   | 'comboboxOverflow'
   | 'comboboxRequired'
   | 'comboboxLabel'
@@ -674,6 +679,7 @@ export type LyraMessageKey =
   | 'traceTree'
   | 'traceTreeSpanStatus'
   | 'traceTreeMetricLabel'
+  | 'agentTraceFilterLabel'
   | 'spanKindAgent'
   | 'spanKindLlm'
   | 'spanKindTool'
@@ -746,6 +752,8 @@ export type LyraMessageKey =
   | 'testResultsRunning'
   | 'testResultsFilterLabel'
   | 'testResultsCompleteAnnounce'
+  | 'testResultsExpandTest'
+  | 'testResultsCollapseTest'
   | 'envListLabel'
   | 'envListReveal'
   | 'envListHide'
@@ -761,6 +769,7 @@ export type LyraMessageKey =
   | 'avPlayerTranscript'
   | 'avPlayerTimeline'
   | 'avPlayerPlaybackRate'
+  | 'avPlayerRateOption'
   | 'avPlayerPosition'
   | 'attachmentTriggerAudio'
   | 'attachmentMenuAudio'
@@ -844,6 +853,10 @@ export type LyraMessageKey =
   | 'flowEdge'
   | 'flowEdgeWithLabel'
   | 'flowItemAnnouncement'
+  | 'dashboardGridLabel'
+  | 'dashboardCellCollisionRejected'
+  | 'dashboardCellMoved'
+  | 'dashboardCellResized'
   | 'flowEdgeList'
   | 'flowNodeSelected'
   | 'flowNodeDeselected'
@@ -995,6 +1008,7 @@ export type LyraMessageKey =
   | 'ragEvalDashboardRuns'
   | 'ragEvalDashboardSlices'
   | 'ragEvalDashboardAllSlices'
+  | 'ragEvalDashboardSliceUnavailable'
   | 'promptStudioLabel'
   | 'promptStudioMessages'
   | 'promptStudioVariables'
@@ -1004,6 +1018,8 @@ export type LyraMessageKey =
   | 'promptStudioSave'
   | 'promptStudioAddMessage'
   | 'promptStudioRemoveMessage'
+  | 'promptStudioMessageRole'
+  | 'promptStudioMessageContent'
   | 'promptStudioRoleSystem'
   | 'promptStudioRoleUser'
   | 'promptStudioRoleAssistant'
@@ -1017,6 +1033,9 @@ export type LyraMessageKey =
   | 'subagentPanelEmpty'
   | 'subagentPanelCancel'
   | 'subagentPanelRetry'
+  | 'subagentPanelCancelRun'
+  | 'subagentPanelRetryRun'
+  | 'toolTimelineDetailsFor'
   | 'realtimeSessionLabel'
   | 'realtimeSessionDisconnected'
   | 'realtimeSessionConnecting'
@@ -1186,6 +1205,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   jumpToLatest: 'Jump to latest',
   terminalLabel: 'Terminal output',
   terminalDownload: 'Download log',
+  terminalHighlightLine: 'Line {line}',
+  schemaViewerIssueLimit: 'Only the first {count} validation issues are shown.',
+  toolParamMissingProperty: 'Required key “{key}” has no matching schema property.',
   sequenceStripEmpty: 'No items',
   sequenceStripCategoryCount: '{label}: {count}',
   noColumns: 'No columns configured',
@@ -1276,6 +1298,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   comboboxLoadError: 'Could not load options.',
   comboboxSelectedOverflow: '+{n} more',
   promptQueueItemLabel: 'Queued prompt {index}',
+  promptQueueActionLabel: '{action}, queued prompt {index}',
   notInCatalog: 'not in catalog',
   sendMessage: 'Send message',
   stopGenerating: 'Stop generating',
@@ -1495,6 +1518,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   textareaLabel: 'Text',
   citation: 'Citation {index}',
   citationWithStatus: 'Citation {index}, {status}',
+  citationWithCustomLabel: 'Citation {index}, {label}',
   comboboxOverflow: '+{n} more — refine your search',
   comboboxRequired: 'Please select an option.',
   comboboxLabel: 'Combobox',
@@ -1852,6 +1876,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   traceTree: 'Trace tree',
   traceTreeSpanStatus: '{name} — {status}',
   traceTreeMetricLabel: '{label}: {value}',
+  agentTraceFilterLabel: 'Trace span kinds',
   spanKindAgent: 'Agent',
   spanKindLlm: 'LLM',
   spanKindTool: 'Tool',
@@ -1924,6 +1949,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   testResultsRunning: '{count} running',
   testResultsFilterLabel: 'Filter by status',
   testResultsCompleteAnnounce: '{passed} passed, {failed} failed, {skipped} skipped',
+  testResultsExpandTest: 'Expand {name}',
+  testResultsCollapseTest: 'Collapse {name}',
   envListLabel: 'Environment variables',
   envListReveal: 'Reveal {name}',
   envListHide: 'Hide {name}',
@@ -1939,6 +1966,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   avPlayerTranscript: 'Transcript',
   avPlayerTimeline: 'Seek',
   avPlayerPlaybackRate: 'Playback speed',
+  avPlayerRateOption: '{rate}×',
   avPlayerPosition: '{current} of {duration}',
   attachmentTriggerAudio: 'Record audio',
   attachmentMenuAudio: 'Record audio',
@@ -2022,6 +2050,10 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   flowEdge: 'Edge from {source} to {target}',
   flowEdgeWithLabel: '{label}, edge from {source} to {target}',
   flowItemAnnouncement: '{item} ({index} of {total})',
+  dashboardGridLabel: 'Dashboard grid',
+  dashboardCellCollisionRejected: '{label} cannot be placed there because it overlaps another cell.',
+  dashboardCellMoved: '{label} moved to column {x}, row {y}.',
+  dashboardCellResized: '{label} resized to width {w}, height {h}.',
   flowEdgeList: 'Workflow edges',
   flowNodeSelected: '{label} selected',
   flowNodeDeselected: '{label} deselected',
@@ -2174,6 +2206,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   ragEvalDashboardRuns: 'Evaluation runs',
   ragEvalDashboardSlices: 'Evaluation slices',
   ragEvalDashboardAllSlices: 'All',
+  ragEvalDashboardSliceUnavailable: 'No evaluation runs are available for {slice}.',
   promptStudioLabel: 'Prompt studio',
   promptStudioMessages: 'Prompt messages',
   promptStudioVariables: 'Variables',
@@ -2183,6 +2216,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   promptStudioSave: 'Save version',
   promptStudioAddMessage: 'Add message',
   promptStudioRemoveMessage: 'Remove message',
+  promptStudioMessageRole: 'Message {index} role ({role})',
+  promptStudioMessageContent: 'Message {index} content ({role})',
   promptStudioRoleSystem: 'System',
   promptStudioRoleUser: 'User',
   promptStudioRoleAssistant: 'Assistant',
@@ -2196,6 +2231,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   subagentPanelEmpty: 'No subagent runs',
   subagentPanelCancel: 'Cancel subagent',
   subagentPanelRetry: 'Retry subagent',
+  subagentPanelCancelRun: 'Cancel {name}',
+  subagentPanelRetryRun: 'Retry {name}',
+  toolTimelineDetailsFor: 'Details for {name}',
   realtimeSessionLabel: 'Realtime session',
   realtimeSessionDisconnected: 'Disconnected',
   realtimeSessionConnecting: 'Connecting',

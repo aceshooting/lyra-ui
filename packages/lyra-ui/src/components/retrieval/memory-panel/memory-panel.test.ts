@@ -449,6 +449,21 @@ describe('lr-memory-panel', () => {
     );
   });
 
+  it('repairs focus when an externally controlled collection removes the focused item', async () => {
+    const el = await populated();
+    const rows = el.shadowRoot!.querySelectorAll<HTMLElement>(
+      '[part="section"][data-scope="short-term"] [part="item"]',
+    );
+    rows[1]!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.focus();
+
+    el.shortTerm = el.shortTerm.slice(0, 1);
+    await el.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('item');
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('s1');
+  });
+
   it('shrinks to a 320px allocation with long item text without horizontal overflow', async () => {
     const longItems: LyraMemoryItem[] = [
       {

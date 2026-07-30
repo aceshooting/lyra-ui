@@ -164,6 +164,67 @@ describe("lr-stepper", () => {
     ]);
   });
 
+  it("rehomes focus to the roving fallback when the focused current step becomes disabled", async () => {
+    const mutableSteps = steps();
+    const el = (await fixture(
+      html`<lr-stepper .steps=${mutableSteps}></lr-stepper>`
+    )) as LyraStepper;
+    stepButtons(el)[1]!.focus();
+    mutableSteps[1]!.state = "disabled";
+    el.steps = [...mutableSteps];
+    await el.updateComplete;
+
+    const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(focused?.dataset["id"]).to.equal("basics");
+    expect(focused?.tabIndex).to.equal(0);
+  });
+
+  it("rehomes focus to the roving fallback when the focused current step is removed", async () => {
+    const mutableSteps = steps();
+    const el = (await fixture(
+      html`<lr-stepper .steps=${mutableSteps}></lr-stepper>`
+    )) as LyraStepper;
+    stepButtons(el)[1]!.focus();
+    el.steps = [mutableSteps[0]!, mutableSteps[2]!];
+    await el.updateComplete;
+
+    const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(focused?.dataset["id"]).to.equal("basics");
+    expect(focused?.tabIndex).to.equal(0);
+  });
+
+  it("keeps focus on the roving current step when steps are reordered", async () => {
+    const mutableSteps = steps();
+    const el = (await fixture(
+      html`<lr-stepper .steps=${mutableSteps}></lr-stepper>`
+    )) as LyraStepper;
+    stepButtons(el)[1]!.focus();
+    el.steps = [mutableSteps[2]!, mutableSteps[0]!, mutableSteps[1]!];
+    await el.updateComplete;
+
+    const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(focused?.dataset["id"]).to.equal("inputs");
+    expect(focused?.tabIndex).to.equal(0);
+  });
+
+  it("preserves focus on a surviving enabled non-current step when steps refresh", async () => {
+    const mutableSteps = steps();
+    const el = (await fixture(
+      html`<lr-stepper .steps=${mutableSteps}></lr-stepper>`
+    )) as LyraStepper;
+    stepButtons(el)[2]!.focus();
+    el.steps = [
+      { ...mutableSteps[2]!, label: "Final review" },
+      mutableSteps[0]!,
+      mutableSteps[1]!,
+    ];
+    await el.updateComplete;
+
+    const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(focused?.dataset["id"]).to.equal("review");
+    expect(focused?.tabIndex).to.equal(-1);
+  });
+
   it("fires a non-cancelable lr-step-select on click, without mutating steps itself", async () => {
     const el = (await fixture(
       html`<lr-stepper .steps=${steps()}></lr-stepper>`

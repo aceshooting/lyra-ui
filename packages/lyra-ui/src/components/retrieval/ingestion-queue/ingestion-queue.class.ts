@@ -75,8 +75,8 @@ export interface IngestionQueueItem {
 
 /** `lr-retry`'s `detail` -- extends the shared `RetryEventDetail` (`src/ai/types.ts`) with the
  *  `itemId` identifying *which* queue item the request is about; `attempt` is the attempt number
- *  about to be made (`(item.attempts ?? 0) + 1`), matching `RetryEventDetail.attempt`'s own
- *  semantics verbatim. */
+ *  about to be made: the displayed nonnegative finite-integer attempt count plus one, matching
+ *  `RetryEventDetail.attempt`'s own semantics verbatim. */
 export interface IngestionRetryEventDetail extends RetryEventDetail {
   itemId: string;
 }
@@ -252,8 +252,15 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
       : this.localize('ingestionChunkCount', undefined, { count: formatted });
   }
 
+  private normalizedAttempts(item: IngestionQueueItem): number {
+    return finiteCount(item.attempts ?? 0, 0, Number.MAX_SAFE_INTEGER - 1);
+  }
+
   private onRetryClick(item: IngestionQueueItem): void {
-    this.emit<IngestionRetryEventDetail>('lr-retry', { itemId: item.id, attempt: (item.attempts ?? 0) + 1 });
+    this.emit<IngestionRetryEventDetail>('lr-retry', {
+      itemId: item.id,
+      attempt: this.normalizedAttempts(item) + 1,
+    });
   }
 
   private onCancelClick(item: IngestionQueueItem): void {
@@ -265,8 +272,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     const showProgress = ACTIVE_STAGES.includes(item.stage);
     const canRetry = item.stage === 'failed';
     const canCancel = CANCELABLE_STAGES.includes(item.stage);
+    const attempts = this.normalizedAttempts(item);
     const hasMeta =
-      item.chunkCount !== undefined || item.embeddedChunkCount !== undefined || (item.attempts ?? 0) > 0;
+      item.chunkCount !== undefined || item.embeddedChunkCount !== undefined || attempts > 0;
     const indeterminate = item.progress === undefined || !Number.isFinite(item.progress);
 
     return html`
@@ -299,10 +307,10 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
                     })}</span
                   >`
                 : nothing}
-              ${(item.attempts ?? 0) > 0
+              ${attempts > 0
                 ? html`<span part="item-attempts"
                     >${this.localize('ingestionAttemptCount', undefined, {
-                      count: getNumberFormat(this.effectiveLocale).format(finiteCount(item.attempts!)),
+                      count: getNumberFormat(this.effectiveLocale).format(attempts),
                     })}</span
                   >`
                 : nothing}

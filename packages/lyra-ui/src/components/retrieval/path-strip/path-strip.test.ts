@@ -28,6 +28,23 @@ it('renders one control per path element, in order', async () => {
   expect(nodes[1]!.textContent).to.include('Polonium');
 });
 
+it('lets a host aria-label override the label prop on the nested scroll region', async () => {
+  const el = (await fixture(
+    html`<lr-path-strip
+      label="Path fallback"
+      aria-label="Author reasoning path"
+      .path=${path}
+    ></lr-path-strip>`,
+  )) as LyraPathStrip;
+  const scroller = el.shadowRoot!.querySelector('lr-scroller') as HTMLElement & {
+    updateComplete: Promise<boolean>;
+  };
+  await scroller.updateComplete;
+  const viewport = scroller.shadowRoot!.querySelector('[part="viewport"]')!;
+  expect(viewport.getAttribute('role')).to.equal('region');
+  expect(viewport.getAttribute('aria-label')).to.equal('Author reasoning path');
+});
+
 it('emits lr-entity-activate when a node element is activated', async () => {
   const el = (await fixture(html`<lr-path-strip></lr-path-strip>`)) as LyraPathStrip;
   el.path = path;

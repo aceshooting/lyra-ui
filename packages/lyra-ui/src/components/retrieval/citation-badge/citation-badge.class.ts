@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { finiteInteger } from '../../../internal/numbers.js';
+import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './citation-badge.styles.js';
 
 export type CitationBadgeStatus = 'default' | 'high' | 'medium' | 'low' | 'verified' | 'unverified';
@@ -152,7 +153,8 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
    *  `lr-citation-open`'s detail as-is; this component never navigates. */
   @property() href = '';
 
-  /** Overrides the computed accessible name (`"Citation {index}[, {status}]"`). */
+  /** Adds source context to the accessible name while retaining the visible citation index
+   *  (`"Citation {index}, {label}"`). */
   @property() label = '';
 
   // A `[part]` always contains a literal `<slot>` child regardless of
@@ -210,12 +212,15 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   }
 
   private get accessibleLabel(): string {
-    if (this.label) return this.label;
+    const index = getNumberFormat(this.effectiveLocale).format(this.index);
+    if (this.label) {
+      return this.localize('citationWithCustomLabel', undefined, { index, label: this.label });
+    }
     const key = STATUS_MESSAGE_KEY[this.status];
     const statusText = key ? this.localize(key) : '';
-    const citationLabel = this.localize('citation', undefined, { index: this.index });
+    const citationLabel = this.localize('citation', undefined, { index });
     return statusText
-      ? this.localize('citationWithStatus', undefined, { index: this.index, status: statusText })
+      ? this.localize('citationWithStatus', undefined, { index, status: statusText })
       : citationLabel;
   }
 
@@ -333,6 +338,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
   }
 
   override render(): TemplateResult {
+    const formattedIndex = getNumberFormat(this.effectiveLocale).format(this.index);
     return html`
       <span
         class="wrapper"
@@ -350,7 +356,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
           @click=${this.onClick}
           @dblclick=${this.onDblClick}
         >
-          <span part="bracket" aria-hidden="true">[</span><span part="index">${this.index}</span
+          <span part="bracket" aria-hidden="true">[</span><span part="index">${formattedIndex}</span
           ><span part="bracket" aria-hidden="true">]</span>
         </button>
         <div part="popover" id=${this.popoverId} role="tooltip" inert ?hidden=${!this.popoverOpen}>

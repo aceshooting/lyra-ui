@@ -17,11 +17,15 @@ A form-associated single-choice control. Use it alone or inside `lr-radio-group`
 
 **Properties:** `checked`, `disabled`, `required`, `name`, and `value` (all reflected where
 applicable). A selected radio submits its value through `ElementInternals`.
+An empty `name` is canonicalized to an omitted attribute rather than reappearing as `name=""`.
 `effectiveRequired` exposes the required state inherited from a containing radio group. `focus()`,
 `blur()`, and `click()` forward to the internal radio control.
 
-**Events:** native-style composed `input` and `change`, plus `lr-change` with
-`{ checked, value }`.
+**Events:** native-style composed `input` and `change`. A standalone radio also emits `lr-change`
+with `{ checked, value }`. An owned radio suppresses that child alias at its source; its group emits
+the sole aggregate `lr-change` described below, so capture and bubble listeners cannot observe two
+differently shaped aliases. The internal control's native `focus` and `blur` are re-dispatched as
+bubbling, composed host events.
 
 **Slots:** default label content.
 

@@ -401,6 +401,45 @@ it('recovers real fallback focus when filtering invalidates the focused option',
   }
 });
 
+it('reacts to a filter-only change and leaves no stale internal Tab stop when results empty', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  textarea.id = 'mention-filter-focus-return';
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    el.query = 'alice';
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+
+    el.filter = () => false;
+    await el.updateComplete;
+    await el.updateComplete;
+    expect(document.activeElement?.id).to.equal(textarea.id);
+    expect(listbox(el).getAttribute('tabindex')).to.equal('-1');
+    expect(el.shadowRoot!.querySelectorAll('[tabindex="0"]').length).to.equal(0);
+  } finally {
+    textarea.remove();
+  }
+});
+
+it('returns owned fallback focus to a surviving anchor before disconnecting', async () => {
+  const el = await openWithItems();
+  const textarea = document.createElement('textarea');
+  textarea.id = 'mention-disconnect-focus-return';
+  document.body.appendChild(textarea);
+  try {
+    el.anchor = textarea;
+    await el.updateComplete;
+    expect(await el.focusActiveOption()).to.be.true;
+
+    el.remove();
+    expect(document.activeElement?.id).to.equal(textarea.id);
+  } finally {
+    textarea.remove();
+  }
+});
+
 it('positions the popup (position: fixed) against a plain non-text-control anchor', async () => {
   const wrap = await fixture(html`
     <div>

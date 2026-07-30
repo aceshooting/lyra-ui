@@ -1,5 +1,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { expandIcon, fileIcon } from '../../../internal/icons.js';
 import {
@@ -7,6 +8,7 @@ import {
   safeMediaSrc as validateMediaSrc,
 } from '../../../internal/safe-url.js';
 import { styles } from './media-card.styles.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 export type MediaCardKind = 'image' | 'video' | 'file';
 
@@ -162,7 +164,8 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
 
   /** A CSS length (e.g. `"16rem"`); once set, overrides the
    *  `--lr-media-card-max-height` custom property for this instance only —
-   *  same contract as `<lr-document-preview>`'s identically-named prop. */
+   *  same contract as `<lr-document-preview>`'s identically-named prop. Invalid values are
+   *  ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
 
   /** Visual chrome, mirroring `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the
@@ -203,8 +206,11 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
   /** Per-instance override for `--lr-media-card-max-height`, applied
    *  inline on `[part="base"]` -- the only mechanism that reliably wins
    *  over the `:host{}`-declared default from outside the shadow root. */
-  private get baseStyle(): string | typeof nothing {
-    return this.maxHeight ? `--lr-media-card-max-height:${this.maxHeight}` : nothing;
+  private get baseStyle() {
+    const maxHeight = sanitizeCssLength(this.maxHeight);
+    return maxHeight
+      ? styleMap({ '--lr-media-card-max-height': maxHeight })
+      : nothing;
   }
 
   private emitOpen(): CustomEvent<MediaCardOpenDetail> {

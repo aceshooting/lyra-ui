@@ -133,8 +133,7 @@ export class LyraTimelineItem extends LyraElement {
 
   /** Marks this as the current/in-progress item (e.g. "the agent is executing this step right now"),
    *  as opposed to a resolved past entry. Drives a pulsing marker (disabled under
-   *  `prefers-reduced-motion: reduce`) and `aria-current="true"` on the host -- omitted entirely
-   *  (not `"false"`) while inactive, matching `<lr-stepper>`'s identical `aria-current` handling. */
+   *  `prefers-reduced-motion: reduce`) and an explicit `aria-current` state on the host. */
   @property({ type: Boolean, reflect: true }) active = false;
 
   // Tracked in JS rather than relying on native <slot> fallback content: the "slot wins outright"
@@ -159,10 +158,7 @@ export class LyraTimelineItem extends LyraElement {
     super.willUpdate(changed);
     // aria-current lives on the host (role="listitem" does too -- see connectedCallback), so it's a
     // plain imperative attribute write here rather than part of render()'s shadow-DOM template.
-    // Removed entirely (not set to "false") while inactive -- omitting it loses no information since
-    // aria-current's own ARIA-spec default value is already "false".
-    if (this.active) this.setAttribute('aria-current', 'true');
-    else this.removeAttribute('aria-current');
+    this.setAttribute('aria-current', String(this.active));
   }
 
   private get normalizedTimestamp(): Date | undefined {

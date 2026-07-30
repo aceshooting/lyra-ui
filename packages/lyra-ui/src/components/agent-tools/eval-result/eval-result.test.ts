@@ -30,6 +30,20 @@ describe('lr-eval-result', () => {
     expect(grid.shadowRoot!.querySelectorAll('[role="gridcell"]')).to.have.length(4);
   });
 
+  it('gives the populated comparison grid a localized name by default', async () => {
+    const el = (await fixture(
+      html`<lr-eval-result
+        .runs=${RUNS}
+        .columns=${COLUMNS}
+        .strings=${{ evaluationDashboardRunsLabel: 'Compared evaluation runs' }}
+      ></lr-eval-result>`,
+    )) as LyraEvalResult;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('lr-table')!.getAttribute('aria-label')).to.equal(
+      'Compared evaluation runs',
+    );
+  });
+
   it('shows the empty-state message when runs has no entries', async () => {
     const el = (await fixture(html`<lr-eval-result></lr-eval-result>`)) as LyraEvalResult;
     await el.updateComplete;

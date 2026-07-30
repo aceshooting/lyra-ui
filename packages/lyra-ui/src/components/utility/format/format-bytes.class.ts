@@ -50,14 +50,30 @@ export class LyraFormatBytes extends LyraElement {
       // arithmetic can never see a non-finite value even if the guard above it changes shape.
       const value = finiteNumber(this.value, 0);
       const step = this.safeUnitStep;
-      const index = value === 0 ? 0 : Math.min(UNITS.length - 1, Math.floor(Math.log(Math.abs(value)) / Math.log(step)));
+      const index =
+        value === 0
+          ? 0
+          : Math.max(
+              0,
+              Math.min(
+                UNITS.length - 1,
+                Math.floor(Math.log(Math.abs(value)) / Math.log(step)),
+              ),
+            );
       const amount = value / step ** index;
-      text = getNumberFormat(this.effectiveLocale || undefined, {
+      const options: Intl.NumberFormatOptions = {
         style: 'unit',
         unit: UNITS[index],
         unitDisplay: 'short',
         maximumFractionDigits: this.safeDecimals,
-      }).format(amount);
+      };
+      try {
+        text = getNumberFormat(this.effectiveLocale || undefined, options).format(amount);
+      } catch {
+        // A malformed runtime locale is reachable from untyped JS/markup. The unit/options are
+        // already normalized above, so retrying with the runtime locale keeps the value useful.
+        text = getNumberFormat(undefined, options).format(amount);
+      }
     }
     return html`${text || html`<slot></slot>`}`;
   }

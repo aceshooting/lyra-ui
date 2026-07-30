@@ -5,9 +5,13 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-xs);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
   [part="separator"] {
     color: var(--lr-color-text-quiet);
+    flex: 0 0 auto;
   }
   :host(:first-child) [part="separator"] {
     display: none;
@@ -16,6 +20,8 @@ export const styles = css`
     color: var(--lr-color-text);
     text-decoration: none;
     border-radius: var(--lr-radius);
+    min-inline-size: 0;
+    max-inline-size: 100%;
   }
   a[part="base"]:hover {
     text-decoration: underline;

@@ -29,7 +29,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   @property() label = '';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
-  @property() name = '';
+  @property({ reflect: true }) name = '';
   @property({ type: Boolean, reflect: true }) required = false;
   @property({ type: Boolean, reflect: true }) disabled = false;
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -40,6 +40,8 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
   private readonly hintId = nextId('radio-group-hint');
   private readonly errorId = nextId('radio-group-error');
   private managedRadios = new Set<LyraRadio>();
+  private authorNames = new Map<LyraRadio, string>();
+  private syncingRadios = false;
   private membershipObserver?: MutationObserver;
 
   override connectedCallback(): void {
@@ -50,7 +52,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         if (this.isConnected) this.syncRadios();
       });
     });
-    this.membershipObserver.observe(this, { childList: true, subtree: true });
+    this.membershipObserver.observe(this, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ['slot', 'checked', 'disabled'],
+    });
   }
   override disconnectedCallback(): void {
     this.membershipObserver?.disconnect();
@@ -60,37 +67,97 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     super.disconnectedCallback();
   }
   protected override updated(): void { this.syncRadios(); }
-  private radios(): LyraRadio[] {
-    return [...this.querySelectorAll(tag('radio'))] as LyraRadio[];
+
+  private radioGroupOwner(element: Element): Element | null {
+    const group = element.closest(tag('radio-group'));
+    if (!group) return null;
+    let topLevelChild = element;
+    while (topLevelChild.parentElement && topLevelChild.parentElement !== group) {
+      topLevelChild = topLevelChild.parentElement;
+    }
+    if (topLevelChild.parentElement !== group) return null;
+    const slot = topLevelChild.getAttribute('slot');
+    return slot === 'label' || slot === 'hint' || slot === 'error' ? null : group;
   }
-  private syncRadios(): void {
-    const radios = this.radios();
-    const current = new Set(radios);
-    this.releaseRadios([...this.managedRadios].filter((radio) => !current.has(radio)));
-    this.managedRadios = current;
-    const enabled = radios.filter((radio) => !radio.effectiveDisabled && !this.disabled);
-    const checkedRadio = radios.find((radio) => radio.checked);
-    const groupName = this.name || this.getAttribute('name') || '';
-    for (const radio of radios) {
-      if (groupName) radio.name = groupName;
-      radio.setGroupRequired(this.required);
-      radio.setGroupDisabled(this.disabled);
-      radio.setGroupTabbable(checkedRadio ? radio === checkedRadio : radio === enabled[0]);
+
+  /** @internal Whether this group owns the radio through its default option slot. */
+  ownsRadio(element: Element): element is LyraRadio {
+    return element.localName === tag('radio') && this.radioGroupOwner(element) === this;
+  }
+
+  private radios(): LyraRadio[] {
+    return [...this.querySelectorAll(tag('radio'))].filter((radio) => this.ownsRadio(radio)) as LyraRadio[];
+  }
+  private syncRadios(preferred?: LyraRadio): void {
+    if (this.syncingRadios) return;
+    this.syncingRadios = true;
+    try {
+      const radios = this.radios();
+      const current = new Set(radios);
+      this.releaseRadios([...this.managedRadios].filter((radio) => !current.has(radio)));
+      for (const radio of radios) {
+        radio.setGroupOwner(this);
+        if (!this.managedRadios.has(radio)) {
+          this.authorNames.set(radio, radio.name);
+        }
+      }
+      this.managedRadios = current;
+      for (const radio of radios) radio.setGroupDisabled(this.disabled);
+      const enabled = radios.filter((radio) => !radio.effectiveDisabled);
+      const checked = radios.filter((radio) => radio.checked);
+      const checkedRadio = preferred?.checked && current.has(preferred)
+        ? preferred
+        : checked[checked.length - 1];
+      for (const radio of checked) {
+        if (radio !== checkedRadio) radio.checked = false;
+      }
+      const validityOwner = checkedRadio ?? enabled[0];
+      for (const radio of radios) {
+        radio.name = this.name || this.authorNames.get(radio) || '';
+        radio.setGroupRequired(this.required && radio === validityOwner);
+        radio.setGroupTabbable(checkedRadio ? radio === checkedRadio : radio === enabled[0]);
+      }
+    } finally {
+      this.syncingRadios = false;
     }
   }
   private releaseRadios(radios: Iterable<LyraRadio>): void {
     for (const radio of radios) {
-      radio.setGroupRequired(false);
-      radio.setGroupDisabled(false);
-      radio.setGroupTabbable(true);
+      const authorName = this.authorNames.get(radio) ?? radio.name;
+      this.authorNames.delete(radio);
+      radio.releaseGroupOwner(this, authorName);
     }
   }
+  /** @internal Reconciles one radio's synchronous DOM reparenting before observer delivery. */
+  reconcileRadio(radio: LyraRadio): boolean {
+    if (!this.ownsRadio(radio)) return false;
+    this.syncRadios(radio.checked ? radio : undefined);
+    return true;
+  }
+  /** @internal Releases one radio before a previous group's observer sees its removal. */
+  releaseRadio(radio: LyraRadio): void {
+    if (!this.managedRadios.has(radio) && !this.authorNames.has(radio)) return;
+    this.releaseRadios([radio]);
+    this.managedRadios.delete(radio);
+    this.syncRadios();
+  }
+  /** @internal Reconciles silent programmatic, reset, and restored checked-state changes. */
+  radioCheckedChanged(radio: LyraRadio): void {
+    if (this.syncingRadios || !this.ownsRadio(radio)) return;
+    this.syncRadios(radio.checked ? radio : undefined);
+  }
   /** @internal */
-  selectRadio(radio: LyraRadio): void {
-    if (this.disabled || radio.effectiveDisabled || !this.managedRadios.has(radio)) return;
-    for (const candidate of this.radios()) candidate.checked = candidate === radio;
+  selectRadio(radio: LyraRadio): boolean {
+    if (this.disabled || radio.effectiveDisabled || !this.ownsRadio(radio)) return false;
+    this.syncingRadios = true;
+    try {
+      for (const candidate of this.radios()) candidate.checked = candidate === radio;
+    } finally {
+      this.syncingRadios = false;
+    }
     this.syncRadios();
     this.emit('lr-change', { value: radio.value, radio });
+    return true;
   }
   private onKeyDown = (event: KeyboardEvent): void => {
     if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
@@ -134,6 +201,7 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
         aria-label=${this.accessibleLabel || nothing}
         aria-labelledby=${!this.accessibleLabel && hasLabel ? this.labelId : nothing}
         aria-describedby=${described}
+        aria-required=${this.required ? 'true' : 'false'}
         @keydown=${this.onKeyDown}>
         <div part="label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>
         <slot @slotchange=${this.onRadioSlotChange}></slot>

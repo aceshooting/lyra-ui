@@ -77,10 +77,10 @@ export const styles = css`
   [part='vote-button']:hover {
     background: var(--lr-color-brand-quiet);
   }
-  [part='vote-button'][data-selected] {
-    background: var(--lr-color-brand-quiet);
-    border-color: var(--lr-color-brand);
-    color: var(--lr-color-brand);
+  [part='vote-button']:where([data-selected]) {
+    background: var(--lr-compare-panel-selected-background, var(--lr-color-brand-quiet));
+    border-color: var(--lr-compare-panel-selected-border-color, var(--lr-color-brand));
+    color: var(--lr-compare-panel-selected-color, var(--lr-color-brand));
     font-weight: var(--lr-font-weight-semibold);
   }
   [part='vote-button']:disabled {

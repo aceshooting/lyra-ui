@@ -9,6 +9,24 @@ import {
 } from './heatmap.js';
 import { styles } from './heatmap.styles.js';
 
+it('rejects unsafe custom color ramps and discrete legend paints', async () => {
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap></lr-heatmap>`);
+  el.values = [[1]];
+  el.rowLabels = ['A'];
+  el.colLabels = ['B'];
+  el.colorSteps = ['red', 'url("data:image/svg+xml,<svg/>")'];
+  el.legendStops = [{ value: 1, color: 'red;position:fixed' }];
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-heatmap-color-steps-gradient')).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part="legend-swatch"]')).to.equal(null);
+
+  el.colorSteps = ['var(--lr-color-brand)', 'color-mix(in srgb, red 50%, blue)'];
+  el.legendStops = [{ value: 1, color: '#123456' }];
+  await el.updateComplete;
+  expect(el.style.getPropertyValue('--lr-heatmap-color-steps-gradient')).to.contain('linear-gradient');
+  expect((el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement).style.background).to.not.equal('');
+});
+
 /** Scans a CSS-px rectangle of `ctx` for any pixel whose [r,g,b] satisfies `match` — used by the
  *  focus-ring fast-path repaint tests below, where pinning an exact sub-pixel stroke coordinate
  *  would be brittle against anti-aliasing, but "this color appears somewhere in the cell" is a
@@ -34,7 +52,7 @@ function findPixel(
   return false;
 }
 
-it('sets a group role (not img, which conflicts with the canvas\'s focusable descendant) and a summarizing aria-label', async () => {
+it('puts the generated group role and summary only on the host semantic owner', async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   el.rowLabels = ['Mon', 'Tue'];
   el.colLabels = ['0h', '1h'];
@@ -43,8 +61,11 @@ it('sets a group role (not img, which conflicts with the canvas\'s focusable des
     [3, 4],
   ];
   await el.updateComplete;
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
   expect(el.getAttribute('role')).to.equal('group');
   expect(el.getAttribute('aria-label')).to.contain('2');
+  expect(canvas.getAttribute('role')).to.be.null;
+  expect(canvas.getAttribute('aria-label')).to.be.null;
 });
 
 it('does not overwrite an author-supplied role/aria-label', async () => {
@@ -797,8 +818,8 @@ describe('per-cell hover/focus/click + accessible values', () => {
     const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
     const canvas = el.shadowRoot!.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.tabIndex).to.equal(0);
-    expect(canvas.getAttribute('role')).to.equal('group');
-    expect(canvas.getAttribute('aria-label')).to.equal(el.getAttribute('aria-label'));
+    expect(canvas.getAttribute('role')).to.be.null;
+    expect(canvas.getAttribute('aria-label')).to.be.null;
     expect(canvas.getAttribute('aria-describedby')).to.equal('live-region');
   });
 
@@ -1127,7 +1148,7 @@ describe('annotation/overlay affordance', () => {
 });
 
 describe('role="group" fix + cellText formatter + locale bug fix', () => {
-  it('sets role="group" instead of role="img" (canvas has a focusable, keyboard-interactive descendant)', async () => {
+  it('sets role="group" on the host instead of role="img"', async () => {
     const el = (await fixture(html`<lr-heatmap
       .rowLabels=${['R1']}
       .colLabels=${['C1']}
@@ -1151,13 +1172,15 @@ describe('role="group" fix + cellText formatter + locale bug fix', () => {
     await el.updateComplete;
     expect(el.getAttribute('role')).to.equal('application');
     expect(el.getAttribute('aria-label')).to.equal('Late custom');
-    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.equal('Late custom');
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.be.null;
 
     el.removeAttribute('role');
     el.removeAttribute('aria-label');
     await el.updateComplete;
     expect(el.getAttribute('role')).to.equal('group');
     expect(el.getAttribute('aria-label')).to.contain('Heatmap of 1 × 1 cells');
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('role')).to.be.null;
+    expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')).to.be.null;
   });
 
   it('uses a custom cellText formatter for the tooltip and live-region text when provided', async () => {
@@ -2780,6 +2803,31 @@ describe('legendStops', () => {
       'events',
     );
   });
+});
+
+it('wraps long legend-stop, value-label, and annotation text inside a 320px allocation', async () => {
+  const token = `LEGEND_${'IDENTIFIER'.repeat(40)}`;
+  const wrapper = (await fixture(html`
+    <div style="inline-size: 320px; max-inline-size: 320px;">
+      <lr-heatmap
+        style="inline-size: 100%;"
+        .rowLabels=${['row']}
+        .colLabels=${['column']}
+        .values=${[[1]]}
+        .valueLabel=${token}
+        .legendStops=${[{ value: 1, color: 'rgb(1, 2, 3)', label: token }]}
+        .annotations=${[{ row: 0, col: 0, label: token }]}
+      ></lr-heatmap>
+    </div>
+  `)) as HTMLElement;
+  const el = wrapper.querySelector('lr-heatmap') as LyraHeatmap;
+  await el.updateComplete;
+  const legend = el.shadowRoot!.querySelector('[part="legend"]') as HTMLElement;
+  expect(legend.scrollWidth).to.be.at.most(Math.ceil(legend.getBoundingClientRect().width) + 1);
+  for (const part of ['legend-stop', 'legend-stop-label', 'legend-value-label', 'legend-annotation']) {
+    const node = legend.querySelector(`[part="${part}"]`) as HTMLElement;
+    expect(node.scrollWidth, part).to.be.at.most(Math.ceil(node.getBoundingClientRect().width) + 1);
+  }
 });
 
 describe('maxCellSize / minCellSize (fit-to-width clamps)', () => {

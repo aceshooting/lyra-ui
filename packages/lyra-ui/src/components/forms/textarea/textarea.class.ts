@@ -1,11 +1,13 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { FormAssociated } from '../../../internal/form-associated.js';
 import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { lengthViolations } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { spellcheckConverter } from '../../../internal/converters.js';
+import { sanitizeCssResize } from '../../../internal/safe-css.js';
 
 export type TextareaResize = 'none' | 'vertical' | 'both' | 'auto';
 export type TextareaWrap = 'hard' | 'soft' | 'off';
@@ -73,7 +75,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // `rows` itself (fitToContent() measures the live DOM scrollHeight, not this property).
   @property({ type: Number }) rows = 3;
   /** Native CSS `resize` behavior for the textarea, plus `'auto'`: a `ResizeObserver`-driven
-   *  grow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize="auto"`). */
+   *  grow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize="auto"`).
+   *  An invalid runtime value falls back to `'vertical'`. */
   @property() resize: TextareaResize = 'vertical';
   @property() placeholder = '';
   /** Forwards native read-only behavior to the internal textarea. The value remains focusable,
@@ -395,7 +398,8 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
       .join(' ');
     // resize="auto" grows via JS (fitToContent()); the native CSS resize property stays 'none' so
     // there's no manual drag handle fighting the automatic sizing, matching wa-textarea.
-    const cssResize = this.resize === 'auto' ? 'none' : this.resize;
+    const cssResize =
+      this.resize === 'auto' ? 'none' : sanitizeCssResize(this.resize, 'vertical');
     return html`
       <div part="form-control">
         <label part="form-control-label" for="textarea" ?hidden=${!hasLabel}>
@@ -406,7 +410,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
           part="textarea"
           rows=${this.rows}
           placeholder=${this.placeholder}
-          style=${`resize:${cssResize}`}
+          style=${styleMap({ resize: cssResize })}
           ?data-auto-resize=${this.resize === 'auto'}
           aria-label=${this.accessibleLabel ||
           (hasLabel ? nothing : this.placeholder || this.localize('textareaLabel'))}

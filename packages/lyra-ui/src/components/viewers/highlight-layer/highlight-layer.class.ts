@@ -1,16 +1,18 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
+import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
 import { styles } from './highlight-layer.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
 
 export interface HighlightLayerItem {
   id: string;
-  /** Percent-of-box coordinates (the `region` anchor convention). One item may span multiple rects
-   *  (a quote wrapping lines). */
+  /** Finite percent-of-box coordinates (the `region` anchor convention). One item may span
+   * multiple rects (a quote wrapping lines); invalid coordinates and negative sizes are omitted. */
   rects: { x: number; y: number; width: number; height: number }[];
   label?: string;
   tone?: LyraHighlightTone;
@@ -108,6 +110,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
    *  rendered animation duration, including theme and reduced-motion overrides. */
   flash(id: string): void {
     this.clearFlash();
+    if (!this.isConnected) return;
     const item = this.items.find((candidate) => candidate.id === id);
     if (!item) return;
     this.flashingItem = item;
@@ -139,10 +142,16 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this.flashingItem = null;
   }
 
+  private safeRects(item: HighlightLayerItem): SafePercentRect[] {
+    return item.rects
+      .map(sanitizePercentRect)
+      .filter((rect): rect is SafePercentRect => rect !== undefined);
+  }
+
   private itemIndexesWithRects(): number[] {
     const indexes: number[] = [];
     this.items.forEach((item, index) => {
-      if (item.rects.length > 0) indexes.push(index);
+      if (this.safeRects(item).length > 0) indexes.push(index);
     });
     return indexes;
   }
@@ -155,7 +164,9 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
       if (renderedIndexes.includes(focusedIndex)) return focusedIndex;
     }
     if (this.activeId) {
-      const activeIndex = this.items.findIndex((item) => item.id === this.activeId && item.rects.length > 0);
+      const activeIndex = this.items.findIndex(
+        (item) => item.id === this.activeId && this.safeRects(item).length > 0,
+      );
       if (activeIndex >= 0) return activeIndex;
     }
     return renderedIndexes[0]!;
@@ -211,13 +222,13 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     this.scheduleAfterUpdate(() => this.focusRect(nextIndex));
   }
 
-  private rectLabel(item: HighlightLayerItem, index: number): string {
+  private rectLabel(item: HighlightLayerItem, index: number, total: number): string {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     return item.label
       ? this.localize('highlightWithLabel', undefined, { label: item.label })
       : this.localize('highlightOfTotal', undefined, {
           index: numberFormat.format(index + 1),
-          total: numberFormat.format(this.items.length),
+          total: numberFormat.format(total),
         });
   }
 
@@ -225,9 +236,12 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
     if (this.items.length === 0) return nothing;
     const tabStop = this.tabStopIndex();
     const activeIndex = this.activeId
-      ? this.items.findIndex((item) => item.id === this.activeId && item.rects.length > 0)
+      ? this.items.findIndex(
+          (item) => item.id === this.activeId && this.safeRects(item).length > 0,
+        )
       : -1;
     const renderedIndexes = this.itemIndexesWithRects();
+    const renderedPosition = new Map(renderedIndexes.map((itemIndex, position) => [itemIndex, position]));
     const useActionList = this.interactive && renderedIndexes.length > 1;
     const ariaLabel = this.getAttribute('aria-label') || this.localize('highlightLayerLabel');
     return html`
@@ -238,7 +252,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
           // Rect coordinates are physical percent-of-box over content that never mirrors (a
           // rendered image/page), so position with physical left/top -- logical
           // inset-inline-start would flip the overlay under RTL while the content stays put.
-          return item.rects.map((rect, rectIndex) => {
+          return this.safeRects(item).map((rect, rectIndex) => {
             const isPrimary = rectIndex === 0;
             return html`
               ${this.interactive
@@ -254,11 +268,15 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
                       aria-hidden=${!isPrimary ? 'true' : nothing}
                       role=${isPrimary ? 'button' : nothing}
                       tabindex=${isPrimary ? (tabStop === index ? '0' : '-1') : nothing}
-                      aria-label=${isPrimary ? this.rectLabel(item, index) : nothing}
-                      style="left:calc(${rect.x}% + ${rect.width / 2}%);
-                        top:calc(${rect.y}% + ${rect.height / 2}%);
-                        width:max(${rect.width}%, var(--lr-icon-button-size));
-                        height:max(${rect.height}%, var(--lr-icon-button-size))"
+                      aria-label=${isPrimary
+                        ? this.rectLabel(item, renderedPosition.get(index) ?? 0, renderedIndexes.length)
+                        : nothing}
+                      style=${styleMap({
+                        left: `calc(${rect.x}% + ${rect.width / 2}%)`,
+                        top: `calc(${rect.y}% + ${rect.height / 2}%)`,
+                        width: `max(${rect.width}%, var(--lr-icon-button-size))`,
+                        height: `max(${rect.height}%, var(--lr-icon-button-size))`,
+                      })}
                       @click=${() => this.onRectClick(item.id)}
                       @focus=${isPrimary ? () => this.onRectFocus(item) : nothing}
                       @keydown=${isPrimary ? (e: KeyboardEvent) => this.onRectKeyDown(e, index) : nothing}
@@ -275,7 +293,12 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
                 ?data-active=${isActive}
                 ?data-flash=${isFlash}
                 aria-hidden="true"
-                style="left:${rect.x}%; top:${rect.y}%; width:${rect.width}%; height:${rect.height}%"
+                style=${styleMap({
+                  left: `${rect.x}%`,
+                  top: `${rect.y}%`,
+                  width: `${rect.width}%`,
+                  height: `${rect.height}%`,
+                })}
               ></span>
             `;
           });
@@ -285,7 +308,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
               <div part="highlight-actions">
                 ${renderedIndexes.map((index) => {
                   const item = this.items[index]!;
-                  const label = this.rectLabel(item, index);
+                  const label = this.rectLabel(item, renderedPosition.get(index) ?? 0, renderedIndexes.length);
                   return html`
                     <button
                       part="highlight-action"

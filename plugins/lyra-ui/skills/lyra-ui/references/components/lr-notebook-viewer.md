@@ -33,9 +33,10 @@ JSON text; wins over `src` and is parsed (and validated) synchronously. `name: s
 accessible label, and matched against a `fragment` anchor's cell id. `outputCollapseLines: number =
 40` (attribute `output-collapse-lines`) — a plain-text output longer than this many lines renders
 collapsed behind a toggle; `0` disables collapsing. `maxHeight: string = ''` (attribute
-`max-height`) — once set, the notebook scrolls internally past this height. `anchorKinds` is a
-readonly `['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the
-shared anchor-target contract).
+`max-height`) — once set, the notebook scrolls internally past this height; invalid CSS
+`max-height` values, declaration breaks, and `url()` are ignored. `anchorKinds` is a readonly
+`['node-path', 'fragment']` (this viewer's supported `LyraAnchor.kind` values for the shared
+anchor-target contract).
 
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
@@ -86,3 +87,6 @@ the element or on any ancestor.
 
 A notebook major version outside 4.0–4.5, an invalid shape, or more than 2,000 cells renders a
 localized error and fires `lr-render-error` instead of the notebook.
+
+PNG/JPEG outputs use their `text/plain` representation as alt text, falling back to a localized
+code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the same fallback.

@@ -32,6 +32,9 @@ export interface LyraSourceListEventMap {
  * hidden) while collapsed, via the native `hidden` attribute on
  * `[part="list"]` — a screen reader user tabbing past the header never lands
  * on off-screen source cards they can't currently see.
+ * While connected, assigned children temporarily receive `role="listitem"`.
+ * Live author role changes are retained and restored when a child is removed or the list detaches;
+ * reconnecting reapplies list ownership.
  *
  * @customElement lr-source-list
  * @slot - `<lr-source-card>` elements (or any content, though the card
@@ -66,8 +69,31 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
 
   private readonly listId = nextId('source-list-region');
   private readonly previousRoles = new Map<Element, string | null>();
+  private readonly roleObserver = new MutationObserver((records) => {
+    const changed = new Set<Element>();
+    for (const record of records) {
+      const element = record.target as Element;
+      if (!this.previousRoles.has(element)) continue;
+      this.previousRoles.set(element, element.getAttribute('role'));
+      changed.add(element);
+    }
+    if (changed.size === 0) return;
+    this.roleObserver.disconnect();
+    for (const element of changed) element.setAttribute('role', 'listitem');
+    this.observeRoleChanges();
+  });
+
+  private observeRoleChanges(): void {
+    if (!this.isConnected) return;
+    this.roleObserver.observe(this, {
+      attributes: true,
+      attributeFilter: ['role'],
+      subtree: true,
+    });
+  }
 
   private syncItemRoles(elements: Element[]): void {
+    this.roleObserver.disconnect();
     const assigned = new Set(elements);
     for (const [element, role] of this.previousRoles) {
       if (assigned.has(element)) continue;
@@ -79,11 +105,29 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
       if (!this.previousRoles.has(element)) this.previousRoles.set(element, element.getAttribute('role'));
       element.setAttribute('role', 'listitem');
     }
+    this.observeRoleChanges();
+  }
+
+  private reconcileAssignedItems(): void {
+    const slot = this.shadowRoot?.querySelector('slot') as HTMLSlotElement | null;
+    if (!slot) return;
+    const elements = slot.assignedElements({ flatten: true });
+    this.slottedCount = elements.length;
+    this.syncItemRoles(elements);
+  }
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.observeRoleChanges();
+    if (this.hasUpdated) {
+      void this.updateComplete.then(() => this.reconcileAssignedItems());
+    }
   }
 
   override disconnectedCallback(): void {
-    super.disconnectedCallback();
+    this.roleObserver.disconnect();
     this.syncItemRoles([]);
+    super.disconnectedCallback();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -105,10 +149,7 @@ export class LyraSourceList extends LyraElement<LyraSourceListEventMap> {
     // Fallback reconciliation for slot-forwarding / engines that don't fire
     // `slotchange` for content present at parse time -- same idiom as
     // `<lr-empty>`'s `firstUpdated`.
-    const slot = this.shadowRoot!.querySelector('slot') as HTMLSlotElement;
-    const elements = slot.assignedElements({ flatten: true });
-    this.slottedCount = elements.length;
-    this.syncItemRoles(elements);
+    this.reconcileAssignedItems();
   }
 
   /** Read-only, live-updated count of the currently-slotted children —

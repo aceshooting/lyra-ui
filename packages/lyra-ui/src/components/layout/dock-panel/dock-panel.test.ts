@@ -286,6 +286,55 @@ it("ignores a pointermove/pointerup from an unrelated pointerId mid-drag", async
   window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1 }));
 });
 
+it("aborts an active pointer resize when collapsed is enabled mid-gesture", async () => {
+  const el = await dockedFixture(
+    'size="300px" min-size="100px" max-size="500px" collapsible'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  let events = 0;
+  el.addEventListener("lr-resize", () => (events += 1));
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 31,
+      clientX: 200,
+    })
+  );
+
+  el.collapsed = true;
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 31, clientX: 100 })
+  );
+
+  expect(el.size).to.equal("300px");
+  expect(events).to.equal(0);
+});
+
+it("aborts an active pointer resize when resizable is revoked mid-gesture", async () => {
+  const el = await dockedFixture(
+    'size="300px" min-size="100px" max-size="500px"'
+  );
+  await elementUpdated(el);
+  const handle = el.shadowRoot!.querySelector('[part="handle"]') as HTMLElement;
+  handle.setPointerCapture = () => {};
+  handle.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      bubbles: true,
+      pointerId: 32,
+      clientX: 200,
+    })
+  );
+
+  el.resizable = false;
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 32, clientX: 100 })
+  );
+
+  expect(el.size).to.equal("300px");
+});
+
 it("does not throw on a stray pointermove/pointerup after disconnect mid-drag", async () => {
   const el = await dockedFixture('size="300px"');
   await elementUpdated(el);

@@ -15,6 +15,16 @@ const sample = {
   ],
 };
 const src = `data:application/geo+json,${encodeURIComponent(JSON.stringify(sample))}`;
+const narrowSample = {
+  ...sample,
+  features: sample.features.map((feature, index) => ({
+    ...feature,
+    properties: index === 0
+      ? { publicMetadata: 'international-analytical-engine-research-observation-zone-'.repeat(24) }
+      : feature.properties,
+  })),
+};
+const narrowSrc = `data:application/geo+json,${encodeURIComponent(JSON.stringify(narrowSample))}`;
 
 export const Default: Story = {
   render: () => html`<lr-geojson-view src=${src} name="zones.geojson"></lr-geojson-view>`,
@@ -22,7 +32,7 @@ export const Default: Story = {
 
 export const Empty: Story = { render: () => html`<lr-geojson-view></lr-geojson-view>` };
 
-/** Baseline narrow-allocation coverage with a long map name. */
+/** Narrow-allocation coverage with a long map name and long unbroken serialized metadata. */
 export const Narrow320: Story = {
-  render: () => html`<div style="max-width:320px"><lr-geojson-view src=${src} name="International analytical-engine research observation zones.geojson"></lr-geojson-view></div>`,
+  render: () => html`<div style="inline-size:320px;max-inline-size:100%"><lr-geojson-view src=${narrowSrc} name="International analytical-engine research observation zones.geojson"></lr-geojson-view></div>`,
 };

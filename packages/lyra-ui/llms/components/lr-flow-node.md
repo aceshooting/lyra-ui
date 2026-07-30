@@ -6,7 +6,7 @@
 - **Class** `LyraFlowNode`, also available unregistered from `@aceshooting/lyra-ui/components/data/flow-node/flow-node.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 12 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -56,7 +56,13 @@ hijacking the library-wide `--lr-color-brand` token and repainting everything el
 `status="running"`, independent of `--lr-flow-node-selected-border` so a consumer can retint just one
 of the two states without the other following along — and `--lr-flow-node-running-glow` (default
 `var(--lr-color-brand-quiet)`) — the box-shadow color of the running-state ring around the card, and
-the pulse keyframes' peak color.
+the pulse keyframes' peak color. The status dot has independent
+`--lr-flow-node-status-{pending|running|success|error|denied}-color` hooks, defaulting respectively
+to the shared border-strong, brand, success, danger, and warning tokens;
+`--lr-flow-node-status-color` controls the no-status fallback. The expanded status names are
+`--lr-flow-node-status-pending-color`, `--lr-flow-node-status-running-color`,
+`--lr-flow-node-status-success-color`, `--lr-flow-node-status-error-color`, and
+`--lr-flow-node-status-denied-color`.
 
 **Optional peer deps:** none.
 

@@ -26,6 +26,34 @@ describe('lr-html-viewer', () => {
       expect(el.shadowRoot!.querySelector('[part="html"]')!.getAttribute('aria-label')).to.equal('Report');
     } finally { window.fetch = original; }
   });
+  it('contains fixed-position sanitized content without changing ordinary inline formatting', async () => {
+    const original = window.fetch;
+    window.fetch = (() => Promise.resolve(response(`
+      <span data-fixed style="position:fixed;inset:0;z-index:2147483647">Overlay</span>
+      <p>Ordinary <strong data-inline>inline text</strong>.</p>
+    `))) as typeof window.fetch;
+    try {
+      const el = (await fixture(html`
+        <lr-html-viewer
+          style="inline-size:240px"
+          src="https://example.test/contained.html"
+        ></lr-html-viewer>
+      `)) as LyraHtmlViewer;
+      await waitUntil(() => el.shadowRoot!.querySelector('[data-fixed]') !== null);
+      const surface = el.shadowRoot!.querySelector('[part="html"]') as HTMLElement;
+      const fixed = surface.querySelector('[data-fixed]') as HTMLElement;
+      const inline = surface.querySelector('[data-inline]') as HTMLElement;
+      const surfaceRect = surface.getBoundingClientRect();
+      const fixedRect = fixed.getBoundingClientRect();
+
+      expect(getComputedStyle(surface).contain).to.equal('paint');
+      expect(fixedRect.left).to.be.at.least(surfaceRect.left);
+      expect(fixedRect.right).to.be.at.most(surfaceRect.right);
+      expect(getComputedStyle(inline).display).to.equal('inline');
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('forwards a host aria-label to the role="document" content region, winning over the localized default', async () => {
     const original = window.fetch;
     window.fetch = (() => Promise.resolve(response('<p>Safe</p>'))) as typeof window.fetch;
@@ -120,6 +148,18 @@ describe('lr-html-viewer', () => {
       await expect(el).to.be.accessible();
     } finally { window.fetch = original; }
   });
+});
+
+it('validates maxHeight before assigning the base custom property', async () => {
+  const el = await fixture<LyraHtmlViewer>(html`<lr-html-viewer></lr-html-viewer>`);
+  el.maxHeight = '10rem;position:fixed';
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(base.style.position).to.equal('');
+  expect(base.style.getPropertyValue('--lr-html-viewer-max-height')).to.equal('');
+  el.maxHeight = 'calc(10rem + 2px)';
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-html-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });
 
 describe('HTML registry', () => {

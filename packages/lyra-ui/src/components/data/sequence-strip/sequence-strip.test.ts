@@ -12,6 +12,24 @@ const items = [
   { id: '3', category: 'text' },
 ];
 
+it('rejects declaration-breaking and url category paint values', async () => {
+  const el = await fixture<LyraSequenceStrip>(html`<lr-sequence-strip show-legend></lr-sequence-strip>`);
+  el.items = [{ id: '1', category: 'bad' }];
+  el.categories = [{ key: 'bad', color: 'red;position:fixed', label: 'Bad' }];
+  await el.updateComplete;
+  const cell = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  const swatch = el.shadowRoot!.querySelector('[part="legend-swatch"]') as HTMLElement;
+  expect(cell.style.position).to.equal('');
+  expect(cell.style.backgroundColor).to.equal('transparent');
+  expect(swatch.style.position).to.equal('');
+
+  el.categories = [{ key: 'bad', color: 'var(--lr-color-brand)', label: 'Good' }];
+  await el.updateComplete;
+  expect((el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement).style.backgroundColor).to.equal(
+    'var(--lr-color-brand)',
+  );
+});
+
 it('defaults to empty items/categories and orientation horizontal', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   expect(el.items).to.deep.equal([]);
@@ -138,6 +156,7 @@ describe('hover tooltip', () => {
     cells[0]!.focus();
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="tooltip"]')!.textContent!.trim()).to.equal('Turn 1: text');
+    expect(cells[0]!.getAttribute('aria-describedby')).to.be.null;
 
     cells[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     await el.updateComplete;
