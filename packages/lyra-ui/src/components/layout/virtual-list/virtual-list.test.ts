@@ -2263,3 +2263,49 @@ it("clamps a non-finite scrollToIndex instead of silently discarding the scroll 
   expect(base.scrollTop, "NaN clamps to index 0, not to a NaN offset").to.equal(0);
   expect(Number.isFinite(base.scrollTop)).to.be.true;
 });
+
+it("does not rescan the whole items array for active-id on every scroll frame", async () => {
+  // `activeId` resolves to an index by scanning `items` with `keyOf`. `render()` re-runs on every
+  // scroll frame (`listScrollTop` is reactive state), so an unmemoized scan is O(items) per frame
+  // -- on a 50k-row list that is 50k `keyFunction` calls per frame, in 10 consumer components.
+  let keyCalls = 0;
+  const countingKey = (item: unknown) => {
+    keyCalls++;
+    return item as number;
+  };
+  const items = Array.from({ length: 5000 }, (_, i) => i);
+  // Fixed `row-height` + `overscan="0"`: no dynamic row measurement, so this stays off the
+  // ResizeObserver-loop path a 5000-row auto-measured list would otherwise trip.
+  const el = (await fixture(html`
+    <lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      overscan="0"
+      active-id="4900"
+      .items=${items}
+      .keyFunction=${countingKey}
+      .renderItem=${renderText}
+    ></lr-virtual-list>
+  `)) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  keyCalls = 0;
+
+  // Ten scroll frames. Neither `items` nor `activeId` changes, so the resolved index cannot have
+  // changed either -- the scan must not repeat.
+  for (let frame = 0; frame < 10; frame++) {
+    base.scrollTop = 100 + frame * 40;
+    base.dispatchEvent(new Event("scroll"));
+    await nextFrame();
+    await el.updateComplete;
+  }
+
+  // Rendering the visible window legitimately calls keyOf per *rendered* row (a few dozen), so
+  // this is a generous ceiling that still fails hard on a full 5000-row rescan per frame.
+  expect(
+    keyCalls,
+    `keyFunction ran ${keyCalls} times across 10 scroll frames of a 5000-item list`
+  ).to.be.lessThan(2000);
+});

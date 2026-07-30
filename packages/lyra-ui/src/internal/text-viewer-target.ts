@@ -2,7 +2,13 @@ import { type PropertyValues } from 'lit';
 import { state } from 'lit/decorators.js';
 import { LyraElement } from './lyra-element.js';
 import { DocumentAnchorTarget, type LyraAnchorTarget, type LyraAnchorTargetEventMap } from './anchor-target.js';
-import { findTextQuoteRanges, resolveTextQuote, scopeFromElement } from './text-quote.js';
+import {
+  findTextQuoteMatches,
+  rangeFromTextQuoteMatch,
+  resolveTextQuote,
+  scopeFromElement,
+  type TextQuoteMatch,
+} from './text-quote.js';
 import { acquireHighlightHandle, type HighlightHandle } from './text-highlights.js';
 import type {
   LyraAnchor,
@@ -30,6 +36,12 @@ export interface LyraTextViewerTarget extends LyraAnchorTarget {
  * emitting selection/search events, and painting both host highlights and search matches through
  * the same Custom Highlight/`<mark>` fallback used by the richer document viewers.
  */
+/** How many search matches are materialized into live Ranges at once. A live Range is revalidated
+ *  by the engine on every DOM mutation in its document, so retaining one per match turned a
+ *  one-letter query over a large document into a multi-thousand-fold mutation slowdown. The window
+ *  only bounds *painting*: `matchCount` and next/previous still cover every match. */
+const SEARCH_PAINT_WINDOW = 200;
+
 export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
   Base: T,
 ): T & Constructor<LyraTextViewerTarget & { renderAnchorLiveRegion(): unknown }> {
@@ -37,7 +49,11 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
     override readonly anchorKinds: readonly LyraAnchorKind[] = ['text-quote', 'fragment'];
 
     @state() private searchQuery = '';
-    @state() private searchRanges: Range[] = [];
+    /** Matches as inert offsets, never as retained live `Range`s -- see `TextQuoteMatch`. The
+     *  full set is kept so `matchCount` and next/previous stay exact; only `SEARCH_PAINT_WINDOW`
+     *  of them are materialized into Ranges at a time. */
+    @state() private searchMatches: TextQuoteMatch[] = [];
+    private paintedRangeCount = 0;
     @state() private searchActiveIndex = -1;
 
     private selectionRoot: Element | null = null;
@@ -81,7 +97,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
         !changed.has('searchQuery') &&
         (searchText !== this.lastSearchText || localeChanged)
       ) {
-        // updateSearchRanges() assigns reactive searchRanges. Defer that assignment until this
+        // updateSearchRanges() assigns reactive searchMatches. Defer that assignment until this
         // update has completed; doing it directly from updated() schedules a second Lit update
         // from inside the first one and emits Lit's change-in-update warning. This queue is
         // deliberately separate from LyraElement's coalesced viewer-load queue: a locale and
@@ -127,20 +143,20 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       this.lastSearchLocale = '';
       if (!(await this.waitForUpdateOrDisconnect())) return 0;
       this.updateSearchRanges();
-      this.searchActiveIndex = this.searchRanges.length > 0 ? 0 : -1;
+      this.searchActiveIndex = this.searchMatches.length > 0 ? 0 : -1;
       this.paintRanges();
       this.emit('lr-search-change', {
         query: this.searchQuery,
-        matchCount: this.searchRanges.length,
+        matchCount: this.searchMatches.length,
         activeIndex: this.searchActiveIndex,
       });
       await this.scrollSearchMatch();
-      return this.searchRanges.length;
+      return this.searchMatches.length;
     }
 
     async searchNext(): Promise<boolean> {
-      if (!this.searchRanges.length) return false;
-      this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchRanges.length;
+      if (!this.searchMatches.length) return false;
+      this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
       this.paintRanges();
       this.emitSearchChange();
       await this.scrollSearchMatch();
@@ -148,8 +164,8 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
     }
 
     async searchPrevious(): Promise<boolean> {
-      if (!this.searchRanges.length) return false;
-      this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchRanges.length) % this.searchRanges.length;
+      if (!this.searchMatches.length) return false;
+      this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
       this.paintRanges();
       this.emitSearchChange();
       await this.scrollSearchMatch();
@@ -160,7 +176,7 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       this.searchQuery = '';
       this.lastSearchText = '';
       this.lastSearchLocale = '';
-      this.searchRanges = [];
+      this.searchMatches = [];
       this.searchActiveIndex = -1;
       this.paintRanges();
       this.emit('lr-search-change', { query: '', matchCount: 0, activeIndex: -1 });
@@ -171,8 +187,8 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       const scope = root ? scopeFromElement(root) : null;
       this.lastSearchText = scope?.text ?? '';
       this.lastSearchLocale = this.effectiveLocale;
-      this.searchRanges = scope
-        ? findTextQuoteRanges(scope, this.searchQuery, this.effectiveLocale)
+      this.searchMatches = scope
+        ? findTextQuoteMatches(scope, this.searchQuery, this.effectiveLocale)
         : [];
     }
 
@@ -184,8 +200,8 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
         if (!this.isConnected || !this.searchQuery) return;
         const previousIndex = this.searchActiveIndex;
         this.updateSearchRanges();
-        this.searchActiveIndex = this.searchRanges.length > 0
-          ? Math.min(Math.max(previousIndex, 0), this.searchRanges.length - 1)
+        this.searchActiveIndex = this.searchMatches.length > 0
+          ? Math.min(Math.max(previousIndex, 0), this.searchMatches.length - 1)
           : -1;
         this.paintRanges();
         this.emitSearchChange();
@@ -195,13 +211,13 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
     private emitSearchChange(): void {
       this.emit('lr-search-change', {
         query: this.searchQuery,
-        matchCount: this.searchRanges.length,
+        matchCount: this.searchMatches.length,
         activeIndex: this.searchActiveIndex,
       });
     }
 
     private async scrollSearchMatch(): Promise<void> {
-      const range = this.searchRanges[this.searchActiveIndex];
+      const range = this.activeSearchRange();
       if (!range) return;
       const target = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
         ? range.commonAncestorContainer as Element
@@ -232,6 +248,32 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
       return false;
     }
 
+    /** The slice of `searchMatches` painted right now: the active match plus the neighbours on
+     *  either side, clamped to the array. Wrapping past either end re-centres the window. */
+    private searchPaintWindow(): TextQuoteMatch[] {
+      if (this.searchMatches.length <= SEARCH_PAINT_WINDOW) return this.searchMatches;
+      const centre = this.searchActiveIndex < 0 ? 0 : this.searchActiveIndex;
+      const half = SEARCH_PAINT_WINDOW >> 1;
+      const start = Math.max(0, Math.min(centre - half, this.searchMatches.length - SEARCH_PAINT_WINDOW));
+      return this.searchMatches.slice(start, start + SEARCH_PAINT_WINDOW);
+    }
+
+    /** Materializes just the active match. Separate from the painted window because the active
+     *  Range is also what `scrollSearchMatch()` scrolls to. */
+    private activeSearchRange(): Range | null {
+      const match = this.searchMatches[this.searchActiveIndex];
+      if (!match) return null;
+      const root = this.textContentRoot();
+      return root ? rangeFromTextQuoteMatch(scopeFromElement(root), match) : null;
+    }
+
+    /** How many live Ranges the last paint actually retained. `protected`, not public API: it
+     *  exists so the shared search contract test can assert the window stays bounded, which is
+     *  otherwise only observable through engine-internal Highlight registry state. */
+    protected searchPaintedRangeCount(): number {
+      return this.paintedRangeCount;
+    }
+
     private paintRanges(): void {
       if (!this.isConnected) {
         this.searchHandle?.release();
@@ -260,14 +302,28 @@ export function TextViewerTarget<T extends Constructor<LyraElement<any>>>(
           );
         }
       }
-      for (const range of this.searchRanges) add('accent', range);
+      // Materialize only a bounded window around the active match. Everything outside it is off
+      // screen by construction (the viewport can't show 800 matches at once), and each Range
+      // handed to the Highlight API is retained live for as long as it is painted.
+      const scope = this.searchMatches.length > 0 ? scopeFromElement(root) : null;
+      let painted = 0;
+      if (scope) {
+        for (const match of this.searchPaintWindow()) {
+          const range = rangeFromTextQuoteMatch(scope, match);
+          if (range) {
+            add('accent', range);
+            painted++;
+          }
+        }
+      }
+      this.paintedRangeCount = painted;
       const tones: LyraHighlightTone[] = ['accent', 'success', 'warning', 'danger', 'neutral'];
       for (const tone of tones) this.searchHandle.setRanges(tone, rangesByTone.get(tone) ?? []);
       const active = this.highlights.find((highlight: LyraHighlight) => highlight.id === this.activeHighlightId);
       this.searchHandle.setActive(
         active?.anchor.kind === 'text-quote'
           ? resolveTextQuote(scopeFromElement(root), active.anchor, this.effectiveLocale)
-          : this.searchRanges[this.searchActiveIndex] ?? null,
+          : this.activeSearchRange(),
       );
     }
   }

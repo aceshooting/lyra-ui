@@ -417,6 +417,41 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private readonly observedRowKeys = new WeakMap<HTMLElement, string>();
   private readonly observedRowIndices = new WeakMap<HTMLElement, number>();
   private scrollRafId?: number;
+
+  /** Reference-keyed memo for `activeId`'s resolved index. `render()` re-runs on every scroll
+   *  frame (`scrollTop` drives reactive state), and resolving `activeId` means scanning `items`
+   *  with `keyOf` -- O(items) *per frame*, for a component whose entire purpose is large lists.
+   *  The scan's inputs are only `items`, `activeId`, and `keyFunction`, none of which a scroll
+   *  changes, so cache on their identities. `items` is `attribute: false` and only ever changes by
+   *  reassignment, making reference equality a sound key (same rationale as `<lr-table>`'s row
+   *  memo). `items` is a mutable array, so the length is keyed too: that catches an in-place
+ *  insert/remove followed by a manual `requestUpdate()`. An in-place *reorder* of the same length
+ *  is not detected -- the same identity caveat `keyFunction` already documents. */
+  private activeIndexFor?: readonly unknown[];
+  private activeIndexForLength = -1;
+  private activeIndexForId: VirtualListKey | "" = "";
+  private activeIndexForKeyFn?: (item: unknown, index: number) => string | number;
+  private activeIndexCache = -1;
+
+  /** `activeId`'s index in `items`, or -1. Memoized -- see `activeIndexFor`. */
+  private get activeIndex(): number {
+    if (this.activeId === "") return -1;
+    if (
+      this.activeIndexFor === this.items &&
+      this.activeIndexForLength === this.items.length &&
+      Object.is(this.activeIndexForId, this.activeId) &&
+      this.activeIndexForKeyFn === this.keyFunction
+    )
+      return this.activeIndexCache;
+    this.activeIndexFor = this.items;
+    this.activeIndexForLength = this.items.length;
+    this.activeIndexForId = this.activeId;
+    this.activeIndexForKeyFn = this.keyFunction;
+    this.activeIndexCache = this.items.findIndex((item, index) =>
+      Object.is(this.keyOf(item, index), this.activeId)
+    );
+    return this.activeIndexCache;
+  }
   private pendingScrollTop: number | null = null;
   /** Normalized once per `groups`/`items` assignment, then shared by marker and sticky paths. */
   private normalizedGroups: VirtualListGroup[] = [];
@@ -790,10 +825,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private scrollActiveIntoView(): void {
-    if (this.activeId === "") return;
-    const index = this.items.findIndex((item, i) =>
-      Object.is(this.keyOf(item, i), this.activeId)
-    );
+    const index = this.activeIndex;
     if (index < 0) return;
     const base = this.scrollContainer;
     if (!base) return;
@@ -1137,12 +1169,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // Native keyboard/anchor scrolling gets the same treatment as the programmatic paths, from one
     // declaration -- and the attribute is absent entirely while there is no sticky layer.
     const stickyInset = this.stickyInset;
-    const activeIndex =
-      this.activeId === ""
-        ? -1
-        : this.items.findIndex((item, index) =>
-            Object.is(this.keyOf(item, index), this.activeId)
-          );
+    const activeIndex = this.activeIndex;
 
     return html`
       <div

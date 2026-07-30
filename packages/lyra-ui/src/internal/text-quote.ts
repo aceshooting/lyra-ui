@@ -414,12 +414,38 @@ export function resolveTextQuote(
 /** Returns every DOM range matching a normalized text query, in document order. Used by
  * text-oriented viewers to implement search navigation without losing the normalized-to-DOM
  * offset mapping that text-quote anchors already use. */
-export function findTextQuoteRanges(scope: TextQuoteScope, query: string, locale?: string): Range[] {
+/** A match as plain offsets into `scope.text`. Unlike a `Range` these are inert numbers: holding
+ *  thousands of them costs nothing, whereas every retained live `Range` must be revalidated by the
+ *  engine on every DOM mutation in its document. Callers that keep a whole result set around (a
+ *  find-in-page bar over a large document, where a one-letter query matches thousands of times)
+ *  should hold these and materialize a `Range` only for what they actually paint. */
+export interface TextQuoteMatch {
+  start: number;
+  end: number;
+}
+
+/** Every occurrence of `query` in `scope`, as offsets. See `TextQuoteMatch` for why a caller
+ *  retaining the full result set should prefer this over `findTextQuoteRanges`. */
+export function findTextQuoteMatches(
+  scope: TextQuoteScope,
+  query: string,
+  locale?: string,
+): TextQuoteMatch[] {
   const needle = normalizeQuoteText(query);
   if (!needle) return [];
+  return findAllOccurrences(scope.text, needle, true, locale).map(({ start, end }) => ({ start, end }));
+}
+
+/** Materializes one `TextQuoteMatch` into a live `Range`, or null if the scope no longer covers
+ *  those offsets (the document changed since the match was found). */
+export function rangeFromTextQuoteMatch(scope: TextQuoteScope, match: TextQuoteMatch): Range | null {
+  return rangeFromOffsets(scope, match.start, match.end);
+}
+
+export function findTextQuoteRanges(scope: TextQuoteScope, query: string, locale?: string): Range[] {
   const ranges: Range[] = [];
-  for (const occurrence of findAllOccurrences(scope.text, needle, true, locale)) {
-    const range = rangeFromOffsets(scope, occurrence.start, occurrence.end);
+  for (const match of findTextQuoteMatches(scope, query, locale)) {
+    const range = rangeFromOffsets(scope, match.start, match.end);
     if (range) ranges.push(range);
   }
   return ranges;

@@ -1,4 +1,4 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import './archive-viewer/archive-viewer.js';
 import './calendar-viewer/calendar-viewer.js';
 import './contact-viewer/contact-viewer.js';
@@ -50,5 +50,52 @@ it('keeps every text-viewer search API safe and eventful before content is loade
       { query: '__definitely_absent__', matchCount: 0, activeIndex: -1 },
       { query: '', matchCount: 0, activeIndex: -1 },
     ]);
+  }
+});
+
+it('bounds retained live Ranges while still counting and navigating every match', async () => {
+  // Each retained live `Range` must be revalidated by the engine on every DOM mutation in its
+  // document, so holding one per match made a one-letter query over a large document degrade every
+  // subsequent mutation. The mixin must keep matches as inert offsets and paint only a bounded
+  // window -- without capping what it *reports* or what the user can navigate to.
+  const body = 'the quick brown fox jumps over the lazy dog. '.repeat(400);
+  const eml = [
+    'From: Ada <ada@example.test>',
+    'Subject: Long note',
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    body,
+    '',
+  ].join('\r\n');
+
+  const originalFetch = window.fetch;
+  window.fetch = (() =>
+    Promise.resolve(
+      new Response(eml, { status: 200, headers: { 'content-type': 'message/rfc822' } }),
+    )) as typeof window.fetch;
+  try {
+    const viewer = (await fixture(
+      html`<lr-email-viewer src="https://example.test/message.eml"></lr-email-viewer>`,
+    )) as HTMLElement & LyraTextViewerTarget;
+    await waitUntil(() => viewer.shadowRoot!.querySelector('[part="body"]') !== null);
+
+    // 'the' twice per sentence * 400 sentences; the subject/headers add none.
+    const total = await viewer.search('the');
+    expect(total, 'every match is counted, not just the painted window').to.equal(800);
+
+    const seam = viewer as unknown as { searchPaintedRangeCount(): number };
+    const painted = seam.searchPaintedRangeCount();
+    expect(painted, `painted ${painted} live Ranges for ${total} matches`).to.be.lessThan(total);
+    expect(painted, 'a bounded window still has to paint something').to.be.greaterThan(0);
+
+    // Navigation reaches matches outside the initially painted window, and the window follows
+    // instead of growing.
+    for (let i = 0; i < 5; i++) expect(await viewer.searchPrevious()).to.be.true;
+    expect(
+      seam.searchPaintedRangeCount(),
+      'the painted window stays bounded after wrapping to the end',
+    ).to.be.lessThan(total);
+  } finally {
+    window.fetch = originalFetch;
   }
 });
