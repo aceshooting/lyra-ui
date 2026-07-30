@@ -866,3 +866,285 @@ it("pins overflow-x alongside overflow-y on the listbox so the horizontal axis n
   await el.updateComplete;
   expect(getComputedStyle(listbox(el)).overflowX).to.not.equal('visible');
 });
+
+// -- Keyboard, pointer, focus and slot contracts ----------------------------
+// Closed-dropdown mode (a non-empty catalog with allow-custom unset) drives the trigger button;
+// setting allow-custom switches the same component to the free-text combobox input.
+
+describe('closed-dropdown keyboard contract', () => {
+  const open = async (el: LyraVoicePicker): Promise<void> => {
+    trigger(el).focus();
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    await el.updateComplete;
+  };
+  const press = async (el: LyraVoicePicker, key: string): Promise<KeyboardEvent> => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    trigger(el).dispatchEvent(event);
+    await el.updateComplete;
+    return event;
+  };
+  const active = (el: LyraVoicePicker): number => (el as unknown as { activeIndex: number }).activeIndex;
+
+  it('ArrowDown opens the closed listbox, then walks down and clamps at the last row', async () => {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    expect(el.open).to.be.false;
+    await open(el);
+    expect(el.open).to.be.true;
+    expect(active(el)).to.equal(-1);
+    await press(el, 'ArrowDown');
+    expect(active(el)).to.equal(0);
+    await press(el, 'ArrowDown');
+    expect(active(el)).to.equal(1);
+    await press(el, 'ArrowDown');
+    expect(active(el), 'clamps at rows.length - 1').to.equal(1);
+  });
+
+  it('ArrowUp opens the closed listbox, then walks up and clamps at the first row', async () => {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    await el.updateComplete;
+    expect(el.open, 'ArrowUp on a closed picker opens it rather than moving').to.be.true;
+    await press(el, 'End');
+    expect(active(el)).to.equal(1);
+    await press(el, 'ArrowUp');
+    expect(active(el)).to.equal(0);
+    await press(el, 'ArrowUp');
+    expect(active(el), 'clamps at 0').to.equal(0);
+  });
+
+  it('Home and End jump to the first and last row, and only while open', async () => {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    const closed = await press(el, 'Home');
+    expect(closed.defaultPrevented, 'Home is inert while closed').to.be.false;
+    expect(el.open).to.be.false;
+    await open(el);
+    const end = await press(el, 'End');
+    expect(end.defaultPrevented).to.be.true;
+    expect(active(el)).to.equal(1);
+    const home = await press(el, 'Home');
+    expect(home.defaultPrevented).to.be.true;
+    expect(active(el)).to.equal(0);
+  });
+
+  it('Enter and Space commit the active row, and close without committing when there is none', async () => {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    await open(el);
+    const dismissed = await press(el, 'Enter');
+    expect(dismissed.defaultPrevented).to.be.true;
+    expect(el.open, 'Enter with no active row just closes').to.be.false;
+    expect(el.value).to.equal('');
+
+    await open(el);
+    await press(el, 'ArrowDown');
+    const changed = oneEvent(el, 'lr-change');
+    const committed = await press(el, ' ');
+    expect(committed.defaultPrevented).to.be.true;
+    expect((await changed).detail).to.deep.equal({ value: 'alloy', inCatalog: true });
+    expect(el.value).to.equal('alloy');
+    expect(el.open).to.be.false;
+  });
+
+  it('Escape closes an open listbox and is inert while already closed', async () => {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    const inert = await press(el, 'Escape');
+    expect(inert.defaultPrevented).to.be.false;
+    await open(el);
+    const dismiss = await press(el, 'Escape');
+    expect(dismiss.defaultPrevented).to.be.true;
+    expect(el.open).to.be.false;
+  });
+
+  it('ignores an unhandled key entirely', async () => {
+    const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+    await open(el);
+    const tab = await press(el, 'Tab');
+    expect(tab.defaultPrevented).to.be.false;
+    expect(el.open).to.be.true;
+  });
+});
+
+describe('free-text keyboard contract', () => {
+  const freeText = (): Promise<LyraVoicePicker> =>
+    fixture(html`<lr-voice-picker .catalog=${CATALOG} allow-custom></lr-voice-picker>`) as Promise<LyraVoicePicker>;
+  const press = async (el: LyraVoicePicker, key: string): Promise<KeyboardEvent> => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    input(el).dispatchEvent(event);
+    await el.updateComplete;
+    return event;
+  };
+  const active = (el: LyraVoicePicker): number => (el as unknown as { activeIndex: number }).activeIndex;
+
+  it('ArrowDown/ArrowUp open the suggestion list before they move within it', async () => {
+    const el = await freeText();
+    expect(el.open).to.be.false;
+    await press(el, 'ArrowDown');
+    expect(el.open).to.be.true;
+    await press(el, 'ArrowDown');
+    expect(active(el)).to.equal(0);
+    await press(el, 'ArrowUp');
+    expect(active(el)).to.equal(0);
+
+    const second = await freeText();
+    await press(second, 'ArrowUp');
+    expect(second.open, 'ArrowUp also opens from closed').to.be.true;
+  });
+
+  it('Home and End bound the active suggestion while open', async () => {
+    const el = await freeText();
+    const closed = await press(el, 'End');
+    expect(closed.defaultPrevented).to.be.false;
+    await press(el, 'ArrowDown');
+    const end = await press(el, 'End');
+    expect(end.defaultPrevented).to.be.true;
+    expect(active(el)).to.equal(1);
+    const home = await press(el, 'Home');
+    expect(home.defaultPrevented).to.be.true;
+    expect(active(el)).to.equal(0);
+  });
+
+  it('Enter commits the typed text and Escape restores the committed label', async () => {
+    const el = await freeText();
+    input(el).value = 'custom-voice';
+    input(el).dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    const changed = oneEvent(el, 'lr-change');
+    const commit = await press(el, 'Enter');
+    expect(commit.defaultPrevented).to.be.true;
+    expect((await changed).detail).to.deep.equal({ value: 'custom-voice', inCatalog: false });
+
+    input(el).dispatchEvent(new Event('focus', { bubbles: true }));
+    await el.updateComplete;
+    input(el).value = 'half-typed';
+    input(el).dispatchEvent(new Event('input', { bubbles: true }));
+    await el.updateComplete;
+    const escape = await press(el, 'Escape');
+    expect(escape.defaultPrevented).to.be.true;
+    expect(el.open).to.be.false;
+    expect(input(el).value, 'Escape reverts to the committed value').to.equal('custom-voice');
+  });
+
+  it('Enter and Escape are inert while the list is closed', async () => {
+    const el = await freeText();
+    const enter = await press(el, 'Enter');
+    const escape = await press(el, 'Escape');
+    expect(enter.defaultPrevented).to.be.false;
+    expect(escape.defaultPrevented).to.be.false;
+  });
+});
+
+it('focus() and blur() reach the trigger in closed-dropdown mode', async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(trigger(el));
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.not.equal(trigger(el));
+});
+
+it('focus() and blur() reach the text input in free-text mode', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker .catalog=${CATALOG} allow-custom></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(input(el));
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.not.equal(input(el));
+});
+
+it('a pointerdown outside the host closes an open listbox, while one inside it does not', async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  trigger(el).click();
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  trigger(el).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open, 'a pointerdown on the host stays open').to.be.true;
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('mousedown on the combobox shell focuses the input without letting the shell take selection', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker .catalog=${CATALOG} allow-custom></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  const shell = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  shell.dispatchEvent(event);
+  await el.updateComplete;
+  expect(event.defaultPrevented).to.be.true;
+  expect(el.shadowRoot!.activeElement).to.equal(input(el));
+});
+
+it('mousedown on the combobox shell is inert while disabled', async () => {
+  const el = (await fixture(
+    html`<lr-voice-picker .catalog=${CATALOG} allow-custom disabled></lr-voice-picker>`,
+  )) as LyraVoicePicker;
+  const shell = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  shell.dispatchEvent(event);
+  await el.updateComplete;
+  expect(event.defaultPrevented).to.be.false;
+});
+
+it('mousedown on a listbox option is prevented so the control keeps focus, but not on the listbox chrome', async () => {
+  const el = (await fixture(html`<lr-voice-picker .catalog=${CATALOG}></lr-voice-picker>`)) as LyraVoicePicker;
+  trigger(el).click();
+  await el.updateComplete;
+
+  const onOption = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  rows(el)[0]!.dispatchEvent(onOption);
+  expect(onOption.defaultPrevented).to.be.true;
+
+  const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  listbox(el).dispatchEvent(onChrome);
+  expect(onChrome.defaultPrevented).to.be.false;
+});
+
+it('tracks slotted hint and error content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-voice-picker .catalog=${CATALOG}>
+      <span slot="hint">Pick a narrator</span>
+      <span slot="error">Required</span>
+    </lr-voice-picker>
+  `)) as LyraVoicePicker;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[part="hint"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
+
+  el.querySelector('[slot="hint"]')!.remove();
+  el.querySelector('[slot="error"]')!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(
+    (el as unknown as { hasHintSlot: boolean }).hasHintSlot,
+    'removing the slotted hint clears the tracked flag',
+  ).to.be.false;
+  expect((el as unknown as { hasErrorSlot: boolean }).hasErrorSlot).to.be.false;
+});
+
+it('an ended event from a superseded audio element does not stop the current preview', async () => {
+  const restore = stubMediaPlay(() => Promise.resolve());
+  try {
+    const el = (await fixture(
+      html`<lr-voice-picker .catalog=${OBJECT_CATALOG} value="aria"></lr-voice-picker>`,
+    )) as LyraVoicePicker;
+    previewButton(el).click();
+    await el.updateComplete;
+    const current = (el as unknown as { audioEl?: HTMLAudioElement }).audioEl!;
+    expect(current).to.exist;
+
+    const stale = new Audio();
+    stale.addEventListener('ended', (el as unknown as { onAudioEnded: (e: Event) => void }).onAudioEnded);
+    stale.dispatchEvent(new Event('ended'));
+    await el.updateComplete;
+    expect(previewButton(el).getAttribute('aria-pressed'), 'a stale ended event is ignored').to.equal('true');
+
+    current.dispatchEvent(new Event('ended'));
+    await el.updateComplete;
+    expect(previewButton(el).getAttribute('aria-pressed')).to.equal('false');
+  } finally {
+    restore();
+  }
+});

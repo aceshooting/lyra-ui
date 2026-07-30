@@ -2869,3 +2869,113 @@ describe('source AbortSignal and configurable debounce', () => {
     expect(el.sourceDelay, 'NaN falls back to the default').to.equal(200);
   });
 });
+
+// -- Degraded-environment internals, slot tracking, and closed-list keys ------
+
+describe('ElementInternals fallback', () => {
+  /** Mirrors a DOM implementation without form-association support (a consumer's happy-dom/Vitest
+   *  suite): the component must still construct and stay inert rather than throwing on import. */
+  const withAttachInternals = async (
+    impl: undefined | (() => never),
+    assertion: (el: LyraCombobox) => void,
+  ): Promise<void> => {
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const original = proto.attachInternals;
+    if (impl === undefined) delete proto.attachInternals;
+    else proto.attachInternals = impl;
+    try {
+      const el = (await fixture(basic())) as LyraCombobox;
+      assertion(el);
+    } finally {
+      proto.attachInternals = original;
+    }
+  };
+
+  it('falls back to inert no-op internals when attachInternals is missing entirely', async () => {
+    await withAttachInternals(undefined, (el) => {
+      const internals = (el as unknown as { internals: ElementInternals }).internals;
+      expect(internals.form).to.be.null;
+      expect(internals.willValidate).to.be.false;
+      expect(internals.validationMessage).to.equal('');
+      expect(internals.labels).to.deep.equal([]);
+      expect(internals.checkValidity()).to.be.true;
+      expect(internals.reportValidity()).to.be.true;
+      expect(() => internals.setFormValue('x')).to.not.throw();
+      expect(() => internals.setValidity({}, '')).to.not.throw();
+    });
+  });
+
+  it('falls back to inert no-op internals when attachInternals throws', async () => {
+    await withAttachInternals(
+      () => {
+        throw new DOMException('not supported');
+      },
+      (el) => {
+        const internals = (el as unknown as { internals: ElementInternals }).internals;
+        expect(internals.willValidate).to.be.false;
+        expect(internals.reportValidity()).to.be.true;
+      },
+    );
+  });
+});
+
+it('tracks slotted label, hint and error content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-combobox>
+      <span slot="label">Fruit</span>
+      <span slot="hint">Start typing</span>
+      <span slot="error">Required</span>
+      <lr-option value="a">Apple</lr-option>
+    </lr-combobox>
+  `)) as LyraCombobox;
+  await el.updateComplete;
+  const flags = el as unknown as { hasLabelSlot: boolean; hasHintSlot: boolean; hasErrorSlot: boolean };
+  expect(flags.hasLabelSlot).to.be.true;
+  expect(flags.hasHintSlot).to.be.true;
+  expect(flags.hasErrorSlot).to.be.true;
+
+  for (const slot of ['label', 'hint', 'error']) el.querySelector(`[slot="${slot}"]`)!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(flags.hasLabelSlot).to.be.false;
+  expect(flags.hasHintSlot).to.be.false;
+  expect(flags.hasErrorSlot).to.be.false;
+});
+
+it('ArrowDown and ArrowUp open a closed list before moving within it', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  const input = el.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  expect(el.open).to.be.false;
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  const second = (await fixture(basic())) as LyraCombobox;
+  const secondInput = second.shadowRoot!.querySelector('[part="combobox-input"]') as HTMLInputElement;
+  secondInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+  await second.updateComplete;
+  expect(second.open).to.be.true;
+});
+
+it('ignores a listbox click that lands on chrome rather than an option', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  const listbox = el.shadowRoot!.querySelector('[part="listbox"]') as HTMLElement;
+  listbox.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+  expect(el.open, 'a click on listbox chrome neither selects nor closes').to.be.true;
+});
+
+it('ignores option activation entirely while disabled', async () => {
+  const el = (await fixture(basic())) as LyraCombobox;
+  el.open = true;
+  await el.updateComplete;
+  const option = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  el.disabled = true;
+  await el.updateComplete;
+  option.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.value).to.equal('');
+});

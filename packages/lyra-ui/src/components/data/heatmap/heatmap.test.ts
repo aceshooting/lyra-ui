@@ -3342,3 +3342,202 @@ describe('.strings overrides (remaining localize() keys)', () => {
     expect(tooltip.textContent).to.contain('=> 5');
   });
 });
+
+// -- Broad edge-path coverage: paint overrides, sparse calendars, keyboard, a11y overlay ----
+
+describe('cell paint overrides across both modes', () => {
+  const matrix = () => html`
+    <lr-heatmap
+      .rowLabels=${['A', 'B']}
+      .colLabels=${['X', 'Y']}
+      .values=${[
+        [1, -1],
+        [NaN, 8],
+      ]}
+    ></lr-heatmap>
+  `;
+
+  it('a cellColor override wins over every ramp path in matrix mode', async () => {
+    const el = (await fixture(matrix())) as LyraHeatmap;
+    const seen: number[] = [];
+    el.cellColor = (_pos, value) => {
+      seen.push(value);
+      return 'rgb(1, 2, 3)';
+    };
+    await el.updateComplete;
+    expect(seen.length, 'the override is consulted for every cell, no-data included').to.equal(4);
+    expect(seen, 'the -1 no-data sentinel still reaches the override').to.include(-1);
+    const canvas = el.shadowRoot!.querySelector('canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    expect(
+      findPixel(ctx, 0, 0, canvas.clientWidth, canvas.clientHeight, (r, g, b) => r === 1 && g === 2 && b === 3),
+      'the override color is what actually reaches the canvas',
+    ).to.be.true;
+  });
+
+  it('an override returning undefined falls through to the ramp and no-data fill', async () => {
+    const el = (await fixture(matrix())) as LyraHeatmap;
+    el.cellColor = () => undefined;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  });
+
+  it('scale="sqrt" and discrete colorSteps both paint no-data cells with the no-data fill', async () => {
+    for (const setup of [
+      (el: LyraHeatmap) => {
+        el.scale = 'sqrt';
+      },
+      (el: LyraHeatmap) => {
+        el.colorSteps = ['#111111', '#222222', '#333333'];
+      },
+    ]) {
+      const el = (await fixture(matrix())) as LyraHeatmap;
+      setup(el);
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+    }
+  });
+
+  it('calendar mode paints overrides, sqrt buckets and sparse gaps without throwing', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        mode="calendar"
+        .days=${[
+          { date: '2026-01-01', value: 0 },
+          { date: '2026-01-05', value: 12 },
+          { date: '2026-02-01', value: -1 },
+        ]}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const positions: unknown[] = [];
+    el.cellColor = (pos, value) => {
+      positions.push(pos);
+      return value > 0 ? 'rgb(4, 5, 6)' : undefined;
+    };
+    await el.updateComplete;
+    expect(positions.length, 'every calendar grid position is offered to the override').to.be.greaterThan(3);
+    el.cellColor = undefined;
+    el.scale = 'sqrt';
+    await el.updateComplete;
+    el.colorSteps = ['#101010', '#202020'];
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('canvas')).to.exist;
+  });
+});
+
+describe('accessible cell overlay edge paths', () => {
+  const overlay = () => html`
+    <lr-heatmap
+      accessible-cells
+      .rowLabels=${['A', 'B']}
+      .colLabels=${['X', 'Y']}
+      .values=${[
+        [1, 2],
+        [3, 4],
+      ]}
+    ></lr-heatmap>
+  `;
+
+  it('ignores focus, click and arrow keys on a cell whose key resolves to nothing', async () => {
+    const el = (await fixture(overlay())) as LyraHeatmap;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cell"]')!;
+    let clicks = 0;
+    el.addEventListener('lr-cell-click', () => clicks++);
+
+    cell.dataset['cellKey'] = 'matrix-99-99';
+    cell.dispatchEvent(new FocusEvent('focus'));
+    cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const arrow = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    cell.dispatchEvent(arrow);
+    await el.updateComplete;
+    expect(clicks, 'an unresolvable key emits nothing').to.equal(0);
+    expect(arrow.defaultPrevented).to.be.false;
+
+    delete cell.dataset['cellKey'];
+    cell.dispatchEvent(new FocusEvent('focus'));
+    cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await el.updateComplete;
+    expect(clicks, 'a missing key emits nothing either').to.equal(0);
+  });
+
+  it('ignores a non-arrow key on an accessible cell', async () => {
+    const el = (await fixture(overlay())) as LyraHeatmap;
+    await el.updateComplete;
+    const cell = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="cell"]')!;
+    const event = new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true });
+    cell.dispatchEvent(event);
+    await el.updateComplete;
+    expect(event.defaultPrevented).to.be.false;
+  });
+
+  it('focus, click and arrows on a real cell all resolve, announce and emit', async () => {
+    const el = (await fixture(overlay())) as LyraHeatmap;
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+    const clicked: unknown[] = [];
+    el.addEventListener('lr-cell-click', (e) => clicked.push((e as CustomEvent).detail));
+
+    cells[0]!.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    cells[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await el.updateComplete;
+    expect(clicked.length).to.equal(1);
+
+    for (const key of ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      cells[0]!.dispatchEvent(event);
+      await el.updateComplete;
+      expect(event.defaultPrevented, `${key} is handled`).to.be.true;
+    }
+  });
+
+  it('keyboard navigation is inert with an empty matrix and an empty calendar', async () => {
+    const empty = (await fixture(html`<lr-heatmap accessible-cells></lr-heatmap>`)) as LyraHeatmap;
+    await empty.updateComplete;
+    expect(empty.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
+
+    const emptyCalendar = (await fixture(
+      html`<lr-heatmap mode="calendar" accessible-cells .days=${[]}></lr-heatmap>`,
+    )) as LyraHeatmap;
+    await emptyCalendar.updateComplete;
+    expect(emptyCalendar.shadowRoot!.querySelectorAll('[part="cell"]').length).to.equal(0);
+  });
+
+  it('skips non-interactive neighbours and stops rather than looping forever', async () => {
+    const el = (await fixture(html`
+      <lr-heatmap
+        accessible-cells
+        .rowLabels=${['A', 'B', 'C']}
+        .colLabels=${['X']}
+        .values=${[[1], [2], [3]]}
+        .cellInteractive=${(pos: { row: number }) => pos.row === 0}
+      ></lr-heatmap>
+    `)) as LyraHeatmap;
+    await el.updateComplete;
+    const cells = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="cell"]')];
+    expect(cells.length, 'only the interactive row gets a control').to.equal(1);
+    const event = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    cells[0]!.dispatchEvent(event);
+    await el.updateComplete;
+    expect(event.defaultPrevented).to.be.true;
+  });
+});
+
+it('annotations without a resolvable date or match are skipped in calendar mode', async () => {
+  const el = (await fixture(html`
+    <lr-heatmap
+      mode="calendar"
+      .days=${[{ date: '2026-01-01', value: 3 }]}
+      .annotations=${[
+        { date: '2026-01-01', label: 'kept' },
+        { label: 'no date at all' },
+        { date: 'not-a-date', label: 'unparseable' },
+        { date: '2030-12-31', label: 'outside the rendered range' },
+      ]}
+    ></lr-heatmap>
+  `)) as LyraHeatmap;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('canvas'), 'renders despite the unusable annotations').to.exist;
+});
