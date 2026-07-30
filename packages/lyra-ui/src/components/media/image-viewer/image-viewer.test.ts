@@ -1,4 +1,4 @@
-import { fixture, expect, html, oneEvent } from '@open-wc/testing';
+import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './image-viewer.js';
 import type { LyraImageViewer, ImageRotation } from './image-viewer.js';
 import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
@@ -7,7 +7,21 @@ import { styles } from './image-viewer.styles.js';
 
 const PNG_SRC = 'https://example.test/photo.png';
 
-function stubImageLoad(el: LyraImageViewer, width = 800, height = 600): void {
+/** Waits for the viewer's `<img>` to be committed before faking its intrinsic size.
+ *
+ *  The wait is the point: callers that fixture a *wrapper* element only get `elementUpdated()` on
+ *  that wrapper, which for a plain `<div>` resolves on a bare `nextFrame()` and never awaits the
+ *  nested viewer's own first Lit update. Reading `querySelector('img')` straight out of the shadow
+ *  root therefore assumed a render that had not been awaited, and on CI's contended runner it came
+ *  back `null` -- surfacing as a bare "TypeError: Object.defineProperty called on non-object"
+ *  attributed to whichever test was running, rather than anything about that test's subject.
+ *  Polling here removes the assumption for every call site instead of per-test ordering fixes. */
+async function stubImageLoad(el: LyraImageViewer, width = 800, height = 600): Promise<void> {
+  await el.updateComplete;
+  await waitUntil(
+    () => el.shadowRoot!.querySelector('img') !== null,
+    'the image viewer never committed an <img> to stub',
+  );
   const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
   Object.defineProperty(img, 'naturalWidth', { value: width, configurable: true });
   Object.defineProperty(img, 'naturalHeight', { value: height, configurable: true });
@@ -16,7 +30,7 @@ function stubImageLoad(el: LyraImageViewer, width = 800, height = 600): void {
 
 it('omits invalid public highlight rectangles and renders finite ones', async () => {
   const el = await fixture<LyraImageViewer>(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`);
-  stubImageLoad(el);
+  await stubImageLoad(el);
   el.highlights = [
     {
       id: 'unsafe',
@@ -65,7 +79,7 @@ describe('image loading', () => {
     const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
     expect(img.src).to.equal(PNG_SRC);
     const eventPromise = oneEvent(el, 'lr-load');
-    stubImageLoad(el, 800, 600);
+    await stubImageLoad(el, 800, 600);
     const event = await eventPromise;
     expect(event.detail).to.deep.equal({ naturalWidth: 800, naturalHeight: 600 });
   });
@@ -236,7 +250,7 @@ describe('region highlights', () => {
 
   it('scrollToAnchor resolves true for a region anchor and false for an unsupported kind', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC} .highlights=${highlights}></lr-image-viewer>`)) as LyraImageViewer;
-    stubImageLoad(el);
+    await stubImageLoad(el);
     await el.updateComplete;
     // Shrink the retry loop's real-timer thresholds so the unsupported-kind case below (which
     // never succeeds and only resolves once the retry loop times out) doesn't take the mixin's
@@ -249,7 +263,7 @@ describe('region highlights', () => {
 
   it('setting the anchor property declaratively resolves via scrollToAnchor', async () => {
     const el = (await fixture(html`<lr-image-viewer src=${PNG_SRC}></lr-image-viewer>`)) as LyraImageViewer;
-    stubImageLoad(el);
+    await stubImageLoad(el);
     await el.updateComplete;
     const eventPromise = oneEvent(el, 'lr-anchor-result');
     el.anchor = { kind: 'region', rect: { x: 0, y: 0, width: 10, height: 10 } };
@@ -746,7 +760,7 @@ it('contains an unbroken highlight label inside a 320px allocation', async () =>
     </div>
   `)) as HTMLElement;
   const el = wrapper.querySelector('lr-image-viewer') as LyraImageViewer;
-  stubImageLoad(el);
+  await stubImageLoad(el);
   await el.updateComplete;
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });
