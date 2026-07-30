@@ -387,7 +387,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     if (this.loadState.kind !== 'loaded') return false;
     const cells = this.loadState.doc.cells;
     let index = -1;
-    if (anchor.kind === 'node-path' && typeof anchor.path[0] === 'number') index = anchor.path[0];
+    if (anchor.kind === 'node-path' && Number.isInteger(anchor.path[0])) index = anchor.path[0] as number;
     else if (anchor.kind === 'fragment') index = cells.findIndex((c) => c.id === anchor.id);
     else return false;
     if (index < 0 || index >= cells.length) return false;

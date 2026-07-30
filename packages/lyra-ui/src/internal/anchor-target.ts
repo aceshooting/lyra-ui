@@ -193,7 +193,16 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       const deadline = Date.now() + this.anchorTimeoutMs;
       for (;;) {
         if (generation !== this.anchorGeneration) return false;
-        const ok = await this.applyAnchor(anchor);
+        // A per-viewer applyAnchor() that throws must not reject scrollToAnchor(): that would
+        // suppress lr-anchor-result entirely, breaking this mixin's documented promise of always
+        // reporting a definite result, and would surface as an unhandled rejection on the
+        // declarative `anchor` path. Degrade a throw to "not resolved this attempt" instead.
+        let ok = false;
+        try {
+          ok = await this.applyAnchor(anchor);
+        } catch {
+          ok = false;
+        }
         if (generation !== this.anchorGeneration) return false;
         if (ok) return true;
         if (Date.now() >= deadline) return false;

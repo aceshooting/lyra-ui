@@ -757,3 +757,35 @@ it('also registers the same definition under text/xml', async () => {
   const registry = getDefaultDocumentRendererRegistry();
   expect(registry.get('text/xml')).to.equal(registry.get('application/xml'));
 });
+
+// -- Non-integer node-path segments must not produce a false "found" ----------
+
+describe('non-integer node-path segments', () => {
+  const armed = async (): Promise<LyraXmlViewer> => {
+    const el = (await fixture(html`<lr-xml-viewer .xml=${RSS_XML}></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    return el;
+  };
+
+  it('reports not-found for a fractional or NaN trailing segment instead of a phantom jump', async () => {
+    for (const path of [[0.5], [Number.NaN]]) {
+      const el = await armed();
+      expect(await el.scrollToAnchor({ kind: 'node-path', path }), JSON.stringify(path)).to.be.false;
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('[data-active]').length, 'nothing may be active').to.equal(0);
+    }
+  });
+
+  it('resolves false rather than rejecting when a non-trailing segment is non-integer', async () => {
+    const el = await armed();
+    let rejected = false;
+    const result = await el.scrollToAnchor({ kind: 'node-path', path: [0.5, 0] }).catch(() => {
+      rejected = true;
+      return undefined;
+    });
+    expect(rejected, 'scrollToAnchor must never reject -- lr-anchor-result would never fire').to.be.false;
+    expect(result).to.be.false;
+  });
+});

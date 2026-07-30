@@ -107,8 +107,12 @@ function resolvePath(root: Element, path: PathSegment[]): { element: Element; at
       return { element: current, attr };
     }
     const children = elementChildren(current);
-    if (segment < 0 || segment >= children.length) return null;
-    current = children[segment]!; // safe: bounds checked on the line above
+    // A range check alone is not an index guard: NaN fails both comparisons and a fractional
+    // index passes them, so `children[segment]` would non-null-assert `undefined` -- yielding a
+    // truthy `{ element: undefined }` for a trailing segment (a false "found" result) or a
+    // TypeError on the next iteration for a non-trailing one.
+    if (!Number.isInteger(segment) || segment < 0 || segment >= children.length) return null;
+    current = children[segment]!; // safe: integer + bounds checked on the line above
   }
   return { element: current };
 }
@@ -419,7 +423,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
   protected async applyAnchor(anchor: LyraAnchor): Promise<boolean> {
     if (anchor.kind !== 'node-path' || this.xmlState.kind !== 'loaded' || !this.xmlState.doc.documentElement) return false;
     const resolved = resolvePath(this.xmlState.doc.documentElement, anchor.path);
-    if (!resolved) return false;
+    if (!resolved?.element) return false;
     const numericPath = anchor.path.filter((s): s is number => typeof s === 'number');
     this.expandAncestors(anchor.path);
     this.activePath = JSON.stringify(numericPath);

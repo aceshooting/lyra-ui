@@ -838,7 +838,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   ): void {
     const n = this.items.length;
     if (n === 0) return;
-    const clamped = Math.min(n - 1, Math.max(0, Math.trunc(index)));
+    // Math.trunc(NaN) is NaN and both Math.min/Math.max propagate it, so a range-only clamp
+    // would send NaN into performScrollTo() -- scrolling the list to the top and parking an
+    // unresolvable pending correction. finiteInteger() is the same normalization the sibling
+    // position APIs (offsetForIndex/indexAtOffset) already apply.
+    const clamped = finiteInteger(index, 0, 0, n - 1);
     const align = options?.align ?? "auto";
     const behavior: "auto" | "smooth" = prefersReducedMotion()
       ? "auto"

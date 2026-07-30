@@ -2234,3 +2234,32 @@ describe("row stacking context", () => {
     );
   });
 });
+
+it("clamps a non-finite scrollToIndex instead of silently discarding the scroll position", async () => {
+  const items = Array.from({ length: 50 }, (_, i) => i);
+  const el = (await fixture(
+    html`<lr-virtual-list
+      style="--lr-virtual-list-height:200px"
+      row-height="40"
+      overscan="0"
+      .items=${items}
+      .renderItem=${renderText}
+      .keyFunction=${numberKey}
+    ></lr-virtual-list>`
+  )) as LyraVirtualList;
+  await el.updateComplete;
+  await nextFrame();
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+
+  el.scrollToIndex(20, { align: "start", behavior: "auto" });
+  await nextFrame();
+  expect(base.scrollTop).to.equal(800);
+
+  // NaN passes a range-only clamp -- both comparisons are false -- so an unguarded implementation
+  // resolves offsets[NaN] to 0 and scrolls the list back to the very top, discarding the user's
+  // position, while parking a pendingScrollCorrection whose identity can never resolve.
+  el.scrollToIndex(Number.NaN, { align: "start", behavior: "auto" });
+  await nextFrame();
+  expect(base.scrollTop, "NaN clamps to index 0, not to a NaN offset").to.equal(0);
+  expect(Number.isFinite(base.scrollTop)).to.be.true;
+});
