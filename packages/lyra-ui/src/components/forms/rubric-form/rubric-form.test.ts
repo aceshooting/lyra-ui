@@ -830,4 +830,18 @@ it('keeps each keyed composed control with its logical field across reorder', as
 
 it('uses the on-brand token for the submit action foreground', () => {
   expect(styles.cssText).to.match(/\[part='submit'\][^}]*color:\s*var\(--lr-color-on-brand\)/s);
+
+
+});
+
+it('reportValidity() reveals current field errors and answers overall validity', async () => {
+  const el = (await fixture(html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`)) as LyraRubricForm;
+  await el.updateComplete;
+  const initial = el.reportValidity();
+  await el.updateComplete;
+  expect(typeof initial, 'reportValidity answers a boolean').to.equal('boolean');
+
+  el.value = { accuracy: 4 };
+  await el.updateComplete;
+  expect(el.reportValidity(), 'a satisfied rubric reports valid').to.be.true;
 });

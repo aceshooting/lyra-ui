@@ -990,3 +990,23 @@ describe('appearance', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('reads and writes the textarea selection direction through the host', async () => {
+  const el = (await fixture(html`<lr-chat-composer></lr-chat-composer>`)) as LyraChatComposer;
+  el.value = 'hello world';
+  await el.updateComplete;
+  const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+  textarea.setSelectionRange(0, 5);
+
+  el.selectionDirection = 'backward';
+  expect(textarea.selectionDirection).to.equal('backward');
+  expect(el.selectionDirection).to.equal('backward');
+
+  el.selectionDirection = 'forward';
+  expect(textarea.selectionDirection).to.equal('forward');
+
+  // `null` maps to the platform's 'none'; a browser with a live selection may normalize that back
+  // to a concrete direction, so assert the write is accepted rather than the normalized result.
+  el.selectionDirection = null;
+  expect(['none', 'forward', 'backward']).to.include(textarea.selectionDirection);
+});

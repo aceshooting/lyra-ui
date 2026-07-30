@@ -862,3 +862,23 @@ describe('compact', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('click() activates the row, and targets the rename input while renaming', async () => {
+  const el = (await fixture(
+    html`<lr-conversation-item title="Thread"></lr-conversation-item>`,
+  )) as LyraConversationItem;
+  await el.updateComplete;
+  let selected = 0;
+  el.addEventListener('lr-select', () => selected++);
+  el.click();
+  await el.updateComplete;
+  expect(selected, 'host click() forwards to the internal option row').to.equal(1);
+
+  (el as unknown as { renaming: boolean }).renaming = true;
+  await el.updateComplete;
+  const input = el.shadowRoot!.querySelector('input');
+  expect(input, 'renaming swaps in a text input').to.exist;
+  el.click();
+  await el.updateComplete;
+  expect(selected, 'while renaming, click() must not re-select the row').to.equal(1);
+});
