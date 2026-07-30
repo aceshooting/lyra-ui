@@ -42,7 +42,7 @@ changes the component library version without installing a supported SheetJS rel
 | `maplibre-gl` | `>=5 <7` | `lr-geojson-view`, `lr-map` |
 | `marked` | `^18.0.7` | `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
 | `papaparse` | `^5.5.4` | `lr-csv-viewer`, `lr-dataset-viewer` |
-| `pdfjs-dist` | `^6.1.200` | `lr-pdf-viewer` |
+| `pdfjs-dist` | `^6.2.108` | `lr-pdf-viewer` |
 | `postal-mime` | `^2.7.5` | `lr-email-viewer` |
 | `qrcode` | `^1.5.4` | `lr-qr-code` |
 | `shiki` | `^4.3.1` | `lr-code-block`, `lr-code-block-core`, `lr-diff-view`, `lr-document-compare`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts` |
