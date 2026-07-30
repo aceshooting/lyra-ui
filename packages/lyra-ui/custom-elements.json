@@ -4055,6 +4055,25 @@
             },
             {
               "kind": "method",
+              "name": "formatCount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "`localize()` interpolates with a bare `String(value)`, so a number handed to it renders in\nASCII digits no matter the locale -- mixing two numbering systems inside one translated\nsentence. Route every user-facing number through the effective locale instead."
+            },
+            {
+              "kind": "method",
               "name": "goToVersion",
               "privacy": "private",
               "return": {
@@ -5475,6 +5494,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "formatCount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "`localize()` interpolates with a bare `String(value)`, so a number handed to it renders in\nASCII digits no matter the locale -- mixing two numbering systems inside one translated\nsentence. Route every user-facing number through the effective locale instead."
             },
             {
               "kind": "method",
@@ -95567,6 +95605,25 @@
             },
             {
               "kind": "method",
+              "name": "formatCount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "`localize()` interpolates with a bare `String(value)`, so a number handed to it renders in\nASCII digits no matter the locale -- mixing two numbering systems inside one translated\nsentence. Route every user-facing number through the effective locale instead."
+            },
+            {
+              "kind": "method",
               "name": "formatNumericValue",
               "privacy": "private",
               "return": {
@@ -98188,6 +98245,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "formatCount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "`localize()` interpolates with a bare `String(value)`, so a number handed to it renders in\nASCII digits no matter the locale -- mixing two numbering systems inside one translated\nsentence. Route every user-facing number through the effective locale instead."
             },
             {
               "kind": "method",
@@ -105269,6 +105345,25 @@
             },
             {
               "kind": "method",
+              "name": "formatCount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "`localize()` interpolates with a bare `String(value)`, so a number handed to it renders in\nASCII digits no matter the locale -- mixing two numbering systems inside one translated\nsentence. Route every user-facing number through the effective locale instead."
+            },
+            {
+              "kind": "method",
               "name": "getUpdateComplete",
               "privacy": "protected",
               "return": {
@@ -106257,6 +106352,25 @@
                 }
               },
               "description": "Reads the actual `--lr-font-weight-semibold` value the same way\n`fontFamily()` reads `--lr-font` -- must match `[part='word']`'s\n`font-weight` in word-cloud.styles.ts, so a theme/consumer override of\nthat token can't silently desync canvas text measurement (used for the\nspiral layout's collision boxes) from the actually rendered glyph width."
+            },
+            {
+              "kind": "method",
+              "name": "formatCount",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "value",
+                  "type": {
+                    "text": "number"
+                  }
+                }
+              ],
+              "description": "`localize()` interpolates with a bare `String(value)`, so a number handed to it renders in\nASCII digits no matter the locale -- mixing two numbering systems inside one translated\nsentence. Route every user-facing number through the effective locale instead."
             },
             {
               "kind": "method",
