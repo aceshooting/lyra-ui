@@ -82,6 +82,12 @@ const FRESHNESS_TONE: Record<LibraryDocumentFreshness, 'success' | 'warning' | '
  * `<lr-table>`'s own built-in `selectionMode`, since that mode's click-anywhere-in-the-row toggle
  * would conflict with the row's own name button opening the document; `<lr-table>`'s
  * `selectedKeys` is still fed from `selectedIds` purely for its `aria-selected` row styling.
+ * `<lr-table>` is set to `sort-mode="server"` because this component owns ordering:
+ * `visibleDocuments` already sorts against real values (timestamps for `updatedAt`, a rank for
+ * `freshness`). Client mode would order the rows a second time from `String(cell(row))`, and these
+ * `cell()`s render formatted dates and templates — which made the Updated column come out
+ * alphabetical by month name rather than chronological. `sortKey`/`sortDir` are still passed
+ * down: they drive the header's sort affordance, not the order.
  *
  * @customElement lr-document-library
  * @event lr-filter-change - The search text or tag facet changed. `detail: { text, tags, matchCount }`.
@@ -446,6 +452,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           .selectedKeys=${new Set(this.selectedIds)}
           .sortKey=${this.sortKey}
           .sortDir=${this.sortDirection === 'ascending' ? 'asc' : 'desc'}
+          sort-mode="server"
           ?loading=${this.loading}
           empty-heading=${emptyHeading}
           @lr-sort=${(event: CustomEvent<{ key: string }>) => {

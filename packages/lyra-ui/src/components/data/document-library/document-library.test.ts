@@ -382,3 +382,32 @@ it('scrolls a 320px allocation horizontally rather than overflowing, hiding low-
   const nameHeader = table.shadowRoot!.querySelector('[part="header-cell"][data-col-key="name"]') as HTMLElement;
   expect(getComputedStyle(nameHeader).display).to.not.equal('none');
 });
+
+it('sorts the Updated column chronologically, not alphabetically by its formatted date', async () => {
+  // This component already orders `visibleDocuments` itself, comparing real timestamps. It then
+  // handed `<lr-table>` both those ordered rows *and* a `sortKey`, without `sortMode="server"` --
+  // so the table re-sorted them in client mode. With no `sortValue` on the column, client mode
+  // falls back to `String(cell(row))`, and this column's `cell()` returns a *formatted* date, so
+  // the order became alphabetical by month name and overrode the correct chronological one.
+  const dated = [
+    { id: 'a', name: 'Ancient.md', updatedAt: '2019-03-02T00:00:00Z' },
+    { id: 'b', name: 'Recent.md', updatedAt: '2026-01-05T00:00:00Z' },
+    { id: 'c', name: 'Middle.md', updatedAt: '2020-02-03T00:00:00Z' },
+  ];
+  const el = (await fixture(
+    html`<lr-document-library
+      .documents=${dated}
+      sort-key="updatedAt"
+      sort-direction="ascending"
+    ></lr-document-library>`,
+  )) as LyraDocumentLibrary;
+  await el.updateComplete;
+
+  const table = el.shadowRoot!.querySelector('lr-table') as HTMLElement;
+  const names = [...table.shadowRoot!.querySelectorAll('[part="document-name"]')].map((btn) =>
+    btn.textContent!.trim(),
+  );
+  // Chronological. The alphabetical-by-formatted-date order would be
+  // "Feb 3, 2020" < "Jan 5, 2026" < "Mar 2, 2019" -- i.e. Middle, Recent, Ancient.
+  expect(names).to.deep.equal(['Ancient.md', 'Middle.md', 'Recent.md']);
+});
