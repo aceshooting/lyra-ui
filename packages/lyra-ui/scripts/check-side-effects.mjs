@@ -71,6 +71,25 @@ for (const classFile of classFiles) {
   if (!sideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
 }
 
+// The other side-effect-only module shapes, which have no `*.class.ts` and so are never reached by
+// the walk above: `*-register.ts` (archive-viewer / ebook-viewer register a document-viewer
+// renderer rather than a custom element) and `*-peer.ts` (flag-peer installs an optional-peer
+// resolver via `setFlagUrlResolver()`). Both are imported for effect only -- a consumer writes a
+// bare `import '.../flag-peer.js'` and reads no export -- so an undeclared one is dropped outright
+// by any bundler honoring `sideEffects`. That is exactly how `flag-peer.js` shipped undeclared
+// through 7.8.0: every `<lr-flag country|language>` in a production build silently lost its
+// resolver and rendered the "flag unavailable" alert instead of an image.
+// Per-family barrels (`components/<family>/index.ts`) are covered by the same loop: they
+// `export *` from every registration module in the family, so importing one registers those tags.
+for (const file of walk(componentsRoot)) {
+  if (!/-(?:register|peer)\.ts$/.test(file) && basename(file) !== 'index.ts') continue;
+  const relPath = relative(componentsRoot, file).replaceAll('\\', '/');
+  const srcEntry = `./src/components/${relPath}`;
+  const distEntry = `./dist/components/${relPath.replace(/\.ts$/, '.js')}`;
+  if (!sideEffects.has(srcEntry)) errors.push(`package.json#sideEffects is missing "${srcEntry}"`);
+  if (!sideEffects.has(distEntry)) errors.push(`package.json#sideEffects is missing "${distEntry}"`);
+}
+
 // The root barrel (`src/lyra.ts` / `dist/lyra.js`) registers every non-optional-peer component via
 // its own bare imports; both forms of that all-components barrel must stay declared too.
 for (const barrelEntry of ['./src/lyra.ts', './dist/lyra.js']) {

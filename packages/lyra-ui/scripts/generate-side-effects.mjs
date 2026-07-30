@@ -34,24 +34,28 @@ for (const classFile of classFiles) {
   required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
 }
 
-// Two components (archive-viewer, ebook-viewer) register a document-viewer renderer through a
-// dedicated *-register.ts file with no matching *.class.ts of its own -- the class-file-driven
-// walk above never visits them, so they're carried over unchanged (just re-pathed to their new
-// family location) from whatever the current package.json already declares.
+// Side-effect-only modules with no `*.class.ts` of their own, which the class-file-driven walk
+// above therefore never visits, so they have to be derived from the file tree directly:
+//   *-register.ts  archive-viewer / ebook-viewer -- register a document-viewer renderer rather
+//                  than a custom element.
+//   *-peer.ts      flag-peer -- installs an optional-peer resolver (`setFlagUrlResolver()`) for a
+//                  component whose own class module deliberately keeps the optional peer out of
+//                  its import graph.
+// Both categories exist purely for their import-time side effect: a consumer writes a bare
+// `import '.../flag-peer.js'` and never reads an export, so a bundler honoring `sideEffects`
+// drops the module outright unless it is declared here. Derived from the walk (not carried over
+// from the previous package.json) so a rename or family move can't silently strand an entry.
+// Per-family barrels (`components/<family>/index.ts`) belong here for the same reason the root
+// barrel does: they `export *` from every registration module in the family, so importing one
+// registers those tags.
+for (const file of walk(componentsRoot)) {
+  if (!/-(?:register|peer)\.ts$/.test(file) && basename(file) !== 'index.ts') continue;
+  const relPath = relative(componentsRoot, file).replaceAll('\\', '/');
+  required.add(`./src/components/${relPath}`);
+  required.add(`./dist/components/${relPath.replace(/\.ts$/, '.js')}`);
+}
+
 const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-const { directories: dirToFamily } = JSON.parse(
-  readFileSync(join(packageDir, 'scripts', 'component-families.json'), 'utf8'),
-);
-function rehome(entry) {
-  const m = entry.match(/^(\.\/(?:src|dist)\/components\/)([^/]+)\/(.*)$/);
-  if (!m) return entry;
-  const [, prefix, dir, rest] = m;
-  const family = dirToFamily[dir];
-  return family ? `${prefix}${family}/${dir}/${rest}` : entry;
-}
-for (const entry of pkg.sideEffects) {
-  if (entry.includes('-register.')) required.add(rehome(entry));
-}
 
 pkg.sideEffects = [...required].sort();
 writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
