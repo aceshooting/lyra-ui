@@ -627,6 +627,28 @@ describe('status="converting"', () => {
     expect(spinner.querySelector('.spinner-text')!.textContent).to.equal('42%');
   });
 
+  it('keeps the determinate ring mask opaque when a consumer themes the shadow color translucent', async () => {
+    // The regression this guards: the mask punching the hole out of the progress ring used
+    // var(--lr-color-shadow) for its opaque stop, a documented consumer theming input. A mask
+    // reads alpha only, so a translucent shadow theme -- entirely reasonable for a shadow color --
+    // faded the entire ring rather than just cutting its centre out.
+    const el = (await fixture(html`
+      <lr-document-preview
+        status="converting"
+        progress="42"
+        style="--lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
+      ></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    const ring = el.shadowRoot!.querySelector('.ring.determinate') as HTMLElement;
+    const computed = getComputedStyle(ring);
+    const mask =
+      computed.getPropertyValue('mask-image') || computed.getPropertyValue('-webkit-mask-image');
+    expect(mask).to.contain('radial-gradient');
+    // The transparent stop resolves to rgba(0, 0, 0, 0); a leaked 0.25 would be the themed
+    // shadow alpha reaching the opaque stop.
+    expect(mask).to.not.contain('0.25');
+  });
+
   it('clamps an out-of-range progress value into [0, 100]', async () => {
     const el = (await fixture(html`
       <lr-document-preview status="converting" progress="150"></lr-document-preview>

@@ -48,19 +48,24 @@ export const styles = css`
        scrollbar from sub-pixel rounding even when the content never actually overflows block-wise. */
     overflow-x: auto;
     overflow-y: hidden;
-    /* Static edge affordance: scrolling remains native and no scroll listener is needed. */
+  }
+  /* Edge affordance, gated on the strip actually overflowing -- ScrollOverflowController toggles
+     data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
+     native, with no scroll listener. Unconditional (as this used to be) it fades the first and
+     last item of a strip that fits. */
+  :host([orientation='horizontal']) [part='base'][data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
     mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
   }

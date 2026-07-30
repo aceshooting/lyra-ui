@@ -76,6 +76,17 @@ export const tokens = css`
     --lr-radius-xs: var(--lr-theme-border-radius-xs, 2px);
     --lr-radius-pill: var(--lr-theme-border-radius-pill, 999px);
     --lr-color-shadow: var(--lr-theme-color-shadow, #000);
+    /* The fully-opaque stop of a mask gradient. Deliberately NOT themeable, and deliberately not
+       --lr-color-shadow, which every mask in the library used to borrow for this: a mask reads
+       alpha only, so an entirely reasonable translucent shadow theme
+       (--lr-theme-color-shadow: rgb(0 0 0 / 0.25)) silently dropped mask alpha across the WHOLE
+       element rather than just its edges, rendering lr-segmented/lr-tabs/lr-stepper/lr-timeline/
+       lr-document-preview uniformly washed out with nothing pointing back at the shadow token as
+       the cause. That only ever worked because this token's default happens to be opaque.
+       "Opaque" is not a design decision a consumer tunes -- a mask's opaque stop must be opaque by
+       definition -- so giving this its own --lr-theme-* hook would just reintroduce the same
+       footgun under a new name. The color channel is irrelevant; only alpha 1 matters. */
+    --lr-mask-opaque: #000;
     --lr-color-chart-1: var(--lr-theme-color-chart-1, #8250df);
     --lr-color-chart-2: var(--lr-theme-color-chart-2, #bf3989);
     --lr-color-chart-3: var(--lr-theme-color-chart-3, #0a7d91);

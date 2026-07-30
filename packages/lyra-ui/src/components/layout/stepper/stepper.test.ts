@@ -60,6 +60,23 @@ function installResizeObserverSpy({
   };
 }
 
+/** Every `lr-stepper` arms one `ResizeObserver` of its own regardless of the `orientationBreakpoint`
+ *  feature: the scroll-overflow gate deciding whether the horizontal edge fade paints (see
+ *  `ScrollOverflowController`). So a spy that counts constructions sees this one on top of any
+ *  breakpoint observation, and every count below is expressed relative to it. */
+const BASELINE_OBSERVERS = 1;
+
+/** Drives a synthetic width through *every* callback the element armed, instead of indexing one by
+ *  construction order (which is an implementation detail, and wrong the moment a second observer
+ *  is added). Safe to over-deliver: the scroll-overflow callback ignores its entries entirely and
+ *  just re-measures its own track. */
+function fireResizeAll(
+  callbacks: ResizeObserverCallback[],
+  width: number
+): void {
+  for (const callback of callbacks) fireResize(callback, width);
+}
+
 function fireResize(callback: ResizeObserverCallback, width: number): void {
   callback(
     [
@@ -486,10 +503,10 @@ describe("lr-stepper", () => {
         ></lr-stepper>`
       )) as LyraStepper;
       await elementUpdated(el);
-      expect(spy.callbacks.length).to.equal(1);
+      expect(spy.callbacks.length).to.equal(BASELINE_OBSERVERS + 1);
       expect(el.effectiveOrientation).to.equal("horizontal"); // unmeasured yet -- assumes wide
 
-      fireResize(spy.callbacks[0]!, 320);
+      fireResizeAll(spy.callbacks, 320);
       await elementUpdated(el);
       expect(el.effectiveOrientation).to.equal("vertical");
       expect(el.getAttribute("data-effective-orientation")).to.equal(
@@ -510,7 +527,7 @@ describe("lr-stepper", () => {
       expect(el.shadowRoot!.activeElement).to.equal(buttons[2]);
 
       const changed = oneEvent(el, "lr-stepper-orientation-change");
-      fireResize(spy.callbacks[0]!, 700);
+      fireResizeAll(spy.callbacks, 700);
       expect((await changed).detail).to.deep.equal({
         orientation: "horizontal",
       });
@@ -586,7 +603,7 @@ describe("lr-stepper", () => {
     async function mount(
       spy: ReturnType<typeof installResizeObserverSpy>,
       breakpoint: number | string
-    ): Promise<{ el: LyraStepper; callback?: ResizeObserverCallback }> {
+    ): Promise<{ el: LyraStepper; callbacks: ResizeObserverCallback[] }> {
       const before = spy.callbacks.length;
       const el = (await fixture(
         html`<lr-stepper
@@ -596,7 +613,7 @@ describe("lr-stepper", () => {
         ></lr-stepper>`
       )) as LyraStepper;
       await elementUpdated(el);
-      return { el, callback: spy.callbacks[before] };
+      return { el, callbacks: spy.callbacks.slice(before) };
     }
 
     it("crosses at the same measured width for a rem breakpoint as for the equivalent px number", async () => {
@@ -605,19 +622,21 @@ describe("lr-stepper", () => {
       try {
         const rem = await mount(spy, "31.25rem"); // 31.25rem @ 16px root === 500px
         const px = await mount(spy, 500);
-        expect(rem.callback, "a rem breakpoint must arm the resize observer").to
-          .exist;
-        expect(px.callback).to.exist;
+        expect(
+          rem.callbacks.length,
+          "a rem breakpoint must arm the resize observer"
+        ).to.be.greaterThan(BASELINE_OBSERVERS);
+        expect(px.callbacks.length).to.be.greaterThan(BASELINE_OBSERVERS);
 
-        for (const { el, callback } of [rem, px]) {
-          fireResize(callback!, 499);
+        for (const { el, callbacks } of [rem, px]) {
+          fireResizeAll(callbacks, 499);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("vertical");
           expect(el.getAttribute("data-effective-orientation")).to.equal(
             "vertical"
           );
 
-          fireResize(callback!, 500);
+          fireResizeAll(callbacks, 500);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("horizontal");
           expect(el.getAttribute("data-effective-orientation")).to.equal(
@@ -643,19 +662,21 @@ describe("lr-stepper", () => {
         )) as LyraStepper;
         prop.orientationBreakpoint = 500;
         await elementUpdated(prop);
-        const propCallback = spy.callbacks[before];
-        expect(propCallback, "a numeric property must arm the resize observer")
-          .to.exist;
+        const propCallbacks = spy.callbacks.slice(before);
+        expect(
+          propCallbacks.length,
+          "a numeric property must arm the resize observer"
+        ).to.be.greaterThan(BASELINE_OBSERVERS);
 
-        for (const { el, callback } of [
+        for (const { el, callbacks } of [
           attr,
-          { el: prop, callback: propCallback },
+          { el: prop, callbacks: propCallbacks },
         ]) {
-          fireResize(callback!, 320);
+          fireResizeAll(callbacks, 320);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("vertical");
 
-          fireResize(callback!, 700);
+          fireResizeAll(callbacks, 700);
           await elementUpdated(el);
           expect(el.effectiveOrientation).to.equal("horizontal");
         }
@@ -668,13 +689,13 @@ describe("lr-stepper", () => {
       document.documentElement.style.fontSize = "16px";
       const spy = installResizeObserverSpy({ inert: true });
       try {
-        const { el, callback } = await mount(spy, "31.25rem"); // 500px @ 16px root
-        fireResize(callback!, 600);
+        const { el, callbacks } = await mount(spy, "31.25rem"); // 500px @ 16px root
+        fireResizeAll(callbacks, 600);
         await elementUpdated(el);
         expect(el.effectiveOrientation).to.equal("horizontal"); // 600 >= 500
 
         document.documentElement.style.fontSize = "20px"; // 31.25rem is now 625px
-        fireResize(callback!, 600);
+        fireResizeAll(callbacks, 600);
         await elementUpdated(el);
         expect(el.effectiveOrientation).to.equal("vertical"); // 600 < 625 -- re-read, not frozen
       } finally {
@@ -696,8 +717,8 @@ describe("lr-stepper", () => {
         await elementUpdated(el);
         expect(
           spy.callbacks.length,
-          "no responsive observation may be armed"
-        ).to.equal(0);
+          "no responsive observation may be armed beyond the always-on overflow gate"
+        ).to.equal(BASELINE_OBSERVERS);
         expect(el.effectiveOrientation).to.equal("horizontal");
         expect(el.hasAttribute("data-effective-orientation")).to.be.false;
       } finally {
@@ -885,17 +906,64 @@ describe("horizontal step row overflow", () => {
     expect(maskImage).to.equal("none");
   });
 
-  it("shows a mask-image edge fade on the horizontally-scrolling step row, matching lr-tabs/lr-segmented", async () => {
+  it("shows a mask-image edge fade on the horizontally-scrolling step row once it overflows, matching lr-tabs/lr-segmented", async () => {
     const el = (await fixture(
-      html`<lr-stepper .steps=${steps()}></lr-stepper>`
+      html`<lr-stepper
+        style="display: block; max-inline-size: 90px"
+        .steps=${steps()}
+      ></lr-stepper>`
     )) as LyraStepper;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
     const computed = getComputedStyle(base);
     const maskImage =
       computed.getPropertyValue("mask-image") ||
       computed.getPropertyValue("-webkit-mask-image");
     expect(maskImage).to.not.equal("none");
     expect(maskImage).to.contain("gradient");
+  });
+
+  it("keeps the edge fade opaque when a consumer themes the shadow color translucent", async () => {
+    // The regression this guards: the mask's opaque stops used to be var(--lr-color-shadow), a
+    // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
+    // dropped mask alpha across the whole step row rather than just its edges.
+    const el = (await fixture(
+      html`<lr-stepper
+        style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
+        .steps=${steps()}
+      ></lr-stepper>`
+    )) as LyraStepper;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    const computed = getComputedStyle(base);
+    const maskImage =
+      computed.getPropertyValue("mask-image") ||
+      computed.getPropertyValue("-webkit-mask-image");
+    expect(maskImage).to.contain("gradient");
+    expect(maskImage).to.not.contain("0.25");
+  });
+
+  it("leaves a horizontal step row that fits completely unmasked", async () => {
+    // The regression this guards: the fade used to be painted unconditionally, dimming the first
+    // and last step of a row with nothing to scroll to.
+    const el = (await fixture(
+      html`<lr-stepper .steps=${steps()}></lr-stepper>`
+    )) as LyraStepper;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+    expect(base.scrollWidth - base.clientWidth).to.be.at.most(1);
+    const computed = getComputedStyle(base);
+    const maskImage =
+      computed.getPropertyValue("mask-image") ||
+      computed.getPropertyValue("-webkit-mask-image");
+    expect(maskImage).to.equal("none");
   });
 });
 

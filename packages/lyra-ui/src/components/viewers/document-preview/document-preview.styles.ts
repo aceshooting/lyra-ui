@@ -250,8 +250,8 @@ export const styles = css`
       var(--lr-color-brand) calc(var(--lr-document-preview-progress, 0) * 1%),
       var(--lr-color-border) 0
     );
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--lr-size-3px)), var(--lr-color-shadow) calc(100% - var(--lr-size-3px)));
-    mask: radial-gradient(farthest-side, transparent calc(100% - var(--lr-size-3px)), var(--lr-color-shadow) calc(100% - var(--lr-size-3px)));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--lr-size-3px)), var(--lr-mask-opaque) calc(100% - var(--lr-size-3px)));
+    mask: radial-gradient(farthest-side, transparent calc(100% - var(--lr-size-3px)), var(--lr-mask-opaque) calc(100% - var(--lr-size-3px)));
   }
   .spinner-text {
     color: var(--lr-color-text-quiet);

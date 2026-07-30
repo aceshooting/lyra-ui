@@ -5,6 +5,12 @@ import type { LyraTimeline } from './timeline.js';
 import { styles as timelineStyles } from './timeline.styles.js';
 import { styles as itemStyles } from './timeline-item.styles.js';
 
+/** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
+ *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
+async function nextFrames(): Promise<void> {
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 it('renders with default orientation="vertical" and role="list" on [part="base"]', async () => {
   const el = (await fixture(html`<lr-timeline></lr-timeline>`)) as LyraTimeline;
   expect(el.orientation).to.equal('vertical');
@@ -72,13 +78,54 @@ it('never scrolls vertically in horizontal orientation -- overflow-x:auto alone 
   expect(getComputedStyle(base).overflowY).to.equal('hidden');
 });
 
-it('adds a static, themeable edge fade to the horizontal scroll strip', async () => {
+it('adds a themeable edge fade to the horizontal scroll strip once it actually overflows', async () => {
   // Reads the real computed mask off the rendered [part="base"] instead of substring-matching
   // the exported stylesheet source, which would still pass even if the rule's selector never
   // actually matched (e.g. only applies once orientation="horizontal" is set).
-  const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
+  const el = (await fixture(html`
+    <lr-timeline orientation="horizontal" style="display: block; max-inline-size: 90px">
+      <lr-timeline-item style="flex: 0 0 200px">Deployed build 4821</lr-timeline-item>
+      <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
+      <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
+    </lr-timeline>
+  `)) as LyraTimeline;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  await nextFrames();
+  expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
   expect(getComputedStyle(base).maskImage).to.contain('linear-gradient');
+});
+
+it('leaves a horizontal strip that fits completely unmasked', async () => {
+  // The regression this guards: the fade used to be painted unconditionally, dimming the first
+  // and last item of a strip with nothing to scroll to.
+  const el = (await fixture(
+    html`<lr-timeline orientation="horizontal"><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
+  )) as LyraTimeline;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  await nextFrames();
+  expect(base.scrollWidth - base.clientWidth).to.be.at.most(1);
+  expect(getComputedStyle(base).maskImage).to.equal('none');
+});
+
+it('keeps the edge fade opaque when a consumer themes the shadow color translucent', async () => {
+  // The regression this guards: the mask's opaque stops used to be var(--lr-color-shadow), a
+  // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
+  // dropped mask alpha across the whole strip rather than just its edges.
+  const el = (await fixture(html`
+    <lr-timeline
+      orientation="horizontal"
+      style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
+    >
+      <lr-timeline-item style="flex: 0 0 200px">Deployed build 4821</lr-timeline-item>
+      <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
+      <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
+    </lr-timeline>
+  `)) as LyraTimeline;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  await nextFrames();
+  const mask = getComputedStyle(base).maskImage;
+  expect(mask).to.contain('linear-gradient');
+  expect(mask).to.not.contain('0.25');
 });
 
 it('resolves the accessible name to the localized "Timeline" by default', async () => {

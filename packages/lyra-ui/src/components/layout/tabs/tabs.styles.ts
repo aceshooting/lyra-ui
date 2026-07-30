@@ -16,19 +16,24 @@ export const styles = css`
     border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border);
     overflow-x: auto;
     overflow-y: hidden;
-    /* Static edge affordance: scrolling remains native and no scroll listener is needed. */
+  }
+  /* Edge affordance, gated on the tablist actually overflowing -- ScrollOverflowController toggles
+     data-scroll-overflow from a real scrollWidth/clientWidth measurement; scrolling itself stays
+     native, with no scroll listener. Painted unconditionally (as it used to be) it fades the first
+     and last tab of a row that fits, for no reason. */
+  [part="tablist"][data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
     mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
   }

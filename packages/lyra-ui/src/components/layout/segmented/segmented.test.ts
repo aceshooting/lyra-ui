@@ -12,6 +12,12 @@ const items = () => [
   { value: "month", label: "Month" },
 ];
 
+/** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
+ *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
+async function nextFrames(): Promise<void> {
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
 function segmentButtons(el: LyraSegmented): HTMLButtonElement[] {
   return [
     ...el.shadowRoot!.querySelectorAll('[part="segment"]'),
@@ -316,15 +322,56 @@ describe("item icon", () => {
     );
   });
 
-  it("adds a static, themeable edge fade to the scroll container", async () => {
+  it("adds a themeable edge fade to the scroll container once it actually overflows", async () => {
     // Reads the real computed mask off the rendered [part="base"] instead of substring-matching
     // the exported stylesheet source, which would still pass even if the selector never actually
     // matched.
     const el = (await fixture(
+      html`<lr-segmented
+        style="max-inline-size: 80px"
+        .items=${items()}
+        value="week"
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+    expect(getComputedStyle(base).maskImage).to.contain("linear-gradient");
+  });
+
+  it("leaves a track that fits completely unmasked", async () => {
+    // The regression this guards: the fade used to be painted unconditionally, so at the 2rem
+    // per-edge default a short row was narrower than its own two fades and every label rendered
+    // half-transparent -- the control read as permanently disabled.
+    const el = (await fixture(
       html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
     )) as LyraSegmented;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
-    expect(getComputedStyle(base).maskImage).to.contain("linear-gradient");
+    await nextFrames();
+    expect(base.scrollWidth - base.clientWidth).to.be.at.most(1);
+    expect(getComputedStyle(base).maskImage).to.equal("none");
+  });
+
+  it("keeps the edge fade opaque when a consumer themes the shadow color translucent", async () => {
+    // The regression this guards: the mask's opaque stops used to be var(--lr-color-shadow), a
+    // documented consumer theming input whose job is coloring shadows. A mask reads alpha only,
+    // so setting it to something translucent -- entirely reasonable for a shadow color -- dropped
+    // the mask alpha across the WHOLE control rather than just its edges, rendering it uniformly
+    // washed out with nothing pointing back at the shadow token as the cause.
+    const el = (await fixture(
+      html`<lr-segmented
+        style="max-inline-size: 80px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
+        .items=${items()}
+        value="week"
+      ></lr-segmented>`
+    )) as LyraSegmented;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    await nextFrames();
+    const mask = getComputedStyle(base).maskImage;
+    expect(mask).to.contain("linear-gradient");
+    // The transparent stops resolve to rgba(0, 0, 0, 0); a leaked 0.25 would be the themed
+    // shadow alpha reaching the opaque stops.
+    expect(mask).to.not.contain("0.25");
   });
 });
 
@@ -749,5 +796,47 @@ describe("lr-segmented auto-reveal", () => {
     el.scrollToValue("week");
     const behavior = (calls[0] as ScrollIntoViewOptions).behavior;
     expect(["auto", "smooth"]).to.include(behavior);
+  });
+});
+
+describe("focus rehoming under a hostile DOM", () => {
+  it("survives a re-render when ShadowRoot.activeElement itself throws", async () => {
+    // The regression this guards: willUpdate() read (this.renderRoot as ShadowRoot).activeElement
+    // to decide focus rehoming after an items change. Under happy-dom -- the DOM a large share of
+    // consumers get from Vitest -- that getter THROWS when the document has no active element, and
+    // optional chaining is no defence because the throw happens inside the getter. Since the read
+    // sits in willUpdate(), it surfaced as an unhandled rejection: one downstream suite reported
+    // 120 in a single run, all this stack. The tests still passed; the runner just exited non-zero.
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    const root = el.shadowRoot!;
+    Object.defineProperty(root, "activeElement", {
+      configurable: true,
+      get(): never {
+        throw new TypeError(
+          "Cannot read properties of undefined (reading 'getRootNode')"
+        );
+      },
+    });
+    try {
+      el.items = [...items(), { value: "year", label: "Year" }];
+      await el.updateComplete;
+      expect(segmentButtons(el).length).to.equal(4);
+    } finally {
+      delete (root as unknown as Record<string, unknown>)["activeElement"];
+    }
+  });
+
+  it("still rehomes focus normally when the getter works", async () => {
+    const el = (await fixture(
+      html`<lr-segmented .items=${items()} value="week"></lr-segmented>`
+    )) as LyraSegmented;
+    segmentButtons(el)[0]!.focus();
+    el.items = [...items(), { value: "year", label: "Year" }];
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement?.getAttribute("part")).to.equal(
+      "segment"
+    );
   });
 });

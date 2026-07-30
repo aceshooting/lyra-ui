@@ -12,24 +12,31 @@ export const styles = css`
        other axis's *used* value to 'auto' too if left unset -- which can paint a thin, empty
        phantom scrollbar on a classic (non-overlay) scrollbar platform even when the steps
        actually fit (the exact bug already found and fixed once on lr-tabs). The mask-image edge
-       fade mirrors lr-tabs'/lr-segmented's identical horizontally-scrolling-row treatment; it is
-       reset to 'none' in the vertical-axis rules below so it can never bleed through a
-       higher-specificity match that doesn't also redeclare it (CSS cascades per-property, not
-       per-rule). This is intentionally static: a low-cost affordance, no scroll-position JS. */
+       fade mirrors lr-tabs'/lr-segmented's identical horizontally-scrolling-row treatment; it now
+       lives in its own overflow-gated rule below, and is reset to 'none' in the vertical-axis
+       rules so it can never bleed through a higher-specificity match that doesn't also redeclare
+       it (CSS cascades per-property, not per-rule). */
     overflow-x: auto;
     overflow-y: hidden;
+  }
+  /* Edge fade, gated on the track actually overflowing -- ScrollOverflowController toggles
+     data-scroll-overflow from a real scrollWidth/clientWidth measurement. Unconditional (as this
+     used to be) it fades the first and last step of a stepper that fits. The vertical-axis rules
+     below still reset it to 'none' at higher specificity, so it cannot bleed into that axis even
+     if a visible-overflow measurement happens to trip the attribute. */
+  [part="base"][data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
     mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
   }
@@ -57,18 +64,27 @@ export const styles = css`
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* Same overflow gate as the authored-horizontal rule above, restated at this rule's specificity
+     so the live-axis override re-applies the fade rather than being pinned to the 'none' it must
+     otherwise declare (it has to redeclare the property: the vertical arm it competes with sets
+     it, and CSS cascades per-property). */
+  :host([data-effective-orientation="horizontal"])
+    [part="base"][data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
     mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
   }

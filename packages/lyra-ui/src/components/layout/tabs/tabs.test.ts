@@ -11,6 +11,14 @@ const basic = () => html`
   </lr-tabs>
 `;
 
+/** Two animation frames, long enough for the overflow controller's `ResizeObserver` callback to
+ *  have landed on top of the synchronous measurement it already does in `hostUpdated()`. */
+async function nextFrames(): Promise<void> {
+  await new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))
+  );
+}
+
 function tabButtons(el: LyraTabs): HTMLButtonElement[] {
   return [
     ...el.shadowRoot!.querySelectorAll('[part="tab"]'),
@@ -42,11 +50,57 @@ it("never scrolls vertically -- overflow-x:auto alone lets the y axis compute to
   expect(getComputedStyle(tablist).overflowY).to.equal("hidden");
 });
 
-it("adds a static, themeable edge fade to the scroll container", () => {
+it("declares a themeable edge fade, gated on the tablist overflowing", () => {
   const css = styles.cssText.replace(/\s+/g, " ").replaceAll('"', "'");
   expect(css).to.include("-webkit-mask-image: linear-gradient");
   expect(css).to.include("mask-image: linear-gradient");
   expect(css).to.include("var(--lr-scroll-fade-size)");
+  // The gradient must live behind the overflow gate, never on the bare [part='tablist'] rule.
+  expect(css).to.include("[part='tablist'][data-scroll-overflow] {");
+});
+
+it("applies the edge fade once the tablist actually overflows", async () => {
+  const el = (await fixture(html`
+    <lr-tabs style="display: block; max-inline-size: 90px">
+      <div slot="input" label="Raw input document">Raw input</div>
+      <div slot="preview" label="Rendered preview pane">Rendered preview</div>
+      <div slot="settings" label="Settings and preferences">Settings form</div>
+    </lr-tabs>
+  `)) as LyraTabs;
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  await nextFrames();
+  expect(tablist.scrollWidth).to.be.greaterThan(tablist.clientWidth);
+  expect(getComputedStyle(tablist).maskImage).to.contain("linear-gradient");
+});
+
+it("leaves a tablist that fits completely unmasked", async () => {
+  // The regression this guards: the fade used to be painted unconditionally, dimming the first
+  // and last tab of a row with nothing to scroll to.
+  const el = (await fixture(basic())) as LyraTabs;
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  await nextFrames();
+  expect(tablist.scrollWidth - tablist.clientWidth).to.be.at.most(1);
+  expect(getComputedStyle(tablist).maskImage).to.equal("none");
+});
+
+it("keeps the edge fade opaque when a consumer themes the shadow color translucent", async () => {
+  // The regression this guards: the mask's opaque stops used to be var(--lr-color-shadow), a
+  // documented consumer theming input. A mask reads alpha only, so a translucent shadow theme
+  // dropped mask alpha across the whole tablist rather than just its edges.
+  const el = (await fixture(html`
+    <lr-tabs
+      style="display: block; max-inline-size: 90px; --lr-theme-color-shadow: rgb(0 0 0 / 0.25)"
+    >
+      <div slot="input" label="Raw input document">Raw input</div>
+      <div slot="preview" label="Rendered preview pane">Rendered preview</div>
+      <div slot="settings" label="Settings and preferences">Settings form</div>
+    </lr-tabs>
+  `)) as LyraTabs;
+  const tablist = el.shadowRoot!.querySelector('[part="tablist"]') as HTMLElement;
+  await nextFrames();
+  const mask = getComputedStyle(tablist).maskImage;
+  expect(mask).to.contain("linear-gradient");
+  expect(mask).to.not.contain("0.25");
 });
 
 it('the internal [part="tab"]:hover rule is :where()-wrapped, so a consumer ::part(tab):hover override wins without needing !important', async () => {

@@ -61,20 +61,26 @@ export const styles = css`
     border-radius: var(--lr-segmented-track-radius, var(--lr-radius));
     padding: var(--lr-segmented-track-padding, var(--lr-size-0-125rem));
     gap: var(--lr-segmented-track-gap, var(--lr-size-0-125rem));
-    /* This is intentionally static: the edge fade is a low-cost affordance for an overflowing
-       row and does not need scroll-position JavaScript or observers. */
+  }
+  /* Edge fade, gated on the track actually overflowing -- ScrollOverflowController toggles
+     data-scroll-overflow from a real scrollWidth/clientWidth measurement. This used to be painted
+     unconditionally ("a low-cost affordance that needs no observers"), which is only harmless when
+     there IS overflow: at the 2rem-per-edge default a two-option row (Overall | Daily) is narrower
+     than its own two fades, so both labels rendered half-transparent and the control read as
+     disabled. */
+  [part="base"][data-scroll-overflow] {
     -webkit-mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
     mask-image: linear-gradient(
       to right,
       transparent,
-      var(--lr-color-shadow) var(--lr-scroll-fade-size),
-      var(--lr-color-shadow) calc(100% - var(--lr-scroll-fade-size)),
+      var(--lr-mask-opaque) var(--lr-scroll-fade-size),
+      var(--lr-mask-opaque) calc(100% - var(--lr-scroll-fade-size)),
       transparent
     );
   }
