@@ -32,6 +32,24 @@ it('renders lr-option children as listbox rows with the placeholder shown as the
   expect(el.value).to.equal('');
 });
 
+it('rejects unsafe option dot colors while preserving valid CSS colors', async () => {
+  const el = await fixture<LyraSelect>(html`
+    <lr-select>
+      <lr-option value="a" dot-color="red;position:fixed">A</lr-option>
+    </lr-select>
+  `);
+  const dot = el.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement;
+  expect(dot.style.position).to.equal('');
+  expect(dot.style.backgroundColor).to.equal('transparent');
+
+  const safe = await fixture<LyraSelect>(html`
+    <lr-select>
+      <lr-option value="a" dot-color="color-mix(in srgb, red 50%, blue)">A</lr-option>
+    </lr-select>
+  `);
+  expect((safe.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement).style.backgroundColor).to.not.equal('');
+});
+
 it('opens the listbox by clicking the trigger, and closes it by clicking again', async () => {
   const el = (await fixture(basic())) as LyraSelect;
   expect(el.open).to.be.false;
@@ -603,6 +621,30 @@ it('renders sub and dot-color from light-DOM options', async () => {
   );
 });
 
+it('lays out option status dots and labels in a vertically centered row', async () => {
+  const el = (await fixture(html`
+    <lr-select>
+      <lr-option value="a" sub="Running" dot-color="green">Meter A</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+
+  const row = el.shadowRoot!.querySelector('[part="option"]') as HTMLElement;
+  const dot = el.shadowRoot!.querySelector('[part="option-dot"]') as HTMLElement;
+  const label = el.shadowRoot!.querySelector('[part="option-label"]') as HTMLElement;
+  row.style.minBlockSize = '80px';
+
+  const rowStyle = getComputedStyle(row);
+  expect(rowStyle.flexDirection).to.equal('row');
+  expect(rowStyle.alignItems).to.equal('center');
+
+  const dotRect = dot.getBoundingClientRect();
+  const labelRect = label.getBoundingClientRect();
+  expect(dotRect.right < labelRect.left, 'the shared option gap must separate the leading dot and label').to.be.true;
+  expect(Math.abs((dotRect.top + dotRect.bottom) / 2 - (labelRect.top + labelRect.bottom) / 2)).to.be.lessThan(1);
+});
+
 it('renders a group-label header when option rows are grouped', async () => {
   const el = (await fixture(html`
     <lr-select>
@@ -1071,6 +1113,40 @@ it('pins overflow-x explicitly alongside the listbox\'s overflow-y, so the unset
   // fixed on lr-tabs' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='listbox'\]\s*\{[^}]*overflow-y:\s*auto;\s*overflow-x:\s*hidden;/);
+});
+
+it('contains long form and option content at a 320px allocation', async () => {
+  const long = `generated-${'identifier'.repeat(24)}`;
+  const wrapper = await fixture(html`
+    <div style="display:flex; inline-size:320px;">
+      <lr-select style="min-inline-size:0; flex:1 1 auto;">
+        <lr-option value="long" group=${long} sub=${long} dot-color="green">${long}</lr-option>
+      </lr-select>
+    </div>
+  `);
+  const el = wrapper.querySelector('lr-select') as LyraSelect;
+  el.label = long;
+  el.hint = long;
+  el.errorText = long;
+  el.open = true;
+  await el.updateComplete;
+
+  expect(el.getBoundingClientRect().width).to.be.at.most(321);
+  for (const selector of [
+    '[part="form-control"]',
+    '[part="form-control-label"]',
+    '[part="hint"]',
+    '[part="error"]',
+    '[part="option"]',
+    '[part="option-label"]',
+    '[part="option-sub"]',
+    '.group-label',
+  ]) {
+    const part = el.shadowRoot!.querySelector(selector) as HTMLElement;
+    const rect = part.getBoundingClientRect();
+    expect(getComputedStyle(part).display, `${selector} should be visible`).to.not.equal('none');
+    expect(part.scrollWidth, `${selector} should contain its rendered text`).to.be.at.most(Math.ceil(rect.width) + 1);
+  }
 });
 
 it('gives the trigger a :hover rule alongside its :focus-visible ring', () => {

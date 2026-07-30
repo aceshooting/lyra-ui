@@ -193,8 +193,9 @@ export const styles = css`
 
   [part='option'] {
     display: flex;
-    flex-direction: column;
-    align-items: start;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--lr-space-xs);
     inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid transparent;
@@ -241,6 +242,31 @@ export const styles = css`
   [part='option-sub'] {
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-text-quiet);
+  }
+
+  [part='form-control'],
+  [part='form-control-label'],
+  [part='hint'],
+  [part='error'] {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  [part='option'] {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  [part='option-label'] {
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  [part='option-sub'],
+  .group-label {
+    overflow-wrap: anywhere;
   }
 
   .group-label {
