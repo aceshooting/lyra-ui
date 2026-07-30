@@ -1461,3 +1461,16 @@ describe("view-toggle active-state cssprops", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it('tracks slotted sublabel content through slotchange', async () => {
+  const el = await fixture<LyraWidget>(html`
+    <lr-widget label="Usage"><span slot="sublabel">Last 7 days</span></lr-widget>
+  `);
+  await el.updateComplete;
+  const flags = el as unknown as { hasSublabelSlot: boolean };
+  expect(flags.hasSublabelSlot).to.be.true;
+  el.querySelector('[slot="sublabel"]')!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(flags.hasSublabelSlot).to.be.false;
+});

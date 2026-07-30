@@ -262,3 +262,62 @@ describe("<lr-scroller>", () => {
       .to.be.true;
   });
 });
+
+describe("double-click jumps to an edge", () => {
+  const viewportOf = (el: LyraScroller): HTMLElement =>
+    el.shadowRoot!.querySelector('[part~="viewport"]') as HTMLElement;
+  const controlOf = (el: LyraScroller, which: "previous" | "next"): HTMLElement =>
+    el.shadowRoot!.querySelector(`[part~="${which}"]`) as HTMLElement;
+
+  /** The viewport sets `scroll-behavior: smooth`, so an edge jump animates across several frames
+   *  and does not necessarily move on the very first one. Wait for the position to hold steady
+   *  across several consecutive frames rather than accepting the first repeat (which would just
+   *  observe the pre-animation value twice). */
+  const settled = async (read: () => number): Promise<number> => {
+    let previous = Number.NaN;
+    let stable = 0;
+    for (let i = 0; i < 180; i++) {
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const current = read();
+      stable = current === previous ? stable + 1 : 0;
+      if (stable >= 8) return current;
+      previous = current;
+    }
+    return read();
+  };
+
+  it("jumps to the far end and back in a horizontal LTR scroller", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls orientation="horizontal" style="inline-size: 100px;">
+        <div style="inline-size: 800px;">wide content</div>
+      </lr-scroller>
+    `);
+    await el.updateComplete;
+    const viewport = viewportOf(el);
+    const max = viewport.scrollWidth - viewport.clientWidth;
+    expect(max, "the fixture must actually overflow").to.be.greaterThan(0);
+
+    controlOf(el, "next").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(Math.round(await settled(() => viewport.scrollLeft))).to.equal(Math.round(max));
+
+    controlOf(el, "previous").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(Math.round(await settled(() => viewport.scrollLeft))).to.equal(0);
+  });
+
+  it("mirrors the end edge under RTL, where the far end is a negative scrollLeft", async () => {
+    const el = await fixture<LyraScroller>(html`
+      <lr-scroller controls dir="rtl" orientation="horizontal" style="inline-size: 100px;">
+        <div style="inline-size: 800px;">wide content</div>
+      </lr-scroller>
+    `);
+    await el.updateComplete;
+    const viewport = viewportOf(el);
+    controlOf(el, "next").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    const end = await settled(() => viewport.scrollLeft);
+    expect(end, "RTL scrolls away from zero in the negative direction").to.be.lessThan(0);
+
+    controlOf(el, "previous").dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(Math.round(await settled(() => viewport.scrollLeft))).to.equal(0);
+  });
+
+});

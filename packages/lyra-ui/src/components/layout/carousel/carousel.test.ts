@@ -540,3 +540,46 @@ describe("indicator current-state cssprops", () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it("reacts to prefers-reduced-motion changing after mount", async () => {
+  // The stub above deliberately no-ops addEventListener; this one captures the listener so the
+  // preference can actually flip while the component is live, which is the only way to reach the
+  // change handler (the media query itself can't be driven from inside the test page).
+  const originalMatchMedia = window.matchMedia;
+  const listeners = new Set<(e: MediaQueryListEvent) => void>();
+  let matches = false;
+  window.matchMedia = ((query: string) => ({
+    get matches() {
+      return query === "(prefers-reduced-motion: reduce)" ? matches : false;
+    },
+    media: query,
+    addEventListener: (_t: string, fn: (e: MediaQueryListEvent) => void) => listeners.add(fn),
+    removeEventListener: (_t: string, fn: (e: MediaQueryListEvent) => void) => listeners.delete(fn),
+  })) as typeof window.matchMedia;
+
+  try {
+    const el = await carousel(html`
+      <lr-carousel autoplay autoplay-interval="1000">
+        <div>One</div>
+        <div>Two</div>
+        <div>Three</div>
+      </lr-carousel>
+    `);
+    expect((el as any).reduceMotion).to.be.false;
+    expect((el as any).timer, "autoplay is running while motion is allowed").to.not.be.undefined;
+
+    matches = true;
+    for (const fn of [...listeners]) fn({ matches: true } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect((el as any).reduceMotion).to.be.true;
+    expect((el as any).timer, "turning the preference on stops autoplay").to.be.undefined;
+
+    matches = false;
+    for (const fn of [...listeners]) fn({ matches: false } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect((el as any).reduceMotion).to.be.false;
+    expect((el as any).timer, "turning it back off resumes autoplay").to.not.be.undefined;
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});

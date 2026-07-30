@@ -715,3 +715,42 @@ it('is accessible while autoplaying', async () => {
   await el.updateComplete;
   await expect(el).to.be.accessible();
 });
+
+it('reacts to prefers-reduced-motion changing after mount', async () => {
+  // Captures the media-query listener so the preference can flip while the component is live --
+  // the only way to reach the change handler, since the real query can't be driven from the page.
+  const originalMatchMedia = window.matchMedia;
+  const listeners = new Set<(e: MediaQueryListEvent) => void>();
+  let matches = false;
+  window.matchMedia = ((query: string) => ({
+    get matches() {
+      return query === '(prefers-reduced-motion: reduce)' ? matches : false;
+    },
+    media: query,
+    addEventListener: (_t: string, fn: (e: MediaQueryListEvent) => void) => listeners.add(fn),
+    removeEventListener: (_t: string, fn: (e: MediaQueryListEvent) => void) => listeners.delete(fn),
+  })) as typeof window.matchMedia;
+
+  try {
+    const el = (await fixture(html`
+      <lr-random-content autoplay autoplay-interval="1000">
+        <div id="a">A</div>
+        <div id="b">B</div>
+      </lr-random-content>
+    `)) as LyraRandomContent;
+    await el.updateComplete;
+    expect((el as unknown as { reduceMotion: boolean }).reduceMotion).to.be.false;
+
+    matches = true;
+    for (const fn of [...listeners]) fn({ matches: true } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect((el as unknown as { reduceMotion: boolean }).reduceMotion, 'the preference is adopted').to.be.true;
+
+    matches = false;
+    for (const fn of [...listeners]) fn({ matches: false } as MediaQueryListEvent);
+    await el.updateComplete;
+    expect((el as unknown as { reduceMotion: boolean }).reduceMotion).to.be.false;
+  } finally {
+    window.matchMedia = originalMatchMedia;
+  }
+});

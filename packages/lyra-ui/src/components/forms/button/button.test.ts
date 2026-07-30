@@ -856,3 +856,16 @@ it('makes a loading anchor busy and fully inoperable', async () => {
   el.click();
   expect(clicks).to.equal(0);
 });
+
+it('tracks slotted end content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-button>Save<span slot="end">&rarr;</span></lr-button>
+  `)) as LyraButton;
+  await el.updateComplete;
+  const flags = el as unknown as { hasEndSlot: boolean };
+  expect(flags.hasEndSlot).to.be.true;
+  el.querySelector('[slot="end"]')!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(flags.hasEndSlot).to.be.false;
+});

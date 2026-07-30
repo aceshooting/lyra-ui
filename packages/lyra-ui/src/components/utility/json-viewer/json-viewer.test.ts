@@ -833,3 +833,24 @@ describe('lifecycle: willUpdate calls super', () => {
     }
   });
 });
+
+it('searchPrevious walks backwards and wraps past the first match', async () => {
+  const el = (await fixture(html`<lr-json-viewer .data=${{ ada: 'ada' }}></lr-json-viewer>`)) as LyraJsonViewer;
+  await el.runSearch('ada');
+  let detail: { activeIndex: number } | undefined;
+  el.addEventListener('lr-search-change', (e) => (detail = (e as CustomEvent).detail));
+
+  expect(await el.searchNext()).to.be.true;
+  expect(detail!.activeIndex).to.equal(0);
+  expect(await el.searchPrevious()).to.be.true;
+  expect(detail!.activeIndex, 'stepping back from the first match wraps to the last').to.equal(1);
+  expect(await el.searchPrevious()).to.be.true;
+  expect(detail!.activeIndex).to.equal(0);
+  expect(el.shadowRoot!.querySelector('[data-active]')!.getAttribute('aria-current')).to.equal('true');
+});
+
+it('searchPrevious resolves false when there is nothing to move to', async () => {
+  const el = (await fixture(html`<lr-json-viewer .data=${{ ada: 'ada' }}></lr-json-viewer>`)) as LyraJsonViewer;
+  await el.runSearch('no-such-token');
+  expect(await el.searchPrevious()).to.be.false;
+});
