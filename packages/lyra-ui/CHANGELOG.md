@@ -1,5 +1,162 @@
 # Changelog
 
+## 7.8.0
+
+### Minor Changes
+
+- 2c3934b: `<lr-embedding-explorer>`'s `height` property now actually sizes the plot. It was rendered as an
+  SVG `height` presentation attribute while the component's own stylesheet declared
+  `[part='plot'] { block-size: auto }` — and any stylesheet declaration outranks a presentation
+  attribute, so the property was inert at every value, including its documented `360px` default: the
+  plot always sized itself from the `viewBox` aspect ratio instead.
+
+  `height` is now published on the host as the new `--lr-embedding-explorer-height` custom property,
+  which `[part='plot']`'s `block-size` reads. Consequences worth knowing before upgrading:
+
+  - The default `height="360px"` now takes effect, so a plot wider than 640px is no longer as tall as
+    its allocation implies. Set `height="auto"` to keep the previous aspect-ratio-preserved sizing.
+  - A value the browser cannot parse as a `block-size` is dropped rather than applied, leaving the
+    `auto` behavior instead of collapsing the plot.
+  - A consumer's own `::part(plot) { block-size: ... }` rule still overrides `height`, and the
+    narrow-allocation `min-block-size` floor still raises it.
+
+- 2c3934b: `<lr-memory-panel>` no longer strands keyboard focus when a row action opens its confirmation step.
+  Activating "Add to long-term memory", "Remove", or "Forget all" destroys the button that had focus,
+  and nothing moved focus into the `lr-confirm-bar` that replaces it, so focus fell back to `<body>`:
+  a keyboard user was dumped at the top of the page with nothing announced, and had to re-tab through
+  the whole document to reach the confirmation they had just opened. Focus now moves into the
+  confirmation (its Deny control -- the safe action -- falling back to the bar's status element), and
+  is handed back to the row (or to the "Forget all" control) once the decision resolves. Pressing
+  Escape while the confirmation holds focus now cancels it exactly like pressing Deny: no event is
+  emitted, focus returns the same way, and the key does not propagate past the panel.
+- 2c3934b: `<lr-notebook-viewer>`: `searchNext()` and `searchPrevious()` now resolve `true` when the active
+  match moved and `false` when there was nothing to move to, matching the shared viewer search
+  contract (`LyraTextViewerTarget`) that every other searchable viewer already honors. They
+  previously returned nothing, so a find-in-page host driving several viewers polymorphically —
+  `if (await viewer.searchNext()) { ... }`, or awaiting the call before reading its own match
+  counter — got `undefined` from the notebook viewer alone and took its falsy "no more matches"
+  branch on every press, even mid-notebook.
+
+  This is an additive widening: the methods return a resolved promise instead of nothing, and callers
+  that ignored the return value are unaffected. `search()` already resolved the match count and is
+  unchanged.
+
+- 80e0ef1: Repair four regressions left by earlier fixes:
+
+  - `<lr-radio-group>`: arrow-key selection now emits `input` and `change` alongside `lr-change`, as
+    click and Space already did and as native `<input type=radio>` does. The earlier fix for a
+    duplicate `lr-change` had left the keyboard path emitting only the group event, so a consumer
+    bound to the native-mirroring events silently missed every keyboard selection.
+  - `<lr-progress-ring>`: an unslotted ring is named from the localized fallback again. Its slot's
+    fallback content is the formatted percent, and `assignedNodes({flatten:true})` returns fallback
+    children when nothing is assigned, so the control had been naming itself "40%" and no
+    `registerLyraLocale()` override could reach it.
+  - `<lr-tour>`: opening a detached tour no longer locks scroll on the document or installs a global
+    Escape handler with nothing visible, matching the guard `<lr-dialog>` already had.
+  - `text-quote` anchors and highlights now case-fold with the component's locale in
+    `<lr-docx-viewer>`, `<lr-pdf-viewer>`, `<lr-markdown>` and `<lr-markdown-core>`. Under `lang="tr"`
+    a quote of "istanbul" silently failed to match "İSTANBUL" in these four while resolving correctly
+    in every viewer built on the shared text-viewer mixin.
+
+- d8a026d: Give `<lr-table>`'s sorted column header an opaque default fill. The header is `position: sticky`
+  and the sorted-state rule defaulted to `transparent`, so in any height-capped table the body rows
+  scrolled visibly through the sorted column's header cell.
+
+  Give `<lr-pdf-viewer>`'s toolbar buttons a hover fill that differs from the toolbar behind them —
+  the rule existed but resolved to the toolbar's own opaque token, so hovering produced no visual
+  change at all. Retunable via the new `--lr-pdf-viewer-toolbar-button-hover-bg`.
+
+  Correct three `<lr-chat-message>` snippets in the authored reference that used `role="user"`. The
+  property reflects to `data-role`, so `role` was never observed: consumers copying those examples
+  got a message rendered as the default `assistant`, plus an invalid ARIA role token in the DOM.
+
+- 2c3934b: `<lr-xml-viewer>`, `<lr-av-player>`, and `<lr-terminal>` now resolve a boolean from `searchNext()`
+  and `searchPrevious()`, matching the shared `LyraTextViewerTarget` search contract that
+  `search()` already followed on all three. They returned `void`, so a host driving several
+  searchable components through that one typed surface — `if (await viewer.searchNext())` — read
+  `undefined` and took the "nothing to move to" branch on every press.
+
+### Patch Changes
+
+- ed7f463: Stop retaining one live `Range` per search match in every text viewer. `<lr-archive-viewer>`,
+  `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-email-viewer>`, `<lr-geojson-view>`,
+  `<lr-html-viewer>`, `<lr-include>`, and `<lr-pptx-viewer>` share a search mixin that held a live
+  `Range` for every match. The engine revalidates each retained `Range` on every DOM mutation in its
+  document, so a short query over a long document made every later mutation dramatically slower.
+  Matches are now kept as inert offsets, and only a bounded window around the active match is
+  materialized and painted. `matchCount`, `searchNext()`, and `searchPrevious()` still cover every
+  match.
+- 2d149dc: `<lr-dashboard-grid>` no longer starts a cell drag when the pointer lands on a button, link, or
+  input inside the cell. The guard compared a slotted light-DOM control against a shadow-root wrapper
+  with `contains()`, which never crosses the slot boundary, so it could never fire and every control
+  click inside a draggable cell dragged the cell instead of activating the control.
+
+  `<lr-tree>` no longer throws on the first arrow key when a `<lr-tree-node>` is written declaratively
+  into its documented slot. `item` is `attribute: false`, so such a node has none until a host assigns
+  one, and the keyboard handler read `item.id` unguarded.
+
+- 9083c9b: `<lr-document-library>` now sorts its Updated column chronologically. It ordered rows correctly by
+  timestamp itself, then handed the composed `<lr-table>` both those rows and a `sortKey` without
+  `sort-mode="server"`, so the table sorted them a second time in client mode — from the column's
+  rendered output, which is a _formatted_ date. The result was alphabetical by month name.
+- 2c3934b: `<lr-env-list>` no longer paints its screen-reader-only "Value hidden" announcement as visible text
+  beside the mask. The template emitted `class="sr-only"` but the component never adopted the shared
+  stylesheet that defines that class, and no rule in `LyraElement.styles` supplies it.
+- 2c3934b: Hide the anchor-announcement live region in `<lr-include>` and `<lr-pptx-viewer>`.
+
+  Both viewers render the shared anchor-target mixin's `role="status"` live region, which the mixin
+  marks up with `class="sr-only"`, but neither component's shadow stylesheet defined that class. The
+  region therefore laid out as an ordinary block, so the first anchor jump (or a failed one) painted
+  its localized announcement — "Jumped to highlighted passage." / "Passage not found in this
+  document." — as visible body text: beside the transcluded fragment for `<lr-include>`, and as an
+  extra row under the fidelity notice for `<lr-pptx-viewer>`. The announcement is now visually hidden
+  and screen-reader-only, matching every other viewer that adopts the same mixin.
+
+- 0e2dbf3: `LyraElement`'s internal `scheduleAfterUpdate()` now coalesces per key instead of collapsing every
+  caller in an update cycle onto one slot. It tracked pending work in a single boolean, so the second
+  caller in a cycle early-returned and its callback was dropped and never replayed — a component that
+  scheduled two genuinely different pieces of after-update work silently lost one of them. Repeated
+  schedules under the same key still collapse to one run, so the load path keeps producing one fetch
+  per cycle rather than one per property write.
+- 2cd5fb5: `<lr-artifact-panel>`, `<lr-commit-card>`, `<lr-heatmap>`, `<lr-query-builder>`, `<lr-tree>`, and
+  `<lr-word-cloud>` now format the numbers they interpolate into localized strings with the effective
+  locale. `localize()` substitutes values with a bare `String(value)` and does no number formatting,
+  so these rendered Western digits inside otherwise fully-translated sentences — under a locale using
+  its own numbering system (`ar-u-nu-arab`, `hi-u-nu-deva`, …) a single announcement mixed two digit
+  sets.
+
+  `<lr-attachment-chip>` also no longer falls back to an empty `src` on its thumbnail `<img>`; an
+  empty `src` is a valid URL that resolves against the document, so it would make the browser
+  re-request the page as an image.
+
+- df4dac8: Reject non-integer index segments in anchor resolution. A range-only guard (`i < 0 || i >= len`)
+  does not reject `NaN` (both comparisons are false) or a fractional index, so `<lr-xml-viewer>`
+  reported `lr-anchor-result { found: true }` and announced "Jumped to…" for a `node-path` that
+  matched nothing, and a non-trailing bad segment threw — rejecting `scrollToAnchor()` so
+  `lr-anchor-result` never fired at all, and surfacing as an unhandled rejection on the declarative
+  `anchor` path. `<lr-notebook-viewer>` had the same false-positive shape, and
+  `<lr-virtual-list>.scrollToIndex(NaN)` silently scrolled the list to the top.
+
+  `DocumentAnchorTarget` now also degrades a throwing `applyAnchor()` to "not resolved" instead of
+  letting it reject, so the mixin keeps its documented promise of always reporting a definite result.
+
+- c76ebf8: Fix `<lr-mcp-app>`'s remote `src` mode, which never loaded: binding `srcdoc` to an empty string
+  still produced a _present_ `srcdoc=""` attribute, and the HTML spec's iframe processing branches on
+  that attribute's presence, so the frame navigated to `about:srcdoc` and ignored `src` entirely
+  (while still firing `lr-mcp-ready`). The same empty-string-vs-absent shape is fixed in
+  `<lr-av-player>` (a bare player painted a "Failed to load the media" alert before a `src` was set)
+  and `<lr-zoomable-frame>` (a rejected `src` rendered a broken-image glyph).
+
+  Validate consumer-supplied CSS lengths before they reach an inline style declaration list, so a
+  crafted value can no longer inject extra declarations: `<lr-stack-trace>`'s `max-height`,
+  `<lr-code-block>`/`<lr-code-block-core>`'s `max-height`, `<lr-table>`'s column
+  `width`/`minWidth`/`maxWidth`, and `<lr-browser-frame>`'s agent-supplied ping coordinates (which are
+  now also clamped to the documented 0-100 range instead of serializing `NaN`).
+
+- ed7f463: `<lr-virtual-list>` no longer rescans the whole `items` array on every scroll frame to resolve
+  `active-id`. The lookup is now memoized on the `items`/`active-id`/`keyFunction` identities, so
+  scrolling a large list stops calling `keyFunction` once per item per frame.
+
 ## 7.7.0
 
 ### Minor Changes
