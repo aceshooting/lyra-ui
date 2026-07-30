@@ -52,8 +52,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   private stopLocaleSubscription?: () => void;
   private pendingLoadController?: AbortController;
-  private loadSchedulePending = false;
-  private deferredLoad?: () => void;
+  /** Callbacks scheduled during the current update cycle, keyed so that two callers with
+   *  *different* purposes each keep a slot. A single boolean here meant the second caller in a
+   *  cycle was silently dropped. */
+  private afterUpdateCallbacks?: Map<string, () => void>;
+  /** Callbacks that came due while detached, replayed on reconnect. */
+  private deferredAfterUpdate?: Map<string, () => void>;
   private inheritedContextObserver?: MutationObserver;
 
   override connectedCallback(): void {
@@ -65,10 +69,10 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     invalidateLyraLocaleCache(this);
     this.observeInheritedContext();
     this.stopLocaleSubscription = subscribeLyraLocale(() => this.requestUpdate());
-    const deferred = this.deferredLoad;
+    const deferred = this.deferredAfterUpdate;
     if (deferred) {
-      this.deferredLoad = undefined;
-      this.scheduleAfterUpdate(deferred);
+      this.deferredAfterUpdate = undefined;
+      for (const [key, callback] of deferred) this.scheduleAfterUpdate(callback, key);
     }
   }
 
@@ -130,17 +134,34 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   /**
-   * Runs one coalesced load callback after the current update completes.
-   * Lit still runs the update cycle while detached, so a load scheduled then is
-   * held and replayed on reconnect rather than dropped.
+   * Runs callbacks once, after the current update completes, coalesced **per `key`**.
+   *
+   * Repeated schedules under the same key collapse to the first one — that is the whole point for
+   * the default `'load'` key, where several property writes in one cycle must produce one fetch
+   * rather than one per write. But callers with *different* purposes need their own slot: several
+   * viewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,
+   * and while this coalesced on a single boolean the second one was silently dropped, leaving
+   * search results collated for the previous locale. Pass a distinct `key` for distinct work.
+   *
+   * Lit still runs the update cycle while detached, so callbacks that come due then are held and
+   * replayed on reconnect rather than dropped.
    */
-  protected scheduleAfterUpdate(callback: () => void): void {
-    if (this.loadSchedulePending) return;
-    this.loadSchedulePending = true;
+  protected scheduleAfterUpdate(callback: () => void, key = 'load'): void {
+    const pending = (this.afterUpdateCallbacks ??= new Map());
+    if (pending.has(key)) return;
+    pending.set(key, callback);
+    // Only the first key of a cycle queues the drain; later keys join the same microtask.
+    if (pending.size > 1) return;
     queueMicrotask(() => {
-      this.loadSchedulePending = false;
-      if (this.isConnected) callback();
-      else this.deferredLoad = callback;
+      const due = this.afterUpdateCallbacks;
+      this.afterUpdateCallbacks = undefined;
+      if (!due) return;
+      if (this.isConnected) {
+        for (const due_callback of due.values()) due_callback();
+        return;
+      }
+      const held = (this.deferredAfterUpdate ??= new Map());
+      for (const [heldKey, heldCallback] of due) if (!held.has(heldKey)) held.set(heldKey, heldCallback);
     });
   }
 

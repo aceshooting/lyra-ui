@@ -405,13 +405,16 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     if (safeFetchUrl(this.src) === null) {
       if (this.invalidUrlReportedFor !== this.src) {
         this.invalidUrlReportedFor = this.src;
+        // Its own key: this reports a *rejected URL*, not a load. Under the shared default key a
+        // reconnect that also scheduled the text fetch would swallow this emit entirely, and the
+        // consumer would never learn the src was disallowed.
         this.scheduleAfterUpdate(() => {
           if (this.isConnected && this.invalidUrlReportedFor === this.src) {
             this.emit('lr-render-error', {
               error: new LyraUserFacingError(this.localize('documentPreviewUrlNotAllowed')),
             });
           }
-        });
+        }, 'render-error');
       }
       return this.renderError(this.localize('documentPreviewUrlNotAllowed'));
     }

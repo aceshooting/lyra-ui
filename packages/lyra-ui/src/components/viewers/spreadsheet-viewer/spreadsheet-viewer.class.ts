@@ -139,7 +139,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(LyraSpreadsheetV
     if (locale !== this.lastSearchLocale) {
       const shouldRecompute = !!this.searchQuery;
       this.lastSearchLocale = locale;
-      if (shouldRecompute) this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); });
+      if (shouldRecompute) this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); }, 'search');
     }
   }
 

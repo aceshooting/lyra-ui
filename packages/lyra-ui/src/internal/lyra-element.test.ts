@@ -178,3 +178,47 @@ it('updates descendants that forward host aria-label and aria-describedby attrib
   expect(target.hasAttribute('aria-label')).to.be.false;
   expect(target.hasAttribute('aria-describedby')).to.be.false;
 });
+
+class DemoAfterUpdate extends LyraElement {
+  ran: string[] = [];
+  scheduleTwoDistinct(): void {
+    this.scheduleAfterUpdate(() => this.ran.push('load'));
+    this.scheduleAfterUpdate(() => this.ran.push('search'), 'search');
+  }
+  scheduleTwoSameKey(): void {
+    this.scheduleAfterUpdate(() => this.ran.push('first'));
+    this.scheduleAfterUpdate(() => this.ran.push('second'));
+  }
+  render() {
+    return html`<span>after-update</span>`;
+  }
+}
+customElements.define(tag('demo-after-update'), DemoAfterUpdate);
+
+it('runs every distinctly-keyed scheduleAfterUpdate callback in one cycle', async () => {
+  // The pending flag was a single boolean, so the SECOND caller in an update cycle early-returned
+  // and its callback was silently dropped forever. Several viewers schedule a `load()` and a
+  // locale-driven search recompute from the same `updated()` -- when both fired, the search
+  // recompute never ran and results stayed in the previous locale's collation.
+  const el = (await fixture(html`<lr-demo-after-update></lr-demo-after-update>`)) as DemoAfterUpdate;
+  await el.updateComplete;
+  el.ran = [];
+
+  el.scheduleTwoDistinct();
+  await new Promise<void>((r) => queueMicrotask(() => queueMicrotask(() => r())));
+
+  expect(el.ran.slice().sort()).to.deep.equal(['load', 'search']);
+});
+
+it('still coalesces same-key scheduleAfterUpdate callbacks to one run', async () => {
+  // Coalescing is the whole point for the `load` path: several property writes in one cycle must
+  // produce ONE fetch, not one per write. Keying must not turn that into a double load.
+  const el = (await fixture(html`<lr-demo-after-update></lr-demo-after-update>`)) as DemoAfterUpdate;
+  await el.updateComplete;
+  el.ran = [];
+
+  el.scheduleTwoSameKey();
+  await new Promise<void>((r) => queueMicrotask(() => queueMicrotask(() => r())));
+
+  expect(el.ran).to.deep.equal(['first']);
+});

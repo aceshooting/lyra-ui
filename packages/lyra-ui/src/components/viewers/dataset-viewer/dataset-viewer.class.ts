@@ -136,7 +136,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(LyraDatasetViewerBas
     if (locale !== this.lastSearchLocale) {
       const shouldRecompute = !!this.searchQuery;
       this.lastSearchLocale = locale;
-      if (shouldRecompute) this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); });
+      if (shouldRecompute) this.scheduleAfterUpdate(() => { void this.search(this.searchQuery); }, 'search');
     }
   }
 
