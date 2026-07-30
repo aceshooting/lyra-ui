@@ -539,12 +539,16 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       return html`<div part="output" data-output-type=${output.output_type}><img src="data:image/jpeg;base64,${joinText(data['image/jpeg'])}" alt=${mediaName} /></div>`;
     }
     if (data['image/svg+xml']) {
-      return html`<div
-        part="output"
-        data-output-type=${output.output_type}
-        role="img"
-        aria-label=${mediaName}
-      >${this.renderSanitized(joinText(data['image/svg+xml']), 'svg', key, joinText(data['text/plain']))}</div>`;
+      // The image role goes on the SANITIZED result only. role="img" makes every descendant
+      // presentational, so wrapping the whole renderSanitized() call would bury the loading
+      // notice and the peer-missing alert -- and any focusable control inside the text fallback
+      // becomes a tab stop that axe reports as `nested-interactive`. Same shape as
+      // svg-viewer.class.ts, which names only its `loaded` branch.
+      const svg = this.renderSanitized(joinText(data['image/svg+xml']), 'svg', key, joinText(data['text/plain']));
+      const named = this.sanitizedOutputCache.get(`svg:${joinText(data['image/svg+xml'])}`);
+      return named
+        ? html`<div part="output" data-output-type=${output.output_type} role="img" aria-label=${mediaName}>${svg}</div>`
+        : html`<div part="output" data-output-type=${output.output_type}>${svg}</div>`;
     }
     if (data['text/html']) {
       return html`<div part="output" data-output-type=${output.output_type}>${this.renderSanitized(joinText(data['text/html']), 'html', key, joinText(data['text/plain']))}</div>`;
@@ -615,9 +619,11 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
       return html`<span class="sr-only">${this.localize('loadingDocument')}</span>`;
     }
     if (cached === null) {
+      // A failed optional peer must fail closed *visibly*: docs/agents/peers-and-remote-content.md
+      // requires a localized role="alert", which every sibling viewer already renders.
       return textFallback
         ? this.renderTextOutput(outputKey, textFallback)
-        : html`<p>${this.localize('documentViewerMissingSanitizer')}</p>`;
+        : html`<p part="error" role="alert">${this.localize('documentViewerMissingSanitizer')}</p>`;
     }
     return profile === 'svg' ? html`${unsafeSVG(cached)}` : html`${unsafeHTML(cached)}`;
   }

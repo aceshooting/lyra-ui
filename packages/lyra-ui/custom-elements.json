@@ -4806,7 +4806,7 @@
               "privacy": "private",
               "return": {
                 "type": {
-                  "text": "string"
+                  "text": "ReturnType<typeof styleMap>"
                 }
               },
               "parameters": [
@@ -4816,7 +4816,8 @@
                     "text": "BrowserPing"
                   }
                 }
-              ]
+              ],
+              "description": "Ping coordinates are agent-supplied data, so they are clamped to the documented 0-100 percent\nrange and emitted through `styleMap` -- interpolating them into a declaration string would let\na crafted `x` inject arbitrary declarations onto `[part=\"ping\"]`, and a non-finite value would\nserialize as `left:NaN%`."
             },
             {
               "kind": "method",
