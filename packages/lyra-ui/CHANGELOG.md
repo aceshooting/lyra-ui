@@ -1,5 +1,19 @@
 # Changelog
 
+## 7.7.0
+
+### Minor Changes
+
+- 3ccd0ed: Improve component accessibility, localization, responsive behavior, interaction cleanup, and
+  remote-content safety across the library. Add the new documented component APIs and strengthen
+  event, packaging, and public-contract validation.
+
+### Patch Changes
+
+- 7bcac52: Raise the optional `pdfjs-dist` peer range to `^6.2.108` (from `^6.1.200`), alongside routine
+  development-dependency upgrades. Only consumers of `<lr-pdf-viewer>` are affected, and only if they
+  pin `pdfjs-dist` below `6.2.108`.
+
 ## 7.6.0
 
 ### Minor Changes
