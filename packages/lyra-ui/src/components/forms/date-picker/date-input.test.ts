@@ -1784,3 +1784,40 @@ it('formStateRestoreCallback clears the value for a non-string restored state', 
   );
   expect(el.value).to.equal('');
 });
+
+// -- Outside dismissal and slotted supporting text --------------------------
+
+it('closes an open calendar on an outside pointerdown but not one inside the host', async () => {
+  const el = (await fixture(html`<lr-date-input></lr-date-input>`)) as LyraDateInput;
+  el.open = true;
+  await el.updateComplete;
+  expect(el.open).to.be.true;
+
+  el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open, 'a pointerdown on the host keeps it open').to.be.true;
+
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('tracks slotted hint and error content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-date-input>
+      <span slot="hint">Any date after today</span>
+      <span slot="error">Required</span>
+    </lr-date-input>
+  `)) as LyraDateInput;
+  await el.updateComplete;
+  const flags = el as unknown as { hasHintSlot: boolean; hasErrorSlot: boolean };
+  expect(flags.hasHintSlot).to.be.true;
+  expect(flags.hasErrorSlot).to.be.true;
+
+  el.querySelector('[slot="hint"]')!.remove();
+  el.querySelector('[slot="error"]')!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(flags.hasHintSlot).to.be.false;
+  expect(flags.hasErrorSlot).to.be.false;
+});

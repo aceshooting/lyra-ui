@@ -214,3 +214,37 @@ it('is accessible in a populated state', async () => {
   expect(el.shadowRoot!.querySelector('lr-chat-message')).to.exist;
   await expect(el).to.be.accessible();
 });
+
+// -- Bridged child events ---------------------------------------------------
+
+it('adopts the composer draft from the embedded composer\'s lr-input', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`);
+  await el.updateComplete;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as HTMLElement;
+  expect(composer, 'the composer renders by default').to.exist;
+
+  composer.dispatchEvent(
+    new CustomEvent('lr-input', { detail: { value: 'draft text' }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect((el as unknown as { composerValue: string }).composerValue).to.equal('draft text');
+});
+
+it('adopts the follow state from the embedded viewport\'s lr-follow-change', async () => {
+  const el = await fixture<LyraAgentWorkspace>(html`<lr-agent-workspace .run=${run}></lr-agent-workspace>`);
+  await el.updateComplete;
+  const viewport = el.shadowRoot!.querySelector('lr-chat-viewport') as HTMLElement;
+  expect(el.follow, 'follow defaults on').to.be.true;
+
+  viewport.dispatchEvent(
+    new CustomEvent('lr-follow-change', { detail: { following: false }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(el.follow, 'scrolling away turns follow off').to.be.false;
+
+  viewport.dispatchEvent(
+    new CustomEvent('lr-follow-change', { detail: { following: true }, bubbles: true, composed: true }),
+  );
+  await el.updateComplete;
+  expect(el.follow).to.be.true;
+});

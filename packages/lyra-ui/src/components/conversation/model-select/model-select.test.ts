@@ -1361,3 +1361,58 @@ it('prevents mousedown on a listbox option but not on listbox chrome', async () 
   el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
   expect(onChrome.defaultPrevented).to.be.false;
 });
+
+
+// -- Degraded-DOM form-association fallback ---------------------------------
+
+describe('ElementInternals fallback (lr-model-select)', () => {
+  /** Mirrors a DOM implementation without form-association support (a consumer's happy-dom/Vitest
+   *  suite). `attachInternals()` is browser-only, so the component swaps in inert no-op internals
+   *  rather than throwing at construction -- every member has to answer, and value changes must
+   *  still work with form participation simply unavailable. */
+  const withoutAttachInternals = async (
+    impl: undefined | (() => never),
+    assertion: (el: LyraModelSelect) => void | Promise<void>,
+  ): Promise<void> => {
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const original = proto.attachInternals;
+    if (impl === undefined) delete proto.attachInternals;
+    else proto.attachInternals = impl;
+    try {
+      const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+      await el.updateComplete;
+      await assertion(el);
+    } finally {
+      proto.attachInternals = original;
+    }
+  };
+
+  it('answers inertly when attachInternals is missing', async () => {
+    await withoutAttachInternals(undefined, async (el) => {
+      const internals = (el as unknown as { internals: ElementInternals }).internals;
+      expect(internals.form).to.be.null;
+      expect(internals.willValidate).to.be.false;
+      expect(internals.validationMessage).to.equal('');
+      expect(internals.checkValidity()).to.be.true;
+      expect(internals.reportValidity()).to.be.true;
+      expect(() => internals.setFormValue('x')).to.not.throw();
+      expect(() => internals.setValidity({}, '')).to.not.throw();
+      el.value = 'mistral';
+      await el.updateComplete;
+    });
+  });
+
+  it('answers inertly when attachInternals throws', async () => {
+    await withoutAttachInternals(
+      () => {
+        throw new DOMException('unsupported');
+      },
+      (el) => {
+        const internals = (el as unknown as { internals: ElementInternals }).internals;
+        expect(internals.willValidate).to.be.false;
+        expect(internals.reportValidity()).to.be.true;
+        expect(internals.checkValidity()).to.be.true;
+      },
+    );
+  });
+});

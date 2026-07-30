@@ -866,3 +866,53 @@ describe('validationMessage localization', () => {
     expect(el.validationMessage).to.equal('');
   });
 });
+
+// -- Degraded-DOM form-association fallback ---------------------------------
+
+describe('inert ElementInternals fallback', () => {
+  /** `<lr-radio>` guards on the *global* `ElementInternals` being defined at all, then on
+   *  `attachInternals()` throwing -- a browser without form-association support, or a polyfill
+   *  substitute. Both paths must yield inert internals rather than throwing at construction. */
+  const withGlobalRemoved = async (assertion: (el: LyraRadio) => void): Promise<void> => {
+    const scope = globalThis as { ElementInternals?: unknown };
+    const original = scope.ElementInternals;
+    delete scope.ElementInternals;
+    try {
+      const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
+      await el.updateComplete;
+      assertion(el);
+    } finally {
+      scope.ElementInternals = original;
+    }
+  };
+
+  it('falls back when the ElementInternals global is absent entirely', async () => {
+    await withGlobalRemoved((el) => {
+      const internals = (el as unknown as { internals: ElementInternals }).internals;
+      expect(internals.form).to.be.null;
+      expect(internals.willValidate).to.be.false;
+      expect(internals.validationMessage).to.equal('');
+      expect(internals.checkValidity()).to.be.true;
+      expect(internals.reportValidity()).to.be.true;
+      expect(() => internals.setFormValue('a')).to.not.throw();
+      expect(() => internals.setValidity({}, '')).to.not.throw();
+    });
+  });
+
+  it('falls back when attachInternals throws', async () => {
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const original = proto.attachInternals;
+    proto.attachInternals = () => {
+      throw new DOMException('unsupported');
+    };
+    try {
+      const el = (await fixture(html`<lr-radio value="a">A</lr-radio>`)) as LyraRadio;
+      await el.updateComplete;
+      const internals = (el as unknown as { internals: ElementInternals }).internals;
+      expect(internals.checkValidity()).to.be.true;
+      expect(internals.reportValidity()).to.be.true;
+    } finally {
+      proto.attachInternals = original;
+    }
+  });
+});
