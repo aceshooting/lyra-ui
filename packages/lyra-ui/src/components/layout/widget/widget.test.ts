@@ -323,6 +323,43 @@ describe("views", () => {
     expect(toggle.getAttribute("aria-label")).to.equal("Chart view");
   });
 
+  it("centers the glyph of an icon-only view toggle", async () => {
+    // The regression this guards: [part="view-toggle"] set align-items but no justify-content,
+    // unlike its collapse-button/fullscreen-button siblings. min-inline-size floors the pill at
+    // the square icon-button size, so a glyph narrower than that floor had all its slack dumped
+    // on the trailing side by the default justify-content (normal => flex-start). Measured off
+    // the rendered boxes rather than the stylesheet text, which would pass even if the rule
+    // never matched.
+    const chartIcon = html`<svg
+      class="chart-icon"
+      style="display: block; inline-size: 13px; block-size: 13px"
+    ></svg>`;
+    const el = (await fixture(html`
+      <lr-widget
+        label="Usage"
+        .views=${[{ id: "chart", icon: chartIcon, ariaLabel: "Chart view" }]}
+      >
+        <div slot="view-chart">chart content</div>
+      </lr-widget>
+    `)) as LyraWidget;
+    const toggle = el.shadowRoot!.querySelector(
+      '[part="view-toggle"]'
+    ) as HTMLButtonElement;
+    const icon = toggle.querySelector(
+      '[part="view-icon"]'
+    ) as HTMLElement;
+    const pill = toggle.getBoundingClientRect();
+    const glyph = icon.getBoundingClientRect();
+    expect(
+      pill.width,
+      "the pill must actually be floored wider than its glyph for this to test anything"
+    ).to.be.greaterThan(glyph.width + 2);
+    const offset = Math.abs(
+      glyph.left + glyph.width / 2 - (pill.left + pill.width / 2)
+    );
+    expect(offset, `glyph is ${offset}px off the pill's centre`).to.be.at.most(0.5);
+  });
+
   it("is accessible with an icon-only view toggle (ariaLabel supplies the accessible name)", async () => {
     const chartIcon = html`<svg class="chart-icon"></svg>`;
     const el = (await fixture(html`

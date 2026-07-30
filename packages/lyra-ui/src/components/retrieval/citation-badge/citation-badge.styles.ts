@@ -40,6 +40,11 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: baseline;
+    /* Cross-axis stays baseline (the badge number sits on the surrounding text's baseline), but
+       the main axis must centre: the min-inline-size hit-area floor below is far wider than the
+       one- or two-digit label it usually holds, and the default justify-content
+       (normal => flex-start) left that number hugging the badge's leading edge. */
+    justify-content: center;
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);

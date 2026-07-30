@@ -11,6 +11,10 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: center;
+    /* Both axes: a short entity label is narrower than the min-inline-size hit-area floor below,
+       and the default justify-content (normal => flex-start) left it hugging the leading edge of
+       an otherwise symmetric pill. A no-op once the label fills the floor. */
+    justify-content: center;
     box-sizing: border-box;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);

@@ -64,6 +64,12 @@ export const styles = css`
   [part='legend-item'] {
     display: inline-flex;
     align-items: center;
+    /* Both axes: a short series name leaves the swatch+label pair narrower than the
+       min-inline-size hit-area floor below, and the default justify-content
+       (normal => flex-start) dumped that slack on the trailing side. Safe against long names --
+       overflow-wrap below wraps them instead of overflowing, so there is no slack left to
+       redistribute and this becomes a no-op. */
+    justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;

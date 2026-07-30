@@ -336,3 +336,27 @@ it('keeps the narrow day-cell floor overridable through its own cssprop', async 
   const day = el.shadowRoot!.querySelector('[part="day"]') as HTMLElement;
   expect(getComputedStyle(day).minBlockSize).to.equal('32px');
 });
+
+it('centers the chevron glyph in each icon-only month-nav button', async () => {
+  // The same defect first reported on <lr-widget>'s view toggle: [part='nav'] carries the
+  // min-inline-size hit-area floor, its content is a single chevron far narrower than that
+  // floor, and the default justify-content (normal => flex-start) left the glyph hugging the
+  // button's leading edge. Measured off the rendered boxes, not the stylesheet text.
+  const el = (await fixture(html`<lr-calendar></lr-calendar>`)) as LyraCalendar;
+  await el.updateComplete;
+  const buttons = [
+    ...el.shadowRoot!.querySelectorAll('button[part="nav"]'),
+  ] as HTMLElement[];
+  expect(buttons.length, 'both a previous and a next button').to.equal(2);
+  for (const button of buttons) {
+    const glyph = button.querySelector('[part="nav-glyph"]') as HTMLElement;
+    const box = button.getBoundingClientRect();
+    const mark = glyph.getBoundingClientRect();
+    expect(
+      box.width,
+      'the button must actually be floored wider than its glyph for this to test anything',
+    ).to.be.greaterThan(mark.width + 2);
+    const offset = Math.abs(mark.left + mark.width / 2 - (box.left + box.width / 2));
+    expect(offset, `chevron is ${offset}px off the button's centre`).to.be.at.most(0.5);
+  }
+});

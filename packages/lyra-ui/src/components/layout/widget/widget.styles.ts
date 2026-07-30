@@ -90,6 +90,13 @@ export const styles = css`
     display: inline-flex;
     flex: 0 1 auto;
     align-items: center;
+    /* Both axes, matching collapse-button/fullscreen-button. Cross-axis centering alone left an
+       icon-only toggle visibly off-center: min-inline-size floors the pill at the square
+       icon-button size, so a 13px glyph inside a 40px pill has ~11px of slack that the default
+       justify-content (normal => flex-start) dumps entirely on the trailing side -- 4.5px off
+       true center once the asymmetric inline padding is counted. A labeled toggle is unaffected
+       (its content already fills the pill, which sizes to fit). */
+    justify-content: center;
     min-inline-size: var(--lr-icon-button-size);
     min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;

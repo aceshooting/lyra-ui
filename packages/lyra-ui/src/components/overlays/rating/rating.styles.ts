@@ -2,7 +2,11 @@ import { css } from 'lit';
 
 export const styles = css`
   :host { display: inline-block; color: var(--lr-color-warning); }
-  [part='base'] { display: inline-flex; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+  /* justify-content pairs with the min-inline-size hit-area floor below: a low-max rating (a
+     single star, say) is narrower than that floor, and the default justify-content
+     (normal => flex-start) would push the stars against the leading edge of an otherwise
+     centred control. A no-op once the stars already fill the floor. */
+  [part='base'] { display: inline-flex; justify-content: center; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
   /* Pointer cursor only while the rating is actually settable -- a readonly or disabled rating is
      not editable via click/drag, so an unconditional cursor: pointer here would misleadingly cue
      an interaction that setValue() (rating.class.ts) refuses to apply. */

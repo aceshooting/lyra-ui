@@ -23,7 +23,12 @@ export const styles = css`
      size here applies to whichever of the two a given selector match resolves to, sizing the
      'previous' button directly and, for the wrapping span, at least as large as its own button
      content already makes it. */
-  [part='nav'] { display: flex; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
+  /* justify-content on both axes: the nav buttons carry a single icon-only glyph (nav-glyph),
+     far narrower than the min-inline-size hit-area floor below, and the default
+     justify-content (normal => flex-start) dumped all that slack on the trailing side, leaving
+     the chevron visibly off-centre in its button. Only takes effect when there IS slack, so a
+     nav box whose content already fills it renders exactly as before. */
+  [part='nav'] { display: flex; justify-content: center; align-items: center; gap: var(--lr-space-xs); min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); }
   /* button[part='nav'] (a direct-attribute match, not a descendant match) reaches both the
      'previous' button (carries part="nav" itself) and the 'next' button (now also carries part="nav"
      directly, in addition to sitting inside a span that also carries it for shared hit-area sizing) --
