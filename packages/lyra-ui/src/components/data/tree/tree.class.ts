@@ -275,7 +275,11 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   private focusNode(node: LyraTreeNode | undefined): void {
     if (!node) return;
-    this.activeId = node.item.id;
+    // `item` is `attribute: false`, so a `<lr-tree-node>` written declaratively into this
+    // component's documented slot has none until a host assigns one. Such a node is still
+    // focusable, it just has no identity to make active -- null it rather than leaving the
+    // previous node's id claiming a roving tabindex it no longer owns.
+    this.activeId = node.item?.id ?? null;
     node.focus();
   }
 
@@ -381,7 +385,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   private onTreeKeyDown = (e: KeyboardEvent): void => {
     const visible = this.visibleNodeElements();
     if (visible.length === 0) return;
-    const currentIndex = visible.findIndex((n) => n.item.id === this.activeId);
+    // `n.item` can be undefined for a declaratively-slotted node -- see `focusNode()`.
+    const currentIndex = visible.findIndex((n) => n.item?.id === this.activeId);
     const current = currentIndex >= 0 ? visible[currentIndex] : visible[0];
     if (!current) return; // visible is non-empty (checked above), so current is always defined
     // Ctrl/Cmd+ArrowUp/ArrowDown reorders instead of navigating, matching

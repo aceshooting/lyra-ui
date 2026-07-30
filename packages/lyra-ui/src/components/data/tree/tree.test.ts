@@ -1336,3 +1336,26 @@ describe('reorderable', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+it("survives keyboard navigation over slotted tree-nodes that carry no item", async () => {
+  // `<lr-tree>`'s documented slot takes `<lr-tree-node>` elements, and `item` is `attribute: false`
+  // -- so any consumer writing the tree declaratively in HTML necessarily gets nodes whose `item`
+  // is undefined. `visibleNodeElements()` already guards with `n.item?.disabled`, but the keyboard
+  // handler and `focusNode()` read `n.item.id` bare, throwing a TypeError on the first arrow key.
+  const el = (await fixture(html`
+    <lr-tree>
+      <lr-tree-node>Alpha</lr-tree-node>
+      <lr-tree-node>Beta</lr-tree-node>
+    </lr-tree>
+  `)) as LyraTree;
+  await el.updateComplete;
+
+  const base = el.shadowRoot!.querySelector('[part="base"]') ?? el;
+  const press = (key: string) =>
+    base.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, composed: true }));
+
+  expect(() => press("ArrowDown")).to.not.throw();
+  expect(() => press("ArrowUp")).to.not.throw();
+  expect(() => press("Home")).to.not.throw();
+  expect(() => press("End")).to.not.throw();
+});

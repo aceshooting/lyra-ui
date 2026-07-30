@@ -637,6 +637,22 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     );
   }
 
+  /** Whether the pointer landed on an interactive control inside `wrapper` rather than on the
+   *  cell's own drag surface. */
+  private hasInteractiveTarget(e: PointerEvent, wrapper: HTMLElement): boolean {
+    const path = e.composedPath();
+    const stop = path.indexOf(wrapper);
+    for (const node of stop < 0 ? path : path.slice(0, stop)) {
+      if (
+        node instanceof Element &&
+        node !== wrapper &&
+        node.matches(INTERACTIVE_DESCENDANT_SELECTOR)
+      )
+        return true;
+    }
+    return false;
+  }
+
   private onCellPointerDown(e: PointerEvent, cell: DashboardCell): void {
     if (
       !this.cellsDraggable ||
@@ -647,11 +663,12 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     )
       return;
     const wrapper = e.currentTarget as HTMLElement;
-    const interactive = (e.target as HTMLElement).closest(
-      INTERACTIVE_DESCENDANT_SELECTOR
-    );
-    if (interactive && interactive !== wrapper && wrapper.contains(interactive))
-      return;
+    // Walk the *composed* path, not `closest()` + `contains()`: cell content is slotted light DOM
+    // while `wrapper` lives in this shadow root, so `wrapper.contains(slottedControl)` is always
+    // false (`contains()` walks the node tree, not the flat tree) and the guard never fired.
+    // `composedPath()` crosses both the slot and any nested shadow root, and truncating it at
+    // `wrapper` bounds the search to what is actually inside this cell.
+    if (this.hasInteractiveTarget(e, wrapper)) return;
     const pitch = this.measurePitch();
     if (!pitch) return;
     e.stopPropagation();

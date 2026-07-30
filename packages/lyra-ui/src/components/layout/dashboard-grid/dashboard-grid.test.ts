@@ -1511,3 +1511,45 @@ it("formats move and resize announcement coordinates with the effective locale",
   expect(announcer.pendingText).to.include(number.format(2));
   expect(announcer.pendingText).to.include(number.format(1));
 });
+
+it("does not start a cell drag from a pointerdown on an interactive control inside the cell", async () => {
+  // Cell content is *slotted* light DOM (`<slot name="cell-{id}">`) while the drag listener sits on
+  // a `[part="cell"]` wrapper inside the shadow root. `wrapper.contains(lightDomButton)` is
+  // therefore always false -- `contains()` walks the node tree, not the flat tree -- so the
+  // "don't drag when the user grabbed a control" guard could never fire, and every button/input
+  // click inside a dashboard cell started a drag instead of activating the control.
+  const el = (await fixture(html`
+    <lr-dashboard-grid cells-draggable row-height="50" gap="8">
+      <div cell-id="a"><button type="button">Refresh</button></div>
+    </lr-dashboard-grid>
+  `)) as LyraDashboardGrid;
+  el.layout = [{ id: "a", x: 0, y: 2, w: 1, h: 1 }];
+  await el.updateComplete;
+
+  const wrapper = el.shadowRoot!.querySelector('[part="cell"]') as HTMLElement;
+  wrapper.setPointerCapture = () => {};
+  const button = el.querySelector("button") as HTMLButtonElement;
+
+  let moved = 0;
+  el.addEventListener("lr-cell-move", () => moved++);
+
+  // Composed + bubbling, exactly as a real pointerdown on the slotted button reaches the wrapper.
+  button.dispatchEvent(
+    new PointerEvent("pointerdown", {
+      pointerId: 7,
+      clientX: 0,
+      clientY: 0,
+      bubbles: true,
+      composed: true,
+    })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointermove", { pointerId: 7, clientX: 0, clientY: 116 })
+  );
+  window.dispatchEvent(
+    new PointerEvent("pointerup", { pointerId: 7, clientX: 0, clientY: 116 })
+  );
+  await el.updateComplete;
+
+  expect(moved, "grabbing a button inside a cell must not drag the cell").to.equal(0);
+});
