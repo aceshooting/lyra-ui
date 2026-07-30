@@ -13,6 +13,7 @@ import type { LyraTreeNode } from './tree-node.class.js';
 // Data types live in ./tree-item.js (extracted to break a type-only import cycle with
 // tree-node.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
 import type { TreeBadgeTone, TreeBadge, TreeItem } from './tree-item.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 export type { TreeBadgeTone, TreeBadge, TreeItem };
 
 export interface LyraTreeEventMap {
@@ -195,8 +196,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * top-level ancestor.
    */
   private deepFocusedNode(): LyraTreeNode | null {
-    let active: Element | null = document.activeElement;
-    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    const active = deepActiveElementIn(document);
     if (!active || active.localName !== tag('tree-node')) return null;
     const node = active as LyraTreeNode;
     const id = node.item?.id;

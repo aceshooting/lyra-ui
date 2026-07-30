@@ -4,6 +4,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './mention-popover.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /** One candidate row — an `@`-mentionable person/entity, or a `/`-command. */
 export interface MentionItem {
@@ -470,7 +471,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
     await this.updateComplete;
     const active = this.activeDescendantElement;
     active?.focus({ preventScroll: true });
-    return this.shadowRoot?.activeElement === active;
+    return activeElementIn(this.shadowRoot) === active;
   }
 
   /** The internal `id` of the `role="listbox"` popup. Like

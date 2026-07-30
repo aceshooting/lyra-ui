@@ -14,6 +14,7 @@ import type { LyraCombobox } from '../../forms/combobox/combobox.class.js';
 import type { LyraInput } from '../../forms/input/input.class.js';
 import type { LyraDateInput } from '../../forms/date-picker/date-input.class.js';
 import { styles } from './query-builder.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /** The kind of value a `QueryBuilderField` holds — drives which existing sibling control
  *  (`lr-input`/`lr-select`/`lr-date-input`/`lr-combobox`) renders for a condition row's value
@@ -291,7 +292,7 @@ export class LyraQueryBuilder extends LyraElement<LyraQueryBuilderEventMap> {
     if (this.disabled) return;
     if (!this._value.conditions.some((c) => c.id === id)) return;
     const row = this.shadowRoot?.querySelector(`[part="condition"][data-id="${CSS.escape(id)}"]`);
-    const active = this.shadowRoot?.activeElement;
+    const active = activeElementIn(this.shadowRoot);
     if (row && active && row.contains(active)) this.pendingFocusAdd = true;
     const conditions = this._value.conditions.filter((c) => c.id !== id);
     this.commit({ ...this._value, conditions });

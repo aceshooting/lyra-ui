@@ -15,6 +15,7 @@ import {
   withSyntheticCatalogValue,
   type DisplayCatalogEntry,
 } from '../../../internal/catalog-picker.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /**
  * `true`-defaulting boolean attribute converter for `preview`. Lit's built-in `type: Boolean`
@@ -236,8 +237,9 @@ export class LyraVoicePicker extends LyraElement<LyraVoicePickerEventMap> {
     if (this.hasUpdated) {
       const renderedClosedMode = this.renderRoot.querySelector('[part="trigger"]') !== null;
       const switchingMode = renderedClosedMode !== this.closedMode;
-      const focused =
-        this.renderRoot instanceof ShadowRoot ? this.renderRoot.activeElement : this.ownerDocument.activeElement;
+      const focused = activeElementIn(
+        this.renderRoot instanceof ShadowRoot ? this.renderRoot : this.ownerDocument,
+      );
       this.suppressControlEvents = switchingMode;
       this.transferControlFocus =
         switchingMode &&

@@ -7,8 +7,10 @@ import {
   type OrientationBreakpointBasis,
 } from "../../../internal/orientation-breakpoint.js";
 import { isRtl } from "../../../internal/rtl.js";
+import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
 import { styles } from "./stepper.styles.js";
 import { getNumberFormat } from "../../../internal/intl-cache.js";
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type StepState =
   | "pending"
@@ -199,6 +201,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       )
   );
 
+  constructor() {
+    super();
+    // Gates the horizontal [part="base"] edge fade on the track genuinely overflowing -- see
+    // --lr-scroll-fade-size and stepper.styles.ts. Independent of the orientation controller
+    // above: the vertical rules zero the mask out regardless of this attribute.
+    observeScrollOverflow(this, () => this.baseEl);
+  }
+
   /** The live layout/navigation axis after applying `orientationBreakpoint` -- identical to
    *  `orientation` whenever that's unset. See the class doc. */
   get effectiveOrientation(): StepperOrientation {
@@ -231,8 +241,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (changed.has("steps")) {
-      const focusedStep = (this.renderRoot as ShadowRoot)
-        .activeElement as HTMLElement | null;
+      const focusedStep = activeElementIn(this.renderRoot as ShadowRoot) as HTMLElement | null;
       if (focusedStep?.getAttribute("part") === "step") {
         this.pendingStepFocusId = focusedStep.dataset["id"] ?? "";
       }
@@ -371,8 +380,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       .map((step, index) => ({ step, index }))
       .filter(({ step }) => step.state !== "disabled");
     if (navigable.length === 0) return;
-    const focused = (this.renderRoot as ShadowRoot)
-      .activeElement as HTMLElement | null;
+    const focused = activeElementIn(this.renderRoot as ShadowRoot) as HTMLElement | null;
     const focusedIndex = Number(focused?.dataset["index"]);
     const currentIndex = navigable.findIndex(
       (item) => item.index === focusedIndex

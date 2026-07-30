@@ -8,6 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../../layout/scroller/scroller.class.js';
 import { styles } from './path-strip.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type LyraPathElement =
   | { kind: 'node'; node: LyraEntity }
@@ -50,7 +51,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!changed.has('path')) return;
-    this.restoreFocusAfterPathChange = this.shadowRoot?.activeElement?.matches(
+    this.restoreFocusAfterPathChange = activeElementIn(this.shadowRoot)?.matches(
       '[part="node"], [part="relation"]',
     ) ?? false;
     this.activeIndex = Math.min(this.activeIndex, Math.max(0, this.path.length - 1));

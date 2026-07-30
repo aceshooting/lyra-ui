@@ -5,6 +5,7 @@ import '../../utility/copy-button/copy-button.class.js';
 import '../message-feedback/message-feedback.class.js';
 
 import { styles } from './message-actions.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type MessageActionControl = 'copy' | 'regenerate' | 'edit' | 'feedback';
 
@@ -226,7 +227,7 @@ export class LyraMessageActions extends LyraElement<LyraMessageActionsEventMap> 
       el.removeAttribute('tabindex');
       const activeInner =
         (preferred && inner.includes(preferred) ? preferred : undefined) ??
-        (el.shadowRoot?.activeElement instanceof HTMLElement ? el.shadowRoot.activeElement : undefined) ??
+        (activeElementIn(el.shadowRoot) instanceof HTMLElement ? activeElementIn(el.shadowRoot) : undefined) ??
         inner[0];
       inner.forEach((control) => {
         control.tabIndex = i === index && control === activeInner ? 0 : -1;

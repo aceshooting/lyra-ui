@@ -2,6 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { tag } from '../../../internal/prefix.js';
+import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './timeline.styles.js';
 
 export type TimelineOrientation = 'vertical' | 'horizontal';
@@ -29,7 +30,8 @@ export type TimelineOrientation = 'vertical' | 'horizontal';
  * @csspart base - The root wrapper. `role="list"` lives here directly (a timeline isn't a navigation
  *   landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction:
  *   column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`,
- *   `overflow-y: hidden`, and a static edge-fade `mask-image`) in `horizontal` orientation.
+ *   `overflow-y: hidden`, and an edge-fade `mask-image` applied only while the strip actually
+ *   overflows) in `horizontal` orientation.
  * @cssprop [--lr-timeline-gap=var(--lr-space-l)] - Spacing between consecutive items along the
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
@@ -55,6 +57,14 @@ export class LyraTimeline extends LyraElement {
   // dodge a wasted second update, reconciled in firstUpdated via the authoritative slot-based count,
   // kept live afterward via slotchange) rather than re-deriving it.
   @state() private slottedCount = 0;
+
+  constructor() {
+    super();
+    // Gates the horizontal [part='base'] edge fade on the strip genuinely overflowing -- see
+    // --lr-scroll-fade-size and timeline.styles.ts. Harmless in the vertical default, where the
+    // strip never scrolls inline and the attribute simply stays off.
+    observeScrollOverflow(this, () => this.renderRoot.querySelector("[part='base']"));
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);

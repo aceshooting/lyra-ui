@@ -5,6 +5,7 @@ import type { CancelEventDetail, RetryEventDetail } from '../../../ai/types.js';
 import type { KnowledgeSource } from '../knowledge-base/knowledge-base.class.js';
 import type { IngestionQueueItem } from '../ingestion-queue/ingestion-queue.class.js';
 import { styles } from './knowledge-base-admin.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 let knowledgeBaseAdminInstance = 0;
 
@@ -83,7 +84,7 @@ export class LyraKnowledgeBaseAdmin extends LyraElement<LyraKnowledgeBaseAdminEv
     super.willUpdate(changed);
     if (!this.hideIngestion || this.activeTab !== 'ingestion') return;
     this.focusSourcesAfterUpdate =
-      this.shadowRoot?.activeElement?.id === this.tabId('ingestion');
+      activeElementIn(this.shadowRoot)?.id === this.tabId('ingestion');
     this.activeTab = 'sources';
     this.emit('lr-tab-change', { tab: 'sources' });
   }

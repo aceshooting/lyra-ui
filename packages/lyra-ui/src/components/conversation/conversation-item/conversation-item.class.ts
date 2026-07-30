@@ -11,6 +11,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { getDateTimeFormat } from '../../../internal/intl-cache.js';
 import { styles } from './conversation-item.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter, spellcheckConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface ConversationItemRenameDetail {
   title: string;
@@ -398,7 +399,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
       if (generation !== this.blurCommitGeneration || !this.renaming) return;
       // Removing a virtualized row blurs its editor as a lifecycle side effect. Preserve the
       // controlled draft/state so reconnect can restore the same editing session and focus.
-      if (!this.isConnected || (!synthetic && this.shadowRoot?.activeElement === this.titleInput)) return;
+      if (!this.isConnected || (!synthetic && activeElementIn(this.shadowRoot) === this.titleInput)) return;
       this.commitRename();
     });
   };

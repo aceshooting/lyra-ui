@@ -13,6 +13,7 @@ import '../../overlays/badge/badge.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { styles } from './realtime-session.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type RealtimeConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
 export interface LyraRealtimeSessionEventMap {
@@ -67,8 +68,9 @@ export class LyraRealtimeSession extends LyraElement<LyraRealtimeSessionEventMap
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     if (!changed.has('state')) return;
-    const focused =
-      this.renderRoot instanceof ShadowRoot ? this.renderRoot.activeElement : this.ownerDocument.activeElement;
+    const focused = activeElementIn(
+      this.renderRoot instanceof ShadowRoot ? this.renderRoot : this.ownerDocument,
+    );
     const focusedPart = focused instanceof HTMLElement ? focused.getAttribute('part') : null;
     this.transferActionFocus =
       focused instanceof HTMLElement &&

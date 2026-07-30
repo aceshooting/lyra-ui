@@ -8,6 +8,7 @@ import type { VirtualListGroup } from '../../layout/virtual-list/virtual-list.cl
 import { styles } from './retrieval-results.styles.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
 
 /** `lr-select`'s detail: the complete updated selection, both as bare ids and as the (deduplicated)
  *  `RetrievalChunk` records they refer to -- a host wanting "what got selected" rarely wants to
@@ -201,11 +202,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   private focusRestoreGeneration = 0;
 
   private deepActiveElement(): Element | null {
-    let active = this.shadowRoot?.activeElement ?? null;
-    while (active instanceof HTMLElement && active.shadowRoot?.activeElement) {
-      active = active.shadowRoot.activeElement;
-    }
-    return active;
+    return deepActiveElementIn(this.shadowRoot);
   }
 
   private chunkAnchor(start: Element | null): Element | null {

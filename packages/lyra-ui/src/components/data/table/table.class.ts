@@ -20,6 +20,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { minMax } from '../heatmap/heatmap-scale.js';
 import '../../overlays/empty/empty.class.js';
 import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
  *  spinner; `'skeleton'` keeps the real grid — `<colgroup>`, `<thead>`, filter field, pagination
@@ -1454,7 +1455,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     // a while ago" are indistinguishable from the DOM alone.
     this.editorHadFocusBeforeUpdate =
       this.focusedEditorCell !== null &&
-      this.shadowRoot?.activeElement ===
+      activeElementIn(this.shadowRoot) ===
         this.editorElementFor(this.focusedEditorCell.rowKey, this.focusedEditorCell.columnKey);
   }
 
@@ -1710,7 +1711,7 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
     const editor = this.editorElementFor(cell.rowKey, cell.columnKey);
     if (editor === null) {
       this.focusedEditorCell = null;
-    } else if (this.editorHadFocusBeforeUpdate && this.shadowRoot?.activeElement !== editor) {
+    } else if (this.editorHadFocusBeforeUpdate && activeElementIn(this.shadowRoot) !== editor) {
       editor.focus();
     }
     this.editorHadFocusBeforeUpdate = false;

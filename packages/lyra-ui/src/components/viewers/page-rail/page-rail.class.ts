@@ -8,6 +8,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './page-rail.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 const DIGIT_BUFFER_MS = 500;
 const MAX_PAGE_COUNT = 100_000;
@@ -108,7 +109,7 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
     super.willUpdate(changed);
     if (changed.has('pageCount') || changed.has('resolvedPageCount')) {
       const list = this.shadowRoot?.querySelector<LyraVirtualList>('lr-virtual-list');
-      const focused = list?.shadowRoot?.activeElement;
+      const focused = activeElementIn(list?.shadowRoot);
       const focusedIndex = focused instanceof HTMLElement
         ? finiteInteger(Number(focused.closest<HTMLElement>('[data-row-index]')?.dataset['rowIndex']), -1, -1)
         : -1;

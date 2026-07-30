@@ -8,6 +8,7 @@ import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizePercentRect, type SafePercentRect } from '../../../internal/safe-css.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface HighlightLayerItem {
   id: string;
@@ -77,7 +78,7 @@ export class LyraHighlightLayer extends LyraElement<LyraHighlightLayerEventMap> 
           return Math.abs(index - previousIndex) < Math.abs(nearest - previousIndex) ? index : nearest;
         }, null);
         const nextItem = nextIndex === null ? null : this.items[nextIndex]!;
-        const activeElement = this.shadowRoot?.activeElement as HTMLElement | null;
+        const activeElement = activeElementIn(this.shadowRoot) as HTMLElement | null;
         const shouldTransferFocus = activeElement?.matches('[data-item-action]') ?? false;
         if (shouldTransferFocus && nextItem) {
           const previousTargetIndex = previousItems?.indexOf(nextItem) ?? -1;

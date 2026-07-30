@@ -6,6 +6,7 @@ import { SET_ANCHORED_VALIDITY } from '../../../internal/anchored-validity.js';
 import { nextId } from '../../../internal/a11y.js';
 import { styles } from './known-date.styles.js';
 import { getDateTimeFormat, getNumberFormat } from '../../../internal/intl-cache.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type LyraKnownDateSize = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type LyraKnownDateField = 'day' | 'month' | 'year';
@@ -549,7 +550,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
     e.stopPropagation();
     this.commitChangeIfNeeded();
     const related = e.relatedTarget as Node | null;
-    const active = this.shadowRoot?.activeElement;
+    const active = activeElementIn(this.shadowRoot);
     const staysInsideControl =
       e.isTrusted &&
       ((related instanceof HTMLInputElement && related.dataset['field'] !== undefined) ||

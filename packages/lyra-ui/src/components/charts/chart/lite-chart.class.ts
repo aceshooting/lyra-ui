@@ -11,6 +11,7 @@ import '../../utility/live-region/live-region.class.js';
 import { styles } from './lite-chart.styles.js';
 import { trueDefaultBooleanFromAttributeConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor, sanitizeCssLength } from '../../../internal/safe-css.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface LiteSeries {
   label: string;
@@ -446,7 +447,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     super.willUpdate(changed);
     const marksChanged = ['type', 'labels', 'datasets', 'skipZero'].some((name) => changed.has(name));
     if (!marksChanged) return;
-    const active = this.shadowRoot?.activeElement ?? null;
+    const active = activeElementIn(this.shadowRoot) ?? null;
     const hadFocusedMark = active?.matches('[part="bar"], [part="point"]') ?? false;
     const priorPosition = Number(active?.getAttribute('data-mark-index') ?? this.activeMarkIndex);
     const datasetAttribute = active?.getAttribute('data-dataset-index');
@@ -593,7 +594,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
       const markEls = Array.from(this.renderRoot.querySelectorAll('[part="bar"], [part="point"]')) as HTMLElement[];
       const mark = markEls[index];
       if (!mark) return;
-      if (this.shadowRoot?.activeElement === mark) this.onMarkFocus(index);
+      if (activeElementIn(this.shadowRoot) === mark) this.onMarkFocus(index);
       else mark.focus();
     });
   }

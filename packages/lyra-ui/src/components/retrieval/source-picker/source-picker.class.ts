@@ -9,6 +9,7 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './source-picker.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface LyraSourceEntry {
   id: string;
@@ -165,7 +166,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
     if (!changed.has('sources') && !changed.has('query') && !changed.has('expandedIds')) return;
 
     const renderedRows = Array.from(this.renderRoot.querySelectorAll<HTMLElement>('[part~="item"]'));
-    const focusedIndex = renderedRows.indexOf(this.shadowRoot?.activeElement as HTMLElement);
+    const focusedIndex = renderedRows.indexOf(activeElementIn(this.shadowRoot) as HTMLElement);
     const rows = this.visibleRows();
     const retainedIndex = rows.findIndex((row) => row.entry.id === this.activeId);
     const nextIndex =

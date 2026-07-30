@@ -22,6 +22,7 @@ import {
   type DashboardCell,
   type DashboardCollisionPolicy,
 } from "./layout.js";
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /** A light-DOM-adopted default cell (`<lr-widget>` wrapping an `<lr-widget-renderer>`) -- a
  *  structural type, not an import of `LyraWidget`/`LyraWidgetRenderer`, so this module never
@@ -256,7 +257,7 @@ export class LyraDashboardGrid extends LyraElement<LyraDashboardGridEventMap> {
     super.willUpdate(changed); // no-op today, but keeps any future LyraElement/mixin willUpdate logic wired in
     if (changed.has("layout")) {
       this.rehomeCellFocus =
-        (this.renderRoot as ShadowRoot).activeElement?.getAttribute("part") ===
+        activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute("part") ===
         "cell";
       this.syncDefaultCells();
       const cells = this.sortedLayout;

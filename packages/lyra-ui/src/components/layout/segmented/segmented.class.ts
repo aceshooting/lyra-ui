@@ -4,7 +4,9 @@ import { repeat } from "lit/directives/repeat.js";
 import { LyraElement } from "../../../internal/lyra-element.js";
 import { isRtl } from "../../../internal/rtl.js";
 import { prefersReducedMotion } from "../../../internal/motion.js";
+import { observeScrollOverflow } from "../../../internal/scroll-overflow.js";
 import { styles } from "./segmented.styles.js";
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface SegmentedItem {
   value: string;
@@ -44,7 +46,8 @@ export interface LyraSegmentedEventMap {
  * @csspart segment-icon - Optional leading visual supplied by the item's `icon` field; content
  *   may have a natural aspect ratio and is not restricted to a square icon.
  * @csspart segment-label - The segment's label text.
- * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
+ * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
+ *   fade is applied only while the track actually overflows, so a row that fits is never dimmed.
  * @cssprop [--lr-segmented-track-min-height=var(--lr-size-2-5rem)] - Minimum height of the `base`
  *   track. Re-set per `size` (`2xs` through `xl`); the `2.5rem` (40px) default applies at the
  *   unset/`m` size, matching `<lr-input>`/`<lr-select>`/`<lr-combobox>`'s own shared default-tier
@@ -96,6 +99,15 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
   @state() private selectedItem?: SegmentedItem;
 
   private rehomeSegmentFocus = false;
+
+  constructor() {
+    super();
+    // Gates the [part="base"] edge fade on the track genuinely overflowing -- see
+    // --lr-scroll-fade-size and segmented.styles.ts.
+    observeScrollOverflow(this, () =>
+      this.renderRoot.querySelector('[part="base"]')
+    );
+  }
 
   private select(item: SegmentedItem): void {
     if (item.disabled || item === this.selectedItem) return;
@@ -154,7 +166,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     super.willUpdate(changed);
     if (
       changed.has("items") &&
-      (this.renderRoot as ShadowRoot).activeElement?.getAttribute("part") ===
+      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute("part") ===
         "segment"
     ) {
       this.rehomeSegmentFocus = true;
@@ -179,7 +191,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
       .filter(({ item }) => !item.disabled);
     if (navigable.length === 0) return;
     const focusedIndex = Number(
-      ((this.renderRoot as ShadowRoot).activeElement as HTMLElement | null)
+      (activeElementIn(this.renderRoot as ShadowRoot) as HTMLElement | null)
         ?.dataset["index"]
     );
     const selectedIndex = this.items.indexOf(this.selectedItem!);

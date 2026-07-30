@@ -9,6 +9,7 @@ import { styles } from './tool-approval-dialog.styles.js';
 import '../../utility/json-viewer/json-viewer.class.js';
 import '../../forms/button/button.class.js';
 import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type ToolApprovalDialogWrap = 'hard' | 'soft' | 'off';
 
@@ -243,7 +244,7 @@ export class LyraToolApprovalDialog extends LyraElement<LyraToolApprovalDialogEv
         // steering focus into the textarea beats leaving it on the Edit
         // button the click already left it on.
         this.shadowRoot?.querySelector<HTMLTextAreaElement>('[part="args-editor"]')?.focus();
-      } else if (this.open && !this.shadowRoot?.activeElement) {
+      } else if (this.open && !activeElementIn(this.shadowRoot)) {
         // Reached when editing was turned off some way other than clicking
         // Cancel (e.g. `editable` flipping to false while the textarea held
         // focus, in willUpdate above) -- the textarea that held focus was

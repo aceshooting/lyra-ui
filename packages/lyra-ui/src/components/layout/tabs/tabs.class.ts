@@ -4,7 +4,9 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
+import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
 import { styles } from './tabs.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /**
  * One tab, derived from a direct light-DOM child's `slot`/`label`/`disabled`
@@ -58,7 +60,8 @@ export interface LyraTabsEventMap {
  * @csspart tab - A single tab button.
  * @csspart tab-icon - The optional leading-icon wrapper inside a tab button; only rendered when that tab has a matching `<id>-icon` sibling.
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
- * @cssprop [--lr-scroll-fade-size=2rem] - Width of the static fade at each horizontal scroll edge.
+ * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
+ *   fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.
  * @cssprop [--lr-tabs-selected-color=var(--lr-color-brand)] - Text color of the selected tab.
  *   Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which
  *   is what hijacking `--lr-color-brand` library-wide used to do).
@@ -86,6 +89,13 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
   private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
   private mutationObserver?: MutationObserver;
   private rehomeTabFocus = false;
+
+  constructor() {
+    super();
+    // Gates the [part="tablist"] edge fade on the strip genuinely overflowing -- see
+    // --lr-scroll-fade-size and tabs.styles.ts.
+    observeScrollOverflow(this, () => this.renderRoot.querySelector('[part="tablist"]'));
+  }
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -152,7 +162,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     const current = this.tabs.find((t) => t.slotName === this.active);
     if (current && !current.disabled) return;
     this.rehomeTabFocus =
-      (this.renderRoot as ShadowRoot).activeElement?.getAttribute('part') ===
+      activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
       'tab';
     this.active = this.tabs.find((t) => !t.disabled)?.slotName ?? '';
   }

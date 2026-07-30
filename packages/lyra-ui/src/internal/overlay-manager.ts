@@ -1,3 +1,4 @@
+import { deepActiveElementIn } from './active-element.js';
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'area[href]',
@@ -93,13 +94,7 @@ const hostEntries = new WeakMap<HTMLElement, OverlayEntry>();
 
 /** Returns the deepest focused descendant across open shadow roots. */
 export function deepActiveElement(doc: Document = document): Element | null {
-  let active: Element | null = doc.activeElement;
-  while (active) {
-    const inner = active.shadowRoot?.activeElement ?? null;
-    if (!inner) break;
-    active = inner;
-  }
-  return active;
+  return deepActiveElementIn(doc);
 }
 
 function isSlot(element: Element): element is HTMLSlotElement {

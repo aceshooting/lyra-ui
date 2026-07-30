@@ -5,6 +5,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { styles } from './embedding-explorer.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 const WIDTH = 640;
 const HEIGHT = 360;
@@ -79,7 +80,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
     if (!changed.has('points')) return;
-    const active = this.shadowRoot?.activeElement ?? null;
+    const active = activeElementIn(this.shadowRoot) ?? null;
     const focusedId = active?.getAttribute('data-id');
     const points = this.validPoints;
     const matchingIndex = focusedId ? points.findIndex((point) => point.id === focusedId) : -1;

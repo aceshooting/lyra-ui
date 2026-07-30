@@ -5,6 +5,7 @@ import { place } from '../../../internal/positioner.js';
 import { nextId } from '../../../internal/a11y.js';
 import { buildCsv, downloadBlob, type CsvColumn } from './csv.js';
 import { styles } from './export-button.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export type ExportFormat = 'csv' | 'json';
 
@@ -185,7 +186,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     this._isFirstUpdate = !this.hasUpdated;
     this.setAttribute('aria-busy', String(this.loading));
     if ((changed.has('disabled') || changed.has('loading')) && (this.disabled || this.loading)) {
-      const active = this.shadowRoot?.activeElement;
+      const active = activeElementIn(this.shadowRoot);
       if (
         active === this.triggerEl ||
         (active instanceof HTMLElement && active.getAttribute('part') === 'menu-item')
@@ -203,7 +204,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       }
     }
     if (changed.has('formats')) {
-      const active = this.shadowRoot?.activeElement;
+      const active = activeElementIn(this.shadowRoot);
       const items = this.menuItemEls();
       const index = items.indexOf(active as HTMLButtonElement);
       const previousFormats = changed.get('formats') as ExportFormatOption[] | undefined;

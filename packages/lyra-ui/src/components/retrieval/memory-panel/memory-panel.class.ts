@@ -9,6 +9,7 @@ import '../provenance-panel/provenance-panel.class.js';
 import '../../agent-tools/confirm-bar/confirm-bar.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './memory-panel.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 /** A local, non-exported structural copy of `lr-provenance-panel`'s own (also un-exported)
  *  `NodeTypeStyle` shape, declared here rather than imported so this component has no build-time
@@ -230,7 +231,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   private captureControlledFocus(changed: PropertyValues<this>): void {
     if (!changed.has('shortTerm') && !changed.has('longTerm')) return;
-    const active = this.shadowRoot?.activeElement as HTMLElement | null;
+    const active = activeElementIn(this.shadowRoot) as HTMLElement | null;
     if (!active) return;
 
     const row = active.closest<HTMLElement>('[part="item"]');

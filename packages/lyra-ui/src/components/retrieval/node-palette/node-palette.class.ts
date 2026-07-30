@@ -6,6 +6,7 @@ import { Announcer } from '../../../internal/announcer.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { FLOW_PALETTE_MIME_TYPE } from '../../data/flow-canvas/flow-canvas.class.js';
 import { styles } from './node-palette.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface PaletteItem {
   /** The `FlowNode.type` a placement/drop creates. */
@@ -148,7 +149,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
     if (!this.hasUpdated || !structureChanged) return;
 
     const oldElements = this.itemElements();
-    const focusedIndex = oldElements.indexOf(this.shadowRoot?.activeElement as HTMLElement);
+    const focusedIndex = oldElements.indexOf(activeElementIn(this.shadowRoot) as HTMLElement);
     const referenceIndex = focusedIndex >= 0
       ? focusedIndex
       : Math.min(Math.max(0, this.activeIndex), Math.max(0, previous.length - 1));

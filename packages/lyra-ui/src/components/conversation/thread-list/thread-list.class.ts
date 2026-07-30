@@ -14,6 +14,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import { styles } from './thread-list.styles.js';
 import { getDateTimeFormat, getNumberFormat, getPluralRules } from '../../../internal/intl-cache.js';
 import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface ChatThread {
   id: string;
@@ -619,7 +620,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   }
 
   private focusedRowIndex(rows: LyraConversationItem[]): number {
-    return rows.findIndex((row) => row.shadowRoot?.activeElement != null);
+    return rows.findIndex((row) => activeElementIn(row.shadowRoot) != null);
   }
 
   private onListKeyDown = (e: KeyboardEvent): void => {

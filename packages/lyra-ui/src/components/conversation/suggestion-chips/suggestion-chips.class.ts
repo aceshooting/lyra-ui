@@ -4,6 +4,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import '../../layout/scroller/scroller.class.js';
 import { styles } from './suggestion-chips.styles.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface ChatSuggestion {
   id: string;
@@ -54,7 +55,7 @@ export class LyraSuggestionChips extends LyraElement<LyraSuggestionChipsEventMap
       const previous = changed.get('suggestions') as ChatSuggestion[] | undefined;
       const activeId = previous?.[this.activeIndex]?.id;
       const focusedId =
-        (this.shadowRoot?.activeElement as HTMLElement | null)?.dataset['suggestionId'];
+        (activeElementIn(this.shadowRoot) as HTMLElement | null)?.dataset['suggestionId'];
       const remapped = activeId ? this.suggestions.findIndex((suggestion) => suggestion.id === activeId) : -1;
       this.activeIndex =
         remapped >= 0 ? remapped : Math.min(this.activeIndex, Math.max(0, this.suggestions.length - 1));

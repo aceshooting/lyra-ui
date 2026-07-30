@@ -15,6 +15,7 @@ import { layeredLayout } from '../../../internal/layered-layout.js';
 import { finiteNumber, finiteRange, finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 import '../../overlays/skeleton/skeleton.class.js';
 
 export type GraphLayout = 'force' | 'layered';
@@ -1568,7 +1569,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
         changed.has('layout') ||
         (this.layout === 'layered' && changed.has('linkDistance')));
     const graphItemsChanged = Boolean(structureChanged || changed.has('simNodes') || changed.has('communities'));
-    const activePart = this.shadowRoot?.activeElement?.getAttribute('part') ?? '';
+    const activePart = activeElementIn(this.shadowRoot)?.getAttribute('part') ?? '';
     const hadGraphItemFocus =
       graphItemsChanged && ['node', 'link', 'hull', 'cursor-item'].includes(activePart);
     const previousIndex = this.normalizedGraphItem();

@@ -12,6 +12,7 @@ import { formatFileSize, FILE_SIZE_UNIT_KEYS } from '../../media/attachment-chip
 import { loadEmailDeps } from './email-loader.js';
 import { styles } from './email-viewer.styles.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
+import { activeElementIn } from '../../../internal/active-element.js';
 
 export interface ParsedEmailAttachment { filename: string; mimeType: string; size: number; content?: Uint8Array; }
 export interface ParsedEmail { from: string; to: string; subject: string; date: string; bodyHtml: string | null; bodyText: string | null; attachments: ParsedEmailAttachment[]; }
@@ -362,7 +363,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     const block = this.renderRoot.querySelector<HTMLElement>(`[data-quote-index="${index}"]`);
     const numericIndex = Number(index);
     if (!block || !Number.isInteger(numericIndex) || numericIndex < 0) return;
-    const restoreFocus = this.shadowRoot?.activeElement === target;
+    const restoreFocus = activeElementIn(this.shadowRoot) === target;
     this.expandedHtmlQuoteIndices = this.expandedHtmlQuoteIndices.includes(numericIndex)
       ? this.expandedHtmlQuoteIndices.filter((value) => value !== numericIndex)
       : [...this.expandedHtmlQuoteIndices, numericIndex];
