@@ -8,7 +8,13 @@ import {
 } from "../../../internal/overlay-manager.js";
 import { lockScroll } from "../../../internal/scroll-lock.js";
 import { styles } from "./command-palette.styles.js";
+import { resolveCssLength } from "../../../internal/css-length.js";
 
+/** Fallbacks only. The rendered heights come from `--lr-command-palette-row-height` /
+ *  `-group-height`, which default to `3rem`/`2rem` -- equal to these numbers at a 16px root font
+ *  and *unequal* at any other, including a user's raised browser font size. Rows are absolutely
+ *  positioned at this pitch, so a stale value overlaps them; the live values are resolved in
+ *  `measureRowPitch()`. */
 const COMMAND_ROW_HEIGHT = 48;
 const GROUP_ROW_HEIGHT = 32;
 const RESULT_OVERSCAN_ROWS = 6;
@@ -97,6 +103,8 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   @state() private activeIndex = 0;
   @state() private listScrollTop = 0;
   @state() private listViewportHeight = COMMAND_ROW_HEIGHT * 10;
+  @state() private rowPitch = COMMAND_ROW_HEIGHT;
+  @state() private groupPitch = GROUP_ROW_HEIGHT;
   private listId = nextId("command-list");
   private releaseScrollLock?: () => void;
   private overlay?: OverlayHandle;
@@ -190,8 +198,26 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       if (this.observedList)
         this.listResizeObserver?.unobserve(this.observedList);
       this.observedList = list ?? undefined;
-      if (list) this.listResizeObserver?.observe(list);
+      if (list) {
+        // Measure up front too: the observer's first callback lands a frame later, and the very
+        // first paint already positions rows at whatever pitch is current.
+        this.measureRowPitch();
+        this.listResizeObserver?.observe(list);
+      }
     }
+  }
+
+
+  /** Resolves the two row pitches from their custom properties so the absolutely-positioned rows
+   *  stay aligned with their painted heights. Hardcoding 48/32 matched only at a 16px root font;
+   *  at a browser "large text" setting the rows grew but the pitch did not, overlapping every row
+   *  and putting keyboard scrolling in the wrong coordinate space. */
+  private measureRowPitch(): void {
+    const style = getComputedStyle(this);
+    const row = resolveCssLength(style.getPropertyValue("--lr-command-palette-row-height").trim(), this);
+    const group = resolveCssLength(style.getPropertyValue("--lr-command-palette-group-height").trim(), this);
+    if (row !== undefined && row > 0 && row !== this.rowPitch) this.rowPitch = row;
+    if (group !== undefined && group > 0 && group !== this.groupPitch) this.groupPitch = group;
   }
 
   override connectedCallback(): void {
@@ -200,6 +226,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.listResizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
+      this.measureRowPitch();
       const height =
         entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
       if (height > 0 && this.listViewportHeight !== height)
@@ -374,12 +401,12 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         };
         groups.push(group);
         previousGroup = label;
-        if (label) top += GROUP_ROW_HEIGHT;
+        if (label) top += this.groupPitch;
       }
       const row = { command, index, top, groupIndex: group.index };
       group.rows.push(row);
       resultRows.push(row);
-      top += COMMAND_ROW_HEIGHT;
+      top += this.rowPitch;
     }
     this.resultModelFor = rows;
     this.resultModelCache = { rows: resultRows, groups, totalHeight: top };
@@ -390,17 +417,17 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     if (model.rows.length === 0) return [];
     const minimum = Math.max(
       0,
-      this.listScrollTop - COMMAND_ROW_HEIGHT * RESULT_OVERSCAN_ROWS
+      this.listScrollTop - this.rowPitch * RESULT_OVERSCAN_ROWS
     );
     const maximum =
       this.listScrollTop +
       this.listViewportHeight +
-      COMMAND_ROW_HEIGHT * RESULT_OVERSCAN_ROWS;
+      this.rowPitch * RESULT_OVERSCAN_ROWS;
     let low = 0;
     let high = model.rows.length - 1;
     while (low < high) {
       const middle = (low + high) >> 1;
-      if (model.rows[middle]!.top + COMMAND_ROW_HEIGHT < minimum)
+      if (model.rows[middle]!.top + this.rowPitch < minimum)
         low = middle + 1;
       else high = middle;
     }
@@ -429,7 +456,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     const row = this.resultModel.rows[this.activeIndex];
     if (!list || !row) return;
     const top = row.top;
-    const bottom = top + COMMAND_ROW_HEIGHT;
+    const bottom = top + this.rowPitch;
     if (top < list.scrollTop) list.scrollTop = top;
     else if (bottom > list.scrollTop + list.clientHeight) {
       list.scrollTop = Math.max(0, bottom - list.clientHeight);

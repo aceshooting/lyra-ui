@@ -674,3 +674,20 @@ it("renders localized strings from a .strings override for the dialog label, pla
   const empty = el.shadowRoot!.querySelector('[part="empty"]') as HTMLElement;
   expect(empty.textContent?.trim()).to.equal("Aucune commande correspondante.");
 });
+
+it("derives the virtual row pitch from the row-height tokens, not a hardcoded pixel value", async () => {
+  const el = (await fixture(
+    html`<lr-command-palette style="--lr-command-palette-row-height: 60px; --lr-command-palette-group-height: 40px"></lr-command-palette>`,
+  )) as LyraCommandPalette;
+  el.commands = Array.from({ length: 20 }, (_, i) => ({ id: `c${i}`, label: `Command ${i}` }));
+  el.openPalette();
+  await el.updateComplete;
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+
+  // Rows are absolutely positioned at this pitch while being painted at the token height. A
+  // hardcoded 48 would overlap every row by 12px once the token resolves to anything else --
+  // which is exactly what a raised browser font size does to the 3rem default.
+  expect((el as unknown as { rowPitch: number }).rowPitch).to.equal(60);
+  expect((el as unknown as { groupPitch: number }).groupPitch).to.equal(40);
+});
