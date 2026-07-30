@@ -1217,3 +1217,17 @@ describe('back-compat', () => {
     }
   });
 });
+
+it('case-folds a text-quote ANCHOR with the effective locale, matching search()', async () => {
+  const { el, restore } = await loadWithMarkup('<p>İSTANBUL</p>');
+  try {
+    el.lang = 'tr';
+    await el.updateComplete;
+    (el as unknown as { anchorTimeoutMs: number }).anchorTimeoutMs = 30;
+    (el as unknown as { anchorRetryIntervalMs: number }).anchorRetryIntervalMs = 5;
+    // Turkish folds "İ" to "i", not "i̇", so a root-locale fold never matches. search() already
+    // passed effectiveLocale; the anchor and highlight paths did not, so the identical quote
+    // resolved in lr-email-viewer and silently failed here.
+    expect(await el.scrollToAnchor({ kind: 'text-quote', quote: 'istanbul' })).to.be.true;
+  } finally { restore(); }
+});

@@ -165,3 +165,28 @@ it('inherits the shared ambient timing token for indeterminate bar and ring moti
   expect(getComputedStyle(ringIndicator).animationDuration).to.equal('2.5s');
   expect(getComputedStyle(ringIndicator).animationTimingFunction).to.equal('linear');
 });
+
+it('names an unslotted ring from the localized fallback, not from its own percent text', async () => {
+  const el = (await fixture(html`<lr-progress-ring value="40"></lr-progress-ring>`)) as LyraProgressRing;
+  await el.updateComplete;
+  const bar = el.shadowRoot!.querySelector('[role="progressbar"]') as HTMLElement;
+  // The slot's fallback content is the formatted percent. assignedNodes({flatten:true}) returns
+  // fallback children when nothing is assigned, so an unguarded read would name the control "40%"
+  // and make the localized name (and any registerLyraLocale override) unreachable.
+  expect(bar.getAttribute('aria-label')).to.equal('Progress');
+
+  const overridden = (await fixture(html`
+    <lr-progress-ring value="40" .strings=${{ progress: 'Chargement' }}></lr-progress-ring>
+  `)) as LyraProgressRing;
+  await overridden.updateComplete;
+  expect(
+    overridden.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label'),
+    'a locale override must still reach the name',
+  ).to.equal('Chargement');
+});
+
+it('still lets genuinely slotted content name the ring', async () => {
+  const el = (await fixture(html`<lr-progress-ring value="40">Uploading</lr-progress-ring>`)) as LyraProgressRing;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('[role="progressbar"]')!.getAttribute('aria-label')).to.contain('Uploading');
+});

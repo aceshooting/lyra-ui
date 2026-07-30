@@ -597,7 +597,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
       case 'fragment':
         return applyMarkdownFragmentAnchor(root, anchor, this.headingTree);
       case 'text-quote':
-        return applyMarkdownTextQuoteAnchor(root, anchor);
+        return applyMarkdownTextQuoteAnchor(root, anchor, this.effectiveLocale);
       default:
         return false;
     }
@@ -628,6 +628,7 @@ export class LyraMarkdownCore extends DocumentAnchorTarget(LyraMarkdownCoreBase)
     const root = this.contentRoot();
     if (!root) return;
     this.resolvedHighlightRanges = repaintMarkdownHighlights({
+      locale: this.effectiveLocale,
       root,
       handle: this.ensureHighlightHandle(),
       highlights: this.highlights,

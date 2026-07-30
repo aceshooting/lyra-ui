@@ -424,7 +424,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
   }
 
   private applyTextQuoteAnchor(root: Element, anchor: Extract<LyraAnchor, { kind: 'text-quote' }>): boolean {
-    const range = resolveTextQuote(scopeFromElement(root), anchor);
+    const range = resolveTextQuote(scopeFromElement(root), anchor, this.effectiveLocale);
     if (!range) return false;
     const target = range.startContainer.nodeType === Node.ELEMENT_NODE ? (range.startContainer as Element) : range.startContainer.parentElement;
     (target ?? root).scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
@@ -467,7 +467,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
     let activeRange: Range | null = null;
     for (const highlight of this.highlights) {
       if (highlight.anchor.kind !== 'text-quote') continue;
-      const range = resolveTextQuote(scope, highlight.anchor);
+      const range = resolveTextQuote(scope, highlight.anchor, this.effectiveLocale);
       if (!range) continue;
       rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
       this.resolvedHighlightRanges.push({ highlight, range });

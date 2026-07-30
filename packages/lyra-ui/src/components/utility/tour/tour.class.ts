@@ -561,6 +561,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   }
 
   private activateOverlayInternal(): boolean {
+    // Lit keeps updating a detached element, so `open = true` on a removed tour would lock scroll
+    // on the real document and install a global Escape handler with nothing visible on screen,
+    // and nothing self-heals it. lr-dialog already guards both of its activation paths this way.
+    if (!this.isConnected) return false;
     const interactive = !!this.steps[this.activeIndex]?.interactiveTarget;
     if (this.overlay?.isActive() && this.overlayInteractive === interactive) return false;
     if (this.overlay?.isActive()) {

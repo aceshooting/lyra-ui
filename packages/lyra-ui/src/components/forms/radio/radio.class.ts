@@ -301,6 +301,12 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     group.reconcileRadio?.(this);
     return group;
   }
+  /** @internal Group-driven activation (arrow keys). Shares the click/Space path so every
+   *  modality emits the same `input`/`change`/`lr-change` trio. */
+  activateFromGroup(): void {
+    this.select();
+  }
+
   private select(): void {
     const group = this.group();
     if (this.effectiveDisabled || this.checked) return;

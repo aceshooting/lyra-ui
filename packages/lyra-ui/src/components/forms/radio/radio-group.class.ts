@@ -176,7 +176,12 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
     // safe: radios is non-empty (guarded above) and nextIndex is a modulo/clamp into range.
     const next = radios[nextIndex]!;
     next.focus();
-    this.selectRadio(next);
+    // Route through the radio's own activation path, not selectRadio() directly: that path is
+    // what emits `input`/`change`. Committing here instead would fire only the group's
+    // `lr-change`, so a consumer bound to the native-mirroring events would miss every keyboard
+    // selection while still receiving them for click and Space. Native <input type=radio> fires
+    // both on arrow navigation.
+    next.activateFromGroup();
   };
   private onSlotChange = (event: Event): void => {
     const slot = event.target as HTMLSlotElement;

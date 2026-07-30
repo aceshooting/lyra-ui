@@ -1291,3 +1291,23 @@ it('clamps the tour popover width through the shared popover-viewport-clamp toke
   probe.remove();
   expect(computed).to.equal('10px');
 });
+
+it('does not lock scroll or hijack Escape when opened while detached', async () => {
+  const el = (await fixture(html`<lr-tour></lr-tour>`)) as LyraTour;
+  el.steps = [{ target: 'body', title: 'One', body: 'First' }];
+  await el.updateComplete;
+
+  const overflowBefore = document.documentElement.style.overflow;
+  el.remove();
+  await el.updateComplete;
+
+  el.open = true;
+  await el.updateComplete;
+  // Lit keeps updating a detached element; without an isConnected guard this locks the real
+  // document and installs a global Escape handler with nothing visible on screen.
+  expect(document.documentElement.style.overflow, 'the page must stay scrollable').to.equal(overflowBefore);
+
+  const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  document.dispatchEvent(escape);
+  expect(escape.defaultPrevented, 'Escape must not be swallowed by a detached tour').to.be.false;
+});

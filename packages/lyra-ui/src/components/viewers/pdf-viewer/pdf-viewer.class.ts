@@ -613,7 +613,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       element,
     }));
     if (items.length === 0) return null;
-    return resolveTextQuote(scopeFromItems(items), anchor);
+    return resolveTextQuote(scopeFromItems(items), anchor, this.effectiveLocale);
   }
 
   private async applyRegionAnchor(
@@ -1149,7 +1149,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
       return rect ? [rect] : [];
     }
     if (anchor.kind === 'text-quote' && scope && (anchor.page == null || anchor.page === pageNumber)) {
-      const range = resolveTextQuote(scope, anchor);
+      const range = resolveTextQuote(scope, anchor, this.effectiveLocale);
       if (!range) return [];
       return Array.from(range.getClientRects()).map((rect) => ({
         x: ((rect.left - pageRect.left) / pageRect.width) * 100,

@@ -655,8 +655,11 @@ export function applyMarkdownFragmentAnchor(
 export function applyMarkdownTextQuoteAnchor(
   root: Element,
   anchor: Extract<LyraAnchor, { kind: 'text-quote' }>,
+  /** The component's resolved locale. Text-quote matching case-folds, and casing is
+   *  locale-sensitive -- under `lang="tr"` an unlocalized fold never matches "İSTANBUL". */
+  locale?: string,
 ): boolean {
-  const range = resolveTextQuote(scopeFromElement(root), anchor);
+  const range = resolveTextQuote(scopeFromElement(root), anchor, locale);
   if (!range) return false;
   const target =
     range.startContainer.nodeType === Node.ELEMENT_NODE
@@ -693,6 +696,8 @@ export function repaintMarkdownHighlights(options: {
   handle: HighlightHandle;
   highlights: readonly LyraHighlight[];
   activeHighlightId: string | null;
+  /** The component's resolved locale; see applyMarkdownTextQuoteAnchor. */
+  locale?: string;
 }): ResolvedHighlightRange[] {
   const resolved: ResolvedHighlightRange[] = [];
   const scope = scopeFromElement(options.root);
@@ -700,7 +705,7 @@ export function repaintMarkdownHighlights(options: {
   let activeRange: Range | null = null;
   for (const highlight of options.highlights) {
     if (highlight.anchor.kind !== 'text-quote') continue;
-    const range = resolveTextQuote(scope, highlight.anchor);
+    const range = resolveTextQuote(scope, highlight.anchor, options.locale);
     if (!range) continue;
     rangesByTone.get(highlight.tone ?? 'accent')!.push(range);
     resolved.push({ id: highlight.id, range });

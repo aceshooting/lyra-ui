@@ -41,6 +41,11 @@ export class LyraProgressRing extends LyraElement {
 
   private get visibleLabelText(): string {
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
+    // assignedNodes({flatten:true}) returns the slot's FALLBACK children when nothing is
+    // assigned, and this slot's fallback is the formatted percent -- so an unslotted ring would
+    // name itself "40%" and the localized 'progress' name (plus any registerLyraLocale override)
+    // would be permanently unreachable. Only consumer-assigned content may name the control.
+    if (!slot || slot.assignedNodes().length === 0) return '';
     return (
       slot
         ?.assignedNodes({ flatten: true })

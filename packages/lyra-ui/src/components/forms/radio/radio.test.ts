@@ -916,3 +916,32 @@ describe('inert ElementInternals fallback', () => {
     }
   });
 });
+
+it('fires input and change for arrow-key selection, matching click and Space', async () => {
+  const group = (await fixture(html`
+    <lr-radio-group label="Size">
+      <lr-radio value="s">S</lr-radio>
+      <lr-radio value="m">M</lr-radio>
+    </lr-radio-group>
+  `)) as LyraRadioGroup;
+  const radios = [...group.querySelectorAll('lr-radio')] as LyraRadio[];
+  const firstBase = radios[0]!.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  radios[0]!.checked = true;
+  firstBase.focus();
+
+  const seen: string[] = [];
+  for (const type of ['input', 'change', 'lr-change']) group.addEventListener(type, () => seen.push(type));
+
+  const pending = oneEvent(group, 'lr-change');
+  firstBase.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }),
+  );
+  await pending;
+
+  expect(radios[1]!.checked, 'arrow navigation moves the selection').to.be.true;
+  // Native <input type=radio> fires input+change on arrow navigation; a consumer bound to the
+  // native-mirroring events must not silently miss keyboard selection.
+  expect(seen).to.include('input');
+  expect(seen).to.include('change');
+  expect(seen).to.include('lr-change');
+});
