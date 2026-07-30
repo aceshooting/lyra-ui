@@ -66050,6 +66050,13 @@
               "type": {
                 "text": "Extract<LyraAnchor, { kind: 'text-quote' }>"
               }
+            },
+            {
+              "name": "locale",
+              "optional": true,
+              "type": {
+                "text": "string"
+              }
             }
           ],
           "description": "Scrolls a `text-quote` anchor's resolved range into view, centered."
@@ -66351,7 +66358,7 @@
             {
               "name": "options",
               "type": {
-                "text": "{\n  root: Element;\n  handle: HighlightHandle;\n  highlights: readonly LyraHighlight[];\n  activeHighlightId: string | null;\n}"
+                "text": "{\n  root: Element;\n  handle: HighlightHandle;\n  highlights: readonly LyraHighlight[];\n  activeHighlightId: string | null;\n  /** The component's resolved locale; see applyMarkdownTextQuoteAnchor. */\n  locale?: string;\n}"
               }
             }
           ],
@@ -234780,9 +234787,14 @@
           "name": "LyraPdfViewer",
           "cssProperties": [
             {
-              "description": "Block size of the virtualized page list. Also settable via the `max-height` property.",
+              "description": "Block size of the virtualized page list.",
               "name": "--lr-pdf-viewer-height",
               "default": "var(--lr-size-24rem)"
+            },
+            {
+              "description": "Hover fill of the toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover state is actually visible against it. Also settable via the `max-height` property.",
+              "name": "--lr-pdf-viewer-toolbar-button-hover-bg",
+              "default": "var(--lr-color-surface)"
             }
           ],
           "cssParts": [

@@ -3435,7 +3435,14 @@
       "name": "--lr-pdf-viewer-height",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized page list. Also settable via the `max-height` property."
+        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-size-24rem)`) — Block size of the virtualized page list."
+      }
+    },
+    {
+      "name": "--lr-pdf-viewer-toolbar-button-hover-bg",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-pdf-viewer>`** (default: `var(--lr-color-surface)`) — Hover fill of the toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover state is actually visible against it. Also settable via the `max-height` property."
       }
     },
     {

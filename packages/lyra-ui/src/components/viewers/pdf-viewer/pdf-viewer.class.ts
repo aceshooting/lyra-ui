@@ -256,6 +256,9 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  * @csspart error - The error message region.
  * @csspart spinner - The loading status region.
  * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
+ * @cssprop [--lr-pdf-viewer-toolbar-button-hover-bg=var(--lr-color-surface)] - Hover fill of the
+ *   toolbar buttons. Defaults to the surface fill rather than the toolbar's own tint so the hover
+ *   state is actually visible against it.
  *   Also settable via the `max-height` property.
  */
 export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {

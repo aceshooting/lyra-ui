@@ -814,8 +814,11 @@ matched against the element the selected text originates in:
 
 **Themeable custom properties:** `--lr-pdf-viewer-height` (default `var(--lr-size-24rem)`) — block
 size of the virtualized page list (`[part="pages"]`); also settable via the `maxHeight` property,
-which writes this token inline on `[part="base"]`. Everything below the page list is retuned
-through the exported parts above rather than through dedicated custom properties.
+which writes this token inline on `[part="base"]`. `--lr-pdf-viewer-toolbar-button-hover-bg`
+(default `var(--lr-color-surface)`) — hover fill of the toolbar buttons; it defaults to the surface
+fill rather than the toolbar's own `--lr-color-brand-quiet` tint precisely so the hover state is
+visible against the toolbar behind it. Everything else below the page list is retuned through the
+exported parts above rather than through dedicated custom properties.
 
 **Optional peer dependency:** install `pdfjs-dist` with `pnpm add pdfjs-dist`. The component registers
 a lazy `application/pdf` renderer with `<lr-document-viewer>` so the PDF library is loaded only when
