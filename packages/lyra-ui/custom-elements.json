@@ -103773,7 +103773,7 @@
           ],
           "cssParts": [
             {
-              "description": "The root wrapper. `role=\"list\"` lives here directly (a timeline isn't a navigation landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction: column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`, `overflow-y: hidden`, and a static edge-fade `mask-image`) in `horizontal` orientation.",
+              "description": "The root wrapper. `role=\"list\"` lives here directly (a timeline isn't a navigation landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction: column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`, `overflow-y: hidden`, and an edge-fade `mask-image` applied only while the strip actually overflows) in `horizontal` orientation.",
               "name": "base"
             }
           ],
@@ -152759,7 +152759,7 @@
           "name": "LyraSegmented",
           "cssProperties": [
             {
-              "description": "Width of the static fade at each horizontal scroll edge.",
+              "description": "Width of the fade at each horizontal scroll edge. The fade is applied only while the track actually overflows, so a row that fits is never dimmed.",
               "name": "--lr-scroll-fade-size",
               "default": "2rem"
             },
@@ -155486,7 +155486,7 @@
           "name": "LyraTabs",
           "cssProperties": [
             {
-              "description": "Width of the static fade at each horizontal scroll edge.",
+              "description": "Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.",
               "name": "--lr-scroll-fade-size",
               "default": "2rem"
             },

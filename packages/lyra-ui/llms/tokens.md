@@ -255,7 +255,7 @@ override a single element without touching the shared layer.
 | `--lr-graph-cat-7` | `--lr-theme-graph-cat-7` | `#79e2ef` |
 | `--lr-graph-cat-8` | `--lr-theme-graph-cat-8` | `#e4e7eb` |
 
-## Derived tokens (279)
+## Derived tokens (280)
 
 Computed from the layer above; not directly themeable.
 
@@ -318,6 +318,7 @@ Computed from the layer above; not directly themeable.
 | `--lr-radius-xs` | `var(--lr-theme-border-radius-xs, 2px)` |
 | `--lr-radius-pill` | `var(--lr-theme-border-radius-pill, 999px)` |
 | `--lr-color-shadow` | `var(--lr-theme-color-shadow, #000)` |
+| `--lr-mask-opaque` | `#000` |
 | `--lr-color-chart-1` | `var(--lr-theme-color-chart-1, #8250df)` |
 | `--lr-color-chart-2` | `var(--lr-theme-color-chart-2, #bf3989)` |
 | `--lr-color-chart-3` | `var(--lr-theme-color-chart-3, #0a7d91)` |

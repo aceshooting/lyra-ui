@@ -5888,8 +5888,9 @@ keyboard.
 **CSS parts:** `base` (the `role="radiogroup"` root), `segment` (a single `role="radio"` button),
 `segment-icon` (an optional decorative leading icon), `segment-label` (the segment's label text).
 
-**Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the static mask
-fade at each horizontal scroll edge of the track. `--lr-segmented-track-min-height`,
+**Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
+at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
+that fits is never dimmed). `--lr-segmented-track-min-height`,
 `--lr-segmented-segment-padding`, and `--lr-segmented-font-size` are the three knobs `size` swaps
 (`m` defaults: `auto`, `var(--lr-size-0-125rem) var(--lr-space-s)`, `var(--lr-font-size-sm)`) —
 override them on the host for a size tier the scale doesn't cover, since a `:host([size])` rule
