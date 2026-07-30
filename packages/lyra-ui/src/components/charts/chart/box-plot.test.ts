@@ -688,3 +688,86 @@ it('connectedCallback() routes the resolved boxplot-plugin module into the loade
     document.body.removeChild(el);
   }
 });
+
+// -- Theme-token overrides, empty series, and shrinking dataset counts -------
+
+it('uses explicitly themed chart colors instead of its built-in fallbacks', async () => {
+  const el = (await fixture(html`<lr-box-plot legend style="
+    --lr-chart-grid-color: rgb(10, 20, 30);
+    --lr-chart-tick-color: rgb(40, 50, 60);
+    --lr-chart-legend-color: rgb(70, 80, 90);
+    --lr-chart-tooltip-bg: rgb(100, 110, 120);
+    --lr-chart-tooltip-text: rgb(130, 140, 150);
+  "></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [{ label: 'S', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const options = (el as any).chart.options;
+
+  // Every one of these five reads is a `getPropertyValue(...) || FALLBACK` — with the property set,
+  // the authored value has to win rather than silently falling through to the built-in constant.
+  const serialized = JSON.stringify(options);
+  expect(serialized).to.contain('rgb(10, 20, 30)');
+  expect(serialized).to.contain('rgb(40, 50, 60)');
+  expect(serialized).to.contain('rgb(70, 80, 90)');
+  expect(serialized).to.contain('rgb(100, 110, 120)');
+  expect(serialized).to.contain('rgb(130, 140, 150)');
+});
+
+it('summarizes a series with no points as no-data rather than emitting a range', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [{ label: 'Empty', data: [] }];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  const summary = el.shadowRoot!.textContent ?? '';
+  expect(summary).to.contain('Empty');
+  expect(summary.toLowerCase()).to.contain('no data');
+});
+
+it('describes a falling series distinctly from a rising one', async () => {
+  const rising = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  rising.labels = ['A', 'B'];
+  rising.boxes = [{
+    label: 'Up',
+    data: [
+      { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+      { min: 5, q1: 6, median: 7, q3: 8, max: 9 },
+    ],
+  }];
+  await rising.updateComplete;
+  await waitUntil(() => (rising as any).chart != null);
+
+  const falling = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  falling.labels = ['A', 'B'];
+  falling.boxes = [{
+    label: 'Down',
+    data: [
+      { min: 5, q1: 6, median: 7, q3: 8, max: 9 },
+      { min: 1, q1: 2, median: 3, q3: 4, max: 5 },
+    ],
+  }];
+  await falling.updateComplete;
+  await waitUntil(() => (falling as any).chart != null);
+
+  expect(rising.shadowRoot!.textContent, 'the two trend directions must not read identically')
+    .to.not.equal(falling.shadowRoot!.textContent);
+});
+
+it('drops rendered datasets when the series count shrinks', async () => {
+  const el = (await fixture(html`<lr-box-plot></lr-box-plot>`)) as LyraBoxPlot;
+  el.labels = ['A'];
+  el.boxes = [
+    { label: 'One', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] },
+    { label: 'Two', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] },
+    { label: 'Three', data: [{ min: 3, q1: 4, median: 5, q3: 6, max: 7 }] },
+  ];
+  await el.updateComplete;
+  await waitUntil(() => (el as any).chart != null);
+  expect((el as any).chart.data.datasets.length).to.equal(3);
+
+  el.boxes = [{ label: 'One', data: [{ min: 1, q1: 2, median: 3, q3: 4, max: 5 }] }];
+  await el.updateComplete;
+  expect((el as any).chart.data.datasets.length, 'removed series are not left behind').to.equal(1);
+});
