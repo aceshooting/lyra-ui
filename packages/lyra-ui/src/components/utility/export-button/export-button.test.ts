@@ -806,3 +806,12 @@ it('clamps its floating surface width through the shared popover-viewport-clamp 
   await (el as HTMLElement & { updateComplete?: Promise<unknown> }).updateComplete;
   expect(renderedClamp(el, "[part='menu']")).to.equal('10px');
 });
+
+it('blur() releases the native trigger it focused', async () => {
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  await el.updateComplete;
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.exist;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.be.null;
+});

@@ -534,3 +534,19 @@ it("colors the comment field's placeholder text instead of leaving the UA defaul
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='comment'\]::placeholder\s*\{[^}]*color:\s*var\(--lr-color-text-quiet\)/);
 });
+
+it('blur() releases whichever vote button held focus', async () => {
+  const el = (await fixture(html`<lr-message-feedback></lr-message-feedback>`)) as LyraMessageFeedback;
+  await el.updateComplete;
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.exist;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.be.null;
+
+  el.value = 'down';
+  await el.updateComplete;
+  el.focus();
+  expect(el.shadowRoot!.activeElement, 'focus follows the current vote').to.exist;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.be.null;
+});

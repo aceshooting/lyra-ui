@@ -788,3 +788,14 @@ it('publishes --lr-checkbox-label-indent and drives the real label offset from i
   el.style.setProperty('--lr-checkbox-label-indent', '4rem');
   expect(label.getBoundingClientRect().left - base.getBoundingClientRect().left).to.be.closeTo(64, 0.5);
 });
+
+it('exposes checkValidity()/reportValidity() through ElementInternals', async () => {
+  const el = (await fixture(html`<lr-checkbox required>Label</lr-checkbox>`)) as LyraCheckbox;
+  await el.updateComplete;
+  expect(el.checkValidity(), 'required and unchecked is invalid').to.be.false;
+  expect(el.reportValidity()).to.be.false;
+  el.checked = true;
+  await el.updateComplete;
+  expect(el.checkValidity()).to.be.true;
+  expect(el.reportValidity()).to.be.true;
+});

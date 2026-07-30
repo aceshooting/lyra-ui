@@ -227,3 +227,14 @@ it('wraps the previous/next hover rule in :where() so a consumer ::part(...):hov
   expect(hoverRule!.join(' ')).to.contain(":where([part='previous-button'])");
   expect(hoverRule!.join(' ')).to.contain(":where([part='next-button'])");
 });
+
+it('blur() releases whichever step button held focus', async () => {
+  const el = (await fixture(
+    html`<lr-branch-picker count="3" index="1"></lr-branch-picker>`,
+  )) as LyraBranchPicker;
+  await el.updateComplete;
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.exist;
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.be.null;
+});

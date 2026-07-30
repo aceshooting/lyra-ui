@@ -583,3 +583,14 @@ describe('hint/error chrome', () => {
     expect(label.hidden).to.be.true;
   });
 });
+
+it('exposes checkValidity()/reportValidity() through ElementInternals', async () => {
+  const el = (await fixture(html`<lr-switch required>Label</lr-switch>`)) as LyraSwitch;
+  await el.updateComplete;
+  expect(el.checkValidity(), 'required and unchecked is invalid').to.be.false;
+  expect(el.reportValidity()).to.be.false;
+  el.checked = true;
+  await el.updateComplete;
+  expect(el.checkValidity()).to.be.true;
+  expect(el.reportValidity()).to.be.true;
+});

@@ -376,3 +376,14 @@ it('is accessible with slotted content instead of a named glyph', async () => {
   expect(el.querySelector('lr-flag')!.shadowRoot!.querySelectorAll('img').length).to.equal(1);
   await expect(el).to.be.accessible();
 });
+
+it('blur() releases the native button it focused', async () => {
+  const el = (await fixture(
+    html`<lr-icon-button icon="close" aria-label="Dismiss"></lr-icon-button>`,
+  )) as LyraIconButton;
+  await el.updateComplete;
+  el.focus();
+  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('button'));
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.be.null;
+});
