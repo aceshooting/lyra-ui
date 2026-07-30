@@ -84,6 +84,33 @@ async function settleVirtualList(): Promise<void> {
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
+/**
+ * The anchor tests below mount an 81-entry `<lr-virtual-list>`, switch it from `row-height="auto"`
+ * to a fixed height once its rows exist, and then drive repeated programmatic scrolls through
+ * `scrollToAnchor()`'s retry loop. Measuring a row and then relaying out from inside a
+ * `ResizeObserver` callback is inherent to virtualization (measure row -> rebuild offsets ->
+ * re-render the window -> apply the scroll-anchor correction), so Chromium's spec-mandated loop
+ * guard can legitimately run out of passes for a frame and dispatch a real `ErrorEvent` reading
+ * "ResizeObserver loop completed with undelivered notifications" -- a documented, universally-benign
+ * browser message, not a defect in anything this file asserts on. The harness turns any uncaught
+ * page error into a failure of whichever test happens to be running, so unfiltered it fails these
+ * two tests on CI's contended runner while never firing on a developer machine (verified: two
+ * consecutive CI runs failed both tests through wtr's `retries: 1`, and the same file passes eight
+ * consecutive local runs). Suppression is scoped to that one message, exactly as
+ * `src/performance.test.ts` does for its RO-heavy stress benchmarks; every other uncaught error
+ * still fails its test as before.
+ */
+window.addEventListener(
+  'error',
+  (e) => {
+    if (typeof e.message === 'string' && e.message.includes('ResizeObserver loop')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },
+  true,
+);
+
 describe('archive localization', () => { it('defines archive messages', () => { expect(LYRA_DEFAULT_STRINGS.archiveViewerUnavailable).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerEmpty).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFolder).to.be.a('string'); expect(LYRA_DEFAULT_STRINGS.archiveViewerFile).to.be.a('string'); }); });
 
 describe('lr-archive-viewer', () => {
