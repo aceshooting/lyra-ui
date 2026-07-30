@@ -26,6 +26,8 @@ minimumReleaseAgeExclude:
   - '@storybook/web-components-vite@10.5.4'
   - '@storybook/web-components@10.5.4'
   - storybook@10.5.4
+  - libphonenumber-js@1.13.10
+  - vite@8.2.0
 allowBuilds:
   esbuild: true
   rs-module-lexer: true
