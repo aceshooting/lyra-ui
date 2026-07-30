@@ -262,7 +262,7 @@ export class LyraMcpApp extends LyraElement<LyraMcpAppEventMap> {
           sandbox="allow-forms allow-scripts"
           allow=${permissionPolicy(resource?.permissions)}
           src=${resource?.html ? nothing : src ?? nothing}
-          .srcdoc=${resource?.html ? withCsp(resource.html, resource.csp) : ''}
+          .srcdoc=${resource?.html ? withCsp(resource.html, resource.csp) : nothing}
           style=${styleMap({ height: `${this.frameHeight}px` })}
           @load=${this.onLoad}
         ></iframe>`,

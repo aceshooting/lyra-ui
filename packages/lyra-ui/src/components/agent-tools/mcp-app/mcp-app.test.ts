@@ -255,3 +255,26 @@ it('applies per-instance localized strings', async () => {
   ></lr-mcp-app>`)) as LyraMcpApp;
   expect(el.shadowRoot!.querySelector('iframe')!.title).to.equal('Localized MCP application');
 });
+
+// -- Remote src mode must not be shadowed by an empty srcdoc --------------------
+
+it('renders no srcdoc attribute at all for a src-only resource, so the frame really navigates', async () => {
+  const el = (await fixture(html`<lr-mcp-app></lr-mcp-app>`)) as LyraMcpApp;
+  el.resource = { src: 'https://example.test/app.html' };
+  await el.updateComplete;
+  const frame = el.shadowRoot!.querySelector('iframe') as HTMLIFrameElement;
+  // A present-but-empty srcdoc still wins over src per the HTML spec's iframe processing steps,
+  // which branch on the attribute's PRESENCE -- the frame would navigate to about:srcdoc instead.
+  expect(frame.hasAttribute('srcdoc'), 'srcdoc must be absent, not empty').to.be.false;
+  expect(frame.getAttribute('src')).to.equal('https://example.test/app.html');
+});
+
+it('still renders srcdoc for an inline html resource', async () => {
+  const el = (await fixture(html`<lr-mcp-app></lr-mcp-app>`)) as LyraMcpApp;
+  el.resource = { html: '<p>inline</p>' };
+  await el.updateComplete;
+  const frame = el.shadowRoot!.querySelector('iframe') as HTMLIFrameElement;
+  expect(frame.hasAttribute('srcdoc')).to.be.true;
+  expect(frame.getAttribute('srcdoc')).to.contain('inline');
+  expect(frame.hasAttribute('src'), 'the inline branch must not also set src').to.be.false;
+});

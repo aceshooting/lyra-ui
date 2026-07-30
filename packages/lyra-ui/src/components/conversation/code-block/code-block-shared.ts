@@ -23,6 +23,8 @@ import type { ShikiTransformer } from 'shiki';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighterCore, type ShikiLanguageInput } from './code-loader.js';
 import type { LyraAnchor, LyraHighlight } from '../../viewers/document-viewer/anchors.js';
 
@@ -573,7 +575,13 @@ export function renderCodeBlockShell(options: CodeBlockShellOptions): TemplateRe
           tabindex="0"
           ?hidden=${bodyHidden}
           data-dark-theme=${options.isDarkTheme ? 'true' : nothing}
-          style=${options.maxHeight ? `--lr-code-block-max-height:${options.maxHeight}` : nothing}
+          style=${(() => {
+          // `maxHeight` is a free-form public string on both <lr-code-block> and
+          // <lr-code-block-core>; interpolating it into a declaration list would let
+          // `max-height="1px;background-image:url(...)"` inject declarations here.
+          const safeMaxHeight = sanitizeCssLength(options.maxHeight);
+          return safeMaxHeight ? styleMap({ '--lr-code-block-max-height': safeMaxHeight }) : nothing;
+        })()}
           @mouseup=${options.onBodyMouseUp}
           @click=${options.onBodyClick}
           @keydown=${options.onBodyKeyDown}

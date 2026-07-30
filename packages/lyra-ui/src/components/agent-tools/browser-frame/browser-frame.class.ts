@@ -5,6 +5,8 @@ import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './browser-frame.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { finiteRange } from '../../../internal/numbers.js';
 
 /** The `object-fit: contain` content box (in pixels, relative to the container's own top-left) for
  *  an image of `naturalW`x`naturalH` shown inside a `containerW`x`containerH` box -- ping
@@ -164,12 +166,19 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
   // Ping coordinates are physical percent-of-frame over a screenshot that never mirrors, so
   // position with physical left/top -- logical inset-inline-start would flip the markers under
   // RTL while the screenshot underneath stays put.
-  private pingStyle(ping: BrowserPing): string {
+  /** Ping coordinates are agent-supplied data, so they are clamped to the documented 0-100 percent
+   *  range and emitted through `styleMap` -- interpolating them into a declaration string would let
+   *  a crafted `x` inject arbitrary declarations onto `[part="ping"]`, and a non-finite value would
+   *  serialize as `left:NaN%`. */
+  private pingStyle(ping: BrowserPing): ReturnType<typeof styleMap> {
+    const x = finiteRange(ping.x, 0, 0, 100);
+    const y = finiteRange(ping.y, 0, 0, 100);
     const rect = this.contentRect;
-    if (!rect) return `left:${ping.x}%;top:${ping.y}%`;
-    const left = rect.left + (ping.x / 100) * rect.width;
-    const top = rect.top + (ping.y / 100) * rect.height;
-    return `left:${left}px;top:${top}px`;
+    if (!rect) return styleMap({ left: `${x}%`, top: `${y}%` });
+    return styleMap({
+      left: `${rect.left + (x / 100) * rect.width}px`,
+      top: `${rect.top + (y / 100) * rect.height}px`,
+    });
   }
 
   private onSlotChange = (e: Event): void => {

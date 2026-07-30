@@ -246,3 +246,17 @@ it('exposes component-scoped internal-frame and interactive colors', async () =>
     'rgb(4, 5, 6)',
   );
 });
+
+it('rejects a max-height that tries to escape the custom property into extra declarations', async () => {
+  const el = (await fixture(
+    html`<lr-stack-trace max-height="3rem;position:fixed;inset:0"></lr-stack-trace>`,
+  )) as LyraStackTrace;
+  await el.updateComplete;
+  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(getComputedStyle(base).position, 'the injected declaration must not apply').to.not.equal('fixed');
+  expect(base.style.getPropertyValue('--lr-stack-trace-max-height').trim()).to.equal('');
+
+  el.setAttribute('max-height', '20rem');
+  await el.updateComplete;
+  expect(base.style.getPropertyValue('--lr-stack-trace-max-height').trim()).to.equal('20rem');
+});

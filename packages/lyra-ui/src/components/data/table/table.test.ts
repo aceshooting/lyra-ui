@@ -4271,3 +4271,17 @@ it('renders grouped rows with per-group and grand totals', async () => {
   expect(text).to.include('Group low');
   expect(el.shadowRoot!.querySelectorAll('[part="footer-cell"]').length).to.be.greaterThan(0);
 });
+
+it('rejects a column width that would inject extra declarations into the col element', async () => {
+  const el = (await fixture(html`<lr-table accessible-label="Scores"></lr-table>`)) as LyraTable<Row>;
+  el.columns = [
+    { key: 'name', label: 'Name', cell: (r: Row) => r.name, width: '10rem;background-image:url(https://example.test/b.png)' },
+    { key: 'score', label: 'Score', cell: (r: Row) => r.score, width: '8rem' },
+  ];
+  el.rows = rows;
+  await el.updateComplete;
+  const cols = [...el.shadowRoot!.querySelectorAll<HTMLElement>('col')];
+  expect(cols[0]!.style.backgroundImage, 'no injected paint server').to.equal('');
+  expect(cols[0]!.style.getPropertyValue('inline-size').trim(), 'the unsafe width is dropped').to.equal('');
+  expect(cols[1]!.style.getPropertyValue('inline-size').trim()).to.equal('8rem');
+});

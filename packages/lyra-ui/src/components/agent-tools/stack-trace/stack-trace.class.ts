@@ -5,6 +5,8 @@ import { styles } from './stack-trace.styles.js';
 import { parseStackTrace, DEFAULT_INTERNAL_PATTERNS, type StackFrame, type StackGroup } from './stack-trace-parse.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { styleMap } from 'lit/directives/style-map.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 
 /** How long the "Copied!" confirmation state lasts before reverting -- matches
  *  `lr-copy-button`'s own confirmation duration. */
@@ -181,7 +183,12 @@ export class LyraStackTrace extends LyraElement<LyraStackTraceEventMap> {
         part="base"
         role="group"
         aria-label=${this.getAttribute('aria-label') || this.localize('stackTraceLabel')}
-        style=${this.maxHeight ? `--lr-stack-trace-max-height:${this.maxHeight}` : nothing}
+        style=${(() => {
+          // A free-form consumer string must never reach a declaration list verbatim --
+          // `max-height="3rem;position:fixed"` would otherwise escape the custom property.
+          const safeMaxHeight = sanitizeCssLength(this.maxHeight);
+          return safeMaxHeight ? styleMap({ '--lr-stack-trace-max-height': safeMaxHeight }) : nothing;
+        })()}
       >
         ${this.copyable
           ? html`<button part="copy-button" type="button" @click=${this.onCopy}>

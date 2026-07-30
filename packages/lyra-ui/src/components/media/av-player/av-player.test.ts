@@ -962,11 +962,15 @@ describe('render branches', () => {
     expect(el.shadowRoot!.querySelector('[part="error"]')).to.exist;
   });
 
-  it('renders <audio src=""> when kind is forced to audio with no src set', async () => {
+  it('omits the src attribute entirely when kind is forced to audio with no src set', async () => {
     const el = (await fixture(html`<lr-av-player kind="audio"></lr-av-player>`)) as LyraAvPlayer;
+    await el.updateComplete;
     const audio = el.shadowRoot!.querySelector('audio');
-    expect(audio).to.exist;
-    expect(audio!.getAttribute('src')).to.equal('');
+    // A present-but-empty src makes the element resolve the page URL as media and fire `error`
+    // (MediaError.code 4), which would paint a role="alert" failure state for a component the
+    // consumer has not configured yet.
+    expect(audio!.hasAttribute('src'), 'src must be absent, not empty').to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="error"]').length).to.equal(0);
   });
 });
 

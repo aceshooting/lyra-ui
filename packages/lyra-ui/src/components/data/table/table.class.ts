@@ -8,6 +8,7 @@ import {
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
@@ -850,7 +851,9 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
 
   private renderedColumnWidth(column: TableColumn<T>): string | undefined {
     const resized = this.resizedColumnWidths.get(column.key);
-    return resized === undefined ? column.width : `${resized}px`;
+    // A resized width is our own clamped number; `column.width` is a free-form consumer string and
+    // lands in a declaration list via styleMap, so it has to be validated as a CSS length first.
+    return resized === undefined ? sanitizeCssLength(column.width, 'height') : `${resized}px`;
   }
 
   private onResizePointerDown = (event: PointerEvent): void => {
@@ -2101,9 +2104,11 @@ export class LyraTable<T = unknown> extends LyraElement<LyraTableEventMap<T>> {
               ${this.columns.map(
                 (col) =>
                   html`<col style=${styleMap({
+                    // Consumer-supplied CSS lengths: styleMap emits a joined declaration string on
+                    // its first commit, so an unsanitized value would inject extra declarations.
                     'inline-size': this.renderedColumnWidth(col),
-                    'min-inline-size': col.minWidth,
-                    'max-inline-size': col.maxWidth,
+                    'min-inline-size': sanitizeCssLength(col.minWidth, 'height'),
+                    'max-inline-size': sanitizeCssLength(col.maxWidth, 'height'),
                   })} />`,
               )}
               ${hasRowTotal ? html`<col />` : nothing}

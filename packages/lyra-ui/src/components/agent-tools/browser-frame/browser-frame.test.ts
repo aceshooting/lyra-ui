@@ -351,3 +351,23 @@ describe('lr-browser-frame', () => {
     expect(css).to.match(/\[part='stop-button'\]:hover/);
   });
 });
+
+it('clamps ping coordinates and never lets them reach the declaration list verbatim', async () => {
+  const el = (await fixture(html`<lr-browser-frame></lr-browser-frame>`)) as LyraBrowserFrame;
+  el.pings = [
+    { x: '0%;position:fixed;inset:0' as unknown as number, y: 10 },
+    { x: Number.NaN, y: Number.POSITIVE_INFINITY },
+    { x: 250, y: -80 },
+  ];
+  await el.updateComplete;
+  const pings = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="ping"]')];
+  expect(pings.length).to.equal(3);
+  expect(getComputedStyle(pings[0]!).position, 'no injected declaration applies').to.not.equal('fixed');
+  for (const ping of pings) {
+    expect(ping.style.left).to.match(/^\d+(\.\d+)?%$/);
+    expect(ping.style.top).to.match(/^\d+(\.\d+)?%$/);
+  }
+  // 250 and -80 clamp into the documented 0-100 range.
+  expect(pings[2]!.style.left).to.equal('100%');
+  expect(pings[2]!.style.top).to.equal('0%');
+});

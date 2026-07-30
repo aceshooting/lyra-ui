@@ -661,7 +661,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             part="media"
             controls
             aria-label=${label}
-            src=${safeSrc ?? ''}
+            src=${safeSrc ?? nothing}
             ?loop=${this.loop}
             ?muted=${this.muted}
             preload=${this.preload}
@@ -677,7 +677,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
             part="media"
             controls
             aria-label=${label}
-            src=${safeSrc ?? ''}
+            src=${safeSrc ?? nothing}
             poster=${this.poster || nothing}
             ?loop=${this.loop}
             ?muted=${this.muted}

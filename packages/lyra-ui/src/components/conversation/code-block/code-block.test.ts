@@ -1082,3 +1082,18 @@ describe('shiki dark-theme signal', () => {
     expect(getComputedStyle(dark.span).color).to.not.equal(dark.span.style.color);
   });
 });
+
+it('rejects a max-height that would inject extra declarations onto the body', async () => {
+  const el = (await fixture(html`
+    <lr-code-block code="const x = 1;" max-height="1px;background-image:url(https://example.test/b.png)"></lr-code-block>
+  `)) as LyraCodeBlock;
+  await el.updateComplete;
+  const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(getComputedStyle(body).backgroundImage, 'no injected paint server').to.equal('none');
+  expect(body.style.getPropertyValue('--lr-code-block-max-height').trim()).to.equal('');
+
+  el.setAttribute('max-height', '20rem');
+  await el.updateComplete;
+  const after = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+  expect(after.style.getPropertyValue('--lr-code-block-max-height').trim()).to.equal('20rem');
+});
