@@ -452,16 +452,24 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraElement) {
     return this.searchState.ordered.length;
   }
 
-  searchNext(): void {
-    if (!this.searchState.ordered.length) return;
+  /** Advances to the next match, wrapping to the first after the last. Resolves `true` once the
+   *  active match moved, `false` when there are no matches -- the shape the shared
+   *  `LyraTextViewerTarget` search contract declares, so a find-in-page host can drive every
+   *  searchable component through one typed surface. */
+  async searchNext(): Promise<boolean> {
+    if (!this.searchState.ordered.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchState.ordered.length;
     this.emitSearchChange();
+    return true;
   }
 
-  searchPrevious(): void {
-    if (!this.searchState.ordered.length) return;
+  /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
+   *  active match moved, `false` when there are no matches. */
+  async searchPrevious(): Promise<boolean> {
+    if (!this.searchState.ordered.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchState.ordered.length) % this.searchState.ordered.length;
     this.emitSearchChange();
+    return true;
   }
 
   clearSearch(): void {

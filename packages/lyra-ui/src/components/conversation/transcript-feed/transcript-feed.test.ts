@@ -317,3 +317,18 @@ it('localizes the log label and empty state via this.localize()', async () => {
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="log"]')!.getAttribute('aria-label')).to.equal('Transcription');
 });
+
+it('renders the interim marker visually hidden, not as visible text', async () => {
+  // The `.sr-only` class only hides anything if a stylesheet in THIS shadow root defines it.
+  // `LyraElement.styles` is `[tokens]` and carries no such rule, so without adopting the shared
+  // `srOnly` sheet the marker painted as ordinary visible text next to the entry. Asserting
+  // textContent (as the sibling test above does) cannot catch that -- only rendered geometry can.
+  const el = (await fixture(html`<lr-transcript-feed></lr-transcript-feed>`)) as LyraTranscriptFeed;
+  el.entries = [{ id: '2', speaker: 'You', text: 'partial...', interim: true }];
+  await el.updateComplete;
+
+  const marker = el.shadowRoot!.querySelector('.sr-only') as HTMLElement;
+  const rect = marker.getBoundingClientRect();
+  expect(rect.width, 'sr-only marker width').to.be.at.most(1);
+  expect(rect.height, 'sr-only marker height').to.be.at.most(1);
+});

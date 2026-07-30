@@ -63,6 +63,17 @@ export const WithTypeLabels: Story = {
   `,
 };
 
+/**
+ * Tab to any "Remove" / "Add to long-term memory" / "Forget all" control and press Enter: focus
+ * moves into the confirmation that replaces it, landing on Deny — the safe action — instead of
+ * being dropped back onto the page body. Escape cancels, exactly like pressing Deny, and returns
+ * focus to the control the confirmation replaced: the row's own action for a per-item
+ * confirmation, and `[part="forget-all-button"]` for the bulk one.
+ */
+export const KeyboardConfirmation: Story = {
+  render: () => html`<lr-memory-panel .shortTerm=${shortTerm} .longTerm=${longTerm}></lr-memory-panel>`,
+};
+
 export const Narrow320px: Story = {
   render: () => html`
     <div style="max-width:320px;border:1px dashed var(--lr-color-border);padding:8px;">

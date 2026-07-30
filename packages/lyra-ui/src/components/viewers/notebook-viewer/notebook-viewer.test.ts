@@ -3,7 +3,12 @@ import './notebook-viewer.js';
 import type { LyraNotebookViewer } from './notebook-viewer.js';
 import { __setNotebookSanitizerForTesting } from './dompurify-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
+import type { LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import { styles } from './notebook-viewer.styles.js';
+
+/** The search half of the shared viewer contract -- `lr-notebook-viewer` resolves its own anchor
+ *  kinds rather than the mixin's, so only the search methods are asserted assignable. */
+type SearchContract = Pick<LyraTextViewerTarget, 'search' | 'searchNext' | 'searchPrevious' | 'clearSearch'>;
 
 afterEach(() => {
   __setNotebookSanitizerForTesting(undefined);
@@ -799,6 +804,36 @@ describe('search', () => {
     el.searchPrevious();
     const count = await el.search('nomatch-at-all');
     expect(count).to.equal(0);
+  });
+
+  it('searchNext()/searchPrevious() resolve true when they moved and false when they could not', async () => {
+    // A host driving several viewers polymorphically through the shared
+    // LyraTextViewerTarget shape writes `if (await viewer.searchNext()) { ... }`, or awaits the
+    // call before reading its own match counter. Resolving nothing makes the falsy "no more
+    // matches" branch fire on every press, even mid-notebook.
+    const notebook = {
+      nbformat: 4, nbformat_minor: 5,
+      cells: [
+        { cell_type: 'code', id: 'c1', source: 'needle', execution_count: 1 },
+        { cell_type: 'code', id: 'c2', source: 'needle', execution_count: 2 },
+      ],
+    };
+    const el = (await fixture(html`<lr-notebook-viewer .notebook=${notebook}></lr-notebook-viewer>`)) as LyraNotebookViewer;
+    // Driven through the shared contract type rather than the concrete class, so a regression back
+    // to `void` returns breaks this assignment for any typechecker pointed at the test sources as
+    // well as failing the runtime assertions below.
+    const viewer: SearchContract = el;
+
+    expect(await viewer.searchNext(), 'no query has run yet').to.be.false;
+    expect(await viewer.searchPrevious(), 'no query has run yet').to.be.false;
+
+    expect(await viewer.search('needle')).to.equal(2);
+    expect(await viewer.searchNext(), 'advanced to the second match').to.be.true;
+    expect(await viewer.searchPrevious(), 'stepped back to the first match').to.be.true;
+
+    expect(await viewer.search('__definitely_absent__')).to.equal(0);
+    expect(await viewer.searchNext(), 'the current query has no matches').to.be.false;
+    expect(await viewer.searchPrevious(), 'the current query has no matches').to.be.false;
   });
 
   it('searchNext()/searchPrevious() cycle the active match index and emit lr-search-change', async () => {

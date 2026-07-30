@@ -1,6 +1,7 @@
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isAbortError, isResourceLimitError, readResponseText } from '../../../internal/resource-loader.js';
@@ -80,7 +81,11 @@ class LyraIncludeBase extends LyraElement<LyraIncludeEventMap> {}
  * @csspart base - The non-layout (`display: contents`) wrapper around the default slot.
  */
 export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
-  static override styles = [LyraElement.styles, styles];
+  // `srOnly` is not optional chrome here: the shared anchor-target mixin's
+  // `renderAnchorLiveRegion()` emits its `role="status"` node with
+  // `class="sr-only"`, so without this stylesheet the localized anchor-jump
+  // announcement paints as visible body text beside the transcluded fragment.
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /**
    * URL of the HTML fragment to fetch, validated through the shared

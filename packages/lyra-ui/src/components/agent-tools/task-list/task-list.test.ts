@@ -361,3 +361,16 @@ it('exposes component-scoped status icon colors', async () => {
   expect(color('ok')).to.equal('rgb(4, 5, 6)');
   expect(color('bad')).to.equal('rgb(7, 8, 9)');
 });
+
+it('renders each status label visually hidden, not duplicated as visible text', async () => {
+  // The status is conveyed visually by `[part="status-icon"]` and to assistive tech by an
+  // `.sr-only` sibling. Without the shared `srOnly` sheet in this shadow root that sibling painted
+  // too, so every row showed its status word next to the icon.
+  const el = (await fixture(html`<lr-task-list .items=${items}></lr-task-list>`)) as LyraTaskList;
+  await el.updateComplete;
+
+  const marker = el.shadowRoot!.querySelector('.sr-only') as HTMLElement;
+  const rect = marker.getBoundingClientRect();
+  expect(rect.width, 'sr-only marker width').to.be.at.most(1);
+  expect(rect.height, 'sr-only marker height').to.be.at.most(1);
+});

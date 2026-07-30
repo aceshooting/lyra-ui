@@ -1,6 +1,7 @@
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { styles } from './env-list.styles.js';
 import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
 
@@ -47,7 +48,7 @@ export interface LyraEnvListEventMap {
  *   library-wide brand tokens, since `::part(reveal-button)[aria-pressed]` is invalid CSS.
  */
 export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
-  static override styles = [LyraElement.styles, styles];
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** The name/value entries to render, in order. */
   @property({ attribute: false }) entries: EnvEntry[] = [];

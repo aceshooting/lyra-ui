@@ -91,6 +91,11 @@ describe('lr-embedding-explorer', () => {
       const hit = wrapper
         .querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!
         .shadowRoot!.querySelector<SVGGeometryElement>('.point-hit')!;
+      // Each iteration appends another fixture below the previous one, so the later allocations
+      // can sit past the bottom of the viewport -- where `elementFromPoint` returns `null`
+      // regardless of how big the pick target is. Scroll first, then read the CTM, so the
+      // screen-space coordinates below are the ones actually being hit-tested.
+      wrapper.scrollIntoView({ block: 'center', inline: 'nearest' });
       const style = getComputedStyle(hit);
       const matrix = hit.getScreenCTM()!;
       const renderedScale = Math.hypot(matrix.a, matrix.b);
@@ -115,6 +120,90 @@ describe('lr-embedding-explorer', () => {
         `${width}px allocation pointer edge`,
       ).to.equal(hit);
     }
+  });
+
+  it('applies the height property to the rendered plot', async () => {
+    // `height` is documented as the SVG block size. Rendering it as an SVG presentation attribute
+    // cannot deliver that: a stylesheet declaration always beats a presentation attribute, so
+    // `[part='plot'] { block-size: auto }` won at every value, including the 360px default.
+    const el = (await fixture(
+      html`<lr-embedding-explorer
+        height="240px"
+        .points=${[{ id: 'a', x: 0.1, y: 0.2, label: 'A' }]}
+      ></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+
+    const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
+    expect(getComputedStyle(plot).blockSize).to.equal('240px');
+  });
+
+  it('renders its documented default height when height is left unset', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+
+    const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
+    expect(getComputedStyle(plot).blockSize).to.equal('360px');
+  });
+
+  it('lets a consumer ::part(plot) block-size rule win over the height property', async () => {
+    // The height plumbing must stay in a custom property read by the component's own
+    // `[part='plot']` rule. An inline `block-size` on the SVG would out-rank an outside
+    // `::part(plot)` rule and leave the plot unsizeable by consumers.
+    const wrapper = await fixture(html`
+      <div>
+        <style>
+          .plot-block-size-override::part(plot) {
+            block-size: 120px;
+          }
+        </style>
+        <lr-embedding-explorer
+          class="plot-block-size-override"
+          height="240px"
+          .points=${points}
+        ></lr-embedding-explorer>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!;
+    await el.updateComplete;
+
+    const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
+    expect(getComputedStyle(plot).blockSize).to.equal('120px');
+  });
+
+  it('keeps aspect-ratio-preserved sizing when height is auto', async () => {
+    const el = (await fixture(
+      html`<lr-embedding-explorer height="auto" .points=${points}></lr-embedding-explorer>`,
+    )) as LyraEmbeddingExplorer;
+    await el.updateComplete;
+
+    const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
+    const style = getComputedStyle(plot);
+    const inline = Number.parseFloat(style.inlineSize);
+    const block = Number.parseFloat(style.blockSize);
+    expect(inline, 'plot inline size').to.be.greaterThan(0);
+    expect(block, 'plot block size').to.be.greaterThan(0);
+    // The plot's `viewBox` is 640x360, so `auto` resolves through that intrinsic aspect ratio.
+    expect(block, 'plot block size').to.be.closeTo(inline * (360 / 640), 1);
+  });
+
+  it('keeps the narrow-allocation minimum block size a floor above the height property', async () => {
+    const wrapper = await fixture(html`
+      <div style="inline-size: 300px">
+        <lr-embedding-explorer height="100px" .points=${points}></lr-embedding-explorer>
+      </div>
+    `);
+    const el = wrapper.querySelector<LyraEmbeddingExplorer>('lr-embedding-explorer')!;
+    await el.updateComplete;
+
+    const plot = el.shadowRoot!.querySelector('[part="plot"]') as SVGElement;
+    const rootFontSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(Number.parseFloat(getComputedStyle(plot).blockSize), 'narrow floor').to.be.closeTo(
+      rootFontSize * 12,
+      0.5,
+    );
   });
 
   it('is accessible in empty and populated states', async () => {

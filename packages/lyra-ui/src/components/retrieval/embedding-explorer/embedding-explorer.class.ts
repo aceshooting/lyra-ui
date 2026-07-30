@@ -3,6 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { styles } from './embedding-explorer.styles.js';
 
 const WIDTH = 640;
@@ -46,6 +47,11 @@ export interface LyraEmbeddingExplorerEventMap {
  * @csspart point - One focusable embedding point.
  * @csspart empty - The empty state.
  * @cssprop [--lr-embedding-explorer-selected-stroke=var(--lr-color-brand)] - Stroke color of the selected point.
+ * @cssprop [--lr-embedding-explorer-height=360px] - The plot's `block-size`. Set on the host from
+ *   the `height` property, whose default supplies the `360px`; a value the browser cannot parse as
+ *   a `block-size` is dropped, leaving the `viewBox`-derived aspect-ratio size. A consumer's own
+ *   `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
+ *   `min-block-size` floor still raises it.
  */
 export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -54,7 +60,12 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   @property({ attribute: false }) points: EmbeddingPoint[] = [];
   /** The selected point id. Controlled by the host. */
   @property({ attribute: 'selected-id' }) selectedId = '';
-  /** SVG block size. */
+  /**
+   * The plot's block size, as any CSS length the browser accepts for `block-size` — including
+   * `auto`, which restores the aspect-ratio-preserved size derived from the `viewBox`. It is
+   * applied through `--lr-embedding-explorer-height`; an unparseable value leaves that property
+   * unset, so the plot falls back to `auto` rather than collapsing.
+   */
   @property() height = '360px';
   /** Accessible name for the plot. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
@@ -79,9 +90,22 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    if (changed.has('height')) this.applyHeight();
     if (!this.refocusAfterUpdate) return;
     this.refocusAfterUpdate = false;
     this.renderRoot.querySelector<SVGGElement>(`[data-index="${this.activeIndex}"]`)?.focus();
+  }
+
+  /**
+   * Publishes `height` as `--lr-embedding-explorer-height`, which `[part='plot']`'s `block-size`
+   * reads. It has to land on the host: custom properties cascade downward into the shadow tree,
+   * never upward from a shadow-tree node. Routing it through a custom property rather than an
+   * inline `block-size` also keeps the value visible to a consumer retheming the property.
+   */
+  private applyHeight(): void {
+    const height = sanitizeCssLength(this.height, 'height');
+    if (height) this.style.setProperty('--lr-embedding-explorer-height', height);
+    else this.style.removeProperty('--lr-embedding-explorer-height');
   }
 
   private position(
@@ -189,7 +213,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
     const clusters = [...new Set(points.map((point) => String(point.cluster ?? '')))].sort();
     const clusterIndices = new Map(clusters.map((cluster, index) => [cluster, index]));
     return html`<div part="base" role="region" aria-label=${label}>
-      <svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" height=${this.height} role="listbox" aria-label=${label}>
+      <svg part="plot" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="listbox" aria-label=${label}>
         ${points.map((point, index) => this.renderPoint(point, index, bounds, clusterIndices))}
       </svg>
     </div>`;

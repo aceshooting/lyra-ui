@@ -421,20 +421,28 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     return this.searchMatches.length;
   }
 
-  searchNext(): void {
-    if (this.searchMatches.length === 0) return;
+  /** Advances to the next match, wrapping to the first after the last. Resolves `true` once the
+   *  active match moved, `false` when there are no matches -- the shape the shared
+   *  `LyraTextViewerTarget` search contract declares, so a find-in-page host can drive every
+   *  searchable component through one typed surface. */
+  async searchNext(): Promise<boolean> {
+    if (this.searchMatches.length === 0) return false;
     const previousSearch = this.searchState();
     this.searchActiveIndex = (this.searchActiveIndex + 1) % this.searchMatches.length;
     this.emitSearchChangeIfChanged(previousSearch);
     this.jumpToActiveMatch();
+    return true;
   }
 
-  searchPrevious(): void {
-    if (this.searchMatches.length === 0) return;
+  /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
+   *  active match moved, `false` when there are no matches. */
+  async searchPrevious(): Promise<boolean> {
+    if (this.searchMatches.length === 0) return false;
     const previousSearch = this.searchState();
     this.searchActiveIndex = (this.searchActiveIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.emitSearchChangeIfChanged(previousSearch);
     this.jumpToActiveMatch();
+    return true;
   }
 
   clearSearch(): void {

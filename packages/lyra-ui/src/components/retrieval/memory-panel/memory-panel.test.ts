@@ -2,6 +2,14 @@ import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './memory-panel.js';
 import type { LyraMemoryPanel, LyraMemoryItem } from './memory-panel.js';
 import { styles } from './memory-panel.styles.js';
+import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
+
+/** Lets every queued `updateComplete.then()` focus hop settle before focus is asserted. */
+async function settleFocus(el: LyraMemoryPanel): Promise<void> {
+  await el.updateComplete;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+}
 
 /**
  * A dynamically-inserted `<lr-confirm-bar>` is created as part of `lr-memory-panel`'s own render
@@ -331,6 +339,116 @@ describe('lr-memory-panel', () => {
     expect(row.contains(el.shadowRoot!.activeElement)).to.be.true;
   });
 
+  describe('keyboard focus across the confirmation step', () => {
+    it('moves focus into the confirmation when a focused remove action is activated', async () => {
+      const el = await populated();
+      const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]')!;
+      const remove = row.querySelector('[part="remove-button"]') as HTMLButtonElement;
+      remove.focus();
+      expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('remove-button');
+
+      remove.click(); // what Enter on the focused button dispatches
+      await el.updateComplete;
+      const bar = await readyConfirmBar(row);
+      await settleFocus(el);
+
+      expect(deepActiveElement(document)?.localName).to.not.equal('body');
+      expect(composedContains(bar, deepActiveElement(document))).to.be.true;
+      expect(bar.shadowRoot!.activeElement?.getAttribute('part')).to.equal('deny-button');
+    });
+
+    it('moves focus into the confirmation when a focused add action is activated', async () => {
+      const el = await populated();
+      const row = el.shadowRoot!.querySelector('[part="item"][data-id="s2"]')!;
+      const add = row.querySelector('[part="add-button"]') as HTMLButtonElement;
+      add.focus();
+      add.click();
+      await el.updateComplete;
+      const bar = await readyConfirmBar(row);
+      await settleFocus(el);
+
+      expect(deepActiveElement(document)?.localName).to.not.equal('body');
+      expect(composedContains(bar, deepActiveElement(document))).to.be.true;
+    });
+
+    it('moves focus into the confirmation when the focused "forget all" action is activated', async () => {
+      const el = await populated();
+      const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+      const forgetAll = section.querySelector('[part="forget-all-button"]') as HTMLButtonElement;
+      forgetAll.focus();
+      forgetAll.click();
+      await el.updateComplete;
+      const bar = await readyConfirmBar(section);
+      await settleFocus(el);
+
+      expect(deepActiveElement(document)?.localName).to.not.equal('body');
+      expect(composedContains(bar, deepActiveElement(document))).to.be.true;
+    });
+
+    it('returns focus to the row when the confirmation is denied from the keyboard', async () => {
+      const el = await populated();
+      const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]') as HTMLElement;
+      const remove = row.querySelector('[part="remove-button"]') as HTMLButtonElement;
+      remove.focus();
+      remove.click();
+      await el.updateComplete;
+      const bar = await readyConfirmBar(row);
+      await settleFocus(el);
+
+      (bar.shadowRoot!.querySelector('[part="deny-button"]') as HTMLElement).click();
+      await settleFocus(el);
+
+      expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+      expect(deepActiveElement(document)?.localName).to.not.equal('body');
+      expect(composedContains(row, deepActiveElement(document))).to.be.true;
+    });
+
+    it('cancels the confirmation on Escape and returns focus to the row', async () => {
+      const el = await populated();
+      const row = el.shadowRoot!.querySelector('[part="item"][data-id="s1"]') as HTMLElement;
+      const remove = row.querySelector('[part="remove-button"]') as HTMLButtonElement;
+      remove.focus();
+      remove.click();
+      await el.updateComplete;
+      await readyConfirmBar(row);
+      await settleFocus(el);
+
+      let removed = false;
+      el.addEventListener('lr-remove', () => (removed = true));
+      (deepActiveElement(document) as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }),
+      );
+      await settleFocus(el);
+
+      expect(removed).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+      expect(deepActiveElement(document)?.localName).to.not.equal('body');
+      expect(composedContains(row, deepActiveElement(document))).to.be.true;
+    });
+
+    it('cancels the "forget all" confirmation on Escape and returns focus to its control', async () => {
+      const el = await populated();
+      const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]') as HTMLElement;
+      const forgetAll = section.querySelector('[part="forget-all-button"]') as HTMLButtonElement;
+      forgetAll.focus();
+      forgetAll.click();
+      await el.updateComplete;
+      await readyConfirmBar(section);
+      await settleFocus(el);
+
+      let forgot = false;
+      el.addEventListener('lr-forget', () => (forgot = true));
+      (deepActiveElement(document) as HTMLElement).dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true }),
+      );
+      await settleFocus(el);
+
+      expect(forgot).to.be.false;
+      expect(el.shadowRoot!.querySelectorAll('lr-confirm-bar').length).to.equal(0);
+      expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('forget-all-button');
+    });
+  });
+
   it('uses instance-safe disclosure ids for hostile and duplicate caller ids', async () => {
     const hostile = 'same id\"]';
     const item = (text: string): LyraMemoryItem => ({
@@ -587,4 +705,36 @@ it('formats the forget-all confirmation count with the effective locale', async 
   await el.updateComplete;
   const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
   expect((await readyConfirmBar(section)).textContent).to.include('١٢');
+});
+
+it('keeps focus when a controlled longTerm replacement closes an open forget-all confirmation', async () => {
+  // The forget-all <lr-confirm-bar> renders outside every [part="item"] and had no `part`, so
+  // `captureControlledFocus()` matched neither its row branch nor its forget-all-button branch.
+  // A host reassigning `longTerm` while that confirmation was open unmounted the bar and dropped
+  // focus to <body> -- a keyboard user was thrown back to the top of the page.
+  const el = await populated();
+  const section = el.shadowRoot!.querySelector('[part="section"][data-scope="long-term"]')!;
+  const forgetAll = el.shadowRoot!.querySelector('[part="forget-all-button"]') as HTMLButtonElement;
+  forgetAll.focus();
+  forgetAll.click(); // what Enter on the focused action dispatches
+  await el.updateComplete;
+  const bar = await readyConfirmBar(section);
+  await settleFocus(el);
+
+  expect(bar.getAttribute('part'), 'the confirmation is addressable as a part').to.equal(
+    'forget-all-confirm',
+  );
+  expect(composedContains(bar, deepActiveElement(document)), 'focus starts in the bar').to.be.true;
+
+  // Controlled replacement that still leaves long-term memories: the bar unmounts, the
+  // "Forget all" action comes back, and focus must land on it rather than on <body>.
+  el.longTerm = el.longTerm.slice(0, Math.max(1, el.longTerm.length - 1));
+  await el.updateComplete;
+  await settleFocus(el);
+
+  expect(deepActiveElement(document)?.localName, 'focus must not fall to body').to.not.equal('body');
+  expect(
+    (deepActiveElement(document) as HTMLElement | null)?.getAttribute('part'),
+    'focus returns to the Forget all action',
+  ).to.equal('forget-all-button');
 });

@@ -1165,3 +1165,20 @@ it('registers one shared audio/video renderer across every AV MIME type', async 
   expect(player).to.exist;
   expect(player.name).to.equal('talk.mp3');
 });
+
+it('searchNext/searchPrevious resolve a boolean, matching the shared viewer search contract', async () => {
+  // `internal/text-viewer-target.ts`'s `LyraTextViewerTarget` declares both as
+  // `Promise<boolean>`. These returned `void`, so a host driving several viewers through that one
+  // typed surface -- `if (await viewer.searchNext())` -- got `undefined` here and took the
+  // "nothing to move to" branch on every press, while every other viewer returned a real boolean.
+  const el = (await fixture(html`<lr-av-player src=${MP3_SRC} .cues=${CUES}></lr-av-player>`)) as LyraAvPlayer;
+  await el.updateComplete;
+
+  expect(await el.search('HOST')).to.be.greaterThan(0);
+  expect(await el.searchNext(), 'moved to the next match').to.be.true;
+  expect(await el.searchPrevious(), 'moved to the previous match').to.be.true;
+
+  expect(await el.search('__definitely_absent__')).to.equal(0);
+  expect(await el.searchNext(), 'no matches to move to').to.be.false;
+  expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
+});

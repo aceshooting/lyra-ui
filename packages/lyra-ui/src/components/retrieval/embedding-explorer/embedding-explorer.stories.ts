@@ -17,3 +17,13 @@ const points: EmbeddingPoint[] = [
 
 export const Default: Story = { render: () => html`<lr-embedding-explorer .points=${points}></lr-embedding-explorer>` };
 export const Empty: Story = { render: () => html`<lr-embedding-explorer></lr-embedding-explorer>` };
+
+/** `height` sizes the plot through `--lr-embedding-explorer-height`. */
+export const CustomHeight: Story = {
+  render: () => html`<lr-embedding-explorer height="220px" .points=${points}></lr-embedding-explorer>`,
+};
+
+/** `height="auto"` sizes the plot from the `viewBox` aspect ratio instead of a fixed block size. */
+export const AutoHeight: Story = {
+  render: () => html`<lr-embedding-explorer height="auto" .points=${points}></lr-embedding-explorer>`,
+};

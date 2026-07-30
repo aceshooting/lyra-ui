@@ -248,3 +248,17 @@ describe('lr-env-list', () => {
     }
   });
 });
+
+it('renders the masked-value announcement visually hidden, not as visible text', async () => {
+  // Without the shared `srOnly` sheet adopted into this shadow root, "Value hidden" painted as
+  // ordinary text right beside the mask glyphs.
+  const el = (await fixture(
+    html`<lr-env-list .entries=${[{ name: 'API_KEY', value: 'secret1', secret: true }]}></lr-env-list>`,
+  )) as LyraEnvList;
+  await el.updateComplete;
+
+  const marker = el.shadowRoot!.querySelector('.sr-only') as HTMLElement;
+  const rect = marker.getBoundingClientRect();
+  expect(rect.width, 'sr-only marker width').to.be.at.most(1);
+  expect(rect.height, 'sr-only marker height').to.be.at.most(1);
+});

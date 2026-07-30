@@ -359,6 +359,24 @@ describe('lr-include', () => {
     expect(getComputedStyle(el).display).to.equal('contents');
   });
 
+  it('keeps the shared anchor live region visually hidden once it carries an announcement', async () => {
+    const el = await fixture<LyraInclude>(html`<lr-include>Fallback text</lr-include>`);
+    // An unresolvable highlight id announces `anchorNotFound` immediately -- no retry loop.
+    await el.scrollToAnchor('no-such-highlight');
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="anchor-live-region"]') as HTMLElement;
+    expect(region, 'the mixin live region is rendered').to.exist;
+    expect(
+      (region.textContent ?? '').trim().length,
+      'the live region actually carries announcement text',
+    ).to.be.greaterThan(0);
+    // Rendered geometry, not stylesheet text: an unhidden live region lays out as a normal block
+    // and paints its announcement on screen next to the transcluded fragment.
+    const rect = region.getBoundingClientRect();
+    expect(rect.height, 'live-region block size stays clipped to 1px').to.be.at.most(1);
+    expect(rect.width, 'live-region inline size stays clipped to 1px').to.be.at.most(1);
+  });
+
   it('is accessible when idle', async () => {
     const el = await fixture(html`<lr-include></lr-include>`);
     await expect(el).to.be.accessible();

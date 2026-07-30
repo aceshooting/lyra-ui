@@ -112,6 +112,14 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * If a controlled collection replacement removes the row containing focus, focus moves to the
  * closest surviving memory row, or to the stable root when no row survives.
  *
+ * Focus follows the confirmation rather than being dropped: activating an action replaces the
+ * button that had focus, so focus moves into the freshly rendered `lr-confirm-bar` (its Deny
+ * control -- the safe action -- or the bar's own status element) instead of falling back to
+ * `<body>`. Resolving or cancelling hands focus back: to the row for a per-item decision, to the
+ * "Forget all" control for the bulk one. Escape while the confirmation holds focus cancels it
+ * exactly like Deny -- no event, same focus return -- and does not propagate, so an enclosing
+ * dialog or popover still sees its own Escape when no confirmation is open.
+ *
  * Three distinct, non-overlapping actions: `add` promotes a short-term item into long-term memory
  * (only offered on short-term items -- long-term items are already there); `remove` deletes one
  * specific item from whichever list it's in (offered on every item); `forget` is deliberately
@@ -147,6 +155,8 @@ const TIER_TONE: Record<Tier, 'success' | 'warning' | 'danger'> = {
  * @csspart remove-button - The "Remove" action. Rendered on every item.
  * @csspart forget-all-button - The long-term section's bulk "Forget all" action. Only rendered
  * while `longTerm` is non-empty.
+ * @csspart forget-all-confirm - The `<lr-confirm-bar>` shown in place of the "Forget all"
+ *   action while that bulk confirmation is pending.
  * @cssprop [--lr-memory-panel-confidence-success-color=var(--lr-color-success)] - Text color for a
  * high-confidence item's confidence indicator.
  * @cssprop [--lr-memory-panel-confidence-warning-color=var(--lr-color-warning)] - Text color for a
@@ -181,6 +191,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   private pendingControlledFocus:
     | { scope: MemoryScope; index: number }
     | 'base'
+    | 'forget-all'
     | undefined;
 
   protected override willUpdate(changed: PropertyValues<this>): void {
@@ -206,6 +217,12 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     this.pendingControlledFocus = undefined;
     if (pending === 'base') {
       this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
+      return;
+    }
+    if (pending === 'forget-all') {
+      const button = this.renderRoot.querySelector<HTMLElement>('[part="forget-all-button"]');
+      if (button) button.focus();
+      else this.renderRoot.querySelector<HTMLElement>('[part="base"]')?.focus();
       return;
     }
     this.refocusItem(pending.scope, pending.index);
@@ -248,6 +265,15 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
       return;
     }
 
+    // Focus parked inside the forget-all confirmation. `shadowRoot.activeElement` reports the
+    // <lr-confirm-bar> host, and that bar sits outside every [part="item"], so neither branch
+    // above can see it -- a controlled `longTerm` replacement unmounted the bar and dropped focus
+    // to <body>.
+    if (active.getAttribute('part') === 'forget-all-confirm' && changed.has('longTerm')) {
+      this.pendingControlledFocus = this.longTerm.length === 0 ? 'base' : 'forget-all';
+      return;
+    }
+
     if (
       active.getAttribute('part') === 'forget-all-button' &&
       changed.has('longTerm') &&
@@ -284,10 +310,50 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
 
   private startItemPending(kind: 'add' | 'remove', item: LyraMemoryItem, scope: MemoryScope): void {
     this.pending = { kind, item, scope };
+    this.focusPendingConfirmation();
   }
 
   private startForgetAllPending(): void {
     this.pending = { kind: 'forget-all', longTerm: this.longTerm };
+    this.focusPendingConfirmation();
+  }
+
+  /**
+   * The action button that opens a confirmation is destroyed by the very render that opens it, so a
+   * keyboard user who activated it would be dropped back onto `<body>` -- top of the page, nothing
+   * announced. Move focus into the confirmation's own Deny control instead (`lr-confirm-bar` orders
+   * the safe action first), falling back to that bar's always-present `[part="status"]`.
+   *
+   * The bar -- and the `lr-button` inside it -- run their own first Lit update *after* this
+   * component's, so both are awaited before the focus call; `pending` is re-checked afterwards so a
+   * confirmation that was resolved or cancelled in the meantime never steals focus back.
+   */
+  private focusPendingConfirmation(): void {
+    const started = this.pending;
+    void this.updateComplete.then(async () => {
+      const bar = this.renderRoot.querySelector('lr-confirm-bar');
+      if (!bar) return;
+      await bar.updateComplete;
+      const deny = bar.shadowRoot?.querySelector('[part="deny-button"]') as
+        | (HTMLElement & { updateComplete?: Promise<unknown> })
+        | null;
+      await deny?.updateComplete;
+      if (this.pending !== started || !bar.isConnected) return;
+      (deny ?? bar.shadowRoot?.querySelector<HTMLElement>('[part="status"]'))?.focus();
+    });
+  }
+
+  /** Escape cancels the open confirmation exactly like pressing its Deny control -- same event
+   *  (none), same focus return. Scoped to the bar rather than the document: this is an inline,
+   *  non-modal confirmation, so it must not swallow Escape for an enclosing dialog or popover. */
+  private onConfirmKeyDown(event: KeyboardEvent, cancel: () => void): void {
+    if (event.key !== 'Escape') return;
+    // Stop propagation only when the cancel actually closed something. `resolveItemDecision()`
+    // bails when the pending item is no longer in its array, so stopping first would swallow
+    // Escape while doing nothing -- and an enclosing dialog would refuse to close for no reason.
+    const before = this.pending;
+    cancel();
+    if (this.pending !== before) event.stopPropagation();
   }
 
   private refocusItem(scope: MemoryScope, index: number): void {
@@ -340,6 +406,7 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
       <lr-confirm-bar
         tone=${p.kind === 'add' ? ('neutral' as ConfirmBarTone) : ('danger' as ConfirmBarTone)}
         heading=${this.localize(CONFIRM_HEADING_KEY[p.kind])}
+        @keydown=${(e: KeyboardEvent) => this.onConfirmKeyDown(e, () => this.resolveItemDecision(p, false))}
         @lr-approve=${(e: CustomEvent) => {
           e.stopPropagation();
           this.resolveItemDecision(p, true);
@@ -426,8 +493,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     if (forgetPending) {
       return html`
         <lr-confirm-bar
+          part="forget-all-confirm"
           tone="danger"
           heading=${this.localize('memoryPanelConfirmForgetHeading')}
+          @keydown=${(e: KeyboardEvent) =>
+            this.onConfirmKeyDown(e, () => this.resolveForgetAllDecision(forgetPending, false))}
           @lr-approve=${(e: CustomEvent) => {
             e.stopPropagation();
             this.resolveForgetAllDecision(forgetPending, true);

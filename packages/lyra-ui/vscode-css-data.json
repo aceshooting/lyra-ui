@@ -1983,6 +1983,13 @@
       }
     },
     {
+      "name": "--lr-embedding-explorer-height",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-embedding-explorer>`** (default: `360px`) — The plot's `block-size`. Set on the host from the `height` property, whose default supplies the `360px`; a value the browser cannot parse as a `block-size` is dropped, leaving the `viewBox`-derived aspect-ratio size. A consumer's own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation `min-block-size` floor still raises it."
+      }
+    },
+    {
       "name": "--lr-embedding-explorer-selected-stroke",
       "description": {
         "kind": "markdown",

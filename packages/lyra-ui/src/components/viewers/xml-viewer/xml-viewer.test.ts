@@ -789,3 +789,20 @@ describe('non-integer node-path segments', () => {
     expect(result).to.be.false;
   });
 });
+
+it('searchNext/searchPrevious resolve a boolean, matching the shared viewer search contract', async () => {
+  // `internal/text-viewer-target.ts`'s `LyraTextViewerTarget` declares both as
+  // `Promise<boolean>`. These returned `void`, so a host driving several viewers through that one
+  // typed surface -- `if (await viewer.searchNext())` -- got `undefined` here and took the
+  // "nothing to move to" branch on every press, while every other viewer returned a real boolean.
+  const el = (await fixture(html`<lr-xml-viewer .xml=${'<root><first>foo</first><second>bar</second></root>'}></lr-xml-viewer>`)) as LyraXmlViewer;
+  await el.updateComplete;
+
+  expect(await el.search('foo')).to.be.greaterThan(0);
+  expect(await el.searchNext(), 'moved to the next match').to.be.true;
+  expect(await el.searchPrevious(), 'moved to the previous match').to.be.true;
+
+  expect(await el.search('__definitely_absent__')).to.equal(0);
+  expect(await el.searchNext(), 'no matches to move to').to.be.false;
+  expect(await el.searchPrevious(), 'no matches to move to').to.be.false;
+});

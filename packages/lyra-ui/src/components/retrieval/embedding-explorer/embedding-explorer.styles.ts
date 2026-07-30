@@ -12,10 +12,15 @@ export const styles = css`
     gap: var(--lr-space-xs);
   }
 
+  /* The block size arrives as --lr-embedding-explorer-height, set on the host from the height
+     property. An SVG height presentation attribute cannot carry it -- any stylesheet declaration
+     outranks a presentation attribute -- and an inline block-size on the SVG would hide the value
+     from consumers rethemeing through the custom property. The auto fallback is the
+     aspect-ratio-preserved size derived from the viewBox. */
   [part='plot'] {
     display: block;
     inline-size: 100%;
-    block-size: auto;
+    block-size: var(--lr-embedding-explorer-height, auto);
     overflow: visible;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
@@ -57,6 +62,8 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
   }
 
+  /* A floor, never a fixed size: min-block-size only ever raises the resolved block-size, so a
+     taller height still wins at narrow allocations. */
   @container (max-inline-size: 319.98px) {
     [part='plot'] {
       min-block-size: var(--lr-size-12rem);

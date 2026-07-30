@@ -1,6 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { srOnly } from '../../../internal/a11y.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../../../internal/text-viewer-target.js';
 import type { OptionalPeerApi } from '../../../internal/optional-peer-types.js';
 import { safeFetchUrl } from '../../../internal/safe-url.js';
@@ -44,7 +45,11 @@ class LyraPptxViewerBase extends LyraElement<LyraPptxViewerEventMap> {}
  * @csspart container - The renderer-owned output container.
  */
 export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
-  static override styles = [LyraElement.styles, styles];
+  // `srOnly` is not optional chrome here: the shared anchor-target mixin's
+  // `renderAnchorLiveRegion()` emits its `role="status"` node with
+  // `class="sr-only"`, so without this stylesheet the localized anchor-jump
+  // announcement paints as a visible row under the fidelity notice.
+  static override styles = [LyraElement.styles, styles, srOnly];
 
   /** URL of the PPTX file. */
   @property() src = '';

@@ -179,6 +179,24 @@ describe('lr-pptx-viewer', () => {
     expect(el.shadowRoot!.querySelector('[part="notice"]')!.textContent).to.equal('Certains contenus de diapositive peuvent ne pas s’afficher.');
   });
 
+  it('keeps the shared anchor live region visually hidden once it carries an announcement', async () => {
+    const el = (await fixture(html`<lr-pptx-viewer name="Deck"></lr-pptx-viewer>`)) as LyraPptxViewer;
+    // An unresolvable highlight id announces `anchorNotFound` immediately -- no retry loop.
+    await el.scrollToAnchor('no-such-highlight');
+    await el.updateComplete;
+    const region = el.shadowRoot!.querySelector('[part="anchor-live-region"]') as HTMLElement;
+    expect(region, 'the mixin live region is rendered').to.exist;
+    expect(
+      (region.textContent ?? '').trim().length,
+      'the live region actually carries announcement text',
+    ).to.be.greaterThan(0);
+    // Rendered geometry, not stylesheet text: an unhidden live region lays out as a flex item of
+    // [part="base"] and paints its announcement under the fidelity notice.
+    const rect = region.getBoundingClientRect();
+    expect(rect.height, 'live-region block size stays clipped to 1px').to.be.at.most(1);
+    expect(rect.width, 'live-region inline size stays clipped to 1px').to.be.at.most(1);
+  });
+
   it('is accessible with a mounted presentation and its slide-nav controls visible', async () => {
     const fake = fakeModule();
     const restore = stubFetch();

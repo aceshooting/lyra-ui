@@ -454,18 +454,24 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         : Math.min(Math.max(0, this.activeSearchIndex), this.searchMatches.length - 1);
   }
 
-  /** Advances to the next match, wrapping to the first after the last. No-op with no matches. */
-  searchNext(): void {
-    if (!this.searchMatches.length) return;
+  /** Advances to the next match, wrapping to the first after the last. Resolves `true` once the
+   *  active match moved, `false` when there are no matches -- the shape the shared
+   *  `LyraTextViewerTarget` search contract declares, so a find-in-page host can drive every
+   *  searchable component through one typed surface. */
+  async searchNext(): Promise<boolean> {
+    if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchMatches.length;
     this.emitSearchChange();
+    return true;
   }
 
-  /** Moves to the previous match, wrapping to the last before the first. No-op with no matches. */
-  searchPrevious(): void {
-    if (!this.searchMatches.length) return;
+  /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
+   *  active match moved, `false` when there are no matches. */
+  async searchPrevious(): Promise<boolean> {
+    if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.emitSearchChange();
+    return true;
   }
 
   /** Clears the query, matches, and active index, and emits a zero-match `lr-search-change`. */

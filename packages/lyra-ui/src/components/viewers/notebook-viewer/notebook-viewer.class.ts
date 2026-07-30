@@ -183,6 +183,12 @@ export interface LyraNotebookViewerEventMap {
  * scroll. `node-path` anchors resolve `path[0]` as a cell index; `fragment` anchors resolve a cell's
  * own `id`.
  *
+ * `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()` follow the shared viewer search
+ * contract (`internal/text-viewer-target.ts`'s `LyraTextViewerTarget`): `search()` resolves the
+ * match count and the two navigation methods resolve `true` once the active match moved, `false`
+ * when there is nothing to move to. A find-in-page host can therefore drive this viewer through the
+ * same typed surface as every other one.
+ *
  * @customElement lr-notebook-viewer
  * @event lr-load - Fired once a notebook has been parsed and validated. `detail: { cellCount,
  *   language }`.
@@ -420,20 +426,30 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraElement) {
     return this.searchMatches.length;
   }
 
-  searchNext(): void {
-    if (!this.searchMatches.length) return;
+  /** Advances to the next match, wrapping to the first after the last. Resolves `true` once the
+   *  active match moved, `false` (no-op) when there are no matches -- the same shape every other
+   *  viewer's `searchNext()` resolves, so a find-in-page host can drive them all through the shared
+   *  `LyraTextViewerTarget` surface. */
+  async searchNext(): Promise<boolean> {
+    if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex + 1) % this.searchMatches.length;
     this.activateSearchMatch();
     this.emitSearchChange();
+    return true;
   }
 
-  searchPrevious(): void {
-    if (!this.searchMatches.length) return;
+  /** Moves to the previous match, wrapping to the last before the first. Resolves `true` once the
+   *  active match moved, `false` (no-op) when there are no matches. */
+  async searchPrevious(): Promise<boolean> {
+    if (!this.searchMatches.length) return false;
     this.activeSearchIndex = (this.activeSearchIndex - 1 + this.searchMatches.length) % this.searchMatches.length;
     this.activateSearchMatch();
     this.emitSearchChange();
+    return true;
   }
 
+  /** Clears the query, matches, and active index, and resets `lr-search-change` to a
+   *  0-match/no-active-index state. */
   clearSearch(): void {
     this.clearSearchState();
     this.emitSearchChange();

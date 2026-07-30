@@ -12260,7 +12260,10 @@ anchor-target contract).
 **Methods:** `search(query)` resolves the match count over cell sources and text outputs — a
 matching cell counts as one match (empty/whitespace query behaves like `clearSearch()`);
 `searchNext()`/`searchPrevious()` advance/step back through matches, scrolling to and marking the
-target cell with the persistent active-cell paint; `clearSearch()` clears the query and matches.
+target cell with the persistent active-cell paint, and each resolves `true` once the active match
+moved or `false` when there are none — the same `Promise<boolean>` every other searchable viewer
+resolves, so one find-in-page host can drive them all; `clearSearch()` clears the query and
+matches.
 
 **Events:** `lr-load` — `detail: { cellCount, language }`, fired once a notebook has been parsed
 and validated (`language` from `metadata.language_info.name`/`kernelspec.language`, else `''`).
@@ -18810,7 +18813,16 @@ heading text), `section-empty`, `list` (`role="list"`, omitted while that sectio
 somewhere to land after a confirmation resolves), `item-row`, `item-text`, `confidence` (carries
 `data-tone`; omitted when `confidence` is unset), `expand-toggle` / `item-body` (both omitted when
 `provenance` is unset; `item-body` is `hidden` while collapsed), `item-actions`, `add-button`,
-`remove-button`, `forget-all-button`.
+`remove-button`, `forget-all-button`, `forget-all-confirm` (the `lr-confirm-bar` that replaces
+`forget-all-button` while the bulk confirmation is pending).
+
+**Keyboard/focus contract:** activating an action from the keyboard replaces that control with an
+`lr-confirm-bar`, and focus moves into the bar (landing on Deny, the safe action) rather than
+falling to `<body>` when the control unmounts. Cancelling — Escape or Deny — returns focus to the
+control the confirmation replaced: the row's own action for a per-item confirmation, and
+`forget-all-button` for the bulk one. This holds through a controlled `shortTerm`/`longTerm`
+replacement that closes an open confirmation. Escape only stops propagating when it actually closed
+a confirmation, so it never blocks an enclosing dialog for nothing.
 
 **Themeable custom properties:** `--lr-memory-panel-confidence-success-color` (default
 `var(--lr-color-success)`), `--lr-memory-panel-confidence-warning-color` (default
@@ -19077,7 +19089,9 @@ Dependency-free accessible 2D embedding projection viewer. Coordinates are proje
 the component only normalizes them into SVG, colors optional clusters, and emits selection events.
 
 **Properties:** `points: EmbeddingPoint[] = []` (attribute: false), where each point is `{ id, x,
-y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'`;
+y, label?, sourceId?, cluster? }`; `selectedId: string = ''`; `height: string = '360px'` (any CSS length valid for `block-size`,
+including `auto` for `viewBox`-derived aspect-ratio sizing; applied on the host as
+`--lr-embedding-explorer-height`, and a value the browser cannot parse falls back to `auto`);
 `accessibleLabel: string | null = null` (attribute `aria-label`). Non-finite coordinates are
 omitted. Pointer and programmatic focus synchronize the single roving tab stop, and every point
 keeps at least a 24×24 CSS px pointer target at narrow allocations without enlarging its marker.
@@ -19087,7 +19101,10 @@ keeps at least a 24×24 CSS px pointer target at narrow allocations without enla
 **CSS parts:** `base`, `plot`, `point`, `empty`.
 
 **Themeable custom properties:** `--lr-embedding-explorer-selected-stroke` (default
-`var(--lr-color-brand)`) — stroke color of the selected point. Plus shared tokens.
+`var(--lr-color-brand)`) — stroke color of the selected point; `--lr-embedding-explorer-height`
+(default `360px`) — the `block-size` of `[part="plot"]`, set on the host from `height`. A consumer's
+own `::part(plot) { block-size: ... }` rule still overrides it, and the narrow-allocation
+`min-block-size` floor still raises it. Plus shared tokens.
 
 ## `lr-knowledge-base-admin`
 

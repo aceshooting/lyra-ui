@@ -56,6 +56,12 @@ function deniedIcon(): SVGTemplateResult {
  * (an always-rendered, `tabindex="-1"` element) *before* the Deny/Approve buttons unmount, so focus
  * never has a gap where it would otherwise fall back to `<body>`.
  *
+ * "Never steals focus" and "no Escape semantics" describe what *this element* does on its own. A
+ * host that swaps a focused control out for this bar is expected to move focus into it and to bind
+ * Escape to its own cancel path (`<lr-memory-panel>` does both), since otherwise focus would fall
+ * to `<body>` when the control it replaced unmounts. That stays a host decision: nothing here traps
+ * focus, locks scrolling, or handles Escape.
+ *
  * No argument editing (escalate to `<lr-tool-approval-dialog>`'s `editable` when edit-before-approve
  * matters); no blocking/modality guarantee (a user can scroll past); no decision persistence or
  * "remember choice" logic (the `footer` slot + host own that).
