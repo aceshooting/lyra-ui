@@ -53,7 +53,11 @@ it('rejects an unsafe image src instead of passing it straight to the DOM', asyn
   )) as LyraZoomableFrame;
   await el.updateComplete;
   const img = el.shadowRoot!.querySelector('[part="content"] img') as HTMLImageElement;
-  expect(img.getAttribute('src')).to.equal('');
+  // The attribute must be ABSENT, not present-and-empty: `src=""` is a *valid* URL that resolves
+  // against the document, so the browser re-requests the current page as an image (a broken-image
+  // render plus a wasted round trip). Only omitting the attribute leaves the <img> truly srcless.
+  expect(img.hasAttribute('src'), 'src attribute should be absent, not empty').to.be.false;
+  expect(img.src, 'must not resolve to the document URL').to.equal('');
 });
 
 it('renders the reset button\'s visible zoom percentage through localize (unchanged English default)', async () => {

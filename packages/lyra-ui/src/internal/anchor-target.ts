@@ -115,7 +115,13 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
     protected override willUpdate(changed: PropertyValues): void {
       super.willUpdate(changed);
       if (changed.has('anchor') && this.anchor !== null) {
-        void this.scrollToAnchor(this.anchor);
+        // A per-viewer applyAnchor() may reject (a superseded page-text read, a rendition
+        // failure). A caller of the public method can observe that, but this declarative path
+        // has nobody to hand it to, so an unhandled rejection would escape to the page. Swallow
+        // it HERE only, never inside scrollToAnchor() itself -- a subclass that overrides
+        // scrollToAnchor() to surface its own localized error (lr-ebook-viewer) still needs the
+        // throw to reach its own catch.
+        void this.scrollToAnchor(this.anchor).catch(() => undefined);
       }
     }
 
@@ -193,16 +199,7 @@ export function DocumentAnchorTarget<T extends Constructor<LyraElement<any>>>(
       const deadline = Date.now() + this.anchorTimeoutMs;
       for (;;) {
         if (generation !== this.anchorGeneration) return false;
-        // A per-viewer applyAnchor() that throws must not reject scrollToAnchor(): that would
-        // suppress lr-anchor-result entirely, breaking this mixin's documented promise of always
-        // reporting a definite result, and would surface as an unhandled rejection on the
-        // declarative `anchor` path. Degrade a throw to "not resolved this attempt" instead.
-        let ok = false;
-        try {
-          ok = await this.applyAnchor(anchor);
-        } catch {
-          ok = false;
-        }
+        const ok = await this.applyAnchor(anchor);
         if (generation !== this.anchorGeneration) return false;
         if (ok) return true;
         if (Date.now() >= deadline) return false;
