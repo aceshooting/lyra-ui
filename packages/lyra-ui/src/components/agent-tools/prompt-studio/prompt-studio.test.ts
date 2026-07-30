@@ -174,3 +174,54 @@ it('renders and exposes a component-scoped theme hook for the selected version',
   expect(version.getAttribute('aria-pressed')).to.equal('true');
   expect(getComputedStyle(version).borderTopColor).to.equal('rgb(1, 2, 3)');
 });
+
+// -- Message removal and variable editing -----------------------------------
+
+it('removes a message immutably, leaving the original array untouched', async () => {
+  const original = messages.map((message) => ({ ...message }));
+  const el = (await fixture(
+    html`<lr-prompt-studio .messages=${original} .versions=${versions}></lr-prompt-studio>`,
+  )) as LyraPromptStudio;
+  await el.updateComplete;
+  const changePending = oneEvent(el, 'lr-change');
+  const remove = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove-message"]');
+  expect(remove.length).to.equal(2);
+  remove[0]!.click();
+
+  const detail = (await changePending).detail as { messages: PromptStudioMessage[] };
+  expect(detail.messages.map((m) => m.id)).to.deep.equal(['user']);
+  expect(original.map((m) => m.id), 'the caller-supplied array is not mutated').to.deep.equal([
+    'system',
+    'user',
+  ]);
+});
+
+it('edits a variable name and value by index without disturbing its siblings', async () => {
+  const el = (await fixture(
+    html`<lr-prompt-studio
+      .messages=${messages}
+      .variables=${[
+        { name: 'audience', value: 'developers' },
+        { name: 'tone', value: 'formal' },
+      ]}
+    ></lr-prompt-studio>`,
+  )) as LyraPromptStudio;
+  await el.updateComplete;
+  const inputs = [...el.shadowRoot!.querySelectorAll<HTMLInputElement>('[part="variable"] input')];
+  expect(inputs.length, 'two variables render a name/value pair each').to.equal(4);
+
+  const namePending = oneEvent(el, 'lr-change');
+  inputs[2]!.value = 'register';
+  inputs[2]!.dispatchEvent(new Event('input', { bubbles: true }));
+  const afterName = (await namePending).detail as { variables: { name: string; value: string }[] };
+  expect(afterName.variables).to.deep.equal([
+    { name: 'audience', value: 'developers' },
+    { name: 'register', value: 'formal' },
+  ]);
+
+  const valuePending = oneEvent(el, 'lr-change');
+  inputs[1]!.value = 'operators';
+  inputs[1]!.dispatchEvent(new Event('input', { bubbles: true }));
+  const afterValue = (await valuePending).detail as { variables: { name: string; value: string }[] };
+  expect(afterValue.variables[0]).to.deep.equal({ name: 'audience', value: 'operators' });
+});

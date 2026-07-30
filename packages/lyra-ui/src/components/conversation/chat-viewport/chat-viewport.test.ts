@@ -721,3 +721,29 @@ it('is accessible populated with real chat messages, an unread divider, and a fa
   expect(failed.shadowRoot!.querySelector('[part="retry-button"]')).to.exist;
   await expect(el).to.be.accessible();
 });
+
+// -- Keyboard scroll gestures count as user intent ---------------------------
+
+it('treats PageUp/ArrowUp/Home as a user scroll gesture, and ignores other keys', async () => {
+  for (const key of ['PageUp', 'ArrowUp', 'Home']) {
+    const el = (await fixture(html`<lr-chat-viewport></lr-chat-viewport>`)) as LyraChatViewport;
+    await el.updateComplete;
+    const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+    scroll.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    expect(
+      (el as unknown as { pendingUserIntent: boolean }).pendingUserIntent,
+      `${key} marks user intent, the same as a wheel or touchmove gesture`,
+    ).to.be.true;
+  }
+
+  const el = (await fixture(html`<lr-chat-viewport></lr-chat-viewport>`)) as LyraChatViewport;
+  await el.updateComplete;
+  const scroll = el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement;
+  for (const key of ['PageDown', 'ArrowDown', 'End', 'a']) {
+    scroll.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    expect(
+      (el as unknown as { pendingUserIntent: boolean }).pendingUserIntent,
+      `${key} is not a scroll-back gesture`,
+    ).to.be.false;
+  }
+});

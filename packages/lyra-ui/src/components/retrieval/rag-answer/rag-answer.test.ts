@@ -53,4 +53,46 @@ describe('lr-rag-answer', () => {
       .click();
     expect((await pending).type).to.equal('lr-retry');
   });
+
+  it('re-emits an activated citation as lr-citation-select, and swallows the child event', async () => {
+    const citations = [
+      { id: 'c1', sourceId: 'd1', label: 'First' },
+      { id: 'c2', sourceId: 'd2', label: 'Second' },
+    ];
+    const el = (await fixture(html`<lr-rag-answer
+      answer="Answer"
+      .citations=${citations}
+      .sources=${[{ id: 'd1', name: 'guide.md' }, { id: 'd2', name: 'spec.md' }]}
+    ></lr-rag-answer>`)) as LyraRagAnswer;
+    await el.updateComplete;
+    const badges = [...el.shadowRoot!.querySelectorAll('lr-citation-badge')];
+    expect(badges.length).to.equal(2);
+
+    let leaked = 0;
+    el.addEventListener('lr-citation-activate', () => leaked++);
+    const pending = oneEvent(el, 'lr-citation-select');
+    // The badge's own index is 1-based, so index 2 resolves to citations[1].
+    badges[1]!.dispatchEvent(
+      new CustomEvent('lr-citation-activate', { detail: { index: 2 }, bubbles: true, composed: true }),
+    );
+    const event = await pending;
+    expect((event.detail as { citation: { id: string } }).citation.id).to.equal('c2');
+    expect(leaked, "the child's own event does not escape the host").to.equal(0);
+  });
+
+  it('ignores an activation whose index falls outside the citation list', async () => {
+    const el = (await fixture(html`<lr-rag-answer
+      answer="Answer"
+      .citations=${[{ id: 'c1', sourceId: 'd1' }]}
+      .sources=${[{ id: 'd1', name: 'guide.md' }]}
+    ></lr-rag-answer>`)) as LyraRagAnswer;
+    await el.updateComplete;
+    let selected = 0;
+    el.addEventListener('lr-citation-select', () => selected++);
+    el.shadowRoot!.querySelector('lr-citation-badge')!.dispatchEvent(
+      new CustomEvent('lr-citation-activate', { detail: { index: 99 }, bubbles: true, composed: true }),
+    );
+    await el.updateComplete;
+    expect(selected).to.equal(0);
+  });
 });
