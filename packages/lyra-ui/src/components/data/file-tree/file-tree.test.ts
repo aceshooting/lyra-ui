@@ -194,3 +194,23 @@ describe('lr-file-tree', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// -- expandAll/collapseAll delegation to the embedded tree ------------------
+
+it('delegates expandAll() and collapseAll() to the embedded lr-tree', async () => {
+  const el = (await fixture(html`<lr-file-tree .nodes=${nodes}></lr-file-tree>`)) as LyraFileTree;
+  await el.updateComplete;
+  await el.expandAll();
+  await el.updateComplete;
+  const expanded = [...el.shadowRoot!.querySelectorAll('[aria-expanded]')].filter(
+    (n) => n.getAttribute('aria-expanded') === 'true',
+  );
+  expect(expanded.length, 'expandAll opens every expandable row').to.be.greaterThan(0);
+
+  el.collapseAll();
+  await el.updateComplete;
+  const stillOpen = [...el.shadowRoot!.querySelectorAll('[aria-expanded]')].filter(
+    (n) => n.getAttribute('aria-expanded') === 'true',
+  );
+  expect(stillOpen.length).to.equal(0);
+});

@@ -563,3 +563,77 @@ it('settles its public and form values after child defaults are restored on form
   expect(new FormData(form).getAll('topics')).to.deep.equal(['a']);
   expect(group.checkValidity()).to.be.true;
 });
+
+// -- Form-association surface and its degraded-DOM fallback ------------------
+
+it('exposes the native validity surface through ElementInternals', async () => {
+  const el = (await fixture(html`
+    <lr-checkbox-group label="Toppings" required>
+      <lr-checkbox value="a">A</lr-checkbox>
+      <lr-checkbox value="b">B</lr-checkbox>
+    </lr-checkbox-group>
+  `)) as LyraCheckboxGroup;
+  await el.updateComplete;
+  expect(el.willValidate, 'a form-associated control participates in validation').to.be.true;
+  expect(el.validity.valueMissing, 'required with nothing checked is missing').to.be.true;
+  expect(el.checkValidity()).to.be.false;
+  expect(el.reportValidity()).to.be.false;
+
+  (el.querySelector('lr-checkbox') as LyraCheckbox).click();
+  await el.updateComplete;
+  expect(el.validity.valid).to.be.true;
+  expect(el.reportValidity()).to.be.true;
+});
+
+describe('ElementInternals fallback', () => {
+  /** A DOM implementation without form-association support (e.g. a consumer's happy-dom suite):
+   *  the component must still construct and answer inertly rather than throwing on import. */
+  const withoutAttachInternals = async (
+    impl: undefined | (() => never),
+    assertion: (el: LyraCheckboxGroup) => void,
+  ): Promise<void> => {
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const original = proto.attachInternals;
+    if (impl === undefined) delete proto.attachInternals;
+    else proto.attachInternals = impl;
+    try {
+      const el = (await fixture(html`
+        <lr-checkbox-group label="Toppings"><lr-checkbox value="a">A</lr-checkbox></lr-checkbox-group>
+      `)) as LyraCheckboxGroup;
+      await el.updateComplete;
+      assertion(el);
+    } finally {
+      proto.attachInternals = original;
+    }
+  };
+
+  it('answers inertly when attachInternals is missing', async () => {
+    await withoutAttachInternals(undefined, (el) => {
+      expect(el.form).to.be.null;
+      expect(el.willValidate).to.be.false;
+      expect(el.validationMessage).to.equal('');
+      expect(el.checkValidity()).to.be.true;
+      expect(el.reportValidity()).to.be.true;
+      expect(el.validity).to.deep.equal({});
+    });
+  });
+
+  it('answers inertly when attachInternals throws', async () => {
+    await withoutAttachInternals(
+      () => {
+        throw new DOMException('unsupported');
+      },
+      (el) => {
+        expect(el.willValidate).to.be.false;
+        expect(el.reportValidity()).to.be.true;
+      },
+    );
+  });
+
+  it('keeps value/validity writes as no-ops instead of throwing', async () => {
+    await withoutAttachInternals(undefined, (el) => {
+      const box = el.querySelector('lr-checkbox') as LyraCheckbox;
+      expect(() => box.click()).to.not.throw();
+    });
+  });
+});

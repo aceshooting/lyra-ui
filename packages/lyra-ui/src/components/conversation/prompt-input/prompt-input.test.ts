@@ -435,3 +435,26 @@ it('is accessible with its composed controls populated', async () => {
   expect(el.shadowRoot!.querySelectorAll('lr-chat-composer')).to.have.lengthOf(1);
   await expect(el).to.be.accessible();
 });
+
+// -- Focus/selection delegation to the embedded composer --------------------
+
+it('delegates focus(), blur() and select() to the embedded composer', async () => {
+  const el = (await fixture(html`<lr-prompt-input></lr-prompt-input>`)) as LyraPromptInput;
+  await el.updateComplete;
+  const composer = el.shadowRoot!.querySelector('lr-chat-composer') as LyraChatComposer;
+  await composer.updateComplete;
+  const textarea = composer.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;
+
+  el.focus();
+  expect(composer.shadowRoot!.activeElement).to.equal(textarea);
+
+  el.value = 'draft text';
+  await el.updateComplete;
+  await composer.updateComplete;
+  el.select();
+  expect(textarea.selectionStart).to.equal(0);
+  expect(textarea.selectionEnd).to.equal(textarea.value.length);
+
+  el.blur();
+  expect(composer.shadowRoot!.activeElement).to.not.equal(textarea);
+});

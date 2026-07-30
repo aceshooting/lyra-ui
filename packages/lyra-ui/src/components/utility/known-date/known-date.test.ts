@@ -780,3 +780,16 @@ describe('lifecycle: willUpdate calls super', () => {
     }
   });
 });
+
+// -- Host focus/blur forwarding to the internal fields ----------------------
+
+it('focus() activates the first field in locale order and blur() releases it', async () => {
+  const el = (await fixture(html`<lr-known-date></lr-known-date>`)) as LyraKnownDate;
+  await el.updateComplete;
+  el.focus();
+  const focused = el.shadowRoot!.activeElement as HTMLInputElement | null;
+  expect(focused, 'focus() reaches an internal field').to.exist;
+  expect(focused!.tagName).to.equal('INPUT');
+  el.blur();
+  expect(el.shadowRoot!.activeElement).to.be.null;
+});

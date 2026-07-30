@@ -709,3 +709,64 @@ it('calls super.updated so a future LyraElement/mixin lifecycle hook stays wired
     proto.updated = original;
   }
 });
+
+// -- Dismissal, slotted supporting text, listbox pointer, validity ----------
+
+it('closes an open listbox on an outside pointerdown but not one inside the host', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open, 'a pointerdown on the host stays open').to.be.true;
+  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+  await el.updateComplete;
+  expect(el.open).to.be.false;
+});
+
+it('tracks slotted label, hint and error content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-locale-picker .locales=${['fr', 'de']}>
+      <span slot="label">Language</span>
+      <span slot="hint">Applies immediately</span>
+      <span slot="error">Required</span>
+    </lr-locale-picker>
+  `)) as LyraLocalePicker;
+  await el.updateComplete;
+  const flags = el as unknown as { hasLabelSlot: boolean; hasHintSlot: boolean; hasErrorSlot: boolean };
+  expect(flags.hasLabelSlot).to.be.true;
+  expect(flags.hasHintSlot).to.be.true;
+  expect(flags.hasErrorSlot).to.be.true;
+
+  for (const slot of ['label', 'hint', 'error']) el.querySelector(`[slot="${slot}"]`)!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(flags.hasLabelSlot).to.be.false;
+  expect(flags.hasHintSlot).to.be.false;
+  expect(flags.hasErrorSlot).to.be.false;
+});
+
+it('prevents mousedown on a listbox option but not on listbox chrome', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  el.open = true;
+  await el.updateComplete;
+  const onOption = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="option"]')!.dispatchEvent(onOption);
+  expect(onOption.defaultPrevented).to.be.true;
+
+  const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
+  expect(onChrome.defaultPrevented).to.be.false;
+});
+
+it('reports validity through the native surface', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  await el.updateComplete;
+  expect(el.reportValidity()).to.be.true;
+});

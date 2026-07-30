@@ -1323,3 +1323,41 @@ describe('selected-state theming tokens', () => {
     expect(getComputedStyle(selected).color).to.equal(expected);
   });
 });
+
+// -- Pointer handling in both modes -----------------------------------------
+
+it('mousedown on the combobox shell focuses the input instead of letting the shell take selection', async () => {
+  const el = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG} allow-custom></lr-model-select>`,
+  )) as LyraModelSelect;
+  const shell = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  shell.dispatchEvent(event);
+  await el.updateComplete;
+  expect(event.defaultPrevented).to.be.true;
+  expect(el.shadowRoot!.activeElement).to.equal(el.shadowRoot!.querySelector('[part="combobox-input"]'));
+});
+
+it('mousedown on the combobox shell is inert while disabled', async () => {
+  const el = (await fixture(
+    html`<lr-model-select .catalog=${CATALOG} allow-custom disabled></lr-model-select>`,
+  )) as LyraModelSelect;
+  const shell = el.shadowRoot!.querySelector('[part="combobox"]') as HTMLElement;
+  const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  shell.dispatchEvent(event);
+  await el.updateComplete;
+  expect(event.defaultPrevented).to.be.false;
+});
+
+it('prevents mousedown on a listbox option but not on listbox chrome', async () => {
+  const el = (await fixture(html`<lr-model-select .catalog=${CATALOG}></lr-model-select>`)) as LyraModelSelect;
+  el.open = true;
+  await el.updateComplete;
+  const onOption = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="option"]')!.dispatchEvent(onOption);
+  expect(onOption.defaultPrevented).to.be.true;
+
+  const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
+  expect(onChrome.defaultPrevented).to.be.false;
+});

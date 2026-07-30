@@ -732,3 +732,25 @@ it('forwards host click to the native input and suppresses it while effectively 
   el.click();
   expect(clicks).to.equal(1);
 });
+
+// -- Slotted supporting text ------------------------------------------------
+
+it('tracks slotted hint and error content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-input label="Name">
+      <span slot="hint">Full legal name</span>
+      <span slot="error">Required</span>
+    </lr-input>
+  `)) as LyraInput;
+  await el.updateComplete;
+  const flags = el as unknown as { hasHintSlot: boolean; hasErrorSlot: boolean };
+  expect(flags.hasHintSlot).to.be.true;
+  expect(flags.hasErrorSlot).to.be.true;
+
+  el.querySelector('[slot="hint"]')!.remove();
+  el.querySelector('[slot="error"]')!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect(flags.hasHintSlot).to.be.false;
+  expect(flags.hasErrorSlot).to.be.false;
+});

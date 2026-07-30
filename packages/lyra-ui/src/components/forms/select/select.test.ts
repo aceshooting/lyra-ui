@@ -1675,3 +1675,35 @@ describe('selected-state theming tokens', () => {
     expect(getComputedStyle(selected).color).to.equal(expected);
   });
 });
+
+// -- Slotted supporting text and listbox pointer handling -------------------
+
+it('tracks slotted error content through slotchange', async () => {
+  const el = (await fixture(html`
+    <lr-select label="Meter">
+      <span slot="error">Pick one</span>
+      <lr-option value="a">A</lr-option>
+    </lr-select>
+  `)) as LyraSelect;
+  await el.updateComplete;
+  expect((el as unknown as { hasErrorSlot: boolean }).hasErrorSlot).to.be.true;
+  el.querySelector('[slot="error"]')!.remove();
+  await new Promise((r) => requestAnimationFrame(() => r(null)));
+  await el.updateComplete;
+  expect((el as unknown as { hasErrorSlot: boolean }).hasErrorSlot).to.be.false;
+});
+
+it('prevents mousedown on an option so the trigger keeps focus, but not on listbox chrome', async () => {
+  const el = (await fixture(html`
+    <lr-select label="Meter"><lr-option value="a">A</lr-option></lr-select>
+  `)) as LyraSelect;
+  el.open = true;
+  await el.updateComplete;
+  const onOption = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="option"]')!.dispatchEvent(onOption);
+  expect(onOption.defaultPrevented).to.be.true;
+
+  const onChrome = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  el.shadowRoot!.querySelector('[part="listbox"]')!.dispatchEvent(onChrome);
+  expect(onChrome.defaultPrevented).to.be.false;
+});

@@ -1006,3 +1006,47 @@ it('colors placeholder text on both editable fields and gives the remove button 
   expect(css).to.match(/\[part='remove'\]:hover\s*\{[^}]*background:/);
   expect(css).to.match(/\[part='remove'\]:focus-visible\s*\{[^}]*outline:/);
 });
+
+// -- Degraded-DOM form-association fallback ---------------------------------
+
+describe('ElementInternals fallback', () => {
+  /** Mirrors a DOM implementation without form-association support: token edits must still work
+   *  and the internals writes must degrade to no-ops instead of throwing. */
+  const withoutAttachInternals = async (
+    impl: undefined | (() => never),
+    assertion: (el: LyraTokenInput) => void | Promise<void>,
+  ): Promise<void> => {
+    const proto = HTMLElement.prototype as unknown as { attachInternals?: unknown };
+    const original = proto.attachInternals;
+    if (impl === undefined) delete proto.attachInternals;
+    else proto.attachInternals = impl;
+    try {
+      const el = (await fixture(html`<lr-token-input .value=${['alpha']}></lr-token-input>`)) as LyraTokenInput;
+      await el.updateComplete;
+      await assertion(el);
+    } finally {
+      proto.attachInternals = original;
+    }
+  };
+
+  it('still accepts token changes when attachInternals is missing', async () => {
+    await withoutAttachInternals(undefined, async (el) => {
+      el.value = ['alpha', 'beta'];
+      await el.updateComplete;
+      expect(el.value).to.deep.equal(['alpha', 'beta']);
+    });
+  });
+
+  it('still accepts token changes when attachInternals throws', async () => {
+    await withoutAttachInternals(
+      () => {
+        throw new DOMException('unsupported');
+      },
+      async (el) => {
+        el.value = ['gamma'];
+        await el.updateComplete;
+        expect(el.value).to.deep.equal(['gamma']);
+      },
+    );
+  });
+});
