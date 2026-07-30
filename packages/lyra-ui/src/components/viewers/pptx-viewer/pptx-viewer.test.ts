@@ -453,3 +453,19 @@ describe('PPTX registry', () => {
     });
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a application/vnd.openxmlformats-officedocument.presentationml.presentation renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('application/vnd.openxmlformats-officedocument.presentationml.presentation');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'Deck.PPTX', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', src: 'https://example.test/f' }), 'Deck.PPTX').to.be.true;
+  expect(def!.matches!({ name: 'deck.pdf', mimeType: 'application/pdf', src: 'https://example.test/f' }), 'deck.pdf').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'Deck.PPTX', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-pptx-viewer'), 'render() produces the viewer element').to.exist;
+});

@@ -834,3 +834,19 @@ describe('fetch lifecycle edge cases', () => {
     }
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a application/geo+json renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('application/geo+json');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'Region.GEOJSON', mimeType: 'application/geo+json', src: 'https://example.test/f' }), 'Region.GEOJSON').to.be.true;
+  expect(def!.matches!({ name: 'region.json', mimeType: 'application/json', src: 'https://example.test/f' }), 'region.json').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'Region.GEOJSON', mimeType: 'application/geo+json', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-geojson-view'), 'render() produces the viewer element').to.exist;
+});

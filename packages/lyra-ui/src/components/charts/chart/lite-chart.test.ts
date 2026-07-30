@@ -2432,3 +2432,76 @@ it('gives only the active mark tabindex=0 among multiple roundedBars marks, the 
   expect(marks.filter((m) => m.getAttribute('tabindex') === '0')).to.have.length(1);
   expect(marks.filter((m) => m.getAttribute('tabindex') === '-1')).to.have.length(1);
 });
+
+// -- appendData / exportData ------------------------------------------------
+
+describe('appendData', () => {
+  const chart = (): Promise<LyraLiteChart> =>
+    mount(html`<lr-lite-chart .labels=${[...BAR_LABELS]} .datasets=${BAR_DATASETS.map((d) => ({ ...d, data: [...d.data] }))}></lr-lite-chart>`);
+
+  it('appends one category across every series', async () => {
+    const el = await chart();
+    el.appendData('Thu', [7, 8]);
+    await el.updateComplete;
+    expect(el.labels).to.deep.equal(['Mon', 'Tue', 'Wed', 'Thu']);
+    expect(el.datasets.map((s) => s.data)).to.deep.equal([[1, 2, 3, 7], [4, 5, 6, 8]]);
+  });
+
+  it('null-fills a series with no supplied value rather than shifting alignment', async () => {
+    const el = await chart();
+    el.appendData('Thu', [7]);
+    await el.updateComplete;
+    expect(el.datasets[1]!.data).to.deep.equal([4, 5, 6, null]);
+  });
+
+  it('keeps only the newest categories when maxPoints is set', async () => {
+    const el = await chart();
+    el.appendData('Thu', [7, 8], 2);
+    await el.updateComplete;
+    expect(el.labels).to.deep.equal(['Wed', 'Thu']);
+    expect(el.datasets.map((s) => s.data)).to.deep.equal([[3, 7], [6, 8]]);
+  });
+
+  it('treats a non-finite maxPoints as unbounded', async () => {
+    const el = await chart();
+    el.appendData('Thu', [7, 8], Number.NaN);
+    await el.updateComplete;
+    expect(el.labels).to.have.lengthOf(4);
+  });
+});
+
+describe('exportData', () => {
+  const chart = (): Promise<LyraLiteChart> =>
+    mount(html`<lr-lite-chart .labels=${[...BAR_LABELS]} .datasets=${BAR_DATASETS.map((d) => ({ ...d, data: [...d.data] }))}></lr-lite-chart>`);
+
+  it('emits CSV with a header row and CRLF line endings', async () => {
+    const el = await chart();
+    const csv = el.exportData('csv');
+    expect(csv.split('\r\n')).to.deep.equal(['label,A,B', 'Mon,1,4', 'Tue,2,5', 'Wed,3,6']);
+  });
+
+  it('escapes fields that would otherwise break the CSV grid', async () => {
+    const el = await mount(html`<lr-lite-chart
+      .labels=${['Q1, 2026']}
+      .datasets=${[{ label: 'Say "hi"', data: [1] }]}
+    ></lr-lite-chart>`);
+    const csv = el.exportData('csv');
+    expect(csv).to.include('"Q1, 2026"');
+    expect(csv).to.include('"Say ""hi"""');
+  });
+
+  it('leaves a gap empty rather than writing undefined', async () => {
+    const el = await mount(html`<lr-lite-chart
+      .labels=${['Mon', 'Tue']}
+      .datasets=${[{ label: 'A', data: [1] }]}
+    ></lr-lite-chart>`);
+    expect(el.exportData('csv').split('\r\n').at(-1)).to.equal('Tue,');
+  });
+
+  it('serializes the rendered SVG for the svg format', async () => {
+    const el = await chart();
+    const svg = el.exportData('svg');
+    expect(svg.startsWith('<svg')).to.be.true;
+    expect(svg).to.include('viewBox');
+  });
+});

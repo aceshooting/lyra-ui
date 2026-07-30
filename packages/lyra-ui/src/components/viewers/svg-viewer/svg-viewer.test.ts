@@ -693,12 +693,12 @@ it('registers an image/svg+xml renderer that matches .svg files and renders the 
   const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
   const def = getDefaultDocumentRendererRegistry().get('image/svg+xml');
   expect(def, 'importing svg-viewer.js registers the renderer').to.exist;
-  expect(def!.matches!({ name: 'Diagram.SVG', src: 'https://example.test/a.svg' })).to.be.true;
-  expect(def!.matches!({ name: 'diagram.png', src: 'https://example.test/a.png' })).to.be.false;
+  expect(def!.matches!({ name: 'Diagram.SVG', mimeType: 'image/svg+xml', src: 'https://example.test/a.svg' })).to.be.true;
+  expect(def!.matches!({ name: 'diagram.png', mimeType: 'image/png', src: 'https://example.test/a.png' })).to.be.false;
   expect(def!.capabilities).to.deep.equal({ anchors: ['region'], search: false, textSelect: false });
 
   const host = (await fixture(
-    html`<div>${def!.render({ name: 'a.svg', src: 'https://example.test/a.svg' })}</div>`,
+    html`<div>${def!.render({ name: 'a.svg', mimeType: 'image/svg+xml', src: 'https://example.test/a.svg' })}</div>`,
   )) as HTMLElement;
   const viewer = host.querySelector('lr-svg-viewer') as LyraSvgViewer;
   expect(viewer).to.exist;

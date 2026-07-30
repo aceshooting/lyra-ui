@@ -1057,3 +1057,19 @@ it('validates maxHeight before assigning the base custom property', async () => 
   await el.updateComplete;
   expect(base.style.getPropertyValue('--lr-notebook-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a application/x-ipynb+json renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('application/x-ipynb+json');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'Analysis.IPYNB', mimeType: 'application/x-ipynb+json', src: 'https://example.test/f' }), 'Analysis.IPYNB').to.be.true;
+  expect(def!.matches!({ name: 'script.py', mimeType: 'text/x-python', src: 'https://example.test/f' }), 'script.py').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'Analysis.IPYNB', mimeType: 'application/x-ipynb+json', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-notebook-viewer'), 'render() produces the viewer element').to.exist;
+});

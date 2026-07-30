@@ -764,3 +764,32 @@ it('contains an unbroken highlight label inside a 320px allocation', async () =>
   await el.updateComplete;
   expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers one shared image renderer across every raster MIME type', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../../viewers/document-viewer/registry.js');
+  const registry = getDefaultDocumentRendererRegistry();
+  const mimes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif', 'image/bmp'];
+  const def = registry.get('image/png');
+  expect(def, 'importing image-viewer.js registers the renderer').to.exist;
+  for (const mime of mimes) {
+    expect(registry.get(mime), `${mime} shares one definition`).to.equal(def);
+  }
+
+  expect(def!.matches!({ name: 'photo.PNG', mimeType: 'image/png', src: PNG_SRC })).to.be.true;
+  expect(def!.matches!({ name: 'no-extension', mimeType: 'image/tiff', src: PNG_SRC })).to.be.true;
+  expect(
+    def!.matches!({ name: 'diagram.svg', mimeType: 'image/svg+xml', src: PNG_SRC }),
+    'SVG belongs to lr-svg-viewer, not the raster viewer',
+  ).to.be.false;
+  expect(def!.matches!({ name: 'notes.txt', mimeType: 'text/plain', src: PNG_SRC })).to.be.false;
+  expect(def!.capabilities).to.deep.equal({ anchors: ['region'] });
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'photo.png', mimeType: 'image/png', src: PNG_SRC, alt: 'A photo',
+  })}</div>`)) as HTMLElement;
+  const viewer = host.querySelector('lr-image-viewer') as LyraImageViewer;
+  expect(viewer).to.exist;
+  expect(viewer.name).to.equal('photo.png');
+});

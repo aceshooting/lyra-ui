@@ -527,12 +527,12 @@ it('registers a text/csv renderer that matches .csv files and renders the viewer
   const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
   const def = getDefaultDocumentRendererRegistry().get('text/csv');
   expect(def, 'importing csv-viewer.js registers the renderer').to.exist;
-  expect(def!.matches!({ name: 'Q3-report.CSV', src: 'https://example.test/a.csv' })).to.be.true;
-  expect(def!.matches!({ name: 'notes.txt', src: 'https://example.test/a.txt' })).to.be.false;
+  expect(def!.matches!({ name: 'Q3-report.CSV', mimeType: 'text/csv', src: 'https://example.test/a.csv' })).to.be.true;
+  expect(def!.matches!({ name: 'notes.txt', mimeType: 'text/plain', src: 'https://example.test/a.txt' })).to.be.false;
   expect(def!.capabilities).to.deep.equal({ anchors: ['cell-range'], search: true, textSelect: false });
 
   const host = (await fixture(
-    html`<div>${def!.render({ name: 'a.csv', src: 'https://example.test/a.csv' })}</div>`,
+    html`<div>${def!.render({ name: 'a.csv', mimeType: 'text/csv', src: 'https://example.test/a.csv' })}</div>`,
   )) as HTMLElement;
   const viewer = host.querySelector('lr-csv-viewer') as LyraCsvViewer;
   expect(viewer).to.exist;

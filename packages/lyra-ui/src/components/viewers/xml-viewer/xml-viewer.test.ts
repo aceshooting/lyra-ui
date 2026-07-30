@@ -734,3 +734,26 @@ describe('max-height', () => {
     expect(base.style.getPropertyValue('--lr-xml-viewer-max-height').trim()).to.equal('20rem');
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a application/xml renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('application/xml');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'report.XML', mimeType: 'application/xml', src: 'https://example.test/f' }), 'report.XML').to.be.true;
+  expect(def!.matches!({ name: 'feed.atom', mimeType: 'application/atom+xml', src: 'https://example.test/f' }), 'feed.atom').to.be.true;
+  expect(def!.matches!({ name: 'notes.txt', mimeType: 'text/plain', src: 'https://example.test/f' }), 'notes.txt').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'report.XML', mimeType: 'application/xml', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-xml-viewer'), 'render() produces the viewer element').to.exist;
+});
+
+it('also registers the same definition under text/xml', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const registry = getDefaultDocumentRendererRegistry();
+  expect(registry.get('text/xml')).to.equal(registry.get('application/xml'));
+});

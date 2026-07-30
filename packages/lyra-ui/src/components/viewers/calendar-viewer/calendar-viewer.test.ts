@@ -140,3 +140,19 @@ it('validates maxHeight before assigning the base custom property', async () => 
   await el.updateComplete;
   expect(base.style.getPropertyValue('--lr-calendar-viewer-max-height')).to.equal('calc(10rem + 2px)');
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a text/calendar renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('text/calendar');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'Sprint.ICS', mimeType: 'text/calendar', src: 'https://example.test/f' }), 'Sprint.ICS').to.be.true;
+  expect(def!.matches!({ name: 'sprint.txt', mimeType: 'text/plain', src: 'https://example.test/f' }), 'sprint.txt').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'Sprint.ICS', mimeType: 'text/calendar', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-calendar-viewer'), 'render() produces the viewer element').to.exist;
+});

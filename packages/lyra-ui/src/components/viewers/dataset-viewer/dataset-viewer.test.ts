@@ -513,3 +513,21 @@ describe('styling', () => {
     expect(css).to.match(/lr-virtual-list::part\(cell-highlight-action\):hover/);
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a lyra:dataset renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('lyra:dataset');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'data.TSV', mimeType: 'text/tab-separated-values', src: 'https://example.test/f' }), 'data.TSV').to.be.true;
+  expect(def!.matches!({ name: 'data.psv', mimeType: 'text/plain', src: 'https://example.test/f' }), 'data.psv').to.be.true;
+  expect(def!.matches!({ name: 'data.dat', mimeType: 'text/plain', src: 'https://example.test/f' }), 'data.dat').to.be.true;
+  expect(def!.matches!({ name: 'data.csv', mimeType: 'text/csv', src: 'https://example.test/f' }), 'data.csv').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'data.TSV', mimeType: 'text/tab-separated-values', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-dataset-viewer'), 'render() produces the viewer element').to.exist;
+});

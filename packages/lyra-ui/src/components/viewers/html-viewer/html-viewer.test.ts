@@ -183,3 +183,20 @@ describe('HTML registry', () => {
     });
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers a text/html renderer whose matches() and render() behave as declared', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../document-viewer/registry.js');
+  const def = getDefaultDocumentRendererRegistry().get('text/html');
+  expect(def, 'importing the module registers the renderer').to.exist;
+  expect(def!.matches!({ name: 'page.HTML', mimeType: 'text/html', src: 'https://example.test/f' }), 'page.HTML').to.be.true;
+  expect(def!.matches!({ name: 'page.htm', mimeType: 'text/html', src: 'https://example.test/f' }), 'page.htm').to.be.true;
+  expect(def!.matches!({ name: 'page.md', mimeType: 'text/markdown', src: 'https://example.test/f' }), 'page.md').to.be.false;
+  expect(def!.capabilities, 'capabilities are declared for host feature-detection').to.exist;
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'page.HTML', mimeType: 'text/html', src: 'https://example.test/f',
+  })}</div>`)) as HTMLElement;
+  expect(host.querySelector('lr-html-viewer'), 'render() produces the viewer element').to.exist;
+});

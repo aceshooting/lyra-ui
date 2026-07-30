@@ -1139,3 +1139,25 @@ describe('active-state cssprop escape hatches', () => {
     await expect(el).to.be.accessible();
   });
 });
+
+// -- Document-renderer registry entry ---------------------------------------
+
+it('registers one shared audio/video renderer across every AV MIME type', async () => {
+  const { getDefaultDocumentRendererRegistry } = await import('../../viewers/document-viewer/registry.js');
+  const registry = getDefaultDocumentRendererRegistry();
+  const def = registry.get('audio/mpeg');
+  expect(def, 'importing av-player.js registers the renderer').to.exist;
+  expect(registry.get('audio/wav'), 'audio MIME types share one definition').to.equal(def);
+
+  expect(def!.matches!({ name: 'talk.MP3', mimeType: 'audio/mpeg', src: MP3_SRC })).to.be.true;
+  expect(def!.matches!({ name: 'no-extension', mimeType: 'video/webm', src: MP3_SRC })).to.be.true;
+  expect(def!.matches!({ name: 'notes.txt', mimeType: 'text/plain', src: MP3_SRC })).to.be.false;
+  expect(def!.capabilities).to.deep.equal({ anchors: ['time-range'], search: true });
+
+  const host = (await fixture(html`<div>${def!.render!({
+    name: 'talk.mp3', mimeType: 'audio/mpeg', src: MP3_SRC,
+  })}</div>`)) as HTMLElement;
+  const player = host.querySelector('lr-av-player') as LyraAvPlayer;
+  expect(player).to.exist;
+  expect(player.name).to.equal('talk.mp3');
+});
