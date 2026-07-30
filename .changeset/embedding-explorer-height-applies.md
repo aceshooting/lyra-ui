@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 `<lr-embedding-explorer>`'s `height` property now actually sizes the plot. It was rendered as an

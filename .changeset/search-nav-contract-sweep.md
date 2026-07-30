@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 `<lr-xml-viewer>`, `<lr-av-player>`, and `<lr-terminal>` now resolve a boolean from `searchNext()`

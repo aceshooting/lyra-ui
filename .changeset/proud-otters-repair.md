@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 Repair four regressions left by earlier fixes:

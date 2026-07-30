@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 Give `<lr-table>`'s sorted column header an opaque default fill. The header is `position: sticky`

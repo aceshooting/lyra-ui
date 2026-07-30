@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 `<lr-notebook-viewer>`: `searchNext()` and `searchPrevious()` now resolve `true` when the active

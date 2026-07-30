@@ -1,5 +1,5 @@
 ---
-"@aceshooting/lyra-ui": patch
+"@aceshooting/lyra-ui": minor
 ---
 
 `<lr-memory-panel>` no longer strands keyboard focus when a row action opens its confirmation step.
