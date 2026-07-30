@@ -140878,6 +140878,15 @@
             },
             {
               "kind": "field",
+              "name": "groupPitch",
+              "privacy": "private",
+              "default": "32",
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "kind": "field",
               "name": "haystacks",
               "type": {
                 "text": "string[]"
@@ -141077,6 +141086,15 @@
                 "text": "LyraCommand[] | undefined"
               },
               "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "rowPitch",
+              "privacy": "private",
+              "default": "48",
+              "type": {
+                "text": "number"
+              }
             },
             {
               "kind": "field",
@@ -141281,6 +141299,17 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "measureRowPitch",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Resolves the two row pitches from their custom properties so the absolutely-positioned rows\nstay aligned with their painted heights. Hardcoding 48/32 matched only at a 16px root font;\nat a browser \"large text\" setting the rows grew but the pitch did not, overlapping every row\nand putting keyboard scrolling in the wrong coordinate space."
             },
             {
               "kind": "method",
@@ -141582,19 +141611,6 @@
           },
           "tagName": "lr-command-palette",
           "customElement": true
-        },
-        {
-          "kind": "variable",
-          "name": "command",
-          "default": "rows[index]!"
-        },
-        {
-          "kind": "variable",
-          "name": "top",
-          "type": {
-            "text": "number"
-          },
-          "default": "0"
         }
       ],
       "exports": [
