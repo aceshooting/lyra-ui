@@ -795,13 +795,16 @@ export type {
   TextareaResize,
   TextareaWrap,
   TextareaSelectionDirection,
+  TextareaSize,
+  TextareaAppearance,
+  TextareaScrollPosition,
 } from './components/forms/textarea/textarea.js';
 
 export { LyraButton } from './components/forms/button/button.js';
 export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType } from './components/forms/button/button.js';
 
 export { LyraInput } from './components/forms/input/input.js';
-export type { LyraInputType, LyraInputSize } from './components/forms/input/input.js';
+export type { LyraInputType, LyraInputSize, LyraInputAppearance } from './components/forms/input/input.js';
 export { LyraNumberInput } from './components/forms/input/number-input.js';
 export { LyraTimeInput } from './components/forms/input/time-input.js';
 export { LyraRadio } from './components/forms/radio/radio.js';
@@ -835,7 +838,7 @@ export { LyraFormatBytes } from './components/utility/format/format-bytes.js';
 export { LyraRelativeTime } from './components/utility/format/relative-time.js';
 export type { RelativeTimeUnit } from './components/utility/format/relative-time.js';
 export { LyraRating } from './components/overlays/rating/rating.js';
-export type { LyraRatingEventMap } from './components/overlays/rating/rating.js';
+export type { LyraRatingEventMap, LyraRatingHoverPhase, LyraRatingSize, LyraRatingSymbolRenderer } from './components/overlays/rating/rating.js';
 export { LyraColorPicker } from './components/forms/color-picker/color-picker.js';
 export type { LyraColorPickerEventMap } from './components/forms/color-picker/color-picker.js';
 export { LyraCheckboxGroup } from './components/forms/checkbox-group/checkbox-group.js';

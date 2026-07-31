@@ -557,6 +557,12 @@ export type LyraMessageKey =
   | 'phoneInputIncomplete'
   | 'otpInputIncomplete'
   | 'otpInputLabel'
+  | 'numberInputIncrease'
+  | 'numberInputDecrease'
+  | 'textareaCharacterCount'
+  | 'textareaCharacterCountPlural'
+  | 'textareaCharactersRemaining'
+  | 'textareaCharactersRemainingPlural'
   | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
@@ -1760,6 +1766,12 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   phoneInputIncomplete: 'This phone number is incomplete.',
   otpInputIncomplete: 'Enter all {total} characters.',
   otpInputLabel: 'Verification code',
+  numberInputIncrease: 'Increase',
+  numberInputDecrease: 'Decrease',
+  textareaCharacterCount: '{count} character',
+  textareaCharacterCountPlural: '{count} characters',
+  textareaCharactersRemaining: '{count} character remaining',
+  textareaCharactersRemainingPlural: '{count} characters remaining',
   accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',

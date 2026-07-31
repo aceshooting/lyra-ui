@@ -21,8 +21,9 @@ export const Default: Story = {
   render: () => html`<lr-input label="Name" placeholder="Ada Lovelace"></lr-input>`,
 };
 
+/** The show/hide-password button is opt-in: add `password-toggle` to render it. */
 export const Password: Story = {
-  render: () => html`<lr-input type="password" label="Password"></lr-input>`,
+  render: () => html`<lr-input type="password" password-toggle label="Password"></lr-input>`,
 };
 
 export const Email: Story = {
@@ -49,6 +50,37 @@ export const ClearableWithAdornments: Story = {
       <span slot="start" aria-hidden="true">⌕</span>
       <kbd slot="end">⌘K</kbd>
     </lr-input>
+  `,
+};
+
+/** `appearance` swaps the control row's fill and border; `pill` rounds it to a full pill. */
+export const Appearance: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 0.75rem; max-inline-size: 20rem">
+      <lr-input appearance="filled-outlined" label="filled-outlined (default)"></lr-input>
+      <lr-input appearance="outlined" label="outlined"></lr-input>
+      <lr-input appearance="filled" label="filled"></lr-input>
+      <lr-input appearance="plain" label="plain"></lr-input>
+      <lr-input appearance="accent" label="accent"></lr-input>
+      <lr-input pill label="pill" placeholder="Rounded ends"></lr-input>
+    </div>
+  `,
+};
+
+/** `without-spin-buttons` suppresses the browser's own increment/decrement controls. */
+export const WithoutSpinButtons: Story = {
+  name: 'type="number" without-spin-buttons',
+  render: () => html`
+    <lr-input type="number" without-spin-buttons label="Quantity" min="0" max="10" value="3"></lr-input>
+  `,
+};
+
+/** Enter submits the ancestor form, exactly as it would in a native `<input>`. */
+export const ImplicitSubmission: Story = {
+  render: () => html`
+    <form @submit=${(event: Event) => event.preventDefault()}>
+      <lr-input name="q" label="Search" hint="Press Enter to submit" required></lr-input>
+    </form>
   `,
 };
 

@@ -18,6 +18,37 @@ export const styles = css`
        --lr-button-gap/--lr-button-radius. */
     --lr-input-gap: var(--lr-space-xs);
     --lr-input-radius: var(--lr-radius);
+    /* Fill/border pair swapped per appearance below. Declared here as well so an element whose
+       appearance attribute hasn't reflected yet (or was removed by hand) still paints the
+       committed filled-outlined treatment rather than an unstyled box. */
+    --lr-input-fill: var(--lr-color-surface);
+    --lr-input-border-color: var(--lr-color-border);
+  }
+  :host([appearance='filled-outlined']) {
+    --lr-input-fill: var(--lr-color-surface);
+    --lr-input-border-color: var(--lr-color-border);
+  }
+  :host([appearance='outlined']) {
+    --lr-input-fill: transparent;
+    --lr-input-border-color: var(--lr-color-border);
+  }
+  :host([appearance='filled']) {
+    --lr-input-fill: var(--lr-color-surface-raised);
+    --lr-input-border-color: transparent;
+  }
+  :host([appearance='plain']) {
+    --lr-input-fill: transparent;
+    --lr-input-border-color: transparent;
+  }
+  /* The loudest tier still has to read as an editable text surface, so it takes the *quiet* brand
+     tint as its fill and the loud brand color on the border only -- a loud fill would put user
+     text on a saturated background at an unpredictable contrast ratio. */
+  :host([appearance='accent']) {
+    --lr-input-fill: var(--lr-color-brand-quiet);
+    --lr-input-border-color: var(--lr-color-brand);
+  }
+  :host([pill]) {
+    --lr-input-radius: var(--lr-radius-pill);
   }
   :host([size='2xs']) {
     --lr-input-padding-block: var(--lr-size-0-0625rem);
@@ -73,9 +104,9 @@ export const styles = css`
        growing to fit its own content. */
     block-size: var(--lr-input-control-height, auto);
     padding-inline: var(--lr-input-padding-inline);
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border: var(--lr-border-width-thin) solid var(--lr-input-border-color);
     border-radius: var(--lr-input-radius);
-    background: var(--lr-color-surface);
+    background: var(--lr-input-fill);
   }
   [part='input-wrapper']:focus-within {
     border-color: var(--lr-color-brand);
@@ -116,11 +147,15 @@ export const styles = css`
   [part='input'][type='search']::-webkit-search-decoration {
     appearance: none;
   }
-  [part='input'][type='number'] {
+  /* Gated on the rendered data attribute rather than :host([without-spin-buttons]) so the
+     suppression tracks the property on the very first render, independent of when Lit reflects
+     the host attribute -- and so a subclass defaulting the property the other way (see
+     <lr-number-input>) needs no converter gymnastics to keep the two in step. */
+  [part='input'][type='number'][data-without-spin-buttons] {
     appearance: textfield;
   }
-  [part='input'][type='number']::-webkit-outer-spin-button,
-  [part='input'][type='number']::-webkit-inner-spin-button {
+  [part='input'][type='number'][data-without-spin-buttons]::-webkit-outer-spin-button,
+  [part='input'][type='number'][data-without-spin-buttons]::-webkit-inner-spin-button {
     appearance: none;
     margin: 0;
   }

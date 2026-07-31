@@ -543,7 +543,9 @@ export class LyraGraphQueryBuilder extends LyraElement<LyraGraphQueryBuilderEven
           @change=${(e: Event) => {
             e.stopPropagation();
             const el = e.target as LyraSelect;
-            add(el.value);
+            // `value` widened to `string | string[]` when `<lr-select>` gained `multiple`; this
+            // picker is single-select, so take the first entry rather than stringifying an array.
+            add(Array.isArray(el.value) ? (el.value[0] ?? '') : el.value);
             el.value = '';
           }}
         >
