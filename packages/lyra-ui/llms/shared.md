@@ -488,6 +488,29 @@ implementation are the source of truth. `llms/migration.md` holds the generated 
 tables. For a staged migration, map existing external theme values onto `--lr-theme-*` explicitly in
 application CSS rather than expecting an implicit compatibility layer.
 
+## Family barrels
+
+Each of the eleven component families has an entry point that registers every element in it:
+`@aceshooting/lyra-ui/components/forms`, `.../components/overlays`, and so on for `agent-tools`,
+`charts`, `conversation`, `data`, `layout`, `media`, `retrieval`, `utility` and `viewers`.
+
+They existed for three families before 8.0.0, were in the exports map, and were documented nowhere —
+so they were effectively unreachable. All eleven now exist and are listed here.
+
+A family barrel is **side-effectful by design**: importing it registers every tag in that family, the
+same way the root barrel registers all of them. Reach for one when you genuinely use most of a family
+and want a single import; reach for the granular
+`@aceshooting/lyra-ui/components/<family>/<file>.js` path — which is what every example in these docs
+uses — when you do not, because a barrel cannot be tree-shaken down to the two elements you actually
+render.
+
+```js
+import '@aceshooting/lyra-ui/components/forms';        // every form control
+import '@aceshooting/lyra-ui/components/forms/input/input.js';  // just <lr-input>
+```
+
+---
+
 ## Shared helpers: `utilities/`
 
 Not custom elements — infrastructure the components compose, curated into a supported public
