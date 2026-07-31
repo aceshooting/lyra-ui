@@ -847,6 +847,9 @@ export type { LyraCheckboxGroupEventMap } from './components/forms/checkbox-grou
 export { LyraTokenInput } from './components/forms/token-input/token-input.js';
 export type { LyraTokenInputEventMap } from './components/forms/token-input/token-input.js';
 export { LyraIcon } from './components/utility/icon/icon.js';
+export { registerIconLibrary, unregisterIconLibrary, getIconLibrary } from './components/utility/icon/icon.js';
+export type { LyraIconFlip, LyraIconEventMap } from './components/utility/icon/icon.js';
+export type { LyraIconLibrary, LyraIconLibraryOptions, LyraIconLibraryResolver, LyraIconLibraryMutator } from './components/utility/icon/icon.js';
 export { LyraIconButton } from './components/forms/icon-button/icon-button.js';
 export { LyraCommandPalette } from './components/layout/command-palette/command-palette.js';
 export type { LyraCommand, LyraCommandPaletteEventMap } from './components/layout/command-palette/command-palette.js';

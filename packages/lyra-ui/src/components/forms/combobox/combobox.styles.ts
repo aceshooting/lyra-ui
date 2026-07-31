@@ -338,7 +338,10 @@ export const styles = css`
     padding: 0 var(--lr-space-xs);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-brand-quiet);
-    color: var(--lr-color-text-quiet);
+    /* Full-strength text, not the quiet tone: quiet-on-quiet measured 4.25:1, under WCAG 1.4.3's
+       4.5:1. The badge already reads as secondary from its size and its tinted pill; borrowing the
+       muted text colour on top of a tinted fill was double de-emphasis that cost legibility. */
+    color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
   }
   [part='option-overflow'],

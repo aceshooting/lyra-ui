@@ -577,6 +577,9 @@ export type LyraMessageKey =
   | 'colorPickerSwatch'
   | 'colorPickerCurrentValue'
   | 'selectSelectedOverflow'
+  | 'iconLoadError'
+  | 'iconTooLarge'
+  | 'iconSanitizerMissing'
   | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
@@ -1800,6 +1803,9 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   colorPickerSwatch: 'Select {color}',
   colorPickerCurrentValue: 'Current color: {color}',
   selectSelectedOverflow: '+{n} more',
+  iconLoadError: 'The icon failed to load.',
+  iconTooLarge: 'The icon file is too large to display.',
+  iconSanitizerMissing: 'This icon needs the optional "dompurify" package installed to render safely.',
   accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',

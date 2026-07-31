@@ -31,6 +31,10 @@ const themePath = join(packageDir, 'src', 'theme.css');
 
 const TEXT_CONTRAST = 4.5; // WCAG 2.2 SC 1.4.3, normal-size text
 const NON_TEXT_CONTRAST = 3; // WCAG 2.2 SC 1.4.11, UI component boundaries
+// Minimum OKLab distance between two categorical series after dichromacy simulation. 0.10 is about
+// where two swatches side by side stop reading as the same colour; a judgement call, stated here
+// rather than buried, and deliberately not so strict that an 8-series ramp becomes impossible.
+const CVD_MIN_DISTANCE = 0.1;
 
 const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 
@@ -85,8 +89,83 @@ function readSurfaces(text) {
   return { light: grab(lines.slice(0, darkStart)), dark: grab(lines.slice(darkStart)) };
 }
 
+/**
+ * Every `--lr-theme-<prefix>*` value declared in each mode's block. Used for the ramps that live in
+ * `theme.css` rather than the generated palette -- the categorical chart series and the 16-colour
+ * terminal ANSI set, both of which shipped with no contrast coverage at all.
+ *
+ * A dark block only RE-declares what differs, so the dark map starts as a copy of the light one.
+ * That is exactly how the cascade behaves, and reproducing it is the point: the terminal palette's
+ * real defect was that it was declared once, in the light block, and therefore rendered light-mode
+ * colours on the dark surface.
+ */
+function readThemeRamps(text, prefix) {
+  const lines = text.split('\n');
+  const darkStart = lines.findIndex((line) => /^\s*\.lr-dark\s*,?\s*$/.test(line));
+  const grab = (slice) => {
+    const map = new Map();
+    const pattern = new RegExp(`(--lr-theme-${prefix}[a-z0-9-]*):\\s*(#[0-9a-f]{6})`, 'gi');
+    for (const match of slice.join('\n').matchAll(pattern)) map.set(match[1], match[2]);
+    return map;
+  };
+  if (darkStart < 0) return { light: grab(lines), dark: new Map() };
+  const light = grab(lines.slice(0, darkStart));
+  const dark = new Map(light);
+  for (const [key, value] of grab(lines.slice(darkStart))) dark.set(key, value);
+  return { light, dark };
+}
+
+/**
+ * Simulates the three dichromacies (Brettel/Vienot-style, in linear sRGB) so a categorical ramp can
+ * be checked for the failure that matters most in practice: two series obviously different to most
+ * viewers and identical to a red-green colour-blind one. Roughly 1 in 12 men has some form of it,
+ * and a chart legend keyed only by colour is unusable when two entries collapse.
+ */
+const CVD_MATRICES = {
+  protanopia: [0.170556992, 0.829443014, 0, 0.170556991, 0.829443008, 0, -0.004517144, 0.004517144, 1],
+  deuteranopia: [0.33066007, 0.66933993, 0, 0.33066007, 0.66933993, 0, -0.02785538, 0.02785538, 1],
+  tritanopia: [1, 0.1273989, -0.1273989, 0, 0.8739093, 0.1260907, 0, 0.8739093, 0.1260907],
+};
+
+function simulateCvd(hex, kind) {
+  const value = hex.replace('#', '');
+  const [r, g, b] = [0, 2, 4].map((i) => srgbToLinear(parseInt(value.slice(i, i + 2), 16) / 255));
+  const m = CVD_MATRICES[kind];
+  const out = [m[0] * r + m[1] * g + m[2] * b, m[3] * r + m[4] * g + m[5] * b, m[6] * r + m[7] * g + m[8] * b];
+  const toSrgb = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
+  return `#${out.map((c) => Math.round(Math.min(1, Math.max(0, toSrgb(c))) * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Perceptual distance in OKLab, which is what "these two look the same" actually means. */
+function perceptualDistance(a, b) {
+  const lab = (hex) => {
+    const value = hex.replace('#', '');
+    const [r, g, bl] = [0, 2, 4].map((i) => srgbToLinear(parseInt(value.slice(i, i + 2), 16) / 255));
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * bl);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * bl);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * bl);
+    return [
+      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+    ];
+  };
+  const [l1, a1, b1] = lab(a);
+  const [l2, a2, b2] = lab(b);
+  return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
+}
+
 const { light, dark } = readGrids(readFileSync(palettePath, 'utf8'));
-const surfaces = readSurfaces(readFileSync(themePath, 'utf8'));
+const themeText = readFileSync(themePath, 'utf8');
+const surfaces = readSurfaces(themeText);
+const chart = readThemeRamps(themeText, 'color-chart-');
+const terminal = readThemeRamps(themeText, 'terminal-color-');
+// `<lr-terminal>` paints its own panel on the raised surface; that is the reference for its palette.
+const raisedRamp = readThemeRamps(themeText, 'color-surface-raised');
+const raisedSurfaces = {
+  light: raisedRamp.light.get('--lr-theme-color-surface-raised'),
+  dark: raisedRamp.dark.get('--lr-theme-color-surface-raised'),
+};
 
 const findings = [];
 let checks = 0;
@@ -121,6 +200,48 @@ for (const [mode, grid] of [
       if (ratio < NON_TEXT_CONTRAST) {
         findings.push(`${mode}: ${token} (${value}) on the ${mode} surface ${surface} is ${ratio.toFixed(2)}:1, below WCAG 1.4.11's ${NON_TEXT_CONTRAST}:1`);
       }
+    }
+  }
+}
+
+// --- the theme.css ramps -----------------------------------------------------------------------
+
+// A chart series is a non-text graphical object identifying data, so SC 1.4.11's 3:1 applies
+// against the surface it is drawn on.
+for (const [mode, ramp] of [['light', chart.light], ['dark', chart.dark]]) {
+  const surface = surfaces[mode];
+  for (const [token, value] of ramp) {
+    checks += 1;
+    const ratio = contrastRatio(value, surface);
+    if (ratio < NON_TEXT_CONTRAST) {
+      findings.push(`${mode}: ${token} (${value}) on the ${mode} surface ${surface} is ${ratio.toFixed(2)}:1, below WCAG 1.4.11's ${NON_TEXT_CONTRAST}:1`);
+    }
+  }
+  const entries = [...ramp.entries()];
+  for (let i = 0; i < entries.length; i += 1) {
+    for (let j = i + 1; j < entries.length; j += 1) {
+      for (const kind of Object.keys(CVD_MATRICES)) {
+        checks += 1;
+        const distance = perceptualDistance(simulateCvd(entries[i][1], kind), simulateCvd(entries[j][1], kind));
+        if (distance < CVD_MIN_DISTANCE) {
+          findings.push(`${mode}: ${entries[i][0]} and ${entries[j][0]} collapse under ${kind} (OKLab distance ${distance.toFixed(3)} < ${CVD_MIN_DISTANCE})`);
+        }
+      }
+    }
+  }
+}
+
+// Terminal output is text: 4.5:1 against the surface it renders on, in both modes. That surface is
+// `--lr-color-surface-raised`, not the page surface -- `<lr-terminal>` paints its own panel, so
+// measuring the ANSI palette against the page would be checking it against a background it is never
+// drawn on.
+for (const [mode, ramp] of [['light', terminal.light], ['dark', terminal.dark]]) {
+  const surface = raisedSurfaces[mode] ?? surfaces[mode];
+  for (const [token, value] of ramp) {
+    checks += 1;
+    const ratio = contrastRatio(value, surface);
+    if (ratio < TEXT_CONTRAST) {
+      findings.push(`${mode}: ${token} (${value}) on the ${mode} raised surface ${surface} is ${ratio.toFixed(2)}:1, below WCAG 1.4.3's ${TEXT_CONTRAST}:1`);
     }
   }
 }

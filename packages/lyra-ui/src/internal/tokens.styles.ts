@@ -234,7 +234,18 @@ export const tokens = css`
     --lr-size-8em: var(--lr-theme-size-8em, 8em);
     --lr-size-8rem: var(--lr-theme-size-8rem, 8rem);
     --lr-radius: var(--lr-theme-border-radius-m, 0.375rem);
-    --lr-shadow: var(--lr-theme-shadow-m, 0 2px 8px rgb(0 0 0 / 0.15));
+    /* Elevation. One shadow token used to serve 39 stylesheets, so a tooltip, a slider thumb and a
+       full-screen dialog all cast the same shadow -- elevation carried no information at all. Five
+       steps now, with the shadow COLOUR itself tokenized: it used to be a baked-in
+       rgb(0 0 0 / 0.15), which is invisible against a dark surface, so dark mode effectively had no
+       elevation. --lr-shadow stays as the mid step, so every existing use keeps rendering. */
+    --lr-shadow-color: var(--lr-theme-shadow-color, 0 0 0);
+    --lr-shadow-xs: var(--lr-theme-shadow-xs, 0 1px 2px rgb(var(--lr-shadow-color) / 0.12));
+    --lr-shadow-s: var(--lr-theme-shadow-s, 0 1px 4px rgb(var(--lr-shadow-color) / 0.14));
+    --lr-shadow-m: var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.15));
+    --lr-shadow-l: var(--lr-theme-shadow-l, 0 6px 16px rgb(var(--lr-shadow-color) / 0.18));
+    --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 12px 32px rgb(var(--lr-shadow-color) / 0.22));
+    --lr-shadow: var(--lr-shadow-m);
     --lr-font: var(--lr-theme-font-family-body, system-ui, sans-serif);
 
     /* Motion — every component that animates (popovers, gauge fill, toast)
