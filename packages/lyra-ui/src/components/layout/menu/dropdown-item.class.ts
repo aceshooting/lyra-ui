@@ -8,6 +8,7 @@ import { LyraMenuItem } from './menu-item.class.js';
  * @customElement lr-dropdown-item
  * @slot - The item's label content.
  * @slot icon - Optional leading icon.
+ * @slot submenu - A nested `<lr-menu>` that opens beside this row.
  */
 export class LyraDropdownItem extends LyraMenuItem {}
 

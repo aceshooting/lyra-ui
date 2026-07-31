@@ -50,10 +50,20 @@ export const styles = css`
     transition: opacity var(--lr-transition-fast),
       transform var(--lr-transition-fast), visibility var(--lr-transition-fast);
   }
+  /* The open state deliberately drops visibility from its own transition list, keeping it only on
+     the closed state above. A transition reads its property list from the after-change style, so
+     this makes the popup visible in the same frame it opens -- which is what keeps .focus() on
+     its content working synchronously, since a transitioning visibility still computes as hidden
+     for that first frame and a non-rendered element cannot take focus. The closing direction is
+     unaffected and still holds the box visible for the length of the fade. A submenu, whose style
+     first resolves while its ancestor popup is hidden, always transitions on open and so would
+     otherwise land one frame behind its own focus move, every single time. */
   :host([open]) [part="popup"] {
     visibility: visible;
     opacity: 1;
     transform: translateY(0);
+    transition: opacity var(--lr-transition-fast),
+      transform var(--lr-transition-fast);
   }
   @media (prefers-reduced-motion: reduce) {
     [part="popup"] {

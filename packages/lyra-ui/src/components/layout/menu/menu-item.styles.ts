@@ -73,4 +73,22 @@ export const styles = css`
     flex: 0 0 auto;
     color: var(--lr-color-brand);
   }
+  /* Only in the DOM at all for a submenu parent (see menu-item.ts's render()),
+     so it needs no [hidden] bookkeeping either. */
+  [part='submenu-icon'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    margin-inline-start: auto;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+    line-height: var(--lr-line-height-none);
+  }
+  /* The chevron points at the submenu, which opens on the inline-end side --
+     mirrored through this wrapping part rather than by swapping the glyph, so
+     the shared icon set stays direction-free. */
+  :host(:dir(rtl)) [part='submenu-icon'] {
+    transform: scaleX(-1);
+  }
 `;

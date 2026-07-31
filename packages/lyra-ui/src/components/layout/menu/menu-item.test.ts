@@ -1,6 +1,8 @@
 import { fixture, expect, html, oneEvent } from '@open-wc/testing';
 import './menu-item.js';
 import type { LyraMenuItem } from './menu-item.js';
+import './menu.js';
+import type { MenuFocusTarget } from './menu.js';
 
 // role="menuitem" requires a role="menu"/"menubar"/"group" ancestor to
 // satisfy axe's aria-required-parent rule -- <lr-menu> normally supplies
@@ -205,4 +207,126 @@ it('is accessible with an icon, disabled and destructive states', async () => {
     </div>
   `)) as HTMLElement;
   await expect(wrapper).to.be.accessible();
+});
+
+describe('submenu parent', () => {
+  const withSubmenu = () => html`
+    <div role="menu" aria-label="Actions">
+      <lr-menu-item value="share" id="share">
+        Share
+        <lr-menu slot="submenu" id="panel">
+          <lr-menu-item value="email">Email</lr-menu-item>
+        </lr-menu>
+      </lr-menu-item>
+    </div>
+  `;
+
+  const parentOf = async (): Promise<LyraMenuItem> => {
+    const wrapper = (await fixture(withSubmenu())) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    await item.updateComplete;
+    return item;
+  };
+
+  const panelOf = (item: LyraMenuItem): HTMLElement & { open: boolean } =>
+    item.querySelector('#panel') as HTMLElement & { open: boolean };
+
+  it('reports hasSubmenu and renders BOTH aria-expanded states, never omitting the attribute', async () => {
+    const item = await parentOf();
+    expect(item.hasSubmenu).to.equal(true);
+    expect(item.getAttribute('aria-haspopup')).to.equal('menu');
+    // Closed must render "false" -- a `?aria-expanded=` style omission is never
+    // correct for a stateful role.
+    expect(item.getAttribute('aria-expanded')).to.equal('false');
+
+    item.openSubmenu('none');
+    await item.updateComplete;
+    expect(item.submenuOpen).to.equal(true);
+    expect(item.getAttribute('aria-expanded')).to.equal('true');
+    expect(panelOf(item).open).to.equal(true);
+
+    item.closeSubmenu();
+    await item.updateComplete;
+    expect(item.submenuOpen).to.equal(false);
+    expect(item.getAttribute('aria-expanded')).to.equal('false');
+    expect(panelOf(item).open).to.equal(false);
+  });
+
+  it('leaves a plain item with no submenu ARIA at all', async () => {
+    const el = (await fixture(html`<lr-menu-item value="rename">Rename</lr-menu-item>`)) as LyraMenuItem;
+    expect(el.hasSubmenu).to.equal(false);
+    expect(el.hasAttribute('aria-haspopup')).to.equal(false);
+    expect(el.hasAttribute('aria-expanded')).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="submenu-icon"]')).to.equal(null);
+  });
+
+  it('renders the submenu chevron part only for a submenu parent', async () => {
+    const item = await parentOf();
+    expect(item.shadowRoot!.querySelector('[part="submenu-icon"]') === null).to.equal(false);
+  });
+
+  it('opens the submenu on activation instead of firing lr-menu-item-select', async () => {
+    const item = await parentOf();
+    let selects = 0;
+    item.addEventListener('lr-menu-item-select', () => {
+      selects += 1;
+    });
+    const base = item.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    base.click();
+    await item.updateComplete;
+    expect(selects).to.equal(0);
+    expect(panelOf(item).open).to.equal(true);
+  });
+
+  it('names itself and its panel from its own label text, so an open submenu never leaks into the name', async () => {
+    const item = await parentOf();
+    // Without this, name-from-content walks into the (now visible) submenu and
+    // the item announces "Share Email".
+    expect(item.getAttribute('aria-label')).to.equal('Share');
+    expect(panelOf(item).getAttribute('aria-label')).to.equal('Share');
+  });
+
+  it('lets a consumer-supplied aria-label win over the computed one', async () => {
+    const wrapper = (await fixture(html`
+      <div role="menu" aria-label="Actions">
+        <lr-menu-item value="share" id="share" aria-label="Share with someone">
+          Share
+          <lr-menu slot="submenu" id="panel"><lr-menu-item value="email">Email</lr-menu-item></lr-menu>
+        </lr-menu-item>
+      </div>
+    `)) as HTMLElement;
+    const item = wrapper.querySelector('#share') as LyraMenuItem;
+    await item.updateComplete;
+    expect(item.getAttribute('aria-label')).to.equal('Share with someone');
+  });
+
+  it("honours the menu's own focus vocabulary: 'none' opens without taking focus, 'first' takes it", async () => {
+    const item = await parentOf();
+    const targets: MenuFocusTarget[] = ['none', 'first'];
+    const outside = document.createElement('button');
+    outside.id = 'outside';
+    document.body.append(outside);
+    outside.focus();
+
+    item.openSubmenu(targets[0]);
+    await item.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect((document.activeElement as HTMLElement).id).to.equal('outside');
+
+    item.openSubmenu(targets[1]);
+    await item.updateComplete;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect((document.activeElement as HTMLElement).tagName).to.equal('LR-MENU-ITEM');
+    outside.remove();
+  });
+
+  it('resets the transient submenu-open state on disconnect', async () => {
+    const item = await parentOf();
+    item.openSubmenu('none');
+    await item.updateComplete;
+    expect(item.submenuOpen).to.equal(true);
+    item.remove();
+    await item.updateComplete;
+    expect(item.submenuOpen).to.equal(false);
+  });
 });

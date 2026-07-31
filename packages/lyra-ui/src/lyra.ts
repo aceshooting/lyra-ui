@@ -662,7 +662,7 @@ export type {
   ToolParamFormSchema,
 } from './components/agent-tools/tool-param-form/tool-param-form.js';
 export { LyraMenu } from './components/layout/menu/menu.js';
-export type { MenuSelectDetail } from './components/layout/menu/menu.js';
+export type { MenuSelectDetail, MenuFocusTarget } from './components/layout/menu/menu.js';
 export { LyraMenuItem } from './components/layout/menu/menu-item.js';
 export { LyraMenuLabel } from './components/layout/menu/menu-label.js';
 export type { MenuItemType, MenuItemChangeDetail } from './components/layout/menu/menu-item.js';
