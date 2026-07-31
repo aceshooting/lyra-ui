@@ -1,6 +1,6 @@
 {
   "name": "aceshooting",
-  "description": "Aceshooting's Claude Code plugin marketplace \u2014 currently ships the lyra-ui plugin.",
+  "description": "Aceshooting's Claude Code plugin marketplace — currently ships the lyra-ui plugin.",
   "owner": {
     "name": "Aceshooting"
   },
@@ -9,7 +9,7 @@
       "name": "lyra-ui",
       "source": "./plugins/lyra-ui",
       "description": "Teach Claude the @aceshooting/lyra-ui component API (one reference file per custom element), design-token theming, localization, framework/TypeScript integration, and migration paths from Web Awesome and Shoelace.",
-      "version": "7.8.0"
+      "version": "7.8.1"
     }
   ]
 }
