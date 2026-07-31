@@ -11,8 +11,8 @@ export const styles = css`
        below: per the CSS overflow spec, pinning one axis to a non-'visible' value forces the
        other axis's *used* value to 'auto' too if left unset -- which can paint a thin, empty
        phantom scrollbar on a classic (non-overlay) scrollbar platform even when the steps
-       actually fit (the exact bug already found and fixed once on lr-tabs). The mask-image edge
-       fade mirrors lr-tabs'/lr-segmented's identical horizontally-scrolling-row treatment; it now
+       actually fit (the exact bug already found and fixed once on lr-tab-group). The mask-image edge
+       fade mirrors lr-tab-group'/lr-segmented's identical horizontally-scrolling-row treatment; it now
        lives in its own overflow-gated rule below, and is reset to 'none' in the vertical-axis
        rules so it can never bleed through a higher-specificity match that doesn't also redeclare
        it (CSS cascades per-property, not per-rule). */

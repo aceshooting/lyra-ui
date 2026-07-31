@@ -71,15 +71,15 @@ export const styles = css`
      consumer's own ::part(tab):hover override ((0,1,1)) always wins without needing !important
      (mirrors lr-attachment-trigger's identical fix). */
   :where([part="tab"]):hover:where(:not([aria-disabled="true"])) {
-    color: var(--lr-tabs-hover-color, var(--lr-color-text));
+    color: var(--lr-tab-group-hover-color, var(--lr-color-text));
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor and a :host declaration can never shadow that. Unset, each falls back to the token the
      rule used before the hooks existed, so the rendering is unchanged. */
   [part="tab"][aria-selected="true"] {
-    color: var(--lr-tabs-selected-color, var(--lr-color-brand));
+    color: var(--lr-tab-group-selected-color, var(--lr-color-brand));
     border-block-end-color: var(
-      --lr-tabs-indicator-color,
+      --lr-tab-group-indicator-color,
       var(--lr-color-brand)
     );
   }
@@ -112,5 +112,65 @@ export const styles = css`
     [part="tab"] {
       transition: none !important;
     }
+  }
+
+  /* Placement. The base flex direction moves the strip relative to the panels; start/end are
+     logical, so row/row-reverse mirror under RTL with no :dir() rule. A vertical strip trades
+     its block-end rule for an inline-end one, in the matching logical direction. */
+  :host([placement='bottom']) [part='base'] {
+    flex-direction: column-reverse;
+  }
+  :host([placement='bottom']) [part='tablist'] {
+    border-block-end: none;
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  :host([placement='start']) [part='base'],
+  :host([placement='end']) [part='base'] {
+    flex-direction: row;
+    align-items: start;
+  }
+  :host([placement='end']) [part='base'] {
+    flex-direction: row-reverse;
+  }
+  :host([placement='start']) [part='tablist'],
+  :host([placement='end']) [part='tablist'] {
+    flex-direction: column;
+    align-items: stretch;
+    flex: 0 0 auto;
+    gap: var(--lr-space-2xs);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-block-end: none;
+  }
+  :host([placement='start']) [part='tablist'] {
+    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  :host([placement='end']) [part='tablist'] {
+    border-inline-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  /* The horizontal edge fade measures inline overflow; a vertical strip scrolls in the block
+     direction instead, so the mask would dim the wrong ends. */
+  :host([placement='start']) [part='tablist'][data-scroll-overflow],
+  :host([placement='end']) [part='tablist'][data-scroll-overflow] {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* The selected-tab indicator runs along whichever edge the panels are on. */
+  :host([placement='start']) [part='tab'][aria-selected='true'],
+  :host([placement='end']) [part='tab'][aria-selected='true'] {
+    box-shadow: none;
+  }
+  :host([placement='start']) [part='tab'][aria-selected='true'] {
+    border-inline-end: var(--lr-border-width-thick) solid
+      var(--lr-tab-group-indicator-color, var(--lr-color-brand));
+  }
+  :host([placement='end']) [part='tab'][aria-selected='true'] {
+    border-inline-start: var(--lr-border-width-thick) solid
+      var(--lr-tab-group-indicator-color, var(--lr-color-brand));
+  }
+  :host([placement='start']) [part='panel'],
+  :host([placement='end']) [part='panel'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
   }
 `;

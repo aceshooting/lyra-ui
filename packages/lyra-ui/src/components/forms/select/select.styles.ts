@@ -157,7 +157,7 @@ export const styles = css`
     /* Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other
        axis's used value to 'auto' too (never staying 'visible') -- an implicit overflow-x: auto
        here risks a phantom horizontal scrollbar from sub-pixel rounding even though this listbox
-       only ever scrolls vertically. Pin overflow-x explicitly instead. Same fix as lr-tabs'
+       only ever scrolls vertically. Pin overflow-x explicitly instead. Same fix as lr-tab-group'
        tablist (overflow-x: auto; overflow-y: hidden;), just on the opposite axis. */
     overflow-y: auto;
     overflow-x: hidden;
@@ -217,7 +217,7 @@ export const styles = css`
   [part='option'][aria-selected='true'] {
     /* Per-component indirection (inline var() fallbacks to the shared brand tokens, so unset
        rendering is byte-for-byte unchanged) -- mirrors the active-bg indirection above and
-       lr-segmented's/lr-tabs' selected-state tokens -- so a consumer can retheme just the
+       lr-segmented's/lr-tab-group' selected-state tokens -- so a consumer can retheme just the
        selected row without hijacking --lr-color-brand library-wide. */
     background: var(--lr-select-option-selected-bg, transparent);
     border-color: var(--lr-select-option-selected-border, var(--lr-color-brand));

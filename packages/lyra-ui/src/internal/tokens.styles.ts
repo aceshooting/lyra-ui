@@ -8,7 +8,7 @@ import { css } from 'lit';
 // Every mask in the library used to borrow --lr-color-shadow for its fully-opaque stop. A mask
 // reads alpha only, so an entirely reasonable translucent shadow theme
 // (--lr-theme-color-shadow: rgb(0 0 0 / 0.25)) silently dropped mask alpha across the WHOLE
-// element rather than just its edges, rendering lr-segmented / lr-tabs / lr-stepper /
+// element rather than just its edges, rendering lr-segmented / lr-tab-group / lr-stepper /
 // lr-timeline / lr-document-preview uniformly washed out, with nothing pointing back at the
 // shadow token as the cause. That only ever worked because the shadow default happens to be
 // opaque. "Opaque" is not a design decision a consumer tunes -- a mask's opaque stop must be

@@ -14,10 +14,10 @@
 ## `lr-tool-result-dialog`
 
 A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer
-typically places a `<lr-tabs>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
+typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
 Awesome equivalent). This component knows nothing about what's inside that slot — it only supplies
 the modal chrome around it. It keeps its own shadow template rather than nesting a `<lr-dialog>`,
-so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tabs>`'s own light-DOM
+so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-group>`'s own light-DOM
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
@@ -44,7 +44,7 @@ reason string so every dismissal path funnels through the same event.
 'close-button'|'api'|string`) fired exactly once per dismissal; `lr-maximize-change` (`detail:
 boolean`, the new `maximized` state) fired when the header's maximize/restore toggle is clicked.
 
-**Slots:** `body` (the dialog's main content — typically a `<lr-tabs>` with Input/Preview/JSON/Raw
+**Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
 the footer row itself is hidden via `[hidden]` when nothing is slotted)
 
@@ -73,10 +73,10 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
   @lr-close=${(e) => (dialogOpen = false)}
   @lr-maximize-change=${(e) => console.log('maximized:', e.detail)}
 >
-  <lr-tabs slot="body">
+  <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
     <div slot="json" label="JSON"><lr-json-viewer .data=${result}></lr-json-viewer></div>
-  </lr-tabs>
+  </lr-tab-group>
   <button slot="footer">Rerun</button>
 </lr-tool-result-dialog>
 ```
@@ -98,7 +98,7 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no intervening update, so
   `willUpdate` never reruns to notice `open` did not change
 - this component deliberately does **not** compose `<lr-dialog>` internally; it keeps its own
-  panel template so a slotted `<lr-tabs>` (or any other light-DOM-scanning child) sees real
+  panel template so a slotted `<lr-tab-group>` (or any other light-DOM-scanning child) sees real
   projected content rather than a forwarding `<slot>`, while still sharing the overlay stack
 - `close()` is a no-op when `open` is already `false` — calling it twice in a row only fires
   `lr-close` once

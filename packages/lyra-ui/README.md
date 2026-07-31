@@ -486,7 +486,7 @@ API details.
 | `<lr-mind-map>` | — (extra) | Radial expandable topic tree (NotebookLM-style mind map) — zero-dependency SVG with a closed-form radial layout; hierarchy only, no cross-links, force simulation, communities, or edge labels (that's `lr-graph`) |
 | `<lr-knowledge-graph-explorer>` | — (extra) | Orchestration-level surface for exploring a knowledge graph — the `lr-graph` canvas plus entity search, type filters, neighborhood expansion, pinned nodes, path finding between pins, and a details overlay; composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-list`, `lr-path-strip`, and `lr-popover.showAt()` rather than re-implementing graph rendering itself |
 | `<lr-graph-query-builder>` | — (extra) | Editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph — start/end entity anchors, relationship-type and node-type pickers with a removable active-filter chip display, a traversal direction, a min/max hop range, validation, and a host-persisted saved-query list; a serializable query model for GraphRAG workflows |
-| `<lr-entity-dossier>` | — (extra) | Full entity detail surface — a persistent header (`lr-entity-card` plus a confidence `lr-stat`) above an `lr-tabs` strip for Relationships (`lr-neighbor-list`), Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`); pure layout, never fetches or mutates graph/document state |
+| `<lr-entity-dossier>` | — (extra) | Full entity detail surface — a persistent header (`lr-entity-card` plus a confidence `lr-stat`) above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`); pure layout, never fetches or mutates graph/document state |
 | `<lr-embedding-explorer>` | — (extra) | Accessible SVG projection of host-provided embedding points with cluster coloring, filtering, roving keyboard focus, and `lr-point-select`; it never computes embeddings or owns dimensionality reduction |
 
 **Retrieval & grounding**
@@ -536,7 +536,7 @@ API details.
 | `<lr-dashboard-grid>` | — (extra) | Responsive, keyboard-accessible widget grid — positions `layout` entries on a CSS Grid, composing `lr-widget` + `lr-widget-renderer` for each cell's default content, with drag/resize/collision handled as controlled events; readonly (viewer) by default, opt into editor gestures via `cells-draggable`/`cells-resizable` |
 | `<lr-filter-bar>` | — (extra) | Row of dashboard filters declared by the host (`filters`) rather than invented by this component — each composes an existing Lyra input (`lr-select`/`lr-combobox`/`lr-date-input`), plus a removable `lr-chip-group` summary and a reset button; controlled, emits a single `lr-input` carrying the full resulting value |
 | `<lr-query-builder>` | — (extra) | Composable structured-query builder for tabular/dashboard data — a flat list of field/operator/value condition rows combined with one AND/OR combinator; fully controlled, distinct from `lr-graph-query-builder`'s typed graph/path queries |
-| `<lr-drilldown-panel>` | — (extra) | Controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs — a breadcrumb trail (`lr-breadcrumb`) over `path` plus, per category the current node has content for, the matching existing primitive (`lr-source-card`, `lr-document-preview`, `lr-entity-card`), wrapped in `lr-tabs` only when more than one category applies |
+| `<lr-drilldown-panel>` | — (extra) | Controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs — a breadcrumb trail (`lr-breadcrumb`) over `path` plus, per category the current node has content for, the matching existing primitive (`lr-source-card`, `lr-document-preview`, `lr-entity-card`), wrapped in `lr-tab-group` only when more than one category applies |
 
 **Evaluation**
 
@@ -611,7 +611,7 @@ each one-liner below.
 | `<lr-mention-popover>` | — (extra) | Caret-anchored `@`-mention/`/`-command autocomplete popover for a host-owned `<textarea>`/`<input>`; never takes DOM focus itself |
 | `<lr-tool-call-chip>` | — (extra) | Compact inline pill for one tool/function call mid-conversation; status-aware glyph/color, optional hover/focus detail tooltip |
 | `<lr-tool-result-view>` + `registerToolRenderer()` | — (extra) | Dispatches a tool call's result to a host-registered renderer (by tool name or shape `matches()`), falling back to `<lr-json-viewer>` |
-| `<lr-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tabs>` of Input/Preview/JSON/Raw) |
+| `<lr-tool-result-dialog>` | — (extra) | Full tool-call detail overlay: status/duration header plus a consumer-assembled `body` slot (typically a `<lr-tab-group>` of Input/Preview/JSON/Raw) |
 | `<lr-tool-approval-dialog>` | — (extra) | Human-in-the-loop approve/deny gate for one proposed tool call, with an optional inline JSON argument editor before approving |
 | `<lr-confirm-bar>` | — (extra) | Inline, non-modal approve/deny block for one proposed action — the in-flow sibling of `<lr-tool-approval-dialog>` for confirmations that shouldn't hijack focus; same `lr-approve`/`lr-deny` event shapes and localization keys as the dialog |
 | `<lr-tool-param-form>` | — (extra) | Renders one form control per property of a flat JSON Schema object, for ad hoc tool invocation or approval-time argument editing |
@@ -645,7 +645,7 @@ each one-liner below.
 | `<lr-reorder-list>` + `<lr-reorder-item>` | — (extra) | Generic flat-list reorder primitive: per-row move-up/move-down buttons plus a Ctrl/Cmd+Arrow keyboard shortcut, emitting the full new order on every move |
 | `<lr-image-comparer>` | `wa-comparison` / `sl-image-comparer` | Before/after slotted surfaces with a keyboard-accessible range divider |
 | `<lr-zoomable-frame>` | `wa-zoomable-frame` | Bounded zoom and scrollable panning for slotted content or an image source |
-| `<lr-tabs>` | — (extra) | Tab strip over direct light-DOM panels; WAI-ARIA APG automatic-activation keyboard pattern |
+| `<lr-tab-group>` + `<lr-tab>` + `<lr-tab-panel>` | `wa-tab-group` / `wa-tab` / `wa-tab-panel` / `sl-tab-group` / `sl-tab` / `sl-tab-panel` | Tab strip with `placement` (logical `start`/`end` turn it vertical) and `activation="auto"`/`"manual"`; accepts the upstream `<lr-tab>`/`<lr-tab-panel>` child pairs or this library's own `slot`/`label` panel-attribute shape |
 | `<lr-checkbox>` | `wa-checkbox` / `sl-checkbox` | Boolean form control, `role="checkbox"` with a visual/`indeterminate` mixed state |
 | `<lr-switch>` | `wa-switch` / `sl-switch` | Boolean toggle-switch form control, `role="switch"` on/off semantics |
 | `<lr-menu>` + `<lr-menu-item>` | `sl-menu` / `sl-menu-item` | Anchored dropdown menu around a consumer-supplied trigger; WAI-ARIA "menu button" pattern with real roving focus (not a listbox) |

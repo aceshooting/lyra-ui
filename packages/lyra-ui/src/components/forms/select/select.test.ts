@@ -1110,7 +1110,7 @@ it('pins overflow-x explicitly alongside the listbox\'s overflow-y, so the unset
   // Per the CSS overflow spec, pinning one axis to a non-'visible' value forces the other axis's
   // used value to 'auto' too -- an implicit overflow-x: auto here risks a phantom horizontal
   // scrollbar even though this listbox only ever scrolls vertically. Same class of bug already
-  // fixed on lr-tabs' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
+  // fixed on lr-tab-group' tablist (overflow-x: auto; overflow-y: hidden;), just the opposite axis.
   const css = styles.cssText.replace(/\s+/g, ' ');
   expect(css).to.match(/\[part='listbox'\]\s*\{[^}]*overflow-y:\s*auto;\s*overflow-x:\s*hidden;/);
 });

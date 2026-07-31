@@ -835,12 +835,12 @@ prevents stale page/text/region work from scrolling or reporting success.
 ## `lr-spreadsheet-viewer`
 
 Fetches and renders `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer. Multiple
-worksheets render through a `<lr-tabs>` switcher, and body rows use `<lr-virtual-list>`.
+worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw grid, 1-based, with
 its header row included, resolving the target sheet from the anchor's own `sheet` field (falling
 back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` switches
-`<lr-tabs>`'s active tab first when needed, then scrolls the addressed row/column into view.
+`<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`.
 
 **Properties:** `src` and `name` are strings. `anchorKinds` is a readonly `['cell-range']` (this

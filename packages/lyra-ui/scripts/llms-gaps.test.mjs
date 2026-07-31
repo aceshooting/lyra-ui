@@ -13,7 +13,7 @@
 // `click-to-start`/`click-to-stop`. Both cases are reproduced below as regression fixtures.
 
 import assert from 'node:assert/strict';
-import { mentionsName } from './llms-gaps.mjs';
+import { mentionsName, ownsToken } from './llms-gaps.mjs';
 
 // Quiet by default (it runs inside the `pnpm lint` contract-policy chain); `--verbose` prints the
 // per-case lines.
@@ -95,6 +95,18 @@ test('a name containing a regex metacharacter is matched literally, not as a pat
   // over-match if a future name did (e.g. treating a literal `.` as "any character").
   assert.equal(mentionsName('aXb should not satisfy the literal dot', 'a.b'), false);
   assert.equal(mentionsName('the literal `a.b` appears here', 'a.b'), true);
+});
+
+test('a component-scoped token belongs to the longest matching tag, not every tag that prefixes it', () => {
+  // `lr-tab`, `lr-tab-group` and `lr-tab-panel` share one directory, so they share one stylesheet
+  // scan. A plain prefix match would bill every `--lr-tab-group-*` token to `lr-tab` as well and
+  // demand it be documented in a section it has nothing to do with.
+  const tags = ['lr-tab', 'lr-tab-group', 'lr-tab-panel'];
+  assert.equal(ownsToken('lr-tab-group', '--lr-tab-group-hover-color', tags), true);
+  assert.equal(ownsToken('lr-tab', '--lr-tab-group-hover-color', tags), false);
+  assert.equal(ownsToken('lr-tab', '--lr-tab-indicator-size', tags), true);
+  // An unrelated token belongs to nobody.
+  assert.equal(ownsToken('lr-tab', '--lr-color-brand', tags), false);
 });
 
 if (failures > 0) {

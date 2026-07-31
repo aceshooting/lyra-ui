@@ -170,7 +170,7 @@ export const styles = css`
     /* Pinned explicitly alongside overflow-y -- per the CSS overflow spec, once one axis is
        forced non-'visible', the other axis's used value also computes to 'auto' (never stays
        'visible'), risking a phantom empty horizontal scrollbar from sub-pixel rounding (the same
-       bug lr-tabs' tablist was fixed for). inline-size is max-content below, so this axis never
+       bug lr-tab-group' tablist was fixed for). inline-size is max-content below, so this axis never
        actually needs to scroll. */
     overflow-x: hidden;
     inline-size: max-content;

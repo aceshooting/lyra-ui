@@ -69,7 +69,7 @@
     "dashboard-grid": "layout", "details": "layout", "dock-panel": "layout",
     "drilldown-panel": "layout", "filter-bar": "layout", "menu": "layout",
     "reorder-list": "layout", "responsive-panel": "layout", "scroller": "layout", "segmented": "layout", "split": "layout",
-    "stepper": "layout", "tabs": "layout", "virtual-list": "layout", "widget": "layout",
+    "stepper": "layout", "tab-group": "layout", "virtual-list": "layout", "widget": "layout",
 
     "badge": "overlays", "callout": "overlays", "chip": "overlays", "dialog": "overlays",
     "drawer": "overlays", "empty": "overlays", "kbd": "overlays", "overlay": "overlays",

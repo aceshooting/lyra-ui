@@ -53,6 +53,19 @@ function stylesheetTokens(modulePath) {
 }
 
 /**
+ * Whether `tag` is the component a component-scoped custom property belongs to. A token is owned by
+ * the longest registered tag whose `--<tag>-` prefix it carries, so `--lr-tab-group-hover-color`
+ * belongs to `lr-tab-group` alone even though `--lr-tab-` also matches it.
+ */
+export function ownsToken(tag, token, allTags) {
+  if (!token.startsWith(`--${tag}-`)) return false;
+  for (const other of allTags) {
+    if (other.length > tag.length && token.startsWith(`--${other}-`)) return false;
+  }
+  return true;
+}
+
+/**
  * @returns {Array<{family: string, tag: string, lines: number, kind: string, names: string[]}>}
  *   every documentable name the manifest (or the component's stylesheet) knows about that the
  *   component's own section never mentions.
@@ -67,6 +80,7 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
     }
   }
 
+  const allTags = [...declFor.keys()];
   const gaps = [];
   for (const family of families) {
     const file = path.join(packageDir, 'llms', `${family}.md`);
@@ -113,9 +127,14 @@ export function collectGaps(families = FAMILIES.map(([f]) => f)) {
         miss('cssprop (manifest)', (decl.cssProperties ?? []).map((p) => p.name));
         // Component-scoped tokens only — the shared --lr-color-*/--lr-space-* layer lives in
         // llms/tokens.md and is deliberately not restated per component.
+        //
+        // Ownership is by the LONGEST matching tag, not merely a prefix match: sibling components
+        // sharing a directory can have tags that prefix one another (`lr-tab` / `lr-tab-group`),
+        // and a plain `startsWith` would bill `--lr-tab-group-hover-color` to `lr-tab` as well,
+        // demanding it be documented in a section it has nothing to do with.
         miss(
           'cssprop (stylesheet, undeclared in manifest)',
-          stylesheetTokens(mod.path).filter((t) => t.startsWith(`--${tag}-`)),
+          stylesheetTokens(mod.path).filter((token) => ownsToken(tag, token, allTags)),
         );
       }
     }

@@ -2427,7 +2427,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    * backward one to the previous, in flat array order (`simNodes` then
    * `simLinks`) — the same `forwardKey`/`backwardKey` swap this library's
    * other "physical arrow key drives sequential previous/next" components
-   * (`<lr-tabs>`, `<lr-slider>`, `<lr-segmented>`) apply under RTL.
+   * (`<lr-tab-group>`, `<lr-slider>`, `<lr-segmented>`) apply under RTL.
    * `ArrowDown`/`ArrowUp` always mean next/previous regardless of direction.
    */
   private onGraphKeyDown(e: KeyboardEvent, index: number, activate: (e: KeyboardEvent) => void): void {

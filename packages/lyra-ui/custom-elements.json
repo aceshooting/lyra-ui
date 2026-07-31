@@ -22131,7 +22131,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/\nduration header plus a `body` slot where a consumer typically places a\n`<lr-tabs>` with Input/Preview/JSON/Raw panels. This component knows\nnothing about what's inside that slot — it only supplies the modal chrome\naround it.\n\nThis is its own standalone overlay implementation (`role=\"dialog\"`,\nfocus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than\nnesting a `<lr-dialog>` in its shadow template — see `<lr-dialog>`'s\nown header comment for why a new overlay component in this library\nduplicates that pattern locally instead of composing the previous one:\nslot-forwarding into a nested `<lr-dialog>` would put a forwarding\n`<slot>` where a light-DOM-scanning descendant (e.g. a slotted\n`<lr-tabs>`'s own `Array.from(this.children)` scan) expects real\nprojected content.\n\n`maximized` toggles between a constrained modal size and a near-fullscreen\nsize within the same open dialog and open/close lifecycle — unlike\n`<lr-widget>`'s fullscreen mode, there's no non-modal resting state to\nreturn to, so no separate scroll-lock/focus-trap bookkeeping is needed for\nthe transition itself.\n\nStacking: opening more than one of these dialogs at once is supported --\nEscape and the Tab focus trap only ever act on the topmost open instance,\nso instances beneath it stay open and untouched until the one on top closes.",
+          "description": "`<lr-tool-result-dialog>` — a full tool-call detail overlay: a status/\nduration header plus a `body` slot where a consumer typically places a\n`<lr-tab-group>` with Input/Preview/JSON/Raw panels. This component knows\nnothing about what's inside that slot — it only supplies the modal chrome\naround it.\n\nThis is its own standalone overlay implementation (`role=\"dialog\"`,\nfocus-trapped, Escape/backdrop-dismissible, scroll-locking) rather than\nnesting a `<lr-dialog>` in its shadow template — see `<lr-dialog>`'s\nown header comment for why a new overlay component in this library\nduplicates that pattern locally instead of composing the previous one:\nslot-forwarding into a nested `<lr-dialog>` would put a forwarding\n`<slot>` where a light-DOM-scanning descendant (e.g. a slotted\n`<lr-tab-group>`'s own `Array.from(this.children)` scan) expects real\nprojected content.\n\n`maximized` toggles between a constrained modal size and a near-fullscreen\nsize within the same open dialog and open/close lifecycle — unlike\n`<lr-widget>`'s fullscreen mode, there's no non-modal resting state to\nreturn to, so no separate scroll-lock/focus-trap bookkeeping is needed for\nthe transition itself.\n\nStacking: opening more than one of these dialogs at once is supported --\nEscape and the Tab focus trap only ever act on the topmost open instance,\nso instances beneath it stay open and untouched until the one on top closes.",
           "name": "LyraToolResultDialog",
           "cssProperties": [
             {
@@ -22241,7 +22241,7 @@
           ],
           "slots": [
             {
-              "description": "The dialog's main content — typically a `<lr-tabs>` with Input/Preview/JSON/Raw panels, entirely consumer-assembled.",
+              "description": "The dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw panels, entirely consumer-assembled.",
               "name": "body"
             },
             {
@@ -148732,7 +148732,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-drilldown-panel>` — controlled navigation from a chart/table datum to its related evidence,\ndocuments, entities, or agent runs. This is a navigation *shell*: it never re-renders any of that\ncontent itself, only a breadcrumb trail (`lr-breadcrumb`) over `path` plus, for whichever\ncategories the current (last) node actually has content for, the one existing primitive that\nalready renders that content type (`lr-source-card` for evidence, `lr-document-preview` for\ndocuments, `lr-entity-card` for entities) -- wrapped in an `lr-tabs` strip only when more than one\ncategory has content, so a single-category node renders that category directly with no tab\nchrome.\n\nControlled, like every other Lyra component: `path` is the full breadcrumb trail (oldest first,\ncurrent node last) and is owned entirely by the host. Activating a *non-current* breadcrumb step\nfires `lr-drilldown-navigate` with that step's `id`/`index` — this component never mutates `path`\nitself; a listener typically responds with `this.path = this.path.slice(0, e.detail.index + 1)`\n(truncate back to that level) or replaces `path` outright with newly fetched levels. An empty\n`path` renders the shared `lr-empty` \"no selection\" state; a non-empty `path` whose current node\nhas no content in any category renders the shared `lr-empty` `noData` state instead.\n\n**Agent runs.** Unlike evidence/documents/entities, this library has no existing \"render one\nagent run\" primitive yet (a future orchestration-level component, not part of this layer, is the\nnatural home for that once it exists) — so, rather than inventing bespoke run-rendering here, the\n`runs` slot is this component's escape hatch: whatever a host projects into it renders as the\n\"Agent runs\" category tab (shown only while the slot actually has assigned content), exactly the\nsame tradeoff `<lr-document-preview>`'s own `unsupported` slot makes. Because slot content is\nordinary light DOM, not part of the `path` data model, a host drilling into different agent-run\ncontent per level re-projects new content into the slot whenever the current node changes — the\nsame thing a `<lr-document-preview>` consumer already does for its `unsupported` slot.",
+          "description": "`<lr-drilldown-panel>` — controlled navigation from a chart/table datum to its related evidence,\ndocuments, entities, or agent runs. This is a navigation *shell*: it never re-renders any of that\ncontent itself, only a breadcrumb trail (`lr-breadcrumb`) over `path` plus, for whichever\ncategories the current (last) node actually has content for, the one existing primitive that\nalready renders that content type (`lr-source-card` for evidence, `lr-document-preview` for\ndocuments, `lr-entity-card` for entities) -- wrapped in an `lr-tab-group` strip only when more than one\ncategory has content, so a single-category node renders that category directly with no tab\nchrome.\n\nControlled, like every other Lyra component: `path` is the full breadcrumb trail (oldest first,\ncurrent node last) and is owned entirely by the host. Activating a *non-current* breadcrumb step\nfires `lr-drilldown-navigate` with that step's `id`/`index` — this component never mutates `path`\nitself; a listener typically responds with `this.path = this.path.slice(0, e.detail.index + 1)`\n(truncate back to that level) or replaces `path` outright with newly fetched levels. An empty\n`path` renders the shared `lr-empty` \"no selection\" state; a non-empty `path` whose current node\nhas no content in any category renders the shared `lr-empty` `noData` state instead.\n\n**Agent runs.** Unlike evidence/documents/entities, this library has no existing \"render one\nagent run\" primitive yet (a future orchestration-level component, not part of this layer, is the\nnatural home for that once it exists) — so, rather than inventing bespoke run-rendering here, the\n`runs` slot is this component's escape hatch: whatever a host projects into it renders as the\n\"Agent runs\" category tab (shown only while the slot actually has assigned content), exactly the\nsame tradeoff `<lr-document-preview>`'s own `unsupported` slot makes. Because slot content is\nordinary light DOM, not part of the `path` data model, a host drilling into different agent-run\ncontent per level re-projects new content into the slot whenever the current node changes — the\nsame thing a `<lr-document-preview>` consumer already does for its `unsupported` slot.",
           "name": "LyraDrilldownPanel",
           "cssParts": [
             {
@@ -148752,7 +148752,7 @@
               "name": "breadcrumb-item"
             },
             {
-              "description": "The wrapper around one category's rendered items — used both as the sole direct child of `content` (single-category node) and inside each `lr-tabs` panel (multi-category node).",
+              "description": "The wrapper around one category's rendered items — used both as the sole direct child of `content` (single-category node) and inside each `lr-tab-group` panel (multi-category node).",
               "name": "category"
             },
             {
@@ -148776,7 +148776,7 @@
               "name": "evidence-item"
             },
             {
-              "description": "The nested `lr-tabs` strip, only rendered when the current node has content in more than one category.",
+              "description": "The nested `lr-tab-group` strip, only rendered when the current node has content in more than one category.",
               "name": "tabs"
             }
           ],
@@ -148794,7 +148794,7 @@
                 "text": "string | null"
               },
               "default": "null",
-              "description": "Accessible name forwarded to the internal `lr-tabs` strip (only rendered while the current\nnode has more than one populated category). Unset, the tab strip renders without an\n`aria-label`, matching `lr-tabs`' own unset-default behavior.",
+              "description": "Accessible name forwarded to the internal `lr-tab-group` strip (only rendered while the current\nnode has more than one populated category). Unset, the tab strip renders without an\n`aria-label`, matching `lr-tab-group`' own unset-default behavior.",
               "attribute": "aria-label"
             },
             {
@@ -149312,7 +149312,7 @@
                 "text": "string | null"
               },
               "default": "null",
-              "description": "Accessible name forwarded to the internal `lr-tabs` strip (only rendered while the current\nnode has more than one populated category). Unset, the tab strip renders without an\n`aria-label`, matching `lr-tabs`' own unset-default behavior.",
+              "description": "Accessible name forwarded to the internal `lr-tab-group` strip (only rendered while the current\nnode has more than one populated category). Unset, the tab strip renders without an\n`aria-label`, matching `lr-tab-group`' own unset-default behavior.",
               "fieldName": "accessibleLabel"
             },
             {
@@ -158026,12 +158026,12 @@
     },
     {
       "kind": "javascript-module",
-      "path": "src/components/layout/tabs/tabs.class.ts",
+      "path": "src/components/layout/tab-group/tab-group.class.ts",
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tabs>` — a tab strip whose panels are direct light-DOM children,\neach carrying `slot=\"<id>\"` (the panel's stable id) and `label=\"<text>\"`\n(the tab button's text). One named `<slot>` is rendered per distinct\n`slot` name found among the current children — a child with no `label`,\nor a name with no matching child, simply never produces a tab.\n\nA tab button's *visible* content can carry a leading icon without ever\nchanging its *accessible name* (which always stays exactly `label`'s\ntext, nothing else): give a tab an extra direct-child sibling of\n`<lr-tabs>` carrying `slot=\"<id>-icon\"` (that sibling's own content --\nan inline SVG, an emoji span, a custom icon element, anything -- is\nentirely up to the consumer). It's rendered ahead of the label inside\nthat tab's button, wrapped in an `aria-hidden=\"true\"` part so it's\nexcluded from accessible-name computation no matter what it contains. A\ntab with no matching `<id>-icon` sibling renders no icon wrapper at all,\nso existing text-only tabs are completely unaffected. (A named slot,\nrather than a second attribute holding an icon-name lookup, was chosen\nbecause this library's `internal/icons.ts` is a small closed set of\nchrome glyphs for this library's *own* components, not a public\nname-keyed registry -- a slot lets a consumer supply an arbitrary,\ndomain-specific icon instead of being limited to that internal set.)\n\nImplements the WAI-ARIA APG tabs pattern with automatic activation:\nLeft/Right (swapped under RTL) move focus *and* selection together,\nHome/End jump to the first/last enabled tab, and a roving `tabindex`\nfollows whichever tab is currently selected.",
-          "name": "LyraTabs",
+          "description": "`<lr-tab-group>` — a tab strip whose panels are direct light-DOM children,\neach carrying `slot=\"<id>\"` (the panel's stable id) and `label=\"<text>\"`\n(the tab button's text). One named `<slot>` is rendered per distinct\n`slot` name found among the current children — a child with no `label`,\nor a name with no matching child, simply never produces a tab.\n\nA tab button's *visible* content can carry a leading icon without ever\nchanging its *accessible name* (which always stays exactly `label`'s\ntext, nothing else): give a tab an extra direct-child sibling of\n`<lr-tab-group>` carrying `slot=\"<id>-icon\"` (that sibling's own content --\nan inline SVG, an emoji span, a custom icon element, anything -- is\nentirely up to the consumer). It's rendered ahead of the label inside\nthat tab's button, wrapped in an `aria-hidden=\"true\"` part so it's\nexcluded from accessible-name computation no matter what it contains. A\ntab with no matching `<id>-icon` sibling renders no icon wrapper at all,\nso existing text-only tabs are completely unaffected. (A named slot,\nrather than a second attribute holding an icon-name lookup, was chosen\nbecause this library's `internal/icons.ts` is a small closed set of\nchrome glyphs for this library's *own* components, not a public\nname-keyed registry -- a slot lets a consumer supply an arbitrary,\ndomain-specific icon instead of being limited to that internal set.)\n\nImplements the WAI-ARIA APG tabs pattern. With the default `activation=\"auto\"`, Left/Right\n(swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection\ntogether; with `activation=\"manual\"` they move focus only and Enter/Space commits, which the APG\nrequires whenever revealing a panel is expensive. Home/End jump to the first/last enabled tab,\nand a roving `tabindex` follows the focused tab.\n\n**Two child models are accepted.** `<lr-tab panel=\"x\">` plus `<lr-tab-panel name=\"x\">` mirrors\n`wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`\nattributes itself. The attribute model described above is this library's own original shape and\nremains fully supported. A group containing any `<lr-tab>` child is read purely as the element\nmodel, so the two never interleave ambiguously.",
+          "name": "LyraTabGroup",
           "cssProperties": [
             {
               "description": "Width of the fade at each horizontal scroll edge. The fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.",
@@ -158040,17 +158040,17 @@
             },
             {
               "description": "Text color of the selected tab. Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which is what hijacking `--lr-color-brand` library-wide used to do).",
-              "name": "--lr-tabs-selected-color",
+              "name": "--lr-tab-group-selected-color",
               "default": "var(--lr-color-brand)"
             },
             {
               "description": "Color of the selected tab's underline, themeable independently of its text color.",
-              "name": "--lr-tabs-indicator-color",
+              "name": "--lr-tab-group-indicator-color",
               "default": "var(--lr-color-brand)"
             },
             {
               "description": "Text color of a hovered, non-disabled tab. Independent of the selected-state props above.",
-              "name": "--lr-tabs-hover-color",
+              "name": "--lr-tab-group-hover-color",
               "default": "var(--lr-color-text)"
             }
           ],
@@ -158078,11 +158078,11 @@
           ],
           "slots": [
             {
-              "description": "Direct children with `slot=\"<id>\" label=\"<text>\"` (and optionally `disabled`); one becomes each tab's panel.",
+              "description": "Either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with `slot=\"<id>\" label=\"<text>\"` (and optionally `disabled`); one becomes each tab's panel.",
               "name": ""
             },
             {
-              "description": "Optional sibling direct child supplying a tab's leading icon content; excluded from the tab button's accessible name.",
+              "description": "Optional sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.",
               "name": "<id>-icon"
             }
           ],
@@ -158096,6 +158096,17 @@
               "default": "null",
               "description": "Accessible name for the `role=\"tablist\"` strip. Attribute-reflects from a host-level\n`aria-label` so a plain-markup consumer gets ARIA-name forwarding without setting a JS\nproperty. Unset, the tablist renders without an `aria-label` (the role carries no localized\ndefault name).",
               "attribute": "aria-label"
+            },
+            {
+              "kind": "field",
+              "name": "activation",
+              "type": {
+                "text": "TabGroupActivation"
+              },
+              "default": "'auto'",
+              "description": "`auto` (the default) moves selection with focus. `manual` moves focus only and waits for\nEnter or Space — the APG requirement for panels that are expensive to reveal.",
+              "attribute": "activation",
+              "reflects": true
             },
             {
               "kind": "field",
@@ -158169,6 +158180,16 @@
             },
             {
               "kind": "field",
+              "name": "focusedTab",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''",
+              "description": "Where keyboard focus currently sits under `activation=\"manual\"`, which is allowed to differ\nfrom `active`. Under `auto` the two are always the same, so this simply follows selection."
+            },
+            {
+              "kind": "field",
               "name": "idsBySlot",
               "privacy": "private",
               "readonly": true,
@@ -158185,6 +158206,16 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "field",
+              "name": "isVertical",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "description": "Whether the strip runs down the side rather than across the top -- which decides both the\nnavigation keys and `aria-orientation`.",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -158237,12 +158268,33 @@
             },
             {
               "kind": "field",
+              "name": "placement",
+              "type": {
+                "text": "TabGroupPlacement"
+              },
+              "default": "'top'",
+              "description": "Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make\nthe tablist vertical, which swaps the navigation keys to Up/Down per the APG.",
+              "attribute": "placement",
+              "reflects": true
+            },
+            {
+              "kind": "field",
               "name": "rehomeTabFocus",
               "type": {
                 "text": "boolean"
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "rovingTab",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "description": "Whichever tab currently owns `tabindex=\"0\"`. Under `auto` that is always the selected tab;\nunder `manual` focus may sit elsewhere, and it must fall back to the selection whenever the\nremembered tab has gone away or become disabled.",
+              "readonly": true
             },
             {
               "kind": "field",
@@ -158273,7 +158325,7 @@
               "kind": "field",
               "name": "syncTabs",
               "privacy": "private",
-              "description": "Rebuilds `tabs` from the current direct children. First child wins when two share a `slot` name (matches native slot assignment: both would render into the one panel, but only one label can back the button)."
+              "description": "Rebuilds `tabs` from the current direct children, in whichever of the two child models they\nuse. First child wins when two share a name (matching native slot assignment: both would\nrender into the one panel, but only one label can back the button).\n\n**Element model** (`<lr-tab panel=\"x\">` + `<lr-tab-panel name=\"x\">`) mirrors both upstreams, so\n`wa-tab-group`/`sl-tab-group` markup renames mechanically. **Attribute model** (any child with\n`slot=\"x\" label=\"…\"`) is this library's own original shape and stays fully supported — several\ncomponents here compose it. A group using any `<lr-tab>` child is read purely as the element\nmodel, so the two never interleave ambiguously within one group."
             },
             {
               "kind": "field",
@@ -158369,6 +158421,25 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "focusOnly",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "tab",
+                  "type": {
+                    "text": "TabDef"
+                  }
+                }
+              ],
+              "description": "Moves the roving focus without selecting -- the `activation=\"manual\"` path."
             },
             {
               "kind": "method",
@@ -158497,6 +158568,43 @@
             },
             {
               "kind": "method",
+              "name": "readAttributeModel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TabDef[]"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "children",
+                  "type": {
+                    "text": "Element[]"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "readElementModel",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TabDef[]"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "children",
+                  "type": {
+                    "text": "Element[]"
+                  }
+                }
+              ],
+              "description": "Reads `<lr-tab>`/`<lr-tab-panel>` pairs and assigns each one the `slot` that lands it in the\nright place: a tab projects into its own button, a panel into its own tabpanel wrapper. Writing\n`slot` here rather than asking consumers to is what keeps the upstream markup a pure rename --\nand it is idempotent, so the mutation observer that sees the write does not re-enter.\n\nA tab with no `panel` still gets a stable synthetic name from its position, so an unpaired tab\nrenders a button with an empty panel instead of silently disappearing."
+            },
+            {
+              "kind": "method",
               "name": "removeEventListener",
               "return": {
                 "type": {
@@ -158609,7 +158717,7 @@
                   }
                 }
               ],
-              "description": "Activates `tab` (no-op for a disabled tab or one that's already active) and emits `lr-tabs-change`."
+              "description": "Activates `tab` (no-op for a disabled tab or one that's already active), emitting\n`lr-tab-hide` for the outgoing tab before `lr-tab-show` for the incoming one, so a listener\nthat tears down the old panel always runs before the one that builds the new one."
             },
             {
               "kind": "method",
@@ -158628,15 +158736,47 @@
                   }
                 }
               ]
+            },
+            {
+              "kind": "method",
+              "name": "tabSlotName",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "slotName",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Derives the `slot` an `<lr-tab>` is projected into -- its own button."
             }
           ],
           "events": [
             {
-              "description": "`detail: { tabId }`, fired when the active tab changes via click or keyboard.",
-              "name": "lr-tabs-change"
+              "description": "`detail: { tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.",
+              "name": "lr-tab-hide"
+            },
+            {
+              "description": "`detail: { tabId }`, fired when a tab becomes active via click or keyboard.",
+              "name": "lr-tab-show"
             }
           ],
           "attributes": [
+            {
+              "name": "activation",
+              "type": {
+                "text": "TabGroupActivation"
+              },
+              "default": "'auto'",
+              "description": "`auto` (the default) moves selection with focus. `manual` moves focus only and waits for\nEnter or Space — the APG requirement for panels that are expensive to reveal.",
+              "fieldName": "activation"
+            },
             {
               "name": "active",
               "type": {
@@ -158667,38 +158807,47 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "name": "placement",
+              "type": {
+                "text": "TabGroupPlacement"
+              },
+              "default": "'top'",
+              "description": "Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make\nthe tablist vertical, which swaps the navigation keys to Up/Down per the APG.",
+              "fieldName": "placement"
             }
           ],
           "superclass": {
             "name": "LyraElement",
             "module": "/src/internal/lyra-element.js"
           },
-          "tagName": "lr-tabs",
+          "tagName": "lr-tab-group",
           "customElement": true
         }
       ],
       "exports": [
         {
           "kind": "js",
-          "name": "LyraTabs",
+          "name": "LyraTabGroup",
           "declaration": {
-            "name": "LyraTabs",
-            "module": "src/components/layout/tabs/tabs.class.ts"
+            "name": "LyraTabGroup",
+            "module": "src/components/layout/tab-group/tab-group.class.ts"
           }
         }
       ]
     },
     {
       "kind": "javascript-module",
-      "path": "src/components/layout/tabs/tabs.ts",
+      "path": "src/components/layout/tab-group/tab-group.ts",
       "declarations": [],
       "exports": [
         {
           "kind": "custom-element-definition",
-          "name": "lr-tabs",
+          "name": "lr-tab-group",
           "declaration": {
-            "name": "LyraTabs",
-            "module": "src/components/layout/tabs/tabs.class.ts"
+            "name": "LyraTabGroup",
+            "module": "src/components/layout/tab-group/tab-group.class.ts"
           }
         },
         {
@@ -158706,7 +158855,845 @@
           "name": "*",
           "declaration": {
             "name": "*",
-            "module": "src/components/layout/tabs/tabs.class.js"
+            "module": "src/components/layout/tab-group/tab-group.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/layout/tab-group/tab-panel.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-tab-panel>` — the content revealed by the `<lr-tab>` whose `panel` matches this element's\n`name`. Mirrors `wa-tab-panel` / `sl-tab-panel`.\n\nDeliberately carries no `role=\"tabpanel\"` of its own: `<lr-tab-group>` renders the\n`role=\"tabpanel\"` wrapper this element is projected into, and a second nested tabpanel role\nwould leave the panel announced twice. Show/hide is the group's job too.",
+          "name": "LyraTabPanel",
+          "slots": [
+            {
+              "description": "The panel's content.",
+              "name": ""
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Matches the `panel` of the `<lr-tab>` that reveals this panel.",
+              "attribute": "name",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Matches the `panel` of the `<lr-tab>` that reveals this panel.",
+              "fieldName": "name"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lr-tab-panel",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraTabPanel",
+          "declaration": {
+            "name": "LyraTabPanel",
+            "module": "src/components/layout/tab-group/tab-panel.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/layout/tab-group/tab-panel.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-tab-panel",
+          "declaration": {
+            "name": "LyraTabPanel",
+            "module": "src/components/layout/tab-group/tab-panel.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/layout/tab-group/tab-panel.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/layout/tab-group/tab.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-tab>` — one tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.\n\nA declarative descriptor, not the interactive control: `<lr-tab-group>` renders the real\n`role=\"tab\"` button and projects this element's content into it, so the whole ARIA and\nroving-tabindex contract stays in one place. That means the content may be rich (an icon plus a\nlabel, a badge) while the button's accessible name is still exactly that content's text.\n\nPair it with a `<lr-tab-panel>` whose `name` matches this element's `panel`.",
+          "name": "LyraTab",
+          "slots": [
+            {
+              "description": "The tab's visible content.",
+              "name": ""
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Removes the tab from keyboard navigation and prevents activation.",
+              "attribute": "disabled",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "panel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The `name` of the `<lr-tab-panel>` this tab reveals.",
+              "attribute": "panel",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Removes the tab from keyboard navigation and prevents activation.",
+              "fieldName": "disabled"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "panel",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "The `name` of the `<lr-tab-panel>` this tab reveals.",
+              "fieldName": "panel"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lr-tab",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraTab",
+          "declaration": {
+            "name": "LyraTab",
+            "module": "src/components/layout/tab-group/tab.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/layout/tab-group/tab.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-tab",
+          "declaration": {
+            "name": "LyraTab",
+            "module": "src/components/layout/tab-group/tab.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/layout/tab-group/tab.class.js"
           }
         }
       ]
@@ -193194,7 +194181,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-entity-dossier>` — a full entity detail surface: a persistent header (`lr-entity-card` plus\nan optional confidence `lr-stat`) above a `lr-tabs` strip for Relationships (`lr-neighbor-list`),\nSupporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —\nit never fetches, ranks, or mutates graph/document state, and never re-renders what any of those\nfive composed components already render themselves; every one of their own events (`\nlr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tabs-change`)\nbubbles through unmodified (`composed: true` crosses this component's own shadow boundary with no\nre-dispatch needed).\n\n`chunks`/`thresholds` (the \"supporting chunks\" tab) and `provenance` (the \"Provenance\" tab) are\ndeliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks\nsection: the \"Supporting chunks\" tab is the evidence for *this entity's own* summary/properties,\nwhile `provenance` is the broader grounding chain (which may span other entities, relationships,\nand communities, and may or may not reuse the same chunk set) — a host is free to pass the same\narray to both when the two concepts genuinely coincide.\n\nTab labels reuse the exact `localize()` keys the composed child already uses for its own\naccessible name (`neighborListLabel`, `chunkInspectorLabel`, `provenancePanelLabel`) rather than\nnew dossier-specific keys, so a translated locale only has to cover each string once and the tab\nstrip and the panel underneath it always agree.\n\nThis component emits no events of its own. Its EventMap and `@event` documentation name the\ncomposed events that bubble through so host listeners remain typed and discoverable;\n`lr-tabs-change` carries `detail: { tabId: LyraEntityDossierTab }`. This is the same \"pure\nprojection + event conduit\" convention `lr-provenance-panel` and `lr-spreadsheet-viewer`'s\ninternal `lr-tabs` already establish.",
+          "description": "`<lr-entity-dossier>` — a full entity detail surface: a persistent header (`lr-entity-card` plus\nan optional confidence `lr-stat`) above a `lr-tab-group` strip for Relationships (`lr-neighbor-list`),\nSupporting chunks (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout —\nit never fetches, ranks, or mutates graph/document state, and never re-renders what any of those\nfive composed components already render themselves; every one of their own events (`\nlr-entity-activate`, `lr-node-expand`, `lr-chunk-open`, `lr-expand`, `lr-toggle`, `lr-tab-show`)\nbubbles through unmodified (`composed: true` crosses this component's own shadow boundary with no\nre-dispatch needed).\n\n`chunks`/`thresholds` (the \"supporting chunks\" tab) and `provenance` (the \"Provenance\" tab) are\ndeliberately separate inputs even though `lr-provenance-panel` can itself also show a chunks\nsection: the \"Supporting chunks\" tab is the evidence for *this entity's own* summary/properties,\nwhile `provenance` is the broader grounding chain (which may span other entities, relationships,\nand communities, and may or may not reuse the same chunk set) — a host is free to pass the same\narray to both when the two concepts genuinely coincide.\n\nTab labels reuse the exact `localize()` keys the composed child already uses for its own\naccessible name (`neighborListLabel`, `chunkInspectorLabel`, `provenancePanelLabel`) rather than\nnew dossier-specific keys, so a translated locale only has to cover each string once and the tab\nstrip and the panel underneath it always agree.\n\nThis component emits no events of its own. Its EventMap and `@event` documentation name the\ncomposed events that bubble through so host listeners remain typed and discoverable;\n`lr-tab-show` carries `detail: { tabId: LyraEntityDossierTab }`. This is the same \"pure\nprojection + event conduit\" convention `lr-provenance-panel` and `lr-spreadsheet-viewer`'s\ninternal `lr-tab-group` already establish.",
           "name": "LyraEntityDossier",
           "cssParts": [
             {
@@ -193230,7 +194217,7 @@
               "name": "provenance-panel"
             },
             {
-              "description": "The nested `lr-tabs` strip.",
+              "description": "The nested `lr-tab-group` strip.",
               "name": "tabs"
             }
           ],
@@ -193242,7 +194229,7 @@
                 "text": "string | null"
               },
               "default": "null",
-              "description": "Accessible name forwarded to the internal `lr-tabs` strip. Unset, the tab strip renders\nwithout an `aria-label` (matching `lr-tabs`' own unset-default behavior).",
+              "description": "Accessible name forwarded to the internal `lr-tab-group` strip. Unset, the tab strip renders\nwithout an `aria-label` (matching `lr-tab-group`' own unset-default behavior).",
               "attribute": "aria-label"
             },
             {
@@ -193253,7 +194240,7 @@
               },
               "privacy": "private",
               "default": "'relationships'",
-              "description": "Which tab is active -- internal, not a controlled public property: `lr-tabs` already owns\nthis state, and a one-way `.active=${...}` binding driven by a *stale* public property here\nwould fight the user's own click the next time this component re-renders for an unrelated\nreason (see `lr-spreadsheet-viewer`'s identical `activeSheetIndex` pattern)."
+              "description": "Which tab is active -- internal, not a controlled public property: `lr-tab-group` already owns\nthis state, and a one-way `.active=${...}` binding driven by a *stale* public property here\nwould fight the user's own click the next time this component re-renders for an unrelated\nreason (see `lr-spreadsheet-viewer`'s identical `activeSheetIndex` pattern)."
             },
             {
               "kind": "field",
@@ -193699,7 +194686,7 @@
             },
             {
               "description": "Surfaced unchanged from the embedded tabs. `detail: { tabId }`.",
-              "name": "lr-tabs-change"
+              "name": "lr-tab-show"
             },
             {
               "description": "Surfaced unchanged from the embedded provenance panel. `detail: { section, expanded }`.",
@@ -193713,7 +194700,7 @@
                 "text": "string | null"
               },
               "default": "null",
-              "description": "Accessible name forwarded to the internal `lr-tabs` strip. Unset, the tab strip renders\nwithout an `aria-label` (matching `lr-tabs`' own unset-default behavior).",
+              "description": "Accessible name forwarded to the internal `lr-tab-group` strip. Unset, the tab strip renders\nwithout an `aria-label` (matching `lr-tab-group`' own unset-default behavior).",
               "fieldName": "accessibleLabel"
             },
             {
@@ -196867,7 +197854,7 @@
                   }
                 }
               ],
-              "description": "The forward physical arrow key (`ArrowRight` in LTR, `ArrowLeft` under\n`dir=\"rtl\"` — see `isRtl()`) moves to the next roving-tabindex item, the\nbackward one to the previous, in flat array order (`simNodes` then\n`simLinks`) — the same `forwardKey`/`backwardKey` swap this library's\nother \"physical arrow key drives sequential previous/next\" components\n(`<lr-tabs>`, `<lr-slider>`, `<lr-segmented>`) apply under RTL.\n`ArrowDown`/`ArrowUp` always mean next/previous regardless of direction."
+              "description": "The forward physical arrow key (`ArrowRight` in LTR, `ArrowLeft` under\n`dir=\"rtl\"` — see `isRtl()`) moves to the next roving-tabindex item, the\nbackward one to the previous, in flat array order (`simNodes` then\n`simLinks`) — the same `forwardKey`/`backwardKey` swap this library's\nother \"physical arrow key drives sequential previous/next\" components\n(`<lr-tab-group>`, `<lr-slider>`, `<lr-segmented>`) apply under RTL.\n`ArrowDown`/`ArrowUp` always mean next/previous regardless of direction."
             },
             {
               "kind": "method",
@@ -242621,7 +243608,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "Fetches and renders `.xlsx` and legacy `.xls` workbooks with virtualized rows and sheet tabs.\n\nAdopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw grid, 1-based, with\nits (always-present) header row included -- matching how a spreadsheet app itself labels `A1`.\nThe target sheet resolves from the anchor's own `sheet` field (falling back to a `Sheet!`-prefixed\n`range`, then the currently active sheet when neither is set); `scrollToAnchor()` switches\n`<lr-tabs>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the\naddressed row into view via the virtualized list's `active-id`, then scrolls the first addressed\ncolumn horizontally into view. `highlights` paint a structural `part=\"cell-highlight\"` cell\nwrapping a focusable native `part=\"cell-highlight-action\"` button, recomputed per row inside\n`renderRow()` so a row scrolled out and back in reconstructs its highlight for free, with no\npersistent DOM to keep in sync. `search()` is a case-insensitive\nsubstring match over every sheet's stringified cell values (the same stringification `cell()`\nalready renders), ordered sheet then row then column, switching tabs as navigation crosses sheets.",
+          "description": "Fetches and renders `.xlsx` and legacy `.xls` workbooks with virtualized rows and sheet tabs.\n\nAdopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw grid, 1-based, with\nits (always-present) header row included -- matching how a spreadsheet app itself labels `A1`.\nThe target sheet resolves from the anchor's own `sheet` field (falling back to a `Sheet!`-prefixed\n`range`, then the currently active sheet when neither is set); `scrollToAnchor()` switches\n`<lr-tab-group>`'s `active` tab first when the resolved sheet isn't already active, then scrolls the\naddressed row into view via the virtualized list's `active-id`, then scrolls the first addressed\ncolumn horizontally into view. `highlights` paint a structural `part=\"cell-highlight\"` cell\nwrapping a focusable native `part=\"cell-highlight-action\"` button, recomputed per row inside\n`renderRow()` so a row scrolled out and back in reconstructs its highlight for free, with no\npersistent DOM to keep in sync. `search()` is a case-insensitive\nsubstring match over every sheet's stringified cell values (the same stringification `cell()`\nalready renders), ordered sheet then row then column, switching tabs as navigation crosses sheets.",
           "name": "LyraSpreadsheetViewer",
           "cssProperties": [
             {
@@ -242672,7 +243659,7 @@
               "name": "spinner"
             },
             {
-              "description": "The sheet-switching `<lr-tabs>`, rendered only for a multi-sheet workbook.",
+              "description": "The sheet-switching `<lr-tab-group>`, rendered only for a multi-sheet workbook.",
               "name": "tabs"
             }
           ],
@@ -242695,7 +243682,7 @@
               },
               "privacy": "private",
               "default": "0",
-              "description": "Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lr-tabs>`'s own\n`active` (as `sheet-${index}`), and switched by `scrollToAnchor()`/search navigation whenever\na match lives on a different sheet."
+              "description": "Index into `fetchState.sheets` of the sheet currently shown -- bound to `<lr-tab-group>`'s own\n`active` (as `sheet-${index}`), and switched by `scrollToAnchor()`/search navigation whenever\na match lives on a different sheet."
             },
             {
               "kind": "field",

@@ -14,7 +14,7 @@
 ## `lr-entity-dossier`
 
 Entity detail surface: a persistent header (`lr-entity-card` + an optional confidence `lr-stat`)
-above an `lr-tabs` strip for Relationships (`lr-neighbor-list`), Supporting chunks
+above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting chunks
 (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout — never fetches, ranks,
 or mutates graph/document state.
 
@@ -44,14 +44,14 @@ or mutates graph/document state.
 - `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name for the internal
-  `lr-tabs` strip; unset renders the strip with no `aria-label`
+  `lr-tab-group` strip; unset renders the strip with no `aria-label`
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
 (`composed: true`): `lr-entity-activate` (`detail: { id }`), `lr-node-expand` (`detail: { id }`),
 `lr-chunk-open` (`detail: { id, sourceId, anchor? }`), `lr-expand` (`detail: { id, expanded }`),
-`lr-toggle` (`detail: { section, expanded }`), and `lr-tabs-change`
+`lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tabs` slot/tab ids).
+| 'provenance'` — also the `lr-tab-group` slot/tab ids).
 
 **Slots:** none.
 
@@ -64,7 +64,7 @@ or mutates graph/document state.
 **Optional peer deps:** none.
 
 **Known gotchas:**
-- The active tab is internal `@state`, not a controlled property — `lr-tabs` already owns it, and a
+- The active tab is internal `@state`, not a controlled property — `lr-tab-group` already owns it, and a
   stale public property re-bound on an unrelated re-render would fight the user's own click.
 - Tab labels reuse each composed child's own `localize()` key (`neighborListLabel`,
   `chunkInspectorLabel`, `provenancePanelLabel`), so a locale only translates each string once.

@@ -33,7 +33,7 @@ family and entry point.
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 28 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 24 tags in `components/data/`
-- **Layout, navigation & structure** — 31 tags in `components/layout/`
+- **Layout, navigation & structure** — 33 tags in `components/layout/`
 - **Overlays, status & feedback** — 20 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
 - **Media, files & maps** — 18 tags in `components/media/`
@@ -5620,17 +5620,30 @@ orientation's minimum block size, ignored while horizontal.
 
 ---
 
-## `lr-tabs`
+## `lr-tab-group`
 
-A tab strip whose panels are direct light-DOM children, each carrying `slot="<id>"` (the panel's
-stable id) and `label="<text>"` (the tab button's text). One named `<slot>` is rendered per distinct
-`slot` name found among the current children — a child with no `label`, or a name with no matching
-child, simply never produces a tab. Implements the WAI-ARIA APG tabs pattern with automatic
-activation: Left/Right (swapped under RTL) move focus *and* selection together, Home/End jump to the
-first/last enabled tab, and a roving `tabindex` follows whichever tab is currently selected.
+A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
+
+**Two child models are accepted**, and a group is read as one or the other — never a mix.
+
+*Element model* (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so that
+markup renames mechanically. The group assigns the `slot` attributes itself; you never write them.
+Each `<lr-tab>`'s content is projected into the real `role="tab"` button, so a tab can carry an icon
+or a badge while the button's accessible name stays exactly that content's text. A group containing
+any `<lr-tab>` child is read purely as this model.
+
+*Attribute model* — this library's own original shape, fully supported: panels are direct light-DOM
+children carrying `slot="<id>"` (the panel's stable id) and `label="<text>"` (the tab button's text).
+One named `<slot>` is rendered per distinct `slot` name found among the current children; a child
+with no `label`, or a name with no matching child, simply never produces a tab.
+
+Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right (swapped
+under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection together; with
+`activation="manual"` they move focus only and Enter/Space commits. Home/End jump to the first/last
+enabled tab, and a roving `tabindex` follows the focused tab.
 
 A tab button's *visible* content can carry a leading icon without ever changing its *accessible
-name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tabs>`
+name* (always exactly `label`'s text): give a tab an extra direct-child sibling of `<lr-tab-group>`
 carrying `slot="<id>-icon"` (that sibling's own content — inline SVG, emoji span, a custom icon
 element, anything — is entirely up to the consumer). It renders ahead of the label inside that tab's
 button, wrapped in an `aria-hidden="true"` `[part="tab-icon"]` so it's excluded from accessible-name
@@ -5644,14 +5657,37 @@ wrapper at all, so existing text-only tabs are unaffected.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name applied to the
   `role="tablist"` strip; attribute-reflects from a host-level `aria-label`. Unset, the tablist
   renders without an `aria-label` (there is no localized default name).
+- `placement: 'top' | 'bottom' | 'start' | 'end' = 'top'` (attribute `placement`, reflected) — which
+  edge the strip sits on. `start`/`end` are *logical*, so they mirror under RTL with no `:dir()`
+  rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
+  switches the navigation keys to Up/Down per the APG.
+- `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
+  moves focus only and waits for Enter or Space. Use `manual` whenever revealing a panel is
+  expensive: automatic activation would reveal every panel the user arrows past. Under `manual` the
+  roving `tabindex="0"` sits on the *focused* tab, which may differ from the selected one.
 
-**Events:** `lr-tabs-change` (`detail: { tabId: string }`) — fired when the active tab changes via
-click or keyboard. Not fired when `active` self-corrects to a valid tab (initial default, or a tab
-disappearing/becoming disabled underneath the current selection).
+**Events:**
+- `lr-tab-show` (`detail: { tabId: string }`) — a tab became active via click or keyboard. Not fired
+  when `active` self-corrects to a valid tab (initial default, or a tab disappearing/becoming
+  disabled underneath the current selection).
+- `lr-tab-hide` (`detail: { tabId: string }`) — the outgoing tab, emitted immediately *before* the
+  matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
+  that builds the new one. Not fired when there was no previous selection.
 
-**Slots:** default — direct children with `slot="<id>" label="<text>"` (and optionally `disabled`);
-one becomes each tab's panel. `<id>-icon` — optional sibling direct child supplying a tab's leading
-icon content; excluded from the tab button's accessible name.
+**Slots:** default — either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with
+`slot="<id>" label="<text>"` (and optionally `disabled`), one becoming each tab's panel. `<id>-icon`
+— optional sibling direct child supplying a tab's leading icon content, in the attribute model only;
+excluded from the tab button's accessible name.
+
+```html
+<!-- element model: renames straight across from wa-/sl- -->
+<lr-tab-group placement="start" activation="manual">
+  <lr-tab panel="general">General</lr-tab>
+  <lr-tab panel="danger" disabled>Danger zone</lr-tab>
+  <lr-tab-panel name="general">General settings</lr-tab-panel>
+  <lr-tab-panel name="danger">Danger zone</lr-tab-panel>
+</lr-tab-group>
+```
 
 **CSS parts:** `base` (root wrapper around the tablist and panels), `tablist` (the `role="tablist"`
 row of tab buttons), `tab` (a single tab button), `tab-icon` (the optional leading-icon wrapper
@@ -5659,11 +5695,11 @@ inside a tab button; only rendered when that tab has a matching `<id>-icon` sibl
 single `role="tabpanel"` wrapper, one per tab, hidden unless active)
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the static
-mask fade at each horizontal scroll edge of the tablist. `--lr-tabs-selected-color` (default
+mask fade at each horizontal scroll edge of the tablist. `--lr-tab-group-selected-color` (default
 `var(--lr-color-brand)`) — text color of the selected tab, scoped to `[aria-selected='true']` only,
-so it never repaints a hovered unselected tab. `--lr-tabs-indicator-color` (default
+so it never repaints a hovered unselected tab. `--lr-tab-group-indicator-color` (default
 `var(--lr-color-brand)`) — the selected tab's underline, themeable independently of its text color.
-`--lr-tabs-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
+`--lr-tab-group-hover-color` (default `var(--lr-color-text)`) — text color of a hovered, non-disabled
 tab, independent of the two selected-state hooks. All three are declared as inline `var()` fallbacks
 at the point of use rather than on `:host`, so each can be set on the element *or on any ancestor* —
 the pattern exists because `::part(tab)[aria-selected='true']` is invalid CSS (Shadow Parts forbids
@@ -5677,12 +5713,12 @@ before, so rendering is unchanged. Otherwise shared tokens —
 **Optional peer deps:** none.
 
 ```html
-<lr-tabs active="general">
+<lr-tab-group active="general">
   <div slot="general" label="General">General settings…</div>
   <div slot="advanced" label="Advanced" disabled>Advanced settings…</div>
-</lr-tabs>
+</lr-tab-group>
 <script type="module">
-  document.querySelector('lr-tabs').addEventListener('lr-tabs-change', (e) => console.log(e.detail.tabId));
+  document.querySelector('lr-tab-group').addEventListener('lr-tab-show', (e) => console.log(e.detail.tabId));
 </script>
 ```
 
@@ -5827,6 +5863,45 @@ each falls back to the token its rule used before. Otherwise shared tokens —
   navigation remain available independently of those semantics.
 - Left/Right (horizontal) and Up/Down (vertical) are mutually exclusive per `orientation` — there's
   no single set of keys that works in both.
+
+---
+
+## `lr-tab`
+
+One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
+
+A **declarative descriptor, not the interactive control**: the group renders the real `role="tab"`
+button and projects this element's content into it, so the whole ARIA and roving-tabindex contract
+stays in one place. The host is `display: contents`, contributing no box of its own inside that
+button.
+
+**Properties:** `panel: string = ''` (reflected) — the `name` of the `<lr-tab-panel>` this tab
+reveals; `disabled: boolean = false` (reflected) — removes the tab from keyboard navigation and
+prevents activation.
+
+**Events:** none — the owning group emits `lr-tab-show`/`lr-tab-hide`. **Slots:** default (the tab's
+visible content). **CSS parts:** none; style the group's `tab` part instead.
+**Themeable custom properties:** none.
+
+The group writes this element's `slot` attribute itself. A tab with no `panel` still gets a stable
+synthetic name from its position, so an unpaired tab renders a button with an empty panel rather
+than silently disappearing.
+
+---
+
+## `lr-tab-panel`
+
+The content revealed by the `<lr-tab>` whose `panel` matches this element's `name`. Mirrors
+`wa-tab-panel` / `sl-tab-panel`.
+
+Deliberately carries **no `role="tabpanel"` of its own**: the group renders the `role="tabpanel"`
+wrapper this element is projected into, and a second nested tabpanel role would leave the panel
+announced twice. Show/hide is the group's job too — this element is always present in the DOM.
+
+**Properties:** `name: string = ''` (reflected) — matches the `panel` of the `<lr-tab>` that reveals
+it. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** none; style the
+group's `panel` part instead. **Themeable custom properties:** none.
+---
 
 ---
 
@@ -7200,7 +7275,7 @@ or agent runs. It renders a breadcrumb path and delegates category content to ex
 
 **Properties:** `path: DrilldownNode[] = []` and `types: NodeTypeStyle[] = []` (both attribute:
 false), `accessibleLabel: string | null = null` (attribute `aria-label` — names the nested
-`lr-tabs`; unset renders no `aria-label` at all, matching `lr-tabs`' own default),
+`lr-tab-group`; unset renders no `aria-label` at all, matching `lr-tab-group`' own default),
 `communityLabel: string = ''` (attribute `community-label`), `showFocusButton: boolean = true`
 (attribute `show-focus-button`). **Events:**
 `lr-drilldown-navigate` (`detail: { id, index }`). **Slots:** `runs`. **CSS parts:** `base`,
@@ -12211,12 +12286,12 @@ prevents stale page/text/region work from scrolling or reporting success.
 ## `lr-spreadsheet-viewer`
 
 Fetches and renders `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer. Multiple
-worksheets render through a `<lr-tabs>` switcher, and body rows use `<lr-virtual-list>`.
+worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
 
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses one sheet's raw grid, 1-based, with
 its header row included, resolving the target sheet from the anchor's own `sheet` field (falling
 back to a `Sheet!`-prefixed `range`, then the active sheet); `scrollToAnchor()` switches
-`<lr-tabs>`'s active tab first when needed, then scrolls the addressed row/column into view.
+`<lr-tab-group>`'s active tab first when needed, then scrolls the addressed row/column into view.
 `highlights` paint as a focusable `part="cell-highlight"`.
 
 **Properties:** `src` and `name` are strings. `anchorKinds` is a readonly `['cell-range']` (this
@@ -15614,10 +15689,10 @@ registerToolRenderer('web_search', {
 ## `lr-tool-result-dialog`
 
 A full tool-call detail overlay: a status/duration header plus a `body` slot where a consumer
-typically places a `<lr-tabs>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
+typically places a `<lr-tab-group>` with Input/Preview/JSON/Raw panels. First-party invention (no Web
 Awesome equivalent). This component knows nothing about what's inside that slot — it only supplies
 the modal chrome around it. It keeps its own shadow template rather than nesting a `<lr-dialog>`,
-so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tabs>`'s own light-DOM
+so slot-forwarding does not put a forwarding `<slot>` where a slotted `<lr-tab-group>`'s own light-DOM
 child scan expects real projected content, while its modal behavior participates in the shared
 overlay stack.
 
@@ -15644,7 +15719,7 @@ reason string so every dismissal path funnels through the same event.
 'close-button'|'api'|string`) fired exactly once per dismissal; `lr-maximize-change` (`detail:
 boolean`, the new `maximized` state) fired when the header's maximize/restore toggle is clicked.
 
-**Slots:** `body` (the dialog's main content — typically a `<lr-tabs>` with Input/Preview/JSON/Raw
+**Slots:** `body` (the dialog's main content — typically a `<lr-tab-group>` with Input/Preview/JSON/Raw
 panels, entirely consumer-assembled), `footer` (optional action buttons, rendered in a bottom row —
 the footer row itself is hidden via `[hidden]` when nothing is slotted)
 
@@ -15673,10 +15748,10 @@ tokens `--lr-color-surface/-border/-text-quiet/-brand/-brand-quiet/-success/-suc
   @lr-close=${(e) => (dialogOpen = false)}
   @lr-maximize-change=${(e) => console.log('maximized:', e.detail)}
 >
-  <lr-tabs slot="body">
+  <lr-tab-group slot="body">
     <div slot="preview" label="Preview">…</div>
     <div slot="json" label="JSON"><lr-json-viewer .data=${result}></lr-json-viewer></div>
-  </lr-tabs>
+  </lr-tab-group>
   <button slot="footer">Rerun</button>
 </lr-tool-result-dialog>
 ```
@@ -15698,7 +15773,7 @@ state, so no additional scroll-lock/focus-trap bookkeeping is needed for that tr
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no intervening update, so
   `willUpdate` never reruns to notice `open` did not change
 - this component deliberately does **not** compose `<lr-dialog>` internally; it keeps its own
-  panel template so a slotted `<lr-tabs>` (or any other light-DOM-scanning child) sees real
+  panel template so a slotted `<lr-tab-group>` (or any other light-DOM-scanning child) sees real
   projected content rather than a forwarding `<slot>`, while still sharing the overlay stack
 - `close()` is a no-op when `open` is already `false` — calling it twice in a row only fires
   `lr-close` once
@@ -18667,7 +18742,7 @@ time.
 ## `lr-entity-dossier`
 
 Entity detail surface: a persistent header (`lr-entity-card` + an optional confidence `lr-stat`)
-above an `lr-tabs` strip for Relationships (`lr-neighbor-list`), Supporting chunks
+above an `lr-tab-group` strip for Relationships (`lr-neighbor-list`), Supporting chunks
 (`lr-chunk-inspector`), and Provenance (`lr-provenance-panel`). Pure layout — never fetches, ranks,
 or mutates graph/document state.
 
@@ -18697,14 +18772,14 @@ or mutates graph/document state.
 - `showFocusButton: boolean = true` (attribute `show-focus-button`) — forwarded to `lr-entity-card`
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name for the internal
-  `lr-tabs` strip; unset renders the strip with no `aria-label`
+  `lr-tab-group` strip; unset renders the strip with no `aria-label`
 
 **Events:** declares none of its own. Every composed child's event bubbles through unmodified
 (`composed: true`): `lr-entity-activate` (`detail: { id }`), `lr-node-expand` (`detail: { id }`),
 `lr-chunk-open` (`detail: { id, sourceId, anchor? }`), `lr-expand` (`detail: { id, expanded }`),
-`lr-toggle` (`detail: { section, expanded }`), and `lr-tabs-change`
+`lr-toggle` (`detail: { section, expanded }`), and `lr-tab-show`
 (`detail: { tabId: LyraEntityDossierTab }`, where `LyraEntityDossierTab = 'relationships' | 'chunks'
-| 'provenance'` — also the `lr-tabs` slot/tab ids).
+| 'provenance'` — also the `lr-tab-group` slot/tab ids).
 
 **Slots:** none.
 
@@ -18717,7 +18792,7 @@ or mutates graph/document state.
 **Optional peer deps:** none.
 
 **Known gotchas:**
-- The active tab is internal `@state`, not a controlled property — `lr-tabs` already owns it, and a
+- The active tab is internal `@state`, not a controlled property — `lr-tab-group` already owns it, and a
   stale public property re-bound on an unrelated re-render would fight the user's own click.
 - Tab labels reuse each composed child's own `localize()` key (`neighborListLabel`,
   `chunkInspectorLabel`, `provenancePanelLabel`), so a locale only translates each string once.

@@ -906,7 +906,7 @@ describe("horizontal step row overflow", () => {
     expect(maskImage).to.equal("none");
   });
 
-  it("shows a mask-image edge fade on the horizontally-scrolling step row once it overflows, matching lr-tabs/lr-segmented", async () => {
+  it("shows a mask-image edge fade on the horizontally-scrolling step row once it overflows, matching lr-tab-group/lr-segmented", async () => {
     const el = (await fixture(
       html`<lr-stepper
         style="display: block; max-inline-size: 90px"

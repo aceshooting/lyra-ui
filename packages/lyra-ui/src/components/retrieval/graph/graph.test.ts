@@ -3095,7 +3095,7 @@ describe('data-list aria-label localization', () => {
 describe('RTL keyboard navigation', () => {
   // Matches the `forwardKey`/`backwardKey` swap this library's other
   // "physical arrow key drives sequential previous/next" components
-  // (lr-tabs, lr-slider, lr-segmented) apply under dir="rtl": the
+  // (lr-tab-group, lr-slider, lr-segmented) apply under dir="rtl": the
   // physical ArrowLeft becomes "next" and ArrowRight becomes "previous".
   it('swaps ArrowLeft/ArrowRight roving-tabindex navigation under dir="rtl"', async () => {
     const wrapper = (await fixture(

@@ -5,7 +5,7 @@ import type { LyraEntity } from '../entity-card/entity-card.js';
 import type { LyraNeighborRow } from '../neighbor-list/neighbor-list.js';
 import type { LyraChunk } from '../chunk-inspector/chunk-inspector.js';
 import type { LyraProvenance } from '../provenance-panel/provenance-panel.js';
-import type { LyraTabs } from '../../layout/tabs/tabs.js';
+import type { LyraTabGroup } from '../../layout/tab-group/tab-group.js';
 import type { LyraNeighborList } from '../neighbor-list/neighbor-list.js';
 import type { LyraChunkInspector } from '../chunk-inspector/chunk-inspector.js';
 import type { LyraProvenancePanel } from '../provenance-panel/provenance-panel.js';
@@ -62,7 +62,7 @@ it('renders the noData empty state and no tabs when entity is null', async () =>
   const empty = el.shadowRoot!.querySelector('[part="empty"]');
   expect(empty).to.exist;
   expect(empty!.getAttribute('heading')).to.equal('No data');
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.not.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.not.exist;
 });
 
 it('renders lr-entity-card with entity/types/communityLabel/showFocusButton forwarded', async () => {
@@ -110,7 +110,7 @@ it('renders the confidence lr-stat with every field forwarded when confidence is
 
 it('renders three tabs labelled Relationships, Retrieved chunks, and Grounding, reusing the composed children\'s own default strings', async () => {
   const el = await populated();
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
   expect(labels).to.deep.equal(['Relationships', 'Retrieved chunks', 'Grounding']);
@@ -118,7 +118,7 @@ it('renders three tabs labelled Relationships, Retrieved chunks, and Grounding, 
 
 it('defaults to the relationships tab active', async () => {
   const el = await populated();
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   expect(tabs.active).to.equal('relationships');
 });
 
@@ -151,12 +151,12 @@ it('forwards provenance and types to lr-provenance-panel', async () => {
   expect(panel.types).to.deep.equal([{ id: 'person', label: 'Person' }]);
 });
 
-it('switches the active tab and re-renders lr-tabs.active when a tab button is clicked', async () => {
+it('switches the active tab and re-renders lr-tab-group.active when a tab button is clicked', async () => {
   const el = await populated();
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   await tabs.updateComplete;
   const chunksTabButton = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].find((b) => b.textContent!.trim() === 'Retrieved chunks') as HTMLButtonElement;
-  const listener = oneEvent(el, 'lr-tabs-change');
+  const listener = oneEvent(el, 'lr-tab-show');
   chunksTabButton.click();
   const event = await listener;
   expect(event.detail.tabId).to.equal('chunks');
@@ -174,11 +174,11 @@ it('lets a deeply-nested composed event (lr-entity-activate from lr-entity-card,
   expect(event.detail).to.deep.equal({ id: 'e1' });
 });
 
-it('forwards a host aria-label to the internal lr-tabs strip', async () => {
+it('forwards a host aria-label to the internal lr-tab-group strip', async () => {
   const el = (await fixture(html`<lr-entity-dossier aria-label="Entity detail"></lr-entity-dossier>`)) as LyraEntityDossier;
   el.entity = entity;
   await el.updateComplete;
-  const tabs = el.shadowRoot!.querySelector('lr-tabs')!;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group')!;
   expect(tabs.getAttribute('aria-label')).to.equal('Entity detail');
 });
 
@@ -186,7 +186,7 @@ it('honors a .strings override of a reused key (neighborListLabel) on the relati
   const el = await populated();
   el.strings = { neighborListLabel: 'Relations' };
   await el.updateComplete;
-  const tabs = el.shadowRoot!.querySelector('lr-tabs') as LyraTabs;
+  const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   await tabs.updateComplete;
   const labels = [...tabs.shadowRoot!.querySelectorAll('[part="tab"]')].map((b) => b.textContent!.trim());
   expect(labels[0]).to.equal('Relations');
@@ -200,7 +200,7 @@ it('renders correctly under dir="rtl"', async () => {
   el.chunks = chunks;
   el.provenance = provenance;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('lr-tabs')).to.exist;
+  expect(el.shadowRoot!.querySelector('lr-tab-group')).to.exist;
   await expect(el).to.be.accessible();
 });
 

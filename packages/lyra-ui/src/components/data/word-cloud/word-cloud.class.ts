@@ -294,7 +294,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       this.announce(order[next]!);
       return;
     }
-    // Left/Right swap under RTL, matching lr-tabs's/lr-tree's identical
+    // Left/Right swap under RTL, matching lr-tab-group's/lr-tree's identical
     // physical-direction handling; Up/Down are direction-agnostic and always
     // mean next/previous through the same stable nav order.
     const rtl = isRtl(this);

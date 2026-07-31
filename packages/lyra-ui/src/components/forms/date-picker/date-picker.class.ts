@@ -358,7 +358,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     // explicit `direction` override, so under `dir="rtl"` the browser mirrors
     // the column order itself (day 1 of the week renders at the inline-start
     // edge, which `direction` puts on the right) -- the same auto-mirroring
-    // `<lr-tabs>`/`<lr-split>`/`<lr-tree>` rely on for their own
+    // `<lr-tab-group>`/`<lr-split>`/`<lr-tree>` rely on for their own
     // row/track layouts. So ArrowLeft/ArrowRight must swap which physical key
     // advances a day, or keyboard nav would point the opposite way from what
     // the mirrored grid shows. ArrowUp/ArrowDown move by week (the block

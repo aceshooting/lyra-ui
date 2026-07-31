@@ -60,7 +60,7 @@ it('pins overflow-x explicitly alongside overflow-y so the transcript never grow
   // Per the CSS overflow spec, pinning only overflow-y to a non-'visible' value still forces the
   // other axis's *used* value to 'auto' (never 'visible') -- so a sub-pixel-wide inline code span
   // or a fractional-width bubble under zoom could trip a spurious horizontal scrollbar unless
-  // overflow-x is pinned explicitly too (mirrors lr-tabs's fix for the identical bug class).
+  // overflow-x is pinned explicitly too (mirrors lr-tab-group's fix for the identical bug class).
   const el = (await fixture(html`<lr-chat-viewport></lr-chat-viewport>`)) as LyraChatViewport;
   const scroll = getComputedStyle(el.shadowRoot!.querySelector('[part="scroll"]') as HTMLElement);
   expect(scroll.overflowX).to.equal('hidden');

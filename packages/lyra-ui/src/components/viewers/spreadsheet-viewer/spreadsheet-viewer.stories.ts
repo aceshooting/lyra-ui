@@ -12,7 +12,7 @@ export const Empty: Story = { render: () => html`<lr-spreadsheet-viewer></lr-spr
 export const FailedFetch: Story = { render: () => html`<lr-spreadsheet-viewer src="https://example.invalid/missing.xlsx" name="missing.xlsx"></lr-spreadsheet-viewer>` };
 
 /** A narrow host (320px), matching the library's baseline narrow-allocation check -- confirms the
- *  grid header row and its `<lr-tabs>`/virtualized body scroll horizontally instead of overflowing
+ *  grid header row and its `<lr-tab-group>`/virtualized body scroll horizontally instead of overflowing
  *  the allocation, matching lr-dataset-viewer's identical narrow-story precedent. */
 export const Narrow320: Story = {
   render: () => html`<div style="max-width:320px"><lr-spreadsheet-viewer src=${src} name="people.xlsx"></lr-spreadsheet-viewer></div>`,

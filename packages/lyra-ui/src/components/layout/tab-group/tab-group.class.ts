@@ -4,8 +4,9 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { nextId } from '../../../internal/a11y.js';
+import { tag } from '../../../internal/prefix.js';
 import { observeScrollOverflow } from '../../../internal/scroll-overflow.js';
-import { styles } from './tabs.styles.js';
+import { styles } from './tab-group.styles.js';
 import { activeElementIn } from '../../../internal/active-element.js';
 
 /**
@@ -18,13 +19,31 @@ interface TabDef {
   label: string;
   disabled: boolean;
   hasIcon: boolean;
+  /** `element` when the tab came from an `<lr-tab>`, whose content the button projects instead of
+   *  rendering `label` as text. `attribute` is the panel-attribute shape. */
+  source: 'attribute' | 'element';
 }
 
-export interface LyraTabsEventMap {
-  'lr-tabs-change': CustomEvent<{ tabId: string }>;
+/** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
+export type TabGroupPlacement = 'top' | 'bottom' | 'start' | 'end';
+
+/**
+ * `auto` moves selection with focus (the APG's automatic activation). `manual` moves focus only,
+ * and the user commits with Enter or Space — required by the APG whenever revealing a panel is
+ * expensive, since automatic activation would load every panel the user arrows past.
+ */
+export type TabGroupActivation = 'auto' | 'manual';
+
+/** Fallback panel name for an `<lr-tab>` with no `panel` attribute -- keyed by position so it is
+ *  stable across re-syncs, and prefixed so it cannot collide with an author-chosen name. */
+const SYNTHETIC_PANEL_PREFIX = 'lr-tab-';
+
+export interface LyraTabGroupEventMap {
+  'lr-tab-show': CustomEvent<{ tabId: string }>;
+  'lr-tab-hide': CustomEvent<{ tabId: string }>;
 }
 /**
- * `<lr-tabs>` — a tab strip whose panels are direct light-DOM children,
+ * `<lr-tab-group>` — a tab strip whose panels are direct light-DOM children,
  * each carrying `slot="<id>"` (the panel's stable id) and `label="<text>"`
  * (the tab button's text). One named `<slot>` is rendered per distinct
  * `slot` name found among the current children — a child with no `label`,
@@ -33,7 +52,7 @@ export interface LyraTabsEventMap {
  * A tab button's *visible* content can carry a leading icon without ever
  * changing its *accessible name* (which always stays exactly `label`'s
  * text, nothing else): give a tab an extra direct-child sibling of
- * `<lr-tabs>` carrying `slot="<id>-icon"` (that sibling's own content --
+ * `<lr-tab-group>` carrying `slot="<id>-icon"` (that sibling's own content --
  * an inline SVG, an emoji span, a custom icon element, anything -- is
  * entirely up to the consumer). It's rendered ahead of the label inside
  * that tab's button, wrapped in an `aria-hidden="true"` part so it's
@@ -46,15 +65,23 @@ export interface LyraTabsEventMap {
  * name-keyed registry -- a slot lets a consumer supply an arbitrary,
  * domain-specific icon instead of being limited to that internal set.)
  *
- * Implements the WAI-ARIA APG tabs pattern with automatic activation:
- * Left/Right (swapped under RTL) move focus *and* selection together,
- * Home/End jump to the first/last enabled tab, and a roving `tabindex`
- * follows whichever tab is currently selected.
+ * Implements the WAI-ARIA APG tabs pattern. With the default `activation="auto"`, Left/Right
+ * (swapped under RTL, or Up/Down when `placement` is `start`/`end`) move focus *and* selection
+ * together; with `activation="manual"` they move focus only and Enter/Space commits, which the APG
+ * requires whenever revealing a panel is expensive. Home/End jump to the first/last enabled tab,
+ * and a roving `tabindex` follows the focused tab.
  *
- * @customElement lr-tabs
- * @slot - Direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
- * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content; excluded from the tab button's accessible name.
- * @event lr-tabs-change - `detail: { tabId }`, fired when the active tab changes via click or keyboard.
+ * **Two child models are accepted.** `<lr-tab panel="x">` plus `<lr-tab-panel name="x">` mirrors
+ * `wa-tab-group`/`sl-tab-group`, so that markup renames mechanically; the group assigns the `slot`
+ * attributes itself. The attribute model described above is this library's own original shape and
+ * remains fully supported. A group containing any `<lr-tab>` child is read purely as the element
+ * model, so the two never interleave ambiguously.
+ *
+ * @customElement lr-tab-group
+ * @slot - Either `<lr-tab>`/`<lr-tab-panel>` pairs, or direct children with `slot="<id>" label="<text>"` (and optionally `disabled`); one becomes each tab's panel.
+ * @slot <id>-icon - Optional sibling direct child supplying a tab's leading icon content, in the attribute model only; excluded from the tab button's accessible name.
+ * @event lr-tab-show - `detail: { tabId }`, fired when a tab becomes active via click or keyboard.
+ * @event lr-tab-hide - `detail: { tabId }`, fired for the outgoing tab immediately before `lr-tab-show`.
  * @csspart base - The root wrapper around the tablist and panels.
  * @csspart tablist - The `role="tablist"` row of tab buttons.
  * @csspart tab - A single tab button.
@@ -62,15 +89,15 @@ export interface LyraTabsEventMap {
  * @csspart panel - A single `role="tabpanel"` wrapper (one per tab, hidden unless active).
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
  *   fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.
- * @cssprop [--lr-tabs-selected-color=var(--lr-color-brand)] - Text color of the selected tab.
+ * @cssprop [--lr-tab-group-selected-color=var(--lr-color-brand)] - Text color of the selected tab.
  *   Scoped to `[aria-selected='true']` only, so it never repaints a hovered unselected tab (which
  *   is what hijacking `--lr-color-brand` library-wide used to do).
- * @cssprop [--lr-tabs-indicator-color=var(--lr-color-brand)] - Color of the selected tab's
+ * @cssprop [--lr-tab-group-indicator-color=var(--lr-color-brand)] - Color of the selected tab's
  *   underline, themeable independently of its text color.
- * @cssprop [--lr-tabs-hover-color=var(--lr-color-text)] - Text color of a hovered, non-disabled tab.
+ * @cssprop [--lr-tab-group-hover-color=var(--lr-color-text)] - Text color of a hovered, non-disabled tab.
  *   Independent of the selected-state props above.
  */
-export class LyraTabs extends LyraElement<LyraTabsEventMap> {
+export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   /** The active tab's `slot`/id. Falls back to the first enabled tab whenever the current value doesn't resolve to one. */
@@ -82,9 +109,20 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
    *  default name). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  @state() private tabs: TabDef[] = [];
+  /** Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make
+   *  the tablist vertical, which swaps the navigation keys to Up/Down per the APG. */
+  @property({ reflect: true }) placement: TabGroupPlacement = 'top';
 
-  private baseId = nextId('tabs');
+  /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
+   *  Enter or Space — the APG requirement for panels that are expensive to reveal. */
+  @property({ reflect: true }) activation: TabGroupActivation = 'auto';
+
+  @state() private tabs: TabDef[] = [];
+  /** Where keyboard focus currently sits under `activation="manual"`, which is allowed to differ
+   *  from `active`. Under `auto` the two are always the same, so this simply follows selection. */
+  @state() private focusedTab = '';
+
+  private baseId = nextId('tab-group');
   private nextOpaqueId = 0;
   private readonly idsBySlot = new Map<string, { tab: string; panel: string }>();
   private mutationObserver?: MutationObserver;
@@ -134,20 +172,22 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     this.mutationObserver = undefined;
   }
 
-  /** Rebuilds `tabs` from the current direct children. First child wins when two share a `slot` name (matches native slot assignment: both would render into the one panel, but only one label can back the button). */
+  /**
+   * Rebuilds `tabs` from the current direct children, in whichever of the two child models they
+   * use. First child wins when two share a name (matching native slot assignment: both would
+   * render into the one panel, but only one label can back the button).
+   *
+   * **Element model** (`<lr-tab panel="x">` + `<lr-tab-panel name="x">`) mirrors both upstreams, so
+   * `wa-tab-group`/`sl-tab-group` markup renames mechanically. **Attribute model** (any child with
+   * `slot="x" label="…"`) is this library's own original shape and stays fully supported — several
+   * components here compose it. A group using any `<lr-tab>` child is read purely as the element
+   * model, so the two never interleave ambiguously within one group.
+   */
   private syncTabs = (): void => {
-    const seen = new Set<string>();
-    const next: TabDef[] = [];
     const children = Array.from(this.children);
-    for (const child of children) {
-      const slotName = child.getAttribute('slot');
-      const label = child.getAttribute('label');
-      if (!slotName || !label || seen.has(slotName)) continue;
-      seen.add(slotName);
-      const iconSlot = this.iconSlotName(slotName);
-      const hasIcon = children.some((c) => c.getAttribute('slot') === iconSlot);
-      next.push({ slotName, label, disabled: child.hasAttribute('disabled'), hasIcon });
-    }
+    const next = children.some((child) => child.localName === tag('tab'))
+      ? this.readElementModel(children)
+      : this.readAttributeModel(children);
     const liveSlots = new Set(next.map((tab) => tab.slotName));
     for (const slotName of this.idsBySlot.keys()) {
       if (!liveSlots.has(slotName)) this.idsBySlot.delete(slotName);
@@ -155,7 +195,57 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     this.tabs = next;
   };
 
-  /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tabs-change`): this corrects *invalid* state rather than responding to a user picking a different tab. */
+  private readAttributeModel(children: Element[]): TabDef[] {
+    const seen = new Set<string>();
+    const next: TabDef[] = [];
+    for (const child of children) {
+      const slotName = child.getAttribute('slot');
+      const label = child.getAttribute('label');
+      if (!slotName || !label || seen.has(slotName)) continue;
+      seen.add(slotName);
+      const iconSlot = this.iconSlotName(slotName);
+      const hasIcon = children.some((c) => c.getAttribute('slot') === iconSlot);
+      next.push({ slotName, label, disabled: child.hasAttribute('disabled'), hasIcon, source: 'attribute' });
+    }
+    return next;
+  }
+
+  /**
+   * Reads `<lr-tab>`/`<lr-tab-panel>` pairs and assigns each one the `slot` that lands it in the
+   * right place: a tab projects into its own button, a panel into its own tabpanel wrapper. Writing
+   * `slot` here rather than asking consumers to is what keeps the upstream markup a pure rename --
+   * and it is idempotent, so the mutation observer that sees the write does not re-enter.
+   *
+   * A tab with no `panel` still gets a stable synthetic name from its position, so an unpaired tab
+   * renders a button with an empty panel instead of silently disappearing.
+   */
+  private readElementModel(children: Element[]): TabDef[] {
+    const seen = new Set<string>();
+    const next: TabDef[] = [];
+    const panels = children.filter((child) => child.localName === tag('tab-panel'));
+    let index = 0;
+    for (const child of children) {
+      if (child.localName !== tag('tab')) continue;
+      const slotName = child.getAttribute('panel') || `${SYNTHETIC_PANEL_PREFIX}${index}`;
+      index += 1;
+      if (seen.has(slotName)) continue;
+      seen.add(slotName);
+      const tabSlot = this.tabSlotName(slotName);
+      if (child.getAttribute('slot') !== tabSlot) child.setAttribute('slot', tabSlot);
+      const panel = panels.find((candidate) => candidate.getAttribute('name') === slotName);
+      if (panel && panel.getAttribute('slot') !== slotName) panel.setAttribute('slot', slotName);
+      next.push({
+        slotName,
+        label: (child.textContent ?? '').trim(),
+        disabled: child.hasAttribute('disabled'),
+        hasIcon: false,
+        source: 'element',
+      });
+    }
+    return next;
+  }
+
+  /** Keeps `active` resolved to a real, enabled tab -- covers the initial default, a tab disappearing/becoming disabled underneath the current selection, and a consumer assigning `.active` directly. Silent (no `lr-tab-show`): this corrects *invalid* state rather than responding to a user picking a different tab. */
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     if (!changed.has('tabs') && !changed.has('active')) return;
@@ -165,6 +255,7 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
       activeElementIn(this.renderRoot as ShadowRoot)?.getAttribute('part') ===
       'tab';
     this.active = this.tabs.find((t) => !t.disabled)?.slotName ?? '';
+    this.focusedTab = this.active;
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -176,11 +267,30 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
       ?.focus();
   }
 
-  /** Activates `tab` (no-op for a disabled tab or one that's already active) and emits `lr-tabs-change`. */
+  /** Activates `tab` (no-op for a disabled tab or one that's already active), emitting
+   *  `lr-tab-hide` for the outgoing tab before `lr-tab-show` for the incoming one, so a listener
+   *  that tears down the old panel always runs before the one that builds the new one. */
   private selectTab(tab: TabDef): void {
     if (tab.disabled || tab.slotName === this.active) return;
+    const previous = this.active;
     this.active = tab.slotName;
-    this.emit('lr-tabs-change', { tabId: tab.slotName });
+    this.focusedTab = tab.slotName;
+    if (previous) this.emit('lr-tab-hide', { tabId: previous });
+    this.emit('lr-tab-show', { tabId: tab.slotName });
+  }
+
+  /** Moves the roving focus without selecting -- the `activation="manual"` path. */
+  private focusOnly(tab: TabDef): void {
+    this.focusedTab = tab.slotName;
+    this.focusTab(tab.slotName);
+  }
+
+  /** Whichever tab currently owns `tabindex="0"`. Under `auto` that is always the selected tab;
+   *  under `manual` focus may sit elsewhere, and it must fall back to the selection whenever the
+   *  remembered tab has gone away or become disabled. */
+  private get rovingTab(): string {
+    const candidate = this.tabs.find((t) => t.slotName === this.focusedTab && !t.disabled);
+    return candidate ? candidate.slotName : this.active;
   }
 
   /** Moves real DOM focus to tab `slotName`'s button. Safe to call immediately (no `updateComplete` wait): every tab button already exists in the DOM regardless of its current `tabindex`, and `tabindex="-1"` elements are still focusable via script. */
@@ -194,15 +304,33 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     }
   }
 
+  /** Whether the strip runs down the side rather than across the top -- which decides both the
+   *  navigation keys and `aria-orientation`. */
+  private get isVertical(): boolean {
+    return this.placement === 'start' || this.placement === 'end';
+  }
+
   private onTabListKeyDown = (e: KeyboardEvent): void => {
     const navigable = this.tabs.filter((t) => !t.disabled);
     if (navigable.length === 0) return;
-    const currentIndex = navigable.findIndex((t) => t.slotName === this.active);
-    // Horizontal strip -- Up/Down aren't used. Left/Right swap under RTL,
-    // matching lr-split/lr-tree's physical-direction handling.
+    const currentIndex = navigable.findIndex((t) => t.slotName === this.rovingTab);
+
+    // A vertical strip navigates with Up/Down per the APG; a horizontal one with Left/Right, which
+    // swap under RTL the same way lr-split/lr-tree handle physical directions. Up/Down are never
+    // direction-dependent -- block flow does not reverse under RTL.
     const rtl = isRtl(this);
-    const forwardKey = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backwardKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+    const forwardKey = this.isVertical ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight';
+    const backwardKey = this.isVertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft';
+
+    // Manual activation commits the focused tab; the APG requires this precisely because automatic
+    // activation would reveal every panel arrowed past.
+    if (this.activation === 'manual' && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+      const focused = navigable.find((t) => t.slotName === this.rovingTab);
+      if (!focused) return;
+      e.preventDefault();
+      this.selectTab(focused);
+      return;
+    }
 
     let targetIndex: number;
     switch (e.key) {
@@ -223,6 +351,10 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     }
     e.preventDefault();
     const target = navigable[targetIndex]!; // safe: navigable non-empty (checked) and targetIndex in [0, length)
+    if (this.activation === 'manual') {
+      this.focusOnly(target);
+      return;
+    }
     this.selectTab(target);
     this.focusTab(target.slotName);
   };
@@ -246,6 +378,11 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     return `${slotName}-icon`;
   }
 
+  /** Derives the `slot` an `<lr-tab>` is projected into -- its own button. */
+  private tabSlotName(slotName: string): string {
+    return `${slotName}-tab`;
+  }
+
   private renderTab(tab: TabDef): TemplateResult {
     const selected = tab.slotName === this.active;
     return html`<button
@@ -257,11 +394,13 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
       aria-selected=${selected ? 'true' : 'false'}
       aria-disabled=${tab.disabled ? 'true' : 'false'}
       aria-controls=${this.panelId(tab.slotName)}
-      tabindex=${selected ? '0' : '-1'}
+      tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
       @click=${() => this.selectTab(tab)}
-    >${tab.hasIcon
-      ? html`<span part="tab-icon" aria-hidden="true"><slot name=${this.iconSlotName(tab.slotName)}></slot></span>`
-      : nothing}${tab.label}</button>`;
+    >${tab.source === 'element'
+      ? html`<slot name=${this.tabSlotName(tab.slotName)}></slot>`
+      : html`${tab.hasIcon
+          ? html`<span part="tab-icon" aria-hidden="true"><slot name=${this.iconSlotName(tab.slotName)}></slot></span>`
+          : nothing}${tab.label}`}</button>`;
   }
 
   private renderPanel(tab: TabDef): TemplateResult {
@@ -289,7 +428,13 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
     // additions/removals anywhere in the list.
     return html`
       <div part="base">
-        <div part="tablist" role="tablist" aria-label=${this.accessibleLabel || nothing} aria-orientation="horizontal" @keydown=${this.onTabListKeyDown}>
+        <div
+          part="tablist"
+          role="tablist"
+          aria-label=${this.accessibleLabel || nothing}
+          aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
+          @keydown=${this.onTabListKeyDown}
+        >
           ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderTab(tab))}
         </div>
         ${repeat(this.tabs, (tab) => tab.slotName, (tab) => this.renderPanel(tab))}
@@ -301,6 +446,6 @@ export class LyraTabs extends LyraElement<LyraTabsEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-tabs': LyraTabs;
+    'lr-tab-group': LyraTabGroup;
   }
 }

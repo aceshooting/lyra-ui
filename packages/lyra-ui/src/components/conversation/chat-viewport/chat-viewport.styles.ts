@@ -23,7 +23,7 @@ export const styles = css`
        set to a non-'visible' value the other axis's used value is forced to 'auto' too (it never
        stays 'visible') -- an implicit overflow-x here would risk a phantom horizontal scrollbar
        from a wide inline code span or a fractional-width bubble under zoom, even though this
-       transcript is only ever meant to scroll vertically. Same fix lr-tabs already applies for the
+       transcript is only ever meant to scroll vertically. Same fix lr-tab-group already applies for the
        identical reason. */
     overflow-x: hidden;
     overflow-y: auto;

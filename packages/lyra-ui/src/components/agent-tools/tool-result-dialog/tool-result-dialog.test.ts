@@ -3,7 +3,7 @@ import './tool-result-dialog.js';
 import type { LyraToolResultDialog } from './tool-result-dialog.js';
 import { styles } from './tool-result-dialog.styles.js';
 
-// A stand-in for a slotted component (e.g. lr-tabs) whose real focusable
+// A stand-in for a slotted component (e.g. lr-tab-group) whose real focusable
 // target lives inside its own shadow root rather than the host tag's
 // light-DOM subtree. Mirrors lr-dialog's/lr-widget's identical test
 // fixture, under a distinct tag name so every test file can register its
@@ -486,9 +486,9 @@ it('renders the footer wrapper visible on first paint when footer content is pre
   expect(footer.hasAttribute('hidden')).to.be.false;
 });
 
-it('does not intercept lr-tabs-change bubbling up from a slotted lr-tabs', async () => {
+it('does not intercept lr-tab-show bubbling up from a slotted lr-tab-group', async () => {
   // This component listens for none of its own tab-related events -- a
-  // slotted <lr-tabs>'s lr-tabs-change simply composes/bubbles through
+  // slotted <lr-tab-group>'s lr-tab-show simply composes/bubbles through
   // the light DOM on its own, with no interception or re-firing needed.
   const el = (await fixture(
     html`<lr-tool-result-dialog tool-name="run_python" open
@@ -497,9 +497,9 @@ it('does not intercept lr-tabs-change bubbling up from a slotted lr-tabs', async
   )) as LyraToolResultDialog;
   await el.updateComplete;
 
-  const listener = oneEvent(el, 'lr-tabs-change');
+  const listener = oneEvent(el, 'lr-tab-show');
   el.querySelector('#inner-emitter')!.dispatchEvent(
-    new CustomEvent('lr-tabs-change', { bubbles: true, composed: true, detail: { tabId: 'json' } }),
+    new CustomEvent('lr-tab-show', { bubbles: true, composed: true, detail: { tabId: 'json' } }),
   );
   const { detail } = await listener;
   expect(detail).to.deep.equal({ tabId: 'json' });

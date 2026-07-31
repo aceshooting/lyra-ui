@@ -15,7 +15,7 @@ Also rewrite the import specifiers: `@awesome.me/webawesome` and `@shoelace-styl
 A tag absent from these tables has no documented counterpart — port it by hand, or check
 `llms/index.md` for a Lyra component that covers the same job under a different name.
 
-## Web Awesome (81)
+## Web Awesome (84)
 
 Documented 1:1 mirrors. `wa-*` names not listed here are Web Awesome components Lyra does not mirror.
 
@@ -93,6 +93,9 @@ Documented 1:1 mirrors. `wa-*` names not listed here are Web Awesome components 
 | `<wa-spinner>` | `<lr-spinner>` |
 | `<wa-split-panel>` | `<lr-split>` |
 | `<wa-switch>` | `<lr-switch>` |
+| `<wa-tab>` | `<lr-tab>` |
+| `<wa-tab-group>` | `<lr-tab-group>` |
+| `<wa-tab-panel>` | `<lr-tab-panel>` |
 | `<wa-tag>` | `<lr-tag>` |
 | `<wa-textarea>` | `<lr-textarea>` |
 | `<wa-time-input>` | `<lr-time-input>` |
@@ -103,7 +106,7 @@ Documented 1:1 mirrors. `wa-*` names not listed here are Web Awesome components 
 | `<wa-tree-item>` | `<lr-tree-item>` |
 | `<wa-zoomable-frame>` | `<lr-zoomable-frame>` |
 
-## Shoelace (55)
+## Shoelace (58)
 
 Best-effort mapping: Web Awesome, not Lyra, is Shoelace's direct successor, so these agree less often.
 
@@ -158,6 +161,9 @@ Best-effort mapping: Web Awesome, not Lyra, is Shoelace's direct successor, so t
 | `<sl-spinner>` | `<lr-spinner>` |
 | `<sl-split-panel>` | `<lr-split>` |
 | `<sl-switch>` | `<lr-switch>` |
+| `<sl-tab>` | `<lr-tab>` |
+| `<sl-tab-group>` | `<lr-tab-group>` |
+| `<sl-tab-panel>` | `<lr-tab-panel>` |
 | `<sl-tag>` | `<lr-tag>` |
 | `<sl-textarea>` | `<lr-textarea>` |
 | `<sl-tooltip>` | `<lr-tooltip>` |

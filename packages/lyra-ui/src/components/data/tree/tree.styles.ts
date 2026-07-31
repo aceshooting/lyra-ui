@@ -12,7 +12,7 @@ export const styles = css`
        overflow-y is pinned explicitly alongside overflow-x: per the CSS overflow spec, leaving one
        axis unset once the other is non-'visible' forces its used value to 'auto' too, which can show
        a phantom/empty vertical scrollbar from sub-pixel rounding even though this tree never scrolls
-       block-wise on its own (it grows tall instead) -- mirrors <lr-tabs>'s identical fix. */
+       block-wise on its own (it grows tall instead) -- mirrors <lr-tab-group>'s identical fix. */
     overflow-x: auto;
     overflow-y: hidden;
   }
