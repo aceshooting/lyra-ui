@@ -580,6 +580,8 @@ export type LyraMessageKey =
   | 'iconLoadError'
   | 'iconTooLarge'
   | 'iconSanitizerMissing'
+  | 'paginationFirstPage'
+  | 'paginationLastPage'
   | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
@@ -1806,6 +1808,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   iconLoadError: 'The icon failed to load.',
   iconTooLarge: 'The icon file is too large to display.',
   iconSanitizerMissing: 'This icon needs the optional "dompurify" package installed to render safely.',
+  paginationFirstPage: 'First page',
+  paginationLastPage: 'Last page',
   accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',

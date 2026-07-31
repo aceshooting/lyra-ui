@@ -6,8 +6,17 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger } from '../../../internal/numbers.js';
 import { styles } from './pagination.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
+import { safeLinkHref } from '../../../internal/safe-url.js';
 
 export type LyraPaginationSize = 'xs' | 's' | 'm' | 'l' | 'xl';
+/** `standard` renders the numbered page list; `compact` collapses it to the page-jump field. */
+export type LyraPaginationFormat = 'standard' | 'compact';
+export type LyraPaginationAppearance =
+  | 'accent'
+  | 'filled'
+  | 'outlined'
+  | 'filled-outlined'
+  | 'plain';
 
 export interface LyraPaginationEventMap {
   'lr-page-change': CustomEvent<{ page: number }>;
@@ -15,9 +24,80 @@ export interface LyraPaginationEventMap {
   focus: CustomEvent<undefined>;
 }
 
+/** One rendered slot in the page list: a real page, or a run of pages that was skipped. */
+type PaginationItem = { readonly type: 'page'; readonly page: number } | { readonly type: 'gap' };
+
+/** Upper bound on rendered page slots. `pageCount` is derived from consumer-supplied item counts
+ *  and can be arbitrarily large (a million items at one per page), so the list length is capped
+ *  rather than trusted; `siblingCount`/`boundaryCount` are clamped to keep it reachable. */
+const MAX_PAGE_SLOTS = 101;
+const MAX_WINDOW_COUNT = 25;
+
+/** Inclusive integer sequence, empty when the bounds cross. */
+function pageSequence(from: number, to: number): number[] {
+  return to < from ? [] : Array.from({ length: to - from + 1 }, (_, offset) => from + offset);
+}
+
 /**
- * `<lr-pagination>` — controlled, server-friendly page navigation with an
- * editable page jump and optional item-range summary.
+ * Lays out the page list: `boundaryCount` pages pinned at each end, a window of `siblingCount`
+ * pages either side of the current page, and a gap wherever a run of pages was skipped.
+ *
+ * The rendered slot count stays the same on every page, so the control keeps its width while the
+ * reader pages through instead of jittering as gaps appear and disappear. That is what the last
+ * step buys: a side that turns out not to need a gap hands its slot back to the window as one more
+ * page number.
+ */
+function paginationItems(
+  current: number,
+  pageCount: number,
+  siblingCount: number,
+  boundaryCount: number,
+): PaginationItem[] {
+  if (pageCount <= 0) return [];
+  const asPage = (page: number): PaginationItem => ({ type: 'page', page });
+  // Both boundaries, both sibling runs, the current page, and one slot per potential gap.
+  const budget = Math.min(boundaryCount * 2 + siblingCount * 2 + 3, MAX_PAGE_SLOTS);
+  if (pageCount <= budget) return pageSequence(1, pageCount).map(asPage);
+
+  const windowFloor = boundaryCount + 1; // first page after the leading boundary
+  const windowCeiling = pageCount - boundaryCount; // last page before the trailing boundary
+  let from = current - siblingCount;
+  let to = current + siblingCount;
+  // Push the window back inside the boundaries, spending the overflow on the opposite side rather
+  // than shortening the window.
+  if (from < windowFloor) {
+    to += windowFloor - from;
+    from = windowFloor;
+  }
+  if (to > windowCeiling) {
+    from -= to - windowCeiling;
+    to = windowCeiling;
+  }
+  from = Math.max(from, windowFloor);
+  to = Math.min(to, windowCeiling);
+
+  let spare = (from > windowFloor ? 0 : 1) + (to < windowCeiling ? 0 : 1);
+  while (spare > 0) {
+    if (to < windowCeiling) to += 1;
+    else if (from > windowFloor) from -= 1;
+    else break;
+    spare -= 1;
+  }
+
+  return [
+    ...pageSequence(1, boundaryCount).map(asPage),
+    ...(from > windowFloor ? [{ type: 'gap' } as const] : []),
+    ...pageSequence(from, to).map(asPage),
+    ...(to < windowCeiling ? [{ type: 'gap' } as const] : []),
+    ...pageSequence(pageCount - boundaryCount + 1, pageCount).map(asPage),
+  ];
+}
+
+/**
+ * `<lr-pagination>` — controlled, server-friendly page navigation: a numbered
+ * page list with elided gaps, optional first/last controls, an optional
+ * item-range summary, and a compact layout that swaps the list for an
+ * editable page jump.
  *
  * The component never mutates `page`. Activating a control emits
  * `lr-page-change`; the consumer applies the requested page after its own
@@ -30,17 +110,29 @@ export interface LyraPaginationEventMap {
  * @event focus - Re-dispatched from an internal pagination control as a bubbling, composed event.
  * @csspart base - The navigation wrapper.
  * @csspart summary - The item-range summary.
- * @csspart controls - The previous/page/next control group.
+ * @csspart controls - The previous/pages/next control group.
+ * @csspart pages - The `role="list"` wrapper around the numbered page items.
+ * @csspart page - One numbered page control; a `<button>`, or an `<a>` when `href-template` is set.
+ * @csspart page-current - Also carried by the page control for the applied page, alongside `page`.
+ * @csspart ellipsis - A non-interactive marker standing in for a skipped run of pages.
+ * @csspart first-button - The first-page button, rendered with `with-edges`.
+ * @csspart first-icon - The first-page directional icon.
  * @csspart previous-button - The previous-page button.
  * @csspart previous-icon - The previous-page directional icon.
- * @csspart page-field - The current-page input and page-count wrapper.
- * @csspart page-input - The validated numeric page-jump input.
- * @csspart page-count - The total page count shown after the input.
+ * @csspart page-field - The current-page input and page-count wrapper (`format="compact"`).
+ * @csspart page-input - The validated numeric page-jump input (`format="compact"`).
+ * @csspart page-count - The total page count shown after the input (`format="compact"`).
  * @csspart next-button - The next-page button.
  * @csspart next-icon - The next-page directional icon.
+ * @csspart last-button - The last-page button, rendered with `with-edges`.
+ * @csspart last-icon - The last-page directional icon.
  * @csspart live-region - The visually hidden applied-page announcement.
  * @cssprop --lr-pagination-control-size - Control inline/block size; defaults from the `size` variant.
  * @cssprop --lr-pagination-font-size - Control font size; defaults from the `size` variant.
+ * @cssprop --lr-pagination-control-bg - Resting background of every control; defaults from the
+ *   `appearance` variant.
+ * @cssprop --lr-pagination-control-border-color - Resting border color of every control; defaults
+ *   from the `appearance` variant.
  * @cssprop [--lr-pagination-control-radius=var(--lr-radius)] - Border radius of navigation
  * buttons and the page input.
  * @cssprop [--lr-pagination-control-padding=var(--lr-space-xs)] - Inner padding of the nav buttons
@@ -68,6 +160,23 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  summary, so a mechanical rename silently added a row to every migrated pager. */
   @property({ type: Boolean, attribute: 'with-summary', reflect: true }) withSummary = false;
   @property({ reflect: true }) size: LyraPaginationSize = 'm';
+  /** `standard` renders the numbered page list; `compact` swaps it for the editable page jump,
+   *  which fits a toolbar or a card footer where a full list would not. */
+  @property({ reflect: true }) format: LyraPaginationFormat = 'standard';
+  /** Pages shown either side of the current page in the numbered list. */
+  @property({ type: Number, attribute: 'sibling-count' }) siblingCount = 2;
+  /** Pages always pinned at the start and at the end of the numbered list. */
+  @property({ type: Number, attribute: 'boundary-count' }) boundaryCount = 1;
+  /** Renders buttons that jump straight to the first and last page. */
+  @property({ type: Boolean, attribute: 'with-edges', reflect: true }) withEdges = false;
+  /** Renders each page as a link instead of a button, for SSR, crawlers, and no-JS navigation.
+   *  A string uses `{page}` as the placeholder (`/products?page={page}`); a function receives the
+   *  page number and returns the URL. A page whose resolved URL is not a safe navigation target
+   *  falls back to a button. */
+  @property({ attribute: 'href-template' }) hrefTemplate: string | ((page: number) => string) = '';
+  /** Resting look of every control. The applied page stays a solid brand chip in all of them, so
+   *  it is never the appearance that decides whether the current page is identifiable. */
+  @property({ reflect: true }) appearance: LyraPaginationAppearance = 'outlined';
 
   /** Optional item noun used in the summary. Empty uses the localized `item`/`items` keys. */
   @property({ attribute: 'item-label' }) itemLabel = '';
@@ -77,6 +186,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ attribute: 'page-label' }) pageLabel = 'Page';
   @property({ attribute: 'previous-label' }) previousLabel = 'Previous';
   @property({ attribute: 'next-label' }) nextLabel = 'Next';
+  @property({ attribute: 'first-label' }) firstLabel = 'First page';
+  @property({ attribute: 'last-label' }) lastLabel = 'Last page';
 
   @state() private draftPage = '';
   @state() private invalidDraft = false;
@@ -125,6 +236,26 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   private get controlsDisabled(): boolean {
     return this.disabled || this.loading || this.pageCount === 0;
+  }
+
+  /** Read-time-safe view of `siblingCount`, clamped so the rendered list stays bounded. */
+  private get normalizedSiblingCount(): number {
+    return finiteCount(this.siblingCount, 2, MAX_WINDOW_COUNT);
+  }
+
+  /** Read-time-safe view of `boundaryCount`, clamped so the rendered list stays bounded. */
+  private get normalizedBoundaryCount(): number {
+    return finiteCount(this.boundaryCount, 1, MAX_WINDOW_COUNT);
+  }
+
+  /** The URL this page would navigate to, or `null` when there is no template or the resolved URL
+   *  is not a safe navigation target (a `javascript:`/`data:` template fails closed to a button
+   *  rather than shipping the scheme into an anchor). */
+  private pageHref(page: number): string | null {
+    const template = this.hrefTemplate;
+    if (typeof template === 'function') return safeLinkHref(template(page));
+    if (typeof template !== 'string' || template === '') return null;
+    return safeLinkHref(template.split('{page}').join(String(page)));
   }
 
   private localizedProperty(key: string, defaultValue: string, value: string): string {
@@ -218,13 +349,139 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.emit('blur');
   };
 
-  override render(): TemplateResult {
-    const previousLabel = this.localizedProperty('previous', 'Previous', this.previousLabel);
-    const nextLabel = this.localizedProperty('next', 'Next', this.nextLabel);
+  /** Previous/next. Both directions share one shape so the two never drift apart. */
+  private renderNavButton(direction: 'previous' | 'next'): TemplateResult {
+    const isPrevious = direction === 'previous';
+    const current = this.currentPage;
+    const label = isPrevious
+      ? this.localizedProperty('previous', 'Previous', this.previousLabel)
+      : this.localizedProperty('next', 'Next', this.nextLabel);
+    const spent = isPrevious ? current <= 1 : current >= this.pageCount;
+
+    return html`<button
+      part=${isPrevious ? 'previous-button' : 'next-button'}
+      type="button"
+      aria-label=${label}
+      ?disabled=${this.controlsDisabled || spent}
+      @click=${() => this.requestPage(isPrevious ? current - 1 : current + 1)}
+      @focus=${this.onControlFocus}
+      @blur=${this.onControlBlur}
+    >
+      <span part=${isPrevious ? 'previous-icon' : 'next-icon'} aria-hidden="true"
+        >${chevronIcon()}</span
+      >
+    </button>`;
+  }
+
+  /** First/last. The doubled chevron is the conventional "all the way to the end" glyph, and it
+   *  mirrors under RTL through the wrapping part rather than the icon itself. */
+  private renderEdgeButton(edge: 'first' | 'last'): TemplateResult {
+    const isFirst = edge === 'first';
+    const current = this.currentPage;
+    const label = isFirst
+      ? this.localizedProperty('paginationFirstPage', 'First page', this.firstLabel)
+      : this.localizedProperty('paginationLastPage', 'Last page', this.lastLabel);
+    const spent = isFirst ? current <= 1 : current >= this.pageCount;
+
+    return html`<button
+      part=${isFirst ? 'first-button' : 'last-button'}
+      type="button"
+      aria-label=${label}
+      ?disabled=${this.controlsDisabled || spent}
+      @click=${() => this.requestPage(isFirst ? 1 : this.pageCount)}
+      @focus=${this.onControlFocus}
+      @blur=${this.onControlBlur}
+    >
+      <span part=${isFirst ? 'first-icon' : 'last-icon'} aria-hidden="true"
+        >${chevronIcon()}${chevronIcon()}</span
+      >
+    </button>`;
+  }
+
+  /** One numbered page. The visible number is its accessible name -- an extra `aria-label` would
+   *  only make a screen reader announce the same digit twice. */
+  private renderPage(page: number): TemplateResult {
+    const isCurrent = page === this.currentPage;
+    // Both branches render the same part names, so the state lives in the part token rather than
+    // in an attribute: `::part(page)[aria-current]` is invalid CSS and would silently never match.
+    const part = isCurrent ? 'page page-current' : 'page';
+    const label = this.formatNumber(page);
+    const href = this.pageHref(page);
+
+    if (href !== null) {
+      return html`<a
+        part=${part}
+        href=${isCurrent || this.controlsDisabled ? nothing : href}
+        aria-current=${isCurrent ? 'page' : 'false'}
+        aria-disabled=${this.controlsDisabled ? 'true' : 'false'}
+        @focus=${this.onControlFocus}
+        @blur=${this.onControlBlur}
+        >${label}</a
+      >`;
+    }
+
+    return html`<button
+      part=${part}
+      type="button"
+      aria-current=${isCurrent ? 'page' : 'false'}
+      ?disabled=${this.controlsDisabled}
+      @click=${() => this.requestPage(page)}
+      @focus=${this.onControlFocus}
+      @blur=${this.onControlBlur}
+    >
+      ${label}
+    </button>`;
+  }
+
+  private renderPageList(): TemplateResult {
+    const items = paginationItems(
+      this.currentPage,
+      this.pageCount,
+      this.normalizedSiblingCount,
+      this.normalizedBoundaryCount,
+    );
+
+    return html`<ul part="pages" role="list">
+      ${items.map((item) =>
+        item.type === 'gap'
+          ? // Decorative on purpose: a skipped run is not a place the reader can go, so announcing
+            // it as one more control would put a page button in the screen reader's element list
+            // that leads nowhere. Sighted readers still get the gap.
+            html`<li part="ellipsis" aria-hidden="true">…</li>`
+          : html`<li role="listitem">${this.renderPage(item.page)}</li>`,
+      )}
+    </ul>`;
+  }
+
+  private renderPageField(): TemplateResult {
     const pageLabel = this.localizedProperty('paginationPage', 'Page', this.pageLabel);
+
+    return html`<span part="page-field">
+      <input
+        part="page-input"
+        type="number"
+        inputmode="numeric"
+        min="1"
+        max=${Math.max(1, this.pageCount)}
+        step="1"
+        required
+        aria-label=${pageLabel}
+        aria-invalid=${this.invalidDraft ? 'true' : 'false'}
+        .value=${live(this.draftPage)}
+        ?disabled=${this.controlsDisabled}
+        @input=${this.onPageInput}
+        @change=${this.commitPage}
+        @keydown=${this.onPageKeyDown}
+        @focus=${this.onControlFocus}
+        @blur=${this.onControlBlur}
+      />
+      <span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.pageCount)}</span>
+    </span>`;
+  }
+
+  override render(): TemplateResult {
     const navigationLabel =
       this.accessibleLabel || this.localizedProperty('paginationLabel', 'Pagination', this.label);
-    const current = this.currentPage;
 
     return html`
       <nav
@@ -236,49 +493,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
           ? nothing
           : html`<span part="summary">${this.summaryText()}</span>`}
         <div part="controls">
-          <button
-            part="previous-button"
-            type="button"
-            aria-label=${previousLabel}
-            ?disabled=${this.controlsDisabled || current <= 1}
-            @click=${() => this.requestPage(current - 1)}
-            @focus=${this.onControlFocus}
-            @blur=${this.onControlBlur}
-          >
-            <span part="previous-icon">${chevronIcon()}</span>
-          </button>
-          <span part="page-field">
-            <input
-              part="page-input"
-              type="number"
-              inputmode="numeric"
-              min="1"
-              max=${Math.max(1, this.pageCount)}
-              step="1"
-              required
-              aria-label=${pageLabel}
-              aria-invalid=${this.invalidDraft ? 'true' : 'false'}
-              .value=${live(this.draftPage)}
-              ?disabled=${this.controlsDisabled}
-              @input=${this.onPageInput}
-              @change=${this.commitPage}
-              @keydown=${this.onPageKeyDown}
-              @focus=${this.onControlFocus}
-              @blur=${this.onControlBlur}
-            />
-            <span part="page-count" aria-hidden="true"> / ${this.formatNumber(this.pageCount)}</span>
-          </span>
-          <button
-            part="next-button"
-            type="button"
-            aria-label=${nextLabel}
-            ?disabled=${this.controlsDisabled || current >= this.pageCount}
-            @click=${() => this.requestPage(current + 1)}
-            @focus=${this.onControlFocus}
-            @blur=${this.onControlBlur}
-          >
-            <span part="next-icon">${chevronIcon()}</span>
-          </button>
+          ${this.withEdges ? this.renderEdgeButton('first') : nothing}
+          ${this.renderNavButton('previous')}
+          ${this.format === 'compact' ? this.renderPageField() : this.renderPageList()}
+          ${this.renderNavButton('next')}
+          ${this.withEdges ? this.renderEdgeButton('last') : nothing}
         </div>
         <span
           part="live-region"

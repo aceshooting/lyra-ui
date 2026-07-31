@@ -20,15 +20,124 @@ function controlledPagination(total = 237) {
   ></lr-pagination>`;
 }
 
+function controlled(template: (apply: (event: Event) => void) => unknown) {
+  return template((event: Event) => {
+    const detail = (event as CustomEvent<{ page: number }>).detail;
+    (event.currentTarget as LyraPagination).page = detail.page;
+  });
+}
+
 export const Default: Story = {
   render: () => controlledPagination(),
 };
 
-/** `focus()` and `blur()` target the editable page-jump input and surface host focus events. */
+/** `focus()` and `blur()` target the editable page-jump input of the compact layout, and surface
+ *  host focus events. */
+/** The default `standard` layout: every page is its own control, with elided runs collapsed into a
+ *  decorative gap so the control keeps a constant width as the reader pages through. */
+export const Elided: Story = {
+  render: () =>
+    controlled(
+      (apply) => html`<lr-pagination
+        total="4000"
+        page-size="20"
+        page="87"
+        with-edges
+        with-summary
+        @lr-page-change=${apply}
+      ></lr-pagination>`,
+    ),
+};
+
+/** `sibling-count` widens the window around the current page; `boundary-count` pins more pages at
+ *  each end. */
+export const WindowSize: Story = {
+  name: 'Window size (sibling-count / boundary-count)',
+  render: () => html`
+    <div style="display: grid; gap: 1rem; justify-items: start;">
+      ${controlled(
+        (apply) => html`<lr-pagination
+          total="400"
+          page-size="20"
+          page="10"
+          sibling-count="0"
+          boundary-count="1"
+          @lr-page-change=${apply}
+        ></lr-pagination>`,
+      )}
+      ${controlled(
+        (apply) => html`<lr-pagination
+          total="400"
+          page-size="20"
+          page="10"
+          sibling-count="3"
+          boundary-count="2"
+          @lr-page-change=${apply}
+        ></lr-pagination>`,
+      )}
+    </div>
+  `,
+};
+
+/** Every resting look. The applied page stays a solid brand chip in all of them. */
+export const Appearance: Story = {
+  render: () => html`
+    <div style="display: grid; gap: 1rem; justify-items: start;">
+      ${['accent', 'filled', 'outlined', 'filled-outlined', 'plain'].map((appearance) =>
+        controlled(
+          (apply) => html`<lr-pagination
+            total="200"
+            page-size="20"
+            page="4"
+            appearance=${appearance}
+            @lr-page-change=${apply}
+          ></lr-pagination>`,
+        ),
+      )}
+    </div>
+  `,
+};
+
+/** With `href-template`, each page renders as a real link, so the pager works before hydration and
+ *  is crawlable. The current page deliberately has no `href` -- the reader is already there. */
+export const Links: Story = {
+  render: () => html`
+    <lr-pagination
+      total="200"
+      page-size="20"
+      page="3"
+      with-edges
+      href-template="#page/{page}"
+    ></lr-pagination>
+  `,
+};
+
+/** `format="compact"` swaps the page list for the editable page-jump field, for toolbars and card
+ *  footers where a full list does not fit. */
+export const Compact: Story = {
+  render: () =>
+    controlled(
+      (apply) => html`<lr-pagination
+        format="compact"
+        total="237"
+        page-size="20"
+        with-summary
+        @lr-page-change=${apply}
+      ></lr-pagination>`,
+    ),
+};
+
 export const ProgrammaticFocus: Story = {
   render: () => html`
     <div style="display: grid; gap: 0.75rem; justify-items: start;">
-      ${controlledPagination()}
+      ${controlled(
+        (apply) => html`<lr-pagination
+          format="compact"
+          total="237"
+          page-size="20"
+          @lr-page-change=${apply}
+        ></lr-pagination>`,
+      )}
       <button
         type="button"
         @click=${(event: Event) => {
@@ -81,6 +190,7 @@ export const ControlPadding: Story = {
   },
   render: () => html`
     <lr-pagination
+      format="compact"
       total="237"
       page-size="20"
       page="4"

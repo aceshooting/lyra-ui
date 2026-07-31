@@ -429,7 +429,7 @@ export type {
 } from './components/forms/time-range/time-range.js';
 export { LyraPlayback } from './components/media/playback/playback.js';
 export { LyraPagination } from './components/data/pagination/pagination.js';
-export type { LyraPaginationSize } from './components/data/pagination/pagination.js';
+export type { LyraPaginationSize, LyraPaginationFormat, LyraPaginationAppearance } from './components/data/pagination/pagination.js';
 export { LyraHeatmap } from './components/data/heatmap/heatmap.js';
 export type {
   MatrixCellPos,
@@ -998,7 +998,7 @@ export type { LyraResponsivePanelEventMap } from './components/layout/responsive
 export type { LyraSegmentedEventMap } from './components/layout/segmented/segmented.js';
 export type { LyraSwatchPickerEventMap } from './components/forms/swatch-picker/swatch-picker.js';
 export type { LyraSelectEventMap } from './components/forms/select/select.js';
-export type { LyraSliderEventMap, SliderValueFormatter } from './components/forms/slider/slider.js';
+export type { LyraSliderChangeDetail, LyraSliderEventMap, SliderHandle, SliderOrientation, SliderValueFormatter } from './components/forms/slider/slider.js';
 export type { LyraSourceCardEventMap } from './components/retrieval/source-card/source-card.js';
 export type { LyraSourceListEventMap } from './components/retrieval/source-list/source-list.js';
 export type { LyraSplitEventMap } from './components/layout/split/split.js';
