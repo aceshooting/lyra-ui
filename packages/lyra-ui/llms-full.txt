@@ -31,11 +31,11 @@ and costs a few hundred tokens instead of the whole catalog. `llms/index.md` map
 family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
-- **Form controls & inputs** — 26 tags in `components/forms/`
+- **Form controls & inputs** — 28 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 24 tags in `components/data/`
-- **Layout, navigation & structure** — 30 tags in `components/layout/`
-- **Overlays, status & feedback** — 19 tags in `components/overlays/`
-- **Utilities, formatting & observers** — 19 tags in `components/utility/`
+- **Layout, navigation & structure** — 31 tags in `components/layout/`
+- **Overlays, status & feedback** — 20 tags in `components/overlays/`
+- **Utilities, formatting & observers** — 20 tags in `components/utility/`
 - **Media, files & maps** — 18 tags in `components/media/`
 - **Charts** — 12 tags in `components/charts/`
 - **Document & file viewers** — 22 tags in `components/viewers/`
@@ -2631,6 +2631,105 @@ ring/dot without hijacking the shared `--lr-color-brand` token everything else r
 <lr-radio name="format" value="json">JSON</lr-radio>
 ```
 
+## `lr-radio-button`
+
+The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
+`sl-radio-button`.
+
+Deliberately a **subclass of `LyraRadio`**: form association, validity, `form.reset()` restoration
+and the whole `lr-radio-group` ownership/roving-focus contract are inherited rather than
+reimplemented, so the two can never drift apart. Only the chrome differs. A `lr-radio-group` accepts
+either tag and the two can be mixed in one group.
+
+Consecutive `lr-radio-button` siblings collapse their shared borders into one segmented control
+automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-type` counts only
+`lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
+and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
+
+**Properties and methods:** identical to `lr-radio` — `checked`, `disabled`, `name`, `required`,
+`value`; `click()`, `focus()`, `blur()`.
+
+**Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
+(`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
+emits its own aggregate `lr-change` instead; and `focus` / `blur`, re-emitted because the internal
+control's own do not cross the shadow boundary.
+
+**Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
+
+**CSS parts:** `base`, `prefix`, `label`, `suffix`. `base` carries `checked` and `disabled` as
+additional part tokens (`::part(base checked)`), because an attribute selector after `::part()`
+never matches.
+
+Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and its
+`--lr-radio-label-indent`, `--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color`
+custom properties. **This element renders none of them** — it draws a button, not a circle and dot —
+so styling them here has no effect. They are inherited declarations, not surface.
+
+**Themeable custom properties:** shared tokens only — `--lr-color-brand` / `--lr-color-on-brand` /
+`--lr-color-brand-quiet` (selected and hover fills), `--lr-color-surface-raised`,
+`--lr-color-border`, `--lr-radius`, `--lr-icon-button-size` (the WCAG 2.5.8 hit-area floor).
+
+```html
+<lr-radio-group name="view" label="View">
+  <lr-radio-button value="day" checked>Day</lr-radio-button>
+  <lr-radio-button value="week">Week</lr-radio-button>
+</lr-radio-group>
+```
+
+---
+
+## `lr-otp-input`
+
+A form-associated one-time-code field: several character segments that together hold one value.
+Mirrors `wa-otp-input`.
+
+The segments are **presentational**. A single real `<input>` sits transparently across them and owns
+focus, selection and the value — which is what makes paste, SMS autofill (`autocomplete` defaults to
+`one-time-code`), IME composition and mobile keyboards work without reimplementing any of it, and
+keeps the control to one tab stop rather than one per character.
+
+Every entry path — typing, paste, autofill, a `value` assignment, a narrowing `type` change — funnels
+through one sanitizer, so none of them can produce a value another could not. Characters the current
+`type` rejects are dropped silently: pasting `"ABC-123"` into a numeric field yields `123`.
+
+**Properties:** `label`, `hint`, `errorText` (`error-text`); `length: number = 6` (reflected);
+`format: string = ''` (reflected) — `#` marks a segment and any other character becomes a literal
+separator (`format="###-###"`), overriding `length`; `type: 'numeric' | 'alpha' | 'alphanumeric' =
+'numeric'` (reflected, also drives `inputmode`); `case: 'preserve' | 'upper' | 'lower' = 'preserve'`
+(reflected); `mask: boolean = false` and `withMask: boolean = false` (`with-mask`) — display-only,
+`value` and the screen-reader text are unaffected; `readonly: boolean = false`;
+`autocomplete: string = 'one-time-code'`; plus the shared form-associated surface (`name`, `value`,
+`disabled`, `required`, `form`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`,
+`reportValidity()`).
+
+**Methods:** `focus()`, `blur()`, `click()`, `select()`.
+
+**Read-only:** `segmentCount: number` — how many segments are actually rendered, i.e. `format`'s `#`
+count when `format` is set, else `length`, clamped to 1–32. This is the number `value` is truncated
+to and the field is validated against, so read it rather than re-deriving it from `length`.
+
+**Events:** `input`, `change`, and `lr-complete` — `detail: { value }`, once every segment is filled.
+
+**Slots:** `label`, `hint`, `error` (each replaces the matching attribute for rich content).
+
+**CSS parts:** `base`, `label`, `field`, `control` (the real, transparent input), `segment`,
+`separator`, `hint`, `error`. `segment` carries `active`, `masked`, `placeholder-mask` and `invalid`
+as additional part tokens.
+
+**Themeable custom properties:** `--lr-otp-input-mask-char` (the mask glyph — must be a *quoted*
+string, it is used as CSS `content`); otherwise shared tokens.
+
+**Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
+message; `required` and empty reports `valueMissing`. Validation text only renders once the user has
+engaged with the field.
+
+```html
+<lr-otp-input label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
+<lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>
+```
+
+---
+
 ## `lr-radio-group`
 
 A labeled, keyboard-navigable group of `lr-radio` controls. Arrow keys, Home, and End move
@@ -4225,16 +4324,16 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 
 ---
 
-## `lr-tree` / `lr-tree-node`
+## `lr-tree` / `lr-tree-item`
 
 An expand/collapse hierarchy (document/graph navigation tree). `lr-tree` owns the data and
-imperatively creates/reconciles light-DOM `<lr-tree-node>` children by `id`; `lr-tree-node`
+imperatively creates/reconciles light-DOM `<lr-tree-item>` children by `id`; `lr-tree-item`
 recursively renders itself and its own nested children.
 
 ### `lr-tree`
 
 Implements the full WAI-ARIA treeitem keyboard pattern: a single roving `tabindex` (tracked as
-`activeId`, pushed down to every `<lr-tree-node>` including nested ones) and
+`activeId`, pushed down to every `<lr-tree-item>` including nested ones) and
 ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated `keydown` listener (native
 `KeyboardEvent`s are `composed: true` and bubble across shadow-DOM boundaries, so a press inside a
 deeply-nested node's own shadow root still reaches it).
@@ -4280,10 +4379,10 @@ the last child of a subtree is ambiguous (the visually next row is a top-level u
 could mean either "swap with the next sibling" — there is none — or "reparent up a level"), and
 reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
 is simply not made: no event, no announcement, focus stays put. Otherwise this element dispatches
-nothing directly (see `lr-tree-node` below — those bubble up and are also observed internally to keep
+nothing directly (see `lr-tree-item` below — those bubble up and are also observed internally to keep
 the roving `activeId` in sync with clicks).
 
-**Slots:** default (holds the `<lr-tree-node>` elements it manages).
+**Slots:** default (holds the `<lr-tree-item>` elements it manages).
 
 **CSS parts:** `base`, `empty` (the empty-state message shown when `data` is empty)
 
@@ -4294,7 +4393,7 @@ itself is the focusable `role="treeitem"`).
 
 **Optional peer deps:** none.
 
-### `lr-tree-node`
+### `lr-tree-item`
 
 Normally set internally by `lr-tree`, but a public element. `role="treeitem"` (plus
 `aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset` and the roving `tabindex`, driven by
@@ -4319,7 +4418,7 @@ descendants of the treeitem, matching the WAI-ARIA treeitem pattern's containmen
 
 **Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
 the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
-— via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-node`,
+— via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
 bubble/compose up
 through `lr-tree`'s light DOM.
 
@@ -4367,7 +4466,7 @@ and `--lr-tree-badge-danger-bg`.
   data reassignment) now applies at every depth via a keyed `repeat()`, not just depth 0; and
   `role="tree"` now has an accessible name via the new `label` property.
 - `lr-tree`'s `getUpdateComplete()` cascades into every currently-known descendant
-  `<lr-tree-node>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
+  `<lr-tree-item>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
   tree's `updateComplete` (e.g. after `focusNode()`) doesn't run before an arbitrarily-nested node has
   actually finished rendering its pushed-down `activeId`/`tabIndex` — one more pending update per
   depth level, otherwise.
@@ -6521,6 +6620,35 @@ window.
 
 ---
 
+## `lr-menu-label`
+
+A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
+
+The host takes `role="presentation"` on connect (a `role="menu"` may only contain menu-item roles,
+so a heading with a generic role would make the menu's own children invalid) — unless the consumer
+already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `instanceof
+LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
+stop; nothing on `<lr-menu>` has to know this element exists.
+
+To announce a *named group* rather than a caption, wrap the labelled items in an element with
+`role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
+internals would not resolve — idrefs do not cross a shadow boundary.
+
+**Properties:** none. **Events:** none. **Slots:** default (the heading text).
+**CSS parts:** `base` (the heading row).
+
+**Themeable custom properties:** shared tokens only — `--lr-color-text-quiet`, `--lr-font-size-sm`,
+`--lr-font-weight-semibold`, `--lr-space-xs`/`--lr-space-s`.
+
+```html
+<lr-menu>
+  <lr-menu-label>Recently used</lr-menu-label>
+  <lr-menu-item value="open">Open…</lr-menu-item>
+</lr-menu>
+```
+
+---
+
 ## `lr-menu` / `lr-menu-item`
 
 An anchored dropdown built around a consumer-supplied trigger element (typically an icon button)
@@ -6612,7 +6740,7 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
 relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`. `role="menuitem"` and the
-roving `tabindex` both live on the host element itself (mirroring `<lr-tree-node>`), not an
+roving `tabindex` both live on the host element itself (mirroring `<lr-tree-item>`), not an
 internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tabIndex`.
 
 **Properties:**
@@ -7833,6 +7961,57 @@ computed-label value so the two can never disagree.
 
 ---
 
+## `lr-popup`
+
+The low-level anchored-positioning primitive `lr-popover`, `lr-dropdown` and `lr-tooltip` are built
+on. Mirrors `wa-popup` / `sl-popup`.
+
+It positions its default slot against an anchor and keeps the two aligned through scroll, resize and
+layout change — and does nothing else. **No dismiss behaviour, no focus management, no ARIA
+relationship, no trigger semantics.** Those are policy, and each of the three overlays above layers
+its own. Reach for `lr-popup` when you need a floating surface the library does not already ship (an
+anchored inline editor, a custom autocomplete list); if you find yourself adding light dismiss and
+focus return on top of it, use `lr-popover` instead.
+
+**Anchoring**, in precedence order: the `virtualAnchor` property (an arbitrary rect — a canvas hit, a
+chart datum, a selection range), then `for` (an element id resolved in *this element's own root*, so
+it works inside a shadow tree where a plain idref could not cross the boundary), then the first
+element assigned to the `anchor` slot.
+
+**Properties:** `active: boolean = false` (reflected) — whether the popup renders and positions;
+`for: string = ''` (reflected); `placement: Placement = 'bottom-start'` (reflected, the full
+Floating UI vocabulary, mirrored under RTL); `distance: number = 4`; `skidding: number = 0`;
+`flip: boolean = true` (reflected, `true`-defaulting converter — use `.flip = false`, not
+`?flip=`); `shift: boolean = true` (same); `padding: number = 8`; `arrow: boolean = false`
+(reflected); `arrowPadding: number = 0` (`arrow-padding`); `virtualAnchor` (property only).
+
+**Methods:** `reposition()` — recompute now. Rarely needed, since the popup already tracks scroll,
+resize and layout change; useful after moving a virtual anchor imperatively.
+
+**Events:** `lr-reposition` — `detail: { placement }`, the placement actually used after `flip`.
+
+**Slots:** `anchor` (the element to position against), default (the floating content).
+
+**CSS parts:** `anchor`, `popup`, `arrow`. `popup` carries the **resolved side** as a second part
+token (`top`/`bottom`/`left`/`right`), so `::part(popup bottom)` styles one side —
+`::part(popup)[data-side]` would silently never match.
+
+**Themeable custom properties:** `--lr-popup-arrow-size` (half-width of the arrow square, default
+`var(--lr-size-0-375rem)`); otherwise shared tokens — `--lr-overlay-stack-index` /
+`--lr-layer-popover` (stacking), `--lr-color-surface-raised`, `--lr-color-border`.
+
+The popup also receives `--lr-positioner-available-inline-size` / `--lr-positioner-available-block-size`
+from the shared positioner and caps itself to them, so it never overflows the viewport.
+
+```html
+<lr-popup active arrow placement="top" distance="8">
+  <button slot="anchor">Anchor</button>
+  <div class="panel">Positioned content</div>
+</lr-popup>
+```
+
+---
+
 ## `lr-popover`
 
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.
@@ -8808,6 +8987,30 @@ source tree.
 **Themeable custom properties:** `--lr-icon-size` (default `--lr-size-1-25rem`) sets both
 dimensions. Stroke color is `currentColor` and the host is `color: inherit`, so color comes from
 the surrounding text with no configuration.
+
+## `lr-visually-hidden`
+
+Hides its slotted content from sight while leaving it in the accessibility tree, so a screen reader
+still announces it. Uses the clip-rect technique (`position: absolute` in a 1px box with
+`clip-path: inset(50%)`), never `display: none` or `visibility: hidden` — either of those would
+remove the content from the accessibility tree along with the viewport, which is the whole failure
+mode this element exists to avoid.
+
+`:host(:focus-within)` restores the element to normal flow, so anything focusable inside becomes
+visible the moment a keyboard user reaches it. That is what makes it usable for a skip link.
+
+**Properties:** none. **Events:** none. **Slots:** default (the content to hide).
+**CSS parts:** none — the host itself is the box. **Themeable custom properties:** none.
+
+```html
+<lr-visually-hidden><a href="#main">Skip to main content</a></lr-visually-hidden>
+```
+
+Every declaration is `!important`, deliberately: the element's contract is that the content is
+hidden, and a consumer stylesheet that accidentally set `position: static` on it would silently
+expose the text. Use the `:focus-within` escape hatch rather than overriding the base rules.
+
+---
 
 ## `lr-divider`
 

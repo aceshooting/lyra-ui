@@ -1,14 +1,14 @@
 import { fixture, expect, html } from '@open-wc/testing';
-import './tree-node.js';
-import type { LyraTreeNode } from './tree-node.js';
+import './tree-item.js';
+import type { LyraTreeItem } from './tree-item.js';
 
 const item = { id: '1', label: 'Root' };
 
 // `item` is assigned by `<lr-tree>` in normal use, but the tag is registered publicly, so a bare
-// `document.createElement('lr-tree-node')` must complete its first update cycle (and later ones)
+// `document.createElement('lr-tree-item')` must complete its first update cycle (and later ones)
 // without dereferencing the missing item -- it renders as an empty leaf until `item` arrives.
 it('completes its lifecycle without an item, then renders once one is assigned', async () => {
-  const el = document.createElement('lr-tree-node') as LyraTreeNode;
+  const el = document.createElement('lr-tree-item') as LyraTreeItem;
   document.body.appendChild(el);
   try {
     await el.updateComplete;
@@ -30,7 +30,7 @@ it('completes its lifecycle without an item, then renders once one is assigned',
 // here would produce invalid ARIA output. All three are now sanitized via `finiteInteger` at
 // assignment time, so the rendered attributes are always sane regardless of what's assigned.
 it('clamps a NaN/negative depth to a finite integer >= 0, keeping aria-level a positive integer', async () => {
-  const el = (await fixture(html`<lr-tree-node .item=${item}></lr-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 
   el.depth = NaN;
   expect(el.depth).to.equal(0);
@@ -49,7 +49,7 @@ it('clamps a NaN/negative depth to a finite integer >= 0, keeping aria-level a p
 });
 
 it('clamps a NaN/negative setSize to a finite integer >= 1, but preserves the -1 "unknown" ARIA sentinel', async () => {
-  const el = (await fixture(html`<lr-tree-node .item=${item}></lr-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 
   el.setSize = NaN;
   expect(el.setSize).to.equal(1);
@@ -66,7 +66,7 @@ it('clamps a NaN/negative setSize to a finite integer >= 1, but preserves the -1
 });
 
 it('clamps a NaN/negative posInSet to a finite integer >= 1', async () => {
-  const el = (await fixture(html`<lr-tree-node .item=${item}></lr-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-item .item=${item}></lr-tree-item>`)) as LyraTreeItem;
 
   el.posInSet = NaN;
   expect(el.posInSet).to.equal(1);
@@ -81,7 +81,7 @@ it('clamps a NaN/negative posInSet to a finite integer >= 1', async () => {
 
 it('gives the expand/collapse toggle the shared minimum tappable size', async () => {
   const withChildren = { ...item, children: [{ id: '1.1', label: 'Child' }] };
-  const el = (await fixture(html`<lr-tree-node .item=${withChildren}></lr-tree-node>`)) as LyraTreeNode;
+  const el = (await fixture(html`<lr-tree-item .item=${withChildren}></lr-tree-item>`)) as LyraTreeItem;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
   expect(getComputedStyle(toggle).minInlineSize).to.equal('40px');
@@ -97,11 +97,11 @@ it('keeps a disabled branch toggle inert and does not move focus to the disabled
   const wrapper = await fixture(html`
     <div role="tree">
       <button id="before">Before</button>
-      <lr-tree-node .item=${disabledBranch}></lr-tree-node>
+      <lr-tree-item .item=${disabledBranch}></lr-tree-item>
     </div>
   `);
   const before = wrapper.querySelector<HTMLButtonElement>('#before')!;
-  const el = wrapper.querySelector('lr-tree-node') as LyraTreeNode;
+  const el = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
   await el.updateComplete;
   const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="toggle"]')!;
 
@@ -113,7 +113,7 @@ it('keeps a disabled branch toggle inert and does not move focus to the disabled
 });
 
 // A `role="treeitem"` host is only ARIA-valid nested inside a `role="tree"`/`role="group"`
-// ancestor (the WAI-ARIA required-parent rule) -- <lr-tree-node> is never used standalone in
+// ancestor (the WAI-ARIA required-parent rule) -- <lr-tree-item> is never used standalone in
 // practice (see the class doc), so this wraps it the same way <lr-tree> itself always does,
 // while still asserting accessibility on the node's own instance, expanded/badged/described so
 // every own-ARIA code path (role/aria-level/aria-setsize/aria-posinset, the badge/icon/
@@ -129,10 +129,10 @@ it('is accessible with a realistic, expanded, badged item', async () => {
   };
   const wrapper = await fixture(
     html`<div role="tree">
-      <lr-tree-node .item=${populated} expanded .setSize=${1} .posInSet=${1}></lr-tree-node>
+      <lr-tree-item .item=${populated} expanded .setSize=${1} .posInSet=${1}></lr-tree-item>
     </div>`,
   );
-  const node = wrapper.querySelector('lr-tree-node') as LyraTreeNode;
+  const node = wrapper.querySelector('lr-tree-item') as LyraTreeItem;
   await node.updateComplete;
   expect(node.getAttribute('role')).to.equal('treeitem');
   await expect(node).to.be.accessible();

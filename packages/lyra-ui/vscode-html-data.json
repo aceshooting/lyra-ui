@@ -9399,7 +9399,7 @@
       "name": "lr-menu",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control. In supporting browsers,\nassigning the element reference intentionally clears the internal control's serialized\n`aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers\nwithout the reflected element-reference API retain the string as a best-effort fallback.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers between groups (native `<hr>` already carries an implicit `separator` role, matching what `role=\"menu\"` expects between item groups). Arbitrary non-item content still renders here for backward compatibility, but the `header`/`footer` slots below are the supported place for it. |\n| `footer` | Same as `header`, rendered below the items — an \"Apply\"/\"Done\" button, a link to a fuller settings page, a count. |\n| `header` | Composed content rendered above the items and *outside* the `role=\"menu\"` list — a filter/search field, a section title, a summary row. Keeps its own full default keyboard behavior, is reachable with Tab from the items, and is ARIA-valid (arbitrary content inside `role=\"menu\"` is not). Collapses to no box at all while unfilled. |\n| `trigger` | The consumer's own trigger element (typically an icon button). Clicking it toggles the menu; it's positioned against via `internal/positioner.js`'s `place()`. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `footer` | The wrapper around the `footer` slot, below the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `header` | The wrapper around the `header` slot, above the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `list` | The `role=\"menu\"` container wrapping the default slot. |\n| `popup` | The positioned floating panel. |\n| `trigger` | The wrapper around the `trigger` slot (the positioning anchor). |"
+        "value": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-item>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control. In supporting browsers,\nassigning the element reference intentionally clears the internal control's serialized\n`aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers\nwithout the reflected element-reference API retain the string as a best-effort fallback.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-menu-item>` elements, plus optionally plain `<hr>` dividers between groups (native `<hr>` already carries an implicit `separator` role, matching what `role=\"menu\"` expects between item groups). Arbitrary non-item content still renders here for backward compatibility, but the `header`/`footer` slots below are the supported place for it. |\n| `footer` | Same as `header`, rendered below the items — an \"Apply\"/\"Done\" button, a link to a fuller settings page, a count. |\n| `header` | Composed content rendered above the items and *outside* the `role=\"menu\"` list — a filter/search field, a section title, a summary row. Keeps its own full default keyboard behavior, is reachable with Tab from the items, and is ARIA-valid (arbitrary content inside `role=\"menu\"` is not). Collapses to no box at all while unfilled. |\n| `trigger` | The consumer's own trigger element (typically an icon button). Clicking it toggles the menu; it's positioned against via `internal/positioner.js`'s `place()`. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `footer` | The wrapper around the `footer` slot, below the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `header` | The wrapper around the `header` slot, above the list and outside `role=\"menu\"`. `display: none` while the slot is unfilled. |\n| `list` | The `role=\"menu\"` container wrapping the default slot. |\n| `popup` | The positioned floating panel. |\n| `trigger` | The wrapper around the `trigger` slot (the positioning anchor). |"
       },
       "attributes": [
         {
@@ -9443,7 +9443,7 @@
       "name": "lr-menu-item",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-menu-item>` — a single action row inside `<lr-menu>`'s default\nslot. Not meaningful on its own (there is no standalone \"click a menu item\"\nuse case) — it exists purely as `<lr-menu>`'s light-DOM child, the same\nrelationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`.\n\n`role=\"menuitem\"` and the roving `tabindex` both live on *this host\nelement*, not an internal shadow-DOM button — mirroring `<lr-tree-node>`'s\nidentical choice (see that class's doc). `<lr-menu>` is the sole owner of\nthis element's `tabIndex`: it flips exactly one navigable item's `tabIndex`\nto `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and\ncalls `.focus()` directly on this host to move real DOM focus there.\n`[part=\"base\"]` is purely a visual box with no interactive semantics of its\nown — see the class doc on `<lr-menu>` for why real DOM focus (rather\nthan `aria-activedescendant`) was chosen for this pair.\n\nEnter/Space activation is handled by `<lr-menu>`'s own delegated\n`keydown` listener calling `select()` on whichever item is currently\nroving-focused (mirrors `<lr-tree>` calling `current.select()` from its\nown keydown handler) — this element only wires a plain `click` listener\nitself, so `select()` fires identically whether the item was reached by\nmouse or keyboard.\n\n`type=\"checkbox\"` (mirroring `wa-dropdown-item`'s identical `type` option)\nrenders `role=\"menuitemcheckbox\"` in place of `role=\"menuitem\"`, with\n`aria-checked` reflecting `checked` and a checkmark glyph shown once\n`checked` is `true`. Activating a `checkbox`-type item (click, or the\nparent's Enter/Space handling via `select()`) toggles `checked` and fires\n`lr-menu-item-change` *in addition to* the usual `lr-menu-item-select`\n— the latter is never suppressed, so a parent `<lr-menu>` still closes\nand re-fires its consolidated `lr-menu-select` exactly as it does for a\n`type=\"normal\"` item. `type=\"normal\"` (the default) renders and behaves\nexactly as before this option existed — no role, rendering, or event\ndifferences.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The item's label content. |\n| `icon` | Optional leading icon. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The row (`role` lives on the host — see the class doc). |\n| `checkmark` | The checkmark glyph shown when a `type=\"checkbox\"` item is `checked`. Not rendered at all for `type=\"normal\"`. |\n| `icon` | Wrapper around the `icon` slot. Not rendered at all when the slot is empty. |\n| `label` | Wrapper around the default slot. |"
+        "value": "`<lr-menu-item>` — a single action row inside `<lr-menu>`'s default\nslot. Not meaningful on its own (there is no standalone \"click a menu item\"\nuse case) — it exists purely as `<lr-menu>`'s light-DOM child, the same\nrelationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`.\n\n`role=\"menuitem\"` and the roving `tabindex` both live on *this host\nelement*, not an internal shadow-DOM button — mirroring `<lr-tree-item>`'s\nidentical choice (see that class's doc). `<lr-menu>` is the sole owner of\nthis element's `tabIndex`: it flips exactly one navigable item's `tabIndex`\nto `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and\ncalls `.focus()` directly on this host to move real DOM focus there.\n`[part=\"base\"]` is purely a visual box with no interactive semantics of its\nown — see the class doc on `<lr-menu>` for why real DOM focus (rather\nthan `aria-activedescendant`) was chosen for this pair.\n\nEnter/Space activation is handled by `<lr-menu>`'s own delegated\n`keydown` listener calling `select()` on whichever item is currently\nroving-focused (mirrors `<lr-tree>` calling `current.select()` from its\nown keydown handler) — this element only wires a plain `click` listener\nitself, so `select()` fires identically whether the item was reached by\nmouse or keyboard.\n\n`type=\"checkbox\"` (mirroring `wa-dropdown-item`'s identical `type` option)\nrenders `role=\"menuitemcheckbox\"` in place of `role=\"menuitem\"`, with\n`aria-checked` reflecting `checked` and a checkmark glyph shown once\n`checked` is `true`. Activating a `checkbox`-type item (click, or the\nparent's Enter/Space handling via `select()`) toggles `checked` and fires\n`lr-menu-item-change` *in addition to* the usual `lr-menu-item-select`\n— the latter is never suppressed, so a parent `<lr-menu>` still closes\nand re-fires its consolidated `lr-menu-select` exactly as it does for a\n`type=\"normal\"` item. `type=\"normal\"` (the default) renders and behaves\nexactly as before this option existed — no role, rendering, or event\ndifferences.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The item's label content. |\n| `icon` | Optional leading icon. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The row (`role` lives on the host — see the class doc). |\n| `checkmark` | The checkmark glyph shown when a `type=\"checkbox\"` item is `checked`. Not rendered at all for `type=\"normal\"`. |\n| `icon` | Wrapper around the `icon` slot. Not rendered at all when the slot is empty. |\n| `label` | Wrapper around the default slot. |"
       },
       "attributes": [
         {
@@ -9486,6 +9486,22 @@
           "description": {
             "kind": "markdown",
             "value": "An id/value the parent `<lr-menu>`'s `lr-menu-select` detail keys off of.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-menu-label",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-menu-label>` — a non-interactive section heading inside `<lr-menu>`'s default slot.\n\n`role=\"presentation\"` on the host: a `role=\"menu\"` may only contain menu-item roles, so a\nheading that kept a generic role would make the menu's own children invalid. The visible text\nstill reads normally in reading order, and `<lr-menu>`'s roving tabindex skips this element\nbecause it is not a `LyraMenuItem` — a label is never a focus stop.\n\nTo announce a *named group* rather than a caption, wrap the labelled items in an element with\n`role=\"group\"` and point its `aria-label` at the same text; idrefs cannot cross the shadow\nboundary, so `aria-labelledby` against this element's internals would not resolve.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The heading text. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The heading row. |"
+      },
+      "attributes": [
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]
@@ -10296,6 +10312,120 @@
           "description": {
             "kind": "markdown",
             "value": "The selection key submitted with the form.\n\nType: `string`  \nDefault: `''`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-otp-input",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-otp-input>` — a form-associated one-time-code field: several character segments that\ntogether hold one value.\n\nThe segments are presentational. A single real `<input>` sits transparently across them and owns\nfocus, selection and the value, which is what makes paste, SMS autofill (`autocomplete` defaults\nto `one-time-code`), IME composition and mobile keyboards work without reimplementing any of it —\nand keeps the control to one tab stop rather than one per character.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| `error` | Rich validation text, replacing the `errorText` attribute. |\n| `hint` | Rich supporting text, replacing the `hint` attribute. |\n| `label` | Rich label content, replacing the `label` attribute. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer wrapper. |\n| `control` | The real, visually transparent input. |\n| `error` | Validation text. |\n| `field` | The row of segments. |\n| `hint` | Supporting text. |\n| `label` | The field label. |\n| `segment` | One character segment. Carries `active`, `masked`, `placeholder-mask` and `invalid` in the part name so a consumer can target any of those states through `::part()`. |\n| `separator` | A literal separator emitted by `format`. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-otp-input-mask-char` (default: `'•'`) — The glyph shown for a masked character. Must be a quoted string, because it is used as CSS `content`."
+      },
+      "attributes": [
+        {
+          "name": "autocomplete",
+          "description": {
+            "kind": "markdown",
+            "value": "Native autofill hint. Defaults to the SMS one-time-code value.\n\nType: `string`  \nDefault: `'one-time-code'`"
+          }
+        },
+        {
+          "name": "case",
+          "description": {
+            "kind": "markdown",
+            "value": "Case transform applied as characters are entered.\n\nType: `OtpInputCase`  \nDefault: `'preserve'`"
+          }
+        },
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "error-text",
+          "description": {
+            "kind": "markdown",
+            "value": "Validation text below the field.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "format",
+          "description": {
+            "kind": "markdown",
+            "value": "Segment layout with literal separators — `#` marks a segment, any other character becomes a\nseparator. `format=\"###-###\"` renders two groups of three joined by a dash. Overrides `length`.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "hint",
+          "description": {
+            "kind": "markdown",
+            "value": "Supporting text below the field.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "label",
+          "description": {
+            "kind": "markdown",
+            "value": "Visible label. Prefer the `label` slot for rich content.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "length",
+          "description": {
+            "kind": "markdown",
+            "value": "Number of character segments. Ignored when `format` is set.\n\nDefault: `DEFAULT_LENGTH`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "mask",
+          "description": {
+            "kind": "markdown",
+            "value": "Show entered characters as the mask glyph instead of their real value. Display-only.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "readonly",
+          "description": {
+            "kind": "markdown",
+            "value": "Display the value without allowing edits. Unlike `disabled`, it still submits and focuses.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "type",
+          "description": {
+            "kind": "markdown",
+            "value": "Which characters are accepted; also drives the mobile keyboard through `inputmode`.\n\nType: `OtpInputType`  \nDefault: `'numeric'`"
+          }
+        },
+        {
+          "name": "with-mask",
+          "description": {
+            "kind": "markdown",
+            "value": "Also show the mask glyph in empty segments, so the field reads as masked before entry.\n\nType: `boolean`  \nDefault: `false`"
           }
         }
       ]
@@ -11146,6 +11276,92 @@
       ]
     },
     {
+      "name": "lr-popup",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-popup>` — the low-level anchored-positioning primitive.\n\nIt positions its `popup` slot against an anchor and keeps the two aligned through scroll,\nresize and layout change. That is *all* it does: no dismiss behaviour, no focus management, no\nARIA relationship, no trigger semantics. Those are policy, and policy belongs to the component\nbuilt on top — `<lr-popover>`, `<lr-dropdown>` and `<lr-tooltip>` each layer their own.\n\nReach for it when you need a floating surface the library does not already ship: an anchored\ninline editor, a colour-picker panel, a custom autocomplete list. If you find yourself adding\nlight dismiss and focus return on top, use `<lr-popover>` instead.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The floating content. |\n| `anchor` | The element to position against. Ignored when `for` or `virtualAnchor` is set. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `anchor` | The anchor slot wrapper. |\n| `arrow` | The arrow element, rendered only when `arrow` is set. |\n| `popup` | The positioned floating surface. Carries the resolved side (`top`, `bottom`, `left`, `right`) in its part name, so `::part(popup bottom)` can style one side — state after `::part()` never matches. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-popup-arrow-size` (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+      },
+      "attributes": [
+        {
+          "name": "active",
+          "description": {
+            "kind": "markdown",
+            "value": "Whether the popup is rendered and positioned. Nothing else changes when it flips.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "arrow",
+          "description": {
+            "kind": "markdown",
+            "value": "Render an arrow that points at the anchor.\n\nType: `boolean`  \nDefault: `false`"
+          }
+        },
+        {
+          "name": "arrow-padding",
+          "description": {
+            "kind": "markdown",
+            "value": "Keeps the arrow this far from the popup's corners, in pixels.\n\nType: `number`  \nDefault: `0`"
+          }
+        },
+        {
+          "name": "distance",
+          "description": {
+            "kind": "markdown",
+            "value": "Distance from the anchor along the placement axis, in pixels.\n\nType: `number`  \nDefault: `4`"
+          }
+        },
+        {
+          "name": "flip",
+          "description": {
+            "kind": "markdown",
+            "value": "Flip to the opposite side when the preferred one does not fit.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "for",
+          "description": {
+            "kind": "markdown",
+            "value": "Id of an element elsewhere in the same root to anchor against, instead of the `anchor` slot.\nResolved in this element's own root, so it works inside a shadow tree where an idref could not\ncross the boundary.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "padding",
+          "description": {
+            "kind": "markdown",
+            "value": "Viewport padding kept clear by `shift` and by the available-size measurement.\n\nType: `number`  \nDefault: `8`"
+          }
+        },
+        {
+          "name": "placement",
+          "description": {
+            "kind": "markdown",
+            "value": "Preferred placement. `flip`/`shift` may override it; the result is reported by `lr-reposition`.\n\nType: `Placement`  \nDefault: `'bottom-start'`"
+          }
+        },
+        {
+          "name": "shift",
+          "description": {
+            "kind": "markdown",
+            "value": "Shift along the anchor's edge to stay within the viewport.\n\nType: `boolean`  \nDefault: `true`"
+          }
+        },
+        {
+          "name": "skidding",
+          "description": {
+            "kind": "markdown",
+            "value": "Offset along the anchor's edge, in pixels.\n\nType: `number`  \nDefault: `0`"
+          }
+        }
+      ]
+    },
+    {
       "name": "lr-pptx-viewer",
       "description": {
         "kind": "markdown",
@@ -11760,6 +11976,57 @@
       "description": {
         "kind": "markdown",
         "value": "`<lr-radio>` — a form-associated single-choice control. Radios can be used\nalone or inside `<lr-radio-group>`.\n\nDeliberately no hint/error chrome of its own -- the default slot already carries real, visible\nlabel text (see `@slot` below), so a labeled-field frame built around `label`/`hint`/`errorText`\nprops has nothing to add here. A consumer needing shared hint/error messaging for a set of\noptions composes it once on the owning `<lr-radio-group>` (which does carry `hint`/`errorText`),\nthe same way a native radio `<fieldset>`/`<legend>` pairs with one externally-owned error node\nshared across all its `<input type=\"radio\">` children rather than one per option.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Label text. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The interactive radio control. |\n| `circle` | The circular radio indicator. |\n| `dot` | The selected indicator. |\n| `label` | The default slot wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-radio-label-indent` (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.\n- `--lr-radio-checked-border-color` (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads.\n- `--lr-radio-checked-dot-color` (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
+      },
+      "attributes": [
+        {
+          "name": "checked",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "disabled",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
+          }
+        },
+        {
+          "name": "name",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        },
+        {
+          "name": "required",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `boolean`"
+          }
+        },
+        {
+          "name": "value",
+          "description": {
+            "kind": "markdown",
+            "value": "Type: `string`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-radio-button",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-radio-button>` — a single-choice control rendered as a button rather than a circle.\n\nThe same control as `<lr-radio>`, and deliberately a subclass of it: form association,\nvalidity, `form.reset()` restoration and the whole `<lr-radio-group>` ownership/roving-focus\ncontract are inherited rather than reimplemented, so the two can never drift apart. Only the\nchrome differs. A `<lr-radio-group>` accepts either tag, and the two can be mixed.\n\nConsecutive `<lr-radio-button>` siblings collapse their shared borders into one segmented\ncontrol automatically — nothing needs to be set on the group.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Label text. |\n| `prefix` | Content placed before the label, typically an icon. |\n| `suffix` | Content placed after the label. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The interactive button. Carries `checked` and `disabled` in the part name so a consumer can target either state through `::part()`. |\n| `circle` | The circular radio indicator. |\n| `dot` | The selected indicator. |\n| `label` | The default slot wrapper. |\n| `prefix` | The leading-content wrapper. |\n| `suffix` | The trailing-content wrapper. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-radio-label-indent` (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.\n- `--lr-radio-checked-border-color` (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads.\n- `--lr-radio-checked-dot-color` (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
       },
       "attributes": [
         {
@@ -16183,7 +16450,7 @@
       "name": "lr-tree",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.\n\nImplements the WAI-ARIA treeitem keyboard pattern: a single roving\n`tabindex` (tracked here as `activeId`, pushed down to every\n`<lr-tree-node>` — including nested ones, recursively) and\nArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated\n`keydown` listener. Native `KeyboardEvent`s are `composed: true` and\nbubble across shadow-DOM boundaries, so a press inside a deeply-nested\n`<lr-tree-node>`'s own shadow root still reaches this listener.\n\nSet `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused\nnode emits `lr-reorder` — a *request*, exactly like every other event here. `data` is\nhost-owned and never mutated by this component, so nothing moves until the host reassigns a\nreordered `data`; focus then follows the moved node. The keybinding matches\n`<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on\nWindows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from\n`nodes` on every render and keyed by filesystem path, an order it does not own.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-tree-node>` elements (top-level tree items). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The tree's root wrapper (role=\"tree\"). |\n| `empty` | The empty-state message shown when `data` is empty. |"
+        "value": "`<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.\n\nImplements the WAI-ARIA treeitem keyboard pattern: a single roving\n`tabindex` (tracked here as `activeId`, pushed down to every\n`<lr-tree-item>` — including nested ones, recursively) and\nArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated\n`keydown` listener. Native `KeyboardEvent`s are `composed: true` and\nbubble across shadow-DOM boundaries, so a press inside a deeply-nested\n`<lr-tree-item>`'s own shadow root still reaches this listener.\n\nSet `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused\nnode emits `lr-reorder` — a *request*, exactly like every other event here. `data` is\nhost-owned and never mutated by this component, so nothing moves until the host reassigns a\nreordered `data`; focus then follows the moved node. The keybinding matches\n`<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on\nWindows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from\n`nodes` on every render and keyed by filesystem path, an order it does not own.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | `<lr-tree-item>` elements (top-level tree items). |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The tree's root wrapper (role=\"tree\"). |\n| `empty` | The empty-state message shown when `data` is empty. |"
       },
       "attributes": [
         {
@@ -16210,10 +16477,10 @@
       ]
     },
     {
-      "name": "lr-tree-node",
+      "name": "lr-tree-item",
       "description": {
         "kind": "markdown",
-        "value": "`<lr-tree-node>` — internal recursive renderer for `<lr-tree>`.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root as further\n`role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `badge` | The optional node badge (the legacy `item.badge`, and/or one chip per `item.badges` entry, tone-mapped via `data-tone`). |\n| `content` | The primary and secondary text wrapper. |\n| `description` | The optional secondary description. |\n| `group` | The wrapper around a node's expanded child items. |\n| `icon` | The optional decorative leading icon. |\n| `label` | The node label. |\n| `row` | The tree row. |\n| `toggle` | The expand/collapse button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tree-depth` (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.\n- `--lr-tree-selected-bg` (default: `var(--lr-color-brand-quiet)`) — Background of the selected row.\n- `--lr-tree-selected-color` (default: `var(--lr-color-brand)`) — Text color of the selected row.\n- `--lr-tree-badge-neutral-color` (default: `var(--lr-color-text-quiet)`) — Neutral badge text color.\n- `--lr-tree-badge-neutral-bg` (default: `var(--lr-color-surface)`) — Neutral badge background.\n- `--lr-tree-badge-brand-color` (default: `var(--lr-color-brand)`) — Brand badge text color.\n- `--lr-tree-badge-brand-bg` (default: `var(--lr-color-brand-quiet)`) — Brand badge background.\n- `--lr-tree-badge-success-color` (default: `var(--lr-color-success)`) — Success badge text color.\n- `--lr-tree-badge-success-bg` (default: `var(--lr-color-success-quiet)`) — Success badge background.\n- `--lr-tree-badge-warning-color` (default: `var(--lr-color-warning)`) — Warning badge text color.\n- `--lr-tree-badge-warning-bg` (default: `var(--lr-color-warning-quiet)`) — Warning badge background.\n- `--lr-tree-badge-danger-color` (default: `var(--lr-color-danger)`) — Danger badge text color.\n- `--lr-tree-badge-danger-bg` (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
+        "value": "`<lr-tree-item>` — internal recursive renderer for `<lr-tree>`.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root as further\n`role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `badge` | The optional node badge (the legacy `item.badge`, and/or one chip per `item.badges` entry, tone-mapped via `data-tone`). |\n| `content` | The primary and secondary text wrapper. |\n| `description` | The optional secondary description. |\n| `group` | The wrapper around a node's expanded child items. |\n| `icon` | The optional decorative leading icon. |\n| `label` | The node label. |\n| `row` | The tree row. |\n| `toggle` | The expand/collapse button. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-tree-depth` (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.\n- `--lr-tree-selected-bg` (default: `var(--lr-color-brand-quiet)`) — Background of the selected row.\n- `--lr-tree-selected-color` (default: `var(--lr-color-brand)`) — Text color of the selected row.\n- `--lr-tree-badge-neutral-color` (default: `var(--lr-color-text-quiet)`) — Neutral badge text color.\n- `--lr-tree-badge-neutral-bg` (default: `var(--lr-color-surface)`) — Neutral badge background.\n- `--lr-tree-badge-brand-color` (default: `var(--lr-color-brand)`) — Brand badge text color.\n- `--lr-tree-badge-brand-bg` (default: `var(--lr-color-brand-quiet)`) — Brand badge background.\n- `--lr-tree-badge-success-color` (default: `var(--lr-color-success)`) — Success badge text color.\n- `--lr-tree-badge-success-bg` (default: `var(--lr-color-success-quiet)`) — Success badge background.\n- `--lr-tree-badge-warning-color` (default: `var(--lr-color-warning)`) — Warning badge text color.\n- `--lr-tree-badge-warning-bg` (default: `var(--lr-color-warning-quiet)`) — Warning badge background.\n- `--lr-tree-badge-danger-color` (default: `var(--lr-color-danger)`) — Danger badge text color.\n- `--lr-tree-badge-danger-bg` (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
       },
       "attributes": [
         {
@@ -16388,6 +16655,22 @@
           "description": {
             "kind": "markdown",
             "value": "Added to a row's 1-based index to compute `aria-rowindex` in `item-role=\"row\"` mode (e.g. `1`\nwhen a consumer renders its own header row occupying `aria-rowindex=\"1\"` outside this\ncomponent). No effect in `'listitem'` mode.\n\nType: `number`  \nDefault: `0`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lr-visually-hidden",
+      "description": {
+        "kind": "markdown",
+        "value": "`<lr-visually-hidden>` — hides its content from sight while leaving it in the accessibility\ntree, so screen readers still announce it.\n\nContent becomes visible again while anything inside it holds focus, which is what makes the\nelement usable for skip links: the link is invisible until a keyboard user tabs to it.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | The content to hide visually. |"
+      },
+      "attributes": [
+        {
+          "name": "locale",
+          "description": {
+            "kind": "markdown",
+            "value": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`"
           }
         }
       ]

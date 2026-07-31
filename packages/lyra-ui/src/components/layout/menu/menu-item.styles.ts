@@ -5,7 +5,7 @@ export const styles = css`
     display: block;
     /* The host itself is the focusable role="menuitem" target (see the class
        doc) -- the ring paints on [part='base'] instead of the host's own
-       box, matching lr-tree-node's identical :host(:focus-visible)
+       box, matching lr-tree-item's identical :host(:focus-visible)
        delegation, so it always hugs the visible row rather than any
        host-level margin/inline layout quirks. */
     outline: none;

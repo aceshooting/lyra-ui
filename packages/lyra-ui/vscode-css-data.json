@@ -3383,6 +3383,13 @@
       }
     },
     {
+      "name": "--lr-otp-input-mask-char",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-otp-input>`** (default: `'•'`) — The glyph shown for a masked character. Must be a quoted string, because it is used as CSS `content`."
+      }
+    },
+    {
       "name": "--lr-overlay-max-inline-size",
       "description": {
         "kind": "markdown",
@@ -3565,6 +3572,13 @@
       }
     },
     {
+      "name": "--lr-popup-arrow-size",
+      "description": {
+        "kind": "markdown",
+        "value": "**`<lr-popup>`** (default: `var(--lr-size-0-375rem)`) — Half-width of the arrow square."
+      }
+    },
+    {
       "name": "--lr-progress-duration",
       "description": {
         "kind": "markdown",
@@ -3652,21 +3666,21 @@
       "name": "--lr-radio-checked-border-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads."
       }
     },
     {
       "name": "--lr-radio-checked-dot-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `var(--lr-color-brand)`) — Background of `[part='dot']` while `checked`."
       }
     },
     {
       "name": "--lr-radio-label-indent",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-radio>`** (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control."
+        "value": "**`<lr-radio>`, `<lr-radio-button>`** (default: `calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))`) — The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control."
       }
     },
     {
@@ -5535,91 +5549,91 @@
       "name": "--lr-tree-badge-brand-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand-quiet)`) — Brand badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand-quiet)`) — Brand badge background."
       }
     },
     {
       "name": "--lr-tree-badge-brand-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand)`) — Brand badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Brand badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-danger-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-danger-quiet)`) — Danger badge background."
       }
     },
     {
       "name": "--lr-tree-badge-danger-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-danger)`) — Danger badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-danger)`) — Danger badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-neutral-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-surface)`) — Neutral badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-surface)`) — Neutral badge background."
       }
     },
     {
       "name": "--lr-tree-badge-neutral-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-text-quiet)`) — Neutral badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-text-quiet)`) — Neutral badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-success-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-success-quiet)`) — Success badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-success-quiet)`) — Success badge background."
       }
     },
     {
       "name": "--lr-tree-badge-success-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-success)`) — Success badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-success)`) — Success badge text color."
       }
     },
     {
       "name": "--lr-tree-badge-warning-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-warning-quiet)`) — Warning badge background."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-warning-quiet)`) — Warning badge background."
       }
     },
     {
       "name": "--lr-tree-badge-warning-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-warning)`) — Warning badge text color."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-warning)`) — Warning badge text color."
       }
     },
     {
       "name": "--lr-tree-depth",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
+        "value": "**`<lr-tree-item>`** (default: `0`) — Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`."
       }
     },
     {
       "name": "--lr-tree-selected-bg",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand-quiet)`) — Background of the selected row."
       }
     },
     {
       "name": "--lr-tree-selected-color",
       "description": {
         "kind": "markdown",
-        "value": "**`<lr-tree-node>`** (default: `var(--lr-color-brand)`) — Text color of the selected row."
+        "value": "**`<lr-tree-item>`** (default: `var(--lr-color-brand)`) — Text color of the selected row."
       }
     },
     {

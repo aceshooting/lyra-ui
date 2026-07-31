@@ -736,6 +736,30 @@ source tree.
 dimensions. Stroke color is `currentColor` and the host is `color: inherit`, so color comes from
 the surrounding text with no configuration.
 
+## `lr-visually-hidden`
+
+Hides its slotted content from sight while leaving it in the accessibility tree, so a screen reader
+still announces it. Uses the clip-rect technique (`position: absolute` in a 1px box with
+`clip-path: inset(50%)`), never `display: none` or `visibility: hidden` — either of those would
+remove the content from the accessibility tree along with the viewport, which is the whole failure
+mode this element exists to avoid.
+
+`:host(:focus-within)` restores the element to normal flow, so anything focusable inside becomes
+visible the moment a keyboard user reaches it. That is what makes it usable for a skip link.
+
+**Properties:** none. **Events:** none. **Slots:** default (the content to hide).
+**CSS parts:** none — the host itself is the box. **Themeable custom properties:** none.
+
+```html
+<lr-visually-hidden><a href="#main">Skip to main content</a></lr-visually-hidden>
+```
+
+Every declaration is `!important`, deliberately: the element's contract is that the content is
+hidden, and a consumer stylesheet that accidentally set `position: static` on it would silently
+expose the text. Use the `:focus-within` escape hatch rather than overriding the base rules.
+
+---
+
 ## `lr-divider`
 
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host

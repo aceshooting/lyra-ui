@@ -200,9 +200,12 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     } as unknown as ElementInternals;
   }
 
-  /** @internal */
+  /** @internal Matches on a part *token*, not the whole attribute: `<lr-radio-button>` encodes
+   *  `checked`/`disabled` into the same part name (state after `::part()` never matches, so it has
+   *  to live there), and an exact `[part="base"]` would silently stop finding the anchor the moment
+   *  a second token appeared -- taking `click()`, `focus()` and validity anchoring with it. */
   [VALIDITY_ANCHOR](): HTMLElement | null {
-    return this.renderRoot?.querySelector('[part="base"]') ?? null;
+    return this.renderRoot?.querySelector('[part~="base"]') ?? null;
   }
 
   override connectedCallback(): void {
@@ -321,16 +324,22 @@ export class LyraRadio extends LyraElement<LyraRadioEventMap> {
     this.emit('change');
     this.emit('lr-change', { checked: true, value: this.value });
   }
-  private onClick = (): void => this.select();
-  private onKeyDown = (event: KeyboardEvent): void => {
+  /** Roving-tabindex state an owning group imposes; `<lr-radio-button>` reads it for its own
+   *  `tabindex`, which is the only reason it is not private. */
+  protected get groupTabbable(): boolean { return this._tabbable; }
+
+  // Protected rather than private so `<lr-radio-button>` can render different chrome around the
+  // identical activation contract instead of reimplementing (and drifting from) it.
+  protected onClick = (): void => this.select();
+  protected onKeyDown = (event: KeyboardEvent): void => {
     if (this.effectiveDisabled) return;
     if (event.key === ' ' || event.key === 'Spacebar') {
       event.preventDefault();
       this.select();
     }
   };
-  private onFocus = (): void => { this.emit('focus'); };
-  private onBlur = (): void => { this.emit('blur'); };
+  protected onFocus = (): void => { this.emit('focus'); };
+  protected onBlur = (): void => { this.emit('blur'); };
   private onSlotChange = (event: Event): void => {
     this.hasLabel = (event.target as HTMLSlotElement).assignedNodes({ flatten: true })
       .some((node) => (node.textContent ?? '').trim().length > 0);

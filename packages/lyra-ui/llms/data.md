@@ -1148,16 +1148,16 @@ the legend consumes `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-fon
 
 ---
 
-## `lr-tree` / `lr-tree-node`
+## `lr-tree` / `lr-tree-item`
 
 An expand/collapse hierarchy (document/graph navigation tree). `lr-tree` owns the data and
-imperatively creates/reconciles light-DOM `<lr-tree-node>` children by `id`; `lr-tree-node`
+imperatively creates/reconciles light-DOM `<lr-tree-item>` children by `id`; `lr-tree-item`
 recursively renders itself and its own nested children.
 
 ### `lr-tree`
 
 Implements the full WAI-ARIA treeitem keyboard pattern: a single roving `tabindex` (tracked as
-`activeId`, pushed down to every `<lr-tree-node>` including nested ones) and
+`activeId`, pushed down to every `<lr-tree-item>` including nested ones) and
 ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated `keydown` listener (native
 `KeyboardEvent`s are `composed: true` and bubble across shadow-DOM boundaries, so a press inside a
 deeply-nested node's own shadow root still reaches it).
@@ -1203,10 +1203,10 @@ the last child of a subtree is ambiguous (the visually next row is a top-level u
 could mean either "swap with the next sibling" — there is none — or "reparent up a level"), and
 reparenting is a structural edit with no keyboard affordance distinguishing the two. Such a request
 is simply not made: no event, no announcement, focus stays put. Otherwise this element dispatches
-nothing directly (see `lr-tree-node` below — those bubble up and are also observed internally to keep
+nothing directly (see `lr-tree-item` below — those bubble up and are also observed internally to keep
 the roving `activeId` in sync with clicks).
 
-**Slots:** default (holds the `<lr-tree-node>` elements it manages).
+**Slots:** default (holds the `<lr-tree-item>` elements it manages).
 
 **CSS parts:** `base`, `empty` (the empty-state message shown when `data` is empty)
 
@@ -1217,7 +1217,7 @@ itself is the focusable `role="treeitem"`).
 
 **Optional peer deps:** none.
 
-### `lr-tree-node`
+### `lr-tree-item`
 
 Normally set internally by `lr-tree`, but a public element. `role="treeitem"` (plus
 `aria-expanded`/`aria-level`/`aria-setsize`/`aria-posinset` and the roving `tabindex`, driven by
@@ -1242,7 +1242,7 @@ descendants of the treeitem, matching the WAI-ARIA treeitem pattern's containmen
 
 **Events:** `lr-node-toggle` (`detail: { id, expanded }`, fired by `expand()`/`collapse()` — via
 the toggle button or ArrowRight/ArrowLeft), `lr-node-select` (`detail: { id }`, fired by `select()`
-— via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-node`,
+— via clicking anywhere in the row or Enter/Space) — dispatched from `lr-tree-item`,
 bubble/compose up
 through `lr-tree`'s light DOM.
 
@@ -1290,7 +1290,7 @@ and `--lr-tree-badge-danger-bg`.
   data reassignment) now applies at every depth via a keyed `repeat()`, not just depth 0; and
   `role="tree"` now has an accessible name via the new `label` property.
 - `lr-tree`'s `getUpdateComplete()` cascades into every currently-known descendant
-  `<lr-tree-node>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
+  `<lr-tree-item>`'s own `updateComplete` (see `update-cascade.ts`) so that code awaiting the
   tree's `updateComplete` (e.g. after `focusNode()`) doesn't run before an arbitrarily-nested node has
   actually finished rendering its pushed-down `activeId`/`tabIndex` — one more pending update per
   depth level, otherwise.

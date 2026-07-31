@@ -2,7 +2,7 @@
 
 # Component index
 
-268 custom elements, grouped by the source family they live in.
+273 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`). Each is self-contained: import
@@ -18,7 +18,7 @@ get the class without registering the tag.
 `strings`, TypeScript, frameworks, SSR): `llms/shared.md`. Design tokens: `llms/tokens.md`.
 Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 
-## Form controls & inputs — `components/forms/` (26)
+## Form controls & inputs — `components/forms/` (28)
 
 - `lr-combobox` · forms/combobox/combobox.js — a filterable single/multi select that combines a text input with a listbox.
 - `lr-option` · forms/combobox/option.js — a selectable option for `<lr-combobox>`.
@@ -38,6 +38,8 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-switch` · forms/switch/switch.js — a boolean toggle-switch form control.
 - `lr-slider` · forms/slider/slider.js — a numeric range control (e.g.
 - `lr-radio` · forms/radio/radio.js — a form-associated single-choice control.
+- `lr-radio-button` · forms/radio/radio-button.js — a single-choice control rendered as a button rather than a circle.
+- `lr-otp-input` · forms/otp-input/otp-input.js — a form-associated one-time-code field: several character segments that together hold one value.
 - `lr-radio-group` · forms/radio/radio-group.js — a labeled, keyboard-navigable group of radios.
 - `lr-checkbox-group` · forms/checkbox-group/checkbox-group.js — a form-associated group of `<lr-checkbox>` elements.
 - `lr-token-input` · forms/token-input/token-input.js — an editable, form-associated list of removable tokens.
@@ -58,7 +60,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-heatmap` · data/heatmap/heatmap.js — a Canvas heatmap with a DPR-aware, resize-aware redraw loop, in one of two `mode`s:
 - `lr-sequence-strip` · data/sequence-strip/sequence-strip.js — a compact, one-thin-cell-per-item strip visualizing a sequence of categorical states, with an optional secondary per-cell marker.
 - `lr-tree` · data/tree/tree.js — an expand/collapse hierarchy for graph/document navigation.
-- `lr-tree-node` · data/tree/tree-node.js — internal recursive renderer for `<lr-tree>`.
+- `lr-tree-item` · data/tree/tree-item.js — internal recursive renderer for `<lr-tree>`.
 - `lr-flow-canvas` · data/flow-canvas/flow-canvas.js — a pannable/zoomable DAG workflow canvas: positions HTML node cards, draws SVG edges between their handles, runs a shared layered auto-lay...
 - `lr-flow-node` · data/flow-node/flow-node.js — the card a workflow node renders as: header/body/toolbar chrome, tool-lifecycle status tones, and the named connection-handle elements ed...
 - `lr-flow-minimap` · data/flow-minimap/flow-minimap.js — a corner overview map of a `lr-flow-canvas`: scaled node rectangles plus a draggable viewport rectangle, for orientation and fast navigat...
@@ -74,7 +76,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-graph-query-builder` · data/graph-query-builder/graph-query-builder.js — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-query-builder` · data/query-builder/query-builder.js — a composable structured-query builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with one AN...
 
-## Layout, navigation & structure — `components/layout/` (30)
+## Layout, navigation & structure — `components/layout/` (31)
 
 - `lr-split` · layout/split/split.js — resizable panels for dashboard layouts.
 - `lr-widget` · layout/widget/widget.js — a titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
@@ -92,6 +94,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-app-rail` · layout/app-rail/app-rail.js — a responsive navigation rail that adapts across three presentations as the *viewport* narrows (not this element's own inline size — see t...
 - `lr-app-rail-item` · layout/app-rail/app-rail-item.js — an explicit icon/label navigation item for `<lr-app-rail>`.
 - `lr-responsive-panel` · layout/responsive-panel/responsive-panel.js — the same slotted content either docked inline in the page's normal layout flow (desktop) or presented as a full-screen/ bottom-sheet over...
+- `lr-menu-label` · layout/menu/menu-label.js — a non-interactive section heading inside `<lr-menu>`'s default slot.
 - `lr-menu` · layout/menu/menu.js — an anchored dropdown of `<lr-menu-item>` actions, opened from a consumer-supplied trigger (typically an icon button).
 - `lr-menu-item` · layout/menu/menu-item.js — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · layout/menu/dropdown-item.js — the Web Awesome-compatible name for a menu item.
@@ -107,7 +110,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-drilldown-panel` · layout/drilldown-panel/drilldown-panel.js — controlled navigation from a chart/table datum to its related evidence, documents, entities, or agent runs.
 - `lr-filter-bar` · layout/filter-bar/filter-bar.js — a row of dashboard filters, each declared by the host (`filters`) rather than invented by this component: every filter composes an existi...
 
-## Overlays, status & feedback — `components/overlays/` (19)
+## Overlays, status & feedback — `components/overlays/` (20)
 
 - `lr-toast` · overlays/toast/toast.js — the stacking toast region.
 - `lr-toast-item` · overlays/toast/toast-item.js — a single toast notification.
@@ -118,6 +121,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-chip` · overlays/chip/chip.js — a small, content-agnostic pill for a short label: a tag, an active-filter/scope indicator, etc.
 - `lr-chip-group` · overlays/chip/chip-group.js — a flex-wrap container for a set of `<lr-chip>` children (plain light-DOM composition — direct children are the chips, the same shape `<lr...
 - `lr-kbd` · overlays/kbd/kbd.js — a small chip representing a keyboard shortcut, rendering the platform-appropriate glyph for cross-platform modifier keys (⌘ on macOS, "Ct...
+- `lr-popup` · overlays/popup/popup.js — the low-level anchored-positioning primitive.
 - `lr-popover` · overlays/overlay/popover.js — a click-triggered, light-dismiss floating surface.
 - `lr-tooltip` · overlays/overlay/tooltip.js — a localized, hover/focus tooltip for a consumer-owned trigger.
 - `lr-dropdown` · overlays/overlay/dropdown.js — a menu-role popover for action lists and consumer-supplied menu content.
@@ -129,7 +133,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-callout` · overlays/callout/callout.js — an inline message surface for status, warning, and error content.
 - `lr-rating` · overlays/rating/rating.js — a keyboard-accessible star rating control.
 
-## Utilities, formatting & observers — `components/utility/` (19)
+## Utilities, formatting & observers — `components/utility/` (20)
 
 - `lr-export-button` · utility/export-button/export-button.js — a CSV/JSON download button, single-format or a format-choice menu.
 - `lr-copy-button` · utility/copy-button/copy-button.js — a standalone icon-only copy-to-clipboard affordance for a plain single/multi-line text value in a layout the consumer controls (e.g.
@@ -142,6 +146,7 @@ Optional peers: `llms/peers.md`. `wa-*`/`sl-*` renames: `llms/migration.md`.
 - `lr-mention-popover` · utility/mention-popover/mention-popover.js — a caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete inside a plain-text `<textarea>`/`<input>...
 - `lr-diff-view` · utility/diff-view/diff-view.js — a real two-string line diff (Myers/LCS-style alignment), rendered as interleaved unified-diff output -- not diff-flavored syntax highligh...
 - `lr-icon` · utility/icon/icon.js — a tiny dependency-free SVG icon primitive using a named path set.
+- `lr-visually-hidden` · utility/visually-hidden/visually-hidden.js — hides its content from sight while leaving it in the accessibility tree, so screen readers still announce it.
 - `lr-divider` · utility/divider/divider.js — a themeable semantic separator.
 - `lr-format-number` · utility/format/format-number.js — locale-aware `Intl.NumberFormat` output.
 - `lr-format-date` · utility/format/format-date.js — locale-aware `Intl.DateTimeFormat` output.

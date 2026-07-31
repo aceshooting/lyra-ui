@@ -86997,7 +86997,7 @@
                   }
                 }
               ],
-              "description": "Fulfills a lazy directory's children in place. Expansion state survives because `<lr-tree>`\nreconciles top-level items by id and each `<lr-tree-node>` keeps its own `expanded` state."
+              "description": "Fulfills a lazy directory's children in place. Expansion state survives because `<lr-tree>`\nreconciles top-level items by id and each `<lr-tree-item>` keeps its own `expanded` state."
             },
             {
               "kind": "method",
@@ -104240,18 +104240,12 @@
     },
     {
       "kind": "javascript-module",
-      "path": "src/components/data/tree/tree-item.ts",
-      "declarations": [],
-      "exports": []
-    },
-    {
-      "kind": "javascript-module",
-      "path": "src/components/data/tree/tree-node.class.ts",
+      "path": "src/components/data/tree/tree-item.class.ts",
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tree-node>` — internal recursive renderer for `<lr-tree>`.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root as further\n`role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).",
-          "name": "LyraTreeNode",
+          "description": "`<lr-tree-item>` — internal recursive renderer for `<lr-tree>`.\n\n`role=\"treeitem\"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/\n`aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on\nthe *host* element, not the internal `[part=\"row\"]` div — that makes this\nnode's own nested children (rendered in *its own* shadow root as further\n`role=\"group\"` content) genuine DOM descendants of the treeitem, which is\nwhat the WAI-ARIA treeitem pattern requires (previously a shadow-root\nsibling).",
+          "name": "LyraTreeItem",
           "cssProperties": [
             {
               "description": "Internal indent plumbing, not a retheming knob: this node's `depth`, written inline onto `[part=\"row\"]` by the component and multiplied by `--lr-space-l` (capped at `--lr-size-8rem`) to produce the row's `padding-inline-start`.",
@@ -104858,32 +104852,32 @@
             "name": "LyraElement",
             "module": "/src/internal/lyra-element.js"
           },
-          "tagName": "lr-tree-node",
+          "tagName": "lr-tree-item",
           "customElement": true
         }
       ],
       "exports": [
         {
           "kind": "js",
-          "name": "LyraTreeNode",
+          "name": "LyraTreeItem",
           "declaration": {
-            "name": "LyraTreeNode",
-            "module": "src/components/data/tree/tree-node.class.ts"
+            "name": "LyraTreeItem",
+            "module": "src/components/data/tree/tree-item.class.ts"
           }
         }
       ]
     },
     {
       "kind": "javascript-module",
-      "path": "src/components/data/tree/tree-node.ts",
+      "path": "src/components/data/tree/tree-item.ts",
       "declarations": [],
       "exports": [
         {
           "kind": "custom-element-definition",
-          "name": "lr-tree-node",
+          "name": "lr-tree-item",
           "declaration": {
-            "name": "LyraTreeNode",
-            "module": "src/components/data/tree/tree-node.class.ts"
+            "name": "LyraTreeItem",
+            "module": "src/components/data/tree/tree-item.class.ts"
           }
         },
         {
@@ -104891,10 +104885,16 @@
           "name": "*",
           "declaration": {
             "name": "*",
-            "module": "src/components/data/tree/tree-node.class.js"
+            "module": "src/components/data/tree/tree-item.class.js"
           }
         }
       ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/data/tree/tree-types.ts",
+      "declarations": [],
+      "exports": []
     },
     {
       "kind": "javascript-module",
@@ -104902,7 +104902,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.\n\nImplements the WAI-ARIA treeitem keyboard pattern: a single roving\n`tabindex` (tracked here as `activeId`, pushed down to every\n`<lr-tree-node>` — including nested ones, recursively) and\nArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated\n`keydown` listener. Native `KeyboardEvent`s are `composed: true` and\nbubble across shadow-DOM boundaries, so a press inside a deeply-nested\n`<lr-tree-node>`'s own shadow root still reaches this listener.\n\nSet `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused\nnode emits `lr-reorder` — a *request*, exactly like every other event here. `data` is\nhost-owned and never mutated by this component, so nothing moves until the host reassigns a\nreordered `data`; focus then follows the moved node. The keybinding matches\n`<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on\nWindows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from\n`nodes` on every render and keyed by filesystem path, an order it does not own.",
+          "description": "`<lr-tree>` — an expand/collapse hierarchy for graph/document navigation.\n\nImplements the WAI-ARIA treeitem keyboard pattern: a single roving\n`tabindex` (tracked here as `activeId`, pushed down to every\n`<lr-tree-item>` — including nested ones, recursively) and\nArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated\n`keydown` listener. Native `KeyboardEvent`s are `composed: true` and\nbubble across shadow-DOM boundaries, so a press inside a deeply-nested\n`<lr-tree-item>`'s own shadow root still reaches this listener.\n\nSet `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused\nnode emits `lr-reorder` — a *request*, exactly like every other event here. `data` is\nhost-owned and never mutated by this component, so nothing moves until the host reassigns a\nreordered `data`; focus then follows the moved node. The keybinding matches\n`<lr-dashboard-grid>`'s `cells-draggable` precedent (Alt+Arrow is browser back/forward on\nWindows/Linux). `<lr-file-tree>` deliberately **opts out**: its `TreeItem[]` is derived from\n`nodes` on every render and keyed by filesystem path, an order it does not own.",
           "name": "LyraTree",
           "cssParts": [
             {
@@ -104916,7 +104916,7 @@
           ],
           "slots": [
             {
-              "description": "`<lr-tree-node>` elements (top-level tree items).",
+              "description": "`<lr-tree-item>` elements (top-level tree items).",
               "name": ""
             }
           ],
@@ -105041,7 +105041,7 @@
               "kind": "field",
               "name": "nodeElements",
               "type": {
-                "text": "LyraTreeNode[]"
+                "text": "LyraTreeItem[]"
               },
               "privacy": "private",
               "readonly": true
@@ -105170,14 +105170,14 @@
               "privacy": "private",
               "return": {
                 "type": {
-                  "text": "LyraTreeNode[]"
+                  "text": "LyraTreeItem[]"
                 }
               },
               "parameters": [
                 {
                   "name": "node",
                   "type": {
-                    "text": "LyraTreeNode"
+                    "text": "LyraTreeItem"
                   }
                 }
               ]
@@ -105198,10 +105198,10 @@
               "privacy": "private",
               "return": {
                 "type": {
-                  "text": "LyraTreeNode | null"
+                  "text": "LyraTreeItem | null"
                 }
               },
-              "description": "The `<lr-tree-node>` that genuinely holds real DOM focus, or `null`.\n\n`document.activeElement` collapses to the outermost light-DOM node even\nwhen the real focus target is a nested descendant several shadow roots\ndown, so it can't distinguish \"the top-level node is focused\" from \"one of\nits nested descendants is\". Walking the `shadowRoot.activeElement` chain\nresolves the actual node, which is what lets a `data` reassignment restore\nfocus to a *nested* node rather than yanking it up to that node's\ntop-level ancestor."
+              "description": "The `<lr-tree-item>` that genuinely holds real DOM focus, or `null`.\n\n`document.activeElement` collapses to the outermost light-DOM node even\nwhen the real focus target is a nested descendant several shadow roots\ndown, so it can't distinguish \"the top-level node is focused\" from \"one of\nits nested descendants is\". Walking the `shadowRoot.activeElement` chain\nresolves the actual node, which is what lets a `data` reassignment restore\nfocus to a *nested* node rather than yanking it up to that node's\ntop-level ancestor."
             },
             {
               "kind": "method",
@@ -105338,7 +105338,7 @@
                 {
                   "name": "node",
                   "type": {
-                    "text": "LyraTreeNode | undefined"
+                    "text": "LyraTreeItem | undefined"
                   }
                 }
               ]
@@ -105495,7 +105495,7 @@
                 {
                   "name": "node",
                   "type": {
-                    "text": "LyraTreeNode"
+                    "text": "LyraTreeItem"
                   }
                 },
                 {
@@ -105543,7 +105543,7 @@
                   "text": "void"
                 }
               },
-              "description": "By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-node>` elements and removes ones no longer present in `data`."
+              "description": "By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-item>` elements and removes ones no longer present in `data`."
             },
             {
               "kind": "method",
@@ -105551,19 +105551,19 @@
               "privacy": "private",
               "return": {
                 "type": {
-                  "text": "LyraTreeNode[]"
+                  "text": "LyraTreeItem[]"
                 }
               },
-              "description": "Every currently *visible* (ancestor-expanded) node, top-to-bottom.\n\nRecomputed on every call rather than memoized: `item`/`expanded` are\nplain public settable properties on `<lr-tree-node>` (not just\nreachable through this class's own `data` setter or the bubbling\n`lr-node-toggle` event), so a cache keyed off those two entry points\nalone would go stale the moment a caller mutated a node directly --\ne.g. `node.item = { ...node.item, children: [...] }` to append a child\nin place. This walk only runs from user-paced `keydown` handling (never\na hot render-loop path), so the cost of a `shadowRoot.querySelectorAll`\nper currently-expanded node is not worth trading for that staleness risk."
+              "description": "Every currently *visible* (ancestor-expanded) node, top-to-bottom.\n\nRecomputed on every call rather than memoized: `item`/`expanded` are\nplain public settable properties on `<lr-tree-item>` (not just\nreachable through this class's own `data` setter or the bubbling\n`lr-node-toggle` event), so a cache keyed off those two entry points\nalone would go stale the moment a caller mutated a node directly --\ne.g. `node.item = { ...node.item, children: [...] }` to append a child\nin place. This walk only runs from user-paced `keydown` handling (never\na hot render-loop path), so the cost of a `shadowRoot.querySelectorAll`\nper currently-expanded node is not worth trading for that staleness risk."
             }
           ],
           "events": [
             {
-              "description": "`detail: { id }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.",
+              "description": "`detail: { id }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.",
               "name": "lr-node-select"
             },
             {
-              "description": "`detail: { id, expanded }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.",
+              "description": "`detail: { id, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.",
               "name": "lr-node-toggle"
             },
             {
@@ -105690,7 +105690,7 @@
               }
             }
           ],
-          "description": "Both `<lr-tree>` and `<lr-tree-node>` override `getUpdateComplete()` to\nadditionally await their currently-known child `<lr-tree-node>`\nelements' own `updateComplete`. A nested node only receives a pushed-down\nproperty (like `activeId`, and the `tabIndex` derived from it) once its\nown render has committed -- one more pending update per depth level -- so\nwithout this, code that awaits a parent's `updateComplete` (e.g.\n`focusNode()`) could run before an arbitrarily-nested descendant has\nactually settled."
+          "description": "Both `<lr-tree>` and `<lr-tree-item>` override `getUpdateComplete()` to\nadditionally await their currently-known child `<lr-tree-item>`\nelements' own `updateComplete`. A nested node only receives a pushed-down\nproperty (like `activeId`, and the `tabIndex` derived from it) once its\nown render has committed -- one more pending update per depth level -- so\nwithout this, code that awaits a parent's `updateComplete` (e.g.\n`focusNode()`) could run before an arbitrarily-nested descendant has\nactually settled."
         }
       ],
       "exports": [
@@ -124966,6 +124966,961 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/forms/otp-input/otp-input.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-otp-input>` — a form-associated one-time-code field: several character segments that\ntogether hold one value.\n\nThe segments are presentational. A single real `<input>` sits transparently across them and owns\nfocus, selection and the value, which is what makes paste, SMS autofill (`autocomplete` defaults\nto `one-time-code`), IME composition and mobile keyboards work without reimplementing any of it —\nand keeps the control to one tab stop rather than one per character.",
+          "name": "LyraOtpInput",
+          "cssProperties": [
+            {
+              "description": "The glyph shown for a masked character. Must be a quoted string, because it is used as CSS `content`.",
+              "name": "--lr-otp-input-mask-char",
+              "default": "'•'"
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The outer wrapper.",
+              "name": "base"
+            },
+            {
+              "description": "The real, visually transparent input.",
+              "name": "control"
+            },
+            {
+              "description": "Validation text.",
+              "name": "error"
+            },
+            {
+              "description": "The row of segments.",
+              "name": "field"
+            },
+            {
+              "description": "Supporting text.",
+              "name": "hint"
+            },
+            {
+              "description": "The field label.",
+              "name": "label"
+            },
+            {
+              "description": "One character segment. Carries `active`, `masked`, `placeholder-mask` and `invalid` in the part name so a consumer can target any of those states through `::part()`.",
+              "name": "segment"
+            },
+            {
+              "description": "A literal separator emitted by `format`.",
+              "name": "separator"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Rich validation text, replacing the `errorText` attribute.",
+              "name": "error"
+            },
+            {
+              "description": "Rich supporting text, replacing the `hint` attribute.",
+              "name": "hint"
+            },
+            {
+              "description": "Rich label content, replacing the `label` attribute.",
+              "name": "label"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'one-time-code'",
+              "description": "Native autofill hint. Defaults to the SMS one-time-code value.",
+              "attribute": "autocomplete",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "case",
+              "type": {
+                "text": "OtpInputCase"
+              },
+              "default": "'preserve'",
+              "description": "Case transform applied as characters are entered.",
+              "attribute": "case",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "cells",
+              "type": {
+                "text": "Cell[]"
+              },
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "control",
+              "type": {
+                "text": "HTMLInputElement"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "privacy": "public",
+              "type": {
+                "text": "boolean"
+              },
+              "attribute": "disabled",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "errorId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "errorText",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Validation text below the field.",
+              "attribute": "error-text"
+            },
+            {
+              "kind": "field",
+              "name": "focused",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "format",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Segment layout with literal separators — `#` marks a segment, any other character becomes a\nseparator. `format=\"###-###\"` renders two groups of three joined by a dash. Overrides `length`.",
+              "attribute": "format",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "hasErrorSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasHintSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hasLabelSlot",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Supporting text below the field.",
+              "attribute": "hint"
+            },
+            {
+              "kind": "field",
+              "name": "hintId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Visible label. Prefer the `label` slot for rich content.",
+              "attribute": "label"
+            },
+            {
+              "kind": "field",
+              "name": "labelId",
+              "privacy": "private",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "length",
+              "default": "6",
+              "description": "Number of character segments. Ignored when `format` is set.",
+              "attribute": "length",
+              "reflects": true,
+              "type": {
+                "text": "number"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "mask",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Show entered characters as the mask glyph instead of their real value. Display-only.",
+              "attribute": "mask",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "attribute": "name",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "onBlur",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onErrorSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onHintSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onInput",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "onLabelSlotChange",
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "readonly",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Display the value without allowing edits. Unlike `disabled`, it still submits and focuses.",
+              "attribute": "readonly",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "required",
+              "privacy": "public",
+              "type": {
+                "text": "boolean"
+              },
+              "attribute": "required",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "segmentCount",
+              "type": {
+                "text": "number"
+              },
+              "description": "Segment count actually rendered: `format`'s `#` count when set, else `length`.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "touched",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "Validation text is only shown once the user has actually engaged with the field."
+            },
+            {
+              "kind": "field",
+              "name": "type",
+              "type": {
+                "text": "OtpInputType"
+              },
+              "default": "'numeric'",
+              "description": "Which characters are accepted; also drives the mobile keyboard through `inputmode`.",
+              "attribute": "type",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "value",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "withMask",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Also show the mask glyph in empty segments, so the field reads as masked before entry.",
+              "attribute": "with-mask",
+              "reflects": true
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "renderSegment",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "TemplateResult"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": {
+                    "text": "number"
+                  }
+                },
+                {
+                  "name": "invalid",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "sanitize",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "raw",
+                  "type": {
+                    "text": "string"
+                  }
+                }
+              ],
+              "description": "Drops characters the current `type` rejects, applies `case`, and truncates to the segment\ncount — the single funnel every entry path (typing, paste, autofill, a `value` assignment)\ngoes through, so none of them can produce a value the others could not."
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "select",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Selects the whole code, mirroring `<input>.select()`."
+            },
+            {
+              "kind": "method",
+              "name": "updateValidity",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "The value changed and the field settled.",
+              "name": "change"
+            },
+            {
+              "description": "The value changed.",
+              "name": "input"
+            },
+            {
+              "description": "Every segment is filled. `detail: { value }`.",
+              "name": "lr-complete"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "autocomplete",
+              "type": {
+                "text": "string"
+              },
+              "default": "'one-time-code'",
+              "description": "Native autofill hint. Defaults to the SMS one-time-code value.",
+              "fieldName": "autocomplete"
+            },
+            {
+              "name": "case",
+              "type": {
+                "text": "OtpInputCase"
+              },
+              "default": "'preserve'",
+              "description": "Case transform applied as characters are entered.",
+              "fieldName": "case"
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "fieldName": "disabled"
+            },
+            {
+              "name": "error-text",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Validation text below the field.",
+              "fieldName": "errorText"
+            },
+            {
+              "name": "format",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Segment layout with literal separators — `#` marks a segment, any other character becomes a\nseparator. `format=\"###-###\"` renders two groups of three joined by a dash. Overrides `length`.",
+              "fieldName": "format"
+            },
+            {
+              "name": "hint",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Supporting text below the field.",
+              "fieldName": "hint"
+            },
+            {
+              "name": "label",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Visible label. Prefer the `label` slot for rich content.",
+              "fieldName": "label"
+            },
+            {
+              "name": "length",
+              "default": "DEFAULT_LENGTH",
+              "description": "Number of character segments. Ignored when `format` is set.",
+              "fieldName": "length"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "mask",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Show entered characters as the mask glyph instead of their real value. Display-only.",
+              "fieldName": "mask"
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "fieldName": "name"
+            },
+            {
+              "name": "readonly",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Display the value without allowing edits. Unlike `disabled`, it still submits and focuses.",
+              "fieldName": "readonly"
+            },
+            {
+              "name": "required",
+              "type": {
+                "text": "boolean"
+              },
+              "fieldName": "required"
+            },
+            {
+              "name": "type",
+              "type": {
+                "text": "OtpInputType"
+              },
+              "default": "'numeric'",
+              "description": "Which characters are accepted; also drives the mobile keyboard through `inputmode`.",
+              "fieldName": "type"
+            },
+            {
+              "name": "with-mask",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Also show the mask glyph in empty segments, so the field reads as masked before entry.",
+              "fieldName": "withMask"
+            }
+          ],
+          "mixins": [
+            {
+              "name": "FormAssociated",
+              "module": "/src/internal/form-associated.js"
+            }
+          ],
+          "superclass": {
+            "name": "LyraOtpInputBase",
+            "module": "src/components/forms/otp-input/otp-input.class.ts"
+          },
+          "tagName": "lr-otp-input",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraOtpInput",
+          "declaration": {
+            "name": "LyraOtpInput",
+            "module": "src/components/forms/otp-input/otp-input.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/forms/otp-input/otp-input.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-otp-input",
+          "declaration": {
+            "name": "LyraOtpInput",
+            "module": "src/components/forms/otp-input/otp-input.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/forms/otp-input/otp-input.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/forms/phone-input/phone-input.class.ts",
       "declarations": [
         {
@@ -126495,6 +127450,1192 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/forms/radio/radio-button.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-radio-button>` — a single-choice control rendered as a button rather than a circle.\n\nThe same control as `<lr-radio>`, and deliberately a subclass of it: form association,\nvalidity, `form.reset()` restoration and the whole `<lr-radio-group>` ownership/roving-focus\ncontract are inherited rather than reimplemented, so the two can never drift apart. Only the\nchrome differs. A `<lr-radio-group>` accepts either tag, and the two can be mixed.\n\nConsecutive `<lr-radio-button>` siblings collapse their shared borders into one segmented\ncontrol automatically — nothing needs to be set on the group.",
+          "name": "LyraRadioButton",
+          "cssParts": [
+            {
+              "description": "The interactive button. Carries `checked` and `disabled` in the part name so a consumer can target either state through `::part()`.",
+              "name": "base",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The circular radio indicator.",
+              "name": "circle",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The selected indicator.",
+              "name": "dot",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The default slot wrapper.",
+              "name": "label",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The leading-content wrapper.",
+              "name": "prefix"
+            },
+            {
+              "description": "The trailing-content wrapper.",
+              "name": "suffix"
+            }
+          ],
+          "slots": [
+            {
+              "description": "Label text.",
+              "name": "",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Content placed before the label, typically an icon.",
+              "name": "prefix"
+            },
+            {
+              "description": "Content placed after the label.",
+              "name": "suffix"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "_checked",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_defaultCaptured",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_defaultChecked",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_fieldsetDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_groupDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_groupRequired",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_name",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "''",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_required",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_tabbable",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "true",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "_value",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "private",
+              "default": "'on'",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "checked",
+              "privacy": "public",
+              "type": {
+                "text": "boolean"
+              },
+              "attribute": "checked",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "disabled",
+              "privacy": "public",
+              "type": {
+                "text": "boolean"
+              },
+              "attribute": "disabled",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDisabled",
+              "type": {
+                "text": "boolean"
+              },
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveRequired",
+              "type": {
+                "text": "boolean"
+              },
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "form",
+              "type": {
+                "text": "HTMLFormElement | null"
+              },
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "formAssociated",
+              "type": {
+                "text": "boolean"
+              },
+              "static": true,
+              "default": "true",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "groupOwner",
+              "type": {
+                "text": "RadioGroupController | null"
+              },
+              "privacy": "private",
+              "default": "null",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "groupTabbable",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "protected",
+              "description": "Roving-tabindex state an owning group imposes; `<lr-radio-button>` reads it for its own\n`tabindex`, which is the only reason it is not private.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "hasLabel",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "internals",
+              "type": {
+                "text": "ElementInternals"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "name",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "attribute": "name",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onBlur",
+              "privacy": "protected",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onClick",
+              "privacy": "protected",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onFocus",
+              "privacy": "protected",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onKeyDown",
+              "privacy": "protected",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "onSlotChange",
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "required",
+              "privacy": "public",
+              "type": {
+                "text": "boolean"
+              },
+              "attribute": "required",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "validationMessage",
+              "type": {
+                "text": "string"
+              },
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "validity",
+              "type": {
+                "text": "ValidityState"
+              },
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "validityController",
+              "type": {
+                "text": "AnchoredValidityController"
+              },
+              "privacy": "private",
+              "default": "new AnchoredValidityController(this, this.internals, () => this[VALIDITY_ANCHOR]())",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "value",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "attribute": "value",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "willValidate",
+              "type": {
+                "text": "boolean"
+              },
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "blur",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "click",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "currentGroup",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "RadioGroupController | null"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "focus",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "FocusOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formDisabledCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "disabled",
+                  "type": {
+                    "text": "boolean"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formResetCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "formStateRestoreCallback",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "state",
+                  "type": {
+                    "text": "string | File | FormData | null"
+                  }
+                },
+                {
+                  "name": "_mode",
+                  "optional": true,
+                  "type": {
+                    "text": "'restore' | 'autocomplete'"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "group",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "RadioGroupController | null"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "inertInternals",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "ElementInternals"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "safeAttachInternals",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "ElementInternals"
+                }
+              },
+              "description": "`attachInternals()` throws in any environment without a real `ElementInternals`\nimplementation (e.g. a downstream consumer's happy-dom test suite) -- merely constructing\n(or importing) this component must not hard-crash there. Falls back to an inert stand-in:\nform participation and validity reporting are unavailable in that environment (there is no\npolyfillable substitute), but rendering and every non-form-associated feature keep working.\nMirrors lr-graph-query-builder's identical guard.",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "select",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "syncFormState",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "updateValidity",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "The internal control lost focus.",
+              "name": "blur",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The user selected this radio.",
+              "name": "change",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The internal control received focus.",
+              "name": "focus",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "The user selected this radio.",
+              "name": "input",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "A standalone radio button was selected. `detail: { checked, value }`. An owning radio group emits its aggregate event instead.",
+              "name": "lr-change",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            }
+          ],
+          "superclass": {
+            "name": "LyraRadio",
+            "module": "/src/components/forms/radio/radio.class.js"
+          },
+          "tagName": "lr-radio-button",
+          "customElement": true,
+          "cssProperties": [
+            {
+              "description": "The inline distance from the control's start edge to the start of the label text, i.e. the circle's own floor plus the gap next to it. Published so a consumer composing per-option hint text under the label can align it without re-deriving that formula from the shadow styles, and used as the source of the real gap so the two cannot drift. Setting it on the element (or on `lr-radio` in your own stylesheet) moves the label; because custom properties inherit down and not sideways, it is *not* readable from a sibling node in your tree — align a sibling by computing the same formula from `--lr-theme-icon-button-size` and `--lr-theme-space-s`, which you control.",
+              "name": "--lr-radio-label-indent",
+              "default": "calc(min(var(--lr-icon-button-size), 1.75rem) + var(--lr-space-s))",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Border color of `[part='circle']` while `checked`. Retint just this control's checked ring without touching the shared `--lr-color-brand` token every other component also reads.",
+              "name": "--lr-radio-checked-border-color",
+              "default": "var(--lr-color-brand)",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "description": "Background of `[part='dot']` while `checked`.",
+              "name": "--lr-radio-checked-dot-color",
+              "default": "var(--lr-color-brand)",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            }
+          ],
+          "attributes": [
+            {
+              "name": "checked",
+              "type": {
+                "text": "boolean"
+              },
+              "fieldName": "checked",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "name": "disabled",
+              "type": {
+                "text": "boolean"
+              },
+              "fieldName": "disabled",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "name",
+              "type": {
+                "text": "string"
+              },
+              "fieldName": "name",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "name": "required",
+              "type": {
+                "text": "boolean"
+              },
+              "fieldName": "required",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            },
+            {
+              "name": "value",
+              "type": {
+                "text": "string"
+              },
+              "fieldName": "value",
+              "inheritedFrom": {
+                "name": "LyraRadio",
+                "module": "src/components/forms/radio/radio.class.ts"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraRadioButton",
+          "declaration": {
+            "name": "LyraRadioButton",
+            "module": "src/components/forms/radio/radio-button.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/forms/radio/radio-button.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-radio-button",
+          "declaration": {
+            "name": "LyraRadioButton",
+            "module": "src/components/forms/radio/radio-button.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/forms/radio/radio-button.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/forms/radio/radio-group.class.ts",
       "declarations": [
         {
@@ -127461,6 +129602,16 @@
             },
             {
               "kind": "field",
+              "name": "groupTabbable",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "protected",
+              "description": "Roving-tabindex state an owning group imposes; `<lr-radio-button>` reads it for its own\n`tabindex`, which is the only reason it is not private.",
+              "readonly": true
+            },
+            {
+              "kind": "field",
               "name": "hasLabel",
               "type": {
                 "text": "boolean"
@@ -127516,22 +129667,22 @@
             {
               "kind": "field",
               "name": "onBlur",
-              "privacy": "private"
+              "privacy": "protected"
             },
             {
               "kind": "field",
               "name": "onClick",
-              "privacy": "private"
+              "privacy": "protected"
             },
             {
               "kind": "field",
               "name": "onFocus",
-              "privacy": "private"
+              "privacy": "protected"
             },
             {
               "kind": "field",
               "name": "onKeyDown",
-              "privacy": "private"
+              "privacy": "protected"
             },
             {
               "kind": "field",
@@ -148714,7 +150865,7 @@
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-menu-item>` — a single action row inside `<lr-menu>`'s default\nslot. Not meaningful on its own (there is no standalone \"click a menu item\"\nuse case) — it exists purely as `<lr-menu>`'s light-DOM child, the same\nrelationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`.\n\n`role=\"menuitem\"` and the roving `tabindex` both live on *this host\nelement*, not an internal shadow-DOM button — mirroring `<lr-tree-node>`'s\nidentical choice (see that class's doc). `<lr-menu>` is the sole owner of\nthis element's `tabIndex`: it flips exactly one navigable item's `tabIndex`\nto `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and\ncalls `.focus()` directly on this host to move real DOM focus there.\n`[part=\"base\"]` is purely a visual box with no interactive semantics of its\nown — see the class doc on `<lr-menu>` for why real DOM focus (rather\nthan `aria-activedescendant`) was chosen for this pair.\n\nEnter/Space activation is handled by `<lr-menu>`'s own delegated\n`keydown` listener calling `select()` on whichever item is currently\nroving-focused (mirrors `<lr-tree>` calling `current.select()` from its\nown keydown handler) — this element only wires a plain `click` listener\nitself, so `select()` fires identically whether the item was reached by\nmouse or keyboard.\n\n`type=\"checkbox\"` (mirroring `wa-dropdown-item`'s identical `type` option)\nrenders `role=\"menuitemcheckbox\"` in place of `role=\"menuitem\"`, with\n`aria-checked` reflecting `checked` and a checkmark glyph shown once\n`checked` is `true`. Activating a `checkbox`-type item (click, or the\nparent's Enter/Space handling via `select()`) toggles `checked` and fires\n`lr-menu-item-change` *in addition to* the usual `lr-menu-item-select`\n— the latter is never suppressed, so a parent `<lr-menu>` still closes\nand re-fires its consolidated `lr-menu-select` exactly as it does for a\n`type=\"normal\"` item. `type=\"normal\"` (the default) renders and behaves\nexactly as before this option existed — no role, rendering, or event\ndifferences.",
+          "description": "`<lr-menu-item>` — a single action row inside `<lr-menu>`'s default\nslot. Not meaningful on its own (there is no standalone \"click a menu item\"\nuse case) — it exists purely as `<lr-menu>`'s light-DOM child, the same\nrelationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`.\n\n`role=\"menuitem\"` and the roving `tabindex` both live on *this host\nelement*, not an internal shadow-DOM button — mirroring `<lr-tree-item>`'s\nidentical choice (see that class's doc). `<lr-menu>` is the sole owner of\nthis element's `tabIndex`: it flips exactly one navigable item's `tabIndex`\nto `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and\ncalls `.focus()` directly on this host to move real DOM focus there.\n`[part=\"base\"]` is purely a visual box with no interactive semantics of its\nown — see the class doc on `<lr-menu>` for why real DOM focus (rather\nthan `aria-activedescendant`) was chosen for this pair.\n\nEnter/Space activation is handled by `<lr-menu>`'s own delegated\n`keydown` listener calling `select()` on whichever item is currently\nroving-focused (mirrors `<lr-tree>` calling `current.select()` from its\nown keydown handler) — this element only wires a plain `click` listener\nitself, so `select()` fires identically whether the item was reached by\nmouse or keyboard.\n\n`type=\"checkbox\"` (mirroring `wa-dropdown-item`'s identical `type` option)\nrenders `role=\"menuitemcheckbox\"` in place of `role=\"menuitem\"`, with\n`aria-checked` reflecting `checked` and a checkmark glyph shown once\n`checked` is `true`. Activating a `checkbox`-type item (click, or the\nparent's Enter/Space handling via `select()`) toggles `checked` and fires\n`lr-menu-item-change` *in addition to* the usual `lr-menu-item-select`\n— the latter is never suppressed, so a parent `<lr-menu>` still closes\nand re-fires its consolidated `lr-menu-select` exactly as it does for a\n`type=\"normal\"` item. `type=\"normal\"` (the default) renders and behaves\nexactly as before this option existed — no role, rendering, or event\ndifferences.",
           "name": "LyraMenuItem",
           "cssParts": [
             {
@@ -149257,11 +151408,406 @@
     },
     {
       "kind": "javascript-module",
+      "path": "src/components/layout/menu/menu-label.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-menu-label>` — a non-interactive section heading inside `<lr-menu>`'s default slot.\n\n`role=\"presentation\"` on the host: a `role=\"menu\"` may only contain menu-item roles, so a\nheading that kept a generic role would make the menu's own children invalid. The visible text\nstill reads normally in reading order, and `<lr-menu>`'s roving tabindex skips this element\nbecause it is not a `LyraMenuItem` — a label is never a focus stop.\n\nTo announce a *named group* rather than a caption, wrap the labelled items in an element with\n`role=\"group\"` and point its `aria-label` at the same text; idrefs cannot cross the shadow\nboundary, so `aria-labelledby` against this element's internals would not resolve.",
+          "name": "LyraMenuLabel",
+          "cssParts": [
+            {
+              "description": "The heading row.",
+              "name": "base"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The heading text.",
+              "name": ""
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lr-menu-label",
+          "customElement": true,
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraMenuLabel",
+          "declaration": {
+            "name": "LyraMenuLabel",
+            "module": "src/components/layout/menu/menu-label.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/layout/menu/menu-label.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-menu-label",
+          "declaration": {
+            "name": "LyraMenuLabel",
+            "module": "src/components/layout/menu/menu-label.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/layout/menu/menu-label.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
       "path": "src/components/layout/menu/menu.class.ts",
       "declarations": [
         {
           "kind": "class",
-          "description": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control. In supporting browsers,\nassigning the element reference intentionally clears the internal control's serialized\n`aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers\nwithout the reflected element-reference API retain the string as a best-effort fallback.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.",
+          "description": "`<lr-menu>` — an anchored dropdown of `<lr-menu-item>` actions, opened\nfrom a consumer-supplied trigger (typically an icon button). A close, drop-\nin-shaped replacement for reaching outside this library for a third-party\ndropdown to build a gear menu, an avatar menu, or a history row's overflow\nmenu: click the trigger, a positioned menu appears, clicking an item both\nperforms the action *and* closes the menu.\n\n**ARIA pattern — `role=\"menu\"`/`role=\"menuitem\"` with real roving DOM\nfocus, not a listbox.** Two coherent, mutually-exclusive shapes were\navailable here: (a) `role=\"listbox\"`/`role=\"option\"` with\n`aria-activedescendant`, the pattern `<lr-select>`'s trigger-button +\npopup listbox uses, where DOM focus never leaves the trigger; or (b)\n`role=\"menu\"`/`role=\"menuitem\"` with real focus moving between actual\nfocusable rows, the WAI-ARIA \"menu button\" pattern. This picks (b):\n`<lr-menu-item>` rows are real, independently-focusable elements (see\nthat class's own doc), which is the more natural fit for a menu\nspecifically — unlike a listbox's rows, a menu's rows are conventionally\nbutton-/link-shaped, and every well-known native/OS menu (and this\nfamily's own `<lr-tree>`/`<lr-tree-item>` pair, which this component's\nroving-tabindex plumbing directly mirrors) already moves real focus rather\nthan merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`\nare consistently the menu-button shape throughout — never mixed with\nlistbox/option.\n\nInteraction contract (mirrors the WAI-ARIA APG \"menu button\" pattern):\n- Click the trigger (or Enter/Space on it, via the trigger's own native\n  `click` activation) toggles the menu, moving focus to the first\n  non-disabled item on open.\n- ArrowDown/ArrowUp on the trigger while closed also open it, focusing the\n  first/last non-disabled item respectively.\n- Once open, ArrowDown/ArrowUp move the roving focus among non-disabled\n  items (wrapping past either end — the recommended, and more common,\n  menu-widget behavior, unlike `<lr-select>`'s clamped listbox nav).\n  Home/End jump to the first/last non-disabled item. Enter/Space activate\n  the focused item. Escape closes and returns focus to the trigger. A\n  printable keypress runs type-ahead: roving focus jumps to the next\n  non-disabled item whose text starts with the accumulated buffer, cycling\n  from just after the active item (mirrors `<lr-select>`'s identical\n  listbox type-ahead). All of the above (except Escape and Tab) only\n  respond to keydowns from a real `<lr-menu-item>` target, so a slotted\n  non-item control (e.g. a date input) keeps its own full default keyboard\n  behavior.\n- Tab never traps focus and never calls `preventDefault()` — the browser's\n  own Tab navigation always proceeds untouched. It closes the menu only\n  when focus is on its way *out* of the popup: with a focusable in the\n  `header`/`footer` region on the far side of the keypress, the menu stays\n  open so native Tab can carry focus there instead. With neither region\n  filled, Tab closes exactly as it always has. Tabbing past the popup's\n  last focusable in either direction closes it too, including from slotted\n  non-item content — which previously left the menu open while focus\n  walked away.\n- Escape from `header`/`footer` content closes the menu and refocuses the\n  trigger unconditionally, mirroring `<lr-popover>`'s handling of arbitrary\n  popup content. `closeOnEscapeAnywhere` governs only the *legacy* shape —\n  non-item content slotted into the **default** slot — and defaults to\n  `false`, so existing consumers keep today's behavior unchanged.\n- A click outside both the trigger and the open popup closes it (mirrors\n  `<lr-select>`'s `onDocPointer` exactly) — this does *not* refocus the\n  trigger, since the outside click itself already moved focus somewhere\n  the user chose; Escape and a committed selection *do* refocus the\n  trigger, since those are dismissals with nowhere else for focus to go.\n\n`show(focus?)` and `hide(options?)` are the public imperative pair, for the cases the trigger\ncan't express: a slotted \"Apply\"/\"Done\" button inside the menu, a keyboard shortcut, a parent\nrestoring UI state. `hide({ focusTrigger: true })` is the one that also returns DOM focus to the\ntrigger — use it whenever the interaction that closed the menu hasn't already put focus\nsomewhere the user chose. Writing `open` directly still works and is fully equivalent apart from\nthe focus moves: the roving-tabindex reset is centralized in `updated()`, so `el.open = false`\nnever leaves a stale `tabindex=\"0\"` tab stop on the last active item.\n\nThe trigger element itself is read from the `trigger` slot's assigned element (first one, if\nseveral are assigned) and enhanced imperatively with\n`aria-haspopup=\"menu\"`/`aria-expanded`/`aria-controls` — the same \"reach into a consumer-owned\nlight-DOM element to complete its a11y wiring\" approach `<lr-dialog>` documents for its own\nheading detection. `aria-controls` targets this menu host (which receives a stable generated\n`id` only when the consumer did not supply one), rather than a shadow-private popup id, so the\nrelationship is resolvable from the trigger's root. `<lr-button>` and `<lr-icon-button>` observe\nthose attributes, forward the popup/expanded values to their shadow-internal native controls,\nand resolve the controls element-reference onto that focused control. In supporting browsers,\nassigning the element reference intentionally clears the internal control's serialized\n`aria-controls` value; `ariaControlsElements` is the relationship's source of truth. Browsers\nwithout the reflected element-reference API retain the string as a best-effort fallback.\n\nThe popup is always rendered (never `display:none`) so `.focus()` calls on\nits content work synchronously the instant it opens — visually hidden via\n`visibility`/`opacity` instead (identical to `<lr-select>`'s own\n`[part=\"listbox\"]`). `visibility` is an inherited CSS property that\npierces the `<slot>` projection boundary, so every closed-state\n`<lr-menu-item>` is automatically excluded from sequential (Tab-key)\nnavigation with no separate JS bookkeeping.",
           "name": "LyraMenu",
           "cssParts": [
             {
@@ -181405,6 +183951,745 @@
           "declaration": {
             "name": "*",
             "module": "src/components/overlays/overlay/tooltip.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/overlays/popup/popup.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-popup>` — the low-level anchored-positioning primitive.\n\nIt positions its `popup` slot against an anchor and keeps the two aligned through scroll,\nresize and layout change. That is *all* it does: no dismiss behaviour, no focus management, no\nARIA relationship, no trigger semantics. Those are policy, and policy belongs to the component\nbuilt on top — `<lr-popover>`, `<lr-dropdown>` and `<lr-tooltip>` each layer their own.\n\nReach for it when you need a floating surface the library does not already ship: an anchored\ninline editor, a colour-picker panel, a custom autocomplete list. If you find yourself adding\nlight dismiss and focus return on top, use `<lr-popover>` instead.",
+          "name": "LyraPopup",
+          "cssProperties": [
+            {
+              "description": "Half-width of the arrow square.",
+              "name": "--lr-popup-arrow-size",
+              "default": "var(--lr-size-0-375rem)"
+            }
+          ],
+          "cssParts": [
+            {
+              "description": "The anchor slot wrapper.",
+              "name": "anchor"
+            },
+            {
+              "description": "The arrow element, rendered only when `arrow` is set.",
+              "name": "arrow"
+            },
+            {
+              "description": "The positioned floating surface. Carries the resolved side (`top`, `bottom`, `left`, `right`) in its part name, so `::part(popup bottom)` can style one side — state after `::part()` never matches.",
+              "name": "popup"
+            }
+          ],
+          "slots": [
+            {
+              "description": "The floating content.",
+              "name": ""
+            },
+            {
+              "description": "The element to position against. Ignored when `for` or `virtualAnchor` is set.",
+              "name": "anchor"
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "active",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the popup is rendered and positioned. Nothing else changes when it flips.",
+              "attribute": "active",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "anchorSlotWrapper",
+              "type": {
+                "text": "HTMLElement"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "arrow",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Render an arrow that points at the anchor.",
+              "attribute": "arrow",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "arrowElement",
+              "type": {
+                "text": "HTMLElement"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "arrowPadding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Keeps the arrow this far from the popup's corners, in pixels.",
+              "attribute": "arrow-padding"
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "distance",
+              "type": {
+                "text": "number"
+              },
+              "default": "4",
+              "description": "Distance from the anchor along the placement axis, in pixels.",
+              "attribute": "distance"
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "flip",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Flip to the opposite side when the preferred one does not fit.",
+              "attribute": "flip",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "for",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Id of an element elsewhere in the same root to anchor against, instead of the `anchor` slot.\nResolved in this element's own root, so it works inside a shadow tree where an idref could not\ncross the boundary.",
+              "attribute": "for",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "padding",
+              "type": {
+                "text": "number"
+              },
+              "default": "8",
+              "description": "Viewport padding kept clear by `shift` and by the available-size measurement.",
+              "attribute": "padding"
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "placement",
+              "type": {
+                "text": "Placement"
+              },
+              "default": "'bottom-start'",
+              "description": "Preferred placement. `flip`/`shift` may override it; the result is reported by `lr-reposition`.",
+              "attribute": "placement",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "popupElement",
+              "type": {
+                "text": "HTMLElement"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "resolvedPlacement",
+              "type": {
+                "text": "Placement"
+              },
+              "privacy": "private",
+              "default": "'bottom-start'"
+            },
+            {
+              "kind": "field",
+              "name": "shift",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Shift along the anchor's edge to stay within the viewport.",
+              "attribute": "shift",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "skidding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Offset along the anchor's edge, in pixels.",
+              "attribute": "skidding"
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "stopPlacing",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "virtualAnchor",
+              "type": {
+                "text": "VirtualAnchor | { x: number; y: number; width?: number; height?: number } | null"
+              },
+              "default": "null",
+              "description": "Anchor against an arbitrary rectangle rather than an element — a canvas hit, a chart datum, a\ntext-selection range. Takes precedence over `for` and the `anchor` slot. Assign `null` to go\nback to element anchoring."
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "applyArrow",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "placement",
+                  "type": {
+                    "text": "Placement"
+                  }
+                },
+                {
+                  "name": "coords",
+                  "type": {
+                    "text": "{ x?: number; y?: number } | undefined"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "method",
+              "name": "applySidePart",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "placement",
+                  "type": {
+                    "text": "Placement"
+                  }
+                }
+              ],
+              "description": "The resolved side lives in the part name, never as an attribute after `::part()` — that\nselector shape silently never matches."
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "reposition",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Recomputes the position now. Rarely needed — the popup already tracks scroll, resize and\nlayout change — but a consumer that moved a virtual anchor imperatively can force a pass."
+            },
+            {
+              "kind": "method",
+              "name": "resolveAnchor",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "Element | VirtualAnchor | null"
+                }
+              }
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "teardown",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              }
+            }
+          ],
+          "events": [
+            {
+              "description": "Emitted after each recomputation. `detail: { placement }` carries the placement actually used, which `flip` may have changed.",
+              "name": "lr-reposition"
+            }
+          ],
+          "attributes": [
+            {
+              "name": "active",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Whether the popup is rendered and positioned. Nothing else changes when it flips.",
+              "fieldName": "active"
+            },
+            {
+              "name": "arrow",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Render an arrow that points at the anchor.",
+              "fieldName": "arrow"
+            },
+            {
+              "name": "arrow-padding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Keeps the arrow this far from the popup's corners, in pixels.",
+              "fieldName": "arrowPadding"
+            },
+            {
+              "name": "distance",
+              "type": {
+                "text": "number"
+              },
+              "default": "4",
+              "description": "Distance from the anchor along the placement axis, in pixels.",
+              "fieldName": "distance"
+            },
+            {
+              "name": "flip",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Flip to the opposite side when the preferred one does not fit.",
+              "fieldName": "flip"
+            },
+            {
+              "name": "for",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Id of an element elsewhere in the same root to anchor against, instead of the `anchor` slot.\nResolved in this element's own root, so it works inside a shadow tree where an idref could not\ncross the boundary.",
+              "fieldName": "for"
+            },
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "name": "padding",
+              "type": {
+                "text": "number"
+              },
+              "default": "8",
+              "description": "Viewport padding kept clear by `shift` and by the available-size measurement.",
+              "fieldName": "padding"
+            },
+            {
+              "name": "placement",
+              "type": {
+                "text": "Placement"
+              },
+              "default": "'bottom-start'",
+              "description": "Preferred placement. `flip`/`shift` may override it; the result is reported by `lr-reposition`.",
+              "fieldName": "placement"
+            },
+            {
+              "name": "shift",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "true",
+              "description": "Shift along the anchor's edge to stay within the viewport.",
+              "fieldName": "shift"
+            },
+            {
+              "name": "skidding",
+              "type": {
+                "text": "number"
+              },
+              "default": "0",
+              "description": "Offset along the anchor's edge, in pixels.",
+              "fieldName": "skidding"
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lr-popup",
+          "customElement": true
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraPopup",
+          "declaration": {
+            "name": "LyraPopup",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/overlays/popup/popup.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-popup",
+          "declaration": {
+            "name": "LyraPopup",
+            "module": "src/components/overlays/popup/popup.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/overlays/popup/popup.class.js"
           }
         }
       ]
@@ -221786,6 +225071,395 @@
           "declaration": {
             "name": "*",
             "module": "src/components/utility/tour/tour.class.js"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/utility/visually-hidden/visually-hidden.class.ts",
+      "declarations": [
+        {
+          "kind": "class",
+          "description": "`<lr-visually-hidden>` — hides its content from sight while leaving it in the accessibility\ntree, so screen readers still announce it.\n\nContent becomes visible again while anything inside it holds focus, which is what makes the\nelement usable for skip links: the link is invisible until a keyboard user tabs to it.",
+          "name": "LyraVisuallyHidden",
+          "slots": [
+            {
+              "description": "The content to hide visually.",
+              "name": ""
+            }
+          ],
+          "members": [
+            {
+              "kind": "field",
+              "name": "afterUpdateCallbacks",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks scheduled during the current update cycle, keyed so that two callers with\n*different* purposes each keep a slot. A single boolean here meant the second caller in a\ncycle was silently dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "deferredAfterUpdate",
+              "type": {
+                "text": "Map<string, () => void> | undefined"
+              },
+              "privacy": "private",
+              "description": "Callbacks that came due while detached, replayed on reconnect.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveDirection",
+              "type": {
+                "text": "'ltr' | 'rtl'"
+              },
+              "privacy": "protected",
+              "description": "The effective text direction, including inherited CSS direction.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "effectiveLocale",
+              "type": {
+                "text": "string"
+              },
+              "privacy": "protected",
+              "description": "The effective locale used by this component.",
+              "readonly": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "inheritedContextObserver",
+              "type": {
+                "text": "MutationObserver | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "attribute": "locale",
+              "reflects": true,
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "pendingLoadController",
+              "type": {
+                "text": "AbortController | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "stopLocaleSubscription",
+              "type": {
+                "text": "() => void | undefined"
+              },
+              "privacy": "private",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "field",
+              "name": "strings",
+              "type": {
+                "text": "LyraLocaleStrings"
+              },
+              "default": "{}",
+              "description": "Per-instance message overrides, useful for application-specific wording.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "addEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | AddEventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "beginAbortableLoad",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "AbortSignal | undefined"
+                }
+              },
+              "description": "Starts a component-owned cancellable load and aborts the previous one.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "emit",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "CustomEvent<T>"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "detail",
+                  "optional": true,
+                  "type": {
+                    "text": "T"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "LyraEmitOptions"
+                  }
+                }
+              ],
+              "description": "Dispatch a composed, bubbling custom event; notifications are not veto points by default.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "localize",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "string"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "key",
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "fallback",
+                  "optional": true,
+                  "type": {
+                    "text": "string"
+                  }
+                },
+                {
+                  "name": "values",
+                  "optional": true,
+                  "type": {
+                    "text": "Record<string, string | number>"
+                  }
+                }
+              ],
+              "description": "Resolve a localized message using this component's overrides and locale.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "observeInheritedContext",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "removeEventListener",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "type",
+                  "type": {
+                    "text": "K"
+                  }
+                },
+                {
+                  "name": "listener",
+                  "type": {
+                    "text": "(this: this, event: Events[K]) => unknown"
+                  }
+                },
+                {
+                  "name": "options",
+                  "optional": true,
+                  "type": {
+                    "text": "boolean | EventListenerOptions"
+                  }
+                }
+              ],
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            },
+            {
+              "kind": "method",
+              "name": "scheduleAfterUpdate",
+              "privacy": "protected",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "parameters": [
+                {
+                  "name": "callback",
+                  "type": {
+                    "text": "() => void"
+                  }
+                },
+                {
+                  "name": "key",
+                  "default": "'load'"
+                }
+              ],
+              "description": "Runs callbacks once, after the current update completes, coalesced **per `key`**.\n\nRepeated schedules under the same key collapse to the first one — that is the whole point for\nthe default `'load'` key, where several property writes in one cycle must produce one fetch\nrather than one per write. But callers with *different* purposes need their own slot: several\nviewers schedule a `load()` and a locale-driven search recompute from the same `updated()`,\nand while this coalesced on a single boolean the second one was silently dropped, leaving\nsearch results collated for the previous locale. Pass a distinct `key` for distinct work.\n\nLit still runs the update cycle while detached, so callbacks that come due then are held and\nreplayed on reconnect rather than dropped.",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ],
+          "superclass": {
+            "name": "LyraElement",
+            "module": "/src/internal/lyra-element.js"
+          },
+          "tagName": "lr-visually-hidden",
+          "customElement": true,
+          "attributes": [
+            {
+              "name": "locale",
+              "type": {
+                "text": "string"
+              },
+              "default": "''",
+              "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.",
+              "fieldName": "locale",
+              "inheritedFrom": {
+                "name": "LyraElement",
+                "module": "src/internal/lyra-element.ts"
+              }
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "LyraVisuallyHidden",
+          "declaration": {
+            "name": "LyraVisuallyHidden",
+            "module": "src/components/utility/visually-hidden/visually-hidden.class.ts"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "javascript-module",
+      "path": "src/components/utility/visually-hidden/visually-hidden.ts",
+      "declarations": [],
+      "exports": [
+        {
+          "kind": "custom-element-definition",
+          "name": "lr-visually-hidden",
+          "declaration": {
+            "name": "LyraVisuallyHidden",
+            "module": "src/components/utility/visually-hidden/visually-hidden.class.ts"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "*",
+          "declaration": {
+            "name": "*",
+            "module": "src/components/utility/visually-hidden/visually-hidden.class.js"
           }
         }
       ]

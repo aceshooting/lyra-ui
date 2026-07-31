@@ -6,17 +6,17 @@ import { tag } from '../../../internal/prefix.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { finiteInteger } from '../../../internal/numbers.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
-import { styles } from './tree-node.styles.js';
-import type { TreeItem } from './tree-item.js';
+import { styles } from './tree-item.styles.js';
+import type { TreeItem } from './tree-types.js';
 
 const MAX_RENDER_DEPTH = 64;
 
-export interface LyraTreeNodeEventMap {
+export interface LyraTreeItemEventMap {
   'lr-node-toggle': CustomEvent<{ id: string; expanded: boolean }>;
   'lr-node-select': CustomEvent<{ id: string }>;
 }
 /**
- * `<lr-tree-node>` — internal recursive renderer for `<lr-tree>`.
+ * `<lr-tree-item>` — internal recursive renderer for `<lr-tree>`.
  *
  * `role="treeitem"` (plus `aria-expanded`/`aria-level`/`aria-setsize`/
  * `aria-posinset` and the roving `tabindex`, driven by `<lr-tree>`) live on
@@ -26,7 +26,7 @@ export interface LyraTreeNodeEventMap {
  * what the WAI-ARIA treeitem pattern requires (previously a shadow-root
  * sibling).
  *
- * @customElement lr-tree-node
+ * @customElement lr-tree-item
  * @event lr-node-toggle - `detail: { id, expanded }`, fired when this node is expanded or collapsed (via `expand()`/`collapse()`, the toggle button, or ArrowRight/ArrowLeft).
  * @event lr-node-select - `detail: { id }`, fired when this node's primary action is activated (via `select()`, clicking anywhere in its row, or Enter/Space).
  * @csspart row - The tree row.
@@ -54,7 +54,7 @@ export interface LyraTreeNodeEventMap {
  * @cssprop [--lr-tree-badge-danger-color=var(--lr-color-danger)] - Danger badge text color.
  * @cssprop [--lr-tree-badge-danger-bg=var(--lr-color-danger-quiet)] - Danger badge background.
  */
-export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
+export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {
   static override styles = [LyraElement.styles, styles];
 
   @property({ attribute: false }) item!: TreeItem;
@@ -113,7 +113,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
 
   get hasChildren(): boolean {
     // `item` is required in normal use (`<lr-tree>` always assigns it), but a
-    // bare `document.createElement('lr-tree-node')` reaches the first update
+    // bare `document.createElement('lr-tree-item')` reaches the first update
     // with it unset — degrade to a leaf instead of throwing mid-lifecycle.
     return Boolean(
       this.item?.children?.length &&
@@ -180,7 +180,7 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
   protected override async getUpdateComplete(): Promise<boolean> {
     const result = await super.getUpdateComplete();
     await cascadeUpdateComplete(
-      [...(this.shadowRoot?.querySelectorAll(tag('tree-node')) ?? [])] as LyraTreeNode[],
+      [...(this.shadowRoot?.querySelectorAll(tag('tree-item')) ?? [])] as LyraTreeItem[],
     );
     return result;
   }
@@ -243,14 +243,14 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
             ${repeat(
               this.item.children!,
               (child) => child.id,
-              (child, i) => html`<lr-tree-node
+              (child, i) => html`<lr-tree-item
                 .item=${child}
                 .depth=${this.depth + 1}
                 .ancestry=${[...this.ancestry, this.item]}
                 .activeId=${this.activeId}
                 .setSize=${this.item.children!.length}
                 .posInSet=${i + 1}
-              ></lr-tree-node>`,
+              ></lr-tree-item>`,
             )}
           </div>`
         : nothing}
@@ -261,6 +261,6 @@ export class LyraTreeNode extends LyraElement<LyraTreeNodeEventMap> {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'lr-tree-node': LyraTreeNode;
+    'lr-tree-item': LyraTreeItem;
   }
 }

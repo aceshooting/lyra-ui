@@ -7,7 +7,7 @@ import { styles } from './file-tree.styles.js';
 import type { LyraTree, TreeItem, TreeBadge } from '../tree/tree.class.js';
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
-import { LyraTreeNode } from '../tree/tree-node.class.js';
+import { LyraTreeItem } from '../tree/tree-item.class.js';
 
 export type GitStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' | 'conflicted' | 'ignored';
 
@@ -173,7 +173,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   };
 
   /** Fulfills a lazy directory's children in place. Expansion state survives because `<lr-tree>`
-   *  reconciles top-level items by id and each `<lr-tree-node>` keeps its own `expanded` state. */
+   *  reconciles top-level items by id and each `<lr-tree-item>` keeps its own `expanded` state. */
   setChildren(path: string, children: FileTreeNode[]): void {
     const replace = (list: FileTreeNode[]): FileTreeNode[] =>
       list.map((n) => {
@@ -206,14 +206,14 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     if (!treeEl) return false;
     const chain = this.ancestorChain(path);
     if (chain.length === 0) return false;
-    let container: LyraTree | LyraTreeNode = treeEl;
-    let node: LyraTreeNode | null = null;
+    let container: LyraTree | LyraTreeItem = treeEl;
+    let node: LyraTreeItem | null = null;
     for (const id of chain) {
       const candidates = (
-        container instanceof LyraTreeNode
-          ? [...(container.shadowRoot?.querySelectorAll(tag('tree-node')) ?? [])]
-          : [...container.querySelectorAll(tag('tree-node'))]
-      ) as LyraTreeNode[];
+        container instanceof LyraTreeItem
+          ? [...(container.shadowRoot?.querySelectorAll(tag('tree-item')) ?? [])]
+          : [...container.querySelectorAll(tag('tree-item'))]
+      ) as LyraTreeItem[];
       node = candidates.find((n) => n.item?.id === id) ?? null;
       if (!node) return false;
       if (id !== chain[chain.length - 1] && !node.expanded) {

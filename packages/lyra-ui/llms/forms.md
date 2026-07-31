@@ -1977,6 +1977,105 @@ ring/dot without hijacking the shared `--lr-color-brand` token everything else r
 <lr-radio name="format" value="json">JSON</lr-radio>
 ```
 
+## `lr-radio-button`
+
+The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
+`sl-radio-button`.
+
+Deliberately a **subclass of `LyraRadio`**: form association, validity, `form.reset()` restoration
+and the whole `lr-radio-group` ownership/roving-focus contract are inherited rather than
+reimplemented, so the two can never drift apart. Only the chrome differs. A `lr-radio-group` accepts
+either tag and the two can be mixed in one group.
+
+Consecutive `lr-radio-button` siblings collapse their shared borders into one segmented control
+automatically, via `:host(:first-of-type)` / `:host(:last-of-type)` — `:of-type` counts only
+`lr-radio-button` siblings, so a group's `slot="label"`/`slot="hint"` children never shift the ends,
+and nothing has to be set on the group. A lone button matches both ends and comes out fully rounded.
+
+**Properties and methods:** identical to `lr-radio` — `checked`, `disabled`, `name`, `required`,
+`value`; `click()`, `focus()`, `blur()`.
+
+**Events:** identical to `lr-radio` — `input` and `change` on selection; `lr-change`
+(`detail: { checked, value }`) only for a *standalone* button, since an owning `lr-radio-group`
+emits its own aggregate `lr-change` instead; and `focus` / `blur`, re-emitted because the internal
+control's own do not cross the shadow boundary.
+
+**Slots:** default (label text), `prefix` (leading content, typically an icon), `suffix`.
+
+**CSS parts:** `base`, `prefix`, `label`, `suffix`. `base` carries `checked` and `disabled` as
+additional part tokens (`::part(base checked)`), because an attribute selector after `::part()`
+never matches.
+
+Because this is a subclass, the manifest also lists `lr-radio`'s own `circle` and `dot` parts and its
+`--lr-radio-label-indent`, `--lr-radio-checked-border-color` and `--lr-radio-checked-dot-color`
+custom properties. **This element renders none of them** — it draws a button, not a circle and dot —
+so styling them here has no effect. They are inherited declarations, not surface.
+
+**Themeable custom properties:** shared tokens only — `--lr-color-brand` / `--lr-color-on-brand` /
+`--lr-color-brand-quiet` (selected and hover fills), `--lr-color-surface-raised`,
+`--lr-color-border`, `--lr-radius`, `--lr-icon-button-size` (the WCAG 2.5.8 hit-area floor).
+
+```html
+<lr-radio-group name="view" label="View">
+  <lr-radio-button value="day" checked>Day</lr-radio-button>
+  <lr-radio-button value="week">Week</lr-radio-button>
+</lr-radio-group>
+```
+
+---
+
+## `lr-otp-input`
+
+A form-associated one-time-code field: several character segments that together hold one value.
+Mirrors `wa-otp-input`.
+
+The segments are **presentational**. A single real `<input>` sits transparently across them and owns
+focus, selection and the value — which is what makes paste, SMS autofill (`autocomplete` defaults to
+`one-time-code`), IME composition and mobile keyboards work without reimplementing any of it, and
+keeps the control to one tab stop rather than one per character.
+
+Every entry path — typing, paste, autofill, a `value` assignment, a narrowing `type` change — funnels
+through one sanitizer, so none of them can produce a value another could not. Characters the current
+`type` rejects are dropped silently: pasting `"ABC-123"` into a numeric field yields `123`.
+
+**Properties:** `label`, `hint`, `errorText` (`error-text`); `length: number = 6` (reflected);
+`format: string = ''` (reflected) — `#` marks a segment and any other character becomes a literal
+separator (`format="###-###"`), overriding `length`; `type: 'numeric' | 'alpha' | 'alphanumeric' =
+'numeric'` (reflected, also drives `inputmode`); `case: 'preserve' | 'upper' | 'lower' = 'preserve'`
+(reflected); `mask: boolean = false` and `withMask: boolean = false` (`with-mask`) — display-only,
+`value` and the screen-reader text are unaffected; `readonly: boolean = false`;
+`autocomplete: string = 'one-time-code'`; plus the shared form-associated surface (`name`, `value`,
+`disabled`, `required`, `form`, `validity`, `validationMessage`, `willValidate`, `checkValidity()`,
+`reportValidity()`).
+
+**Methods:** `focus()`, `blur()`, `click()`, `select()`.
+
+**Read-only:** `segmentCount: number` — how many segments are actually rendered, i.e. `format`'s `#`
+count when `format` is set, else `length`, clamped to 1–32. This is the number `value` is truncated
+to and the field is validated against, so read it rather than re-deriving it from `length`.
+
+**Events:** `input`, `change`, and `lr-complete` — `detail: { value }`, once every segment is filled.
+
+**Slots:** `label`, `hint`, `error` (each replaces the matching attribute for rich content).
+
+**CSS parts:** `base`, `label`, `field`, `control` (the real, transparent input), `segment`,
+`separator`, `hint`, `error`. `segment` carries `active`, `masked`, `placeholder-mask` and `invalid`
+as additional part tokens.
+
+**Themeable custom properties:** `--lr-otp-input-mask-char` (the mask glyph — must be a *quoted*
+string, it is used as CSS `content`); otherwise shared tokens.
+
+**Validation:** a partially-entered code reports `tooShort` with the localized `otpInputIncomplete`
+message; `required` and empty reports `valueMissing`. Validation text only renders once the user has
+engaged with the field.
+
+```html
+<lr-otp-input label="Verification code" required error-text="Enter the code we sent you."></lr-otp-input>
+<lr-otp-input label="License key" type="alphanumeric" case="upper" format="####-####-####"></lr-otp-input>
+```
+
+---
+
 ## `lr-radio-group`
 
 A labeled, keyboard-navigable group of `lr-radio` controls. Arrow keys, Home, and End move

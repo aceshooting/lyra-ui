@@ -555,6 +555,8 @@ export type LyraMessageKey =
   | 'valueMustBeSerializable'
   | 'valueInvalid'
   | 'phoneInputIncomplete'
+  | 'otpInputIncomplete'
+  | 'otpInputLabel'
   | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
@@ -1756,6 +1758,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   valueMustBeSerializable: 'Value must be JSON-serializable.',
   valueInvalid: 'The value is invalid.',
   phoneInputIncomplete: 'This phone number is incomplete.',
+  otpInputIncomplete: 'Enter all {total} characters.',
+  otpInputLabel: 'Verification code',
   accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',

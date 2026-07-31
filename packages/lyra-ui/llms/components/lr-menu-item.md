@@ -103,7 +103,7 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
 relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`. `role="menuitem"` and the
-roving `tabindex` both live on the host element itself (mirroring `<lr-tree-node>`), not an
+roving `tabindex` both live on the host element itself (mirroring `<lr-tree-item>`), not an
 internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tabIndex`.
 
 **Properties:**

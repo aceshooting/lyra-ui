@@ -1,6 +1,7 @@
 import {
   computePosition,
   autoUpdate,
+  arrow,
   flip,
   shift,
   offset,
@@ -8,9 +9,33 @@ import {
   type Placement,
 } from '@floating-ui/dom';
 
+/** What `place()` reports back after each recomputation, for a caller that renders an arrow or
+ *  reflects the resolved side (which `flip()` may have changed) into a part name or attribute. */
+export interface PlacementResult {
+  /** The placement actually used, after `flip()`/`shift()` — not necessarily the requested one. */
+  placement: Placement;
+  /** Arrow offsets within the popup, present only when an `arrow` element was supplied. */
+  arrow?: { x?: number; y?: number };
+}
+
 export interface PlaceOptions {
   placement?: Placement;
+  /** Distance from the anchor along the placement axis. */
   offset?: number;
+  /** Distance along the perpendicular axis — Floating UI's cross-axis offset. */
+  skidding?: number;
+  /** Flip to the opposite side when the requested one does not fit. Default `true`. */
+  flip?: boolean;
+  /** Shift along the anchor's edge to stay in view. Default `true`. */
+  shift?: boolean;
+  /** Viewport padding used by `shift()` and the available-size measurement. */
+  padding?: number;
+  /** An arrow element inside the popup to position against the anchor's centre. */
+  arrow?: HTMLElement;
+  /** Keeps the arrow this far from the popup's corners. */
+  arrowPadding?: number;
+  /** Called after every recomputation with the resolved placement. */
+  onPlaced?: (result: PlacementResult) => void;
 }
 
 /**
@@ -57,6 +82,30 @@ export function place(
   popup.style.position = 'fixed';
   popup.style.margin = '0';
 
+  const padding = opts.padding ?? 8;
+  // `flip`/`shift` default on: every caller before these options existed got them unconditionally,
+  // and they are what keeps a popup inside the viewport. Only `<lr-popup>` turns them off, and
+  // only because it is the low-level primitive whose whole job is to expose the raw knobs.
+  const middleware = [
+    offset({ mainAxis: opts.offset ?? 4, crossAxis: opts.skidding ?? 0 }),
+    opts.flip === false ? undefined : flip(),
+    opts.shift === false ? undefined : shift({ padding }),
+    opts.arrow ? arrow({ element: opts.arrow, padding: opts.arrowPadding ?? 0 }) : undefined,
+    size({
+      padding,
+      apply({ availableWidth, availableHeight, elements }) {
+        elements.floating.style.setProperty(
+          '--lr-positioner-available-inline-size',
+          `${Math.max(0, availableWidth)}px`,
+        );
+        elements.floating.style.setProperty(
+          '--lr-positioner-available-block-size',
+          `${Math.max(0, availableHeight)}px`,
+        );
+      },
+    }),
+  ].filter((entry) => entry !== undefined);
+
   const update = () =>
     computePosition(anchor, popup, {
       // The popup is `position: fixed`, so Floating UI must compute viewport-relative
@@ -64,27 +113,11 @@ export function place(
       // the scroll offset (appears too far down on a scrolled page).
       strategy: 'fixed',
       placement: opts.placement ?? 'bottom-start',
-      middleware: [
-        offset(opts.offset ?? 4),
-        flip(),
-        shift({ padding: 8 }),
-        size({
-          padding: 8,
-          apply({ availableWidth, availableHeight, elements }) {
-            elements.floating.style.setProperty(
-              '--lr-positioner-available-inline-size',
-              `${Math.max(0, availableWidth)}px`,
-            );
-            elements.floating.style.setProperty(
-              '--lr-positioner-available-block-size',
-              `${Math.max(0, availableHeight)}px`,
-            );
-          },
-        }),
-      ],
-    }).then(({ x, y }) => {
+      middleware,
+    }).then(({ x, y, placement, middlewareData }) => {
       popup.style.left = `${x}px`;
       popup.style.top = `${y}px`;
+      opts.onPlaced?.({ placement, arrow: middlewareData.arrow });
     });
 
   const stopAutoUpdate = autoUpdate(anchor, popup, update);

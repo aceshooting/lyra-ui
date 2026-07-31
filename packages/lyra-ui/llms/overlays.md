@@ -658,6 +658,57 @@ computed-label value so the two can never disagree.
 
 ---
 
+## `lr-popup`
+
+The low-level anchored-positioning primitive `lr-popover`, `lr-dropdown` and `lr-tooltip` are built
+on. Mirrors `wa-popup` / `sl-popup`.
+
+It positions its default slot against an anchor and keeps the two aligned through scroll, resize and
+layout change — and does nothing else. **No dismiss behaviour, no focus management, no ARIA
+relationship, no trigger semantics.** Those are policy, and each of the three overlays above layers
+its own. Reach for `lr-popup` when you need a floating surface the library does not already ship (an
+anchored inline editor, a custom autocomplete list); if you find yourself adding light dismiss and
+focus return on top of it, use `lr-popover` instead.
+
+**Anchoring**, in precedence order: the `virtualAnchor` property (an arbitrary rect — a canvas hit, a
+chart datum, a selection range), then `for` (an element id resolved in *this element's own root*, so
+it works inside a shadow tree where a plain idref could not cross the boundary), then the first
+element assigned to the `anchor` slot.
+
+**Properties:** `active: boolean = false` (reflected) — whether the popup renders and positions;
+`for: string = ''` (reflected); `placement: Placement = 'bottom-start'` (reflected, the full
+Floating UI vocabulary, mirrored under RTL); `distance: number = 4`; `skidding: number = 0`;
+`flip: boolean = true` (reflected, `true`-defaulting converter — use `.flip = false`, not
+`?flip=`); `shift: boolean = true` (same); `padding: number = 8`; `arrow: boolean = false`
+(reflected); `arrowPadding: number = 0` (`arrow-padding`); `virtualAnchor` (property only).
+
+**Methods:** `reposition()` — recompute now. Rarely needed, since the popup already tracks scroll,
+resize and layout change; useful after moving a virtual anchor imperatively.
+
+**Events:** `lr-reposition` — `detail: { placement }`, the placement actually used after `flip`.
+
+**Slots:** `anchor` (the element to position against), default (the floating content).
+
+**CSS parts:** `anchor`, `popup`, `arrow`. `popup` carries the **resolved side** as a second part
+token (`top`/`bottom`/`left`/`right`), so `::part(popup bottom)` styles one side —
+`::part(popup)[data-side]` would silently never match.
+
+**Themeable custom properties:** `--lr-popup-arrow-size` (half-width of the arrow square, default
+`var(--lr-size-0-375rem)`); otherwise shared tokens — `--lr-overlay-stack-index` /
+`--lr-layer-popover` (stacking), `--lr-color-surface-raised`, `--lr-color-border`.
+
+The popup also receives `--lr-positioner-available-inline-size` / `--lr-positioner-available-block-size`
+from the shared positioner and caps itself to them, so it never overflows the viewport.
+
+```html
+<lr-popup active arrow placement="top" distance="8">
+  <button slot="anchor">Anchor</button>
+  <div class="panel">Positioned content</div>
+</lr-popup>
+```
+
+---
+
 ## `lr-popover`
 
 A click-triggered, light-dismiss floating surface positioned with the shared Floating UI positioner.

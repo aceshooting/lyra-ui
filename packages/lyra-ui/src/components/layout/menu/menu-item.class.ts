@@ -50,7 +50,7 @@ export interface LyraMenuItemEventMap {
  * relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`.
  *
  * `role="menuitem"` and the roving `tabindex` both live on *this host
- * element*, not an internal shadow-DOM button — mirroring `<lr-tree-node>`'s
+ * element*, not an internal shadow-DOM button — mirroring `<lr-tree-item>`'s
  * identical choice (see that class's doc). `<lr-menu>` is the sole owner of
  * this element's `tabIndex`: it flips exactly one navigable item's `tabIndex`
  * to `0` (the rest sit at `-1`) as its roving-tabindex highlight moves, and
@@ -136,7 +136,7 @@ export class LyraMenuItem extends LyraElement<LyraMenuItemEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     // role/aria-disabled/aria-checked live on the host (see the class doc),
     // so they're plain imperative attribute writes here rather than part of
-    // render()'s shadow-DOM template -- mirrors lr-tree-node's identical
+    // render()'s shadow-DOM template -- mirrors lr-tree-item's identical
     // willUpdate.
     const isCheckbox = this.type === 'checkbox';
     this.setAttribute('role', isCheckbox ? 'menuitemcheckbox' : 'menuitem');

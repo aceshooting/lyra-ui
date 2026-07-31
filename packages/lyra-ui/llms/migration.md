@@ -15,72 +15,152 @@ Also rewrite the import specifiers: `@awesome.me/webawesome` and `@shoelace-styl
 A tag absent from these tables has no documented counterpart — port it by hand, or check
 `llms/index.md` for a Lyra component that covers the same job under a different name.
 
-## Web Awesome (44)
+## Web Awesome (81)
 
 Documented 1:1 mirrors. `wa-*` names not listed here are Web Awesome components Lyra does not mirror.
 
 | From | To |
 |---|---|
 | `<wa-accordion>` | `<lr-accordion>` |
+| `<wa-accordion-item>` | `<lr-accordion-item>` |
+| `<wa-animated-image>` | `<lr-animated-image>` |
+| `<wa-animation>` | `<lr-animation>` |
+| `<wa-avatar>` | `<lr-avatar>` |
 | `<wa-badge>` | `<lr-badge>` |
+| `<wa-bar-chart>` | `<lr-bar-chart>` |
 | `<wa-breadcrumb>` | `<lr-breadcrumb>` |
+| `<wa-breadcrumb-item>` | `<lr-breadcrumb-item>` |
+| `<wa-bubble-chart>` | `<lr-bubble-chart>` |
 | `<wa-button>` | `<lr-button>` |
 | `<wa-button-group>` | `<lr-button-group>` |
 | `<wa-callout>` | `<lr-callout>` |
+| `<wa-card>` | `<lr-card>` |
 | `<wa-carousel>` | `<lr-carousel>` |
 | `<wa-carousel-item>` | `<lr-carousel-item>` |
 | `<wa-chart>` | `<lr-chart>` |
+| `<wa-checkbox>` | `<lr-checkbox>` |
+| `<wa-checkbox-group>` | `<lr-checkbox-group>` |
 | `<wa-color-picker>` | `<lr-color-picker>` |
 | `<wa-combobox>` | `<lr-combobox>` |
+| `<wa-comparison>` | `<lr-image-comparer>` |
+| `<wa-copy-button>` | `<lr-copy-button>` |
+| `<wa-data-grid>` | `<lr-table>` |
 | `<wa-date-input>` | `<lr-date-input>` |
 | `<wa-date-picker>` | `<lr-date-picker>` |
 | `<wa-details>` | `<lr-details>` |
+| `<wa-dialog>` | `<lr-dialog>` |
 | `<wa-divider>` | `<lr-divider>` |
+| `<wa-doughnut-chart>` | `<lr-doughnut-chart>` |
+| `<wa-drawer>` | `<lr-drawer>` |
 | `<wa-dropdown>` | `<lr-dropdown>` |
 | `<wa-dropdown-item>` | `<lr-dropdown-item>` |
+| `<wa-file-input>` | `<lr-file-input>` |
 | `<wa-format-bytes>` | `<lr-format-bytes>` |
 | `<wa-format-date>` | `<lr-format-date>` |
 | `<wa-format-number>` | `<lr-format-number>` |
-| `<wa-image-comparer>` | `<lr-image-comparer>` |
+| `<wa-icon>` | `<lr-icon>` |
+| `<wa-include>` | `<lr-include>` |
 | `<wa-input>` | `<lr-input>` |
 | `<wa-intersection-observer>` | `<lr-intersection-observer>` |
+| `<wa-known-date>` | `<lr-known-date>` |
+| `<wa-line-chart>` | `<lr-line-chart>` |
+| `<wa-markdown>` | `<lr-markdown>` |
 | `<wa-mutation-observer>` | `<lr-mutation-observer>` |
 | `<wa-number-input>` | `<lr-number-input>` |
+| `<wa-option>` | `<lr-option>` |
+| `<wa-otp-input>` | `<lr-otp-input>` |
+| `<wa-pagination>` | `<lr-pagination>` |
+| `<wa-pie-chart>` | `<lr-pie-chart>` |
+| `<wa-polar-area-chart>` | `<lr-polar-area-chart>` |
 | `<wa-popover>` | `<lr-popover>` |
+| `<wa-popup>` | `<lr-popup>` |
 | `<wa-progress-bar>` | `<lr-progress-bar>` |
 | `<wa-progress-ring>` | `<lr-progress-ring>` |
+| `<wa-qr-code>` | `<lr-qr-code>` |
+| `<wa-radar-chart>` | `<lr-radar-chart>` |
 | `<wa-radio>` | `<lr-radio>` |
 | `<wa-radio-group>` | `<lr-radio-group>` |
+| `<wa-random-content>` | `<lr-random-content>` |
 | `<wa-rating>` | `<lr-rating>` |
 | `<wa-relative-time>` | `<lr-relative-time>` |
 | `<wa-resize-observer>` | `<lr-resize-observer>` |
+| `<wa-scatter-chart>` | `<lr-scatter-chart>` |
 | `<wa-scroller>` | `<lr-scroller>` |
 | `<wa-select>` | `<lr-select>` |
+| `<wa-skeleton>` | `<lr-skeleton>` |
+| `<wa-slider>` | `<lr-slider>` |
 | `<wa-sparkline>` | `<lr-sparkline>` |
 | `<wa-spinner>` | `<lr-spinner>` |
+| `<wa-split-panel>` | `<lr-split>` |
+| `<wa-switch>` | `<lr-switch>` |
 | `<wa-tag>` | `<lr-tag>` |
 | `<wa-textarea>` | `<lr-textarea>` |
 | `<wa-time-input>` | `<lr-time-input>` |
 | `<wa-toast>` | `<lr-toast>` |
 | `<wa-toast-item>` | `<lr-toast-item>` |
 | `<wa-tooltip>` | `<lr-tooltip>` |
+| `<wa-tree>` | `<lr-tree>` |
+| `<wa-tree-item>` | `<lr-tree-item>` |
 | `<wa-zoomable-frame>` | `<lr-zoomable-frame>` |
 
-## Shoelace (12)
+## Shoelace (55)
 
 Best-effort mapping: Web Awesome, not Lyra, is Shoelace's direct successor, so these agree less often.
 
 | From | To |
 |---|---|
+| `<sl-alert>` | `<lr-callout>` |
+| `<sl-animated-image>` | `<lr-animated-image>` |
+| `<sl-animation>` | `<lr-animation>` |
+| `<sl-avatar>` | `<lr-avatar>` |
 | `<sl-badge>` | `<lr-badge>` |
+| `<sl-breadcrumb>` | `<lr-breadcrumb>` |
+| `<sl-breadcrumb-item>` | `<lr-breadcrumb-item>` |
 | `<sl-button>` | `<lr-button>` |
-| `<sl-callout>` | `<lr-callout>` |
+| `<sl-button-group>` | `<lr-button-group>` |
 | `<sl-card>` | `<lr-card>` |
+| `<sl-carousel>` | `<lr-carousel>` |
+| `<sl-carousel-item>` | `<lr-carousel-item>` |
+| `<sl-checkbox>` | `<lr-checkbox>` |
+| `<sl-color-picker>` | `<lr-color-picker>` |
+| `<sl-copy-button>` | `<lr-copy-button>` |
+| `<sl-details>` | `<lr-details>` |
 | `<sl-dialog>` | `<lr-dialog>` |
+| `<sl-divider>` | `<lr-divider>` |
 | `<sl-drawer>` | `<lr-drawer>` |
+| `<sl-dropdown>` | `<lr-dropdown>` |
+| `<sl-format-bytes>` | `<lr-format-bytes>` |
+| `<sl-format-date>` | `<lr-format-date>` |
+| `<sl-format-number>` | `<lr-format-number>` |
+| `<sl-icon>` | `<lr-icon>` |
+| `<sl-icon-button>` | `<lr-icon-button>` |
+| `<sl-image-comparer>` | `<lr-image-comparer>` |
+| `<sl-include>` | `<lr-include>` |
 | `<sl-input>` | `<lr-input>` |
+| `<sl-menu>` | `<lr-menu>` |
+| `<sl-menu-item>` | `<lr-menu-item>` |
+| `<sl-menu-label>` | `<lr-menu-label>` |
+| `<sl-mutation-observer>` | `<lr-mutation-observer>` |
 | `<sl-option>` | `<lr-option>` |
+| `<sl-popup>` | `<lr-popup>` |
 | `<sl-progress-bar>` | `<lr-progress-bar>` |
+| `<sl-progress-ring>` | `<lr-progress-ring>` |
+| `<sl-qr-code>` | `<lr-qr-code>` |
+| `<sl-radio>` | `<lr-radio>` |
+| `<sl-radio-button>` | `<lr-radio-button>` |
+| `<sl-radio-group>` | `<lr-radio-group>` |
+| `<sl-range>` | `<lr-slider>` |
+| `<sl-rating>` | `<lr-rating>` |
+| `<sl-relative-time>` | `<lr-relative-time>` |
+| `<sl-resize-observer>` | `<lr-resize-observer>` |
 | `<sl-select>` | `<lr-select>` |
+| `<sl-skeleton>` | `<lr-skeleton>` |
 | `<sl-spinner>` | `<lr-spinner>` |
+| `<sl-split-panel>` | `<lr-split>` |
+| `<sl-switch>` | `<lr-switch>` |
+| `<sl-tag>` | `<lr-tag>` |
 | `<sl-textarea>` | `<lr-textarea>` |
+| `<sl-tooltip>` | `<lr-tooltip>` |
+| `<sl-tree>` | `<lr-tree>` |
+| `<sl-tree-item>` | `<lr-tree-item>` |
+| `<sl-visually-hidden>` | `<lr-visually-hidden>` |

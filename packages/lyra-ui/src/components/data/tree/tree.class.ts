@@ -7,12 +7,12 @@ import { isRtl } from '../../../internal/rtl.js';
 import { styles } from './tree.styles.js';
 import { cascadeUpdateComplete } from './update-cascade.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
-import './tree-node.class.js';
-import type { LyraTreeNode } from './tree-node.class.js';
+import './tree-item.class.js';
+import type { LyraTreeItem } from './tree-item.class.js';
 
 // Data types live in ./tree-item.js (extracted to break a type-only import cycle with
-// tree-node.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
-import type { TreeBadgeTone, TreeBadge, TreeItem } from './tree-item.js';
+// tree-item.class.ts); re-exported here so `export *` from tree.js keeps the public paths.
+import type { TreeBadgeTone, TreeBadge, TreeItem } from './tree-types.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 export type { TreeBadgeTone, TreeBadge, TreeItem };
 
@@ -27,11 +27,11 @@ export interface LyraTreeEventMap {
  *
  * Implements the WAI-ARIA treeitem keyboard pattern: a single roving
  * `tabindex` (tracked here as `activeId`, pushed down to every
- * `<lr-tree-node>` — including nested ones, recursively) and
+ * `<lr-tree-item>` — including nested ones, recursively) and
  * ArrowUp/Down/Right/Left/Home/End/Enter/Space handled by one delegated
  * `keydown` listener. Native `KeyboardEvent`s are `composed: true` and
  * bubble across shadow-DOM boundaries, so a press inside a deeply-nested
- * `<lr-tree-node>`'s own shadow root still reaches this listener.
+ * `<lr-tree-item>`'s own shadow root still reaches this listener.
  *
  * Set `reorderable` to opt into keyboard reordering: Ctrl/Cmd+ArrowUp/ArrowDown on the focused
  * node emits `lr-reorder` — a *request*, exactly like every other event here. `data` is
@@ -42,12 +42,12 @@ export interface LyraTreeEventMap {
  * `nodes` on every render and keyed by filesystem path, an order it does not own.
  *
  * @customElement lr-tree
- * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
- * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-node>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @event lr-node-toggle - `detail: { id, expanded }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
+ * @event lr-node-select - `detail: { id }`, dispatched by a descendant `<lr-tree-item>` and observed here (bubbling, composed) to keep the roving-tabindex `activeId` in sync.
  * @event lr-reorder - `detail: { id, parentId, fromIndex, toIndex }` — Ctrl/Cmd+ArrowUp/ArrowDown moved the focused node within its **own parent's** child list (`parentId` is `null` for a top-level item; the indices are sibling-scoped, not flattened-visible-list positions). Only fired while `reorderable`. Never fires at a subtree boundary, so a reorder can never become a reparent.
  * @csspart base - The tree's root wrapper (role="tree").
  * @csspart empty - The empty-state message shown when `data` is empty.
- * @slot - `<lr-tree-node>` elements (top-level tree items).
+ * @slot - `<lr-tree-item>` elements (top-level tree items).
  */
 export class LyraTree extends LyraElement<LyraTreeEventMap> {
   static override styles = [LyraElement.styles, styles];
@@ -72,19 +72,19 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
 
   @query('lr-live-region') private liveRegion?: LyraLiveRegion;
 
-  private get nodeElements(): LyraTreeNode[] {
-    return [...this.querySelectorAll(tag('tree-node'))] as LyraTreeNode[];
+  private get nodeElements(): LyraTreeItem[] {
+    return [...this.querySelectorAll(tag('tree-item'))] as LyraTreeItem[];
   }
 
-  private childrenOf(node: LyraTreeNode): LyraTreeNode[] {
-    return [...(node.shadowRoot?.querySelectorAll(tag('tree-node')) ?? [])] as LyraTreeNode[];
+  private childrenOf(node: LyraTreeItem): LyraTreeItem[] {
+    return [...(node.shadowRoot?.querySelectorAll(tag('tree-item')) ?? [])] as LyraTreeItem[];
   }
 
   /**
    * Every currently *visible* (ancestor-expanded) node, top-to-bottom.
    *
    * Recomputed on every call rather than memoized: `item`/`expanded` are
-   * plain public settable properties on `<lr-tree-node>` (not just
+   * plain public settable properties on `<lr-tree-item>` (not just
    * reachable through this class's own `data` setter or the bubbling
    * `lr-node-toggle` event), so a cache keyed off those two entry points
    * alone would go stale the moment a caller mutated a node directly --
@@ -93,9 +93,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * a hot render-loop path), so the cost of a `shadowRoot.querySelectorAll`
    * per currently-expanded node is not worth trading for that staleness risk.
    */
-  private visibleNodeElements(): LyraTreeNode[] {
-    const acc: LyraTreeNode[] = [];
-    const walk = (nodes: LyraTreeNode[]): void => {
+  private visibleNodeElements(): LyraTreeItem[] {
+    const acc: LyraTreeItem[] = [];
+    const walk = (nodes: LyraTreeItem[]): void => {
       for (const n of nodes) {
         if (n.item?.disabled) continue;
         acc.push(n);
@@ -185,7 +185,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   }
 
   /**
-   * The `<lr-tree-node>` that genuinely holds real DOM focus, or `null`.
+   * The `<lr-tree-item>` that genuinely holds real DOM focus, or `null`.
    *
    * `document.activeElement` collapses to the outermost light-DOM node even
    * when the real focus target is a nested descendant several shadow roots
@@ -195,10 +195,10 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * focus to a *nested* node rather than yanking it up to that node's
    * top-level ancestor.
    */
-  private deepFocusedNode(): LyraTreeNode | null {
+  private deepFocusedNode(): LyraTreeItem | null {
     const active = deepActiveElementIn(document);
-    if (!active || active.localName !== tag('tree-node')) return null;
-    const node = active as LyraTreeNode;
+    if (!active || active.localName !== tag('tree-item')) return null;
+    const node = active as LyraTreeItem;
     const id = node.item?.id;
     return id != null && this.visibleNodeElements().some((n) => n.item?.id === id) ? node : null;
   }
@@ -249,17 +249,17 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     }
   }
 
-  /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-node>` elements and removes ones no longer present in `data`. */
+  /** By-id reconciliation of top-level items: reuses/reorders existing `<lr-tree-item>` elements and removes ones no longer present in `data`. */
   private syncNodes(): void {
-    const existingById = new Map<string, LyraTreeNode>();
+    const existingById = new Map<string, LyraTreeItem>();
     for (const node of this.nodeElements) {
       if (node.item) existingById.set(node.item.id, node);
     }
     const seen = new Set<string>();
-    let previousSibling: LyraTreeNode | null = null;
+    let previousSibling: LyraTreeItem | null = null;
     for (const item of this.data) {
       const reused = !seen.has(item.id) ? existingById.get(item.id) : undefined;
-      const node = reused ?? (document.createElement(tag('tree-node')) as LyraTreeNode);
+      const node = reused ?? (document.createElement(tag('tree-item')) as LyraTreeItem);
       node.item = item;
       node.depth = 0;
       seen.add(item.id);
@@ -274,9 +274,9 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
     }
   }
 
-  private focusNode(node: LyraTreeNode | undefined): void {
+  private focusNode(node: LyraTreeItem | undefined): void {
     if (!node) return;
-    // `item` is `attribute: false`, so a `<lr-tree-node>` written declaratively into this
+    // `item` is `attribute: false`, so a `<lr-tree-item>` written declaratively into this
     // component's documented slot has none until a host assigns one. Such a node is still
     // focusable, it just has no identity to make active -- null it rather than leaving the
     // previous node's id claiming a roving tabindex it no longer owns.
@@ -362,7 +362,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * simply not made: no event, no announcement, focus stays put -- exactly
    * like a plain ArrowDown on the last visible row.
    */
-  private requestReorder(node: LyraTreeNode, delta: 1 | -1): void {
+  private requestReorder(node: LyraTreeItem, delta: 1 | -1): void {
     const id = node.item?.id;
     if (id == null) return;
     const found = this.findSiblings(id);
@@ -470,7 +470,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    * stuck with a reflected `expanded` attribute nothing can clear.
    */
   async expandAll(): Promise<void> {
-    const setAll = async (nodes: LyraTreeNode[]): Promise<void> => {
+    const setAll = async (nodes: LyraTreeItem[]): Promise<void> => {
       await Promise.all(
         nodes.map(async (n) => {
           if (n.item?.disabled) {
@@ -497,7 +497,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
    */
   collapseAll(): void {
     const focused = this.deepFocusedNode();
-    const setAll = (nodes: LyraTreeNode[]): void => {
+    const setAll = (nodes: LyraTreeItem[]): void => {
       for (const n of nodes) {
         setAll(this.childrenOf(n));
         if (n.item?.disabled) n.expanded = false;

@@ -10,6 +10,13 @@ export interface LyraRadioGroupEventMap {
   'lr-change': CustomEvent<{ value: string; radio: LyraRadio }>;
 }
 
+// The two tags a group manages. `<lr-radio-button>` is a `LyraRadio` subclass, so every group
+// behaviour applies to it unchanged -- but discovery is by local name (an `instanceof` check would
+// force this module to import the subclass, and with it the button chrome, into every app that only
+// uses plain radios), so both names have to be listed. Computed rather than frozen at module scope
+// so the prefix stays the single source of truth.
+const RADIO_TAGS = (): string[] => [tag('radio'), tag('radio-button')];
+
 /**
  * `<lr-radio-group>` — a labeled, keyboard-navigable group of radios.
  *
@@ -82,11 +89,11 @@ export class LyraRadioGroup extends LyraElement<LyraRadioGroupEventMap> {
 
   /** @internal Whether this group owns the radio through its default option slot. */
   ownsRadio(element: Element): element is LyraRadio {
-    return element.localName === tag('radio') && this.radioGroupOwner(element) === this;
+    return RADIO_TAGS().includes(element.localName) && this.radioGroupOwner(element) === this;
   }
 
   private radios(): LyraRadio[] {
-    return [...this.querySelectorAll(tag('radio'))].filter((radio) => this.ownsRadio(radio)) as LyraRadio[];
+    return [...this.querySelectorAll(RADIO_TAGS().join(','))].filter((radio) => this.ownsRadio(radio)) as LyraRadio[];
   }
   private syncRadios(preferred?: LyraRadio): void {
     if (this.syncingRadios) return;

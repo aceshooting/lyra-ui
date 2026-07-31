@@ -1492,6 +1492,35 @@ window.
 
 ---
 
+## `lr-menu-label`
+
+A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
+
+The host takes `role="presentation"` on connect (a `role="menu"` may only contain menu-item roles,
+so a heading with a generic role would make the menu's own children invalid) — unless the consumer
+already set a `role`, which is left alone. `<lr-menu>` enumerates its items by `instanceof
+LyraMenuItem`, so a label is never enrolled in the roving tabindex and can never become a focus
+stop; nothing on `<lr-menu>` has to know this element exists.
+
+To announce a *named group* rather than a caption, wrap the labelled items in an element with
+`role="group"` and give it a matching `aria-label`. `aria-labelledby` pointing at this element's
+internals would not resolve — idrefs do not cross a shadow boundary.
+
+**Properties:** none. **Events:** none. **Slots:** default (the heading text).
+**CSS parts:** `base` (the heading row).
+
+**Themeable custom properties:** shared tokens only — `--lr-color-text-quiet`, `--lr-font-size-sm`,
+`--lr-font-weight-semibold`, `--lr-space-xs`/`--lr-space-s`.
+
+```html
+<lr-menu>
+  <lr-menu-label>Recently used</lr-menu-label>
+  <lr-menu-item value="open">Open…</lr-menu-item>
+</lr-menu>
+```
+
+---
+
 ## `lr-menu` / `lr-menu-item`
 
 An anchored dropdown built around a consumer-supplied trigger element (typically an icon button)
@@ -1583,7 +1612,7 @@ wrapping the default slot), `footer` (wrapper around the `footer` slot, below th
 
 Not meaningful standalone — it exists purely as `<lr-menu>`'s light-DOM child, the same
 relationship `<lr-option>` has to `<lr-combobox>`/`<lr-select>`. `role="menuitem"` and the
-roving `tabindex` both live on the host element itself (mirroring `<lr-tree-node>`), not an
+roving `tabindex` both live on the host element itself (mirroring `<lr-tree-item>`), not an
 internal shadow-DOM button; `<lr-menu>` is the sole owner of this element's `tabIndex`.
 
 **Properties:**

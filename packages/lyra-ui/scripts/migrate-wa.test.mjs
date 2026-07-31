@@ -54,26 +54,41 @@ test('buildMirrorMap resolves the wa-format-* wildcard row per-tag', () => {
   assert.equal(map.get('wa-relative-time'), 'lr-relative-time');
 });
 
-test('buildMirrorMap does not invent a mapping for a mismatched-count row', () => {
+test('buildMirrorMap maps each typed chart subclass to its own upstream tag', () => {
   const { map } = buildMirrorMap(readmeText);
-  // The typed chart subclasses (<lr-bar-chart> etc.) all list `wa-chart` in their Mirrors cell,
-  // but none of them has its own literal `wa-bar-chart` tag documented -- only the base
-  // `<lr-chart>` row does.
   assert.equal(map.get('wa-chart'), 'lr-chart');
-  assert.equal(map.has('wa-bar-chart'), false);
-  assert.equal(map.has('wa-line-chart'), false);
-  // <lr-option> shares no documented `wa-option` mirror anywhere in the table (only
-  // `wa-combobox`/`wa-select` are listed for the rows it appears in).
-  assert.equal(map.has('wa-option'), false);
-  // <lr-accordion-item> has no documented `wa-accordion-item` mirror.
-  assert.equal(map.has('wa-accordion-item'), false);
+  assert.equal(map.get('wa-bar-chart'), 'lr-bar-chart');
+  assert.equal(map.get('wa-line-chart'), 'lr-line-chart');
+  assert.equal(map.get('wa-polar-area-chart'), 'lr-polar-area-chart');
 });
 
-test('buildMirrorMap parses the Shoelace table by suffix', () => {
+test('buildMirrorMap reads both upstreams out of the one Mirrors column', () => {
   const { map } = buildMirrorMap(readmeText);
   assert.equal(map.get('sl-button'), 'lr-button');
   assert.equal(map.get('sl-progress-bar'), 'lr-progress-bar');
   assert.equal(map.get('sl-option'), 'lr-option');
+  assert.equal(map.get('sl-checkbox'), 'lr-checkbox');
+  assert.equal(map.get('wa-checkbox-group'), 'lr-checkbox-group');
+});
+
+test('buildMirrorMap maps a differently-named counterpart on a single-component row', () => {
+  const { map } = buildMirrorMap(readmeText);
+  // Neither of these matches by suffix; the row documents exactly one `<lr-*>` tag, so the
+  // correspondence is unambiguous.
+  assert.equal(map.get('wa-comparison'), 'lr-image-comparer');
+  assert.equal(map.get('sl-range'), 'lr-slider');
+  assert.equal(map.get('sl-alert'), 'lr-callout');
+  assert.equal(map.get('wa-split-panel'), 'lr-split');
+});
+
+test('buildMirrorMap refuses a differently-named counterpart on a multi-component row', () => {
+  // `<lr-details> + <lr-accordion> + <lr-accordion-item>` lists three component tags; a mirror
+  // token that matched none of them by name would have no single unambiguous target, so the
+  // parser must leave it unmapped rather than pick one.
+  const row = '| Component | Mirrors | Notes |\n| `<lr-a>` + `<lr-b>` | `wa-a` / `wa-mystery` | note |\n';
+  const { map } = buildMirrorMap(row);
+  assert.equal(map.get('wa-a'), 'lr-a');
+  assert.equal(map.has('wa-mystery'), false);
 });
 
 // --- 2. rewriteFile() text rewriting ----------------------------------------------------------
@@ -109,9 +124,16 @@ test('rewriteFile rewrites open/close tags for a mapped wa- tag', () => {
   assert.ok(combobox && combobox.count === 2, 'expected wa-combobox open+close = 2 replacements');
 });
 
-test('rewriteFile leaves an undocumented wa-option tag untouched', () => {
+test('rewriteFile rewrites a nested mapped child tag', () => {
   const { content } = rewriteFile(SAMPLE, sampleMap);
-  assert.match(content, /<wa-option value="a">Apple<\/wa-option>/);
+  assert.match(content, /<lr-option value="a">Apple<\/lr-option>/);
+});
+
+test('rewriteFile leaves an unmapped wa- tag untouched', () => {
+  // `wa-panel-legacy` is not an upstream tag at all, so no mapping exists for it and the anchored
+  // tag form must still be left alone.
+  const { content } = rewriteFile('<wa-panel-legacy></wa-panel-legacy>', sampleMap);
+  assert.equal(content, '<wa-panel-legacy></wa-panel-legacy>');
 });
 
 test('rewriteFile leaves a comment mentioning wa-panel-legacy untouched', () => {

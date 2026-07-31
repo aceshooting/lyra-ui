@@ -100,7 +100,7 @@ function buildMirrorMap(readmeText) {
     if (!mode) continue;
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
     if (cells.length < 2) continue;
-    if (mode === 'wa') parseWaTableRow(cells[0], cells[1], map, conflicts);
+    if (mode === 'wa') parseMirrorTableRow(cells[0], cells[1], map, conflicts);
     else parseSlTableRow(cells[0], cells[1], map, conflicts);
   }
 
@@ -118,28 +118,46 @@ function setMapping(map, conflicts, from, to) {
 // A "Component" cell lists one or more `<lr-x>` tags (companion tags joined with ` + `, or
 // interchangeable typed variants joined with `, `) plus, occasionally, a non-tag entry like
 // `toast()` or `confirm()` which the `<lr-x>` extraction simply ignores. A "Mirrors" cell lists
-// zero or more backticked `wa-x` tokens (or `-- (extra)` / similar prose, which yields zero
-// tokens), optionally including a `wa-prefix-*` wildcard (see the format-* row).
+// zero or more backticked `wa-x`/`sl-x` tokens (or `-- (extra)` / similar prose, which yields
+// zero tokens), optionally including a `wa-prefix-*` wildcard (see the format-* row). Both
+// upstreams share the one column so a component's counterparts are stated in a single place.
 //
-// Matching is by NAME, not by position: a component tag `lr-X` is mapped from `wa-X` only if
-// `wa-X` literally appears in the Mirrors cell (or is covered by a `wa-prefix-*` wildcard whose
-// prefix `X` starts with). This deliberately leaves a component unmapped when the README doesn't
-// literally document a `wa-*` counterpart for it, rather than guessing from row position/order
-// (which breaks down for rows like the typed chart-subclass family or `lr-option`, where
-// per-tag correspondence isn't 1:1 with the Mirrors cell).
-function parseWaTableRow(componentCell, mirrorCell, map, conflicts) {
+// Matching is by NAME first: a component tag `lr-X` is mapped from `wa-X`/`sl-X` when that name
+// literally appears in the Mirrors cell (or is covered by a wildcard whose prefix `X` starts
+// with). That deliberately refuses to guess from row position, which breaks down on rows like the
+// typed chart-subclass family where per-tag correspondence isn't 1:1.
+//
+// A mirror token left over after name matching is a DIFFERENTLY-NAMED counterpart -- `wa-comparison`
+// for `<lr-image-comparer>`, `sl-range` for `<lr-slider>`, `sl-alert` for `<lr-callout>`. Those are
+// only unambiguous when the row documents exactly one component tag, so that is the sole condition
+// under which the leftovers are mapped to it; a multi-tag row leaves them alone rather than
+// guessing.
+function parseMirrorTableRow(componentCell, mirrorCell, map, conflicts) {
   const componentSuffixes = [...componentCell.matchAll(/<lr-([a-z0-9-]+)>/g)].map((m) => m[1]);
-  const mirrorTokens = [...mirrorCell.matchAll(/`(wa-[a-z0-9-]+\*?)`/g)].map((m) => m[1]);
+  const mirrorTokens = [...mirrorCell.matchAll(/`((?:wa|sl)-[a-z0-9-]+\*?)`/g)].map((m) => m[1]);
   if (mirrorTokens.length === 0 || componentSuffixes.length === 0) return;
+  const consumed = new Set();
 
   for (const suffix of componentSuffixes) {
-    const expected = `wa-${suffix}`;
-    if (mirrorTokens.includes(expected)) {
-      setMapping(map, conflicts, expected, `lr-${suffix}`);
-      continue;
+    for (const prefix of ['wa', 'sl']) {
+      const expected = `${prefix}-${suffix}`;
+      if (mirrorTokens.includes(expected)) {
+        setMapping(map, conflicts, expected, `lr-${suffix}`);
+        consumed.add(expected);
+        continue;
+      }
+      const wildcard = mirrorTokens.find((token) => token.endsWith('*') && expected.startsWith(token.slice(0, -1)));
+      if (wildcard) {
+        setMapping(map, conflicts, expected, `lr-${suffix}`);
+        consumed.add(wildcard);
+      }
     }
-    const wildcardMatch = mirrorTokens.find((token) => token.endsWith('*') && expected.startsWith(token.slice(0, -1)));
-    if (wildcardMatch) setMapping(map, conflicts, expected, `lr-${suffix}`);
+  }
+
+  if (componentSuffixes.length !== 1) return;
+  for (const token of mirrorTokens) {
+    if (consumed.has(token) || token.endsWith('*')) continue;
+    setMapping(map, conflicts, token, `lr-${componentSuffixes[0]}`);
   }
 }
 

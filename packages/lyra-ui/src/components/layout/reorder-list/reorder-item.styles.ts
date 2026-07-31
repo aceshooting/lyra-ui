@@ -29,7 +29,7 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   /* chevronIcon() renders a right-pointing chevron with no baked-in rotation (see icons.ts) --
-     rotate the whole button, matching lr-tree-node's identical [part='toggle'] rotation approach. */
+     rotate the whole button, matching lr-tree-item's identical [part='toggle'] rotation approach. */
   [part='move-up-button'] {
     transform: rotate(-90deg);
   }

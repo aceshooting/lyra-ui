@@ -1,0 +1,61 @@
+import { html, nothing, type TemplateResult } from 'lit';
+import { LyraElement } from '../../../internal/lyra-element.js';
+import { LyraRadio } from './radio.class.js';
+import { styles } from './radio-button.styles.js';
+
+/**
+ * `<lr-radio-button>` — a single-choice control rendered as a button rather than a circle.
+ *
+ * The same control as `<lr-radio>`, and deliberately a subclass of it: form association,
+ * validity, `form.reset()` restoration and the whole `<lr-radio-group>` ownership/roving-focus
+ * contract are inherited rather than reimplemented, so the two can never drift apart. Only the
+ * chrome differs. A `<lr-radio-group>` accepts either tag, and the two can be mixed.
+ *
+ * Consecutive `<lr-radio-button>` siblings collapse their shared borders into one segmented
+ * control automatically — nothing needs to be set on the group.
+ *
+ * @customElement lr-radio-button
+ * @slot - Label text.
+ * @slot prefix - Content placed before the label, typically an icon.
+ * @slot suffix - Content placed after the label.
+ * @event input - The user selected this radio.
+ * @event change - The user selected this radio.
+ * @event lr-change - A standalone radio button was selected. `detail: { checked, value }`. An
+ * owning radio group emits its aggregate event instead.
+ * @event focus - The internal control received focus.
+ * @event blur - The internal control lost focus.
+ * @csspart base - The interactive button. Carries `checked` and `disabled` in the part name so a
+ * consumer can target either state through `::part()`.
+ * @csspart prefix - The leading-content wrapper.
+ * @csspart label - The default slot wrapper.
+ * @csspart suffix - The trailing-content wrapper.
+ */
+export class LyraRadioButton extends LyraRadio {
+  static override styles = [LyraElement.styles, styles];
+
+  override render(): TemplateResult {
+    const disabled = this.effectiveDisabled;
+    const parts = ['base', this.checked ? 'checked' : '', disabled ? 'disabled' : ''].filter(Boolean).join(' ');
+    return html`
+      <span
+        part=${parts}
+        role="radio"
+        tabindex=${disabled || !this.groupTabbable ? '-1' : '0'}
+        aria-checked=${this.checked ? 'true' : 'false'}
+        aria-disabled=${disabled ? 'true' : 'false'}
+        aria-required=${this.effectiveRequired ? 'true' : 'false'}
+        aria-label=${this.getAttribute('aria-label') || nothing}
+        @click=${this.onClick}
+        @keydown=${this.onKeyDown}
+        @focus=${this.onFocus}
+        @blur=${this.onBlur}
+      >
+        <span part="prefix"><slot name="prefix"></slot></span>
+        <span part="label"><slot></slot></span>
+        <span part="suffix"><slot name="suffix"></slot></span>
+      </span>
+    `;
+  }
+}
+
+declare global { interface HTMLElementTagNameMap { 'lr-radio-button': LyraRadioButton; } }

@@ -41,7 +41,7 @@ export interface LyraMenuEventMap {
  * that class's own doc), which is the more natural fit for a menu
  * specifically — unlike a listbox's rows, a menu's rows are conventionally
  * button-/link-shaped, and every well-known native/OS menu (and this
- * family's own `<lr-tree>`/`<lr-tree-node>` pair, which this component's
+ * family's own `<lr-tree>`/`<lr-tree-item>` pair, which this component's
  * roving-tabindex plumbing directly mirrors) already moves real focus rather
  * than merely a virtual `aria-activedescendant` pointer. `role`/`tabIndex`
  * are consistently the menu-button shape throughout — never mixed with
