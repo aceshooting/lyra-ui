@@ -83,7 +83,7 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-2xs);
     font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-text-muted);
+    color: var(--lr-color-text-quiet);
   }
   .status-dot {
     inline-size: var(--lr-size-0-5rem);
@@ -135,7 +135,7 @@ export const styles = css`
     opacity: 1;
   }
   .card[data-pulse] {
-    animation: lr-flow-node-pulse var(--lr-transition-ambient) ease-in-out infinite;
+    animation: lr-flow-node-pulse var(--lr-duration-ambient) var(--lr-easing-emphasized) infinite;
   }
   :host([status='running']) .card {
     border-color: var(--lr-flow-node-running-border, var(--lr-color-brand));

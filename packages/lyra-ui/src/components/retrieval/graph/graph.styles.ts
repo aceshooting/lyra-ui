@@ -47,7 +47,7 @@ export const styles = css`
     border: var(--lr-size-1px) solid var(--lr-color-border);
     z-index: var(--lr-layer-content);
     transform: translate(var(--lr-size-6px), calc(-100% - var(--lr-size-6px)));
-    max-inline-size: min(calc(100% - var(--lr-size-12px)), calc(100vw - var(--lr-size-12px)));
+    max-inline-size: min(calc(100% - var(--lr-size-0-75rem)), calc(100vw - var(--lr-size-0-75rem)));
     overflow-wrap: anywhere;
     white-space: normal;
   }

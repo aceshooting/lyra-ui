@@ -51,7 +51,7 @@ export const ExternalDescription: Story = {
   render: () => html`
     <div style="display:flex; flex-direction:column; gap:0.25rem; align-items:flex-start;">
       <lr-checkbox aria-describedby="maintenance-description">Enable advanced mode</lr-checkbox>
-      <p id="maintenance-description" style="margin:0; color:var(--lr-color-text-muted); font-size:var(--lr-font-size-sm);">
+      <p id="maintenance-description" style="margin:0; color:var(--lr-color-text-quiet); font-size:var(--lr-font-size-sm);">
         This option is unavailable during scheduled maintenance.
       </p>
     </div>
@@ -153,7 +153,7 @@ export const LabelIndent: Story = {
         <!-- Read off the checkbox itself: works because this <p> is a descendant of nothing --
              it is positioned by a padding copied from the element's own published value. -->
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.25rem); color: var(--lr-color-text-muted); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--lr-checkbox-label-indent, 2.25rem); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           One email each morning summarizing the previous day.
         </p>
@@ -163,7 +163,7 @@ export const LabelIndent: Story = {
       >
         <lr-checkbox value="weekly">Weekly roundup</lr-checkbox>
         <p
-          style="margin: 0.25rem 0 0; padding-inline-start: var(--indent); color: var(--lr-color-text-muted); font-size: var(--lr-font-size-sm);"
+          style="margin: 0.25rem 0 0; padding-inline-start: var(--indent); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm);"
         >
           Computed from the theme bridge tokens, so it survives a retheme without reading into the
           checkbox's shadow root.

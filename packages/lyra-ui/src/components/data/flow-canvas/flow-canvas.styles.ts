@@ -196,7 +196,7 @@ export const styles = css`
   }
   [part='edge'][data-running] {
     stroke-dasharray: 6 4;
-    animation: lr-flow-canvas-march var(--lr-flow-canvas-march-duration, var(--lr-transition-ambient)) linear infinite;
+    animation: lr-flow-canvas-march var(--lr-flow-canvas-march-duration, var(--lr-duration-ambient)) linear infinite;
   }
   [part='edge'][data-running-static] {
     stroke-dasharray: 6 4;

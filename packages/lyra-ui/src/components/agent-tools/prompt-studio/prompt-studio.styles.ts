@@ -42,7 +42,7 @@ export const styles = css`
     border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
   }
   [part='variables'], [part='versions'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
-  [part='variables'] h3, [part='preview'] h3 { margin: 0; font-size: var(--lr-font-size-base); }
+  [part='variables'] h3, [part='preview'] h3 { margin: 0; font-size: var(--lr-font-size-md); }
   [part='variable'] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--lr-space-xs); }
   [part='variable'] input { min-inline-size: 0; padding-inline: var(--lr-space-s); }
   [part='toolbar'] button, [part='remove-message'], [part='add-message'], [part='version'] {

@@ -24,7 +24,7 @@ export const styles = css`
     gap: var(--lr-space-2xs);
     padding: var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius-m);
+    border-radius: var(--lr-radius);
     background: var(--lr-color-surface-raised);
     box-sizing: border-box;
     max-inline-size: 100%;

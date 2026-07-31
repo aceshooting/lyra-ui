@@ -238,17 +238,42 @@ export const tokens = css`
     --lr-font: var(--lr-theme-font-family-body, system-ui, sans-serif);
 
     /* Motion — every component that animates (popovers, gauge fill, toast)
-       reads from these three instead of hand-rolling its own duration/easing,
-       so the library has one consistent rhythm. -fast/-base are for discrete
+       reads from these instead of hand-rolling its own duration/easing, so the
+       library has one consistent rhythm. -fast/-base are for discrete
        state-change transitions; -ambient is reserved for infinite looping
-       "still alive" indicators (a calm ~1.8s breathing pulse, not a flicker). */
-    --lr-transition-fast: var(--lr-theme-transition-fast, 120ms ease-out);
-    --lr-transition-base: var(--lr-theme-transition-normal, 180ms ease-out);
-    --lr-transition-ambient: var(--lr-theme-transition-slow, 1.8s ease-in-out);
+       "still alive" indicators (a calm ~1.8s breathing pulse, not a flicker).
+
+       Duration and easing are SEPARATE axes. They used to be fused into one
+       value, which reads fine in a transition: shorthand but is unusable in an
+       animation: shorthand that names its own timing function -- the expansion
+       carries two timing functions, which is invalid, so the browser drops the
+       whole declaration and the animation silently never runs. Four component
+       stylesheets shipped exactly that. Reach for a --lr-duration-x plus a
+       --lr-easing-x in an animation:; the compound tokens below remain for
+       transition:. */
+    --lr-duration-fast: var(--lr-theme-duration-fast, 120ms);
+    --lr-duration-base: var(--lr-theme-duration-normal, 180ms);
+    --lr-duration-ambient: var(--lr-theme-duration-slow, 1.8s);
+    --lr-easing-standard: var(--lr-theme-easing-standard, ease-out);
+    --lr-easing-emphasized: var(--lr-theme-easing-emphasized, ease-in-out);
+    --lr-easing-linear: var(--lr-theme-easing-linear, linear);
+
+    /* Derived, so a consumer retheming either axis gets both. The legacy
+       --lr-theme-transition-* inputs still win when set, so an existing theme
+       keeps working unchanged. */
+    --lr-transition-fast: var(--lr-theme-transition-fast, var(--lr-duration-fast) var(--lr-easing-standard));
+    --lr-transition-base: var(--lr-theme-transition-normal, var(--lr-duration-base) var(--lr-easing-standard));
+    --lr-transition-ambient: var(--lr-theme-transition-slow, var(--lr-duration-ambient) var(--lr-easing-emphasized));
 
     /* Disabled state — one opacity value for every disabled control,
        replacing three previously-independent hardcoded values (0.5/0.4/0.35). */
     --lr-opacity-disabled: var(--lr-theme-opacity-disabled, 0.5);
+
+    /* De-emphasis that is NOT disablement: still-live content the eye should reach second
+       (a streaming part not yet settled, a secondary metadata row). Deliberately far milder than
+       --lr-opacity-disabled, because this text still has to clear WCAG 1.4.3 contrast against the
+       surface — a disabled control does not, and borrowing that value here failed an axe check. */
+    --lr-opacity-muted: var(--lr-theme-opacity-muted, 0.85);
 
     /* Hover lift — the filter: brightness() multiplier applied to a solid
        brand/fill control on :hover, so every such hover shares one rhythm
@@ -338,17 +363,29 @@ export const tokens = css`
      becoming engine-dependent while making the visual movement imperceptible. */
   @media (prefers-reduced-motion: reduce) {
     :host {
+      --lr-duration-fast: 0.001ms;
+      --lr-duration-base: 0.001ms;
+      --lr-duration-ambient: 0.001ms;
+      --lr-easing-standard: linear;
+      --lr-easing-emphasized: linear;
+      /* Overridden too, so a theme that sets the legacy compound inputs directly is still
+         flattened rather than keeping its full-length duration. */
       --lr-transition-fast: 0.001ms linear;
       --lr-transition-base: 0.001ms linear;
       --lr-transition-ambient: 0.001ms linear;
     }
+    /* Deliberately NOT !important. It used to be, which meant no consumer could override it and
+       no component could opt out -- including the rare case where motion *is* the information (a
+       progress indicator's only affordance). Zeroing the duration tokens above already flattens
+       every component that reads them, which is all of them; this blanket rule is the safety net
+       for a stray hardcoded duration, and a safety net should not outrank the author. */
     :host *,
     :host *::before,
     :host *::after {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-      scroll-behavior: auto !important;
+      animation-duration: 0.001ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.001ms;
+      scroll-behavior: auto;
     }
   }
 

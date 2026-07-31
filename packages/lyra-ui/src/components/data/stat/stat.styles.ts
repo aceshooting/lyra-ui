@@ -30,7 +30,7 @@ export const styles = css`
      !important. */
   :where([part='base'][href]):hover {
     border-color: var(--lr-color-brand);
-    box-shadow: var(--lr-shadow-sm);
+    box-shadow: var(--lr-shadow);
   }
   [part='base'][href]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

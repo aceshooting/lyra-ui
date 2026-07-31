@@ -24,6 +24,7 @@ export interface FormAssociatedInterface {
   setFormValue(next: string): void;
   checkValidity(): boolean;
   reportValidity(): boolean;
+  setCustomValidity(message: string): void;
   formResetCallback(): void;
   formStateRestoreCallback(state: string | File | FormData | null, mode?: 'restore' | 'autocomplete'): void;
   /** @internal */
@@ -31,10 +32,17 @@ export interface FormAssociatedInterface {
 }
 
 /**
- * Minimal, inert ElementInternals substitute for DOM implementations that expose
+ * Minimal ElementInternals substitute for DOM implementations that expose
  * form-associated custom elements but do not implement `attachInternals()` yet.
  * Keeping the shape here means components remain constructible in SSR/test DOMs;
  * native browsers still use their real internals and form participation.
+ *
+ * Form participation (`setFormValue`, `form`, `labels`) is inert, since there is nothing to
+ * participate in, but `validity` and `states` are real: both are read back by components
+ * (`internals.validity.valid`, `internals.states.has(...)`), so a stub that always answers
+ * "empty" would report a *wrong* answer rather than a missing one. `states` can't drive CSS
+ * `:state()` matching without a real `ElementInternals` behind it — it degrades to an
+ * observable-but-unstyled record of the same state names a browser would expose.
  *
  * Exported for the form-associated controls that manage `ElementInternals` directly instead of
  * through this mixin (their value isn't a plain string, so the mixin's contract doesn't fit) --
@@ -64,11 +72,9 @@ export function createFallbackInternals(): ElementInternals {
     enumerable: true,
     get: () => validityKeys.every((key) => !flags[key]),
   });
-  const states = {
-    add(): void {},
-    delete(): boolean { return false; },
-    has(): boolean { return false; },
-  } as unknown as CustomStateSet;
+  // A plain `Set<string>` already implements every member `CustomStateSet` exposes
+  // (`add`/`delete`/`has`/`clear`/`size`/iteration); only the CSS side is missing here.
+  const states = new Set<string>() as unknown as CustomStateSet;
   return {
     form: null,
     labels: [] as unknown as NodeList,
@@ -155,6 +161,11 @@ export function FormAssociated<T extends Constructor<LitElement>>(
 
     private _required = false;
 
+    // Gates `:state(user-valid)`/`:state(user-invalid)`, which must stay off a pristine control
+    // however invalid it already is — a required-and-empty field is not a user error until the
+    // user has had a turn. Mirrors native `:user-invalid`.
+    private _hasInteracted = false;
+
     constructor(...args: any[]) {
       super(...args);
       this.internals = attachInternalsSafely(this);
@@ -167,6 +178,22 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // without this, a control whose `value` is never touched is entirely
       // absent from FormData instead of present as "".
       this.internals.setFormValue('');
+      // Interaction signals, listened for on the host itself so subclasses need no wiring:
+      // `input`/`change` from an internal native control are composed and reach the host (as are
+      // the components' own re-emitted copies), and `focusout` is the blur signal — native `blur`
+      // neither bubbles nor crosses a shadow boundary, so it can never be observed here.
+      // Registered once, in the constructor, so reconnecting cannot stack duplicates.
+      // Idempotent: a drag-driven control (`lr-slider`) fires `input` per pointermove, and only
+      // the first one can change anything here.
+      const markInteracted = (): void => {
+        if (this._hasInteracted) return;
+        this._hasInteracted = true;
+        this.syncValidityStates();
+      };
+      this.addEventListener('input', markInteracted);
+      this.addEventListener('change', markInteracted);
+      this.addEventListener('focusout', markInteracted);
+      this.syncValidityStates();
     }
 
     get form(): HTMLFormElement | null {
@@ -199,6 +226,63 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     /** @internal */
     [SET_ANCHORED_VALIDITY](flags: ValidityStateFlags, message = ''): void {
       this.validityController.setValidity(flags, message);
+      this.syncValidityStates();
+    }
+
+    /**
+     * Sets or clears a consumer-supplied validation error — the standard channel for a
+     * server-side rejection ("that email is already registered") that no client-side constraint
+     * can express. A non-empty `message` raises `customError` and becomes `validationMessage`,
+     * so the control fails `checkValidity()`, blocks submission, and matches `:invalid`; `''`
+     * clears it.
+     *
+     * Clearing restores the control's own computed validity rather than forcing it valid: a
+     * required-and-empty field whose custom error is cleared stays `valueMissing`. The custom
+     * error also survives every intrinsic recomputation in between (each `value`/constraint
+     * change re-runs `updateValidity()`), and a form reset, exactly like a native control —
+     * only another `setCustomValidity('')` clears it.
+     *
+     * The message is caller-supplied content, so it is used verbatim and never localized here.
+     */
+    setCustomValidity(message: string): void {
+      this.validityController.setCustomValidity(message ?? '');
+      this.syncValidityStates();
+    }
+
+    /**
+     * Adds/removes one CSS custom state, tolerating every environment that can't take it: a DOM
+     * with no `ElementInternals` at all (`states` undefined behind a shim), and the engines that
+     * shipped `CustomStateSet` only accepting dashed idents. These states are a styling
+     * convenience, so a rejected state name must never break validity itself.
+     */
+    private setValidityState(name: string, present: boolean): void {
+      const states: CustomStateSet | undefined = this.internals?.states;
+      if (!states) return;
+      try {
+        if (present) states.add(name);
+        else states.delete(name);
+      } catch {
+        /* Engine rejected the state name; styling hooks are optional, validity is not. */
+      }
+    }
+
+    /**
+     * Publishes the six validity custom states — `required`/`optional`, `valid`/`invalid`,
+     * `user-valid`/`user-invalid` — so consumers can style a control's validation state with
+     * `lr-thing:state(user-invalid) { … }` without reaching into its shadow root. `valid`
+     * mirrors `validity.valid`; the `user-*` pair additionally requires that the user has
+     * interacted (an `input`/`change`/blur on this control, or a `reportValidity()` call, which
+     * is what a submit attempt runs).
+     */
+    protected syncValidityStates(): void {
+      const valid = this.internals?.validity?.valid !== false;
+      const interacted = this._hasInteracted;
+      this.setValidityState('required', this.required);
+      this.setValidityState('optional', !this.required);
+      this.setValidityState('valid', valid);
+      this.setValidityState('invalid', !valid);
+      this.setValidityState('user-valid', valid && interacted);
+      this.setValidityState('user-invalid', !valid && interacted);
     }
 
     get name(): string {
@@ -250,6 +334,9 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       this._required = next;
       this.toggleAttribute('required', next);
       this.updateValidity();
+      // Also synced from `[SET_ANCHORED_VALIDITY]`, but `required`/`optional` must flip even for a
+      // subclass whose `updateValidity()` override short-circuits without touching validity.
+      this.syncValidityStates();
       this.requestUpdate('required', old);
     }
 
@@ -295,6 +382,10 @@ export function FormAssociated<T extends Constructor<LitElement>>(
     }
 
     reportValidity(): boolean {
+      // Reporting is what a submit attempt does, and a failed submit is precisely when native
+      // `:user-invalid` starts matching — so it counts as interaction.
+      this._hasInteracted = true;
+      this.syncValidityStates();
       return this.internals.reportValidity();
     }
 
@@ -302,6 +393,10 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // Restore the constructed default value (native `defaultValue`
       // semantics) — previously this unconditionally blanked the field.
       this.value = this._defaultValue;
+      // A reset form is pristine again: drop the interaction flag so the `user-*` states stop
+      // matching. The custom error deliberately survives (native `setCustomValidity()` semantics).
+      this._hasInteracted = false;
+      this.syncValidityStates();
     }
 
     formStateRestoreCallback(
@@ -329,6 +424,7 @@ export function FormAssociated<T extends Constructor<LitElement>>(
       // runs; reflect validity from the start, not only after the first
       // `value` write.
       this.updateValidity();
+      this.syncValidityStates();
     }
   }
 

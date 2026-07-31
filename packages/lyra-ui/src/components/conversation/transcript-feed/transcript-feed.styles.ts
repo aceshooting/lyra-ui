@@ -42,7 +42,7 @@ export const styles = [
       max-inline-size: 100%;
       align-items: baseline;
       gap: var(--lr-space-2xs);
-      animation: lr-transcript-fade-in var(--lr-transition-fast) ease-out;
+      animation: lr-transcript-fade-in var(--lr-duration-fast) var(--lr-easing-standard);
     }
     @keyframes lr-transcript-fade-in {
       from {

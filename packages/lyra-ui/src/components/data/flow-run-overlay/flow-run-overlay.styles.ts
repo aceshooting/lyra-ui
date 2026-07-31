@@ -42,7 +42,7 @@ export const styles = css`
     display: inline-flex;
     align-items: center;
     gap: var(--lr-space-2xs);
-    color: var(--lr-color-text-muted);
+    color: var(--lr-color-text-quiet);
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;

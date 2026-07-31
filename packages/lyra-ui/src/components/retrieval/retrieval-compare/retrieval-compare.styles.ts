@@ -26,7 +26,7 @@ export const styles = css`
   }
   [part='set-heading'] {
     margin: 0 0 var(--lr-space-s);
-    font-size: var(--lr-font-size-base);
+    font-size: var(--lr-font-size-md);
   }
   [part='chunks'] {
     display: flex;
