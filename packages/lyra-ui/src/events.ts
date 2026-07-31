@@ -139,6 +139,7 @@ import type { LyraChipGroupEventMap } from './components/overlays/chip/chip-grou
 import type { LyraChipEventMap } from './components/overlays/chip/chip.class.js';
 import type { LyraDialogEventMap } from './components/overlays/dialog/dialog.class.js';
 import type { LyraPopoverEventMap } from './components/overlays/overlay/popover.class.js';
+import type { LyraTooltipEventMap } from './components/overlays/overlay/tooltip.class.js';
 import type { LyraPopupEventMap } from './components/overlays/popup/popup.class.js';
 import type { LyraRatingEventMap } from './components/overlays/rating/rating.class.js';
 import type { LyraToastItemEventMap } from './components/overlays/toast/toast-item.class.js';
@@ -227,26 +228,32 @@ export type LyraAddEvent =
 export type LyraAddConditionEvent = LyraQueryBuilderEventMap['lr-add-condition'];
 
 /**
- * `lr-after-hide` — dispatched by 3 components: `<lr-details>`, `<lr-dialog>`, `<lr-toast-item>`.
+ * `lr-after-hide` — dispatched by 5 components: `<lr-details>`, `<lr-dialog>`, `<lr-popover>`,
+ * `<lr-toast-item>`, `<lr-tooltip>`.
  *
- * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraDetailsEventMap['lr-after-hide']`.
  */
 export type LyraAfterHideEvent =
   | LyraDetailsEventMap['lr-after-hide']
   | LyraDialogEventMap['lr-after-hide']
-  | LyraToastItemEventMap['lr-after-hide'];
+  | LyraPopoverEventMap['lr-after-hide']
+  | LyraToastItemEventMap['lr-after-hide']
+  | LyraTooltipEventMap['lr-after-hide'];
 
 /**
- * `lr-after-show` — dispatched by 3 components: `<lr-details>`, `<lr-dialog>`, `<lr-toast-item>`.
+ * `lr-after-show` — dispatched by 5 components: `<lr-details>`, `<lr-dialog>`, `<lr-popover>`,
+ * `<lr-toast-item>`, `<lr-tooltip>`.
  *
- * A union of 3 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 5 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraDetailsEventMap['lr-after-show']`.
  */
 export type LyraAfterShowEvent =
   | LyraDetailsEventMap['lr-after-show']
   | LyraDialogEventMap['lr-after-show']
-  | LyraToastItemEventMap['lr-after-show'];
+  | LyraPopoverEventMap['lr-after-show']
+  | LyraToastItemEventMap['lr-after-show']
+  | LyraTooltipEventMap['lr-after-show'];
 
 /**
  * `lr-anchor-result` — dispatched by 4 components: `<lr-av-player>`, `<lr-document-viewer>`,
@@ -989,11 +996,11 @@ export type LyraFullscreenChangeEvent = LyraWidgetEventMap['lr-fullscreen-change
 export type LyraGroupToggleEvent = LyraThreadListEventMap['lr-group-toggle'];
 
 /**
- * `lr-hide` — dispatched by 10 components: `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-hide` — dispatched by 11 components: `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-export-button>`, `<lr-menu>`,
- * `<lr-popover>`, `<lr-select>`, `<lr-toast-item>`.
+ * `<lr-popover>`, `<lr-select>`, `<lr-toast-item>`, `<lr-tooltip>`.
  *
- * A union of 10 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 11 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraColorPickerEventMap['lr-hide']`.
  */
 export type LyraHideEvent =
@@ -1006,7 +1013,8 @@ export type LyraHideEvent =
   | LyraMenuEventMap['lr-hide']
   | LyraPopoverEventMap['lr-hide']
   | LyraSelectEventMap['lr-hide']
-  | LyraToastItemEventMap['lr-hide'];
+  | LyraToastItemEventMap['lr-hide']
+  | LyraTooltipEventMap['lr-hide'];
 
 /**
  * `lr-highlight-activate` — dispatched by 7 components: `<lr-av-player>`, `<lr-document-compare>`,
@@ -2093,11 +2101,11 @@ export type LyraSendNowEvent =
   | LyraPromptQueueEventMap['lr-send-now'];
 
 /**
- * `lr-show` — dispatched by 10 components: `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-show` — dispatched by 11 components: `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-date-input>`, `<lr-details>`, `<lr-dialog>`, `<lr-export-button>`, `<lr-menu>`,
- * `<lr-popover>`, `<lr-select>`, `<lr-toast-item>`.
+ * `<lr-popover>`, `<lr-select>`, `<lr-toast-item>`, `<lr-tooltip>`.
  *
- * A union of 10 component entries, so `event.detail` here exposes only what all of them share. For
+ * A union of 11 component entries, so `event.detail` here exposes only what all of them share. For
  * one component's exact detail, index its own map — e.g. `LyraColorPickerEventMap['lr-show']`.
  */
 export type LyraShowEvent =
@@ -2110,7 +2118,8 @@ export type LyraShowEvent =
   | LyraMenuEventMap['lr-show']
   | LyraPopoverEventMap['lr-show']
   | LyraSelectEventMap['lr-show']
-  | LyraToastItemEventMap['lr-show'];
+  | LyraToastItemEventMap['lr-show']
+  | LyraTooltipEventMap['lr-show'];
 
 /**
  * `lr-skip` — dispatched by `<lr-rubric-form>`.

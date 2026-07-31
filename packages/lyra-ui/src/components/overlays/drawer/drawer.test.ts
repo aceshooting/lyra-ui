@@ -91,3 +91,92 @@ it('flips the enter-animation offset under RTL to match the mirrored resting edg
   // so it must enter from further left, same as an LTR 'start' (default) drawer.
   expect(getComputedStyle(endPanel).getPropertyValue('--lr-drawer-enter-x').trim()).to.equal('calc(-1 * 1rem)');
 });
+
+describe('inherited show/hide lifecycle', () => {
+  it('runs the same four-event lifecycle as lr-dialog', async () => {
+    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+    const order: string[] = [];
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+      el.addEventListener(name, () => order.push(name));
+    }
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    expect(el.open).to.be.true;
+    await afterShow;
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    expect(el.open).to.be.false;
+    await afterHide;
+
+    expect(order).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+  });
+
+  it('vetoing lr-show keeps the drawer closed', async () => {
+    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+    el.addEventListener('lr-show', (event) => (event as Event).preventDefault());
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('promotes an open drawer into the top layer', async () => {
+    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await el.updateComplete;
+    expect(el.matches(':popover-open')).to.be.true;
+    await afterShow;
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    await afterHide;
+    expect(el.matches(':popover-open')).to.be.false;
+  });
+});
+
+describe('slide animation', () => {
+  it('slides out with the drawer exit keyframes, not the dialog panel ones', async () => {
+    const el = (await fixture(html`<lr-drawer heading="Filters" open><p>Body</p></lr-drawer>`)) as LyraDrawer;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-in');
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    await el.updateComplete;
+    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-out');
+    await afterHide;
+  });
+
+  it('slides out along the block axis for top/bottom placements', async () => {
+    const el = (await fixture(
+      html`<lr-drawer heading="Filters" placement="bottom" open><p>Body</p></lr-drawer>`,
+    )) as LyraDrawer;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-in-block');
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    await el.updateComplete;
+    expect(getComputedStyle(panel).animationName).to.equal('lr-drawer-out-block');
+    await afterHide;
+  });
+
+  it('reads its duration from the shared panel-duration knob, so reduced motion still settles', async () => {
+    const el = (await fixture(html`<lr-drawer heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+    el.style.setProperty('--lr-duration-base', '0.001ms');
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await el.updateComplete;
+    expect(getComputedStyle(panel).animationDuration).to.equal('1e-06s');
+    await afterShow;
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    await afterHide;
+    expect(el.open).to.be.false;
+  });
+});

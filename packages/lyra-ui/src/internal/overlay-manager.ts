@@ -47,6 +47,10 @@ export interface OverlayDeactivateOptions {
 export interface OverlayHandle {
   /** Moves focus inside unless focus is already within the current panel. */
   focusInitial(): void;
+  /** Moves focus only when the panel contains an `[autofocus]` target. Returns whether it did, so
+   *  a nonmodal overlay that deliberately leaves focus alone can still honour an explicit
+   *  `autofocus` in its content without stealing focus in every other case. */
+  focusAutofocus(): boolean;
   /** Replaces the eventual focus-return target without unregistering or reordering the overlay. */
   updateRestoreFocusTo(target: HTMLElement | null): void;
   /** Removes the overlay permanently. Safe to call repeatedly. */
@@ -201,11 +205,57 @@ export function collectFocusableElements(root: Element | ShadowRoot): HTMLElemen
     .map(({ element }) => element);
 }
 
+function collectAutofocus(element: Element, result: HTMLElement[]): void {
+  if (element.hasAttribute('autofocus')) result.push(element as HTMLElement);
+  if (isSlot(element)) {
+    const hasAssignedNodes = element.assignedNodes().length > 0;
+    const assigned = element
+      .assignedNodes({ flatten: true })
+      .filter((node): node is Element => node.nodeType === 1);
+    const children = hasAssignedNodes ? assigned : Array.from(element.children);
+    for (const child of children) collectAutofocus(child, result);
+    return;
+  }
+  const container: Element | ShadowRoot = element.shadowRoot ?? element;
+  for (const child of Array.from(container.children)) collectAutofocus(child, result);
+}
+
+/**
+ * Collects every `[autofocus]` element inside `root`, walking slots and nested open shadow roots
+ * exactly as the focusable collector does. `autofocus` is a global attribute, so it is honoured on
+ * a custom element host as readily as on a native control.
+ */
+export function collectAutofocusElements(root: Element | ShadowRoot): HTMLElement[] {
+  const result: HTMLElement[] = [];
+  if ('matches' in root) {
+    collectAutofocus(root as Element, result);
+  } else {
+    for (const child of Array.from(root.children)) collectAutofocus(child, result);
+  }
+  return result;
+}
+
 function tryFocus(target: HTMLElement | null): boolean {
   if (!target?.isConnected || !isRendered(target) || target.matches(':disabled')) return false;
   target.focus();
   const active = deepActiveElement(target.ownerDocument);
   return active === target || composedContains(target, active);
+}
+
+/**
+ * Focuses the first `[autofocus]` target inside `panel`, honouring the author's explicit choice
+ * over the "first focusable element" default. A marked custom element that is not itself focusable
+ * (no `tabindex`, no `delegatesFocus`) hands focus to its own first focusable descendant, so
+ * `<lr-input autofocus>` behaves like `<input autofocus>` rather than doing nothing.
+ */
+function focusAutofocusTarget(panel: HTMLElement): boolean {
+  for (const candidate of collectAutofocusElements(panel)) {
+    if (tryFocus(candidate)) return true;
+    for (const inner of collectFocusableElements(candidate)) {
+      if (tryFocus(inner)) return true;
+    }
+  }
+  return false;
 }
 
 function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
@@ -214,6 +264,7 @@ function focusEntry(entry: OverlayEntry, preserveCurrent = true): void {
   const active = deepActiveElement(entry.state.document);
   if (preserveCurrent && composedContains(panel, active)) return;
 
+  if (focusAutofocusTarget(panel)) return;
   const preferred = entry.options.preferredInitialFocus?.() ?? null;
   if (preferred && composedContains(panel, preferred) && tryFocus(preferred)) return;
   for (const target of collectFocusableElements(panel)) {
@@ -544,6 +595,14 @@ export function activateOverlay(options: OverlayActivationOptions): OverlayHandl
       if (entry.active && entry.registered && entry.state.stack[entry.state.stack.length - 1] === entry) {
         focusEntry(entry);
       }
+    },
+    focusAutofocus: () => {
+      if (!entry.active || !entry.registered) return false;
+      const panel = entry.options.panel();
+      if (!panel) return false;
+      const active = deepActiveElement(entry.state.document);
+      if (composedContains(panel, active)) return false;
+      return focusAutofocusTarget(panel);
     },
     updateRestoreFocusTo: (target) => {
       if (entry.active) entry.restoreFocusTo = target;

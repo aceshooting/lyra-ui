@@ -767,3 +767,382 @@ it("leaves today's shrink-to-fit-content behavior unchanged when --lr-dialog-wid
   const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
   expect(getComputedStyle(panel).inlineSize).to.not.equal('600px');
 });
+
+describe('unified show/hide lifecycle', () => {
+  it('emits lr-show before the dialog opens, then lr-after-show once the enter animation finishes', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    const order: string[] = [];
+    let openWhenShowFired: boolean | undefined;
+    el.addEventListener('lr-show', () => {
+      order.push('lr-show');
+      openWhenShowFired = el.open;
+    });
+    el.addEventListener('lr-after-show', () => order.push('lr-after-show'));
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    expect(el.open, 'show() opens synchronously once lr-show is not vetoed').to.be.true;
+    await afterShow;
+
+    expect(order).to.deep.equal(['lr-show', 'lr-after-show']);
+    expect(openWhenShowFired, 'lr-show announces an impending open, not a completed one').to.be.false;
+    el.close('api');
+  });
+
+  it('emits lr-hide before the dialog closes, then lr-after-hide once the exit animation finishes', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const order: string[] = [];
+    let openWhenHideFired: boolean | undefined;
+    el.addEventListener('lr-hide', () => {
+      order.push('lr-hide');
+      openWhenHideFired = el.open;
+    });
+    el.addEventListener('lr-dialog-close', () => order.push('lr-dialog-close'));
+    el.addEventListener('lr-after-hide', () => order.push('lr-after-hide'));
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    expect(el.open).to.be.false;
+    await afterHide;
+
+    expect(order).to.deep.equal(['lr-hide', 'lr-dialog-close', 'lr-after-hide']);
+    expect(openWhenHideFired, 'lr-hide announces an impending close').to.be.true;
+  });
+
+  it('lr-show is cancelable and a veto leaves both the property and the attribute closed', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    let cancelable: boolean | undefined;
+    el.addEventListener('lr-show', (event) => {
+      cancelable = (event as Event).cancelable;
+      (event as Event).preventDefault();
+    });
+
+    el.show();
+    await el.updateComplete;
+
+    expect(cancelable).to.be.true;
+    expect(el.open).to.be.false;
+    expect(el.hasAttribute('open')).to.be.false;
+    expect(document.documentElement.style.overflow).to.equal('');
+  });
+
+  it('lr-hide is cancelable and a veto keeps the dialog open for every close path', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open closable>body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    let closeCount = 0;
+    el.addEventListener('lr-dialog-close', () => closeCount++);
+    el.addEventListener('lr-hide', (event) => (event as Event).preventDefault());
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await el.updateComplete;
+    expect(el.open, 'Escape').to.be.true;
+
+    (el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement).click();
+    await el.updateComplete;
+    expect(el.open, 'close button').to.be.true;
+
+    el.hide();
+    await el.updateComplete;
+    expect(el.open, 'hide()').to.be.true;
+
+    el.open = false;
+    await el.updateComplete;
+    expect(el.open, 'open = false').to.be.true;
+    expect(el.hasAttribute('open'), 'the reflected attribute must not drift from the vetoed state').to.be.true;
+    expect(closeCount, 'a vetoed lr-hide never reaches lr-dialog-close').to.equal(0);
+
+    el.removeEventListener('lr-hide', () => undefined);
+  });
+
+  it('assigning open drives the same lifecycle as show()/hide()', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    const shown = oneEvent(el, 'lr-show');
+    el.open = true;
+    await shown;
+    expect(el.open).to.be.true;
+
+    const hidden = oneEvent(el, 'lr-hide');
+    el.open = false;
+    await hidden;
+    expect(el.open).to.be.false;
+  });
+
+  it('fires no lifecycle events for markup that renders open from the start', async () => {
+    let fired = 0;
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+      el.addEventListener(name, () => fired++);
+    }
+    await el.updateComplete;
+    expect(fired).to.equal(0);
+    expect(el.open).to.be.true;
+    el.close('api');
+  });
+
+  it('lr-after-show and lr-after-hide are not cancelable', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    const shown = oneEvent(el, 'lr-after-show');
+    el.show();
+    expect((await shown).cancelable).to.be.false;
+    const hidden = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    expect((await hidden).cancelable).to.be.false;
+  });
+
+  it('show()/hide() are no-ops in the state they already represent', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    let count = 0;
+    for (const name of ['lr-show', 'lr-hide']) el.addEventListener(name, () => count++);
+    el.hide();
+    expect(count).to.equal(0);
+    el.show();
+    expect(count).to.equal(1);
+    el.show();
+    expect(count).to.equal(1);
+  });
+});
+
+describe('top layer', () => {
+  it('promotes an open dialog into the browser top layer, so a consumer stacking context cannot trap it', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    expect(CSS.supports('selector(:popover-open)'), 'this browser must support the popover top layer').to.be.true;
+    expect(el.matches(':popover-open')).to.be.false;
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await el.updateComplete;
+    expect(el.getAttribute('popover'), 'manual, so the UA never light-dismisses it out from under us').to.equal(
+      'manual',
+    );
+    expect(el.matches(':popover-open'), 'an open dialog is in the top layer').to.be.true;
+    await afterShow;
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.close('api');
+    await afterHide;
+    expect(el.matches(':popover-open'), 'a closed dialog leaves the top layer').to.be.false;
+  });
+
+  it('renders above a consumer stacking context that would otherwise trap a z-index overlay', async () => {
+    const frame = (await fixture(html`
+      <div>
+        <div id="trap" style="position: relative; z-index: 2147483647; isolation: isolate;">
+          <div id="blocker" style="position: absolute; inset: 0; background: red;"></div>
+        </div>
+        <lr-dialog label="Untitled" light-dismiss><button>inside</button></lr-dialog>
+      </div>
+    `)) as HTMLElement;
+    const el = frame.querySelector('lr-dialog') as LyraDialog;
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await afterShow;
+
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const box = panel.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    // elementFromPoint reports the deepest light-DOM element, which for slotted dialog content is
+    // the slotted node itself -- so the assertion is "the hit landed inside the dialog", not
+    // "the hit is the host". Comparing an id/containment keeps a DOM node out of chai's actual.
+    expect(hit?.id, 'the trapping stacking context must not be on top').to.not.equal('blocker');
+    expect(hit !== null && (hit === el || el.contains(hit)), 'the hit landed inside the dialog').to.be.true;
+    el.close('api');
+  });
+
+  it('re-promotes an open dialog after a reparent', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const otherContainer = document.createElement('div');
+    document.body.appendChild(otherContainer);
+    otherContainer.appendChild(el);
+    await el.updateComplete;
+
+    expect(el.matches(':popover-open')).to.be.true;
+    el.close('api');
+    await el.updateComplete;
+    otherContainer.remove();
+  });
+});
+
+describe('initial focus', () => {
+  it('honours [autofocus] on slotted content instead of the first focusable element', async () => {
+    const el = (await fixture(
+      html`<lr-dialog label="Untitled"><button>first</button><button autofocus>second</button></lr-dialog>`,
+    )) as LyraDialog;
+    el.show();
+    await el.updateComplete;
+
+    expect((document.activeElement as HTMLElement | null)?.textContent).to.equal('second');
+    el.close('api');
+  });
+
+  it('reaches an [autofocus] target inside a slotted element own shadow root', async () => {
+    const el = (await fixture(
+      html`<lr-dialog label="Untitled"
+        ><button>first</button><dialog-test-shadow-input autofocus></dialog-test-shadow-input></lr-dialog
+      >`,
+    )) as LyraDialog;
+    el.show();
+    await el.updateComplete;
+
+    const host = el.querySelector('dialog-test-shadow-input') as HTMLElement;
+    expect(host.shadowRoot!.activeElement?.tagName).to.equal('INPUT');
+    el.close('api');
+  });
+
+  it('falls back to the first focusable element when nothing is marked (regression)', async () => {
+    const el = (await fixture(
+      html`<lr-dialog label="Untitled"><button>first</button><button>second</button></lr-dialog>`,
+    )) as LyraDialog;
+    el.show();
+    await el.updateComplete;
+
+    expect((document.activeElement as HTMLElement | null)?.textContent).to.equal('first');
+    el.close('api');
+  });
+});
+
+describe('enter/exit animation', () => {
+  it('animates the panel and the backdrop from the motion tokens on open and on close', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await el.updateComplete;
+    expect(panel.getAnimations().length, 'the panel runs an enter animation').to.be.greaterThan(0);
+    expect(backdrop.getAnimations().length, 'the backdrop runs an enter animation').to.be.greaterThan(0);
+    await afterShow;
+
+    el.close('api');
+    await el.updateComplete;
+    expect(panel.getAnimations().length, 'the panel runs an exit animation').to.be.greaterThan(0);
+    expect(
+      getComputedStyle(el).display,
+      'the host stays rendered until the exit animation completes',
+    ).to.not.equal('none');
+    await oneEvent(el, 'lr-after-hide');
+    expect(getComputedStyle(el).display, 'the host is hidden once the exit animation completes').to.equal('none');
+  });
+
+  it('exposes per-surface duration knobs', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+
+    el.style.setProperty('--lr-dialog-panel-duration', '400ms');
+    el.style.setProperty('--lr-dialog-backdrop-duration', '250ms');
+    await el.updateComplete;
+    expect(getComputedStyle(panel).animationDuration).to.equal('0.4s');
+    expect(getComputedStyle(backdrop).animationDuration).to.equal('0.25s');
+    el.close('api');
+  });
+
+  // prefers-reduced-motion cannot be emulated from inside the test runner, so the reduced-motion
+  // branch is exercised by writing exactly what the reduced-motion block in tokens.styles.ts
+  // writes -- the duration tokens the animation resolves through.
+  it('flattens to the reduced-motion duration and still completes both lifecycles', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled">body</lr-dialog>`)) as LyraDialog;
+    el.style.setProperty('--lr-duration-base', '0.001ms');
+    el.style.setProperty('--lr-duration-fast', '0.001ms');
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    await el.updateComplete;
+    // getComputedStyle serializes 0.001ms in seconds.
+    expect(getComputedStyle(panel).animationDuration).to.equal('1e-06s');
+    await afterShow;
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.close('api');
+    await afterHide;
+    expect(el.open).to.be.false;
+  });
+});
+
+describe('header chrome', () => {
+  it('renders the label slot in the header and names the panel from it', async () => {
+    const el = (await fixture(
+      html`<lr-dialog open><span slot="label">Rich <em>title</em></span>body</lr-dialog>`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const heading = el.shadowRoot!.querySelector('[part="heading"]') as HTMLElement;
+
+    expect(el.shadowRoot!.querySelectorAll('[part="header"]').length).to.equal(1);
+    expect(heading.querySelector('slot[name="label"]')).to.exist;
+    expect(panel.getAttribute('aria-labelledby')).to.equal(heading.id);
+    el.close('api');
+  });
+
+  it('renders the header-actions slot before the close button', async () => {
+    const el = (await fixture(
+      html`<lr-dialog heading="Title" closable open
+        ><button slot="header-actions">Help</button>body</lr-dialog
+      >`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    const header = el.shadowRoot!.querySelector('[part="header"]') as HTMLElement;
+    const actions = el.shadowRoot!.querySelector('[part="header-actions"]') as HTMLElement;
+    const closeButton = el.shadowRoot!.querySelector('[part="close-button"]') as HTMLElement;
+
+    expect(actions).to.exist;
+    expect(
+      actions.compareDocumentPosition(closeButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'header-actions come before the close button',
+    ).to.be.greaterThan(0);
+    expect(header.contains(actions)).to.be.true;
+    el.close('api');
+  });
+
+  it('withoutHeader suppresses the header row even when heading/closable/label-slot are set', async () => {
+    const el = (await fixture(
+      html`<lr-dialog heading="Title" closable without-header open
+        ><span slot="label">Rich</span>body</lr-dialog
+      >`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="header"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="close-button"]').length).to.equal(0);
+    el.close('api');
+  });
+
+  it('leaves the default chrome unchanged when the new opt-ins are unset (regression)', async () => {
+    const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    expect(el.withoutHeader).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="header"]').length).to.equal(0);
+    expect(el.shadowRoot!.querySelectorAll('[part="header-actions"]').length).to.equal(0);
+    el.close('api');
+  });
+
+  it('lets a consumer retheme region padding and the backdrop filter', async () => {
+    const el = (await fixture(html`<lr-dialog heading="Title" open>body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+
+    el.style.setProperty('--lr-dialog-spacing', '31px');
+    el.style.setProperty('--lr-dialog-backdrop-filter', 'blur(3px)');
+    await el.updateComplete;
+    expect(getComputedStyle(body).paddingTop).to.equal('31px');
+    expect(getComputedStyle(backdrop).backdropFilter).to.equal('blur(3px)');
+    el.close('api');
+  });
+
+  it('is accessible with the label and header-actions slots populated', async () => {
+    const el = (await fixture(
+      html`<lr-dialog open closable
+        ><span slot="label">Delete item?</span><button slot="header-actions">Help</button>Are you
+        sure?</lr-dialog
+      >`,
+    )) as LyraDialog;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="header-actions"]').length).to.equal(1);
+    await expect(el).to.be.accessible();
+    el.close('api');
+  });
+});

@@ -1,5 +1,7 @@
 import { css } from 'lit';
 
+/* The arrow rules are shared verbatim by the popover and the tooltip; only the size custom
+   property differs, which is why each sheet declares its own copy against its own token name. */
 export const styles = css`
   :host { display: inline-block; }
   [part='trigger'] { display: inline-block; }
@@ -35,6 +37,25 @@ export const styles = css`
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
   [part='popup'] { opacity: 1; transform: translateY(0); transition: opacity var(--lr-transition-fast), transform var(--lr-transition-fast), visibility var(--lr-transition-fast); }
   [part='content'] { padding: var(--lr-space-m); }
+  /* An arrow protrudes past the popup's edge, so the scroll container has to move inwards for it
+     -- an overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so a
+     popover without one keeps its previous box model exactly. */
+  :host([arrow]) [part='popup'] { overflow: visible; }
+  :host([arrow]) [part='content'] {
+    overflow: auto;
+    max-block-size: var(--lr-positioner-available-block-size, var(--lr-size-20rem));
+  }
+  [part~='arrow'] {
+    position: absolute;
+    inline-size: calc(2 * var(--lr-overlay-arrow-size, var(--lr-size-0-375rem)));
+    block-size: calc(2 * var(--lr-overlay-arrow-size, var(--lr-size-0-375rem)));
+    rotate: 45deg;
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    /* Only the two outward-facing edges of the rotated square should read as the popup's border;
+       the other two sit under the panel. */
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  }
   @media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }
 `;
 
@@ -46,5 +67,16 @@ export const tooltipStyles = css`
   [part='popup'] { position: fixed; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--lr-tooltip-max-inline-size, var(--lr-size-20rem)), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-background, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow); }
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
   [part='popup'] { opacity: 1; transition: opacity var(--lr-transition-fast), visibility var(--lr-transition-fast); }
+  /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching it to
+     visible for the arrow trades internal scrolling for a visible arrow. Reach for
+     <lr-popover> when a floating surface needs both. */
+  :host([arrow]) [part='popup'] { overflow: visible; }
+  [part~='arrow'] {
+    position: absolute;
+    inline-size: calc(2 * var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem)));
+    block-size: calc(2 * var(--lr-tooltip-arrow-size, var(--lr-size-0-375rem)));
+    rotate: 45deg;
+    background: var(--lr-tooltip-background, var(--lr-color-neutral));
+  }
   @media (prefers-reduced-motion: reduce) { [part='popup'] { transition: none !important; } }
 `;

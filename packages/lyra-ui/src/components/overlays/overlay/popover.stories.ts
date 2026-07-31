@@ -60,3 +60,48 @@ export const VirtualAnchor: Story = {
     </div>
   `,
 };
+
+export const Arrow: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`arrow` renders a pointer at the popup edge. `arrow-placement` chooses between tracking the anchor (`anchor`, the default), the middle of the edge (`center`), or one logical end of it (`start`/`end`, kept `arrow-padding` from the corner). The arrow part name also carries the resolved side, so `::part(arrow arrow-top)` styles one direction.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div style="display: flex; gap: 4rem; padding-block: 3rem;">
+      <lr-popover .open=${context.viewMode !== 'docs'} arrow placement="bottom">
+        <button slot="trigger">Anchor arrow</button>
+        <p>Points back at the trigger's centre.</p>
+      </lr-popover>
+      <lr-popover .open=${context.viewMode !== 'docs'} arrow arrow-placement="start" arrow-padding="12" placement="bottom-start">
+        <button slot="trigger">Start arrow</button>
+        <p>Pinned 12px from the popup's logical start corner.</p>
+      </lr-popover>
+    </div>
+  `,
+};
+
+export const ExternalAnchor: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`for` positions the popup against any element in the same root, while the slotted trigger keeps owning the click and the ARIA relationship. `skidding` slides the popup along the anchor edge.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+      <div id="popover-external-anchor" style="padding: 0.5rem; border: 1px dashed var(--lr-color-border);">
+        The popup is positioned against this box
+      </div>
+      <lr-popover .open=${context.viewMode !== 'docs'} for="popover-external-anchor" skidding="16" arrow>
+        <button slot="trigger">Trigger lives down here</button>
+        <p>Anchored elsewhere, triggered here.</p>
+      </lr-popover>
+    </div>
+  `,
+};

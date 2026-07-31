@@ -163,3 +163,69 @@ export const NarrowLongContent: Story = {
     </lr-dialog>
   </div>`,
 };
+
+export const HeaderSlots: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `label` slot supplies rich header content (and the accessible name) where the plain-string `heading` property is not enough; `header-actions` adds controls beside the built-in close button. `--lr-dialog-spacing` retunes the padding of all three regions and `--lr-dialog-backdrop-filter` frosts the scrim.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      closable
+      style="--lr-dialog-spacing: 1.25rem; --lr-dialog-backdrop-filter: blur(3px);"
+    >
+      <span slot="label">Project <strong>settings</strong></span>
+      <button slot="header-actions" type="button">Help</button>
+      <p style="margin: 0;">Rich header content, an extra header action, and a frosted backdrop.</p>
+    </lr-dialog>
+  `,
+};
+
+export const WithoutHeader: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: '`without-header` drops the header row entirely for a dialog that owns its own chrome.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog .open=${context.viewMode !== 'docs'} heading="Never rendered" closable without-header label="Custom chrome">
+      <p style="margin: 0;">No header row is rendered even though `heading` and `closable` are both set.</p>
+    </lr-dialog>
+  `,
+};
+
+export const AutofocusAndLifecycle: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`[autofocus]` on slotted content wins over the default "first focusable element" rule. `lr-show`/`lr-hide` are cancelable, and `lr-after-show`/`lr-after-hide` fire once the enter/exit animation has finished.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <button @click=${openDialog}>Open dialog</button>
+      <lr-dialog
+        heading="Rename project"
+        closable
+        @lr-after-show=${() => console.info('lr-after-show')}
+        @lr-after-hide=${() => console.info('lr-after-hide')}
+      >
+        <label>Cancel first, but the field takes focus: <input autofocus /></label>
+        <div slot="footer">
+          <button @click=${(e: Event) => ((e.target as HTMLElement).closest('lr-dialog') as LyraDialog).hide()}>
+            Cancel
+          </button>
+        </div>
+      </lr-dialog>
+    </div>
+  `,
+};

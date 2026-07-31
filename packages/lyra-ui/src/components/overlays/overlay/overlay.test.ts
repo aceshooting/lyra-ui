@@ -114,7 +114,7 @@ it('does not let a closed popup/dropdown occupy a layout box in its host', async
 });
 
 it('shows a tooltip after focus and describes the trigger', async () => {
-  const el = await fixture(html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`);
+  const el = await fixture(html`<lr-tooltip show-delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`);
   const trigger = el.querySelector('button') as HTMLButtonElement & {
     ariaDescribedByElements?: Element[];
   };
@@ -135,7 +135,7 @@ it('shows a tooltip after focus and describes the trigger', async () => {
 
 it("resolves a tooltip popup onto lr-button's focused internal control", async () => {
   const el = await fixture(html`
-    <lr-tooltip delay="0">
+    <lr-tooltip show-delay="0">
       Helpful text
       <lr-button slot="trigger">Help</lr-button>
     </lr-tooltip>
@@ -160,7 +160,7 @@ it("resolves a tooltip popup onto lr-button's focused internal control", async (
 
 it("resolves a tooltip popup onto lr-icon-button's focused internal control", async () => {
   const el = await fixture(html`
-    <lr-tooltip delay="0">
+    <lr-tooltip show-delay="0">
       Helpful text
       <lr-icon-button slot="trigger" icon="help" aria-label="Help"></lr-icon-button>
     </lr-tooltip>
@@ -185,7 +185,7 @@ it("resolves a tooltip popup onto lr-icon-button's focused internal control", as
 
 it('keeps the tooltip description proxy synchronized without including trigger text', async () => {
   const el = await fixture(html`
-    <lr-tooltip delay="0">
+    <lr-tooltip show-delay="0">
       <span>Initial help</span>
       <button slot="trigger">Do not describe this trigger label</button>
     </lr-tooltip>
@@ -205,7 +205,7 @@ it('promotes actionable tooltip content to a focus-persistent dialog surface', a
   document.body.appendChild(outside);
   try {
     const el = (await fixture(html`
-      <lr-tooltip delay="0" .strings=${{ popover: 'Helpful actions' }}>
+      <lr-tooltip show-delay="0" .strings=${{ popover: 'Helpful actions' }}>
         <button slot="trigger">Help</button>
         <button>Learn more</button>
       </lr-tooltip>
@@ -272,7 +272,7 @@ it('honors a .strings override for the popover key, provably reaching the render
 
 it('dismisses an open tooltip on Escape while the trigger keeps focus', async () => {
   const el = (await fixture(
-    html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,
+    html`<lr-tooltip show-delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,
   )) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.focus();
@@ -342,7 +342,7 @@ it('restores the light-dismiss listener after a synchronous reconnect while open
 });
 
 it('unbinds hover/focus listeners and stale aria-describedby from a trigger swapped out of the slot', async () => {
-  const el = (await fixture(html`<lr-tooltip delay="0">Info<button slot="trigger">A</button></lr-tooltip>`)) as LyraTooltip;
+  const el = (await fixture(html`<lr-tooltip show-delay="0">Info<button slot="trigger">A</button></lr-tooltip>`)) as LyraTooltip;
   const oldTrigger = el.querySelector('button') as HTMLButtonElement;
   oldTrigger.focus();
   await el.updateComplete;
@@ -371,7 +371,7 @@ it('unbinds hover/focus listeners and stale aria-describedby from a trigger swap
 
 it('preserves author trigger ARIA while a tooltip describes it and restores it on replacement', async () => {
   const el = (await fixture(html`
-    <lr-tooltip delay="0">Info<button slot="trigger" aria-describedby="author-help">A</button></lr-tooltip>
+    <lr-tooltip show-delay="0">Info<button slot="trigger" aria-describedby="author-help">A</button></lr-tooltip>
   `)) as LyraTooltip;
   const oldTrigger = el.querySelector('button') as HTMLButtonElement;
   oldTrigger.focus();
@@ -420,7 +420,7 @@ it('restores author popover trigger ARIA when its trigger is replaced', async ()
 
 it('cancels a delayed tooltip open when manual mode, explicit close, or trigger ownership changes', async () => {
   const el = (await fixture(html`
-    <lr-tooltip delay="40">Info<button slot="trigger">A</button></lr-tooltip>
+    <lr-tooltip show-delay="40">Info<button slot="trigger">A</button></lr-tooltip>
   `)) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
 
@@ -447,13 +447,13 @@ it('cancels a delayed tooltip open when manual mode, explicit close, or trigger 
 
 it('reschedules a pending tooltip immediately when its delay changes to zero', async () => {
   const el = (await fixture(html`
-    <lr-tooltip delay="1000">Info<button slot="trigger">Help</button></lr-tooltip>
+    <lr-tooltip show-delay="1000">Info<button slot="trigger">Help</button></lr-tooltip>
   `)) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.dispatchEvent(new FocusEvent('focus'));
   expect(el.open).to.be.false;
 
-  el.delay = 0;
+  el.showDelay = 0;
   await el.updateComplete;
   expect(el.open).to.be.true;
 });
@@ -463,7 +463,7 @@ it('keeps interactive tooltip content open across pointer transitions and closes
   document.body.appendChild(outside);
   try {
     const el = (await fixture(html`
-      <lr-tooltip delay="0">
+      <lr-tooltip show-delay="0">
         <button slot="trigger">Help</button>
         <button id="action">Action</button>
       </lr-tooltip>
@@ -584,7 +584,7 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
   expect(popoverPopup.style.top).to.not.include('NaN');
 
   const tooltip = (await fixture(
-    html`<lr-tooltip delay="0" distance="not-a-number">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    html`<lr-tooltip show-delay="0" distance="not-a-number">Info<button slot="trigger">Help</button></lr-tooltip>`,
   )) as LyraTooltip;
   const trigger = tooltip.querySelector('button') as HTMLButtonElement;
   trigger.focus();
@@ -598,7 +598,7 @@ it('does not poison popover/tooltip positioning with NaN when distance is invali
 
 it('falls back to the default 150ms delay when delay is NaN, instead of opening instantly', async () => {
   const el = (await fixture(html`<lr-tooltip>Info<button slot="trigger">Help</button></lr-tooltip>`)) as LyraTooltip;
-  el.delay = NaN;
+  el.showDelay = NaN;
   await el.updateComplete;
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.dispatchEvent(new FocusEvent('focus'));
@@ -608,7 +608,7 @@ it('falls back to the default 150ms delay when delay is NaN, instead of opening 
 });
 
 it('lets a consumer retheme the tooltip via --lr-tooltip-max-inline-size/-background/-color', async () => {
-  const el = (await fixture(html`<lr-tooltip delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`)) as LyraTooltip;
+  const el = (await fixture(html`<lr-tooltip show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`)) as LyraTooltip;
   await el.updateComplete;
   const popup = el.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
   const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -936,7 +936,7 @@ it('routes a single Escape press to only the topmost of a showAt()-opened popove
 it('leaves normal slotted-trigger tooltip behavior unchanged when showAt() is never used', async () => {
   // Regression guard for the virtual-anchor widening, mirroring the popover one above.
   const el = (await fixture(
-    html`<lr-tooltip delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,
+    html`<lr-tooltip show-delay="0">Helpful text<button slot="trigger">Help</button></lr-tooltip>`,
   )) as LyraTooltip;
   const trigger = el.querySelector('button') as HTMLButtonElement;
   trigger.focus();
@@ -969,7 +969,7 @@ describe('overlay semantic and lifecycle regressions', () => {
     }
 
     const el = (await fixture(html`
-      <lr-tooltip delay="0">
+      <lr-tooltip show-delay="0">
         <button slot="trigger">Help</button>
         <lr-test-tooltip-shadow-action></lr-test-tooltip-shadow-action>
       </lr-tooltip>
@@ -1008,7 +1008,7 @@ describe('overlay semantic and lifecycle regressions', () => {
     }
 
     const el = (await fixture(html`
-      <lr-tooltip delay="0">
+      <lr-tooltip show-delay="0">
         <button slot="trigger">Help</button>
         <lr-test-tooltip-late-shadow-action></lr-test-tooltip-late-shadow-action>
       </lr-tooltip>
@@ -1053,7 +1053,7 @@ describe('overlay semantic and lifecycle regressions', () => {
 
   it('lets Escape from interactive tooltip content dismiss and restore trigger focus', async () => {
     const el = (await fixture(html`
-      <lr-tooltip delay="0">
+      <lr-tooltip show-delay="0">
         <button slot="trigger">Help</button>
         <button id="action">Action</button>
       </lr-tooltip>
@@ -1337,5 +1337,428 @@ describe('lr-popover hide()', () => {
     await el.updateComplete;
     expect(el.open).to.be.false;
     expect(hideCount).to.equal(0);
+  });
+});
+
+describe('unified show/hide lifecycle', () => {
+  it('emits lr-show before a popover opens and lr-after-show once the transition finishes', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const order: string[] = [];
+    let openWhenShowFired: boolean | undefined;
+    el.addEventListener('lr-show', () => {
+      order.push('lr-show');
+      openWhenShowFired = el.open;
+    });
+    el.addEventListener('lr-after-show', () => order.push('lr-after-show'));
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    expect(el.open).to.be.true;
+    await afterShow;
+
+    expect(order).to.deep.equal(['lr-show', 'lr-after-show']);
+    expect(openWhenShowFired, 'lr-show announces an impending open').to.be.false;
+  });
+
+  it('emits lr-hide before a popover closes and lr-after-hide once the transition finishes', async () => {
+    const el = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    const order: string[] = [];
+    el.addEventListener('lr-hide', () => order.push('lr-hide'));
+    el.addEventListener('lr-after-hide', () => order.push('lr-after-hide'));
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    expect(el.open).to.be.false;
+    await afterHide;
+    expect(order).to.deep.equal(['lr-hide', 'lr-after-hide']);
+  });
+
+  it('vetoing lr-show keeps a popover closed for the trigger click, show() and open=true alike', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    let cancelable: boolean | undefined;
+    el.addEventListener('lr-show', (event) => {
+      cancelable = (event as Event).cancelable;
+      (event as Event).preventDefault();
+    });
+
+    trigger.click();
+    await el.updateComplete;
+    expect(cancelable).to.be.true;
+    expect(el.open, 'trigger click').to.be.false;
+
+    el.show();
+    await el.updateComplete;
+    expect(el.open, 'show()').to.be.false;
+
+    el.open = true;
+    await el.updateComplete;
+    expect(el.open, 'open = true').to.be.false;
+    expect(el.hasAttribute('open')).to.be.false;
+    expect(trigger.getAttribute('aria-expanded')).to.equal('false');
+  });
+
+  it('vetoing lr-hide keeps a popover open for every dismissal path', async () => {
+    const el = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await el.updateComplete;
+    el.addEventListener('lr-hide', (event) => (event as Event).preventDefault());
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await el.updateComplete;
+    expect(el.open, 'Escape').to.be.true;
+
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
+    await el.updateComplete;
+    expect(el.open, 'light dismiss').to.be.true;
+
+    el.hide();
+    await el.updateComplete;
+    expect(el.open, 'hide()').to.be.true;
+
+    el.open = false;
+    await el.updateComplete;
+    expect(el.open, 'open = false').to.be.true;
+    expect(el.hasAttribute('open')).to.be.true;
+  });
+
+  it('emits nothing for popover markup that renders open from the start', async () => {
+    let fired = 0;
+    const el = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+      el.addEventListener(name, () => fired++);
+    }
+    await el.updateComplete;
+    expect(fired).to.equal(0);
+  });
+
+  it('runs the full lifecycle on a tooltip, including from the trigger', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="0" hide-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    const order: string[] = [];
+    for (const name of ['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']) {
+      el.addEventListener(name, () => order.push(name));
+    }
+
+    const afterShow = oneEvent(el, 'lr-after-show');
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await afterShow;
+
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    trigger.dispatchEvent(new FocusEvent('blur'));
+    await afterHide;
+
+    expect(order).to.deep.equal(['lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide']);
+  });
+
+  it('vetoing a tooltip lr-show keeps it closed', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    el.addEventListener('lr-show', (event) => (event as Event).preventDefault());
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('exposes the same show()/hide()/open surface on lr-dropdown', async () => {
+    const el = (await fixture(
+      html`<lr-dropdown><button slot="trigger">Menu</button><p>Items</p></lr-dropdown>`,
+    )) as LyraPopover;
+    const afterShow = oneEvent(el, 'lr-after-show');
+    el.show();
+    expect(el.open).to.be.true;
+    await afterShow;
+    const afterHide = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    expect(el.open).to.be.false;
+    await afterHide;
+  });
+
+  it('lr-after-show and lr-after-hide are not cancelable', async () => {
+    const el = (await fixture(
+      html`<lr-popover><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    const shown = oneEvent(el, 'lr-after-show');
+    el.show();
+    expect((await shown).cancelable).to.be.false;
+    const hidden = oneEvent(el, 'lr-after-hide');
+    el.hide();
+    expect((await hidden).cancelable).to.be.false;
+  });
+});
+
+describe('anchored-overlay arrows and external anchoring', () => {
+  it('renders no arrow by default (regression)', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open><button slot="trigger">Open</button><p>Details</p></lr-popover>`,
+    )) as LyraPopover;
+    await popover.updateComplete;
+    expect(popover.arrow).to.be.false;
+    expect(popover.arrowPlacement).to.equal('anchor');
+    expect(popover.arrowPadding).to.equal(0);
+    expect(popover.skidding).to.equal(0);
+    expect(popover.for).to.equal('');
+    expect(popover.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(0);
+  });
+
+  it('renders an arrow carrying the resolved side in its part name', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open arrow placement="bottom"
+        ><button slot="trigger">Open</button><p>Details</p></lr-popover
+      >`,
+    )) as LyraPopover;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
+    expect(arrow).to.exist;
+    const parts = (arrow.getAttribute('part') ?? '').split(/\s+/);
+    expect(parts).to.include('arrow');
+    expect(parts.some((token) => ['arrow-top', 'arrow-bottom', 'arrow-left', 'arrow-right'].includes(token))).to
+      .be.true;
+    expect(getComputedStyle(arrow).position).to.equal('absolute');
+  });
+
+  it('centres the arrow along the popup edge for arrow-placement="center"', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open arrow arrow-placement="center" placement="bottom"
+        ><button slot="trigger">Open</button><p>Some reasonably wide popover body text</p></lr-popover
+      >`,
+    )) as LyraPopover;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
+    const popupBox = popup.getBoundingClientRect();
+    const arrowBox = arrow.getBoundingClientRect();
+    expect(Math.abs(arrowBox.left + arrowBox.width / 2 - (popupBox.left + popupBox.width / 2))).to.be.at.most(1.5);
+  });
+
+  it('keeps a start-placed arrow arrow-padding away from the popup corner', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open arrow arrow-placement="start" arrow-padding="20" placement="bottom"
+        ><button slot="trigger">Open</button><p>Some reasonably wide popover body text</p></lr-popover
+      >`,
+    )) as LyraPopover;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const arrow = popover.shadowRoot!.querySelector('[part~="arrow"]') as HTMLElement;
+    expect(arrow.getBoundingClientRect().left - popup.getBoundingClientRect().left).to.be.closeTo(20, 1.5);
+  });
+
+  it('offsets the popup along the anchor edge by skidding', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open placement="bottom-start"
+        ><button slot="trigger">Open</button><p>Details</p></lr-popover
+      >`,
+    )) as LyraPopover;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const before = popup.getBoundingClientRect().left;
+
+    popover.skidding = 24;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    expect(popup.getBoundingClientRect().left - before).to.be.closeTo(24, 1.5);
+  });
+
+  it('anchors against the element named by `for` instead of the slotted trigger', async () => {
+    const frame = (await fixture(html`
+      <div>
+        <button id="near" style="position: absolute; inset-block-start: 0; inset-inline-start: 0;">Near</button>
+        <button id="far" style="position: absolute; inset-block-start: 300px; inset-inline-start: 320px;">
+          Far
+        </button>
+        <lr-popover open for="far" placement="bottom-start"
+          ><button slot="trigger">Open</button><p>Details</p></lr-popover
+        >
+      </div>
+    `)) as HTMLElement;
+    const popover = frame.querySelector('lr-popover') as LyraPopover;
+    await popover.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const popup = popover.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const far = frame.querySelector('#far') as HTMLElement;
+    expect(popup.getBoundingClientRect().left).to.be.closeTo(far.getBoundingClientRect().left, 2);
+  });
+
+  it('gives lr-tooltip the same arrow, skidding and `for` surface', async () => {
+    const frame = (await fixture(html`
+      <div>
+        <button id="tip-anchor" style="position: absolute; inset-block-start: 280px; inset-inline-start: 300px;">
+          Anchor
+        </button>
+        <lr-tooltip open manual arrow for="tip-anchor" placement="bottom-start" show-delay="0"
+          >Info<button slot="trigger">Help</button></lr-tooltip
+        >
+      </div>
+    `)) as HTMLElement;
+    const tooltip = frame.querySelector('lr-tooltip') as LyraTooltip;
+    await tooltip.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const popup = tooltip.shadowRoot!.querySelector('[part="popup"]') as HTMLElement;
+    const anchor = frame.querySelector('#tip-anchor') as HTMLElement;
+    expect(tooltip.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
+    expect(popup.getBoundingClientRect().left).to.be.closeTo(anchor.getBoundingClientRect().left, 2);
+  });
+
+  it('is accessible with an arrow rendered', async () => {
+    const popover = (await fixture(
+      html`<lr-popover open arrow aria-label="Details"
+        ><button slot="trigger">Open</button><p>Details</p></lr-popover
+      >`,
+    )) as LyraPopover;
+    await popover.updateComplete;
+    expect(popover.shadowRoot!.querySelectorAll('[part~="arrow"]').length).to.equal(1);
+    await expect(popover).to.be.accessible();
+  });
+});
+
+describe('lr-tooltip trigger and delays', () => {
+  it('defaults to hover and focus, matching the previous behaviour', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    // String()-wrapped: while `trigger` was still the private slotted-element state, a failing
+    // assertion here would have handed chai a DOM node and hung the whole file (see
+    // docs/agents/testing.md).
+    expect(String(el.trigger)).to.equal('hover focus');
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(el.open, 'hover').to.be.true;
+    trigger.dispatchEvent(new MouseEvent('mouseleave'));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open, 'focus').to.be.true;
+  });
+
+  it('opens on click and only on click when trigger="click"', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip trigger="click" show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(el.open, 'hover must not open a click tooltip').to.be.false;
+
+    trigger.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+
+    trigger.click();
+    await el.updateComplete;
+    expect(el.open, 'a second click closes it again').to.be.false;
+  });
+
+  it('honours a single trigger keyword, ignoring the other interaction', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip trigger="focus" show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+  });
+
+  it('ignores every interaction under trigger="manual", exactly like the manual boolean', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip trigger="manual" show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    trigger.dispatchEvent(new MouseEvent('mouseenter'));
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    trigger.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+
+    el.show();
+    await el.updateComplete;
+    expect(el.open, 'manual still opens programmatically').to.be.true;
+  });
+
+  it('delays showing and hiding independently', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="60" hide-delay="120">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open, 'show-delay has not elapsed yet').to.be.false;
+    await new Promise((resolve) => setTimeout(resolve, 140));
+    expect(el.open).to.be.true;
+
+    trigger.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.open, 'hide-delay has not elapsed yet').to.be.true;
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    expect(el.open).to.be.false;
+  });
+
+  it('defaults hide-delay to 0, so blur closes immediately as it did before', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    expect(el.hideDelay).to.equal(0);
+    expect(el.showDelay).to.equal(0);
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    trigger.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('show() and hide() bypass both delays', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="5000" hide-delay="5000">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    el.show();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    el.hide();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('normalizes a non-finite hide-delay to the default instead of hanging open', async () => {
+    const el = (await fixture(
+      html`<lr-tooltip show-delay="0">Info<button slot="trigger">Help</button></lr-tooltip>`,
+    )) as LyraTooltip;
+    el.hideDelay = Number.NaN;
+    const trigger = el.querySelector('button') as HTMLButtonElement;
+    trigger.dispatchEvent(new FocusEvent('focus'));
+    await el.updateComplete;
+    expect(el.open).to.be.true;
+    trigger.dispatchEvent(new FocusEvent('blur'));
+    await el.updateComplete;
+    expect(el.open).to.be.false;
   });
 });

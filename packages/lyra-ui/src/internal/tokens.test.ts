@@ -327,6 +327,11 @@ it('names only tokens that tokens.styles.ts actually reads', async () => {
 });
 
 it('leaves every bridged token at its built-in value when theme.css is imported', async () => {
+  // The chart and terminal entries below are SPOT SAMPLES of two generated ramps
+  // (scripts/generate-chart-palette.mjs, scripts/generate-terminal-palette.mjs). Both generators
+  // write theme.css AND tokens.styles.ts's fallbacks in one pass, which is what actually prevents
+  // the drift this test detects; regenerating the ramp therefore means updating these four values
+  // from the generator's output, not hand-picking new ones.
   const expected: Array<[name: string, value: string]> = [
     ['--lr-icon-button-size', '2.5rem'],
     ['--lr-focus-ring-width', '2px'],
@@ -347,10 +352,10 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
     ['--lr-layer-base', '0'],
     ['--lr-layer-dropdown', '900'],
     ['--lr-layer-toast', '9999'],
-    ['--lr-color-chart-1', '#8250df'],
-    ['--lr-color-chart-8', '#c9d1d9'],
-    ['--lr-terminal-color-red', '#cf222e'],
-    ['--lr-terminal-color-bright-white', '#d0d7de'],
+    ['--lr-color-chart-1', '#0e006e'],
+    ['--lr-color-chart-8', '#8f81d3'],
+    ['--lr-terminal-color-red', '#901114'],
+    ['--lr-terminal-color-bright-white', '#636363'],
   ];
   await withThemeCss(async () => {
     const failures: string[] = [];
@@ -369,8 +374,8 @@ it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
     // visible symptom.
     expect(await probeVarUnder('lr-dark', '--lr-color-surface')).to.equal('#1a1a1a');
     expect(await probeVarUnder('lr-dark', '--lr-color-surface-raised')).to.equal('#22272e');
-    expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#b58cff');
-    expect(await probeVarUnder('lr-dark', '--lr-color-chart-8')).to.equal('#e4e7eb');
+    expect(await probeVarUnder('lr-dark', '--lr-color-chart-1')).to.equal('#bbff94');
+    expect(await probeVarUnder('lr-dark', '--lr-color-chart-8')).to.equal('#555de3');
   });
 });
 

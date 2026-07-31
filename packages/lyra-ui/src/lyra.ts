@@ -671,6 +671,8 @@ export { LyraPopover } from './components/overlays/overlay/popover.js';
 export { LyraPopup } from './components/overlays/popup/popup.js';
 export type { LyraPopupEventMap } from './components/overlays/popup/popup.js';
 export type { LyraPopoverEventMap } from './components/overlays/overlay/popover.js';
+export type { LyraTooltipEventMap, LyraTooltipTrigger } from './components/overlays/overlay/tooltip.js';
+export type { LyraArrowPlacement } from './components/overlays/overlay/popover.js';
 export { LyraTooltip } from './components/overlays/overlay/tooltip.js';
 export { LyraDropdown } from './components/overlays/overlay/dropdown.js';
 export { LyraChip } from './components/overlays/chip/chip.js';

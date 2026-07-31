@@ -93,14 +93,14 @@ export const tokens = css`
     --lr-color-shadow: var(--lr-theme-color-shadow, #000);
     /* Opaque stop for mask gradients; see MASK_OPAQUE note above. */
     --lr-mask-opaque: #000;
-    --lr-color-chart-1: var(--lr-theme-color-chart-1, #8250df);
-    --lr-color-chart-2: var(--lr-theme-color-chart-2, #bf3989);
-    --lr-color-chart-3: var(--lr-theme-color-chart-3, #0a7d91);
-    --lr-color-chart-4: var(--lr-theme-color-chart-4, #57606a);
-    --lr-color-chart-5: var(--lr-theme-color-chart-5, #b083f5);
-    --lr-color-chart-6: var(--lr-theme-color-chart-6, #f470b8);
-    --lr-color-chart-7: var(--lr-theme-color-chart-7, #52d6e8);
-    --lr-color-chart-8: var(--lr-theme-color-chart-8, #c9d1d9);
+    --lr-color-chart-1: var(--lr-theme-color-chart-1, #0e006e);
+    --lr-color-chart-2: var(--lr-theme-color-chart-2, #4d011a);
+    --lr-color-chart-3: var(--lr-theme-color-chart-3, #862002);
+    --lr-color-chart-4: var(--lr-theme-color-chart-4, #503983);
+    --lr-color-chart-5: var(--lr-theme-color-chart-5, #315fdd);
+    --lr-color-chart-6: var(--lr-theme-color-chart-6, #935e7c);
+    --lr-color-chart-7: var(--lr-theme-color-chart-7, #de6906);
+    --lr-color-chart-8: var(--lr-theme-color-chart-8, #8f81d3);
     /* Ordered categorical fallback palette for typed graph nodes (GraphNodeType with no explicit
        color) and any future graph-legend swatches, assigned by nodeTypes entry index % 8. A
        separate, independently themeable ramp from --lr-color-chart-* (same starting values,
@@ -117,22 +117,22 @@ export const tokens = css`
     /* The 16-color ANSI/SGR palette (<lr-terminal>'s CSI-30..37/90..97 foreground and
        CSI-40..47/100..107 background codes render via these, see internal/ansi.ts's FG_VARS/BG_VARS) --
        each independently themeable via its own --lr-theme-terminal-color-* hook. */
-    --lr-terminal-color-black: var(--lr-theme-terminal-color-black, #24292e);
-    --lr-terminal-color-red: var(--lr-theme-terminal-color-red, #cf222e);
-    --lr-terminal-color-green: var(--lr-theme-terminal-color-green, #1a7f37);
-    --lr-terminal-color-yellow: var(--lr-theme-terminal-color-yellow, #9a6700);
-    --lr-terminal-color-blue: var(--lr-theme-terminal-color-blue, #0969da);
-    --lr-terminal-color-magenta: var(--lr-theme-terminal-color-magenta, #8250df);
-    --lr-terminal-color-cyan: var(--lr-theme-terminal-color-cyan, #1b7c83);
-    --lr-terminal-color-white: var(--lr-theme-terminal-color-white, #6b7280);
-    --lr-terminal-color-bright-black: var(--lr-theme-terminal-color-bright-black, #57606a);
-    --lr-terminal-color-bright-red: var(--lr-theme-terminal-color-bright-red, #fa4549);
-    --lr-terminal-color-bright-green: var(--lr-theme-terminal-color-bright-green, #4ac26b);
-    --lr-terminal-color-bright-yellow: var(--lr-theme-terminal-color-bright-yellow, #d4a72c);
-    --lr-terminal-color-bright-blue: var(--lr-theme-terminal-color-bright-blue, #4184e4);
-    --lr-terminal-color-bright-magenta: var(--lr-theme-terminal-color-bright-magenta, #a475f9);
-    --lr-terminal-color-bright-cyan: var(--lr-theme-terminal-color-bright-cyan, #3192aa);
-    --lr-terminal-color-bright-white: var(--lr-theme-terminal-color-bright-white, #d0d7de);
+    --lr-terminal-color-black: var(--lr-theme-terminal-color-black, #4d4d4d);
+    --lr-terminal-color-red: var(--lr-theme-terminal-color-red, #901114);
+    --lr-terminal-color-green: var(--lr-theme-terminal-color-green, #015e15);
+    --lr-terminal-color-yellow: var(--lr-theme-terminal-color-yellow, #5f4a03);
+    --lr-terminal-color-blue: var(--lr-theme-terminal-color-blue, #06489c);
+    --lr-terminal-color-magenta: var(--lr-theme-terminal-color-magenta, #67298c);
+    --lr-terminal-color-cyan: var(--lr-theme-terminal-color-cyan, #02585f);
+    --lr-terminal-color-white: var(--lr-theme-terminal-color-white, #4d4d4d);
+    --lr-terminal-color-bright-black: var(--lr-theme-terminal-color-bright-black, #636363);
+    --lr-terminal-color-bright-red: var(--lr-theme-terminal-color-bright-red, #b32322);
+    --lr-terminal-color-bright-green: var(--lr-theme-terminal-color-bright-green, #01791e);
+    --lr-terminal-color-bright-yellow: var(--lr-theme-terminal-color-bright-yellow, #796005);
+    --lr-terminal-color-bright-blue: var(--lr-theme-terminal-color-bright-blue, #145ec1);
+    --lr-terminal-color-bright-magenta: var(--lr-theme-terminal-color-bright-magenta, #823bae);
+    --lr-terminal-color-bright-cyan: var(--lr-theme-terminal-color-bright-cyan, #04717a);
+    --lr-terminal-color-bright-white: var(--lr-theme-terminal-color-bright-white, #636363);
     --lr-layer-base: var(--lr-theme-z-index-base, 0);
     --lr-layer-content: var(--lr-theme-z-index-content, 1);
     --lr-layer-dropdown: var(--lr-theme-z-index-dropdown, 900);
@@ -349,14 +349,14 @@ export const tokens = css`
       --lr-color-on-warning: var(--lr-theme-color-warning-on-loud, #111827);
       --lr-color-on-danger: var(--lr-theme-color-danger-on-loud, #111827);
       --lr-color-on-neutral: var(--lr-theme-color-neutral-on-loud, #111827);
-      --lr-color-chart-1: var(--lr-theme-color-chart-1, #b58cff);
-      --lr-color-chart-2: var(--lr-theme-color-chart-2, #ff7ab2);
-      --lr-color-chart-3: var(--lr-theme-color-chart-3, #4fd1c5);
-      --lr-color-chart-4: var(--lr-theme-color-chart-4, #aab4c4);
-      --lr-color-chart-5: var(--lr-theme-color-chart-5, #d4a7ff);
-      --lr-color-chart-6: var(--lr-theme-color-chart-6, #ff91c8);
-      --lr-color-chart-7: var(--lr-theme-color-chart-7, #79e2ef);
-      --lr-color-chart-8: var(--lr-theme-color-chart-8, #e4e7eb);
+      --lr-color-chart-1: var(--lr-theme-color-chart-1, #bbff94);
+      --lr-color-chart-2: var(--lr-theme-color-chart-2, #ffbce8);
+      --lr-color-chart-3: var(--lr-theme-color-chart-3, #2bd66a);
+      --lr-color-chart-4: var(--lr-theme-color-chart-4, #bb99cb);
+      --lr-color-chart-5: var(--lr-theme-color-chart-5, #7888fe);
+      --lr-color-chart-6: var(--lr-theme-color-chart-6, #9b6b90);
+      --lr-color-chart-7: var(--lr-theme-color-chart-7, #db3a29);
+      --lr-color-chart-8: var(--lr-theme-color-chart-8, #555de3);
       --lr-graph-cat-1: var(--lr-theme-graph-cat-1, #b58cff);
       --lr-graph-cat-2: var(--lr-theme-graph-cat-2, #ff7ab2);
       --lr-graph-cat-3: var(--lr-theme-graph-cat-3, #4fd1c5);

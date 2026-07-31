@@ -26,6 +26,7 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const themePath = join(packageDir, 'src', 'theme.css');
+const tokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5;
 const CONTRAST_TARGET = 4.75; // headroom over the gate
@@ -109,6 +110,38 @@ function solve(name, hue, chroma, surface) {
   return toHex({ L, C: chroma, H: hue });
 }
 
+/**
+ * Rewrites the matching `--lr-<name>: var(--lr-theme-<name>, <hex>)` fallbacks in
+ * `src/internal/tokens.styles.ts` so they stay byte-identical to `theme.css`.
+ *
+ * That equality is a real contract, not tidiness: `theme.css` is optional, and a consumer who never
+ * imports it gets the hardcoded fallback instead. If the two drift, importing the theme silently
+ * changes colours that were supposed to be identical — which is exactly what `tokens.test.ts`'s
+ * bridged-token assertions catch. Generating both from one source is what makes the drift
+ * impossible rather than merely detected.
+ *
+ * The light fallbacks sit before the `@media (prefers-color-scheme: dark)` block and the dark ones
+ * inside it.
+ */
+function writeTokenFallbacks(tokensPath, valuesByMode) {
+  let text = readFileSync(tokensPath, 'utf8');
+  // The dark fallbacks live in the `@media (prefers-color-scheme: dark)` block, not a `:host(...)`
+  // selector -- `tokens.styles.ts` bridges the theme for a component dropped onto a dark page with
+  // no theme imported at all, which is a media query by definition.
+  const darkAnchor = text.indexOf('@media (prefers-color-scheme: dark)');
+  if (darkAnchor < 0) throw new Error('could not find the prefers-color-scheme block in tokens.styles.ts');
+  const apply = (region, values) => {
+    for (const [name, hex] of Object.entries(values)) {
+      const pattern = new RegExp(`(--lr-${name}:\\s*var\\(--lr-theme-${name},\\s*)#[0-9a-f]{6}(\\))`, 'gi');
+      region = region.replace(pattern, `$1${hex}$2`);
+    }
+    return region;
+  };
+  const light = apply(text.slice(0, darkAnchor), valuesByMode.light ?? {});
+  const dark = apply(text.slice(darkAnchor), valuesByMode.dark ?? {});
+  writeFileSync(tokensPath, light + dark, 'utf8');
+}
+
 const themeText = readFileSync(themePath, 'utf8');
 
 function readPerMode(token) {
@@ -122,9 +155,11 @@ const raised = readPerMode('--lr-theme-color-surface-raised');
 if (!raised.light || !raised.dark) throw new Error('could not read --lr-theme-color-surface-raised for both modes');
 
 let output = themeText;
+const generated = {};
 for (const mode of ['light', 'dark']) {
   const surface = raised[mode];
   const entries = ANSI.map(([name, hue, chroma]) => [name, solve(name, hue, chroma, surface)]);
+  generated[mode] = Object.fromEntries(entries.map(([name, hex]) => [`terminal-color-${name}`, hex]));
   const block = entries.map(([name, hex]) => `    --lr-theme-terminal-color-${name}: ${hex};`).join('\n');
   const pattern = new RegExp(
     `(/\\* terminal ramp: generated \\(${mode}\\) -- see scripts/generate-terminal-palette\\.mjs \\*/\\n)[\\s\\S]*?(\\n\\s*/\\* terminal ramp: end \\*/)`,
@@ -135,3 +170,4 @@ for (const mode of ['light', 'dark']) {
   console.log(`${mode}: 16 ANSI colours on ${surface}, min contrast ${worst.toFixed(2)}:1 (floor ${TEXT_CONTRAST})`);
 }
 writeFileSync(themePath, output, 'utf8');
+writeTokenFallbacks(tokensPath, generated);

@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const themePath = join(packageDir, 'src', 'theme.css');
+const tokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
 
 const SERIES = 8;
 const NON_TEXT_CONTRAST = 3;
@@ -180,6 +181,38 @@ function solve(surface, mode) {
   return chosen.sort((a, b) => (dark ? luminance(b) - luminance(a) : luminance(a) - luminance(b)));
 }
 
+/**
+ * Rewrites the matching `--lr-<name>: var(--lr-theme-<name>, <hex>)` fallbacks in
+ * `src/internal/tokens.styles.ts` so they stay byte-identical to `theme.css`.
+ *
+ * That equality is a real contract, not tidiness: `theme.css` is optional, and a consumer who never
+ * imports it gets the hardcoded fallback instead. If the two drift, importing the theme silently
+ * changes colours that were supposed to be identical — which is exactly what `tokens.test.ts`'s
+ * bridged-token assertions catch. Generating both from one source is what makes the drift
+ * impossible rather than merely detected.
+ *
+ * The light fallbacks sit before the `@media (prefers-color-scheme: dark)` block and the dark ones
+ * inside it.
+ */
+function writeTokenFallbacks(tokensPath, valuesByMode) {
+  let text = readFileSync(tokensPath, 'utf8');
+  // The dark fallbacks live in the `@media (prefers-color-scheme: dark)` block, not a `:host(...)`
+  // selector -- `tokens.styles.ts` bridges the theme for a component dropped onto a dark page with
+  // no theme imported at all, which is a media query by definition.
+  const darkAnchor = text.indexOf('@media (prefers-color-scheme: dark)');
+  if (darkAnchor < 0) throw new Error('could not find the prefers-color-scheme block in tokens.styles.ts');
+  const apply = (region, values) => {
+    for (const [name, hex] of Object.entries(values)) {
+      const pattern = new RegExp(`(--lr-${name}:\\s*var\\(--lr-theme-${name},\\s*)#[0-9a-f]{6}(\\))`, 'gi');
+      region = region.replace(pattern, `$1${hex}$2`);
+    }
+    return region;
+  };
+  const light = apply(text.slice(0, darkAnchor), valuesByMode.light ?? {});
+  const dark = apply(text.slice(darkAnchor), valuesByMode.dark ?? {});
+  writeFileSync(tokensPath, light + dark, 'utf8');
+}
+
 const themeText = readFileSync(themePath, 'utf8');
 
 /**
@@ -209,6 +242,15 @@ for (const [mode, hexes] of Object.entries(ramps)) {
   output = output.replace(pattern, `$1${block}$2`);
 }
 writeFileSync(themePath, output, 'utf8');
+writeTokenFallbacks(
+  tokensPath,
+  Object.fromEntries(
+    Object.entries(ramps).map(([mode, hexes]) => [
+      mode,
+      Object.fromEntries(hexes.map((hex, i) => [`color-chart-${i + 1}`, hex])),
+    ]),
+  ),
+);
 
 for (const [mode, hexes] of Object.entries(ramps)) {
   const surface = mode === 'light' ? lightSurface : darkSurface;
