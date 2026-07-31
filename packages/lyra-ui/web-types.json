@@ -117,7 +117,8 @@
               "description": "`'live'` follows the tail (per `follow`) and pulses; `'post-hoc'` shows the completed-count\nsummary and never scrolls.\n\nType: `ActivityFeedMode`  \nDefault: `'live'`",
               "value": {
                 "type": [
-                  "ActivityFeedMode"
+                  "'live'",
+                  "'post-hoc'"
                 ]
               }
             },
@@ -210,7 +211,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, padded box. `'plain'` removes the border, background, padding and corner\nradius, so a run nested inside a host frame that already draws a border doesn't double it.\n`plain` wins over `compact` when both are set (nothing left to tighten). The built-in\nCancel/Retry buttons draw their own border/background and stay visibly interactive either\nway.\n\nType: `AgentRunAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "AgentRunAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -347,7 +349,9 @@
               "description": "Status of the built-in composer.\n\nType: `ChatComposerStatus`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "ChatComposerStatus"
+                  "'idle'",
+                  "'sending'",
+                  "'streaming'"
                 ]
               }
             },
@@ -592,7 +596,21 @@
               "description": "Type: `LyraAnimationPreset`  \nDefault: `'none'`",
               "value": {
                 "type": [
-                  "LyraAnimationPreset"
+                  "'none'",
+                  "'fade-in'",
+                  "'fade-out'",
+                  "'zoom-in'",
+                  "'zoom-out'",
+                  "'slide-in-start'",
+                  "'slide-in-end'",
+                  "'slide-out-start'",
+                  "'slide-out-end'",
+                  "'slide-in-up'",
+                  "'slide-in-down'",
+                  "'bounce'",
+                  "'pulse'",
+                  "'spin'",
+                  "'shake'"
                 ]
               }
             },
@@ -655,7 +673,10 @@
               "description": "Type: `LyraAnimationTimingPreset`  \nDefault: `'custom'`",
               "value": {
                 "type": [
-                  "LyraAnimationTimingPreset"
+                  "'custom'",
+                  "'fast'",
+                  "'base'",
+                  "'ambient'"
                 ]
               }
             }
@@ -746,7 +767,9 @@
               "description": "The rail's current effective presentation. Always one of the three real\nmodes — never `'auto'` — reflecting either the live breakpoint match or,\nonce forced, whatever was last assigned.\n\nAssigning `'full'`/`'icon-only'`/`'mobile'` forces that mode and stops\nthis element from responding to `icon-only-breakpoint`/\n`mobile-breakpoint` matches. Assigning the sentinel `'auto'` releases\nthe force and immediately re-syncs to the current viewport width,\nresuming automatic tracking. `'auto'` is a write-only instruction, not a\nvalue this getter ever returns — there is no way to observe \"currently\nforced\" from the property itself.\n\nType: `AppRailMode`",
               "value": {
                 "type": [
-                  "AppRailMode"
+                  "'full'",
+                  "'icon-only'",
+                  "'mobile'"
                 ]
               }
             },
@@ -1005,7 +1028,8 @@
               "description": "Which slot is currently visible.\n\nType: `ArtifactPanelView`  \nDefault: `'preview'`",
               "value": {
                 "type": [
-                  "ArtifactPanelView"
+                  "'preview'",
+                  "'code'"
                 ]
               }
             }
@@ -1119,7 +1143,10 @@
               "description": "Lifecycle state — drives the accent tint and which of `progress`/`spinner`/`retry-button` renders.\n\nType: `AttachmentChipStatus`  \nDefault: `'pending'`",
               "value": {
                 "type": [
-                  "AttachmentChipStatus"
+                  "'pending'",
+                  "'uploading'",
+                  "'error'",
+                  "'done'"
                 ]
               }
             },
@@ -1269,7 +1296,10 @@
               "description": "Type: `AudioVisualizerState`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "AudioVisualizerState"
+                  "'idle'",
+                  "'listening'",
+                  "'thinking'",
+                  "'speaking'"
                 ]
               }
             },
@@ -1278,7 +1308,8 @@
               "description": "Type: `AudioVisualizerVariant`  \nDefault: `'bars'`",
               "value": {
                 "type": [
-                  "AudioVisualizerVariant"
+                  "'bars'",
+                  "'waveform'"
                 ]
               }
             }
@@ -1290,7 +1321,13 @@
           "attributes": [
             {
               "name": "kind",
-              "description": "Forces `audio`/`video` rendering, overriding the `mime-type`-based auto-detection.\n\nType: `AvKind | undefined`"
+              "description": "Forces `audio`/`video` rendering, overriding the `mime-type`-based auto-detection.\n\nType: `AvKind | undefined`",
+              "value": {
+                "type": [
+                  "'audio'",
+                  "'video'"
+                ]
+              }
             },
             {
               "name": "locale",
@@ -1357,7 +1394,14 @@
             },
             {
               "name": "preload",
-              "description": "Type: `'none' | 'metadata' | 'auto'`  \nDefault: `'metadata'`"
+              "description": "Type: `'none' | 'metadata' | 'auto'`  \nDefault: `'metadata'`",
+              "value": {
+                "type": [
+                  "'none'",
+                  "'metadata'",
+                  "'auto'"
+                ]
+              }
             },
             {
               "name": "src",
@@ -1410,7 +1454,9 @@
               "description": "`'circle'` (the default) or `'square'`.\n\nType: `AvatarShape`  \nDefault: `'circle'`",
               "value": {
                 "type": [
-                  "AvatarShape"
+                  "'circle'",
+                  "'rounded'",
+                  "'square'"
                 ]
               }
             },
@@ -1419,7 +1465,12 @@
               "description": "Visual size. `'lg'` matches `--lr-icon-button-size` (2.5rem); `'md'` (the default) is 2rem.\n\nType: `AvatarSize`  \nDefault: `'md'`",
               "value": {
                 "type": [
-                  "AvatarSize"
+                  "'small'",
+                  "'medium'",
+                  "'large'",
+                  "'sm'",
+                  "'md'",
+                  "'lg'"
                 ]
               }
             },
@@ -1428,7 +1479,11 @@
               "description": "Recolors the initials-fallback background/text, mirroring `lr-chip`'s `tone` vocabulary.\n`'neutral'` (the default) reads as a plain, unaccented circle.\n\nType: `AvatarTone`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "AvatarTone"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -1465,7 +1520,9 @@
               "description": "`'circle'` (the default) or `'square'`, reused verbatim from `<lr-avatar>`'s own\n`AvatarShape` union. Drives the overflow badge's shape — does not reshape slotted avatars\n(see class doc); each avatar's own ring already adapts to that avatar's own `shape`\nattribute independently.\n\nType: `AvatarShape`  \nDefault: `'circle'`",
               "value": {
                 "type": [
-                  "AvatarShape"
+                  "'circle'",
+                  "'rounded'",
+                  "'square'"
                 ]
               }
             },
@@ -1474,7 +1531,12 @@
               "description": "Visual size, reused verbatim from `<lr-avatar>`'s own `AvatarSize` union. Drives the\noverflow badge's size and the overlap amount — does not resize slotted avatars (see class\ndoc).\n\nType: `AvatarSize`  \nDefault: `'md'`",
               "value": {
                 "type": [
-                  "AvatarSize"
+                  "'small'",
+                  "'medium'",
+                  "'large'",
+                  "'sm'",
+                  "'md'",
+                  "'lg'"
                 ]
               }
             },
@@ -1483,7 +1545,11 @@
               "description": "Recolors the overflow badge, reused verbatim from `<lr-avatar>`'s own `AvatarTone` union.\n`'neutral'` (the default) reads as a plain, unaccented badge.\n\nType: `AvatarTone`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "AvatarTone"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -1507,7 +1573,12 @@
               "description": "Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original\nbadge dimensions.\n\nType: `BadgeSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "BadgeSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -1516,7 +1587,11 @@
               "description": "Type: `BadgeVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "BadgeVariant"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -1603,7 +1678,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -1648,7 +1727,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -1876,7 +1962,8 @@
               "description": "Type: `BrowserFrameController`  \nDefault: `'agent'`",
               "value": {
                 "type": [
-                  "BrowserFrameController"
+                  "'agent'",
+                  "'user'"
                 ]
               }
             },
@@ -1912,7 +1999,10 @@
               "description": "Type: `BrowserFrameStatus`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "BrowserFrameStatus"
+                  "'idle'",
+                  "'connecting'",
+                  "'streaming'",
+                  "'stalled'"
                 ]
               }
             },
@@ -2008,7 +2098,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -2053,7 +2147,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -2104,7 +2205,13 @@
               "description": "`'filled'` (the default) reads `--lr-button-fill`, which for `variant=\"neutral\"` is the\nambient `--lr-color-surface` -- matching this component's own container, by design, for a\nlow-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every\nvariant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or\nmin-height, underlined, colored from `--lr-button-accent` (the same token `'plain'` uses)\nand inheriting the surrounding font — for a text link that flows inline in a sentence rather\nthan a button-shaped control. `'quiet'` is a bordered, transparent-until-hover tier for a\ntoolbar-style icon+label action — its border/text read fixed `--lr-color-border`/`--lr-color-text-quiet`\ntokens regardless of `variant`, unlike `'outlined'`'s variant-tinted text, so it stays\nvisually muted at rest.\n\nType: `ButtonAppearance`  \nDefault: `'filled'`",
               "value": {
                 "type": [
-                  "ButtonAppearance"
+                  "'accent'",
+                  "'filled'",
+                  "'outlined'",
+                  "'filled-outlined'",
+                  "'plain'",
+                  "'link'",
+                  "'quiet'"
                 ]
               }
             },
@@ -2168,7 +2275,12 @@
               "description": "Visual size, `'2xs'`–`'xl'`. `'2xs'` is the tightest tier — a sub-`xs` size for dense,\ntoolbar-embedded controls (e.g. beside a native `<input type=\"search\">` in a compact dialog\nheader). `'m'` (the default) is the standard size.\n\nType: `ButtonSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "ButtonSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -2181,7 +2293,9 @@
               "description": "Forwarded to this component's own submit/reset handling — see the class doc comment above\nfor why this component (not the shadow-internal `<button>`) owns that behavior.\n\nType: `ButtonType`  \nDefault: `'button'`",
               "value": {
                 "type": [
-                  "ButtonType"
+                  "'button'",
+                  "'submit'",
+                  "'reset'"
                 ]
               }
             },
@@ -2190,7 +2304,11 @@
               "description": "Tone vocabulary shared with `<lr-chip>`/`<lr-avatar>`'s own `tone` property, named\n`variant` here (not `tone`) to keep the component's semantic tone vocabulary consistent.\n\nType: `ButtonVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "ButtonVariant"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -2223,7 +2341,8 @@
               "description": "Type: `ButtonGroupOrientation`  \nDefault: `'horizontal'`",
               "value": {
                 "type": [
-                  "ButtonGroupOrientation"
+                  "'horizontal'",
+                  "'vertical'"
                 ]
               }
             }
@@ -2274,7 +2393,8 @@
               "description": "Type: `CalendarView`  \nDefault: `'month'`",
               "value": {
                 "type": [
-                  "CalendarView"
+                  "'month'",
+                  "'agenda'"
                 ]
               }
             },
@@ -2388,7 +2508,11 @@
               "description": "Type: `CalloutVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "CalloutVariant"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -2403,7 +2527,11 @@
               "description": "Visual treatment, mirroring `wa-card`'s `appearance` vocabulary. `'outlined'` (the default)\nis a bordered surface -- the common \"small bordered surface with padding\" idiom.\n\nType: `CardAppearance`  \nDefault: `\"outlined\"`",
               "value": {
                 "type": [
-                  "CardAppearance"
+                  "\"accent\"",
+                  "\"filled\"",
+                  "\"outlined\"",
+                  "\"filled-outlined\"",
+                  "\"plain\""
                 ]
               }
             },
@@ -2608,7 +2736,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -2653,7 +2785,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -2704,7 +2843,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, padded box. `'plain'` removes the border, background, padding and corner\nradius, so a composer docked inside a chat panel, dialog footer or toolbar that already draws\nits own border doesn't double the frame. Focus stays visible either way: `plain` swaps the\nborder-color shift for an underline across the input row, since there is no border left to\nrecolor.\n\nType: `ChatComposerAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "ChatComposerAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -2834,7 +2974,9 @@
               "description": "Type: `ChatComposerStatus`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "ChatComposerStatus"
+                  "'idle'",
+                  "'sending'",
+                  "'streaming'"
                 ]
               }
             },
@@ -2870,7 +3012,9 @@
               "description": "Native editing-assistance attributes forwarded to the internal textarea.\n\nType: `ChatComposerWrap`  \nDefault: `'soft'`",
               "value": {
                 "type": [
-                  "ChatComposerWrap"
+                  "'hard'",
+                  "'soft'",
+                  "'off'"
                 ]
               }
             }
@@ -2891,7 +3035,13 @@
             },
             {
               "name": "attachments-position",
-              "description": "Where the `attachments` slot renders relative to the message body.\n`'after'` (the default) reproduces today's exact DOM order. `'before'`\nrenders attachments immediately above the body -- both DOM and visual\norder move together (no CSS `order` trick), so reading/focus order\nalways matches what's on screen.\n\nType: `'before' | 'after'`  \nDefault: `'after'`"
+              "description": "Where the `attachments` slot renders relative to the message body.\n`'after'` (the default) reproduces today's exact DOM order. `'before'`\nrenders attachments immediately above the body -- both DOM and visual\norder move together (no CSS `order` trick), so reading/focus order\nalways matches what's on screen.\n\nType: `'before' | 'after'`  \nDefault: `'after'`",
+              "value": {
+                "type": [
+                  "'before'",
+                  "'after'"
+                ]
+              }
             },
             {
               "name": "collapsed",
@@ -2916,7 +3066,9 @@
               "description": "Who authored the message. Reflects to `data-role` — see the class doc.\n\nType: `ChatMessageRole`  \nDefault: `'assistant'`",
               "value": {
                 "type": [
-                  "ChatMessageRole"
+                  "'user'",
+                  "'assistant'",
+                  "'system'"
                 ]
               }
             },
@@ -2943,7 +3095,10 @@
               "description": "Delivery/generation state. Drives the footer's status dot/text and,\nfor `\"failed\"`, the bubble's danger treatment and the built-in retry\nbutton. Declared via `static properties` above with a hand-written\naccessor (see `previousStatus`).\n\nType: `ChatMessageStatus`",
               "value": {
                 "type": [
-                  "ChatMessageStatus"
+                  "'sending'",
+                  "'sent'",
+                  "'failed'",
+                  "'streaming'"
                 ]
               }
             }
@@ -2989,7 +3144,9 @@
               "description": "Live-region policy forwarded to the internal `role=\"log\"`. Keep `off` for token-by-token\nstreaming; use `polite` or `assertive` only when messages are appended at an announcement-safe\ncadence.\n\nType: `ChatViewportLive`  \nDefault: `'off'`",
               "value": {
                 "type": [
-                  "ChatViewportLive"
+                  "'off'",
+                  "'polite'",
+                  "'assertive'"
                 ]
               }
             },
@@ -3251,7 +3408,13 @@
               "description": "Visual density. `m` preserves the original chip dimensions.\n\nType: `ChipSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "ChipSize"
+                  "'3xs'",
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -3269,7 +3432,11 @@
               "description": "Status/emphasis color. `neutral` (the default) reads as plain/unstyled.\n\nType: `ChipTone`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "ChipTone"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             },
@@ -3340,7 +3507,13 @@
             },
             {
               "name": "sort",
-              "description": "Type: `'score' | 'none'`  \nDefault: `'score'`"
+              "description": "Type: `'score' | 'none'`  \nDefault: `'score'`",
+              "value": {
+                "type": [
+                  "'score'",
+                  "'none'"
+                ]
+              }
             },
             {
               "name": "virtualize-at",
@@ -3407,7 +3580,12 @@
               "description": "Confidence/verification state — drives the badge's color and (unless\n`label` is set) part of its accessible name.\n\nType: `CitationBadgeStatus`  \nDefault: `'default'`",
               "value": {
                 "type": [
-                  "CitationBadgeStatus"
+                  "'default'",
+                  "'high'",
+                  "'medium'",
+                  "'low'",
+                  "'verified'",
+                  "'unverified'"
                 ]
               }
             }
@@ -3823,7 +4001,15 @@
             },
             {
               "name": "resize",
-              "description": "Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`.\n\nType: `'none' | 'both' | 'horizontal' | 'vertical'`  \nDefault: `'both'`"
+              "description": "Native CSS `resize` behavior. An invalid runtime value falls back to `'both'`.\n\nType: `'none' | 'both' | 'horizontal' | 'vertical'`  \nDefault: `'both'`",
+              "value": {
+                "type": [
+                  "'none'",
+                  "'both'",
+                  "'horizontal'",
+                  "'vertical'"
+                ]
+              }
             },
             {
               "name": "spellcheck",
@@ -3845,7 +4031,14 @@
             },
             {
               "name": "wrap",
-              "description": "Type: `'off' | 'soft' | 'hard'`  \nDefault: `'off'`"
+              "description": "Type: `'off' | 'soft' | 'hard'`  \nDefault: `'off'`",
+              "value": {
+                "type": [
+                  "'off'",
+                  "'soft'",
+                  "'hard'"
+                ]
+              }
             }
           ]
         },
@@ -3930,7 +4123,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`'s own `size`.\n\nType: `LyraColorPickerSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraColorPickerSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             }
@@ -4134,7 +4332,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraComboboxSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraComboboxSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -4222,7 +4425,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s (and `<lr-agent-run>`'s own) `appearance` vocabulary.\n`'card'` (the default) keeps the bordered, padded box. `'plain'` removes the border, padding\nand corner radius, so a commit nested inside a host list that already draws its own row\nchrome doesn't double it. `plain` wins over `compact` when both are set (nothing left to\ntighten).\n\nType: `CommitCardAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "CommitCardAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -4300,7 +4504,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary and this component's sibling\n`lr-entity-card`'s identical property. `'card'` (the default) keeps the bordered, filled,\npadded box. `'plain'` removes the border, background, and padding, so a card nested inside a\ncontainer that already draws a border doesn't double it.\n\nType: `CommunityCardAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "CommunityCardAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -4411,7 +4616,15 @@
             },
             {
               "name": "vote",
-              "description": "Type: `CompareVote | null`"
+              "description": "Type: `CompareVote | null`",
+              "value": {
+                "type": [
+                  "'a'",
+                  "'b'",
+                  "'tie'",
+                  "'both-bad'"
+                ]
+              }
             }
           ]
         },
@@ -4433,7 +4646,9 @@
               "description": "Decided state. Set by the component on activation *and* host-writable (an externally-resolved\ndecision -- timeout, another reviewer -- renders identically but emits nothing).\n\nType: `ConfirmBarDecision`  \nDefault: `null`",
               "value": {
                 "type": [
-                  "ConfirmBarDecision"
+                  "'approved'",
+                  "'denied'",
+                  "null"
                 ]
               }
             },
@@ -4460,7 +4675,9 @@
               "description": "Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called\npreventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.\non failure, so the user can retry), or set `decision` to finalize.\n\nType: `ConfirmBarDecision`  \nDefault: `null`",
               "value": {
                 "type": [
-                  "ConfirmBarDecision"
+                  "'approved'",
+                  "'denied'",
+                  "null"
                 ]
               }
             },
@@ -4469,7 +4686,8 @@
               "description": "Token-mapped emphasis for destructive proposals.\n\nType: `ConfirmBarTone`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "ConfirmBarTone"
+                  "'neutral'",
+                  "'danger'"
                 ]
               }
             },
@@ -4604,7 +4822,8 @@
               "description": "Type: `ContextMeterVariant`  \nDefault: `'bar'`",
               "value": {
                 "type": [
-                  "ContextMeterVariant"
+                  "'ring'",
+                  "'bar'"
                 ]
               }
             }
@@ -4853,7 +5072,9 @@
               "description": "How a move/resize that would overlap another cell is resolved -- see the class doc.\n\nType: `DashboardCollisionPolicy`  \nDefault: `\"reject\"`",
               "value": {
                 "type": [
-                  "DashboardCollisionPolicy"
+                  "'reject'",
+                  "'push'",
+                  "'overlap'"
                 ]
               }
             },
@@ -5100,11 +5321,23 @@
             },
             {
               "name": "mode",
-              "description": "Type: `'single' | 'range'`"
+              "description": "Type: `'single' | 'range'`",
+              "value": {
+                "type": [
+                  "'single'",
+                  "'range'"
+                ]
+              }
             },
             {
               "name": "months",
-              "description": "Type: `1 | 2`  \nDefault: `1`"
+              "description": "Type: `1 | 2`  \nDefault: `1`",
+              "value": {
+                "type": [
+                  "1",
+                  "2"
+                ]
+              }
             },
             {
               "name": "name",
@@ -5165,7 +5398,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-select`/`lr-combobox`'s own `size`.\n`'2xs'` is the tightest tier, for dense toolbar-embedded fields.\n\nType: `LyraDateInputSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraDateInputSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -5183,7 +5421,9 @@
               "description": "Type: `WeekdayFormat`  \nDefault: `'short'`",
               "value": {
                 "type": [
-                  "WeekdayFormat"
+                  "'narrow'",
+                  "'short'",
+                  "'long'"
                 ]
               }
             },
@@ -5279,13 +5519,20 @@
               "description": "Type: `CalendarMode`  \nDefault: `'single'`",
               "value": {
                 "type": [
-                  "CalendarMode"
+                  "'single'",
+                  "'range'"
                 ]
               }
             },
             {
               "name": "months",
-              "description": "Type: `1 | 2`  \nDefault: `1`"
+              "description": "Type: `1 | 2`  \nDefault: `1`",
+              "value": {
+                "type": [
+                  "1",
+                  "2"
+                ]
+              }
             },
             {
               "name": "next-label",
@@ -5319,7 +5566,12 @@
               "description": "Visual size — scales `--lr-cell-size` proportionally; not pixel-matched to\n`lr-input`'s row-height scale (a calendar cell isn't a text row).\n\nType: `LyraDatePickerSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraDatePickerSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -5337,7 +5589,9 @@
               "description": "Type: `WeekdayFormat`  \nDefault: `'short'`",
               "value": {
                 "type": [
-                  "WeekdayFormat"
+                  "'narrow'",
+                  "'short'",
+                  "'long'"
                 ]
               }
             },
@@ -5484,7 +5738,8 @@
               "description": "`'unified'` (the default) renders today's single interleaved `<pre>`; `'split'` renders two\nside-by-side columns derived from the same `DiffOp[]` (see `pairOpsForSplit()`).\n\nType: `LyraDiffViewLayout`  \nDefault: `'unified'`",
               "value": {
                 "type": [
-                  "LyraDiffViewLayout"
+                  "'unified'",
+                  "'split'"
                 ]
               }
             },
@@ -5526,7 +5781,8 @@
               "description": "Type: `DividerOrientation`  \nDefault: `'horizontal'`",
               "value": {
                 "type": [
-                  "DividerOrientation"
+                  "'horizontal'",
+                  "'vertical'"
                 ]
               }
             }
@@ -5559,7 +5815,10 @@
               "description": "Type: `DockPanelEdge`  \nDefault: `\"end\"`",
               "value": {
                 "type": [
-                  "DockPanelEdge"
+                  "\"start\"",
+                  "\"end\"",
+                  "\"top\"",
+                  "\"bottom\""
                 ]
               }
             },
@@ -5628,7 +5887,8 @@
               "description": "Forwarded to the internal `<lr-diff-view>`'s own `layout` property while `view=\"diff\"`.\n\nType: `LyraDiffViewLayout`  \nDefault: `'unified'`",
               "value": {
                 "type": [
-                  "LyraDiffViewLayout"
+                  "'unified'",
+                  "'split'"
                 ]
               }
             },
@@ -5664,7 +5924,8 @@
               "description": "`'diff'` (the default) renders one inline `<lr-diff-view>`; `'side-by-side'` renders two\nindependently-scrollable `<lr-document-preview>` panes -- see the class doc's \"Synchronized\nanchors\" section for how the two panes are kept in sync.\n\nType: `LyraDocumentCompareView`  \nDefault: `'diff'`",
               "value": {
                 "type": [
-                  "LyraDocumentCompareView"
+                  "'diff'",
+                  "'side-by-side'"
                 ]
               }
             }
@@ -5706,7 +5967,8 @@
               "description": "Type: `DocumentLibrarySortDirection`  \nDefault: `'ascending'`",
               "value": {
                 "type": [
-                  "DocumentLibrarySortDirection"
+                  "'ascending'",
+                  "'descending'"
                 ]
               }
             },
@@ -5715,7 +5977,11 @@
               "description": "Type: `LibraryDocumentSortKey`  \nDefault: `'name'`",
               "value": {
                 "type": [
-                  "LibraryDocumentSortKey"
+                  "'name'",
+                  "'version'",
+                  "'owner'",
+                  "'freshness'",
+                  "'updatedAt'"
                 ]
               }
             }
@@ -5796,7 +6062,10 @@
               "description": "Host-owned lifecycle state. `\"converting\"` shows the spinner regardless\nof `mime-type`/`src`; `\"error\"` shows `errorMessage` regardless of\neither. `\"idle\"`/`\"ready\"` both resume normal format dispatch — this\ncomponent doesn't require a host that has no conversion step to ever\nset `\"ready\"` explicitly.\n\nType: `DocumentPreviewStatus`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "DocumentPreviewStatus"
+                  "'idle'",
+                  "'converting'",
+                  "'ready'",
+                  "'error'"
                 ]
               }
             },
@@ -5989,7 +6258,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -6034,7 +6307,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -6138,7 +6418,10 @@
               "description": "Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be\n`start`, so a mechanical rename silently moved every migrated drawer to the other side.\n\nType: `LyraDrawerPlacement`  \nDefault: `'end'`",
               "value": {
                 "type": [
-                  "LyraDrawerPlacement"
+                  "'start'",
+                  "'end'",
+                  "'top'",
+                  "'bottom'"
                 ]
               }
             }
@@ -6230,7 +6513,8 @@
               "description": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `LyraPopupRole`  \nDefault: `'dialog'`",
               "value": {
                 "type": [
-                  "LyraPopupRole"
+                  "'dialog'",
+                  "'menu'"
                 ]
               }
             }
@@ -6281,7 +6565,8 @@
               "description": "`'checkbox'` renders `role=\"menuitemcheckbox\"` with a toggleable `checked` state and a\ncheckmark glyph, mirroring `wa-dropdown-item`'s identical `type` option — see the class doc.\n\nType: `MenuItemType`  \nDefault: `'normal'`",
               "value": {
                 "type": [
-                  "MenuItemType"
+                  "'normal'",
+                  "'checkbox'"
                 ]
               }
             },
@@ -6516,7 +6801,12 @@
               "description": "Visual size — scales the emoji grid item box proportionally, floored at 24px\n(WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale.\n\nType: `LyraEmojiPickerSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraEmojiPickerSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             }
@@ -6573,7 +6863,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, padded box. `'plain'` removes the border, background, padding and corner\nradius, so a card nested inside a container that already draws a border doesn't double it.\n`plain` wins over `compact` when both are set (nothing left to tighten).\n\nType: `EntityCardAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "EntityCardAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -7020,7 +7311,8 @@
               "description": "Shows only the icon or the icon together with its localized label.\n\nType: `LyraFileIconVariant`  \nDefault: `'icon'`",
               "value": {
                 "type": [
-                  "LyraFileIconVariant"
+                  "'icon'",
+                  "'label'"
                 ]
               }
             }
@@ -7263,7 +7555,14 @@
             },
             {
               "name": "variant",
-              "description": "Which fidelity tier to load, for the ~65 `country`/`language` codes whose source art embeds a\ncoat of arms/seal/emblem (for every other code all tiers are the same file, so this is a safe\nno-op):\n- `\"compact\"` — a tiny WebP raster for icon-scale use (menu items, language selectors, dense\n  lists; ~12–28px), where the emblem detail is invisible anyway.\n- `\"standard\"` (default) — the icon-optimized vector, for card/row sizes (~28–96px).\n- `\"detailed\"` — the pristine, full-detail vector, for rendering larger than icon scale (e.g.\n  a hero display) where the extra illustrative detail is actually visible.\n\nHas no effect when `src` is set — a pre-resolved URL is used as-is regardless. Takes precedence\nover the deprecated `detailed` boolean.\n\nType: `FlagVariant | undefined`"
+              "description": "Which fidelity tier to load, for the ~65 `country`/`language` codes whose source art embeds a\ncoat of arms/seal/emblem (for every other code all tiers are the same file, so this is a safe\nno-op):\n- `\"compact\"` — a tiny WebP raster for icon-scale use (menu items, language selectors, dense\n  lists; ~12–28px), where the emblem detail is invisible anyway.\n- `\"standard\"` (default) — the icon-optimized vector, for card/row sizes (~28–96px).\n- `\"detailed\"` — the pristine, full-detail vector, for rendering larger than icon scale (e.g.\n  a hero display) where the extra illustrative detail is actually visible.\n\nHas no effect when `src` is set — a pre-resolved URL is used as-is regardless. Takes precedence\nover the deprecated `detailed` boolean.\n\nType: `FlagVariant | undefined`",
+              "value": {
+                "type": [
+                  "'compact'",
+                  "'standard'",
+                  "'detailed'"
+                ]
+              }
             }
           ]
         },
@@ -7367,7 +7666,13 @@
             },
             {
               "name": "orientation",
-              "description": "Type: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`"
+              "description": "Type: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`",
+              "value": {
+                "type": [
+                  "'horizontal'",
+                  "'vertical'"
+                ]
+              }
             }
           ]
         },
@@ -7380,7 +7685,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, shadowed floating cluster. `'plain'` removes the border, background, shadow,\npadding and corner radius, so a cluster placed in a host toolbar or panel that already draws\nits own surface doesn't double the frame. The buttons keep their shared minimum hit area and\ntheir own hover/focus affordances either way.\n\nType: `FlowControlsAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "FlowControlsAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -7413,7 +7719,13 @@
             },
             {
               "name": "orientation",
-              "description": "Layout axis of the button cluster.\n\nType: `'vertical' | 'horizontal'`  \nDefault: `'vertical'`"
+              "description": "Layout axis of the button cluster.\n\nType: `'vertical' | 'horizontal'`  \nDefault: `'vertical'`",
+              "value": {
+                "type": [
+                  "'vertical'",
+                  "'horizontal'"
+                ]
+              }
             }
           ]
         },
@@ -7496,7 +7808,13 @@
             },
             {
               "name": "orientation",
-              "description": "Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when\nthis card is canvas-adopted; a standalone card defaults to `\"horizontal\"`.\n\nType: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`"
+              "description": "Additive: which physical edge handles render on, mirroring the canvas's own `orientation` when\nthis card is canvas-adopted; a standalone card defaults to `\"horizontal\"`.\n\nType: `'horizontal' | 'vertical'`  \nDefault: `'horizontal'`",
+              "value": {
+                "type": [
+                  "'horizontal'",
+                  "'vertical'"
+                ]
+              }
             },
             {
               "name": "progress",
@@ -7513,7 +7831,16 @@
             },
             {
               "name": "status",
-              "description": "Type: `FlowRunStatus | null`  \nDefault: `null`"
+              "description": "Type: `FlowRunStatus | null`  \nDefault: `null`",
+              "value": {
+                "type": [
+                  "'pending'",
+                  "'running'",
+                  "'success'",
+                  "'error'",
+                  "'denied'"
+                ]
+              }
             },
             {
               "name": "status-detail",
@@ -7535,7 +7862,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, shadowed floating strip. `'plain'` removes the border, background, shadow,\npadding and corner radius, so a summary strip dropped directly into a host toolbar that\nalready draws its own frame doesn't double it.\n\nType: `FlowRunOverlayAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "FlowRunOverlayAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -7684,7 +8012,15 @@
             },
             {
               "name": "notation",
-              "description": "Type: `'standard' | 'compact' | 'scientific' | 'engineering'`  \nDefault: `'standard'`"
+              "description": "Type: `'standard' | 'compact' | 'scientific' | 'engineering'`  \nDefault: `'standard'`",
+              "value": {
+                "type": [
+                  "'standard'",
+                  "'compact'",
+                  "'scientific'",
+                  "'engineering'"
+                ]
+              }
             },
             {
               "name": "value",
@@ -7742,7 +8078,9 @@
               "description": "Type: `GaugeType`  \nDefault: `'radial'`",
               "value": {
                 "type": [
-                  "GaugeType"
+                  "'radial'",
+                  "'ring'",
+                  "'linear'"
                 ]
               }
             },
@@ -7879,7 +8217,8 @@
               "description": "`'force'` (default) runs the existing d3-force simulation, untouched. `'layered'` computes a\ndeterministic Sugiyama-lite layout (`src/internal/layered-layout.ts`, a shared,\ndependency-free util suitable for any future layered-diagram consumer) instead -- no settle\nanimation, node drag disabled (dragging would fight a computed layout), `chargeStrength` a\ndocumented no-op, `linkDistance` retunes the layer gap. Switching at runtime repositions\nwithout a tween.\n\nType: `GraphLayout`  \nDefault: `'force'`",
               "value": {
                 "type": [
-                  "GraphLayout"
+                  "'force'",
+                  "'layered'"
                 ]
               }
             },
@@ -7924,7 +8263,8 @@
               "description": "`'svg'` (default, unchanged) renders the existing per-node/per-link DOM. `'canvas'` swaps to\na single `<canvas part=\"canvas\">` -- the scale path (an honest ceiling for `'svg'`: dozens to\nlow hundreds of nodes; `'canvas'` targets roughly 5,000 nodes / 10,000 links). Feature-reduced\nby design: no `::part(node)`/`::part(link)` styling (pixels, not elements -- theme via\ncssprops), no SVG `<title>`, a drawn focus ring instead of a CSS one. All events/methods/\nprops otherwise behave identically across renderers. Runtime changes tear down and rebuild\nthe surface; positions survive via `prevById`/`lastPositionById`.\n\nType: `GraphRenderer`  \nDefault: `'svg'`",
               "value": {
                 "type": [
-                  "GraphRenderer"
+                  "'svg'",
+                  "'canvas'"
                 ]
               }
             },
@@ -7937,7 +8277,9 @@
               "description": "`'none'` (default) preserves today's behavior exactly -- no `aria-pressed`/`data-selected`,\nno `lr-selection-change`. Controlled, mirroring `lr-heatmap.selectedCell`: the component\nnever mutates `selectedNodeIds`/`selectedLinkIds` itself, only emits intent; the host assigns\nthem back.\n\nType: `GraphSelectionMode`  \nDefault: `'none'`",
               "value": {
                 "type": [
-                  "GraphSelectionMode"
+                  "'none'",
+                  "'single'",
+                  "'multiple'"
                 ]
               }
             },
@@ -8209,7 +8551,8 @@
               "description": "Type: `HeatmapMode`  \nDefault: `'matrix'`",
               "value": {
                 "type": [
-                  "HeatmapMode"
+                  "'matrix'",
+                  "'calendar'"
                 ]
               }
             },
@@ -8218,7 +8561,8 @@
               "description": "`\"linear\"` (default) maps values linearly to the color ramp in matrix\nmode, and buckets calendar-mode values via `quartileBucket()` — both\nunchanged from before this property governed calendar mode too.\n`\"sqrt\"` compresses via `sqrtStep()`'s square-root magnitude compression\ninstead, in *both* modes, so one heavy cell/day doesn't wash out the\nrest of a skewed dataset.\n\nType: `HeatmapScale`  \nDefault: `'linear'`",
               "value": {
                 "type": [
-                  "HeatmapScale"
+                  "'linear'",
+                  "'sqrt'"
                 ]
               }
             },
@@ -8360,7 +8704,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -8405,7 +8753,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -8598,7 +8953,14 @@
             },
             {
               "name": "type",
-              "description": "Forwarded to this component's own submit/reset handling (`onClick` below) — see the class\ndoc comment for why this component (not the shadow-internal `<button>`) owns that behavior.\n\nType: `'button' | 'submit' | 'reset'`  \nDefault: `'button'`"
+              "description": "Forwarded to this component's own submit/reset handling (`onClick` below) — see the class\ndoc comment for why this component (not the shadow-internal `<button>`) owns that behavior.\n\nType: `'button' | 'submit' | 'reset'`  \nDefault: `'button'`",
+              "value": {
+                "type": [
+                  "'button'",
+                  "'submit'",
+                  "'reset'"
+                ]
+              }
             }
           ]
         },
@@ -8642,7 +9004,8 @@
               "description": "Type: `LyraImageComparerOrientation`  \nDefault: `'horizontal'`",
               "value": {
                 "type": [
-                  "LyraImageComparerOrientation"
+                  "'horizontal'",
+                  "'vertical'"
                 ]
               }
             },
@@ -8679,7 +9042,9 @@
               "description": "Base scale at `zoom = 1`: `contain` fits the whole image in the frame, `width` fills the\nframe's inline size, `actual` shows the image at its natural pixel dimensions.\n\nType: `ImageFit`  \nDefault: `'contain'`",
               "value": {
                 "type": [
-                  "ImageFit"
+                  "'contain'",
+                  "'width'",
+                  "'actual'"
                 ]
               }
             },
@@ -8724,7 +9089,10 @@
               "description": "Clockwise rotation in 90-degree steps.\n\nType: `ImageRotation`  \nDefault: `0`",
               "value": {
                 "type": [
-                  "ImageRotation"
+                  "0",
+                  "90",
+                  "180",
+                  "270"
                 ]
               }
             },
@@ -8775,7 +9143,9 @@
               "description": "Forwarded to `fetch(url, { mode })`. Deliberately defaults to\n`'same-origin'` rather than the `'cors'` default documented by the\nWeb Awesome/Shoelace components this element otherwise mirrors — a\nconsumer opts in to cross-origin fetching explicitly. An invalid/typo'd\nattribute value is defensively normalized back to `'same-origin'`\nrather than letting `fetch()` throw synchronously for an invalid\n`RequestMode`.\n\nType: `LyraIncludeMode`  \nDefault: `'same-origin'`",
               "value": {
                 "type": [
-                  "LyraIncludeMode"
+                  "'cors'",
+                  "'no-cors'",
+                  "'same-origin'"
                 ]
               }
             },
@@ -8995,7 +9365,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is\nthe tightest tier, for dense toolbar-embedded controls.\n\nType: `LyraInputSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraInputSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -9017,7 +9392,12 @@
               "description": "Type: `LyraInputType`  \nDefault: `'text'`",
               "value": {
                 "type": [
-                  "LyraInputType"
+                  "'text'",
+                  "'password'",
+                  "'email'",
+                  "'number'",
+                  "'time'",
+                  "'search'"
                 ]
               }
             }
@@ -9177,7 +9557,8 @@
               "description": "Active tab. Controlled by the host after `lr-tab-change` if desired. If the ingestion tab\nbecomes unavailable, this normalizes to `'sources'` through the same event contract.\n\nType: `KnowledgeBaseAdminTab`  \nDefault: `'sources'`",
               "value": {
                 "type": [
-                  "KnowledgeBaseAdminTab"
+                  "'sources'",
+                  "'ingestion'"
                 ]
               }
             },
@@ -9228,7 +9609,9 @@
               "description": "What drives this component's own `dimmedNodeIds`/`dimmedLinkIds` forwarding, on top of the\nalways-active search-match dimming -- see the class doc's dedicated paragraph.\n\nType: `KnowledgeGraphHighlight`  \nDefault: `'selection'`",
               "value": {
                 "type": [
-                  "KnowledgeGraphHighlight"
+                  "'selection'",
+                  "'hover'",
+                  "'none'"
                 ]
               }
             },
@@ -9255,7 +9638,8 @@
               "description": "Forwarded to `lr-graph.renderer`. `renderer=\"canvas\"` has no per-node DOM element, which\nnarrows how the node-detail popover anchors and disables its pan/zoom tracking -- see the\nclass doc's anchoring note.\n\nType: `GraphRenderer`  \nDefault: `'svg'`",
               "value": {
                 "type": [
-                  "GraphRenderer"
+                  "'svg'",
+                  "'canvas'"
                 ]
               }
             },
@@ -9404,7 +9788,11 @@
               "description": "Type: `LyraKnownDateSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraKnownDateSize"
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -9591,7 +9979,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -9636,7 +10028,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -9731,7 +10130,8 @@
               "description": "`'fit'` (default) squeezes the plot into the measured host width, unchanged from before this\nproperty existed. `'scroll'` gives every bar a fixed `barWidth` instead, letting the plot's\ncontent width exceed the host's — the host becomes horizontally scrollable\n(`overflow-x: auto`) so every bar stays exactly `barWidth` wide regardless of category count.\nReflects to the `layout` attribute (e.g. for `:host([layout='scroll'])` host styling).\n\nType: `LyraLiteChartLayout`  \nDefault: `'fit'`",
               "value": {
                 "type": [
-                  "LyraLiteChartLayout"
+                  "'fit'",
+                  "'scroll'"
                 ]
               }
             },
@@ -9779,7 +10179,8 @@
               "description": "`type=\"bar\"` only (no effect on `type=\"line\"`): `'linear'` (default) maps a bar's value to\nheight via the standard `niceDomain`-based fraction, unchanged from before this property\nexisted. `'sqrt'` instead maps via `Math.sqrt(value / domainMax)` (mirroring `lr-heatmap`'s\nmatrix-mode `sqrt` scale), boosting smaller values relative to one dominant value so a skewed\ndataset's smaller bars don't get washed out. Gridlines/tick labels stay on the linear domain\neither way — only the bar marks' own height mapping changes.\n\nType: `LyraLiteChartScale`  \nDefault: `'linear'`",
               "value": {
                 "type": [
-                  "LyraLiteChartScale"
+                  "'linear'",
+                  "'sqrt'"
                 ]
               }
             },
@@ -9815,7 +10216,8 @@
               "description": "Type: `LyraLiteChartType`  \nDefault: `'bar'`",
               "value": {
                 "type": [
-                  "LyraLiteChartType"
+                  "'bar'",
+                  "'line'"
                 ]
               }
             },
@@ -9857,7 +10259,8 @@
               "description": "`polite` (role=\"status\") waits for the user to be idle; `assertive`\n(role=\"alert\") interrupts. Mirrors native `aria-live` semantics.\n\n`write()` also applies `role`/`aria-live` imperatively at announce time\n(not only through this property's template binding) so a caller that\nsets `mode` and immediately force-announces in the same synchronous\nturn -- e.g. a stream-status transition -- gets the new urgency and the\nnew text landing together, rather than the text beating Lit's\nre-render to the DOM.\n\nType: `LiveRegionMode`  \nDefault: `'polite'`",
               "value": {
                 "type": [
-                  "LiveRegionMode"
+                  "'polite'",
+                  "'assertive'"
                 ]
               }
             },
@@ -9962,7 +10365,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraLocalePickerSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraLocalePickerSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -10323,7 +10731,8 @@
               "description": "Visual chrome, mirroring `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the\ndefault) keeps the bordered, filled box. `'plain'` removes the border, background, padding\nand corner radius, so a card inside a dense chat transcript (or any container already\ndrawing its own separation between attachments) doesn't double the frame.\n\nType: `MediaCardAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "MediaCardAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -10347,7 +10756,14 @@
             },
             {
               "name": "kind",
-              "description": "Explicit format dispatch. Leave unset to auto-detect from `mime-type`.\n\nType: `MediaCardKind | undefined`"
+              "description": "Explicit format dispatch. Leave unset to auto-detect from `mime-type`.\n\nType: `MediaCardKind | undefined`",
+              "value": {
+                "type": [
+                  "'image'",
+                  "'video'",
+                  "'file'"
+                ]
+              }
             },
             {
               "name": "locale",
@@ -10553,7 +10969,8 @@
               "description": "`'checkbox'` renders `role=\"menuitemcheckbox\"` with a toggleable `checked` state and a\ncheckmark glyph, mirroring `wa-dropdown-item`'s identical `type` option — see the class doc.\n\nType: `MenuItemType`  \nDefault: `'normal'`",
               "value": {
                 "type": [
-                  "MenuItemType"
+                  "'normal'",
+                  "'checkbox'"
                 ]
               }
             },
@@ -10602,7 +11019,14 @@
             },
             {
               "name": "feedback-value",
-              "description": "Forwarded to the embedded `lr-message-feedback` when the `feedback` built-in is enabled. The\nbuilt-in stays thumbs-only: `reasons`/`commentable`/`detailFor` are never forwarded, so its\ndetail panel never opens.\n\nType: `'up' | 'down' | null`  \nDefault: `null`"
+              "description": "Forwarded to the embedded `lr-message-feedback` when the `feedback` built-in is enabled. The\nbuilt-in stays thumbs-only: `reasons`/`commentable`/`detailFor` are never forwarded, so its\ndetail panel never opens.\n\nType: `'up' | 'down' | null`  \nDefault: `null`",
+              "value": {
+                "type": [
+                  "'up'",
+                  "'down'",
+                  "null"
+                ]
+              }
             },
             {
               "name": "label",
@@ -10648,7 +11072,13 @@
             },
             {
               "name": "detail-for",
-              "description": "Which rating opens the detail panel (only when it would have content -- `reasons` non-empty or\n`commentable`). `'down'` (the default) matches the dominant product pattern of elaborating only\non negative feedback; `'both'` opens it for either thumb.\n\nType: `'down' | 'both'`  \nDefault: `'down'`"
+              "description": "Which rating opens the detail panel (only when it would have content -- `reasons` non-empty or\n`commentable`). `'down'` (the default) matches the dominant product pattern of elaborating only\non negative feedback; `'both'` opens it for either thumb.\n\nType: `'down' | 'both'`  \nDefault: `'down'`",
+              "value": {
+                "type": [
+                  "'down'",
+                  "'both'"
+                ]
+              }
             },
             {
               "name": "disabled",
@@ -10911,7 +11341,11 @@
               "description": "Visual size — same `xs`–`xl` scale as `lr-select`'s `size`.\n\nType: `LyraModelSelectSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraModelSelectSize"
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -10962,7 +11396,8 @@
               "description": "`vertical` stacks full-width rows with visible labels; `compact` runs\nthe same two rows side by side with a smaller temperature caption, for\ntoolbars/sidebars where the vertical layout's height doesn't fit.\n\nType: `ModelSettingsPanelLayout`  \nDefault: `'vertical'`",
               "value": {
                 "type": [
-                  "ModelSettingsPanelLayout"
+                  "'vertical'",
+                  "'compact'"
                 ]
               }
             },
@@ -11351,7 +11786,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is\nthe tightest tier, for dense toolbar-embedded controls.\n\nType: `LyraInputSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraInputSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -11373,7 +11813,12 @@
               "description": "Type: `LyraInputType`  \nDefault: `'text'`",
               "value": {
                 "type": [
-                  "LyraInputType"
+                  "'text'",
+                  "'password'",
+                  "'email'",
+                  "'number'",
+                  "'time'",
+                  "'search'"
                 ]
               }
             }
@@ -11475,7 +11920,9 @@
               "description": "Case transform applied as characters are entered.\n\nType: `OtpInputCase`  \nDefault: `'preserve'`",
               "value": {
                 "type": [
-                  "OtpInputCase"
+                  "'preserve'",
+                  "'upper'",
+                  "'lower'"
                 ]
               }
             },
@@ -11578,7 +12025,9 @@
               "description": "Which characters are accepted; also drives the mobile keyboard through `inputmode`.\n\nType: `OtpInputType`  \nDefault: `'numeric'`",
               "value": {
                 "type": [
-                  "OtpInputType"
+                  "'numeric'",
+                  "'alpha'",
+                  "'alphanumeric'"
                 ]
               }
             },
@@ -11756,7 +12205,11 @@
               "description": "Type: `LyraPaginationSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraPaginationSize"
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -11982,7 +12435,14 @@
             },
             {
               "name": "inputmode",
-              "description": "Type: `'tel' | 'numeric' | 'text'`  \nDefault: `'tel'`"
+              "description": "Type: `'tel' | 'numeric' | 'text'`  \nDefault: `'tel'`",
+              "value": {
+                "type": [
+                  "'tel'",
+                  "'numeric'",
+                  "'text'"
+                ]
+              }
             },
             {
               "name": "invalid-text",
@@ -12052,7 +12512,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`.\n\nType: `LyraPhoneInputSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraPhoneInputSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -12148,7 +12613,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -12193,7 +12662,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -12385,7 +12861,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -12430,7 +12910,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -12573,7 +13060,8 @@
               "description": "Semantic role used by the popup. Dropdown subclasses set this to `menu`.\n\nType: `LyraPopupRole`  \nDefault: `'dialog'`",
               "value": {
                 "type": [
-                  "LyraPopupRole"
+                  "'dialog'",
+                  "'menu'"
                 ]
               }
             }
@@ -12789,7 +13277,10 @@
               "description": "Type: `ProgressVariant`  \nDefault: `'brand'`",
               "value": {
                 "type": [
-                  "ProgressVariant"
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -12904,7 +13395,9 @@
               "description": "Type: `ChatComposerStatus`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "ChatComposerStatus"
+                  "'idle'",
+                  "'sending'",
+                  "'streaming'"
                 ]
               }
             },
@@ -13121,7 +13614,8 @@
               "description": "Type: `PushToTalkMode`  \nDefault: `'hold'`",
               "value": {
                 "type": [
-                  "PushToTalkMode"
+                  "'hold'",
+                  "'toggle'"
                 ]
               }
             },
@@ -13154,7 +13648,10 @@
               "description": "QR error-correction level. Normalized (upper-cased, validated against `L`/`M`/`Q`/`H`,\nfalling back to `H`) on every assignment, attribute or property, so it's never a transient\ngarbage value.\n\nType: `LyraQrCodeErrorCorrection`",
               "value": {
                 "type": [
-                  "LyraQrCodeErrorCorrection"
+                  "'L'",
+                  "'M'",
+                  "'Q'",
+                  "'H'"
                 ]
               }
             },
@@ -13310,7 +13807,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -13355,7 +13856,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -13737,7 +14245,12 @@
               "description": "Entrance effect applied to a child the instant it becomes shown.\n\nType: `LyraRandomContentAnimation`  \nDefault: `'none'`",
               "value": {
                 "type": [
-                  "LyraRandomContentAnimation"
+                  "'none'",
+                  "'fade'",
+                  "'fade-up'",
+                  "'fade-down'",
+                  "'fade-left'",
+                  "'fade-right'"
                 ]
               }
             },
@@ -13782,7 +14295,9 @@
               "description": "Selection algorithm — see `randomize()`.\n\nType: `LyraRandomContentMode`  \nDefault: `'unique'`",
               "value": {
                 "type": [
-                  "LyraRandomContentMode"
+                  "'unique'",
+                  "'random'",
+                  "'sequence'"
                 ]
               }
             },
@@ -13924,7 +14439,11 @@
               "description": "Type: `RealtimeConnectionState`  \nDefault: `'disconnected'`",
               "value": {
                 "type": [
-                  "RealtimeConnectionState"
+                  "'disconnected'",
+                  "'connecting'",
+                  "'connected'",
+                  "'reconnecting'",
+                  "'error'"
                 ]
               }
             },
@@ -13933,7 +14452,10 @@
               "description": "Type: `AudioVisualizerState`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "AudioVisualizerState"
+                  "'idle'",
+                  "'listening'",
+                  "'thinking'",
+                  "'speaking'"
                 ]
               }
             }
@@ -13958,7 +14480,13 @@
             },
             {
               "name": "numeric",
-              "description": "Type: `'always' | 'auto'`  \nDefault: `'auto'`"
+              "description": "Type: `'always' | 'auto'`  \nDefault: `'auto'`",
+              "value": {
+                "type": [
+                  "'always'",
+                  "'auto'"
+                ]
+              }
             },
             {
               "name": "sync",
@@ -14054,7 +14582,9 @@
               "description": "Type: `ResizeObserverBox`  \nDefault: `'content-box'`",
               "value": {
                 "type": [
-                  "ResizeObserverBox"
+                  "'content-box'",
+                  "'border-box'",
+                  "'device-pixel-content-box'"
                 ]
               }
             },
@@ -14118,7 +14648,9 @@
               "description": "`'auto'` (default) tracks `mobile-breakpoint` live; `'inline'`/`'overlay'` force that\npresentation regardless of viewport width.\n\nType: `ResponsivePanelMode`  \nDefault: `\"auto\"`",
               "value": {
                 "type": [
-                  "ResponsivePanelMode"
+                  "\"inline\"",
+                  "\"overlay\"",
+                  "\"auto\""
                 ]
               }
             },
@@ -14136,7 +14668,8 @@
               "description": "Only affects the overlay presentation's visual treatment -- `'fullscreen'` (default) covers\nthe whole viewport; `'bottom-sheet'` slides up from the bottom and doesn't cover the full\nheight.\n\nType: `ResponsivePanelVariant`  \nDefault: `\"fullscreen\"`",
               "value": {
                 "type": [
-                  "ResponsivePanelVariant"
+                  "\"fullscreen\"",
+                  "\"bottom-sheet\""
                 ]
               }
             }
@@ -14151,7 +14684,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s/`lr-agent-run`'s `appearance` vocabulary. `'card'` (the\ndefault) keeps the bordered, filled box. `'plain'` removes the border, background, and corner\nradius, so a card nested inside a host frame that already draws a border (e.g.\n`<lr-tool-result-view>`'s own chrome) doesn't double it. `plain` wins over `compact` when\nboth are set (nothing left to tighten).\n\nType: `ResultCardAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "ResultCardAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -14295,7 +14829,8 @@
               "description": "`'source'` buckets rows under a header per `source.id` (always rendered through the internal\n`<lr-virtual-list>`, regardless of `virtualize-at`); `'none'` (default) is a flat ranked list.\n\nType: `RetrievalResultsGrouping`  \nDefault: `'none'`",
               "value": {
                 "type": [
-                  "RetrievalResultsGrouping"
+                  "'source'",
+                  "'none'"
                 ]
               }
             },
@@ -14340,7 +14875,8 @@
               "description": "`'expanded'` (default) shows each chunk's full `<lr-chunk-inspector>` row (score bar, text\npreview with its own expand toggle) plus any `metadata`; `'compact'` shows title + score bar\nonly, on both.\n\nType: `RetrievalResultsPresentation`  \nDefault: `'expanded'`",
               "value": {
                 "type": [
-                  "RetrievalResultsPresentation"
+                  "'compact'",
+                  "'expanded'"
                 ]
               }
             },
@@ -14355,7 +14891,13 @@
             },
             {
               "name": "sort",
-              "description": "`'score'` (default) sorts the deduplicated list descending by `score`; `'none'` preserves\n`chunks`' own given order.\n\nType: `'score' | 'none'`  \nDefault: `'score'`"
+              "description": "`'score'` (default) sorts the deduplicated list descending by `score`; `'none'` preserves\n`chunks`' own given order.\n\nType: `'score' | 'none'`  \nDefault: `'score'`",
+              "value": {
+                "type": [
+                  "'score'",
+                  "'none'"
+                ]
+              }
             },
             {
               "name": "virtualize-at",
@@ -14619,7 +15161,11 @@
               "description": "Legend placement. `auto` uses a right legend above 480px and a bottom legend below it.\n\nType: `LyraChartLegendPosition`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "LyraChartLegendPosition"
+                  "'top'",
+                  "'right'",
+                  "'bottom'",
+                  "'left'",
+                  "'auto'"
                 ]
               }
             },
@@ -14664,7 +15210,14 @@
               "description": "Type: `LyraChartType`  \nDefault: `'line'`",
               "value": {
                 "type": [
-                  "LyraChartType"
+                  "'line'",
+                  "'bar'",
+                  "'scatter'",
+                  "'pie'",
+                  "'doughnut'",
+                  "'radar'",
+                  "'polarArea'",
+                  "'bubble'"
                 ]
               }
             },
@@ -14793,7 +15346,8 @@
               "description": "Type: `ScrollerOrientation`  \nDefault: `\"horizontal\"`",
               "value": {
                 "type": [
-                  "ScrollerOrientation"
+                  "\"horizontal\"",
+                  "\"vertical\""
                 ]
               }
             },
@@ -14835,7 +15389,12 @@
               "description": "Visual size — same `2xs`-`xl` scale as `<lr-select>`/`<lr-combobox>` (`s` through `xl`)\nand `<lr-input>` (`2xs`). Reflects as the `size` attribute. The default `m` tier is\nidentical to this component's pre-`size` rendering, so leaving it unset never changes\noutput.\n\nType: `LyraSegmentedSize`  \nDefault: `\"m\"`",
               "value": {
                 "type": [
-                  "LyraSegmentedSize"
+                  "\"2xs\"",
+                  "\"xs\"",
+                  "\"s\"",
+                  "\"m\"",
+                  "\"l\"",
+                  "\"xl\""
                 ]
               }
             },
@@ -14949,7 +15508,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-input`/`lr-combobox`/`lr-locale-picker`'s own `size`.\n\nType: `LyraSelectSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraSelectSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -15033,7 +15597,12 @@
             },
             {
               "name": "orientation",
-              "description": "Only `'horizontal'` (the default) is supported today — vertical is plausible future scope, not\nbuilt speculatively without a motivating case.\n\nType: `'horizontal'`  \nDefault: `'horizontal'`"
+              "description": "Only `'horizontal'` (the default) is supported today — vertical is plausible future scope, not\nbuilt speculatively without a motivating case.\n\nType: `'horizontal'`  \nDefault: `'horizontal'`",
+              "value": {
+                "type": [
+                  "'horizontal'"
+                ]
+              }
             },
             {
               "name": "show-legend",
@@ -15064,7 +15633,8 @@
               "description": "Type: `SkeletonEffect`  \nDefault: `'pulse'`",
               "value": {
                 "type": [
-                  "SkeletonEffect"
+                  "'pulse'",
+                  "'sheen'"
                 ]
               }
             },
@@ -15095,7 +15665,9 @@
               "description": "Type: `SkeletonVariant`  \nDefault: `'text'`",
               "value": {
                 "type": [
-                  "SkeletonVariant"
+                  "'text'",
+                  "'circle'",
+                  "'rect'"
                 ]
               }
             },
@@ -15192,7 +15764,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, padded box. `'plain'` removes the border, background, padding and corner\nradius, so a card inside a `<lr-source-list>` (or any container already drawing its own\nborder/dividers) doesn't double the frame. `plain` wins over `compact` when both are set\n(nothing left to tighten); the title and toggle keep their brand color and hover underline,\nwhich never depended on the card chrome.\n\nType: `SourceCardAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "SourceCardAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -15402,7 +15975,14 @@
             },
             {
               "name": "type",
-              "description": "Rendering style.\n\nType: `'line' | 'bar' | 'area'`  \nDefault: `'line'`"
+              "description": "Rendering style.\n\nType: `'line' | 'bar' | 'area'`  \nDefault: `'line'`",
+              "value": {
+                "type": [
+                  "'line'",
+                  "'bar'",
+                  "'area'"
+                ]
+              }
             },
             {
               "name": "values",
@@ -15423,7 +16003,8 @@
               "description": "Type: `SpinnerLabelPlacement`  \nDefault: `'none'`",
               "value": {
                 "type": [
-                  "SpinnerLabelPlacement"
+                  "'none'",
+                  "'after'"
                 ]
               }
             },
@@ -15447,7 +16028,9 @@
               "description": "Opts a pane in to responsive collapse: `'start'` is the first light-DOM\npanel (index 0), `'end'` is the last. Both are LOGICAL positions, same\nas CSS `inset-inline-start`/`-end` — see the `collapsingIndex` getter\nfor why that already resolves to the same physical index under RTL for\nthis component (panels are never re-`order`ed for RTL, only the drag\ndelta sign mirrors). Default `'none'`: none of the collapse behavior\nbelow applies, and rendering/behavior is identical to before this\nproperty existed.\n\nType: `SplitCollapseMode`  \nDefault: `\"none\"`",
               "value": {
                 "type": [
-                  "SplitCollapseMode"
+                  "\"start\"",
+                  "\"end\"",
+                  "\"none\""
                 ]
               }
             },
@@ -15456,7 +16039,8 @@
               "description": "Which box `railBreakpoint`/`floatBreakpoint` measure. `'container'` (the default) observes\nthis component's own `[part=\"base\"]` inline size via `ResizeObserver`, comparing strictly `<`.\n`'viewport'` instead evaluates `matchMedia('(max-width: <breakpoint>)')` for each of the two\nthresholds, which is inclusive (`<=`) — native `max-width` semantics, deliberately, so the\ncrossing point matches a CSS `@media` rule authored with the same length exactly. Switching\nbasis therefore shifts each crossing point by 1px (the same trade-off\n`orientationBreakpointBasis` already makes).\n\nUse `'viewport'` to collapse in step with a page-level responsive layout — e.g. a shell whose\nown `@media` rules restack at the same width — rather than with this split's own allocation.\n`'viewport'` also lets the browser resolve a `rem` breakpoint with real `@media` semantics\n(against the *initial* font size, ignoring an `html { font-size }` override), keeping it in\nstep with such a rule.\n\nBoth bands are classified from both queries together on every change, so a fast resize that\ncrosses both thresholds at once still lands on one correct state and fires\n`lr-split-collapse-change` once. Under `'viewport'` basis the first paint is already correct —\nno `ResizeObserver` round-trip — and the initial state is not announced as a transition.\n\nDefault: `'container'`.\n\nType: `BreakpointBasis`  \nDefault: `\"container\"`",
               "value": {
                 "type": [
-                  "BreakpointBasis"
+                  "'container'",
+                  "'viewport'"
                 ]
               }
             },
@@ -15465,7 +16049,9 @@
               "description": "The collapsing pane's current responsive state. Always one of the three\nreal states — never `'auto'` — reflecting either the live measured\nwidth or, once forced, whatever was last assigned. See the class doc for\nthe full force/auto contract (mirrors `<lr-app-rail>`'s `mode`).\n\nType: `SplitCollapseState`",
               "value": {
                 "type": [
-                  "SplitCollapseState"
+                  "\"wide\"",
+                  "\"rail\"",
+                  "\"floating\""
                 ]
               }
             },
@@ -15496,7 +16082,8 @@
               "description": "Layout/resize axis used below `orientationBreakpoint`.\n\nType: `SplitOrientation`  \nDefault: `\"vertical\"`",
               "value": {
                 "type": [
-                  "SplitOrientation"
+                  "\"horizontal\"",
+                  "\"vertical\""
                 ]
               }
             },
@@ -15514,7 +16101,8 @@
               "description": "Type: `SplitOrientation`  \nDefault: `\"horizontal\"`",
               "value": {
                 "type": [
-                  "SplitOrientation"
+                  "\"horizontal\"",
+                  "\"vertical\""
                 ]
               }
             },
@@ -15592,7 +16180,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, padded box. `'plain'` removes the border, background, padding and corner\nradius so a trace nested inside an `lr-result-card`/`lr-agent-run` (which already draws a\nborder) doesn't double the frame. The `max-height` scroll cap and the copy/frame affordances\nare unaffected.\n\nType: `StackTraceAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "StackTraceAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -15652,7 +16241,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled, padded box that stretches to fill its parent; `'plain'` removes the border,\nbackground, padding, corner radius and the `block-size: 100%` stretch so the stat can sit\ninline in prose, a toolbar or a table cell. `plain` wins over `compact` when both are set\n(nothing left to tighten), and it also drops `emphasis`'s accent edge — that edge is card\nchrome — while `emphasis`'s brand value tint still applies. A `plain` stat with a safe `href`\nswaps the card's border-color/lift hover affordance (invisible with no border) for an\nunderline on `[part='value']`; the `:focus-visible` ring is unchanged.\n\nType: `StatAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "StatAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -15697,7 +16287,8 @@
               "description": "Which trend direction counts as \"good\" — inverts arrow/color polarity for\ncost/latency/error-rate-style metrics where a decrease is the win.\n\nType: `StatGoodDirection`  \nDefault: `'up'`",
               "value": {
                 "type": [
-                  "StatGoodDirection"
+                  "'up'",
+                  "'down'"
                 ]
               }
             },
@@ -15728,7 +16319,8 @@
               "description": "Layout axis. `'vertical'` (the default) stacks label, value, trend, sub and caption.\n`'horizontal'` lays label, value+unit, trend, sub and caption out on a single wrapping\nbaseline row; `[part='spark']` and `[part='rows']` have no sensible place on a text baseline\nand stay stacked on their own full-width line beneath that row.\n\nType: `StatOrientation`  \nDefault: `'vertical'`",
               "value": {
                 "type": [
-                  "StatOrientation"
+                  "'vertical'",
+                  "'horizontal'"
                 ]
               }
             },
@@ -15786,7 +16378,10 @@
               "description": "Type: `StatVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "StatVariant"
+                  "'neutral'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -15814,7 +16409,8 @@
               "description": "Layout/navigation axis used below `orientationBreakpoint`.\n\nType: `StepperOrientation`  \nDefault: `\"vertical\"`",
               "value": {
                 "type": [
-                  "StepperOrientation"
+                  "\"horizontal\"",
+                  "\"vertical\""
                 ]
               }
             },
@@ -15823,7 +16419,8 @@
               "description": "`'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);\n`'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed). The *authored* axis\nused at/above `orientationBreakpoint` (or always, when that's unset) -- see\n`effectiveOrientation` for the live axis actually in effect.\n\nType: `StepperOrientation`  \nDefault: `\"horizontal\"`",
               "value": {
                 "type": [
-                  "StepperOrientation"
+                  "\"horizontal\"",
+                  "\"vertical\""
                 ]
               }
             },
@@ -15869,7 +16466,10 @@
               "description": "Current connection phase. Settable directly by the host at any time —\nsee the class doc for how that interacts with the internal stall timer.\n\nType: `StreamStatusPhase`  \nDefault: `'idle'`",
               "value": {
                 "type": [
-                  "StreamStatusPhase"
+                  "'idle'",
+                  "'connecting'",
+                  "'streaming'",
+                  "'stalled'"
                 ]
               }
             },
@@ -16069,7 +16669,8 @@
               "description": "Visual treatment. `swatch` preserves the plain-circle default; `gemstone` renders the shared\ngemstone glyph for options with a `gemstone` key and enables its glow/shine recipe.\n\nType: `LyraSwatchPickerMode`  \nDefault: `'swatch'`",
               "value": {
                 "type": [
-                  "LyraSwatchPickerMode"
+                  "'swatch'",
+                  "'gemstone'"
                 ]
               }
             },
@@ -16078,7 +16679,12 @@
               "description": "Visual size — scales the swatch hit-area and fill diameter proportionally, hit-area\nfloored at 24px (WCAG 2.5.8); not pixel-matched to `lr-input`'s row-height scale.\n\nType: `LyraSwatchPickerSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraSwatchPickerSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -16208,7 +16814,8 @@
               "description": "`auto` (the default) moves selection with focus. `manual` moves focus only and waits for\nEnter or Space — the APG requirement for panels that are expensive to reveal.\n\nType: `TabGroupActivation`  \nDefault: `'auto'`",
               "value": {
                 "type": [
-                  "TabGroupActivation"
+                  "'auto'",
+                  "'manual'"
                 ]
               }
             },
@@ -16239,7 +16846,10 @@
               "description": "Which edge the tab strip sits on. `start`/`end` are logical and mirror under RTL; both make\nthe tablist vertical, which swaps the navigation keys to Up/Down per the APG.\n\nType: `TabGroupPlacement`  \nDefault: `'top'`",
               "value": {
                 "type": [
-                  "TabGroupPlacement"
+                  "'top'",
+                  "'bottom'",
+                  "'start'",
+                  "'end'"
                 ]
               }
             }
@@ -16320,7 +16930,13 @@
             },
             {
               "name": "default-sort-dir",
-              "description": "The direction applied whenever header activation switches sorting to a *different* column —\nincluding the first column ever sorted. Re-activating the column that is already `sortKey`\ntoggles between `'asc'` and `'desc'` instead, so this never overrides a direction the user\njust chose for the column they are still on. Defaults to `'asc'`; set `'desc'` for a\nmost-recent-first or highest-first table.\n\nType: `'asc' | 'desc'`  \nDefault: `'asc'`"
+              "description": "The direction applied whenever header activation switches sorting to a *different* column —\nincluding the first column ever sorted. Re-activating the column that is already `sortKey`\ntoggles between `'asc'` and `'desc'` instead, so this never overrides a direction the user\njust chose for the column they are still on. Defaults to `'asc'`; set `'desc'` for a\nmost-recent-first or highest-first table.\n\nType: `'asc' | 'desc'`  \nDefault: `'asc'`",
+              "value": {
+                "type": [
+                  "'asc'",
+                  "'desc'"
+                ]
+              }
             },
             {
               "name": "empty-compact",
@@ -16400,7 +17016,13 @@
             },
             {
               "name": "layout",
-              "description": "Floor for the `<table>`'s `table-layout`. `'fixed'` forces the fixed algorithm even when no\ncolumn declares a `width`, so every column shares the available width evenly and long cell\ncontent is clipped/wrapped instead of stretching its column. The default `'auto'` is only a\nfloor: it still resolves to `fixed` whenever a column declares a `width`, a column has been\ndrag-resized, or a resize gesture is in flight — resizing does not work under\n`table-layout: auto`.\n\nTwo consequences of the fixed algorithm are worth knowing before opting in: with no declared\nwidths the *first* row (header row included) determines every column's width, so revealing a\n`priority`-hidden column via `[part='reveal-columns-button']` re-measures and changes all of\nthem; and `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`\n(declare `width` instead when you need a specific column sized).\n\nType: `'auto' | 'fixed'`  \nDefault: `'auto'`"
+              "description": "Floor for the `<table>`'s `table-layout`. `'fixed'` forces the fixed algorithm even when no\ncolumn declares a `width`, so every column shares the available width evenly and long cell\ncontent is clipped/wrapped instead of stretching its column. The default `'auto'` is only a\nfloor: it still resolves to `fixed` whenever a column declares a `width`, a column has been\ndrag-resized, or a resize gesture is in flight — resizing does not work under\n`table-layout: auto`.\n\nTwo consequences of the fixed algorithm are worth knowing before opting in: with no declared\nwidths the *first* row (header row included) determines every column's width, so revealing a\n`priority`-hidden column via `[part='reveal-columns-button']` re-measures and changes all of\nthem; and `columns[].minWidth`/`maxWidth` are silently ignored by `table-layout: fixed`\n(declare `width` instead when you need a specific column sized).\n\nType: `'auto' | 'fixed'`  \nDefault: `'auto'`",
+              "value": {
+                "type": [
+                  "'auto'",
+                  "'fixed'"
+                ]
+              }
             },
             {
               "name": "loading",
@@ -16416,7 +17038,8 @@
               "description": "How `loading` renders. `'spinner'` (the default, unchanged output) replaces the whole grid\nwith an indeterminate spinner. `'skeleton'` instead renders the real table — the same\n`<colgroup>` (declared *and* drag-resized widths included), the same `<thead>`, the filter\nfield and the pagination footer — and fills `<tbody>` with placeholder rows, so a cold load\nsketches the grid's shape rather than collapsing to a spinner and reflowing when the rows\nland. Kept separate from `loading` rather than widening it to a string union, so\n`?loading=${…}` bindings and `el.loading === true` checks keep working.\n\nColumn *widths* only stay pixel-identical across the load if the browser isn't sizing them\nfrom cell content: declare `columns[].width`, or set `layout=\"fixed\"`. Under the default\n`table-layout: auto`, placeholder cells have no intrinsic width, so the columns re-measure\nwhen real content arrives — exactly as they do between any two different data sets.\n\nType: `TableLoadingAppearance`  \nDefault: `'spinner'`",
               "value": {
                 "type": [
-                  "TableLoadingAppearance"
+                  "'spinner'",
+                  "'skeleton'"
                 ]
               }
             },
@@ -16485,7 +17108,13 @@
             },
             {
               "name": "pagination-mode",
-              "description": "Type: `'client' | 'server'`  \nDefault: `'client'`"
+              "description": "Type: `'client' | 'server'`  \nDefault: `'client'`",
+              "value": {
+                "type": [
+                  "'client'",
+                  "'server'"
+                ]
+              }
             },
             {
               "name": "reveal-columns-label",
@@ -16501,7 +17130,9 @@
               "description": "Type: `TableSelectionMode`  \nDefault: `'none'`",
               "value": {
                 "type": [
-                  "TableSelectionMode"
+                  "'none'",
+                  "'single'",
+                  "'multiple'"
                 ]
               }
             },
@@ -16525,7 +17156,13 @@
             },
             {
               "name": "sort-dir",
-              "description": "Type: `'asc' | 'desc'`  \nDefault: `'asc'`"
+              "description": "Type: `'asc' | 'desc'`  \nDefault: `'asc'`",
+              "value": {
+                "type": [
+                  "'asc'",
+                  "'desc'"
+                ]
+              }
             },
             {
               "name": "sort-key",
@@ -16541,7 +17178,8 @@
               "description": "`'client'` (the default) orders `rows` itself, in the browser, from `sortKey`/`sortDir` and\nthe active column's `sortValue`. `'server'` renders `rows` in exactly the order given,\nassuming the caller has already sorted them — mirroring `paginationMode`'s identical\nclient/server split. `lr-sort` is emitted on header activation either way.\n\nWith no `sortKey` set (the default) `'client'` is a no-op: the input order is preserved\nverbatim, so an existing consumer that only listens for `lr-sort` sees unchanged rendering\nuntil a header is actually activated.\n\nType: `TableSortMode`  \nDefault: `'client'`",
               "value": {
                 "type": [
-                  "TableSortMode"
+                  "'client'",
+                  "'server'"
                 ]
               }
             },
@@ -16587,7 +17225,12 @@
               "description": "Visual density, matching `<lr-chip>`'s `2xs`–`xl` size scale. `m` preserves the original\nbadge dimensions.\n\nType: `BadgeSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "BadgeSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -16596,7 +17239,11 @@
               "description": "Type: `BadgeVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "BadgeVariant"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -16611,7 +17258,8 @@
               "description": "Visual chrome, mirroring `lr-card`'s `appearance` vocabulary. `'card'` (the default) keeps the\nbordered, filled box. `'plain'` removes `[part=\"base\"]`'s border, background, and corner\nradius, so a list embedded in the transcript inside a frame that already draws a border (an\nagent-run panel, a message bubble) doesn't double it.\n\nType: `TaskListAppearance`  \nDefault: `'card'`",
               "value": {
                 "type": [
-                  "TaskListAppearance"
+                  "'card'",
+                  "'plain'"
                 ]
               }
             },
@@ -16929,7 +17577,11 @@
               "description": "Native CSS `resize` behavior for the textarea, plus `'auto'`: a `ResizeObserver`-driven\ngrow-to-content mode with no manual drag handle (mirrors `wa-textarea`'s `resize=\"auto\"`).\nAn invalid runtime value falls back to `'vertical'`.\n\nType: `TextareaResize`  \nDefault: `'vertical'`",
               "value": {
                 "type": [
-                  "TextareaResize"
+                  "'none'",
+                  "'vertical'",
+                  "'horizontal'",
+                  "'both'",
+                  "'auto'"
                 ]
               }
             },
@@ -16956,7 +17608,9 @@
               "description": "Forwarded to the native `<textarea>`'s own `wrap`.\n\nType: `TextareaWrap`  \nDefault: `'soft'`",
               "value": {
                 "type": [
-                  "TextareaWrap"
+                  "'hard'",
+                  "'soft'",
+                  "'off'"
                 ]
               }
             }
@@ -17002,7 +17656,8 @@
               "description": "`'live'` while reasoning is actively streaming in right now; `'post-hoc'`\nonce it's complete and being reviewed after the fact. See the class doc\nfor the concrete behavior differences this drives.\n\nType: `ThinkingPanelMode`  \nDefault: `'live'`",
               "value": {
                 "type": [
-                  "ThinkingPanelMode"
+                  "'live'",
+                  "'post-hoc'"
                 ]
               }
             }
@@ -17044,7 +17699,9 @@
               "description": "Data mode: bucket rows under localized date headers, use `groupBy` with `'custom'`, or use\n`'none'` for a flat list in host order.\n\nType: `ThreadListGrouping`  \nDefault: `'date'`",
               "value": {
                 "type": [
-                  "ThreadListGrouping"
+                  "'date'",
+                  "'custom'",
+                  "'none'"
                 ]
               }
             },
@@ -17245,7 +17902,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-select`/`lr-combobox`'s own `size`. `'2xs'` is\nthe tightest tier, for dense toolbar-embedded controls.\n\nType: `LyraInputSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraInputSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -17267,7 +17929,12 @@
               "description": "Type: `LyraInputType`  \nDefault: `'text'`",
               "value": {
                 "type": [
-                  "LyraInputType"
+                  "'text'",
+                  "'password'",
+                  "'email'",
+                  "'number'",
+                  "'time'",
+                  "'search'"
                 ]
               }
             }
@@ -17336,7 +18003,12 @@
               "description": "Visual size — proportionally scales the handle, track, and preset buttons via a single\nmultiplier; the drag hit-area never shrinks below 24px (WCAG 2.5.8). Not pixel-matched to\n`lr-input`'s row-height scale -- this component's own dimensions aren't on that ladder.\n\nType: `LyraTimeRangeSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraTimeRangeSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -17396,7 +18068,8 @@
               "description": "`'vertical'` (the default) lays items out in a column, the primary/most-common use case — an\naudit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.\nDeliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by\nhabit.\n\nType: `TimelineOrientation`  \nDefault: `'vertical'`",
               "value": {
                 "type": [
-                  "TimelineOrientation"
+                  "'vertical'",
+                  "'horizontal'"
                 ]
               }
             }
@@ -17438,7 +18111,11 @@
               "description": "Tone of the marker. `'neutral'` (default) is a plain past event; `'brand'` is highlighted/\ninformational; `'success'` is completed positively (e.g. a successful deploy); `'warning'` needs\nattention; `'danger'` is a failed/error event. Same five-value set as `BadgeVariant`/\n`CalloutVariant`.\n\nType: `TimelineItemVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "TimelineItemVariant"
+                  "'neutral'",
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'"
                 ]
               }
             }
@@ -17462,7 +18139,12 @@
               "description": "Where the stack anchors on screen.\n\nType: `ToastPlacement`  \nDefault: `'top-end'`",
               "value": {
                 "type": [
-                  "ToastPlacement"
+                  "'top-start'",
+                  "'top-center'",
+                  "'top-end'",
+                  "'bottom-start'",
+                  "'bottom-center'",
+                  "'bottom-end'"
                 ]
               }
             }
@@ -17495,7 +18177,11 @@
               "description": "Visual size.\n\nType: `ToastSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "ToastSize"
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -17504,7 +18190,11 @@
               "description": "Severity/variant.\n\nType: `ToastVariant`  \nDefault: `'neutral'`",
               "value": {
                 "type": [
-                  "ToastVariant"
+                  "'brand'",
+                  "'success'",
+                  "'warning'",
+                  "'danger'",
+                  "'neutral'"
                 ]
               }
             },
@@ -17649,7 +18339,12 @@
               "description": "Visual size — same `2xs`–`xl` scale as `lr-input`'s own `size`.\n\nType: `LyraTokenInputSize`  \nDefault: `'m'`",
               "value": {
                 "type": [
-                  "LyraTokenInputSize"
+                  "'2xs'",
+                  "'xs'",
+                  "'s'",
+                  "'m'",
+                  "'l'",
+                  "'xl'"
                 ]
               }
             },
@@ -17749,7 +18444,9 @@
               "description": "Which decision is awaiting host resolution, while an lr-approve/lr-deny listener has called\npreventDefault(). Host-writable: set back to null to bounce back to the undecided state (e.g.\non failure, so the user can retry), or call `close('approve'|'deny')` to finalize. Also reset\nto `null` every time the dialog transitions from closed to open, mirroring\n`editing`/`draftText`/`draftError`'s own reset-on-reopen contract below, so a reused instance\nnever leaks one proposal's stuck pending state into the next. While non-null, Escape/backdrop\ndismissal is suppressed (see `activateOverlay()`).\n\nType: `ToolApprovalDialogPending`  \nDefault: `null`",
               "value": {
                 "type": [
-                  "ToolApprovalDialogPending"
+                  "'approve'",
+                  "'deny'",
+                  "null"
                 ]
               }
             },
@@ -17776,7 +18473,9 @@
               "description": "Type: `ToolApprovalDialogWrap`  \nDefault: `'soft'`",
               "value": {
                 "type": [
-                  "ToolApprovalDialogWrap"
+                  "'hard'",
+                  "'soft'",
+                  "'off'"
                 ]
               }
             }
@@ -17840,7 +18539,11 @@
               "description": "The call's current lifecycle state — drives the glyph, color, and\n`status-text`. Invalid runtime values use the pending presentation.\n\nType: `ToolCallStatus`  \nDefault: `'pending'`",
               "value": {
                 "type": [
-                  "ToolCallStatus"
+                  "'pending'",
+                  "'running'",
+                  "'success'",
+                  "'error'",
+                  "'denied'"
                 ]
               }
             },
@@ -17932,7 +18635,11 @@
               "description": "The tool call's current lifecycle state — drives the header's status\nbadge. An out-of-union value (e.g. a stray `status` attribute, or a\ndirect property assignment from an untyped caller) is treated as\n`'pending'` rather than crashing render.\n\nType: `ToolResultStatus`  \nDefault: `'pending'`",
               "value": {
                 "type": [
-                  "ToolResultStatus"
+                  "'pending'",
+                  "'running'",
+                  "'success'",
+                  "'error'",
+                  "'denied'"
                 ]
               }
             },
@@ -17983,7 +18690,11 @@
               "description": "The outcome of the currently-rendered result, as reported by the matched renderer's optional\n`context.reportStatus()` third `render()` argument (see `ToolRenderContext` in `registry.ts`).\nReset to `'success'` immediately before every `render()` call, so a renderer that never calls\n`reportStatus` — including every pre-existing 2-arg renderer — leaves it at that default, and a\nlater renderer that stays quiet doesn't inherit a stale outcome from a previous one. Reuses the\nsame vocabulary as `<lr-tool-result-dialog>`'s own `status` property.\n\nType: `ToolResultStatus`  \nDefault: `'success'`",
               "value": {
                 "type": [
-                  "ToolResultStatus"
+                  "'pending'",
+                  "'running'",
+                  "'success'",
+                  "'error'",
+                  "'denied'"
                 ]
               }
             },
@@ -18474,7 +19185,8 @@
               "description": "Compact sizing for dense layouts (e.g. inline with a message bubble).\n\nType: `TypingIndicatorSize`  \nDefault: `'md'`",
               "value": {
                 "type": [
-                  "TypingIndicatorSize"
+                  "'sm'",
+                  "'md'"
                 ]
               }
             },
@@ -18483,7 +19195,9 @@
               "description": "Which decorative presentation to render.\n\nType: `TypingIndicatorVariant`  \nDefault: `'dots'`",
               "value": {
                 "type": [
-                  "TypingIndicatorVariant"
+                  "'dots'",
+                  "'pulse'",
+                  "'cursor'"
                 ]
               }
             }
@@ -18556,7 +19270,8 @@
               "description": "`'listitem'` (default) preserves today's `role=\"list\"`/`role=\"listitem\"` mapping with\n`aria-setsize`/`aria-posinset`. `'row'` maps to `role=\"rowgroup\"`/`role=\"row\"` with\n`aria-rowindex` instead -- for a consumer composing a virtualized `role=\"table\"` (see\n`<lr-dataset-viewer>`).\n\nType: `VirtualListItemRole`  \nDefault: `\"listitem\"`",
               "value": {
                 "type": [
-                  "VirtualListItemRole"
+                  "\"listitem\"",
+                  "\"row\""
                 ]
               }
             },
@@ -18939,7 +19654,8 @@
               "description": "`mixed` lets some words render rotated 90° for denser packing.\n\nType: `WordCloudOrientations`  \nDefault: `'horizontal'`",
               "value": {
                 "type": [
-                  "WordCloudOrientations"
+                  "'horizontal'",
+                  "'mixed'"
                 ]
               }
             },
@@ -18948,7 +19664,8 @@
               "description": "`sqrt` compresses the weight->font-size mapping so one heavy word doesn't dwarf the rest.\n\nType: `WordCloudScale`  \nDefault: `'linear'`",
               "value": {
                 "type": [
-                  "WordCloudScale"
+                  "'linear'",
+                  "'sqrt'"
                 ]
               }
             },
