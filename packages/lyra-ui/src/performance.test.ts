@@ -25,17 +25,27 @@ import type { LyraSpreadsheetViewer } from './components/viewers/spreadsheet-vie
 import type { LyraHighlight } from './components/viewers/document-viewer/anchors.js';
 
 /**
- * The stress-scale benchmarks below (graph/flow-canvas in particular) mount hundreds to thousands
- * of `ResizeObserver`-watched elements in a single synchronous batch. Chromium's spec-mandated loop
- * guard can then genuinely fail to deliver every notification within one frame and dispatch a real
- * `ErrorEvent` reading "ResizeObserver loop completed with undelivered notifications" -- a
- * documented, universally-benign browser message (it does not indicate a bug in application code;
- * see e.g. https://stackoverflow.com/q/49384120), not a failure of anything this file asserts on.
- * The test harness treats any such uncaught page error as failing whatever test happens to be
- * running when it lands, so left unfiltered this becomes a source of pure flake uncorrelated with
- * the actual budget assertions below. `preventDefault()` on a capturing `error` listener suppresses
- * the browser's own "report this as an unhandled exception" step (the same flag Chromium's devtools
- * console honors) -- every *other* uncaught error is untouched and still fails its test as before.
+ * Chromium can dispatch an uncaught `ErrorEvent` reading "ResizeObserver loop completed with
+ * undelivered notifications" -- a documented, universally-benign browser message (it does not
+ * indicate a bug in application code; see e.g. https://stackoverflow.com/q/49384120), not a failure
+ * of anything this file asserts on. The harness treats any such uncaught page error as failing
+ * whatever test happens to be running when it lands, so left unfiltered it is a source of pure
+ * flake uncorrelated with the actual budget assertions below.
+ *
+ * This filter used to blame the stress-scale mounts here (graph/flow-canvas batching hundreds to
+ * thousands of `ResizeObserver`-watched elements). That was measurably wrong. Instrumenting this
+ * listener to *count* rather than only suppress showed exactly 2 per full-suite run, 3 runs out of
+ * 3 -- and 0 per run, 3 out of 3, once `<lr-virtual-list>` stopped calling `observe()` from inside
+ * its own resize callback (see `beginResizeDelivery()` there). Every occurrence came from the
+ * `virtualListMs` benchmark's list, none from the stress mounts.
+ *
+ * It is kept regardless, as defense-in-depth for those genuinely RO-heavy batches, which remain
+ * capable of it on a slower machine than the one that measurement ran on. It is no longer
+ * load-bearing for `<lr-virtual-list>`: that component owns a dedicated regression test asserting
+ * zero such errors, so a reintroduced loop fails there loudly instead of being hidden here.
+ * `preventDefault()` on a capturing `error` listener suppresses the browser's own "report this as
+ * an unhandled exception" step (the same flag Chromium's devtools console honors) -- every *other*
+ * uncaught error is untouched and still fails its test as before.
  */
 window.addEventListener(
   'error',

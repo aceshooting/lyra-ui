@@ -417,6 +417,15 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   private readonly observedRowKeys = new WeakMap<HTMLElement, string>();
   private readonly observedRowIndices = new WeakMap<HTMLElement, number>();
   private scrollRafId?: number;
+  /** True for the remainder of the frame in which any of this component's `ResizeObserver`s
+   *  delivered -- so `syncRowObservers()` can tell that the re-render it is running inside is still
+   *  part of the browser's current resize-observation loop. See `beginResizeDelivery()`. */
+  private inResizeDelivery = false;
+  /** Rows that entered the window during such a re-render: already owned by `observedRows`, but not
+   *  yet handed to `rowResizeObserver`. Always a subset of `observedRows` -- `syncRowObservers()`
+   *  drops an entry here whenever it drops the same identity there. */
+  private readonly deferredRowObservations = new Map<string, HTMLElement>();
+  private rowObserveRafId?: number;
 
   /** Reference-keyed memo for `activeId`'s resolved index. `render()` re-runs on every scroll
    *  frame (`scrollTop` drives reactive state), and resolving `activeId` means scanning `items`
@@ -483,6 +492,12 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.rowResizeObserver?.disconnect();
     this.rowResizeObserver = undefined;
     this.observedRows.clear();
+    this.deferredRowObservations.clear();
+    this.inResizeDelivery = false;
+    if (this.rowObserveRafId !== undefined) {
+      cancelAnimationFrame(this.rowObserveRafId);
+      this.rowObserveRafId = undefined;
+    }
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
     this.stickyResizeObserver?.disconnect();
@@ -688,6 +703,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     const base = this.scrollContainer;
     if (!base) return;
     this.containerResizeObserver = new ResizeObserver((entries) => {
+      this.beginResizeDelivery();
       const entry = entries[0];
       if (!entry) return;
       this.viewportHeight =
@@ -737,6 +753,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   };
 
   private onRowsResized = (entries: ResizeObserverEntry[]): void => {
+    this.beginResizeDelivery();
     if (this.fixedRowHeight != null) return;
     const base = this.scrollContainer;
     const oldScrollTop = base?.scrollTop ?? this.containerScrollTop;
@@ -777,6 +794,42 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
   };
 
+  /**
+   * Marks the rest of this frame as "inside a resize-observation delivery", and schedules the
+   * flush that ends it. Called from every one of this component's `ResizeObserver` callbacks,
+   * because each of them writes reactive state (`measuredHeights` + `requestUpdate()`,
+   * `viewportHeight`, `stickyHeight`) and so can re-render the list -- and a re-render can move the
+   * window.
+   *
+   * Re-rendering from inside a resize callback is inherent to `row-height="auto"` and is fine;
+   * calling `observe()` from inside one is not. A brand-new observation is always active, and the
+   * browser has already broadcast that DOM depth for this frame, so it is recorded as a *skipped*
+   * observation and the loop ends by dispatching an uncaught `ErrorEvent` reading "ResizeObserver
+   * loop completed with undelivered notifications". Nothing is actually wrong -- but the error is
+   * uncaught, so it lands on whatever is running at the time, which is why it showed up as
+   * unattributable flake in this component's *consumers* rather than here.
+   *
+   * Holding just those `observe()` calls until the next frame is the whole fix. The offsets
+   * rebuild, the re-render, and the scroll-anchor correction all still happen synchronously, so
+   * what gets painted is unchanged; only the moment the *newly windowed* rows start being measured
+   * moves by a frame, during which they render at the same `DEFAULT_ROW_ESTIMATE_PX` they already
+   * would have.
+   */
+  private beginResizeDelivery(): void {
+    this.inResizeDelivery = true;
+    if (this.rowObserveRafId !== undefined) return;
+    this.rowObserveRafId = requestAnimationFrame(() => {
+      this.rowObserveRafId = undefined;
+      this.inResizeDelivery = false;
+      const ro = this.rowResizeObserver;
+      for (const [identity, el] of this.deferredRowObservations) {
+        // Defensive: syncRowObservers() already keeps this map a subset of observedRows.
+        if (ro && this.observedRows.get(identity) === el) ro.observe(el);
+      }
+      this.deferredRowObservations.clear();
+    });
+  }
+
   /** Keeps the row `ResizeObserver` watching exactly the currently-rendered
    *  rows in `row-height="auto"` mode -- rows that scroll out of the
    *  rendered window are unobserved so the observer doesn't accumulate
@@ -787,6 +840,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (this.fixedRowHeight != null) {
       for (const el of this.observedRows.values()) ro.unobserve(el);
       this.observedRows.clear();
+      this.deferredRowObservations.clear();
       return;
     }
     const current = new Map<string, HTMLElement>();
@@ -806,12 +860,16 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       if (current.get(identity) !== el) {
         ro.unobserve(el);
         this.observedRows.delete(identity);
+        this.deferredRowObservations.delete(identity);
       }
     }
     for (const [identity, el] of current) {
       if (!this.observedRows.has(identity)) {
         this.observedRows.set(identity, el);
-        ro.observe(el);
+        // See beginResizeDelivery(): observing from inside the browser's current
+        // resize-observation loop is what trips its "undelivered notifications" guard.
+        if (this.inResizeDelivery) this.deferredRowObservations.set(identity, el);
+        else ro.observe(el);
       }
     }
   }
@@ -1151,6 +1209,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private onStickyResized = (entries: ResizeObserverEntry[]): void => {
+    this.beginResizeDelivery();
     const entry = entries[0];
     if (!entry) return;
     const height =

@@ -2309,3 +2309,67 @@ it("does not rescan the whole items array for active-id on every scroll frame", 
     `keyFunction ran ${keyCalls} times across 10 scroll frames of a 5000-item list`
   ).to.be.lessThan(2000);
 });
+
+it('never trips Chromium\'s resize-observation loop guard while measuring rows and re-windowing', async () => {
+  // Measuring a row rebuilds `offsets` and re-renders synchronously (from the microtask the row
+  // ResizeObserver callback's `requestUpdate()` queues), which moves the window and therefore
+  // `observe()`s the rows that just entered it. A brand-new observation is always active, and the
+  // resize-observation loop has already broadcast that DOM depth for this frame, so the browser
+  // marks it skipped and dispatches an uncaught `ErrorEvent` reading "ResizeObserver loop completed
+  // with undelivered notifications". The harness turns any uncaught page error into a failure of
+  // whichever test happens to be running, which is why this surfaced as unattributable flake across
+  // this component's consumers rather than as a failure here.
+  const roErrors: string[] = [];
+  const captureRoError = (e: ErrorEvent): void => {
+    if (typeof e.message === "string" && e.message.includes("ResizeObserver loop")) {
+      roErrors.push(e.message);
+      // Kept from failing an unrelated concurrently-running test either way; the assertion below
+      // is what actually reports it.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  };
+  window.addEventListener("error", captureRoError, true);
+  try {
+    const items = Array.from({ length: 400 }, (_, i) => i);
+    // Real heights spread far from DEFAULT_ROW_ESTIMATE_PX, so every measurement genuinely moves
+    // the offsets and the window with them.
+    const renderTall = (item: unknown, index: number) =>
+      html`<div style="padding:${(index % 7) * 9}px">
+        ${"row ".repeat((index % 11) + 1)}${item}
+      </div>`;
+    const el = (await fixture(html`
+      <lr-virtual-list
+        style="--lr-virtual-list-height:200px;width:300px"
+        .items=${items}
+        .renderItem=${renderTall}
+        .keyFunction=${numberKey}
+      ></lr-virtual-list>
+    `)) as LyraVirtualList;
+    await el.updateComplete;
+    await nextFrame();
+
+    const base = el.scrollContainer!;
+    // Scroll *and* mutate `items` in the same tick, then advance exactly *one* frame -- the
+    // component's own two-frame settling budget (`nextFrame()`) is precisely what hides this, so
+    // waiting it out here would test the quiescent case instead of the contended one this
+    // reproduces.
+    const oneFrame = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    for (let step = 0; step < 15; step++) {
+      base.scrollTop = 3000 + step * 500;
+      base.dispatchEvent(new Event("scroll"));
+      el.items = items.slice(0, 400 - step);
+      await el.updateComplete;
+      await oneFrame();
+    }
+    await nextFrame();
+
+    expect(
+      roErrors.length,
+      `dispatched ${roErrors.length} "ResizeObserver loop" errors while measuring and re-windowing`
+    ).to.equal(0);
+  } finally {
+    window.removeEventListener("error", captureRoError, true);
+  }
+});

@@ -156315,6 +156315,14 @@
             },
             {
               "kind": "field",
+              "name": "deferredRowObservations",
+              "privacy": "private",
+              "readonly": true,
+              "default": "new Map<string, HTMLElement>()",
+              "description": "Rows that entered the window during such a re-render: already owned by `observedRows`, but not\nyet handed to `rowResizeObserver`. Always a subset of `observedRows` -- `syncRowObservers()`\ndrops an entry here whenever it drops the same identity there."
+            },
+            {
+              "kind": "field",
               "name": "effectiveDirection",
               "type": {
                 "text": "'ltr' | 'rtl'"
@@ -156369,6 +156377,16 @@
               "description": "When true, scrolling near the bottom fires `lr-load-more`.",
               "attribute": "has-more",
               "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "inResizeDelivery",
+              "type": {
+                "text": "boolean"
+              },
+              "privacy": "private",
+              "default": "false",
+              "description": "True for the remainder of the frame in which any of this component's `ResizeObserver`s\ndelivered -- so `syncRowObservers()` can tell that the re-render it is running inside is still\npart of the browser's current resize-observation loop. See `beginResizeDelivery()`."
             },
             {
               "kind": "field",
@@ -156683,6 +156701,14 @@
             },
             {
               "kind": "field",
+              "name": "rowObserveRafId",
+              "type": {
+                "text": "number | undefined"
+              },
+              "privacy": "private"
+            },
+            {
+              "kind": "field",
               "name": "rowResizeObserver",
               "type": {
                 "text": "ResizeObserver | undefined"
@@ -156862,6 +156888,17 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
+            },
+            {
+              "kind": "method",
+              "name": "beginResizeDelivery",
+              "privacy": "private",
+              "return": {
+                "type": {
+                  "text": "void"
+                }
+              },
+              "description": "Marks the rest of this frame as \"inside a resize-observation delivery\", and schedules the\nflush that ends it. Called from every one of this component's `ResizeObserver` callbacks,\nbecause each of them writes reactive state (`measuredHeights` + `requestUpdate()`,\n`viewportHeight`, `stickyHeight`) and so can re-render the list -- and a re-render can move the\nwindow.\n\nRe-rendering from inside a resize callback is inherent to `row-height=\"auto\"` and is fine;\ncalling `observe()` from inside one is not. A brand-new observation is always active, and the\nbrowser has already broadcast that DOM depth for this frame, so it is recorded as a *skipped*\nobservation and the loop ends by dispatching an uncaught `ErrorEvent` reading \"ResizeObserver\nloop completed with undelivered notifications\". Nothing is actually wrong -- but the error is\nuncaught, so it lands on whatever is running at the time, which is why it showed up as\nunattributable flake in this component's *consumers* rather than here.\n\nHolding just those `observe()` calls until the next frame is the whole fix. The offsets\nrebuild, the re-render, and the scroll-anchor correction all still happen synchronously, so\nwhat gets painted is unchanged; only the moment the *newly windowed* rows start being measured\nmoves by a frame, during which they render at the same `DEFAULT_ROW_ESTIMATE_PX` they already\nwould have."
             },
             {
               "kind": "method",
