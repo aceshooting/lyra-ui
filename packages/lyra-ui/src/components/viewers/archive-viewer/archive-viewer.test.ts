@@ -87,18 +87,26 @@ async function settleVirtualList(): Promise<void> {
 /**
  * The anchor tests below mount an 81-entry `<lr-virtual-list>`, switch it from `row-height="auto"`
  * to a fixed height once its rows exist, and then drive repeated programmatic scrolls through
- * `scrollToAnchor()`'s retry loop. Measuring a row and then relaying out from inside a
- * `ResizeObserver` callback is inherent to virtualization (measure row -> rebuild offsets ->
- * re-render the window -> apply the scroll-anchor correction), so Chromium's spec-mandated loop
- * guard can legitimately run out of passes for a frame and dispatch a real `ErrorEvent` reading
- * "ResizeObserver loop completed with undelivered notifications" -- a documented, universally-benign
- * browser message, not a defect in anything this file asserts on. The harness turns any uncaught
- * page error into a failure of whichever test happens to be running, so unfiltered it fails these
- * two tests on CI's contended runner while never firing on a developer machine (verified: two
- * consecutive CI runs failed both tests through wtr's `retries: 1`, and the same file passes eight
- * consecutive local runs). Suppression is scoped to that one message, exactly as
- * `src/performance.test.ts` does for its RO-heavy stress benchmarks; every other uncaught error
- * still fails its test as before.
+ * `scrollToAnchor()`'s retry loop. Chromium can dispatch a real `ErrorEvent` reading "ResizeObserver
+ * loop completed with undelivered notifications" -- a documented, universally-benign browser
+ * message, not a defect in anything this file asserts on. The harness turns any uncaught page error
+ * into a failure of whichever test happens to be running, so unfiltered it failed these two tests on
+ * CI's contended runner while never firing on a developer machine (verified: two consecutive CI runs
+ * failed both tests through wtr's `retries: 1`, and the same file passes eight consecutive local
+ * runs).
+ *
+ * This comment used to call that loop "inherent to virtualization" (measure row -> rebuild offsets
+ * -> re-render the window -> apply the scroll-anchor correction). It is not. The avoidable half was
+ * `<lr-virtual-list>` calling `observe()` on newly windowed rows from inside its own resize
+ * callback, which is now fixed at the source (see `beginResizeDelivery()` there) -- measured to
+ * take the same error from 2 to 0 occurrences per full-suite run in `src/performance.test.ts`,
+ * whose listener was instrumented to count them.
+ *
+ * The filter is kept because this file's own count could never be reproduced locally in either
+ * state (0 both before and after, matching the "never fires on a developer machine" note above), so
+ * there is no local evidence that CI's contended runner is now clean. Removing it would be a guess.
+ * Suppression stays scoped to that one message, exactly as `src/performance.test.ts` does; every
+ * other uncaught error still fails its test as before.
  */
 window.addEventListener(
   'error',
@@ -646,7 +654,7 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     }
   });
 
-  it('emits one entry-scoped text-quote anchor for a selection inside the nested shadow root', async () => {
+  it('emits one entry-scoped text-quote anchor for a selection inside the nested shadow root', async function () {
     const { el, vlistRoot, restore } = await listing();
     const name = Array.from(vlistRoot.querySelectorAll<HTMLElement>('[part~="entry-name"]'))
       .find((node) => node.textContent === 'README.txt')!;
@@ -663,6 +671,13 @@ describe('lr-archive-viewer part reachability through the embedded virtual list'
     try {
       selection.removeAllRanges();
       selection.addRange(range);
+      // WebKit silently drops a programmatic `addRange()` whose boundary nodes live in a shadow
+      // tree (verified: `rangeCount` stays 0 and `getComposedRanges()` returns nothing, while
+      // Chromium and Firefox both accept it). There is then no selection for the component to read,
+      // so this asserts nothing about `lr-archive-viewer` -- a real drag-selection still works
+      // there, it is only the *programmatic* setup that has no WebKit equivalent. Skip rather than
+      // fail, so the gap stays visible in the report instead of reading as a product defect.
+      if (selection.rangeCount === 0) this.skip();
       name.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, composed: true }));
       await aTimeout(30);
       expect(events).to.have.lengthOf(1);
