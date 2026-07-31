@@ -1,5 +1,127 @@
 # Changelog
 
+## 7.8.1
+
+### Patch Changes
+
+- d699c7c: Stop letting a throwing `ShadowRoot.activeElement` getter escape a component. `ShadowRoot.activeElement`
+  is not universally safe to read: under happy-dom 20.11.1 — the DOM a large share of consumers get by
+  default from Vitest — that getter _itself_ throws `TypeError: Cannot read properties of undefined
+(reading 'getRootNode')` whenever the document has no active element. Optional chaining was no
+  defence, because `root?.activeElement` only guards `root` being nullish and the throw happens
+  _inside_ the getter, after `?.` has already decided to proceed.
+
+  Because these reads live in `willUpdate()` and in keydown handlers, the symptom was not a failed
+  assertion but an _unhandled rejection_: one downstream suite reported 120 in a single run, all the
+  same stack, from an `<lr-segmented>` re-rendering after its items changed. The suite still passed
+  while the runner exited non-zero, and the stack pointed at library internals rather than anything
+  the consumer wrote.
+
+  Reported against `<lr-segmented>`, but a sweep found the same read at **every** focus-rehoming,
+  roving-tabindex and focus-restoration site in the library — 30 modules across 11 families, including
+  `<lr-tabs>`, `<lr-stepper>`, `<lr-table>`, `<lr-tree>`, `<lr-graph>`, `<lr-combobox>`'s siblings and
+  the shared overlay manager. All of them now read through a new internal helper that returns `null`
+  instead of throwing; `<lr-tree>`'s nested-shadow-root walk was the worst case, reading the raw
+  getter in its _loop condition_ where a guard on the assignment alone would not have helped.
+
+  Returning `null` is the honest answer: a DOM that cannot say what is focused is indistinguishable,
+  for these call sites, from one where nothing is — and every one of them already handles that as the
+  ordinary state, so the guard degrades to skipping focus restoration. Real browsers never take the
+  catch, so behavior there is unchanged.
+
+- 21b1051: Declare `flag-peer.js` in `package.json#sideEffects`, so `<lr-flag>` still resolves images in a
+  production build. `sideEffects` is an explicit allowlist, and every entry in it was derived from a
+  `*.class.ts` file's sibling registration module. `flag-peer.ts` has no `*.class.ts` of its own, so
+  neither the generator nor the completeness check ever visited it and it shipped undeclared. It is a
+  side-effect-only module — a consumer writes a bare `import '.../flag-peer.js'` and reads no export
+  — so any bundler honoring `sideEffects` dropped it outright. `setFlagUrlResolver()` then never ran,
+  `loadFlagUrlResolver()` cached `Promise.resolve(null)`, and every `<lr-flag>` given a
+  `country`/`language` rendered the localized "flag unavailable" alert instead of an image. Silently:
+  that null-resolver path logs nothing, and dev servers don't tree-shake, so it only ever appeared in
+  a built artifact.
+
+  Both scripts now derive `*-peer.ts` and `*-register.ts` modules, plus the per-family
+  `components/<family>/index.ts` barrels, straight from the file tree rather than carrying them over
+  from the previous `package.json` — so a rename or a family move can't strand an entry again. The
+  completeness check fails on the missing `flag-peer` entries before the fix and passes after.
+
+- 899543f: Centre content that a hit-area floor makes narrower than its own box, in `<lr-calendar>`,
+  `<lr-citation-badge>`, `<lr-entity-chip>`, `<lr-rating>` and the `<lr-chart>` / box-plot legend
+  items. These carry the same defect reported against `<lr-widget>`'s view toggle: a flex part with a
+  `min-inline-size: var(--lr-icon-button-size)` floor (a WCAG 2.5.8 tappable-size requirement, not a
+  layout intent) but no `justify-content`, so whenever the content is narrower than that floor the
+  default `justify-content: normal` — resolving to `flex-start` — dumps every pixel of slack on the
+  trailing side.
+
+  `<lr-calendar>` was the most visible: its month-nav buttons hold a single chevron glyph and rendered
+  **8.8px** off centre, sitting right next to a symmetric month title. `<lr-citation-badge>` left its
+  one- or two-digit number hugging the badge's leading edge, and `<lr-entity-chip>` did the same to a
+  short entity label inside an otherwise symmetric pill.
+
+  Adding `justify-content: center` only changes rendering in precisely the buggy case: once content
+  already fills or exceeds the floor there is no slack left to redistribute and the declaration is a
+  no-op, so every component whose content was already wide enough renders exactly as before. The chart
+  legends were checked for the overflow case specifically — long series names wrap rather than
+  overflow, and both legends are wrapping horizontal rows, so per-item centring cannot make a column
+  of items ragged.
+
+  The sweep also cleared roughly ten other parts carrying the same floor where `flex-start` is
+  correct — full-width header and list rows, whose content should start-align regardless.
+
+  Rendered-geometry regression tests (measuring the glyph's centre against its button's) cover
+  `<lr-widget>` and `<lr-calendar>`; both reproduce the offset without the fix, the widget one at the
+  same 4.5px the report cited.
+
+- 8a67993: Stop driving mask alpha from `--lr-color-shadow` in `<lr-segmented>`, `<lr-tabs>`, `<lr-stepper>`,
+  `<lr-timeline>` and `<lr-document-preview>`. All five used `var(--lr-color-shadow)` for the
+  _opaque_ stops of a `mask-image` gradient — 22 references across 12 declarations. A mask reads
+  alpha only, but that token is a documented consumer theming input (`--lr-theme-color-shadow`) whose
+  job is coloring shadows: setting it to something translucent such as `rgb(0 0 0 / 0.25)`, entirely
+  reasonable for a shadow color, silently dropped the mask alpha across the _entire_ element rather
+  than just its edges. Every affected component then rendered uniformly washed out — indistinguishable
+  from a broken disabled state, with nothing pointing back at the shadow token as the cause. It worked
+  only because that token's default happens to be opaque black.
+
+  The opaque stops now use a new `--lr-mask-opaque`, declared in the internal tokens sheet.
+  Deliberately **not** themeable and deliberately not a second alias of the shadow token: "opaque" is
+  not a design decision a consumer tunes — a mask's opaque stop must be opaque by definition — so
+  giving it its own `--lr-theme-*` hook would just reintroduce the same footgun under a new name.
+
+  `<lr-document-preview>`'s determinate progress ring was the least obvious casualty: its mask punches
+  the ring's centre out, so a translucent shadow theme faded the whole ring rather than cutting a hole
+  in it.
+
+  Regression-tested in all five components by rendering under `--lr-theme-color-shadow: rgb(0 0 0 /
+0.25)` and asserting the resolved computed mask, which reproduces `rgba(0, 0, 0, 0.25)` at the
+  opaque stops without the fix.
+
+- 8a67993: Paint the horizontal edge fade only while the track actually overflows, in `<lr-segmented>`,
+  `<lr-tabs>`, `<lr-stepper>`, and `<lr-timeline>`. All four applied their `--lr-scroll-fade-size`
+  `mask-image` unconditionally, described in-code as an intentionally static, observer-free
+  affordance. That is only harmless when there _is_ overflow. On a track that fits, the fade is pure
+  damage: at the `2rem`-per-edge default a two-option `<lr-segmented>` (`Overall | Daily`) is
+  narrower than its own two fades, so both labels rendered half-transparent and the control read as
+  permanently disabled; a short `<lr-tabs>` row dimmed its first and last tab for no reason.
+
+  A new internal `ScrollOverflowController` measures `scrollWidth` vs `clientWidth` and toggles a
+  `data-scroll-overflow` attribute on the track (inside the shadow root — not consumer-visible DOM),
+  which now gates each mask rule. It re-measures from two sources, because they catch different
+  changes: a `ResizeObserver` on the track for container resizes, and the host's own update cycle for
+  content changes, which need not alter the track's border box at all. Overflowing tracks keep
+  exactly their previous rendering.
+
+  Note for anyone spying on `ResizeObserver` construction: `<lr-stepper>` now arms one of its own
+  regardless of the `orientationBreakpoint` feature.
+
+- 899543f: Center the glyph in an icon-only `<lr-widget>` view toggle. `[part="view-toggle"]` set
+  `align-items: center` but no `justify-content`, unlike the sibling `collapse-button` /
+  `fullscreen-button` rules, which set both. `min-inline-size` floors the pill at the square
+  icon-button size, so a 13px glyph inside a 40px pill has slack that the default
+  `justify-content: normal` (→ `flex-start`) dumps entirely on the trailing side — measured 4.5px off
+  true center once the asymmetric inline padding is counted, and plainly visible as an off-center
+  icon in a round toggle. A labeled toggle was never affected: its content already fills a pill that
+  sizes to fit.
+
 ## 7.8.0
 
 ### Minor Changes
