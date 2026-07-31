@@ -11,7 +11,14 @@
     "shoelace         -- every tag Shoelace registers via `.define('sl-*')`.",
     "",
     "noCounterpart    -- upstream tags lyra-ui deliberately does not mirror. Each needs a reason;",
-    "                    the coverage gate treats an unlisted, unmapped tag as a failure."
+    "                    the coverage gate treats an unlisted, unmapped tag as a failure.",
+    "",
+    "attributeRenames -- every upstream attribute whose lyra spelling differs, or that was",
+    "                    deliberately kept identical after a polarity fix. The gate fails when a",
+    "                    pair disagrees on polarity (`light-dismiss` vs `no-light-dismiss`,",
+    "                    `with-summary` vs `hide-summary`): a rename that flips a boolean's sense",
+    "                    still parses, so nothing errors and the component just behaves the other",
+    "                    way round."
   ],
   "webawesome": {
     "version": "3.11.0",
@@ -174,5 +181,43 @@
     "wa-page": "App-shell page layout element. lyra-ui composes app chrome from lr-app-rail/lr-dock-panel/lr-dashboard-grid rather than shipping one page primitive; no single tag to rename to.",
     "wa-video": "Video and Video-Playlist are deferred indefinitely by design.",
     "wa-video-playlist": "Video and Video-Playlist are deferred indefinitely by design."
-  }
+  },
+  "attributeRenames": [
+    {
+      "component": "lr-dialog",
+      "from": "light-dismiss",
+      "to": "light-dismiss",
+      "upstream": "wa-dialog"
+    },
+    {
+      "component": "lr-drawer",
+      "from": "light-dismiss",
+      "to": "light-dismiss",
+      "upstream": "wa-drawer"
+    },
+    {
+      "component": "lr-pagination",
+      "from": "total",
+      "to": "total",
+      "upstream": "wa-pagination"
+    },
+    {
+      "component": "lr-pagination",
+      "from": "with-summary",
+      "to": "with-summary",
+      "upstream": "wa-pagination"
+    },
+    {
+      "component": "lr-avatar",
+      "from": "image",
+      "to": "image",
+      "upstream": "wa-avatar"
+    },
+    {
+      "component": "lr-combobox",
+      "from": "clearable",
+      "to": "with-clear",
+      "upstream": "wa-combobox"
+    }
+  ]
 }

@@ -97018,7 +97018,7 @@
                 "text": "number"
               },
               "privacy": "private",
-              "description": "Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` (the\npage count itself depending on the now-safe `totalItems`/`pageSize` above) -- never mutates\n`page` itself, matching this component's fully controlled contract.",
+              "description": "Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` (the\npage count itself depending on the now-safe `total`/`pageSize` above) -- never mutates\n`page` itself, matching this component's fully controlled contract.",
               "readonly": true
             },
             {
@@ -97080,16 +97080,6 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
-            },
-            {
-              "kind": "field",
-              "name": "hideSummary",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "attribute": "hide-summary",
-              "reflects": true
             },
             {
               "kind": "field",
@@ -97201,7 +97191,7 @@
                 "text": "number"
               },
               "privacy": "private",
-              "description": "Read-time-safe view of `totalItems` -- non-negative, finite, truncated to a whole item count.",
+              "description": "Read-time-safe view of `total` -- non-negative, finite, truncated to a whole item count.",
               "readonly": true
             },
             {
@@ -97241,7 +97231,7 @@
               "type": {
                 "text": "number"
               },
-              "description": "Total page count derived from `totalItems` and `pageSize`.",
+              "description": "Total page count derived from `total` and `pageSize`.",
               "readonly": true
             },
             {
@@ -97329,13 +97319,24 @@
             },
             {
               "kind": "field",
-              "name": "totalItems",
+              "name": "total",
               "type": {
                 "text": "number"
               },
               "default": "0",
-              "description": "Total number of items across every page. Non-positive values render the empty state.",
-              "attribute": "total-items"
+              "description": "Total number of items across every page. Non-positive values render the empty state.\nNamed `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical\nrename left unset — silently rendering the empty state.",
+              "attribute": "total"
+            },
+            {
+              "kind": "field",
+              "name": "withSummary",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders the localized \"showing X–Y of Z\" summary row. Opt-in and `false` by default,\nmatching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the\nsummary, so a mechanical rename silently added a row to every migrated pager.",
+              "attribute": "with-summary",
+              "reflects": true
             },
             {
               "kind": "method",
@@ -97702,14 +97703,6 @@
               "fieldName": "disabled"
             },
             {
-              "name": "hide-summary",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "fieldName": "hideSummary"
-            },
-            {
               "name": "item-label",
               "type": {
                 "text": "string"
@@ -97799,13 +97792,22 @@
               "fieldName": "size"
             },
             {
-              "name": "total-items",
+              "name": "total",
               "type": {
                 "text": "number"
               },
               "default": "0",
-              "description": "Total number of items across every page. Non-positive values render the empty state.",
-              "fieldName": "totalItems"
+              "description": "Total number of items across every page. Non-positive values render the empty state.\nNamed `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical\nrename left unset — silently rendering the empty state.",
+              "fieldName": "total"
+            },
+            {
+              "name": "with-summary",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Renders the localized \"showing X–Y of Z\" summary row. Opt-in and `false` by default,\nmatching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the\nsummary, so a mechanical rename silently added a row to every migrated pager.",
+              "fieldName": "withSummary"
             }
           ],
           "superclass": {
@@ -166376,7 +166378,7 @@
               "name": "icon"
             },
             {
-              "description": "The `<img>`, only rendered while `src` is set and has not failed to load (and no icon content is slotted).",
+              "description": "The `<img>`, only rendered while `image` is set and has not failed to load (and no icon content is slotted).",
               "name": "image"
             },
             {
@@ -166386,7 +166388,7 @@
           ],
           "slots": [
             {
-              "description": "Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to mark a chat message avatar as \"AI\" vs. \"user\" with a role glyph instead of a photo or initials. Takes priority over both `src` and `initials`. The glyph itself is treated as decorative (`aria-hidden`); set `alt` alongside it for an accessible name.",
+              "description": "Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to mark a chat message avatar as \"AI\" vs. \"user\" with a role glyph instead of a photo or initials. Takes priority over both `image` and `initials`. The glyph itself is treated as decorative (`aria-hidden`); set `alt` alongside it for an accessible name.",
               "name": ""
             }
           ],
@@ -166411,7 +166413,7 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
+              "description": "Alt text -- required alongside `image` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
               "attribute": "alt"
             },
             {
@@ -166471,6 +166473,15 @@
               },
               "privacy": "private",
               "default": "false"
+            },
+            {
+              "kind": "field",
+              "name": "image",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Image URL. Takes priority over `initials` when set and loads successfully (but not over\nslotted icon content); falls back to `initials` on a load error. Named `image` to match\n`wa-avatar`; it used to be `src`, which a mechanical rename left unset — silently falling\nback to initials.",
+              "attribute": "image"
             },
             {
               "kind": "field",
@@ -166552,15 +166563,6 @@
               "description": "Visual size. `'lg'` matches `--lr-icon-button-size` (2.5rem); `'md'` (the default) is 2rem.",
               "attribute": "size",
               "reflects": true
-            },
-            {
-              "kind": "field",
-              "name": "src",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "Image URL. Takes priority over `initials` when set and loads successfully (but not over\nslotted icon content); falls back to `initials` on a load error.",
-              "attribute": "src"
             },
             {
               "kind": "field",
@@ -166822,8 +166824,16 @@
                 "text": "string"
               },
               "default": "''",
-              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
+              "description": "Alt text -- required alongside `image` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.",
               "fieldName": "alt"
+            },
+            {
+              "name": "image",
+              "type": {
+                "text": "string | undefined"
+              },
+              "description": "Image URL. Takes priority over `initials` when set and loads successfully (but not over\nslotted icon content); falls back to `initials` on a load error. Named `image` to match\n`wa-avatar`; it used to be `src`, which a mechanical rename left unset — silently falling\nback to initials.",
+              "fieldName": "image"
             },
             {
               "name": "initials",
@@ -166864,14 +166874,6 @@
               "default": "'md'",
               "description": "Visual size. `'lg'` matches `--lr-icon-button-size` (2.5rem); `'md'` (the default) is 2rem.",
               "fieldName": "size"
-            },
-            {
-              "name": "src",
-              "type": {
-                "text": "string | undefined"
-              },
-              "description": "Image URL. Takes priority over `initials` when set and loads successfully (but not over\nslotted icon content); falls back to `initials` on a load error.",
-              "fieldName": "src"
             },
             {
               "name": "tone",
@@ -171140,6 +171142,16 @@
             },
             {
               "kind": "field",
+              "name": "lightDismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Dismisses the lightbox on a backdrop click. Opt-in and `false` by default -- mirrors\n`<lr-dialog>`'s `lightDismiss` exactly (name, default, no reflect), which in turn matches\n`wa-dialog`.",
+              "attribute": "light-dismiss"
+            },
+            {
+              "kind": "field",
               "name": "liveText",
               "type": {
                 "text": "string"
@@ -171196,16 +171208,6 @@
             {
               "kind": "field",
               "name": "next"
-            },
-            {
-              "kind": "field",
-              "name": "noLightDismiss",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lr-dialog>`'s\n`noLightDismiss` exactly (name, default, no reflect).",
-              "attribute": "no-light-dismiss"
             },
             {
               "kind": "field",
@@ -171636,6 +171638,15 @@
               "fieldName": "index"
             },
             {
+              "name": "light-dismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Dismisses the lightbox on a backdrop click. Opt-in and `false` by default -- mirrors\n`<lr-dialog>`'s `lightDismiss` exactly (name, default, no reflect), which in turn matches\n`wa-dialog`.",
+              "fieldName": "lightDismiss"
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -171674,15 +171685,6 @@
               "default": "0.5",
               "description": "Passed through to the embedded `<lr-zoomable-frame>` as `.minZoom`. Same default as\n`<lr-zoomable-frame>` itself.",
               "fieldName": "minZoom"
-            },
-            {
-              "name": "no-light-dismiss",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lr-dialog>`'s\n`noLightDismiss` exactly (name, default, no reflect).",
-              "fieldName": "noLightDismiss"
             },
             {
               "name": "open",
@@ -178698,6 +178700,16 @@
             },
             {
               "kind": "field",
+              "name": "lightDismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching\n`wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left\nbackdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the\nbehaviour of every migrated dialog. A rename that changes what the markup does with nothing\nto warn on is worse than no rename at all, so the polarity now matches upstream exactly.",
+              "attribute": "light-dismiss"
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -178710,16 +178722,6 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
-            },
-            {
-              "kind": "field",
-              "name": "noLightDismiss",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.",
-              "attribute": "no-light-dismiss"
             },
             {
               "kind": "field",
@@ -179102,6 +179104,15 @@
               "fieldName": "label"
             },
             {
+              "name": "light-dismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching\n`wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left\nbackdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the\nbehaviour of every migrated dialog. A rename that changes what the markup does with nothing\nto warn on is worse than no rename at all, so the polarity now matches upstream exactly.",
+              "fieldName": "lightDismiss"
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -179113,15 +179124,6 @@
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
               }
-            },
-            {
-              "name": "no-light-dismiss",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.",
-              "fieldName": "noLightDismiss"
             },
             {
               "name": "open",
@@ -179420,6 +179422,20 @@
             },
             {
               "kind": "field",
+              "name": "lightDismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching\n`wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left\nbackdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the\nbehaviour of every migrated dialog. A rename that changes what the markup does with nothing\nto warn on is worse than no rename at all, so the polarity now matches upstream exactly.",
+              "attribute": "light-dismiss",
+              "inheritedFrom": {
+                "name": "LyraDialog",
+                "module": "src/components/overlays/dialog/dialog.class.ts"
+              }
+            },
+            {
+              "kind": "field",
               "name": "locale",
               "type": {
                 "text": "string"
@@ -179431,20 +179447,6 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
-              }
-            },
-            {
-              "kind": "field",
-              "name": "noLightDismiss",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.",
-              "attribute": "no-light-dismiss",
-              "inheritedFrom": {
-                "name": "LyraDialog",
-                "module": "src/components/overlays/dialog/dialog.class.ts"
               }
             },
             {
@@ -179528,7 +179530,8 @@
               "type": {
                 "text": "LyraDrawerPlacement"
               },
-              "default": "'start'",
+              "default": "'end'",
+              "description": "Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be\n`start`, so a mechanical rename silently moved every migrated drawer to the other side.",
               "attribute": "placement",
               "reflects": true
             },
@@ -179906,6 +179909,19 @@
               }
             },
             {
+              "name": "light-dismiss",
+              "type": {
+                "text": "boolean"
+              },
+              "default": "false",
+              "description": "Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching\n`wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left\nbackdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the\nbehaviour of every migrated dialog. A rename that changes what the markup does with nothing\nto warn on is worse than no rename at all, so the polarity now matches upstream exactly.",
+              "fieldName": "lightDismiss",
+              "inheritedFrom": {
+                "name": "LyraDialog",
+                "module": "src/components/overlays/dialog/dialog.class.ts"
+              }
+            },
+            {
               "name": "locale",
               "type": {
                 "text": "string"
@@ -179916,19 +179932,6 @@
               "inheritedFrom": {
                 "name": "LyraElement",
                 "module": "src/internal/lyra-element.ts"
-              }
-            },
-            {
-              "name": "no-light-dismiss",
-              "type": {
-                "text": "boolean"
-              },
-              "default": "false",
-              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.",
-              "fieldName": "noLightDismiss",
-              "inheritedFrom": {
-                "name": "LyraDialog",
-                "module": "src/components/overlays/dialog/dialog.class.ts"
               }
             },
             {
@@ -179949,7 +179952,8 @@
               "type": {
                 "text": "LyraDrawerPlacement"
               },
-              "default": "'start'",
+              "default": "'end'",
+              "description": "Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be\n`start`, so a mechanical rename silently moved every migrated drawer to the other side.",
               "fieldName": "placement"
             }
           ],
@@ -224281,7 +224285,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a\ndeliberate inversion of `lr-dialog`'s `noLightDismiss` (opt-out, default\ndismiss-on-backdrop-click): a guided tour's backdrop click doing nothing by default avoids\nlosing onboarding progress to a stray click. Set this to restore dismiss-on-backdrop-click.",
+              "description": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false`, matching\n`lr-dialog`/`lr-lightbox`'s `lightDismiss`: a guided tour's backdrop click doing nothing by\ndefault avoids losing onboarding progress to a stray click. Set it to opt in.",
               "attribute": "light-dismiss"
             },
             {
@@ -224983,7 +224987,7 @@
                 "text": "boolean"
               },
               "default": "false",
-              "description": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a\ndeliberate inversion of `lr-dialog`'s `noLightDismiss` (opt-out, default\ndismiss-on-backdrop-click): a guided tour's backdrop click doing nothing by default avoids\nlosing onboarding progress to a stray click. Set this to restore dismiss-on-backdrop-click.",
+              "description": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false`, matching\n`lr-dialog`/`lr-lightbox`'s `lightDismiss`: a guided tour's backdrop click doing nothing by\ndefault avoids losing onboarding progress to a stray click. Set it to opt in.",
               "fieldName": "lightDismiss"
             },
             {

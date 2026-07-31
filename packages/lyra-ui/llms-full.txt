@@ -3722,14 +3722,14 @@ host applies a requested page. The component owns no data fetching and never mut
   rewritten by the component
 - `pageSize: number = 20` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
-- `totalItems: number = 0` (attribute `total-items`) — total item count; finite values are truncated
+- `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations
-- `pageCount: number` (readonly getter) — `ceil(totalItems / pageSize)` after the normalization
+- `pageCount: number` (readonly getter) — `ceil(total / pageSize)` after the normalization
   above, or `0` when either normalized input is zero
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
-- `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — omits the built-in range
+- `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
   summary while retaining the controls
 - `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — changes control height and type size
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
@@ -3769,7 +3769,7 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
 **Optional peer deps:** none.
 
 ```html
-<lr-pagination total-items="237" page-size="20"></lr-pagination>
+<lr-pagination total="237" page-size="20" with-summary></lr-pagination>
 <script>
   const pagination = document.querySelector('lr-pagination');
   pagination.addEventListener('lr-page-change', async (event) => {
@@ -3787,7 +3787,7 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
   drafts expose `aria-invalid="true"` and emit nothing
 - zero items, zero page size, `disabled`, and `loading` all disable the navigation controls. The
   empty summary is still rendered via the localized `paginationEmptySummary` message
-  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) unless `hide-summary` is set
+  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) only when `with-summary` is set
 - below a 20rem container allocation the summary and controls stack; the breakpoint responds to
   the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
 
@@ -7516,8 +7516,8 @@ accessible naming, and the cancelable `lr-dialog-close` event.
 
 **Properties:**
 - `open: boolean = false` (attribute `open`, reflected) — controls visibility
-- `placement: 'start'|'end'|'top'|'bottom' = 'start'` (attribute `placement`, reflected)
-- `heading?: string`, `label: string`, `closable: boolean`, and `noLightDismiss: boolean` — inherited
+- `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected)
+- `heading?: string`, `label: string`, `closable: boolean`, and `lightDismiss: boolean` — inherited
   dialog naming and dismissal options. A plain `aria-label` attribute on the host is honored too,
   with the same priority-over-everything semantics documented under `lr-dialog` below
 
@@ -7568,7 +7568,7 @@ hand-building that chrome isn't worth it.
 - `closable: boolean = false` (attribute `closable`) — renders a built-in close (X) button in the
   header row (creating one, with no heading text, if `heading` is unset), wired to the same
   `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — prevents a backdrop click from
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click
   closing the dialog; Escape and explicit `close()` calls remain available
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
@@ -9305,7 +9305,7 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 - `spotlightPadding: number = 4` (attribute `spotlight-padding`) — extra px between the target's box
   and the cutout/ring; overridable per step
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — a deliberate inversion of
-  `lr-dialog`'s `noLightDismiss`: a backdrop click does **nothing** by default so a stray click
+  `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `showProgress: boolean = true` (attribute `show-progress`) — renders the "Step X of Y" text + dots
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,
@@ -10293,7 +10293,7 @@ it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 **Properties:**
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no slotted icon
   and no image is set, or the image fails to load.
-- `src?: string` — image URL; takes priority over `initials` when set and loads successfully (but
+- `image?: string` — image URL; takes priority over `initials` when set and loads successfully (but
   never over slotted icon content), falling back to `initials` on a load error.
 - `alt: string = ''` — image alt text; set alongside `src` for accessibility, and also the source of
   the accessible name for the icon-slot and initials cases (the glyph is `aria-hidden`, and the
@@ -10552,7 +10552,7 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
   The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/

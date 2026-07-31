@@ -26,26 +26,26 @@ describe('lr-avatar', () => {
     const sourceA = 'https://example.test/avatar-a.png';
     const sourceB = 'https://example.test/avatar-b.png';
     const el = (await fixture(html`
-      <lr-avatar initials="AB" src=${sourceA} alt="A. Bee"></lr-avatar>
+      <lr-avatar initials="AB" image=${sourceA} alt="A. Bee"></lr-avatar>
     `)) as LyraAvatar;
     let image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     image.dispatchEvent(new Event('error'));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
 
-    el.src = sourceB;
+    el.image = sourceB;
     await el.updateComplete;
     image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     expect(image.getAttribute('src')).to.equal(sourceB);
 
-    el.src = sourceA;
+    el.image = sourceA;
     await el.updateComplete;
     image = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     expect(image.getAttribute('src')).to.equal(sourceA);
   });
 
   it('prefers a loaded image over initials', async () => {
-    const el = (await fixture(html`<lr-avatar initials="AB" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+    const el = (await fixture(html`<lr-avatar initials="AB" image="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
     await aTimeout(50);
     const img = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement | null;
     if (img) {
@@ -55,7 +55,7 @@ describe('lr-avatar', () => {
   });
 
   it('falls back to initials when the image fails to load', async () => {
-    const el = (await fixture(html`<lr-avatar initials="AB" src=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+    const el = (await fixture(html`<lr-avatar initials="AB" image=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
     const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
     img.dispatchEvent(new Event('error'));
     await el.updateComplete;
@@ -63,15 +63,15 @@ describe('lr-avatar', () => {
     expect(el.shadowRoot!.querySelector('[part="initials"]')!.textContent).to.equal('AB');
   });
 
-  it('tries a new image after a previous src failed', async () => {
+  it('tries a new image after a previous one failed', async () => {
     const el = (await fixture(
-      html`<lr-avatar initials="AB" src=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
+      html`<lr-avatar initials="AB" image=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
     )) as LyraAvatar;
     (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector('[part="image"]')).to.not.exist;
 
-    el.src = TEST_IMAGE_SRC_REPLACEMENT;
+    el.image = TEST_IMAGE_SRC_REPLACEMENT;
     await el.updateComplete;
     const replacement = el.shadowRoot!.querySelector('[part="image"]') as HTMLImageElement;
     expect(replacement).to.exist;
@@ -111,7 +111,7 @@ describe('lr-avatar', () => {
     const el = (await fixture(
       html`<lr-avatar
         initials="AB"
-        src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+        image="data:image/gif;base64,R0lGODlhAQABAAAAACw="
         alt="A. Bee"
         ><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg
       ></lr-avatar>`,
@@ -164,7 +164,7 @@ describe('lr-avatar', () => {
 
     const image = (await fixture(html`
       <lr-avatar
-        src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+        image="data:image/gif;base64,R0lGODlhAQABAAAAACw="
         alt="A. Bee"
         aria-label="Account owner"
       ></lr-avatar>
@@ -190,7 +190,7 @@ describe('lr-avatar', () => {
 
   it('exposes alt as an accessible name once an image fails and falls back to initials', async () => {
     const el = (await fixture(
-      html`<lr-avatar initials="AB" src="https://example.invalid/nonexistent.png" alt="A. Bee"></lr-avatar>`,
+      html`<lr-avatar initials="AB" image="https://example.invalid/nonexistent.png" alt="A. Bee"></lr-avatar>`,
     )) as LyraAvatar;
     const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
     img.dispatchEvent(new Event('error'));

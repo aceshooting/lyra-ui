@@ -1372,16 +1372,20 @@
         },
         {
           "name": "lr-avatar",
-          "description": "`<lr-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an\nimage, or an initials fallback, in that priority order (whichever's set takes over from the\nnext). First-party invention (no Web Awesome equivalent) -- purely presentational, no built-in\ninteractivity; a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a\nuser-menu affordance.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to mark a chat message avatar as \"AI\" vs. \"user\" with a role glyph instead of a photo or initials. Takes priority over both `src` and `initials`. The glyph itself is treated as decorative (`aria-hidden`); set `alt` alongside it for an accessible name. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer circle/square container. |\n| `icon` | Wrapper around the default-slotted icon/glyph content. Only rendered while the slot has assigned content. |\n| `image` | The `<img>`, only rendered while `src` is set and has not failed to load (and no icon content is slotted). |\n| `initials` | The fallback initials text, rendered whenever neither slotted content nor `image` is. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-avatar-size` (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`sm`) or `var(--lr-size-2-5rem)` (`lg`).\n- `--lr-avatar-bg` (default: `var(--lr-color-border)`) — Container background. Each non-neutral `tone` sets it to that tone's `-quiet` tint.\n- `--lr-avatar-color` (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `tone` sets it to that tone's loud color.\n- `--lr-avatar-font-size` (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), so the initials track the circle instead of staying at one fixed size across every tier.",
+          "description": "`<lr-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an\nimage, or an initials fallback, in that priority order (whichever's set takes over from the\nnext). First-party invention (no Web Awesome equivalent) -- purely presentational, no built-in\ninteractivity; a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a\nuser-menu affordance.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to mark a chat message avatar as \"AI\" vs. \"user\" with a role glyph instead of a photo or initials. Takes priority over both `image` and `initials`. The glyph itself is treated as decorative (`aria-hidden`); set `alt` alongside it for an accessible name. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer circle/square container. |\n| `icon` | Wrapper around the default-slotted icon/glyph content. Only rendered while the slot has assigned content. |\n| `image` | The `<img>`, only rendered while `image` is set and has not failed to load (and no icon content is slotted). |\n| `initials` | The fallback initials text, rendered whenever neither slotted content nor `image` is. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-avatar-size` (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`sm`) or `var(--lr-size-2-5rem)` (`lg`).\n- `--lr-avatar-bg` (default: `var(--lr-color-border)`) — Container background. Each non-neutral `tone` sets it to that tone's `-quiet` tint.\n- `--lr-avatar-color` (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `tone` sets it to that tone's loud color.\n- `--lr-avatar-font-size` (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`sm`) or `var(--lr-font-size-md)` (`lg`), so the initials track the circle instead of staying at one fixed size across every tier.",
           "attributes": [
             {
               "name": "alt",
-              "description": "Alt text -- required alongside `src` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.\n\nType: `string`  \nDefault: `''`",
+              "description": "Alt text -- required alongside `image` for accessibility, and also used as the accessible\nname (via `aria-label`) when showing icon-only slotted content, since a decorative glyph\nhas no text of its own for a screen reader to read. A host `aria-label` overrides this\nvalue while leaving the visible initials/image unchanged.\n\nType: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
                 ]
               }
+            },
+            {
+              "name": "image",
+              "description": "Image URL. Takes priority over `initials` when set and loads successfully (but not over\nslotted icon content); falls back to `initials` on a load error. Named `image` to match\n`wa-avatar`; it used to be `src`, which a mechanical rename left unset — silently falling\nback to initials.\n\nType: `string | undefined`"
             },
             {
               "name": "initials",
@@ -1418,10 +1422,6 @@
                   "AvatarSize"
                 ]
               }
-            },
-            {
-              "name": "src",
-              "description": "Image URL. Takes priority over `initials` when set and loads successfully (but not over\nslotted icon content); falls back to `initials` on a load error.\n\nType: `string | undefined`"
             },
             {
               "name": "tone",
@@ -5425,20 +5425,20 @@
               }
             },
             {
+              "name": "light-dismiss",
+              "description": "Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching\n`wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left\nbackdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the\nbehaviour of every migrated dialog. A rename that changes what the markup does with nothing\nto warn on is worse than no rename at all, so the polarity now matches upstream exactly.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "locale",
               "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
-                ]
-              }
-            },
-            {
-              "name": "no-light-dismiss",
-              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.\n\nType: `boolean`  \nDefault: `false`",
-              "value": {
-                "type": [
-                  "boolean"
                 ]
               }
             },
@@ -6107,20 +6107,20 @@
               }
             },
             {
+              "name": "light-dismiss",
+              "description": "Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching\n`wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left\nbackdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the\nbehaviour of every migrated dialog. A rename that changes what the markup does with nothing\nto warn on is worse than no rename at all, so the polarity now matches upstream exactly.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "locale",
               "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
               "value": {
                 "type": [
                   "string"
-                ]
-              }
-            },
-            {
-              "name": "no-light-dismiss",
-              "description": "Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s\n`light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since\nbackdrop-dismiss has always been this component's default behavior. `false` (the default)\nreproduces today's exact backdrop-dismiss behavior.\n\nType: `boolean`  \nDefault: `false`",
-              "value": {
-                "type": [
-                  "boolean"
                 ]
               }
             },
@@ -6135,7 +6135,7 @@
             },
             {
               "name": "placement",
-              "description": "Type: `LyraDrawerPlacement`  \nDefault: `'start'`",
+              "description": "Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be\n`start`, so a mechanical rename silently moved every migrated drawer to the other side.\n\nType: `LyraDrawerPlacement`  \nDefault: `'end'`",
               "value": {
                 "type": [
                   "LyraDrawerPlacement"
@@ -9437,6 +9437,15 @@
               }
             },
             {
+              "name": "light-dismiss",
+              "description": "Dismisses the lightbox on a backdrop click. Opt-in and `false` by default -- mirrors\n`<lr-dialog>`'s `lightDismiss` exactly (name, default, no reflect), which in turn matches\n`wa-dialog`.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "locale",
               "description": "Optional locale override. Otherwise the nearest `locale`/`lang` ancestor is used.\n\nType: `string`  \nDefault: `''`",
               "value": {
@@ -9469,15 +9478,6 @@
               "value": {
                 "type": [
                   "number"
-                ]
-              }
-            },
-            {
-              "name": "no-light-dismiss",
-              "description": "Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lr-dialog>`'s\n`noLightDismiss` exactly (name, default, no reflect).\n\nType: `boolean`  \nDefault: `false`",
-              "value": {
-                "type": [
-                  "boolean"
                 ]
               }
             },
@@ -11671,15 +11671,6 @@
               }
             },
             {
-              "name": "hide-summary",
-              "description": "Type: `boolean`  \nDefault: `false`",
-              "value": {
-                "type": [
-                  "boolean"
-                ]
-              }
-            },
-            {
               "name": "item-label",
               "description": "Optional item noun used in the summary. Empty uses the localized `item`/`items` keys.\n\nType: `string`  \nDefault: `''`",
               "value": {
@@ -11770,11 +11761,20 @@
               }
             },
             {
-              "name": "total-items",
-              "description": "Total number of items across every page. Non-positive values render the empty state.\n\nType: `number`  \nDefault: `0`",
+              "name": "total",
+              "description": "Total number of items across every page. Non-positive values render the empty state.\nNamed `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical\nrename left unset — silently rendering the empty state.\n\nType: `number`  \nDefault: `0`",
               "value": {
                 "type": [
                   "number"
+                ]
+              }
+            },
+            {
+              "name": "with-summary",
+              "description": "Renders the localized \"showing X–Y of Z\" summary row. Opt-in and `false` by default,\nmatching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the\nsummary, so a mechanical rename silently added a row to every migrated pager.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             }
@@ -18147,7 +18147,7 @@
             },
             {
               "name": "light-dismiss",
-              "description": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a\ndeliberate inversion of `lr-dialog`'s `noLightDismiss` (opt-out, default\ndismiss-on-backdrop-click): a guided tour's backdrop click doing nothing by default avoids\nlosing onboarding progress to a stray click. Set this to restore dismiss-on-backdrop-click.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false`, matching\n`lr-dialog`/`lr-lightbox`'s `lightDismiss`: a guided tour's backdrop click doing nothing by\ndefault avoids losing onboarding progress to a stray click. Set it to opt in.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"

@@ -34,7 +34,7 @@ hand-building that chrome isn't worth it.
 - `closable: boolean = false` (attribute `closable`) — renders a built-in close (X) button in the
   header row (creating one, with no heading text, if `heading` is unset), wired to the same
   `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — prevents a backdrop click from
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click
   closing the dialog; Escape and explicit `close()` calls remain available
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's

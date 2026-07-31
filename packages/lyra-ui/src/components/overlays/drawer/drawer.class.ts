@@ -27,7 +27,9 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
 export class LyraDrawer extends LyraDialog {
   static override styles = [LyraDialog.styles, styles];
 
-  @property({ reflect: true }) placement: LyraDrawerPlacement = 'start';
+  /** Which edge the drawer slides in from. `end` by default, matching `wa-drawer`; it used to be
+   *  `start`, so a mechanical rename silently moved every migrated drawer to the other side. */
+  @property({ reflect: true }) placement: LyraDrawerPlacement = 'end';
 }
 
 declare global {

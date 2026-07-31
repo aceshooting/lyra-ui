@@ -21,7 +21,7 @@ it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 **Properties:**
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no slotted icon
   and no image is set, or the image fails to load.
-- `src?: string` — image URL; takes priority over `initials` when set and loads successfully (but
+- `image?: string` — image URL; takes priority over `initials` when set and loads successfully (but
   never over slotted icon content), falling back to `initials` on a load error.
 - `alt: string = ''` — image alt text; set alongside `src` for accessibility, and also the source of
   the accessible name for the icon-slot and initials cases (the glyph is `aria-hidden`, and the

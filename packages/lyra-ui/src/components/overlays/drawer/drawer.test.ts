@@ -61,9 +61,18 @@ it('is accessible while open', async () => {
   await expect(el).to.be.accessible();
 });
 
+it('defaults placement to end, matching wa-drawer', async () => {
+  // It used to default to `start`, so a mechanical `wa-drawer` -> `lr-drawer` rename silently
+  // moved every migrated drawer to the other edge.
+  const el = (await fixture(html`<lr-drawer open heading="Filters"><p>Body</p></lr-drawer>`)) as LyraDrawer;
+  await el.updateComplete;
+  expect(el.placement).to.equal('end');
+  expect(el.getAttribute('placement')).to.equal('end');
+});
+
 it('flips the enter-animation offset under RTL to match the mirrored resting edge', async () => {
   const rtlStartWrapper = (await fixture(html`
-    <div dir="rtl"><lr-drawer open heading="Filters"><p>Filter controls</p></lr-drawer></div>
+    <div dir="rtl"><lr-drawer open placement="start" heading="Filters"><p>Filter controls</p></lr-drawer></div>
   `)) as HTMLElement;
   const startDrawer = rtlStartWrapper.querySelector('lr-drawer') as LyraDrawer;
   await startDrawer.updateComplete;

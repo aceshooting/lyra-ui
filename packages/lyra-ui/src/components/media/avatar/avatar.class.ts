@@ -17,12 +17,12 @@ export type AvatarTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
  * @customElement lr-avatar
  * @slot - Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to
  *   mark a chat message avatar as "AI" vs. "user" with a role glyph instead of a photo or
- *   initials. Takes priority over both `src` and `initials`. The glyph itself is treated as
+ *   initials. Takes priority over both `image` and `initials`. The glyph itself is treated as
  *   decorative (`aria-hidden`); set `alt` alongside it for an accessible name.
  * @csspart base - The outer circle/square container.
  * @csspart icon - Wrapper around the default-slotted icon/glyph content. Only rendered while the
  *   slot has assigned content.
- * @csspart image - The `<img>`, only rendered while `src` is set and has not failed to load (and
+ * @csspart image - The `<img>`, only rendered while `image` is set and has not failed to load (and
  *   no icon content is slotted).
  * @csspart initials - The fallback initials text, rendered whenever neither slotted content nor
  *   `image` is.
@@ -45,10 +45,12 @@ export class LyraAvatar extends LyraElement {
   @property() initials = '';
 
   /** Image URL. Takes priority over `initials` when set and loads successfully (but not over
-   *  slotted icon content); falls back to `initials` on a load error. */
-  @property() src?: string;
+   *  slotted icon content); falls back to `initials` on a load error. Named `image` to match
+   *  `wa-avatar`; it used to be `src`, which a mechanical rename left unset — silently falling
+   *  back to initials. */
+  @property() image?: string;
 
-  /** Alt text -- required alongside `src` for accessibility, and also used as the accessible
+  /** Alt text -- required alongside `image` for accessibility, and also used as the accessible
    *  name (via `aria-label`) when showing icon-only slotted content, since a decorative glyph
    *  has no text of its own for a screen reader to read. A host `aria-label` overrides this
    *  value while leaving the visible initials/image unchanged. */
@@ -80,7 +82,7 @@ export class LyraAvatar extends LyraElement {
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (changed.has('src')) this.failedSrc = undefined;
+    if (changed.has('image')) this.failedSrc = undefined;
     // Set from light-DOM children before the first render so the initial paint already reflects
     // any icon content present at parse time, rather than waiting a render behind `slotchange`.
     if (!this.hasUpdated) {
@@ -101,7 +103,7 @@ export class LyraAvatar extends LyraElement {
   };
 
   override render(): TemplateResult {
-    const showImage = !this.hasIcon && !!this.src && this.src !== this.failedSrc;
+    const showImage = !this.hasIcon && !!this.image && this.image !== this.failedSrc;
     const showInitials = !this.hasIcon && !showImage;
     const accessibleName = this.getAttribute('aria-label') ?? this.alt;
     // Whenever `alt` is set, [part='base'] needs a real accessible name
@@ -122,7 +124,7 @@ export class LyraAvatar extends LyraElement {
           ><slot @slotchange=${this.onIconSlotChange}></slot
         ></span>
         ${showImage
-          ? html`<img part="image" src=${this.src!} alt=${accessibleName} @error=${this.onImageError} />`
+          ? html`<img part="image" src=${this.image!} alt=${accessibleName} @error=${this.onImageError} />`
           : nothing}
         ${showInitials
           ? html`<span part="initials" aria-hidden=${accessibleName ? 'true' : nothing}>${this.initials}</span>`

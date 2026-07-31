@@ -4,7 +4,7 @@ import type { LyraPagination } from './pagination.js';
 import { styles } from './pagination.styles.js';
 
 async function pagination(
-  template = html`<lr-pagination total-items="95" page-size="10"></lr-pagination>`,
+  template = html`<lr-pagination total="95" page-size="10" with-summary></lr-pagination>`,
 ): Promise<LyraPagination> {
   const el = (await fixture(template)) as LyraPagination;
   await el.updateComplete;
@@ -22,7 +22,7 @@ it('derives pageCount and a localized item-range summary', async () => {
 
 it('forwards a host aria-label to the internal navigation landmark', async () => {
   const el = await pagination(html`
-    <lr-pagination aria-label="Search result pages" total-items="95"></lr-pagination>
+    <lr-pagination aria-label="Search result pages" total="95"></lr-pagination>
   `);
 
   expect(el.shadowRoot!.querySelector('nav')!.getAttribute('aria-label')).to.equal(
@@ -95,7 +95,7 @@ it('forwards host click to the page input and suppresses it while effectively di
 it('keeps previous and next actions at the shared hit-area floor in every size', async () => {
   for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
     const el = await pagination(
-      html`<lr-pagination size=${size} total-items="95" page-size="10"></lr-pagination>`,
+      html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
     );
     for (const part of ['previous-button', 'next-button']) {
       const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement;
@@ -140,7 +140,7 @@ it('rejects out-of-range and fractional page jumps', async () => {
 });
 
 it('disables every control for empty data, disabled, and loading states', async () => {
-  const el = await pagination(html`<lr-pagination></lr-pagination>`);
+  const el = await pagination(html`<lr-pagination with-summary></lr-pagination>`);
   const controls = () => [
     ...el.shadowRoot!.querySelectorAll<HTMLButtonElement | HTMLInputElement>('button, input'),
   ];
@@ -150,7 +150,7 @@ it('disables every control for empty data, disabled, and loading states', async 
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 items');
   await expect(el).to.be.accessible();
 
-  el.totalItems = 10;
+  el.total = 10;
   el.disabled = true;
   await el.updateComplete;
   expect(controls().every((control) => control.disabled)).to.equal(true);
@@ -165,7 +165,8 @@ it('disables every control for empty data, disabled, and loading states', async 
 it('uses singular item text and accepts localized label overrides', async () => {
   const el = await pagination(html`
     <lr-pagination
-      total-items="1"
+      total="1"
+      with-summary
       .strings=${{
         item: 'entry',
         previous: 'Back',
@@ -194,6 +195,7 @@ it('localizes the empty summary as one interpolated message', async () => {
   const el = await pagination(html`
     <lr-pagination
       item-label="résultats"
+      with-summary
       .strings=${{ paginationEmptySummary: 'Aucun contenu ({total} {itemLabel})' }}
     ></lr-pagination>
   `);
@@ -203,19 +205,31 @@ it('localizes the empty summary as one interpolated message', async () => {
   );
 });
 
-it('hides the built-in summary without removing the controls', async () => {
+it('omits the built-in summary by default, without removing the controls', async () => {
+  // Opt-in, matching `wa-pagination`'s `with-summary`. The attribute used to be `hide-summary`,
+  // whose default rendered the row, so a mechanical rename silently added a summary to every
+  // migrated pager.
   const el = await pagination(html`
-    <lr-pagination total-items="30" hide-summary></lr-pagination>
+    <lr-pagination total="30"></lr-pagination>
   `);
 
+  expect(el.withSummary).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part="summary"]')).to.not.exist;
   expect(el.shadowRoot!.querySelector('[part="next-button"]')).to.exist;
+});
+
+it('renders the built-in summary when with-summary is set', async () => {
+  const el = await pagination(html`
+    <lr-pagination total="30" with-summary></lr-pagination>
+  `);
+
+  expect(el.shadowRoot!.querySelector('[part="summary"]')).to.exist;
 });
 
 it('mirrors the directional icons under RTL', async () => {
   const ltr = await pagination();
   const rtl = await pagination(html`
-    <lr-pagination dir="rtl" total-items="95" page-size="10"></lr-pagination>
+    <lr-pagination dir="rtl" total="95" page-size="10"></lr-pagination>
   `);
   const ltrPrevious = ltr.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
   const rtlPrevious = rtl.shadowRoot!.querySelector('[part="previous-icon"]') as HTMLElement;
@@ -229,7 +243,7 @@ it('stacks its summary and controls in a narrow allocation', async () => {
   const el = await pagination(html`
     <lr-pagination
       style="inline-size: 18rem"
-      total-items="95"
+      total="95"
       page-size="10"
     ></lr-pagination>
   `);
@@ -244,8 +258,9 @@ it('contains long translated labels in a narrow allocation', async () => {
   const el = await pagination(html`
     <lr-pagination
       style="inline-size: 18rem"
-      total-items="95"
+      total="95"
       page-size="10"
+      with-summary
       previous-label="Zur vorherigen Ergebnisseite wechseln"
       next-label="Zur nächsten Ergebnisseite wechseln"
       .strings=${{
@@ -266,13 +281,13 @@ it('is accessible', async () => {
   await expect(el).to.be.accessible();
 });
 
-it('normalizes NaN/negative pageSize and totalItems to an empty, zero-page state instead of NaN', async () => {
+it('normalizes NaN/negative pageSize and total to an empty, zero-page state instead of NaN', async () => {
   const el = await pagination(html`
-    <lr-pagination total-items="95" page-size="10"></lr-pagination>
+    <lr-pagination total="95" page-size="10" with-summary></lr-pagination>
   `);
 
   el.pageSize = NaN;
-  el.totalItems = -50;
+  el.total = -50;
   await el.updateComplete;
   expect(el.pageCount).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('0 items');
@@ -280,7 +295,7 @@ it('normalizes NaN/negative pageSize and totalItems to an empty, zero-page state
 
 it('clamps an oversized or negative page to the last/first valid page instead of NaN/out-of-range', async () => {
   const el = await pagination(html`
-    <lr-pagination total-items="95" page-size="10"></lr-pagination>
+    <lr-pagination total="95" page-size="10"></lr-pagination>
   `);
   const input = el.shadowRoot!.querySelector('[part="page-input"]') as HTMLInputElement;
 
@@ -307,7 +322,7 @@ describe('control padding knob (--lr-pagination-control-padding)', () => {
     // Byte-identical to today, which hardcoded var(--lr-space-xs) at every tier on both sites.
     for (const size of ['xs', 's', 'm', 'l', 'xl'] as const) {
       const el = await pagination(
-        html`<lr-pagination size=${size} total-items="95" page-size="10"></lr-pagination>`,
+        html`<lr-pagination size=${size} total="95" page-size="10"></lr-pagination>`,
       );
       expect(getComputedStyle(nextButton(el)).paddingTop, `${size} button`).to.equal('4px');
       const input = pageInput(el);

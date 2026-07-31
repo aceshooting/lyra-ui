@@ -74,6 +74,9 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
 
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement(tag('dialog')) as LyraDialog;
+    // `<lr-dialog>` makes backdrop dismissal opt-in (matching `wa-dialog`), but this helper's
+    // documented contract is that Escape, the backdrop and the cancel button all resolve `false`.
+    dialog.lightDismiss = true;
     let settled = false;
 
     const heading = document.createElement('h2');

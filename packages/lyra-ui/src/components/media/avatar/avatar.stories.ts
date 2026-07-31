@@ -56,7 +56,7 @@ export const WithImage: Story = {
   name: 'With an image',
   render: () => html`
     <lr-avatar
-      src=${IMAGE_SRC}
+      image=${IMAGE_SRC}
       alt="A. Bee"
       initials="AB"
     ></lr-avatar>
@@ -75,7 +75,7 @@ export const AccessibleNameOverride: Story = {
   },
   render: () => html`
     <lr-avatar
-      src=${IMAGE_SRC}
+      image=${IMAGE_SRC}
       alt="Profile photo"
       aria-label="Signed in as A. Bee"
       initials="AB"
@@ -126,7 +126,7 @@ export const ImageFallback: Story = {
   },
   render: () => html`
     <lr-avatar
-      src="https://example.invalid/nonexistent.png"
+      image="https://example.invalid/nonexistent.png"
       alt="A. Bee"
       initials="AB"
       tone="brand"

@@ -234,10 +234,9 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  overridable per step via `TourStep.spotlightPadding`. Non-negative. */
   @property({ type: Number, attribute: 'spotlight-padding' }) spotlightPadding = DEFAULT_SPOTLIGHT_PADDING;
 
-  /** Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false` -- a
-   *  deliberate inversion of `lr-dialog`'s `noLightDismiss` (opt-out, default
-   *  dismiss-on-backdrop-click): a guided tour's backdrop click doing nothing by default avoids
-   *  losing onboarding progress to a stray click. Set this to restore dismiss-on-backdrop-click. */
+  /** Whether a backdrop click dismisses the tour (`end('skip')`). Defaults to `false`, matching
+   *  `lr-dialog`/`lr-lightbox`'s `lightDismiss`: a guided tour's backdrop click doing nothing by
+   *  default avoids losing onboarding progress to a stray click. Set it to opt in. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   /** Whether the built-in "Step X of Y" progress indicator (dots + text) renders in the footer. */

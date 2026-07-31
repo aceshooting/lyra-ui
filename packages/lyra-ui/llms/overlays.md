@@ -213,8 +213,8 @@ accessible naming, and the cancelable `lr-dialog-close` event.
 
 **Properties:**
 - `open: boolean = false` (attribute `open`, reflected) — controls visibility
-- `placement: 'start'|'end'|'top'|'bottom' = 'start'` (attribute `placement`, reflected)
-- `heading?: string`, `label: string`, `closable: boolean`, and `noLightDismiss: boolean` — inherited
+- `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected)
+- `heading?: string`, `label: string`, `closable: boolean`, and `lightDismiss: boolean` — inherited
   dialog naming and dismissal options. A plain `aria-label` attribute on the host is honored too,
   with the same priority-over-everything semantics documented under `lr-dialog` below
 
@@ -265,7 +265,7 @@ hand-building that chrome isn't worth it.
 - `closable: boolean = false` (attribute `closable`) — renders a built-in close (X) button in the
   header row (creating one, with no heading text, if `heading` is unset), wired to the same
   `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — prevents a backdrop click from
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click
   closing the dialog; Escape and explicit `close()` calls remain available
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's

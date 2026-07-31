@@ -19,8 +19,8 @@ accessible naming, and the cancelable `lr-dialog-close` event.
 
 **Properties:**
 - `open: boolean = false` (attribute `open`, reflected) — controls visibility
-- `placement: 'start'|'end'|'top'|'bottom' = 'start'` (attribute `placement`, reflected)
-- `heading?: string`, `label: string`, `closable: boolean`, and `noLightDismiss: boolean` — inherited
+- `placement: 'start'|'end'|'top'|'bottom' = 'end'` (attribute `placement`, reflected)
+- `heading?: string`, `label: string`, `closable: boolean`, and `lightDismiss: boolean` — inherited
   dialog naming and dismissal options. A plain `aria-label` attribute on the host is honored too,
   with the same priority-over-everything semantics documented under `lr-dialog` below
 

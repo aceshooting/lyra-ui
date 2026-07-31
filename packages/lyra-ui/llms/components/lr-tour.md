@@ -33,7 +33,7 @@ controls and a step-progress indicator. Controlled component — `steps` is neve
 - `spotlightPadding: number = 4` (attribute `spotlight-padding`) — extra px between the target's box
   and the cutout/ring; overridable per step
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — a deliberate inversion of
-  `lr-dialog`'s `noLightDismiss`: a backdrop click does **nothing** by default so a stray click
+  `lr-dialog`'s `lightDismiss`: a backdrop click does **nothing** by default so a stray click
   can't discard onboarding progress. Set it to make a backdrop click `end('skip')`
 - `showProgress: boolean = true` (attribute `show-progress`) — renders the "Step X of Y" text + dots
 - `aria-label` (a plain host attribute, not a public JS property) — names **every** step's popover,

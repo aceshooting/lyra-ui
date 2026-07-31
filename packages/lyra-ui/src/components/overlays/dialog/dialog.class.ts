@@ -139,11 +139,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  public JS property. */
   @property({ attribute: 'aria-label' }) private accessibleLabel: string | null = null;
 
-  /** Opts out of dismissing the dialog on a backdrop click — mirrors `wa-dialog`'s
-   *  `light-dismiss` (default `false`, opt-in) equivalent, inverted to an opt-out here since
-   *  backdrop-dismiss has always been this component's default behavior. `false` (the default)
-   *  reproduces today's exact backdrop-dismiss behavior. */
-  @property({ type: Boolean, attribute: 'no-light-dismiss' }) noLightDismiss = false;
+  /** Dismisses the dialog on a backdrop click. Opt-in and `false` by default, matching
+   *  `wa-dialog`. This was previously spelled `no-light-dismiss` — an opt-*out* whose default left
+   *  backdrop dismissal on, so a mechanical `wa-dialog` → `lr-dialog` rename silently flipped the
+   *  behaviour of every migrated dialog. A rename that changes what the markup does with nothing
+   *  to warn on is worse than no rename at all, so the polarity now matches upstream exactly. */
+  @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   @state() private hasFooterSlot = false;
   @state() private headingText?: string;
@@ -259,7 +260,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   private onBackdropClick = (): void => {
-    if (this.noLightDismiss) return;
+    if (!this.lightDismiss) return;
     this.overlay?.dismissBackdrop();
   };
 

@@ -23,14 +23,14 @@ host applies a requested page. The component owns no data fetching and never mut
   rewritten by the component
 - `pageSize: number = 20` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
-- `totalItems: number = 0` (attribute `total-items`) — total item count; finite values are truncated
+- `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations
-- `pageCount: number` (readonly getter) — `ceil(totalItems / pageSize)` after the normalization
+- `pageCount: number` (readonly getter) — `ceil(total / pageSize)` after the normalization
   above, or `0` when either normalized input is zero
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
-- `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — omits the built-in range
+- `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
   summary while retaining the controls
 - `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — changes control height and type size
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
@@ -70,7 +70,7 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
 **Optional peer deps:** none.
 
 ```html
-<lr-pagination total-items="237" page-size="20"></lr-pagination>
+<lr-pagination total="237" page-size="20" with-summary></lr-pagination>
 <script>
   const pagination = document.querySelector('lr-pagination');
   pagination.addEventListener('lr-page-change', async (event) => {
@@ -88,7 +88,7 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
   drafts expose `aria-invalid="true"` and emit nothing
 - zero items, zero page size, `disabled`, and `loading` all disable the navigation controls. The
   empty summary is still rendered via the localized `paginationEmptySummary` message
-  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) unless `hide-summary` is set
+  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) only when `with-summary` is set
 - below a 20rem container allocation the summary and controls stack; the breakpoint responds to
   the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
 

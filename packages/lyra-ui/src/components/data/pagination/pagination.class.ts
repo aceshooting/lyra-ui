@@ -56,12 +56,17 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ type: Number, reflect: true }) page = 1;
   /** Number of items represented by one page. Non-positive values produce no pages. */
   @property({ type: Number, attribute: 'page-size' }) pageSize = 20;
-  /** Total number of items across every page. Non-positive values render the empty state. */
-  @property({ type: Number, attribute: 'total-items' }) totalItems = 0;
+  /** Total number of items across every page. Non-positive values render the empty state.
+   *  Named `total` to match `wa-pagination`; it used to be `total-items`, which a mechanical
+   *  rename left unset — silently rendering the empty state. */
+  @property({ type: Number }) total = 0;
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Disables navigation and exposes `aria-busy="true"` while a page is loading. */
   @property({ type: Boolean, reflect: true }) loading = false;
-  @property({ type: Boolean, attribute: 'hide-summary', reflect: true }) hideSummary = false;
+  /** Renders the localized "showing X–Y of Z" summary row. Opt-in and `false` by default,
+   *  matching `wa-pagination`. It used to be `hide-summary`, an opt-*out* whose default showed the
+   *  summary, so a mechanical rename silently added a row to every migrated pager. */
+  @property({ type: Boolean, attribute: 'with-summary', reflect: true }) withSummary = false;
   @property({ reflect: true }) size: LyraPaginationSize = 'm';
 
   /** Optional item noun used in the summary. Empty uses the localized `item`/`items` keys. */
@@ -94,9 +99,9 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     if (!this.controlsDisabled) this.pageInput?.click();
   }
 
-  /** Read-time-safe view of `totalItems` -- non-negative, finite, truncated to a whole item count. */
+  /** Read-time-safe view of `total` -- non-negative, finite, truncated to a whole item count. */
   private get normalizedTotalItems(): number {
-    return finiteCount(this.totalItems);
+    return finiteCount(this.total);
   }
 
   /** Read-time-safe view of `pageSize` -- non-negative, finite, truncated to a whole item count. */
@@ -104,14 +109,14 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     return finiteCount(this.pageSize);
   }
 
-  /** Total page count derived from `totalItems` and `pageSize`. */
+  /** Total page count derived from `total` and `pageSize`. */
   get pageCount(): number {
     if (this.normalizedTotalItems === 0 || this.normalizedPageSize === 0) return 0;
     return Math.ceil(this.normalizedTotalItems / this.normalizedPageSize);
   }
 
   /** Read-time-safe view of the controlled `page` property, clamped to `[1, pageCount]` (the
-   *  page count itself depending on the now-safe `totalItems`/`pageSize` above) -- never mutates
+   *  page count itself depending on the now-safe `total`/`pageSize` above) -- never mutates
    *  `page` itself, matching this component's fully controlled contract. */
   private get currentPage(): number {
     if (this.pageCount === 0) return 0;
@@ -151,7 +156,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
-    if (changed.has('page') || changed.has('pageSize') || changed.has('totalItems')) {
+    if (changed.has('page') || changed.has('pageSize') || changed.has('total')) {
       this.draftPage = this.pageCount === 0 ? '' : String(this.currentPage);
       this.invalidDraft = false;
     }
@@ -227,7 +232,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
         aria-label=${navigationLabel}
         aria-busy=${this.loading ? 'true' : 'false'}
       >
-        ${this.hideSummary
+        ${!this.withSummary
           ? nothing
           : html`<span part="summary">${this.summaryText()}</span>`}
         <div part="controls">

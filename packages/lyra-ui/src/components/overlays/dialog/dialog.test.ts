@@ -47,7 +47,7 @@ it('reflects open as an attribute and sets dialog semantics once open', async ()
 });
 
 it('closes on backdrop click and emits lr-dialog-close with reason "backdrop"', async () => {
-  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+  const el = (await fixture(html`<lr-dialog label="Untitled" open light-dismiss>body</lr-dialog>`)) as LyraDialog;
   let detail: unknown;
   el.addEventListener('lr-dialog-close', (e) => (detail = (e as CustomEvent).detail));
 
@@ -640,23 +640,27 @@ describe('stacked dialogs', () => {
   });
 });
 
-describe('noLightDismiss', () => {
-  it('a backdrop click does nothing when true', async () => {
-    const el = (await fixture(html`<lr-dialog no-light-dismiss open>Body</lr-dialog>`)) as LyraDialog;
-    await el.updateComplete;
-    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
-    backdrop.click();
-    await el.updateComplete;
-    expect(el.open).to.be.true;
-  });
-
-  it('a backdrop click still dismisses when false (default, regression)', async () => {
-    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
+describe('lightDismiss', () => {
+  it('a backdrop click dismisses when set', async () => {
+    const el = (await fixture(html`<lr-dialog light-dismiss open>Body</lr-dialog>`)) as LyraDialog;
     await el.updateComplete;
     const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
     backdrop.click();
     await el.updateComplete;
     expect(el.open).to.be.false;
+  });
+
+  // Opt-in, matching `wa-dialog`. The attribute used to be `no-light-dismiss`, whose default left
+  // backdrop dismissal ON -- a mechanical `wa-` -> `lr-` rename therefore flipped the behaviour
+  // silently, which is worse than not renaming at all.
+  it('a backdrop click does nothing by default', async () => {
+    const el = (await fixture(html`<lr-dialog open>Body</lr-dialog>`)) as LyraDialog;
+    await el.updateComplete;
+    expect(el.lightDismiss).to.be.false;
+    const backdrop = el.shadowRoot!.querySelector('[part="backdrop"]') as HTMLElement;
+    backdrop.click();
+    await el.updateComplete;
+    expect(el.open).to.be.true;
   });
 });
 

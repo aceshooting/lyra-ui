@@ -179,9 +179,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   /** Wraps prev/next past the ends. Mirrors `<lr-carousel>`'s `loop` 1:1. */
   @property({ type: Boolean, reflect: true }) loop = false;
 
-  /** Opts out of dismissing the lightbox on a backdrop click -- mirrors `<lr-dialog>`'s
-   *  `noLightDismiss` exactly (name, default, no reflect). */
-  @property({ type: Boolean, attribute: 'no-light-dismiss' }) noLightDismiss = false;
+  /** Dismisses the lightbox on a backdrop click. Opt-in and `false` by default -- mirrors
+   *  `<lr-dialog>`'s `lightDismiss` exactly (name, default, no reflect), which in turn matches
+   *  `wa-dialog`. */
+  @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
 
   /** Shows/hides only the visible `part="counter"`. The accessibility `part="live-region"`
    *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
@@ -386,7 +387,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private onBackdropClick = (): void => {
-    if (this.noLightDismiss) return;
+    if (!this.lightDismiss) return;
     this.overlay?.dismissBackdrop();
   };
 

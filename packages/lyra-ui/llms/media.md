@@ -904,7 +904,7 @@ it in a `<button>`/`<lr-menu>` trigger for a user-menu affordance.
 **Properties:**
 - `initials: string = ''` — fallback text (typically 1-2 characters), shown whenever no slotted icon
   and no image is set, or the image fails to load.
-- `src?: string` — image URL; takes priority over `initials` when set and loads successfully (but
+- `image?: string` — image URL; takes priority over `initials` when set and loads successfully (but
   never over slotted icon content), falling back to `initials` on a load error.
 - `alt: string = ''` — image alt text; set alongside `src` for accessibility, and also the source of
   the accessible name for the icon-slot and initials cases (the glyph is `aria-hidden`, and the
@@ -1163,7 +1163,7 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
   The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/

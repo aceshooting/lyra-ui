@@ -10,9 +10,9 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-function controlledPagination(totalItems = 237) {
+function controlledPagination(total = 237) {
   return html`<lr-pagination
-    total-items=${totalItems}
+    total=${total}
     page-size="20"
     @lr-page-change=${(event: CustomEvent<{ page: number }>) => {
       (event.currentTarget as LyraPagination).page = event.detail.page;
@@ -45,7 +45,7 @@ export const ProgrammaticFocus: Story = {
 export const NarrowAllocation: Story = {
   render: () => html`<div style="inline-size: 18rem">
     <lr-pagination
-      total-items="237"
+      total="237"
       page-size="20"
       previous-label="Zur vorherigen Ergebnisseite wechseln"
       next-label="Zur nächsten Ergebnisseite wechseln"
@@ -65,7 +65,7 @@ export const Empty: Story = {
 
 export const Loading: Story = {
   render: () => html`
-    <lr-pagination total-items="237" page-size="20" page="4" loading></lr-pagination>
+    <lr-pagination total="237" page-size="20" page="4" loading></lr-pagination>
   `,
 };
 
@@ -81,7 +81,7 @@ export const ControlPadding: Story = {
   },
   render: () => html`
     <lr-pagination
-      total-items="237"
+      total="237"
       page-size="20"
       page="4"
       style="--lr-pagination-control-padding: 0.5rem"
