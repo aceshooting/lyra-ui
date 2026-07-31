@@ -24,6 +24,42 @@ async function el2Ready(el: LyraCodeBlock): Promise<void> {
 
 const jsSample = 'const x = 1;';
 
+/**
+ * The skeleton + `aria-busy="true"` state is observable exactly *once per page*: it is gated on the
+ * module-cached `loadShikiHighlighter()` singleton, and every `<lr-code-block>` in this file starts
+ * that load on connect (`connectedCallback()` -> `ensureDefaultHighlighter()`, whether or not
+ * `language` is set). By the time the test below ran, six earlier fixtures had already started it,
+ * so whether the state still existed came down to whether shiki's WASM + theme load happened to
+ * finish first -- which is exactly the intermittent CI failure this replaces (verified: with the
+ * singleton warm, `aria-busy` is absent and the skeleton is already gone the moment `fixture()`
+ * returns).
+ *
+ * A root-level `before()` runs ahead of every test in this file regardless of source order, so the
+ * load is *provably* still pending here. Capturing the state once and asserting it below keeps the
+ * contract covered without depending on test ordering or on shiki's load time.
+ */
+let coldLoad: { ariaBusy: string | null; hasSkeleton: boolean; hasHighlighted: boolean };
+
+before(async () => {
+  const el = document.createElement('lr-code-block') as LyraCodeBlock;
+  el.language = 'javascript';
+  el.code = jsSample;
+  document.body.append(el);
+  try {
+    await el.updateComplete;
+    coldLoad = {
+      ariaBusy: el.getAttribute('aria-busy'),
+      hasSkeleton: el.shadowRoot!.querySelector('lr-skeleton') !== null,
+      // `.shiki` (not `[part="pre"] span`) -- renderPlainCode()'s own per-line `.line` spans also
+      // match a bare `span` selector, so only shiki's own root class unambiguously signals real
+      // highlighted output rather than the plain-text fallback.
+      hasHighlighted: el.shadowRoot!.querySelector('.shiki') !== null,
+    };
+  } finally {
+    el.remove();
+  }
+});
+
 it('defaults to no language/filename, collapsible=false, collapsed=false, copyable=true, no max-height', async () => {
   const el = (await fixture(html`<lr-code-block></lr-code-block>`)) as LyraCodeBlock;
   expect(el.code).to.equal('');
@@ -91,19 +127,19 @@ it('gives compact header controls the shared minimum hit area', async () => {
 describe('shiki highlighting (real peer)', () => {
   it('shows a loading skeleton and aria-busy while shiki loads for a set language, then swaps to highlighted output', async function () {
     this.timeout(20_000);
+    // Captured against a provably-cold singleton -- see the root-level before() at the top of this
+    // file for why this cannot be observed from inside the test itself.
+    expect(coldLoad.ariaBusy, 'aria-busy while the shared shiki load is pending').to.equal('true');
+    expect(coldLoad.hasSkeleton, 'skeleton while the shared shiki load is pending').to.be.true;
+    expect(coldLoad.hasHighlighted, 'no highlighted output before the load resolves').to.be.false;
+
     const el = (await fixture(
       html`<lr-code-block language="javascript" .code=${jsSample}></lr-code-block>`,
     )) as LyraCodeBlock;
-    expect(el.getAttribute('aria-busy')).to.equal('true');
-    expect(el.shadowRoot!.querySelector('lr-skeleton') !== null).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part="pre"] span') === null).to.be.true;
 
     // 8000ms already flaked under load (8-way default @web/test-runner concurrency on this
     // machine's 16 cores starves the real, unmocked shiki WASM+grammar load) -- same class of
     // issue as lr-graph's NODE_COUNT_TIMEOUT below and flag.test.ts's img() helper.
-    // `.shiki` (not `[part="pre"] span`) -- renderPlainCode()'s own per-line .line spans also
-    // match a bare `span` selector now, so only shiki's own root class unambiguously signals real
-    // highlighted output rather than the plain-text fallback.
     await waitUntil(
       () => el.shadowRoot!.querySelector('.shiki') !== null,
       'highlighted output never appeared',
