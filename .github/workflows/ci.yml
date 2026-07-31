@@ -172,6 +172,13 @@ jobs:
       - run: git diff --exit-code -- .storybook/sitemap.xml
       - run: pnpm docs:check
       - run: pnpm storybook:check
+      # Clicks every `Show code` control across every `type: "docs"` entry in the built Storybook
+      # and fails on navigation/click/unexpanded-control regressions, console errors, page errors,
+      # or failed requests. It used to run only at release time (driven by hand from the /publish
+      # flow), so a broken `Show code` could sit on main until someone cut a release. Cheap to add
+      # here specifically: this job already installs Playwright and already has storybook-static/
+      # from the docs:build above, so the incremental cost is just the sweep itself.
+      - run: pnpm docs:check-show-code
 
   # Blocking as of the 2026-07-20 font-substitution determinism fix (see
   # packages/lyra-ui/visual-baselines/README.md): a full 62-story x 3-axis run now reproduces

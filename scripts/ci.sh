@@ -11,6 +11,12 @@
 #   ./scripts/ci.sh --platform-matrix # run the CI platform matrix (Node 20/22 x Firefox/WebKit)
 #                                   # requires Node 20/22 and pnpm 10/11 locally
 #   ./scripts/ci.sh --all           # full local CI gate plus the platform matrix
+#   ./scripts/ci.sh --keep-going    # (-k) don't abort at the first STALE GENERATED ARTIFACT;
+#                                   # collect every freshness failure and report them together at
+#                                   # the end, still exiting non-zero. Useful before a release,
+#                                   # where several artifacts are typically stale at once and the
+#                                   # default fail-fast costs a full rebuild per staleness.
+#                                   # Real test/lint/build failures still abort immediately.
 #
 # The platform matrix can use non-default executable names/paths when needed:
 #   CI_SH_NODE20_BIN=/path/to/node20 CI_SH_PNPM20_BIN=/path/to/pnpm10 \
@@ -25,10 +31,12 @@ export CI=true
 
 RUN_PLATFORM=0
 RUN_PLATFORM_MATRIX=0
+KEEP_GOING=0
 for arg in "$@"; do
   case "$arg" in
     --platform) RUN_PLATFORM=1 ;;
     --platform-matrix|--all) RUN_PLATFORM_MATRIX=1 ;;
+    --keep-going|-k) KEEP_GOING=1 ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
@@ -39,6 +47,40 @@ if [[ "$RUN_PLATFORM" == "1" && "$RUN_PLATFORM_MATRIX" == "1" ]]; then
 fi
 
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
+
+# Regenerated-artifact freshness checks. Every one of these follows the same shape -- run a
+# generator, then `git diff --exit-code` its outputs -- and every one has the same fix: the
+# generator has ALREADY rewritten the files by the time the diff fails, so they just need
+# committing. A bare `git diff --exit-code` says none of that; it prints a raw diff and exits 1,
+# which reads like a content regression rather than "commit this".
+#
+# These checks are also mutually independent and near-instant, but `set -e` makes the first one
+# to fail abort the whole run -- including the multi-minute docs/Storybook/visual stages after
+# it. A release that left three separate artifacts stale therefore needed three full rebuilds to
+# discover that, one staleness at a time. With --keep-going they are all reported in one pass and
+# the script still exits non-zero at the end.
+FRESHNESS_FAILURES=()
+freshness_diff() {
+  local label="$1"; shift
+  if git diff --exit-code -- "$@"; then return 0; fi
+  printf '\n\033[1;31m!! %s is stale\033[0m\n' "$label"
+  printf '   The generator above already rewrote these files -- commit them:\n'
+  printf '     git add %s\n\n' "$*"
+  FRESHNESS_FAILURES+=("$label")
+  [[ "$KEEP_GOING" == "1" ]] || exit 1
+}
+
+# Deliberately an `if`, not `(( ... )) && return 0`: under `set -e` that form exits the whole
+# script when the arithmetic is false, which is exactly the case where we still need to print.
+report_freshness_failures() {
+  if (( ${#FRESHNESS_FAILURES[@]} > 0 )); then
+    printf '\n\033[1;31m== %s stale artifact(s), all recorded under --keep-going:\033[0m\n' \
+      "${#FRESHNESS_FAILURES[@]}"
+    printf '   - %s\n' "${FRESHNESS_FAILURES[@]}"
+    printf '\n   Regenerate + commit them, then re-run.\n'
+    exit 1
+  fi
+}
 
 resolve_command() {
   local requested="$1"
@@ -138,17 +180,17 @@ pnpm --filter @aceshooting/lyra-ui test:coverage
 
 step "manifest freshness"
 pnpm manifest
-git diff --exit-code -- packages/lyra-ui/custom-elements.json
+freshness_diff "custom-elements.json (pnpm manifest)" packages/lyra-ui/custom-elements.json
 step "editor data freshness"
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
-git diff --exit-code -- packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
+freshness_diff "editor data (pnpm generate-editor-data)" packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
 
 step "readme:check"
 pnpm readme:check
 
 step "plugin reference sync"
 ./package.sh
-git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/references/
+freshness_diff "plugin skill references (./package.sh)" plugins/lyra-ui/skills/lyra-ui/references/
 
 step "skill:check"
 pnpm skill:check
@@ -157,11 +199,14 @@ step "docs:build"
 pnpm docs:build
 
 step "docs:check"
-git diff --exit-code -- .storybook/sitemap.xml
+freshness_diff "Storybook sitemap (pnpm docs:build)" .storybook/sitemap.xml
 pnpm docs:check
 
 step "storybook:check"
 pnpm storybook:check
+
+step "docs:check-show-code"
+pnpm docs:check-show-code
 
 step "storybook:check-theme"
 pnpm storybook:check-theme
@@ -229,5 +274,10 @@ if [[ "$RUN_PLATFORM_MATRIX" == "1" ]]; then
     exit 1
   fi
 fi
+
+# Only reachable under --keep-going: without it, freshness_diff already exited at the first
+# stale artifact. Exits non-zero if any were recorded, so --keep-going changes how much you
+# learn per run, never whether a stale artifact fails the gate.
+report_freshness_failures
 
 printf '\n\033[32mCI gate complete.\033[0m\n'
