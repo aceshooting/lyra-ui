@@ -15,12 +15,17 @@ export const styles = css`
        single font-size the badge used to use at every tier, so an unset group is byte-identical. */
     --lr-avatar-group-badge-font-size: var(--lr-font-size-sm);
   }
-  :host([size='sm']) {
+  /* Both spellings of each tier: lr-avatar's canonical vocabulary is now small|medium|large, with
+     sm|md|lg kept as accepted aliases. The group has to match, or a size="small" group type-checks
+     and then silently renders at the medium tier. */
+  :host([size='sm']),
+  :host([size='small']) {
     --lr-avatar-group-avatar-size: var(--lr-size-1-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-4px);
     --lr-avatar-group-badge-font-size: var(--lr-font-size-xs);
   }
-  :host([size='lg']) {
+  :host([size='lg']),
+  :host([size='large']) {
     --lr-avatar-group-avatar-size: var(--lr-size-2-5rem);
     --lr-avatar-group-overlap: var(--lr-size-neg-8px);
     --lr-avatar-group-badge-font-size: var(--lr-font-size-md);
@@ -69,6 +74,9 @@ export const styles = css`
   /* Each avatar's own ring adapts to that avatar's own reflected shape attribute -- no
      group-level coordination needed even in a mixed-shape group. */
   ::slotted(lr-avatar[shape='square']) {
+    border-radius: 0;
+  }
+  ::slotted(lr-avatar[shape='rounded']) {
     border-radius: var(--lr-radius);
   }
 
@@ -102,6 +110,9 @@ export const styles = css`
       box-shadow var(--lr-transition-fast);
   }
   :host([shape='square']) [part='overflow-badge'] {
+    border-radius: 0;
+  }
+  :host([shape='rounded']) [part='overflow-badge'] {
     border-radius: var(--lr-radius);
   }
   [part='overflow-badge']:hover {
