@@ -181,6 +181,19 @@ import type {
   LyraWidgetRendererEventMap,
   LyraZoomableFrameEventMap,
 } from '../src/lyra.js';
+// The opt-in form a consumer writes: a bare side-effect import of the generated global
+// typed-event surface. It resolves to a module whose every statement is type-only, so this line
+// compiles to an empty module and costs zero runtime bytes -- but it is what pulls the
+// `declare global` augmentation into the consumer's program.
+import '../src/events.js';
+import type {
+  LyraGlobalEventMap,
+  LyraNodeToggleEvent,
+  LyraRailResizeEvent,
+  LyraSplitCollapseChangeEvent,
+  LyraTabShowEvent,
+  LyraVisibleRangeChangedEvent,
+} from '../src/events.js';
 
 const publicTypes: [
   StatRow,
@@ -574,4 +587,98 @@ tree.addEventListener('lr-reorder', (event) => {
   void parentId;
   void fromIndex;
   void toIndex;
+});
+
+// ---------------------------------------------------------------------------
+// Generated global typed-event surface (src/events.ts).
+//
+// Everything above types a listener attached to a *lyra element reference*, where the component's
+// own `Lyra*EventMap` generic does the work. Every component event is `bubbles`/`composed`, so the
+// far more common real-world shape -- one delegated listener on a container, on `document`, or on
+// `window` -- had no typing at all: `event` arrived as a bare `Event` and `event.detail` did not
+// exist. The block below is the regression guard for that.
+// ---------------------------------------------------------------------------
+
+// Compile-only guard: the generated aggregate map and the per-event alias types stay exported
+// from the `./events.js` entry point. A consumer writing a typed wrapper names these.
+const globalEventSurfaceTypes: [
+  LyraGlobalEventMap,
+  LyraNodeToggleEvent,
+  LyraRailResizeEvent,
+  LyraSplitCollapseChangeEvent,
+  LyraTabShowEvent,
+  LyraVisibleRangeChangedEvent,
+] | undefined = undefined;
+void globalEventSurfaceTypes;
+
+// `document` uses `DocumentEventMap`, a plain element uses `HTMLElementEventMap`, and `window`
+// uses `WindowEventMap` -- three separate interfaces, all of which extend the one this library
+// augments (`GlobalEventHandlersEventMap`). Assert all three, because augmenting only
+// `HTMLElementEventMap` would silently leave the `document`/`window` cases untyped.
+document.addEventListener('lr-visible-range-changed', (event) => {
+  const start: number = event.detail.start;
+  const end: number = event.detail.end;
+  void start;
+  void end;
+});
+
+declare const delegationRoot: HTMLElement;
+delegationRoot.addEventListener('lr-rail-resize', (event) => {
+  const widthPx: number = event.detail.widthPx;
+  void widthPx;
+});
+
+window.addEventListener('lr-split-collapse-change', (event) => {
+  const state: 'wide' | 'rail' | 'floating' = event.detail.state;
+  void state;
+});
+
+// A name emitted by more than one component becomes a union of those components' own entries, so
+// only what every arm carries is readable without narrowing. `lr-node-toggle` comes from both
+// `<lr-tree>` and `<lr-tree-item>` and both carry `{ id, expanded }`, so both still read.
+document.addEventListener('lr-node-toggle', (event) => {
+  const id: string = event.detail.id;
+  const expanded: boolean = event.detail.expanded;
+  void id;
+  void expanded;
+});
+
+// ...and where the arms genuinely disagree, the union is the honest answer rather than a lie.
+// `lr-change` is emitted by two dozen form controls with unrelated details, so a property only
+// some of them carry must NOT typecheck off the global map. `@ts-expect-error` inverts the
+// assertion: this fails the build if the line ever starts compiling.
+document.addEventListener('lr-change', (event) => {
+  // @ts-expect-error - `value` exists on some `lr-change` details (e.g. `<lr-slider>`) but not
+  // all (e.g. `<lr-checkbox>` carries `checked`). Narrow through the emitting component's own
+  // map -- `LyraSelectEventMap['lr-change']` -- when one component's exact detail is needed.
+  const value = event.detail.value;
+  void value;
+});
+
+// The precise, per-element maps remain the source of truth the global map is derived from, and
+// stay directly nameable for exactly that narrowing.
+declare const preciseChange: LyraSelectEventMap['lr-change'];
+const preciseChangeValue: string | string[] = preciseChange.detail.value;
+void preciseChangeValue;
+
+// A detail property that does not exist must not typecheck. Before the global map existed this
+// line compiled fine, because `event` was a bare `Event` and `event.detail` was an error for a
+// different reason entirely -- so this is the assertion that proves the map is doing real work.
+document.addEventListener('lr-visible-range-changed', (event) => {
+  // @ts-expect-error - the detail is `{ start, end }`; there is no `firstIndex`.
+  const missing = event.detail.firstIndex;
+  void missing;
+});
+
+// A generic helper keyed by the aggregate map -- the shape an application wraps the library in.
+function onLyraEvent<K extends keyof LyraGlobalEventMap>(
+  target: EventTarget,
+  type: K,
+  listener: (event: LyraGlobalEventMap[K]) => void,
+): void {
+  target.addEventListener(type, listener as EventListener);
+}
+onLyraEvent(document, 'lr-rail-resize', (event) => {
+  const widthPx: number = event.detail.widthPx;
+  void widthPx;
 });

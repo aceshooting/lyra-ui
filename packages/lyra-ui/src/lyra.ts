@@ -1022,3 +1022,8 @@ export { FormAssociated } from './internal/form-associated.js';
 export { LYRA_PREFIX, tag, defineElement } from './internal/prefix.js';
 
 export type * from './ai/types.js';
+
+// Global typed-event surface (generated; see scripts/generate-event-types.mjs). Type-only, so it
+// adds zero runtime bytes to the barrel -- but it pulls the `declare global` augmentation into any
+// program that imports the package root, which is what types `document.addEventListener('lr-...')`.
+export type { LyraGlobalEventMap } from './events.js';

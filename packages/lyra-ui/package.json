@@ -68,6 +68,7 @@
     "./components/conversation": "./dist/components/conversation/index.js",
     "./components/retrieval": "./dist/components/retrieval/index.js",
     "./localization.js": "./dist/localization.js",
+    "./events": "./dist/events.js",
     "./utilities/*": "./dist/utilities/*",
     "./utilities": "./dist/utilities/index.js",
     "./ai": "./dist/ai/index.js",
@@ -680,13 +681,15 @@
     "manifest": "cem analyze --litelement --outdir .",
     "manifest:check": "node scripts/check-manifest.mjs",
     "manifest:coverage": "node scripts/check-manifest-coverage.mjs",
+    "events": "node scripts/generate-event-types.mjs",
+    "check:event-types": "node scripts/check-event-types.mjs",
     "generate-editor-data": "node scripts/generate-editor-data.mjs",
     "llms": "node scripts/build-llms.mjs",
     "llms:check": "node scripts/check-llms-artifacts.mjs",
     "llms-freshness": "node scripts/check-llms-freshness.mjs",
     "migrate-wa": "node scripts/migrate-wa.mjs",
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs",
-    "contract-policy": "pnpm run check:script-paths && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:cycles && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
+    "contract-policy": "pnpm run check:script-paths && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run llms-freshness && pnpm run llms:check && pnpm run test:architecture && pnpm run check-side-effects && pnpm run check:form-associated && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:cycles && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:numeric-guards && pnpm run check:default-strings && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types",
     "prepack": "pnpm run build && pnpm run manifest && pnpm run generate-editor-data && pnpm run llms"
   },
@@ -853,6 +856,6 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "packageManager": "pnpm@11.18.0",
-  "customElements": "tmp/lrb-verify/custom-elements.json",
+  "customElements": "custom-elements.json",
   "web-types": "web-types.json"
 }

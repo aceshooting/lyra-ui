@@ -1,6 +1,7 @@
 import { LitElement, type CSSResultGroup, type PropertyDeclaration } from 'lit';
 import { property } from 'lit/decorators.js';
 import { tokens } from './tokens.styles.js';
+import { palette } from './tokens/palette.styles.js';
 import {
   enableLyraLocaleCache,
   invalidateLyraLocaleCache,
@@ -33,7 +34,10 @@ function composedParentElement(element: Element): Element | null {
  * RTL is handled by components using CSS logical properties rather than a forced `dir`.
  */
 export class LyraElement<Events = LyraEventMap> extends LitElement {
-  static override styles: CSSResultGroup = [tokens];
+  // `palette` before `tokens`: the ramp and the semantic grid are raw inputs, and `tokens` is
+  // free to reference them. Both are shared `CSSResult` instances, so adopting them in every
+  // component costs one stylesheet in the bundle, not one per component.
+  static override styles: CSSResultGroup = [palette, tokens];
 
   /**
    * Components commonly forward ARIA host attributes to an internal role and derive localization
