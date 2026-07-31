@@ -59,12 +59,82 @@ export const Variants: Story = {
 
 export const Appearances: Story = {
   render: () => html`
-    <div style="display: flex; align-items: center; gap: 0.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
       <lr-button variant="brand" appearance="accent">Accent</lr-button>
       <lr-button variant="brand" appearance="filled">Filled</lr-button>
       <lr-button variant="brand" appearance="outlined">Outlined</lr-button>
+      <lr-button variant="brand" appearance="filled-outlined">Filled outlined</lr-button>
       <lr-button variant="brand" appearance="plain">Plain</lr-button>
+      <lr-button variant="brand" appearance="quiet">Quiet</lr-button>
       <lr-button variant="brand" appearance="link">Link</lr-button>
+    </div>
+  `,
+};
+
+export const FilledOutlined: Story = {
+  name: 'Filled outlined',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`appearance="filled-outlined"` keeps the filled tier’s fill and foreground but takes the ' +
+          'outlined tier’s `--lr-button-outlined-border`, so the edge still reads against a ' +
+          'same-toned surface.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-button appearance="filled">Filled</lr-button>
+      <lr-button appearance="filled-outlined">Filled outlined</lr-button>
+      <lr-button variant="brand" appearance="filled-outlined">Brand</lr-button>
+      <lr-button variant="danger" appearance="filled-outlined">Danger</lr-button>
+    </div>
+  `,
+};
+
+export const Pill: Story = {
+  name: 'Pill',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`pill` re-assigns `--lr-button-radius` to `--lr-radius-pill`, so every appearance and ' +
+          'size tier picks up fully rounded ends through the same knob a consumer would override.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-button pill variant="brand" appearance="accent">Accent</lr-button>
+      <lr-button pill appearance="outlined">Outlined</lr-button>
+      <lr-button pill size="xs">Extra small</lr-button>
+      <lr-button pill size="l">Large</lr-button>
+    </div>
+  `,
+};
+
+export const WithCaret: Story = {
+  name: 'Dropdown trigger (with-caret)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The `with-caret` chevron (`::part(caret)`) marks the button as a dropdown/menu trigger. ' +
+          'It is decorative (`aria-hidden`) — the popup relationship belongs on the host as ' +
+          '`aria-haspopup`/`aria-expanded`, both of which are forwarded to the internal control.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <lr-button with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
+      <lr-button with-caret pill appearance="outlined" aria-haspopup="menu" aria-expanded="false">
+        Filter
+      </lr-button>
+      <lr-button with-caret size="xs" appearance="quiet" aria-haspopup="menu" aria-expanded="false">
+        Sort
+      </lr-button>
     </div>
   `,
 };
@@ -226,6 +296,41 @@ export const SubmitInAForm: Story = {
       }}
     >
       <lr-button type="submit" variant="brand">Save</lr-button>
+    </form>
+  `,
+};
+
+export const NamedSubmitters: Story = {
+  name: 'Named submitters (name / value / form* overrides)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A submit button carrying `name`/`value` contributes that pair to the submitted ' +
+          '`FormData`, so one form can distinguish which action was taken. `formnovalidate` (and ' +
+          '`formaction`/`formenctype`/`formmethod`/`formtarget`) override the form owner for that ' +
+          'submission only.',
+      },
+    },
+  },
+  render: () => html`
+    <form
+      @submit=${(event: SubmitEvent) => {
+        event.preventDefault();
+        const form = event.currentTarget as HTMLFormElement;
+        const data = new FormData(form, event.submitter);
+        alert(`action=${String(data.get('action'))} title=${String(data.get('title'))}`);
+      }}
+    >
+      <label>Title <input name="title" required /></label>
+      <div style="display: flex; gap: 0.5rem; margin-block-start: 0.5rem;">
+        <lr-button type="submit" name="action" value="publish" variant="brand" appearance="accent">
+          Publish
+        </lr-button>
+        <lr-button type="submit" name="action" value="draft" appearance="outlined" formnovalidate>
+          Save draft (skips validation)
+        </lr-button>
+      </div>
     </form>
   `,
 };

@@ -6,6 +6,31 @@ export const styles = css`
     --lr-color-picker-swatch-size: var(--lr-size-2-5rem);
     --lr-color-picker-gap: var(--lr-space-xs);
     --lr-color-picker-radius: var(--lr-radius);
+    --lr-color-picker-grid-inline-size: var(--lr-size-15rem);
+    --lr-color-picker-grid-block-size: var(--lr-size-8rem);
+    --lr-color-picker-grid-handle-size: var(--lr-size-1rem);
+    --lr-color-picker-slider-block-size: var(--lr-size-0-75rem);
+    --lr-color-picker-slider-handle-size: var(--lr-size-1-25rem);
+    --lr-color-picker-palette-swatch-size: var(--lr-size-1-5rem);
+    --lr-color-picker-checker-color: var(--lr-color-border);
+    --lr-color-picker-checker-size: var(--lr-size-0-5rem);
+    /* The sRGB hue wheel's own stops. These are the algorithm's data, not a design decision, so
+       they stay literal -- but they are exposed as one overridable list because a consumer
+       theming a wide-gamut or perceptually-uniform ramp needs to replace exactly this. Both text
+       directions read the same list; only the gradient's direction differs. */
+    --lr-color-picker-hue-stops:
+      hsl(0 100% 50%),
+      hsl(60 100% 50%),
+      hsl(120 100% 50%),
+      hsl(180 100% 50%),
+      hsl(240 100% 50%),
+      hsl(300 100% 50%),
+      hsl(360 100% 50%);
+    /* Overwritten inline per render with the live colour; declared here so every consumer of it
+       below still paints something sensible before the first update commits. */
+    --lr-color-picker-swatch-color: transparent;
+    --lr-color-picker-grid-hue: transparent;
+    --lr-color-picker-opacity-gradient: none;
   }
   :host([size='2xs']) {
     --lr-color-picker-swatch-size: var(--lr-size-1-25rem);
@@ -22,8 +47,16 @@ export const styles = css`
   :host([size='xl']) {
     --lr-color-picker-swatch-size: var(--lr-size-3-5rem);
   }
-  [part='form-control'] { display: inline-flex; flex-direction: column; gap: var(--lr-color-picker-gap); }
-  [part~='label'] { color: var(--lr-color-text); font-size: var(--lr-font-size-md-sm); }
+
+  [part='form-control'] {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--lr-color-picker-gap);
+  }
+  [part~='label'] {
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-md-sm);
+  }
   /* [part]:empty never matches -- the part always contains a literal <slot> child element
      regardless of assigned content -- so real emptiness is tracked in JS (hasLabel/hasHint/
      hasError) and reflected via the hidden attribute instead. Without this, the required-asterisk
@@ -36,16 +69,308 @@ export const styles = css`
     content: ' *';
     color: var(--lr-color-danger);
   }
-  [part='input'] { inline-size: var(--lr-color-picker-swatch-size); block-size: var(--lr-color-picker-swatch-size); padding: var(--lr-size-2px); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-color-picker-radius); background: var(--lr-color-surface); cursor: pointer; }
-  [part='input']:hover { border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand)); }
-  [part='input']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
-  :host(:disabled) { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
-  :host(:disabled) [part='input'] { cursor: not-allowed; }
-  [part='hint'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
+
+  /* The alpha checkerboard every translucent surface sits on. A conic-gradient tile beats four
+     stacked linear gradients and needs no extra element. */
+  [part~='trigger'],
+  [part~='preview'],
+  [part~='swatch'] {
+    background-color: var(--lr-color-surface);
+    background-image: conic-gradient(
+      var(--lr-color-picker-checker-color) 0deg 90deg,
+      transparent 90deg 180deg,
+      var(--lr-color-picker-checker-color) 180deg 270deg,
+      transparent 270deg 360deg
+    );
+    background-size: var(--lr-color-picker-checker-size) var(--lr-color-picker-checker-size);
+  }
+
+  [part='trigger-container'] {
+    display: flex;
+    align-items: center;
+  }
+  [part~='trigger'] {
+    /* min-* mirrors the size ladder rather than pinning a separate floor: at the default m tier
+       the trigger already resolves to --lr-icon-button-size, and the smaller tiers are a
+       deliberate density choice for dense toolbars. */
+    min-inline-size: var(--lr-color-picker-swatch-size);
+    min-block-size: var(--lr-color-picker-swatch-size);
+    inline-size: var(--lr-color-picker-swatch-size);
+    block-size: var(--lr-color-picker-swatch-size);
+    padding: 0;
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-color-picker-radius);
+    cursor: pointer;
+  }
+  [part~='trigger']::after,
+  [part~='preview']::after,
+  [part~='swatch']::after {
+    content: '';
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    border-radius: inherit;
+    background-color: var(--lr-color-picker-swatch-color);
+  }
+  [part~='trigger']:hover {
+    border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='trigger']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part~='panel'] {
+    /* Fixed from the start (not only once JS positions it on open) so the closed panel never
+       occupies a box in the host's normal flow. Physical top/left, not the logical inset
+       properties: positioner.ts's place() always overwrites these via style.left/style.top, and
+       under RTL inset-inline-start resolves to the physical right, leaving both right:0 and left:Npx
+       active -- the over-constrained resolution then discards the JS value and pins the panel to
+       the viewport edge. */
+    position: fixed;
+    top: 0;
+    /* policy-allow(physical-css): must stay the same physical property positioner.ts's place()
+       overwrites via style.left; see the comment above. */
+    left: 0;
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-color-picker-gap);
+    padding: var(--lr-space-s);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-color-picker-radius);
+    background: var(--lr-color-surface);
+    box-shadow: var(--lr-shadow);
+    max-inline-size: var(--lr-positioner-available-inline-size, none);
+  }
+  [part~='panel'][hidden] {
+    display: none;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--lr-color-picker-gap);
+  }
+  .sliders {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--lr-color-picker-gap);
+    min-inline-size: 0;
+  }
+
+  [part~='grid'] {
+    position: relative;
+    inline-size: var(--lr-color-picker-grid-inline-size);
+    max-inline-size: 100%;
+    block-size: var(--lr-color-picker-grid-block-size);
+    border-radius: var(--lr-color-picker-radius);
+    cursor: crosshair;
+    background-color: var(--lr-color-picker-grid-hue);
+    /* The saturation/value square is defined as a white-to-transparent tint across the inline axis
+       over a transparent-to-shade wash down the block axis. Both endpoints are the achromatic
+       extremes the model itself requires, written in hsl() so no raw hex literal is involved. */
+    background-image:
+      linear-gradient(to bottom, transparent, hsl(0 0% 0%)),
+      linear-gradient(to right, hsl(0 0% 100%), transparent);
+  }
+  :host(:dir(rtl)) [part~='grid'] {
+    background-image:
+      linear-gradient(to bottom, transparent, hsl(0 0% 0%)),
+      linear-gradient(to left, hsl(0 0% 100%), transparent);
+  }
+  [part~='grid-handle'] {
+    position: absolute;
+    inline-size: var(--lr-color-picker-grid-handle-size);
+    block-size: var(--lr-color-picker-grid-handle-size);
+    border: var(--lr-border-width-medium) solid var(--lr-color-surface);
+    border-radius: 50%;
+    box-shadow: var(--lr-shadow);
+    transform: translate(-50%, -50%);
+    cursor: grab;
+  }
+  :host(:dir(rtl)) [part~='grid-handle'] {
+    transform: translate(50%, -50%);
+  }
+
+  /* The slider element is the pointer target and is floored at 24px (WCAG 2.5.8) even though the
+     visible ramp is the thinner --lr-color-picker-slider-block-size bar drawn by ::before inside
+     it. Growing the visible bar instead would make a colour picker look like a pair of progress
+     bars; shrinking the target to the bar would leave a 12px-tall touch target. */
+  [part~='slider'] {
+    position: relative;
+    block-size: var(--lr-size-1-5rem);
+    cursor: pointer;
+  }
+  [part~='slider']::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    block-size: var(--lr-color-picker-slider-block-size);
+    border-radius: var(--lr-radius-pill);
+    transform: translateY(-50%);
+  }
+  [part~='hue-slider']::before {
+    background-image: linear-gradient(to right, var(--lr-color-picker-hue-stops));
+  }
+  :host(:dir(rtl)) [part~='hue-slider']::before {
+    background-image: linear-gradient(to left, var(--lr-color-picker-hue-stops));
+  }
+  [part~='opacity-slider']::before {
+    background-image:
+      var(--lr-color-picker-opacity-gradient),
+      conic-gradient(
+        var(--lr-color-picker-checker-color) 0deg 90deg,
+        transparent 90deg 180deg,
+        var(--lr-color-picker-checker-color) 180deg 270deg,
+        transparent 270deg 360deg
+      );
+    background-size: auto, var(--lr-color-picker-checker-size) var(--lr-color-picker-checker-size);
+    background-color: var(--lr-color-surface);
+  }
+  [part~='slider-handle'] {
+    position: absolute;
+    inset-block-start: 50%;
+    inline-size: var(--lr-color-picker-slider-handle-size);
+    block-size: var(--lr-color-picker-slider-handle-size);
+    border: var(--lr-border-width-medium) solid var(--lr-color-surface);
+    border-radius: 50%;
+    box-shadow: var(--lr-shadow);
+    background-color: var(--lr-color-picker-swatch-color);
+    transform: translate(-50%, -50%);
+    cursor: grab;
+  }
+  :host(:dir(rtl)) [part~='slider-handle'] {
+    transform: translate(50%, -50%);
+  }
+  [part~='grid-handle']:hover,
+  [part~='slider-handle']:hover {
+    border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='grid-handle']:focus-visible,
+  [part~='slider-handle']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part~='preview'] {
+    flex: 0 0 auto;
+    inline-size: var(--lr-color-picker-palette-swatch-size);
+    block-size: var(--lr-color-picker-palette-swatch-size);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: 50%;
+  }
+
+  [part~='input'] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    padding: var(--lr-space-2xs) var(--lr-space-xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-color-picker-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font-family: var(--lr-font-mono);
+    font-size: var(--lr-font-size-sm);
+  }
+  [part~='input']:hover {
+    border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='input']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part~='format-button'],
+  [part~='eyedropper-button'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-2xs);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: var(--lr-color-picker-radius);
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-xs);
+    cursor: pointer;
+  }
+  [part~='format-button']:hover,
+  [part~='eyedropper-button']:hover {
+    border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='format-button']:focus-visible,
+  [part~='eyedropper-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+
+  [part~='swatches'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lr-color-picker-gap);
+    max-inline-size: var(--lr-color-picker-grid-inline-size);
+  }
+  [part~='swatch'] {
+    position: relative;
+    inline-size: var(--lr-color-picker-palette-swatch-size);
+    block-size: var(--lr-color-picker-palette-swatch-size);
+    padding: 0;
+    border: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  [part~='swatch']:hover {
+    border-color: var(--lr-color-picker-hover-border-color, var(--lr-color-brand));
+  }
+  [part~='swatch']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  /* The selected palette entry is marked by a ring AND a check mark, so the selection never rides
+     on colour alone. Encoded in the part name (not an attribute selector after ::part(), which
+     never matches) so consumers can restyle the selected state too. */
+  [part~='swatch-selected'] {
+    border-color: var(--lr-color-brand);
+    border-width: var(--lr-border-width-medium);
+  }
+  [part~='swatch-selected']::before {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--lr-color-surface);
+    font-size: var(--lr-font-size-xs);
+    text-shadow: 0 0 var(--lr-size-2px) var(--lr-color-shadow);
+    z-index: var(--lr-layer-content);
+  }
+
+  :host(:disabled) {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
+  }
+  :host(:disabled) [part~='trigger'],
+  :host(:disabled) [part~='swatch'],
+  :host(:disabled) [part~='format-button'],
+  :host(:disabled) [part~='eyedropper-button'] {
+    cursor: not-allowed;
+  }
+
+  [part='hint'] {
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-sm);
+  }
   [part='hint'][hidden] {
     display: none;
   }
-  [part='error'] { color: var(--lr-color-danger); font-size: var(--lr-font-size-sm); }
+  [part='error'] {
+    color: var(--lr-color-danger);
+    font-size: var(--lr-font-size-sm);
+  }
   [part='error'][hidden] {
     display: none;
   }

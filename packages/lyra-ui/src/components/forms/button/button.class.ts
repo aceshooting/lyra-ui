@@ -1,7 +1,7 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { spinnerIcon } from '../../../internal/icons.js';
+import { chevronIcon, spinnerIcon } from '../../../internal/icons.js';
 import { safeDownloadHref, safeLinkHref } from '../../../internal/safe-url.js';
 import {
   syncAriaControlsElements,
@@ -10,9 +10,25 @@ import {
 import { styles } from './button.styles.js';
 
 export type ButtonVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger';
-export type ButtonAppearance = 'accent' | 'filled' | 'outlined' | 'plain' | 'link' | 'quiet';
+/** The shared appearance vocabulary (`accent`/`filled`/`outlined`/`filled-outlined`/`plain`) plus
+ *  this component's two own tiers, `link` and `quiet`. */
+export type ButtonAppearance =
+  | 'accent'
+  | 'filled'
+  | 'outlined'
+  | 'filled-outlined'
+  | 'plain'
+  | 'link'
+  | 'quiet';
 export type ButtonSize = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 export type ButtonType = 'button' | 'submit' | 'reset';
+/** Native `formenctype` vocabulary, applied to the submission this button triggers. */
+export type ButtonFormEnctype =
+  | 'application/x-www-form-urlencoded'
+  | 'multipart/form-data'
+  | 'text/plain';
+/** Native `formmethod` vocabulary. `'dialog'` closes an ancestor `<dialog>` instead of submitting. */
+export type ButtonFormMethod = 'get' | 'post' | 'dialog';
 
 /**
  * `<lr-button>` — a generic action-button primitive. Renders an internal native
@@ -20,6 +36,16 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * are handled by this component itself via the host's own `closest('form')` — a shadow-internal
  * native `<button type="submit">` does not participate in an ancestor light-DOM form's submission
  * on its own, since form-submitter semantics don't cross the shadow boundary.
+ *
+ * A submit button that carries `name`/`value` or any of the `form*` submission overrides
+ * (`formaction`/`formenctype`/`formmethod`/`formnovalidate`/`formtarget`) submits through a
+ * transient native `<button type="submit">` inserted directly after the host, used as
+ * `requestSubmit()`'s submitter and removed again in the same synchronous step. That is what makes
+ * the name/value pair reach the submitted `FormData` and the overrides reach the real submission:
+ * `requestSubmit()` can only take a submitter the form actually owns, and a custom element is never
+ * one. While that submitter exists it *is* the form's submitter, so `SubmitEvent.submitter` is the
+ * transient native button rather than this host. With none of those properties set, submission
+ * stays a plain `requestSubmit()` with a `null` submitter.
  *
  * When `href` is set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/relative — see
  * `safeLinkHref`, or `safeDownloadHref` which drops `mailto:` when `download` is set) the root
@@ -52,6 +78,7 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * @csspart label - The default-slot label wrapper.
  * @csspart start - The `start` slot wrapper.
  * @csspart end - The `end` slot wrapper.
+ * @csspart caret - The decorative dropdown chevron, present only while `withCaret` is `true`.
  * @csspart spinner - The loading spinner, present only while `loading` is `true`.
  * @cssprop [--lr-button-width=100%] - Inline size of the internal button. The host
  * defaults it to `100%` so the native button follows the host's own width; override to
@@ -74,7 +101,7 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * @cssprop [--lr-button-border=var(--lr-color-border)] - Border color of the internal button.
  * Swapped per `variant` to that variant's semantic color.
  * @cssprop [--lr-button-outlined-border=var(--lr-color-border-strong)] - Border color of
- * `appearance="outlined"`, which overrides `--lr-button-border`.
+ * `appearance="outlined"` and `appearance="filled-outlined"`, which overrides `--lr-button-border`.
  * @cssprop [--lr-button-outlined-fill=transparent] - Background of `appearance="outlined"`.
  * Transparent by default; set it to tint the button (e.g. a faint surface wash behind the outline)
  * without a `::part(base)` rule. Like `--lr-button-quiet-*`, it is deliberately *not* swapped per
@@ -115,7 +142,11 @@ export type ButtonType = 'button' | 'submit' | 'reset';
  * content in the internal button. Unlike the size knobs above it does not vary by `size` tier.
  * Override it to retune without a `::part(base)` rule.
  * @cssprop [--lr-button-radius=var(--lr-radius)] - Corner radius of the internal button. Does not
- * vary by `size` tier. `appearance="link"` ignores it (it renders with zero radius).
+ * vary by `size` tier. `appearance="link"` ignores it (it renders with zero radius). `pill`
+ * re-assigns it to `--lr-radius-pill`.
+ * @cssprop [--lr-button-caret-size=var(--lr-size-0-75em)] - Font size of the `with-caret` chevron,
+ * i.e. its rendered glyph box. Relative to the button's own font size, so it follows every `size`
+ * tier without a per-tier rule.
  * @cssprop --lr-button-shadow - Box shadow of the internal button. **Undeclared by default**, so
  * `box-shadow` falls back to `none` — byte-identical to before this property existed. Set it (e.g.
  * an elevated/floating action button) without a `::part(base)` rule.
@@ -132,10 +163,12 @@ export class LyraButton extends LyraElement {
 
   static override properties = {
     disabled: { type: Boolean, reflect: true, noAccessor: true },
+    name: { reflect: true, noAccessor: true },
   };
 
   private _fieldsetDisabled = false;
   private _disabled = false;
+  private _name = '';
   private hasSyncedDescribedByElements = false;
 
   get disabled(): boolean {
@@ -146,6 +179,25 @@ export class LyraButton extends LyraElement {
     this._disabled = Boolean(next);
     this.toggleAttribute('disabled', this._disabled);
     this.requestUpdate('disabled', old);
+  }
+
+  /** Submitted as a `name`/`value` pair with the form data, but only while this button is the
+   *  submitter (`type="submit"`, in `<button>` mode). Unnamed (the default), the button contributes
+   *  nothing — exactly like a native `<button>` with no `name`. See the class doc comment for how
+   *  the pair reaches the submitted `FormData`.
+   *
+   *  Reflected synchronously on assignment (rather than on Lit's async update cycle) because a
+   *  rename must be visible to a `form.requestSubmit()` in the same tick — including this
+   *  component's own, when a consumer renames the button from the click handler that submits. */
+  get name(): string {
+    return this._name;
+  }
+  set name(next: string) {
+    const old = this._name;
+    this._name = next ?? '';
+    if (this._name) this.setAttribute('name', this._name);
+    else this.removeAttribute('name');
+    this.requestUpdate('name', old);
   }
 
   /** Whether the button is disabled explicitly or by an ancestor fieldset. */
@@ -187,7 +239,9 @@ export class LyraButton extends LyraElement {
   /** `'filled'` (the default) reads `--lr-button-fill`, which for `variant="neutral"` is the
    *  ambient `--lr-color-surface` -- matching this component's own container, by design, for a
    *  low-emphasis default. `'accent'` is the loud tier: a solid, high-contrast fill for every
-   *  variant, including `neutral`. `'link'` is zero-chrome inline text — no padding, border, or
+   *  variant, including `neutral`. `'filled-outlined'` is `'filled'` plus `'outlined'`'s border
+   *  color, for a filled button that still has to read against a same-toned surface.
+   *  `'link'` is zero-chrome inline text — no padding, border, or
    *  min-height, underlined, colored from `--lr-button-accent` (the same token `'plain'` uses)
    *  and inheriting the surrounding font — for a text link that flows inline in a sentence rather
    *  than a button-shaped control. `'quiet'` is a bordered, transparent-until-hover tier for a
@@ -199,9 +253,36 @@ export class LyraButton extends LyraElement {
    *  toolbar-embedded controls (e.g. beside a native `<input type="search">` in a compact dialog
    *  header). `'m'` (the default) is the standard size. */
   @property({ reflect: true }) size: ButtonSize = 'm';
+  /** Fully rounded ends, for a pill-shaped control. Re-assigns `--lr-button-radius` to
+   *  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so a consumer's own
+   *  `--lr-button-radius` stays the single corner-radius knob. `appearance="link"` still renders
+   *  with zero chrome, pill or not. */
+  @property({ type: Boolean, reflect: true }) pill = false;
+  /** Renders a decorative trailing chevron (`[part="caret"]`, `aria-hidden`) marking the button as
+   *  a dropdown/menu trigger. It carries no accessible name of its own — the button's label already
+   *  names the action, and the popup relationship is expressed by a host `aria-haspopup`/
+   *  `aria-expanded`, which are forwarded to the internal control. */
+  @property({ attribute: 'with-caret', type: Boolean, reflect: true }) withCaret = false;
   /** Forwarded to this component's own submit/reset handling — see the class doc comment above
    *  for why this component (not the shadow-internal `<button>`) owns that behavior. */
   @property() type: ButtonType = 'button';
+  /** The value submitted alongside `name`. Meaningful only together with a `name`, matching a
+   *  native submit button. */
+  @property() value = '';
+  /** Overrides the form owner's `action` for the submission this button triggers. Unset by
+   *  default, leaving the form's own `action` in place. */
+  @property({ attribute: 'formaction' }) formAction?: string;
+  /** Overrides the form owner's `enctype` for the submission this button triggers. */
+  @property({ attribute: 'formenctype' }) formEnctype?: ButtonFormEnctype;
+  /** Overrides the form owner's `method` for the submission this button triggers. */
+  @property({ attribute: 'formmethod' }) formMethod?: ButtonFormMethod;
+  /** Skips the form owner's constraint validation for the submission this button triggers —
+   *  the native `formnovalidate` semantics. Without it an invalid form is reported and not
+   *  submitted, exactly as a native submit button behaves. */
+  @property({ attribute: 'formnovalidate', type: Boolean }) formNoValidate = false;
+  /** Overrides the form owner's `target` for the submission this button triggers. Distinct from
+   *  `target`, which is the anchor target used in link mode. */
+  @property({ attribute: 'formtarget' }) formTarget?: string;
   /** Shows an internal spinner in place of interaction affordance and disables the button, without
    *  clearing `disabled` — a consumer's own `disabled` state and a transient `loading` state are
    *  independent (mirrors `<lr-export-button>`'s own `loading`/`disabled` pair). */
@@ -257,11 +338,67 @@ export class LyraButton extends LyraElement {
 
   private onClick = (): void => {
     if (this.type === 'submit') {
-      this.closest('form')?.requestSubmit();
+      const form = this.closest('form');
+      if (!form) return;
+      if (this.hasSubmitterOverrides) this.submitAsNamedSubmitter(form);
+      else form.requestSubmit();
     } else if (this.type === 'reset') {
       this.closest('form')?.reset();
     }
   };
+
+  /** Whether anything about this button changes the submission itself, rather than merely
+   *  triggering it. Only then is the transient native submitter worth creating: with none of these
+   *  set, a plain `requestSubmit()` keeps `SubmitEvent.submitter` `null` as before. */
+  private get hasSubmitterOverrides(): boolean {
+    return Boolean(
+      this.name ||
+        this.value ||
+        this.formAction ||
+        this.formEnctype ||
+        this.formMethod ||
+        this.formNoValidate ||
+        this.formTarget,
+    );
+  }
+
+  /**
+   * Submits `form` through a transient native `<button type="submit">` carrying this button's
+   * `name`/`value` and `form*` overrides.
+   *
+   * `requestSubmit(submitter)` refuses any submitter the form doesn't own, and a custom element can
+   * never be one, so neither the name/value pair nor the overrides can reach the submission from
+   * the host itself — `internals.setFormValue()` wouldn't help either, since a submitter's pair is
+   * contributed by the submission algorithm, not by the control's form value. The stand-in is
+   * inserted directly after the host so its pair lands in the entry list in the same tree-order
+   * position a native submit button would, and removed in a `finally` so a throwing or
+   * validation-blocked submission can't leave it behind.
+   */
+  private submitAsNamedSubmitter(form: HTMLFormElement): void {
+    const submitter = document.createElement('button');
+    submitter.type = 'submit';
+    submitter.hidden = true;
+    submitter.tabIndex = -1;
+    if (this.name) {
+      submitter.name = this.name;
+      submitter.value = this.value;
+    }
+    // Assigned only when set: an empty `formaction` resolves against the document URL, which would
+    // silently redirect the submission instead of leaving the form's own action in place.
+    if (this.formAction) submitter.formAction = this.formAction;
+    if (this.formEnctype) submitter.formEnctype = this.formEnctype;
+    if (this.formMethod) submitter.formMethod = this.formMethod;
+    if (this.formNoValidate) submitter.formNoValidate = true;
+    if (this.formTarget) submitter.formTarget = this.formTarget;
+
+    if (this.parentElement) this.insertAdjacentElement('afterend', submitter);
+    else form.append(submitter);
+    try {
+      form.requestSubmit(submitter);
+    } finally {
+      submitter.remove();
+    }
+  }
 
   /**
    * Called by the browser when an ancestor `<fieldset disabled>` toggles. Tracked separately
@@ -320,6 +457,7 @@ export class LyraButton extends LyraElement {
       <span part="end" ?hidden=${!this.hasEndSlot}>
         <slot name="end" @slotchange=${this.onEndSlotChange}></slot>
       </span>
+      ${this.withCaret ? html`<span part="caret" aria-hidden="true">${chevronIcon()}</span>` : nothing}
       ${this.loading ? html`<span part="spinner" aria-hidden="true">${spinnerIcon()}</span>` : ''}
     `;
 

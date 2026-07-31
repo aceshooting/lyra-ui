@@ -563,6 +563,20 @@ export type LyraMessageKey =
   | 'textareaCharacterCountPlural'
   | 'textareaCharactersRemaining'
   | 'textareaCharactersRemainingPlural'
+  | 'copyFailed'
+  | 'colorPickerSaturationBrightness'
+  | 'colorPickerSaturationBrightnessValue'
+  | 'colorPickerHue'
+  | 'colorPickerHueValue'
+  | 'colorPickerOpacity'
+  | 'colorPickerOpacityValue'
+  | 'colorPickerValueField'
+  | 'colorPickerToggleFormat'
+  | 'colorPickerEyeDropper'
+  | 'colorPickerSwatches'
+  | 'colorPickerSwatch'
+  | 'colorPickerCurrentValue'
+  | 'selectSelectedOverflow'
   | 'accessibleLabelSeparator'
   | 'durationMilliseconds'
   | 'durationSeconds'
@@ -1772,6 +1786,20 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, string> = {
   textareaCharacterCountPlural: '{count} characters',
   textareaCharactersRemaining: '{count} character remaining',
   textareaCharactersRemainingPlural: '{count} characters remaining',
+  copyFailed: 'Copy failed',
+  colorPickerSaturationBrightness: 'Saturation and brightness',
+  colorPickerSaturationBrightnessValue: 'Saturation {saturation}%, brightness {brightness}%',
+  colorPickerHue: 'Hue',
+  colorPickerHueValue: '{hue} degrees',
+  colorPickerOpacity: 'Opacity',
+  colorPickerOpacityValue: '{opacity}% opaque',
+  colorPickerValueField: 'Color value',
+  colorPickerToggleFormat: 'Toggle color format',
+  colorPickerEyeDropper: 'Select a color from the screen',
+  colorPickerSwatches: 'Color swatches',
+  colorPickerSwatch: 'Select {color}',
+  colorPickerCurrentValue: 'Current color: {color}',
+  selectSelectedOverflow: '+{n} more',
   accessibleLabelSeparator: ' — ',
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',

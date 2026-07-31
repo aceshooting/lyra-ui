@@ -113,6 +113,100 @@ it('toggles and emits lr-change with detail.checked on click', async () => {
   expect(el.checked).to.be.false;
 });
 
+describe('native form event contract', () => {
+  /** Records the ordered event-name sequence a single activation produces on the host, so the
+   *  assertions below can prove both that the native pair fires *and* that it fires in the
+   *  native order (`input` before `change`) with the `lr-change` compatibility alias last --
+   *  matching `<lr-checkbox>`'s established sequence. */
+  const recordSequence = (el: LyraSwitch): string[] => {
+    const seen: string[] = [];
+    for (const name of ['input', 'change', 'lr-change']) {
+      el.addEventListener(name, (event) => seen.push(event.type));
+    }
+    return seen;
+  };
+
+  it('emits input, change and lr-change in that order on a pointer click', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const seen = recordSequence(el);
+
+    base.click();
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+    expect(el.checked).to.be.true;
+  });
+
+  it('emits input and change on Space and on Enter keydown', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const seen = recordSequence(el);
+
+    base.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+
+    base.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }),
+    );
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change', 'input', 'change', 'lr-change']);
+    expect(el.checked).to.be.false;
+  });
+
+  it('emits input and change from the programmatic host click() activation path', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+    const seen = recordSequence(el);
+
+    el.click();
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change']);
+  });
+
+  it('makes input and change bubbling, composed and non-cancelable', async () => {
+    const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
+
+    const inputPromise = oneEvent(el, 'input');
+    el.click();
+    const inputEvent = await inputPromise;
+    expect(inputEvent.bubbles).to.be.true;
+    expect(inputEvent.composed).to.be.true;
+    expect(inputEvent.cancelable).to.be.false;
+
+    const changePromise = oneEvent(el, 'change');
+    el.click();
+    const changeEvent = await changePromise;
+    expect(changeEvent.bubbles).to.be.true;
+    expect(changeEvent.composed).to.be.true;
+    expect(changeEvent.cancelable).to.be.false;
+  });
+
+  it('emits neither input nor change while disabled, nor for a programmatic .checked assignment', async () => {
+    const el = (await fixture(html`<lr-switch disabled>Label</lr-switch>`)) as LyraSwitch;
+    const seen = recordSequence(el);
+
+    el.click();
+    el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }),
+    );
+    expect(seen).to.deep.equal([]);
+
+    el.disabled = false;
+    await el.updateComplete;
+    el.checked = true;
+    await el.updateComplete;
+    expect(seen).to.deep.equal([]);
+  });
+
+  it('emits neither input nor change from form.reset() or session-state restoration', async () => {
+    const form = (await fixture(html`
+      <form><lr-switch name="notify" checked>Notify me</lr-switch></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-switch') as LyraSwitch;
+    const seen = recordSequence(el);
+
+    form.reset();
+    el.formStateRestoreCallback('checked');
+    expect(seen).to.deep.equal([]);
+  });
+});
+
 it('toggles on Space and Enter keydown', async () => {
   const el = (await fixture(html`<lr-switch>Label</lr-switch>`)) as LyraSwitch;
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

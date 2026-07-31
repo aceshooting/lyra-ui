@@ -31,6 +31,9 @@ export const styles = css`
        once here rather than re-assigned per :host([size='…']) block. */
     --lr-button-gap: var(--lr-space-2xs);
     --lr-button-radius: var(--lr-radius);
+    /* Relative to the button's own font-size, so the with-caret chevron tracks every size tier
+       without a per-tier rule -- same sizing stance as lr-attachment-trigger's expand-icon. */
+    --lr-button-caret-size: var(--lr-size-0-75em);
     --lr-button-accent: var(--lr-color-text);
     --lr-button-fill: var(--lr-color-surface);
     --lr-button-on-fill: var(--lr-color-text);
@@ -81,6 +84,13 @@ export const styles = css`
     --lr-button-accent-fill: var(--lr-color-danger);
     --lr-button-accent-on-fill: var(--lr-color-on-danger);
   }
+  /* Fully rounded ends. Re-assigning the radius knob rather than declaring border-radius on
+     [part='base'] keeps one corner-radius declaration in the sheet, and leaves
+     appearance="link"'s own literal "border-radius: 0" winning (a pill inline link would be a
+     button-shaped box, which is exactly what that appearance exists to avoid). */
+  :host([pill]) {
+    --lr-button-radius: var(--lr-radius-pill);
+  }
   [part='base'] {
     display: inline-flex;
     position: relative;
@@ -122,6 +132,15 @@ export const styles = css`
   :host([appearance='outlined']) [part='base'] {
     background: var(--lr-button-outlined-fill);
     color: var(--lr-button-accent);
+    border-color: var(--lr-button-outlined-border);
+  }
+  /* The filled fill and foreground, but carrying the outlined tier's own border color instead of
+     the variant-tinted --lr-button-border -- a filled button whose edge still reads against a
+     same-toned surface. Both halves stay on their existing knobs, so retuning either tier retunes
+     this one with it. */
+  :host([appearance='filled-outlined']) [part='base'] {
+    background: var(--lr-button-fill);
+    color: var(--lr-button-on-fill);
     border-color: var(--lr-button-outlined-border);
   }
   :host([appearance='plain']) [part='base'] {
@@ -172,6 +191,18 @@ export const styles = css`
   [part='start'][hidden],
   [part='end'][hidden] {
     display: none;
+  }
+  /* Decorative dropdown chevron. The shared chevronIcon() points right, so the glyph -- not the
+     wrapping part -- is rotated to point down, matching lr-select's expand-icon; a down caret is
+     direction-neutral, so nothing here mirrors under RTL. */
+  [part='caret'] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    font-size: var(--lr-button-caret-size);
+  }
+  [part='caret'] svg {
+    transform: rotate(90deg);
   }
   /* Per-tier geometry: cssprop re-assignment only. The "m" tier lives on :host above ("size"
      reflects and defaults to 'm', so :host always matches it). */
@@ -235,7 +266,8 @@ export const styles = css`
   }
   :host([loading]) [part='start'],
   :host([loading]) [part='label'],
-  :host([loading]) [part='end'] {
+  :host([loading]) [part='end'],
+  :host([loading]) [part='caret'] {
     opacity: 0;
   }
   @keyframes lr-button-spin {

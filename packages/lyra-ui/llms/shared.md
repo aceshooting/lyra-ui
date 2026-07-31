@@ -43,7 +43,7 @@ module-resolution failure, not a silent no-op — `exports` maps `./components/*
 - **Other subpaths.** `@aceshooting/lyra-ui/theme.css` (ready-made light/dark theme),
   `@aceshooting/lyra-ui/localization.js` (side-effect-free locale runtime),
   `@aceshooting/lyra-ui/ai` (provider-neutral data types), `@aceshooting/lyra-ui/testing`
-  (happy-dom shims), `@aceshooting/lyra-ui/internal/*` (shared internals, all documented below).
+  (happy-dom shims), `@aceshooting/lyra-ui/utilities/*` (the curated shared helpers, all documented below).
 
 ## Events
 
@@ -488,10 +488,18 @@ implementation are the source of truth. `llms/migration.md` holds the generated 
 tables. For a staged migration, map existing external theme values onto `--lr-theme-*` explicitly in
 application CSS rather than expecting an implicit compatibility layer.
 
-## Shared internals: `internal/`
+## Shared helpers: `utilities/`
 
-Not custom elements — infrastructure the components compose. Importable via
-`@aceshooting/lyra-ui/internal/*`.
+Not custom elements — infrastructure the components compose, curated into a supported public
+surface. Importable via `@aceshooting/lyra-ui/utilities/*` (one module per helper, e.g.
+`@aceshooting/lyra-ui/utilities/positioner`), or as a whole from `@aceshooting/lyra-ui/utilities`.
+
+**This replaced `@aceshooting/lyra-ui/internal/*` in 8.0.0.** The whole `internal/` tree used to be
+a published subpath with no stability statement, which made every internal refactor potentially
+breaking for someone. It is no longer exported. The nine helpers below are the ones that were ever
+documented as public; they are re-exported from `utilities/` unchanged and are covered by semver.
+If you were importing something from `internal/` that is not listed here, it was never a supported
+entry point — open an issue and it can be promoted deliberately.
 
 - **`LyraElement`** (`internal/lyra-element.ts`) — the base class. `static styles = [tokens]`;
   subclasses prepend `LyraElement.styles` to their own `static styles`. Supplies `emit()` (see

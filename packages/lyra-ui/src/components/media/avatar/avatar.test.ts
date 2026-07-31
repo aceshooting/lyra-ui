@@ -78,18 +78,24 @@ describe('lr-avatar', () => {
     expect(replacement.getAttribute('src')).to.equal(TEST_IMAGE_SRC_REPLACEMENT);
   });
 
-  it('defaults size to md, shape to circle, tone to neutral', async () => {
+  it('defaults size to medium, shape to circle, tone to neutral', async () => {
     const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
-    expect(el.size).to.equal('md');
+    expect(el.size).to.equal('medium');
     expect(el.shape).to.equal('circle');
     expect(el.tone).to.equal('neutral');
   });
 
   it('reflects size/shape/tone as attributes for CSS selectors', async () => {
-    const el = (await fixture(html`<lr-avatar initials="AB" size="lg" shape="square" tone="brand"></lr-avatar>`)) as LyraAvatar;
-    expect(el.getAttribute('size')).to.equal('lg');
+    const el = (await fixture(html`<lr-avatar initials="AB" size="large" shape="square" tone="brand"></lr-avatar>`)) as LyraAvatar;
+    expect(el.getAttribute('size')).to.equal('large');
     expect(el.getAttribute('shape')).to.equal('square');
     expect(el.getAttribute('tone')).to.equal('brand');
+  });
+
+  it('keeps a legacy sm/md/lg spelling verbatim in the reflected attribute', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB" size="lg"></lr-avatar>`)) as LyraAvatar;
+    expect(el.size).to.equal('lg');
+    expect(el.getAttribute('size')).to.equal('lg');
   });
 
   it('is accessible', async () => {
@@ -215,21 +221,25 @@ describe('per-size initials font-size', () => {
 
   it('scales the rendered initials font-size with size', async () => {
     // The visible defect this covers: the initials were painted at a fixed
-    // --lr-font-size-sm at every tier, so a `sm` avatar's 2 characters could not
-    // fit its 1.5rem circle and an `lg` avatar's looked undersized in its 2.5rem one.
-    const [sm, md, lg] = [await renderedFontSize('sm'), await renderedFontSize('md'), await renderedFontSize('lg')];
-    expect(sm, 'sm < md').to.be.lessThan(md);
-    expect(lg, 'lg > md').to.be.greaterThan(md);
+    // --lr-font-size-sm at every tier, so a `small` avatar's 2 characters could not
+    // fit its 1.5rem circle and a `large` avatar's looked undersized in its 2.5rem one.
+    const [small, medium, large] = [
+      await renderedFontSize('small'),
+      await renderedFontSize('medium'),
+      await renderedFontSize('large'),
+    ];
+    expect(small, 'small < medium').to.be.lessThan(medium);
+    expect(large, 'large > medium').to.be.greaterThan(medium);
   });
 
-  it('leaves the default (md) tier byte-identical to today', async () => {
+  it('leaves the default (medium) tier byte-identical to today', async () => {
     // --lr-font-size-sm = 0.8125rem = 13px, the single hardcoded value every tier used to share.
     expect(await renderedFontSize()).to.equal(13);
-    expect(await renderedFontSize('md')).to.equal(13);
+    expect(await renderedFontSize('medium')).to.equal(13);
   });
 
   it('lets a consumer override --lr-avatar-font-size at any tier', async () => {
-    const el = (await fixture(html`<lr-avatar size="sm" initials="AB" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
+    const el = (await fixture(html`<lr-avatar size="small" initials="AB" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
     el.style.setProperty('--lr-avatar-font-size', '19px');
     await el.updateComplete;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
@@ -238,9 +248,203 @@ describe('per-size initials font-size', () => {
   });
 
   it('is accessible at every tier with initials rendered', async () => {
-    for (const size of ['sm', 'md', 'lg'] as const) {
+    for (const size of ['small', 'medium', 'large'] as const) {
       const el = (await fixture(html`<lr-avatar size=${size} initials="AB" alt="A. Bee"></lr-avatar>`)) as LyraAvatar;
       await expect(el).to.be.accessible();
     }
+  });
+});
+
+describe('lr-avatar size aliases', () => {
+  const renderedBox = async (size?: string): Promise<{ inlineSize: string; blockSize: string; fontSize: string }> => {
+    const el = (await fixture(
+      size == null
+        ? html`<lr-avatar initials="AB"></lr-avatar>`
+        : html`<lr-avatar size=${size} initials="AB"></lr-avatar>`,
+    )) as LyraAvatar;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const style = getComputedStyle(base);
+    return { inlineSize: style.inlineSize, blockSize: style.blockSize, fontSize: style.fontSize };
+  };
+
+  it('renders the sm/md/lg aliases exactly like small/medium/large', async () => {
+    expect(await renderedBox('sm'), 'sm renders as small').to.deep.equal(await renderedBox('small'));
+    expect(await renderedBox('md'), 'md renders as medium').to.deep.equal(await renderedBox('medium'));
+    expect(await renderedBox('lg'), 'lg renders as large').to.deep.equal(await renderedBox('large'));
+  });
+
+  it('renders the unset default exactly like the medium tier', async () => {
+    expect(await renderedBox()).to.deep.equal(await renderedBox('medium'));
+  });
+
+  it('keeps every tier visibly distinct', async () => {
+    const small = await renderedBox('small');
+    const medium = await renderedBox('medium');
+    const large = await renderedBox('large');
+    expect(Number.parseFloat(small.inlineSize)).to.be.lessThan(Number.parseFloat(medium.inlineSize));
+    expect(Number.parseFloat(large.inlineSize)).to.be.greaterThan(Number.parseFloat(medium.inlineSize));
+  });
+});
+
+describe('lr-avatar shape', () => {
+  const renderedRadius = async (shape: string): Promise<string> => {
+    const el = (await fixture(html`<lr-avatar initials="AB" shape=${shape}></lr-avatar>`)) as LyraAvatar;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    return getComputedStyle(base).borderTopLeftRadius;
+  };
+
+  it('renders circle, rounded, and square as three distinct corner radii', async () => {
+    const [circle, rounded, square] = [
+      await renderedRadius('circle'),
+      await renderedRadius('rounded'),
+      await renderedRadius('square'),
+    ];
+    expect(square, 'square has sharp corners').to.equal('0px');
+    expect(Number.parseFloat(rounded), 'rounded is softer than square').to.be.greaterThan(0);
+    expect(
+      Number.parseFloat(circle),
+      'circle is rounder than rounded',
+    ).to.be.greaterThan(Number.parseFloat(rounded));
+  });
+
+  it('is accessible in the rounded shape', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB" alt="A. Bee" shape="rounded"></lr-avatar>`)) as LyraAvatar;
+    expect(el.shape).to.equal('rounded');
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-avatar loading', () => {
+  it('defaults to eager and forwards the native loading attribute', async () => {
+    const el = (await fixture(
+      html`<lr-avatar image=${TEST_IMAGE_SRC} alt="A. Bee" initials="AB"></lr-avatar>`,
+    )) as LyraAvatar;
+    expect(el.loading).to.equal('eager');
+    const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.getAttribute('loading')).to.equal('eager');
+    // Unset-regression: `loading="eager"` is the native default, so an avatar that never sets the
+    // new property renders and falls back exactly as it did before the property existed.
+    expect(img.getAttribute('src')).to.equal(TEST_IMAGE_SRC);
+    expect(el.shadowRoot!.querySelectorAll('[part="initials"]').length).to.equal(0);
+  });
+
+  it('forwards loading="lazy" to the native image', async () => {
+    const el = (await fixture(
+      html`<lr-avatar image=${TEST_IMAGE_SRC} alt="A. Bee" loading="lazy"></lr-avatar>`,
+    )) as LyraAvatar;
+    const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    expect(img.getAttribute('loading')).to.equal('lazy');
+    expect(img.loading).to.equal('lazy');
+  });
+});
+
+describe('lr-avatar lr-error', () => {
+  it('emits lr-error with the failed URL when the image cannot load', async () => {
+    const el = (await fixture(
+      html`<lr-avatar initials="AB" image=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
+    )) as LyraAvatar;
+    const img = el.shadowRoot!.querySelector('img') as HTMLImageElement;
+    const errored = oneEvent(el, 'lr-error');
+    img.dispatchEvent(new Event('error'));
+    const event = await errored;
+    expect(event.detail.image).to.equal(TEST_IMAGE_SRC);
+    expect(event.bubbles).to.be.true;
+    expect(event.composed).to.be.true;
+  });
+
+  it('emits lr-error again for a replacement image that also fails', async () => {
+    const el = (await fixture(
+      html`<lr-avatar initials="AB" image=${TEST_IMAGE_SRC} alt="A. Bee"></lr-avatar>`,
+    )) as LyraAvatar;
+    const failures: string[] = [];
+    el.addEventListener('lr-error', (event) => failures.push((event as CustomEvent<{ image: string }>).detail.image));
+    (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
+    await el.updateComplete;
+
+    el.image = TEST_IMAGE_SRC_REPLACEMENT;
+    await el.updateComplete;
+    (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(failures).to.deep.equal([TEST_IMAGE_SRC, TEST_IMAGE_SRC_REPLACEMENT]);
+  });
+
+  it('never emits lr-error for an avatar with no image', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
+    let failures = 0;
+    el.addEventListener('lr-error', () => failures++);
+    el.initials = 'CD';
+    await el.updateComplete;
+    expect(failures).to.equal(0);
+  });
+});
+
+describe('lr-avatar icon slot', () => {
+  const ICON = html`<svg slot="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg>`;
+
+  it('renders slot="icon" content in place of the initials', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB" alt="A. Bee">${ICON}</lr-avatar>`)) as LyraAvatar;
+    await el.updateComplete;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hasAttribute('hidden')).to.be.false;
+    const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    expect(slot.assignedElements({ flatten: true }).length).to.equal(1);
+    expect(slot.hasAttribute('hidden')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="initials"]').length).to.equal(0);
+  });
+
+  it('yields to a loadable image, then takes over when that image fails', async () => {
+    const el = (await fixture(
+      html`<lr-avatar initials="AB" alt="A. Bee" image=${TEST_IMAGE_SRC}>${ICON}</lr-avatar>`,
+    )) as LyraAvatar;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="image"]').length).to.equal(1);
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hasAttribute('hidden'), 'icon slot stays collapsed behind the image').to.be.true;
+
+    (el.shadowRoot!.querySelector('img') as HTMLImageElement).dispatchEvent(new Event('error'));
+    await el.updateComplete;
+    expect(icon.hasAttribute('hidden')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="initials"]').length).to.equal(0);
+  });
+
+  it('yields to default-slotted glyph content', async () => {
+    const el = (await fixture(html`
+      <lr-avatar initials="AB" alt="A. Bee">
+        ${ICON}
+        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"></rect></svg>
+      </lr-avatar>
+    `)) as LyraAvatar;
+    await el.updateComplete;
+    const namedSlot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    const defaultSlot = el.shadowRoot!.querySelector('[part="icon"] slot:not([name])') as HTMLSlotElement;
+    expect(namedSlot.hasAttribute('hidden'), 'the named icon slot defers to the default slot').to.be.true;
+    expect(defaultSlot.hasAttribute('hidden')).to.be.false;
+    expect(getComputedStyle(namedSlot).display).to.equal('none');
+  });
+
+  it('reacts to icon-slot content added after the first render', async () => {
+    const el = (await fixture(html`<lr-avatar initials="AB"></lr-avatar>`)) as LyraAvatar;
+    const icon = el.shadowRoot!.querySelector('[part="icon"]') as HTMLElement;
+    expect(icon.hasAttribute('hidden')).to.be.true;
+    const slot = el.shadowRoot!.querySelector('slot[name="icon"]') as HTMLSlotElement;
+    const slotChange = oneEvent(slot, 'slotchange');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('slot', 'icon');
+    el.append(svg);
+    await slotChange;
+    await el.updateComplete;
+    expect(icon.hasAttribute('hidden')).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="initials"]').length).to.equal(0);
+  });
+
+  it('names the icon-slot fallback through alt', async () => {
+    const el = (await fixture(html`<lr-avatar alt="AI assistant">${ICON}</lr-avatar>`)) as LyraAvatar;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(base.getAttribute('role')).to.equal('img');
+    expect(base.getAttribute('aria-label')).to.equal('AI assistant');
+    await expect(el).to.be.accessible();
   });
 });

@@ -63,7 +63,7 @@ A force-directed node-link diagram with pan/zoom/drag, built on `d3-force`.
   `focusNode()`/`fit()`, hulls, edge labels, and `hiddenTypes` filtering all work identically to
   force mode. Switching `layout` at runtime repositions every node without a tween. The layering
   algorithm itself lives in the standalone, dependency-free `layeredLayout()` export
-  (`@aceshooting/lyra-ui/internal/layered-layout`), reusable by any other layered-diagram consumer
+  (`@aceshooting/lyra-ui/utilities/layered-layout`), reusable by any other layered-diagram consumer
 - `renderer: 'svg' | 'canvas' = 'svg'` — `'canvas'` swaps the per-node/per-link SVG DOM for a single
   DPR-aware `<canvas>`; every event/method/property behaves identically to `'svg'`, with hit-testing
   resolved via an offscreen color-picking canvas instead of DOM event targets. Trade-offs: no

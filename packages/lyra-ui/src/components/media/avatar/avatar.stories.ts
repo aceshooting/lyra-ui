@@ -12,7 +12,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.',
+          'A small, fixed-size identity marker: default-slotted icon/glyph content, an image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order. Purely presentational — a consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.',
       },
     },
   },
@@ -31,7 +31,7 @@ export const IconOnly: Story = {
     docs: {
       description: {
         story:
-          'Default-slotted content (an inline SVG here) takes priority over both `src` and `initials` — useful for a chat UI distinguishing an "AI" avatar from a "user" avatar by role glyph rather than a photo or initials. Set `alt` alongside the icon for an accessible name, since the glyph itself is treated as decorative.',
+          'Default-slotted content (an inline SVG here) takes priority over `image`, the `icon` slot, and `initials` — useful for a chat UI distinguishing an "AI" avatar from a "user" avatar by role glyph rather than a photo or initials. Set `alt` alongside the icon for an accessible name, since the glyph itself is treated as decorative.',
       },
     },
   },
@@ -84,8 +84,21 @@ export const AccessibleNameOverride: Story = {
 };
 
 export const Sizes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The canonical spellings are `small`/`medium`/`large`. The shorthand `sm`/`md`/`lg` remains accepted as an alias of the same three tiers (bottom row), so existing markup and markup migrated from a shorthand-sized library keep their sizing.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar initials="SM" size="small"></lr-avatar>
+      <lr-avatar initials="MD" size="medium"></lr-avatar>
+      <lr-avatar initials="LG" size="large"></lr-avatar>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-top:0.75rem;">
       <lr-avatar initials="SM" size="sm"></lr-avatar>
       <lr-avatar initials="MD" size="md"></lr-avatar>
       <lr-avatar initials="LG" size="lg"></lr-avatar>
@@ -94,12 +107,62 @@ export const Sizes: Story = {
 };
 
 export const Shapes: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`circle` (the default) uses the pill radius, `rounded` the shared `--lr-radius`, and `square` no corner radius at all.',
+      },
+    },
+  },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
       <lr-avatar initials="AB" shape="circle"></lr-avatar>
+      <lr-avatar initials="AB" shape="rounded"></lr-avatar>
       <lr-avatar initials="AB" shape="square"></lr-avatar>
     </div>
   `,
+};
+
+export const IconSlotFallback: Story = {
+  name: 'Fallback glyph (slot="icon")',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Content in the `icon` slot stands in for the `initials` text: it renders only when no default-slot glyph is present and no image loads. The left avatar has no image at all; the right one has an unreachable image URL and falls through to the same glyph.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <lr-avatar alt="Unassigned">
+        <svg slot="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </lr-avatar>
+      <lr-avatar alt="Unassigned" tone="brand" image="https://example.invalid/nonexistent.png">
+        <svg slot="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </lr-avatar>
+    </div>
+  `,
+};
+
+export const LazyLoading: Story = {
+  name: 'Deferred image request (loading="lazy")',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The native `<img loading>` attribute is forwarded verbatim. `lazy` defers the request until the avatar approaches the viewport — worth setting for avatars far down a long list, never for one above the fold.',
+      },
+    },
+  },
+  render: () => html`<lr-avatar image=${IMAGE_SRC} alt="A. Bee" initials="AB" loading="lazy"></lr-avatar>`,
 };
 
 export const Tones: Story = {
@@ -120,7 +183,7 @@ export const ImageFallback: Story = {
     docs: {
       description: {
         story:
-          'A broken/unreachable `src` falls back to the `initials` text instead of showing a broken-image icon.',
+          'A broken/unreachable `image` falls back to the `icon` slot, or to the `initials` text, instead of showing a broken-image icon — and fires `lr-error` with the URL that failed.',
       },
     },
   },
@@ -130,7 +193,12 @@ export const ImageFallback: Story = {
       alt="A. Bee"
       initials="AB"
       tone="brand"
+      @lr-error=${(e: CustomEvent<{ image: string }>) => {
+        const out = document.getElementById('avatar-error-log');
+        if (out) out.textContent = `lr-error: ${e.detail.image}`;
+      }}
     ></lr-avatar>
+    <p id="avatar-error-log" style="font-family: monospace; margin-top: 0.5rem;">(no event yet)</p>
   `,
 };
 
@@ -140,15 +208,15 @@ export const InitialsFontSize: Story = {
     docs: {
       description: {
         story:
-          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`sm` → `--lr-font-size-xs`, `md` → `--lr-font-size-sm`, `lg` → `--lr-font-size-md`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
+          'The initials fallback scales with `size` through `--lr-avatar-font-size` (`small` → `--lr-font-size-xs`, `medium` → `--lr-font-size-sm`, `large` → `--lr-font-size-md`). Set the property directly to override any tier — useful for single-character initials, which can carry a larger glyph than a two-character pair in the same circle.',
       },
     },
   },
   render: () => html`
     <div style="display:flex; align-items:center; gap:0.75rem;">
-      <lr-avatar initials="AB" size="sm"></lr-avatar>
-      <lr-avatar initials="AB" size="md"></lr-avatar>
-      <lr-avatar initials="AB" size="lg"></lr-avatar>
+      <lr-avatar initials="AB" size="small"></lr-avatar>
+      <lr-avatar initials="AB" size="medium"></lr-avatar>
+      <lr-avatar initials="AB" size="large"></lr-avatar>
       <lr-avatar initials="A" tone="brand" style="--lr-avatar-font-size: 1.25rem;"></lr-avatar>
     </div>
   `,

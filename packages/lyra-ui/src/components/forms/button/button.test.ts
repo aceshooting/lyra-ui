@@ -869,3 +869,409 @@ it('tracks slotted end content through slotchange', async () => {
   await el.updateComplete;
   expect(flags.hasEndSlot).to.be.false;
 });
+
+describe('lr-button: pill', () => {
+  it('rounds the base to the pill radius token', async () => {
+    const el = (await fixture(html`<lr-button pill>Save</lr-button>`)) as LyraButton;
+    expect(el.pill).to.be.true;
+    expect(el.getAttribute('pill')).to.equal('');
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // Rendered result, not stylesheet text: --lr-radius-pill resolves to 999px by default.
+    expect(getComputedStyle(base).borderRadius).to.equal('999px');
+  });
+
+  it('rounds a pill link button’s anchor the same way', async () => {
+    const el = (await fixture(
+      html`<lr-button pill href="https://example.com">Go</lr-button>`,
+    )) as LyraButton;
+    const base = el.shadowRoot!.querySelector('a[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).borderRadius).to.equal('999px');
+  });
+
+  it('leaves the corner radius on --lr-button-radius when pill is unset (regression)', async () => {
+    const el = (await fixture(html`<lr-button>Save</lr-button>`)) as LyraButton;
+    expect(el.pill).to.be.false;
+    expect(el.hasAttribute('pill')).to.be.false;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    // --lr-radius (0.375rem) at the default 16px root font size, exactly as before pill existed.
+    expect(getComputedStyle(base).borderRadius).to.equal('6px');
+  });
+
+  it('drops back to the default radius when pill is turned off again', async () => {
+    const el = (await fixture(html`<lr-button pill>Save</lr-button>`)) as LyraButton;
+    el.pill = false;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).borderRadius).to.equal('6px');
+  });
+
+  it('keeps appearance="link" at zero radius even while pill is set', async () => {
+    const el = (await fixture(
+      html`<lr-button pill appearance="link">Retry</lr-button>`,
+    )) as LyraButton;
+    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    expect(getComputedStyle(base).borderRadius).to.equal('0px');
+  });
+
+  it('is accessible as a pill button', async () => {
+    const el = await fixture(html`<lr-button pill variant="brand">Save</lr-button>`);
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-button: with-caret', () => {
+  it('renders no caret part by default (regression)', async () => {
+    const el = (await fixture(html`<lr-button>Menu</lr-button>`)) as LyraButton;
+    expect(el.withCaret).to.be.false;
+    expect(el.shadowRoot!.querySelectorAll('[part="caret"]').length).to.equal(0);
+  });
+
+  it('renders a decorative caret glyph when with-caret is set', async () => {
+    const el = (await fixture(html`<lr-button with-caret>Menu</lr-button>`)) as LyraButton;
+    expect(el.withCaret).to.be.true;
+    expect(el.getAttribute('with-caret')).to.equal('');
+    const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
+    // The glyph carries no accessible name: the label already names the trigger.
+    expect(caret.getAttribute('aria-hidden')).to.equal('true');
+    expect(el.shadowRoot!.querySelectorAll('[part="caret"] svg').length).to.equal(1);
+  });
+
+  it('points the caret down by rotating the wrapping part’s glyph', async () => {
+    const el = (await fixture(html`<lr-button with-caret>Menu</lr-button>`)) as LyraButton;
+    const glyph = el.shadowRoot!.querySelector('[part="caret"] svg') as unknown as HTMLElement;
+    // rotate(90deg) on the shared right-pointing chevron == matrix(0, 1, -1, 0, 0, 0).
+    expect(getComputedStyle(glyph).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+
+  it('renders the caret in anchor mode too', async () => {
+    const el = (await fixture(
+      html`<lr-button with-caret href="https://example.com">Menu</lr-button>`,
+    )) as LyraButton;
+    expect(el.shadowRoot!.querySelectorAll('a[part="base"] [part="caret"]').length).to.equal(1);
+  });
+
+  it('hides the caret behind the loading spinner, like the label and adornments', async () => {
+    const el = (await fixture(
+      html`<lr-button with-caret .loading=${true}>Menu</lr-button>`,
+    )) as LyraButton;
+    const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
+    expect(getComputedStyle(caret).opacity).to.equal('0');
+  });
+
+  it('removes the caret again when with-caret is turned off', async () => {
+    const el = (await fixture(html`<lr-button with-caret>Menu</lr-button>`)) as LyraButton;
+    el.withCaret = false;
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelectorAll('[part="caret"]').length).to.equal(0);
+    expect(el.hasAttribute('with-caret')).to.be.false;
+  });
+
+  it('keeps the caret at the inline end under RTL, with the glyph un-mirrored', async () => {
+    const el = (await fixture(
+      html`<lr-button dir="rtl" with-caret>القائمة</lr-button>`,
+    )) as LyraButton;
+    const caret = el.shadowRoot!.querySelector('[part="caret"]') as HTMLElement;
+    const label = el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+    // Inline-end under RTL is physically to the left of the label.
+    expect(caret.getBoundingClientRect().left).to.be.lessThan(
+      label.getBoundingClientRect().left,
+    );
+    // A downward caret is direction-neutral: it must not flip with the writing direction.
+    const glyph = el.shadowRoot!.querySelector('[part="caret"] svg') as unknown as HTMLElement;
+    expect(getComputedStyle(glyph).transform).to.equal('matrix(0, 1, -1, 0, 0, 0)');
+  });
+
+  it('is accessible as a caret-bearing dropdown trigger', async () => {
+    const el = await fixture(
+      html`<lr-button with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>`,
+    );
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-button: appearance="filled-outlined"', () => {
+  it('combines the filled fill with the outlined border color', async () => {
+    const filledEl = (await fixture(
+      html`<lr-button appearance="filled" variant="brand">Save</lr-button>`,
+    )) as LyraButton;
+    const outlinedEl = (await fixture(
+      html`<lr-button appearance="outlined" variant="brand">Save</lr-button>`,
+    )) as LyraButton;
+    const bothEl = (await fixture(
+      html`<lr-button appearance="filled-outlined" variant="brand">Save</lr-button>`,
+    )) as LyraButton;
+    expect(bothEl.appearance).to.equal('filled-outlined');
+    expect(bothEl.getAttribute('appearance')).to.equal('filled-outlined');
+
+    const filled = getComputedStyle(filledEl.shadowRoot!.querySelector('[part="base"]')!);
+    const outlined = getComputedStyle(outlinedEl.shadowRoot!.querySelector('[part="base"]')!);
+    const both = getComputedStyle(bothEl.shadowRoot!.querySelector('[part="base"]')!);
+
+    expect(both.backgroundColor).to.equal(filled.backgroundColor);
+    expect(both.color).to.equal(filled.color);
+    expect(both.borderTopColor).to.equal(outlined.borderTopColor);
+    // The whole point of the tier: a border that reads distinctly against its own fill.
+    expect(both.borderTopColor).to.not.equal(filled.borderTopColor);
+  });
+
+  it('is accessible', async () => {
+    const el = await fixture(
+      html`<lr-button appearance="filled-outlined" variant="brand">Save</lr-button>`,
+    );
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('lr-button: named submitter and form-submission overrides', () => {
+  it('contributes its name/value pair to the submitted FormData', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" value="hello" />
+        <lr-button type="submit" name="action" value="save">Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const captured: Record<string, string | null> = {};
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = new FormData(form, event.submitter);
+      captured.action = data.get('action') as string | null;
+      captured.q = data.get('q') as string | null;
+    });
+    el.click();
+    expect(captured.action).to.equal('save');
+    expect(captured.q).to.equal('hello');
+  });
+
+  it('contributes an empty value for a named button with no value', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit" name="action">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const captured: Record<string, string | null> = { action: null };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      captured.action = new FormData(form, event.submitter).get('action') as string | null;
+    });
+    el.click();
+    expect(captured.action).to.equal('');
+  });
+
+  it('leaves the submitted FormData and event.submitter untouched when nothing is named (regression)', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" value="hello" />
+        <lr-button type="submit">Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const seen: { submitterIsNull: boolean; keys: string[] } = { submitterIsNull: false, keys: [] };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      seen.submitterIsNull = event.submitter === null;
+      seen.keys = Array.from(new FormData(form, event.submitter).keys());
+    });
+    el.click();
+    expect(seen.submitterIsNull).to.be.true;
+    expect(seen.keys).to.deep.equal(['q']);
+  });
+
+  it('leaves no transient submitter behind in the form', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit" name="action" value="save">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const elementCountBefore = form.elements.length;
+    form.addEventListener('submit', (event) => event.preventDefault());
+    el.click();
+    expect(form.querySelectorAll('button').length).to.equal(0);
+    expect(form.elements.length).to.equal(elementCountBefore);
+  });
+
+  it('runs constraint validation on the real submission, blocking an invalid form', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" required />
+        <lr-button type="submit" name="action" value="save">Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.false;
+  });
+
+  it('skips constraint validation when formnovalidate is set', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" required />
+        <lr-button type="submit" name="action" value="save" formnovalidate>Save</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    expect(el.formNoValidate).to.be.true;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.true;
+  });
+
+  it('applies formaction/formenctype/formmethod/formtarget to the element the browser submits with', async () => {
+    const form = (await fixture(html`
+      <form action="/default-endpoint" method="get">
+        <lr-button
+          type="submit"
+          name="action"
+          value="save"
+          formaction="/custom-endpoint"
+          formenctype="multipart/form-data"
+          formmethod="post"
+          formtarget="_blank"
+          >Save</lr-button
+        >
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    expect(el.formAction).to.equal('/custom-endpoint');
+    expect(el.formEnctype).to.equal('multipart/form-data');
+    expect(el.formMethod).to.equal('post');
+    expect(el.formTarget).to.equal('_blank');
+
+    const seen: Record<string, string> = {};
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const submitter = event.submitter as HTMLButtonElement;
+      Object.assign(seen, {
+        tag: submitter.localName,
+        type: submitter.type,
+        name: submitter.name,
+        value: submitter.value,
+        action: submitter.formAction,
+        enctype: submitter.formEnctype,
+        method: submitter.formMethod,
+        target: submitter.formTarget,
+      });
+    });
+    el.click();
+
+    expect(seen.tag).to.equal('button');
+    expect(seen.type).to.equal('submit');
+    expect(seen.name).to.equal('action');
+    expect(seen.value).to.equal('save');
+    expect(seen.action).to.include('/custom-endpoint');
+    expect(seen.enctype).to.equal('multipart/form-data');
+    expect(seen.method).to.equal('post');
+    expect(seen.target).to.equal('_blank');
+  });
+
+  it('closes an ancestor dialog with its value through formmethod="dialog"', async () => {
+    const dialog = (await fixture(html`
+      <dialog>
+        <form>
+          <lr-button type="submit" name="action" value="save" formmethod="dialog">Save</lr-button>
+        </form>
+      </dialog>
+    `)) as HTMLDialogElement;
+    const el = dialog.querySelector('lr-button') as LyraButton;
+    dialog.show();
+    expect(dialog.open).to.be.true;
+    el.click();
+    expect(dialog.open).to.be.false;
+    expect(dialog.returnValue).to.equal('save');
+  });
+
+  it('reflects name synchronously on assignment, with no await', async () => {
+    const el = (await fixture(html`<lr-button type="submit">Save</lr-button>`)) as LyraButton;
+    el.name = 'action';
+    expect(el.getAttribute('name')).to.equal('action');
+    el.name = '';
+    expect(el.hasAttribute('name')).to.be.false;
+  });
+
+  it('submits with a name assigned in the same tick as the click', async () => {
+    const form = (await fixture(html`
+      <form><lr-button type="submit">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const captured: Record<string, string | null> = { action: null };
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      captured.action = new FormData(form, event.submitter).get('action') as string | null;
+    });
+    // No `await el.updateComplete` between the two: a rename must reach the submission
+    // synchronously, not on Lit's async update cycle.
+    el.name = 'action';
+    el.value = 'save';
+    el.click();
+    expect(captured.action).to.equal('save');
+  });
+
+  it('exposes the submitter overrides as unset by default (regression)', async () => {
+    const el = (await fixture(html`<lr-button type="submit">Save</lr-button>`)) as LyraButton;
+    expect(el.name).to.equal('');
+    expect(el.value).to.equal('');
+    expect(el.formAction).to.be.undefined;
+    expect(el.formEnctype).to.be.undefined;
+    expect(el.formMethod).to.be.undefined;
+    expect(el.formTarget).to.be.undefined;
+    expect(el.formNoValidate).to.be.false;
+  });
+
+  it('never submits from a named button whose type is not submit', async () => {
+    const form = (await fixture(html`
+      <form><lr-button name="action" value="save">Save</lr-button></form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    el.click();
+    expect(submitted).to.be.false;
+    expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+
+  it('still resets from a named type="reset" button, with no transient submitter', async () => {
+    const form = (await fixture(html`
+      <form>
+        <input name="q" />
+        <lr-button type="reset" name="action" value="clear">Reset</lr-button>
+      </form>
+    `)) as HTMLFormElement;
+    const input = form.querySelector('input') as HTMLInputElement;
+    input.value = 'changed';
+    const el = form.querySelector('lr-button') as LyraButton;
+    el.click();
+    expect(input.value).to.equal('');
+    expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+
+  it('ignores the submitter surface entirely in anchor mode', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-button type="submit" name="action" value="save" href="https://example.com"
+          >Go</lr-button
+        >
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-button') as LyraButton;
+    const anchor = el.shadowRoot!.querySelector('a[part="base"]') as HTMLAnchorElement;
+    let submitted = false;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      submitted = true;
+    });
+    anchor.addEventListener('click', (event) => event.preventDefault());
+    el.click();
+    expect(submitted).to.be.false;
+    expect(form.querySelectorAll('button').length).to.equal(0);
+  });
+});

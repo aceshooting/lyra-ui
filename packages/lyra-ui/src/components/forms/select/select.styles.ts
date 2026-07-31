@@ -12,6 +12,8 @@ export const styles = css`
        identical --lr-button-gap/--lr-button-radius (button.styles.ts). */
     --lr-select-gap: var(--lr-space-xs);
     --lr-select-radius: var(--lr-radius);
+    --lr-select-tag-padding: var(--lr-space-2xs) var(--lr-space-xs);
+    --lr-select-tag-font-size: var(--lr-font-size-sm);
     /* --lr-select-trigger-height is intentionally NOT declared here. It is a consumer-facing
        escape hatch consumed only through the two var() fallbacks on [part='trigger'] below;
        declaring any value for it (even 'auto') makes those fallback arms unreachable, which is
@@ -69,6 +71,23 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
 
+  /* Pill only retunes the shared radius property, so the single consumption point on
+     [part='trigger'] stays the only place a corner radius is read -- and a consumer's own
+     --lr-select-radius override (an inline style or an outer-tree rule) still wins over it. */
+  :host([pill]) {
+    --lr-select-radius: var(--lr-radius-pill);
+  }
+
+  /* Positioning context for [part='clear-button'], which is a *sibling* of the trigger rather
+     than a child: the trigger is a real <button>, and a nested button would be invalid
+     interactive-content nesting that no keyboard or AT user could ever reach. The wrapper is
+     display: block so the trigger's own box (and therefore every existing size/height contract)
+     is unchanged. */
+  .control {
+    position: relative;
+    display: block;
+  }
+
   [part='trigger'] {
     display: flex;
     align-items: center;
@@ -97,6 +116,49 @@ export const styles = css`
      ::part(trigger):hover override ((0,1,1)) still wins without needing !important. */
   :where([part='trigger']):hover:where(:not(:disabled)) {
     background: var(--lr-color-brand-quiet);
+  }
+  /* Appearance treatments. outlined is the base rule above, so only the other four restate
+     what they change. Each keeps the same box, border width and radius -- only the fill, the
+     border color and (for accent) the text color move. */
+  :host([appearance='filled']) [part='trigger'] {
+    background: var(--lr-color-surface-raised);
+    border-color: transparent;
+  }
+  :host([appearance='filled-outlined']) [part='trigger'] {
+    background: var(--lr-color-surface-raised);
+  }
+  :host([appearance='plain']) [part='trigger'] {
+    background: transparent;
+    border-color: transparent;
+  }
+  :host([appearance='accent']) [part='trigger'] {
+    background: var(--lr-color-brand);
+    border-color: transparent;
+    color: var(--lr-color-on-brand);
+  }
+  /* On the loud brand fill the quiet-text tokens below would sit at far too low a contrast --
+     the placeholder, the expand icon and the chips all ride the on-brand text color instead. */
+  :host([appearance='accent']) [part='trigger'] .trigger-label[data-placeholder],
+  :host([appearance='accent']) [part='trigger'] [part='expand-icon'],
+  :host([appearance='accent']) [part='trigger'] [part='start'],
+  :host([appearance='accent']) [part='trigger'] [part='end'] {
+    color: inherit;
+  }
+  :host([appearance='accent']) [part~='tag'] {
+    background: color-mix(in srgb, currentColor 20%, transparent);
+  }
+  /* Each appearance restates the hover feedback: the treatments above out-specify the shared
+     hover rule further up, so without these the pointer affordance would silently disappear for
+     every appearance except the default outlined. */
+  :host([appearance='filled']) :where([part='trigger']):hover:where(:not(:disabled)),
+  :host([appearance='filled-outlined']) :where([part='trigger']):hover:where(:not(:disabled)),
+  :host([appearance='plain']) :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: var(--lr-color-brand-quiet);
+  }
+  /* The loud fill has no quieter tint to move to, so it shifts toward the contrast neutral --
+     which darkens in the light theme and lightens in the dark one, both times away from the fill. */
+  :host([appearance='accent']) :where([part='trigger']):hover:where(:not(:disabled)) {
+    background: color-mix(in srgb, var(--lr-color-neutral) 12%, var(--lr-color-brand));
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-color-brand);
@@ -132,6 +194,83 @@ export const styles = css`
      native <select>'s empty-option / combobox's placeholder styling. */
   .trigger-label[data-placeholder] {
     color: var(--lr-color-text-quiet);
+  }
+
+  /* Multi-select chip row. Wraps rather than scrolls, so a long selection grows the trigger's
+     block size instead of hiding chips behind an invisible scroll axis. */
+  [part='tags'] {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--lr-space-2xs);
+    min-inline-size: 0;
+  }
+  /* [part~=] because the overflow chip carries two part names ('tag tag-overflow'), and an exact
+     [part='tag'] match would skip it -- state lives in the part name because a state selector
+     after ::part() never matches. */
+  [part~='tag'] {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    max-inline-size: 100%;
+    padding: var(--lr-select-tag-padding);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-color-surface-raised);
+    font-size: var(--lr-select-tag-font-size);
+    line-height: var(--lr-line-height-none);
+  }
+  [part='tag-label'] {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  [part~='tag-overflow'] {
+    color: var(--lr-color-text-quiet);
+    white-space: nowrap;
+  }
+
+  /* Sits in the trigger's reserved inline-end band (see .control[data-clearable] below), outboard
+     of the expand icon: the trigger is a <button>, so the clear action cannot live inside it and
+     has to be overlaid from the wrapper instead. Reserving the band with padding rather than
+     overlapping keeps the trigger's own content clear of it in both directions. */
+  [part='clear-button'] {
+    position: absolute;
+    inset-inline-end: 0;
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    /* A real, independently-focusable control, so it takes the full shared icon-button hit-area
+       floor rather than the capped decorative box [part='expand-icon'] uses. */
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: var(--lr-space-2xs);
+    border: none;
+    border-radius: var(--lr-select-radius);
+    background: none;
+    color: var(--lr-color-text-quiet);
+    line-height: var(--lr-line-height-none);
+    cursor: pointer;
+  }
+  .control[data-clearable] [part='trigger'] {
+    padding-inline-end: var(--lr-icon-button-size);
+  }
+  /* Mirrors <lr-combobox>'s own [part='clear-button']:hover -- the same quiet-to-full text token
+     step, so mouse users get the feedback keyboard users get from the focus ring below. */
+  [part='clear-button']:hover {
+    color: var(--lr-color-text);
+  }
+  [part='clear-button']:focus-visible {
+    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+    outline-offset: var(--lr-focus-ring-offset);
+  }
+  [part='clear-button']:disabled {
+    opacity: var(--lr-opacity-disabled);
+    cursor: not-allowed;
   }
 
   [part='expand-icon'] {

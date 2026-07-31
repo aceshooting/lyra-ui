@@ -344,7 +344,7 @@ export type {
 } from './components/forms/combobox/combobox.js';
 export { LyraOption } from './components/forms/combobox/option.js';
 export { LyraSelect } from './components/forms/select/select.js';
-export type { LyraSelectSize } from './components/forms/select/select.js';
+export type { LyraSelectAppearance, LyraSelectSize, LyraSelectTagRenderer } from './components/forms/select/select.js';
 export { LyraDatePicker } from './components/forms/date-picker/date-picker.js';
 export type { DateRange } from './components/forms/date-picker/date-picker.js';
 export { LyraDateInput } from './components/forms/date-picker/date-input.js';
@@ -750,7 +750,7 @@ export type {
   RecencyBucket,
 } from './internal/group-by-recency.js';
 export { LyraAvatar } from './components/media/avatar/avatar.js';
-export type { AvatarSize, AvatarShape, AvatarTone } from './components/media/avatar/avatar.js';
+export type { AvatarSize, AvatarShape, AvatarTone, AvatarLoading, LyraAvatarEventMap } from './components/media/avatar/avatar.js';
 export { LyraCard } from './components/layout/card/card.js';
 export { LyraCarousel } from './components/layout/carousel/carousel.js';
 export type { LyraCarouselEventMap } from './components/layout/carousel/carousel.js';
@@ -801,7 +801,7 @@ export type {
 } from './components/forms/textarea/textarea.js';
 
 export { LyraButton } from './components/forms/button/button.js';
-export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType } from './components/forms/button/button.js';
+export type { ButtonVariant, ButtonAppearance, ButtonSize, ButtonType, ButtonFormEnctype, ButtonFormMethod } from './components/forms/button/button.js';
 
 export { LyraInput } from './components/forms/input/input.js';
 export type { LyraInputType, LyraInputSize, LyraInputAppearance } from './components/forms/input/input.js';
@@ -819,8 +819,9 @@ export { LyraProgressBar } from './components/overlays/progress/progress-bar.js'
 export type { ProgressVariant } from './components/overlays/progress/progress-bar.js';
 export { LyraProgressRing } from './components/overlays/progress/progress-ring.js';
 export { LyraBadge } from './components/overlays/badge/badge.js';
-export type { BadgeVariant } from './components/overlays/badge/badge.js';
+export type { BadgeVariant, BadgeSize, BadgeAppearance, BadgeAttention } from './components/overlays/badge/badge.js';
 export { LyraTag } from './components/overlays/badge/tag.js';
+export type { LyraTagEventMap } from './components/overlays/badge/tag.js';
 export { LyraCallout } from './components/overlays/callout/callout.js';
 export type { CalloutVariant, LyraCalloutEventMap } from './components/overlays/callout/callout.js';
 export { LyraDetails } from './components/layout/details/details.js';
@@ -840,7 +841,7 @@ export type { RelativeTimeUnit } from './components/utility/format/relative-time
 export { LyraRating } from './components/overlays/rating/rating.js';
 export type { LyraRatingEventMap, LyraRatingHoverPhase, LyraRatingSize, LyraRatingSymbolRenderer } from './components/overlays/rating/rating.js';
 export { LyraColorPicker } from './components/forms/color-picker/color-picker.js';
-export type { LyraColorPickerEventMap } from './components/forms/color-picker/color-picker.js';
+export type { LyraColorPickerEventMap, LyraColorPickerSize, LyraColorPickerSwatch, LyraColorPickerFormat, LyraColorPickerOutputFormat, LyraColorHsva } from './components/forms/color-picker/color-picker.js';
 export { LyraCheckboxGroup } from './components/forms/checkbox-group/checkbox-group.js';
 export type { LyraCheckboxGroupEventMap } from './components/forms/checkbox-group/checkbox-group.js';
 export { LyraTokenInput } from './components/forms/token-input/token-input.js';
@@ -869,7 +870,7 @@ export type { LyraCodeBlockCoreEventMap } from './components/conversation/code-b
 export type { LyraComboboxEventMap } from './components/forms/combobox/combobox.js';
 export type { LyraOptionEventMap } from './components/forms/combobox/option.js';
 export type { LyraConversationItemEventMap } from './components/conversation/conversation-item/conversation-item.js';
-export type { LyraCopyButtonEventMap } from './components/utility/copy-button/copy-button.js';
+export type { LyraCopyButtonEventMap, LyraCopyErrorReason } from './components/utility/copy-button/copy-button.js';
 export type { LyraDateInputEventMap, LyraDateInputSize } from './components/forms/date-picker/date-input.js';
 export type { LyraDatePickerEventMap } from './components/forms/date-picker/date-picker.js';
 export type { LyraDialogEventMap } from './components/overlays/dialog/dialog.js';

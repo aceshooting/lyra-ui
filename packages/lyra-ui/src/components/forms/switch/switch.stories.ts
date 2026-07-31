@@ -67,3 +67,31 @@ export const Interactive: Story = {
     <p id="switch-log" style="font-family: monospace; margin-top: 0.5rem;">checked: false</p>
   `,
 };
+
+export const NativeFormEvents: Story = {
+  name: 'Native input/change events',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A user toggle fires the native `input` and `change` pair before the `lr-change` alias, so a form library or a `<form>`-level listener bound to the native names sees the switch the same way it sees a native checkbox.',
+      },
+    },
+  },
+  render: () => html`
+    <form
+      @input=${() => {
+        const out = document.getElementById('switch-native-log');
+        if (out) out.textContent = `${out.textContent} input`;
+      }}
+      @change=${() => {
+        const out = document.getElementById('switch-native-log');
+        if (out) out.textContent = `${out.textContent} change`;
+      }}
+      style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;"
+    >
+      <lr-switch name="notifications">Enable notifications</lr-switch>
+    </form>
+    <p id="switch-native-log" style="font-family: monospace; margin-top: 0.5rem;">form saw:</p>
+  `,
+};

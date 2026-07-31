@@ -358,6 +358,53 @@ function ternaryBranches(expr) {
   return null;
 }
 
+/**
+ * Every expression a conditional could evaluate TO, with the conditions themselves discarded.
+ *
+ * Stripping only the first condition is not enough once the alternate is itself a conditional --
+ * `a === 'success' ? 'base ok' : b === 'error' ? 'base bad' : 'base'` left `=== 'error'` in the
+ * text, so `error` was read as a part name and demanded a `[part='error']` rule that should never
+ * exist. Recursing on both arms of each top-level `:` keeps only real value positions.
+ */
+function conditionalValueExpressions(expr) {
+  const rest = ternaryBranches(expr);
+  if (rest === null) return [expr];
+  let depth = 0;
+  for (let i = 0; i < rest.length; i++) {
+    const ch = rest[i];
+    if (ch === '(' || ch === '[' || ch === '{') depth++;
+    else if (ch === ')' || ch === ']' || ch === '}') depth--;
+    else if (depth === 0 && ch === '?') {
+      // A nested conditional inside the consequent; hand the whole tail to the recursion.
+      break;
+    } else if (depth === 0 && ch === ':') {
+      return [
+        ...conditionalValueExpressions(rest.slice(0, i)),
+        ...conditionalValueExpressions(rest.slice(i + 1)),
+      ];
+    }
+  }
+  return conditionalValueExpressions(rest);
+}
+
+/**
+ * The token GROUPS a `part=` attribute can render as: one group per possible attribute value, each
+ * holding that value's whitespace-separated tokens.
+ *
+ * Grouping matters because a multi-token `part="base base-error"` is still ONE element and ONE box.
+ * Flattening it demanded a separate sized rule per token, so encoding state in the part name -- the
+ * pattern this repo mandates, since `::part(base)[state]` never matches -- was penalised for doing
+ * the right thing.
+ */
+function literalGroups(text) {
+  const groups = [];
+  for (const m of text.matchAll(/["']([^"']+)["']/g)) {
+    const tokens = m[1].trim().split(/\s+/).filter(Boolean);
+    if (tokens.length) groups.push(tokens);
+  }
+  return groups;
+}
+
 function collectLiterals(text) {
   const names = new Set();
   for (const m of text.matchAll(/["']([^"']+)["']/g)) {
@@ -375,22 +422,23 @@ function collectLiterals(text) {
 function resolvePartNames(attrText, wholeSource) {
   const part = getAttr(attrText, 'part');
   if (!part) return [];
-  if (part.kind === 'static') return [...part.value.trim().split(/\s+/)].filter(Boolean);
+  const fromExpression = (expr) =>
+    conditionalValueExpressions(expr).flatMap((value) => literalGroups(value));
+  if (part.kind === 'static') {
+    const tokens = part.value.trim().split(/\s+/).filter(Boolean);
+    return tokens.length ? [tokens] : [];
+  }
   const expr = part.expr.trim();
-  // `part=${'a b'}` / `part=${cond ? 'a' : 'b'}` -- every literal in the
-  // branch(es), the condition (if any) stripped out first.
-  const literalNames = collectLiterals(ternaryBranches(expr) ?? expr);
-  if (literalNames.size > 0) return [...literalNames];
+  // `part=${'a b'}` / `part=${cond ? 'a b' : 'a'}` -- one group per value position.
+  const groups = fromExpression(expr);
+  if (groups.length > 0) return groups;
   // `part=${identifier}` -- resolve via a `const/let identifier = ...` assignment
-  // (ternary-of-literals or a single literal) declared anywhere earlier in the file.
+  // (conditional-of-literals or a single literal) declared anywhere earlier in the file.
   const identifierMatch = expr.match(/^\s*([A-Za-z_$][\w$]*)\s*$/);
   if (identifierMatch) {
     const identifier = identifierMatch[1];
     const assign = wholeSource.match(new RegExp(`\\b(?:const|let)\\s+${identifier}\\s*=([^;]+);`));
-    if (assign) {
-      const assignExpr = assign[1].trim();
-      return [...collectLiterals(ternaryBranches(assignExpr) ?? assignExpr)];
-    }
+    if (assign) return fromExpression(assign[1].trim());
   }
   return [];
 }
@@ -825,31 +873,48 @@ export function checkStaticHitAreaFixture(
       continue;
     }
 
-    for (const partName of candidate.partNames) {
-      const guard = guardResultForPart(styleSources, partName);
-      if (!guard.found) {
+    // One group per possible `part=` value; each group is ONE element, so the floor only has to be
+    // met by one of its tokens. `part="base base-error"` satisfying it through `[part~='base']` is
+    // correct, not a miss -- state belongs in the part name precisely because `::part(x)[attr]`
+    // never matches, and demanding a sized rule per state token would penalise that.
+    for (const group of candidate.partNames) {
+      const shown = group.join(' ');
+      const guards = group.map((partName) => ({ partName, guard: guardResultForPart(styleSources, partName) }));
+      const satisfied = guards.find(({ guard }) => guard.found && guard.sawInline && guard.sawBlock);
+      if (satisfied) {
+        for (const offense of satisfied.guard.offending) {
+          errors.push(
+            `${relPath}:${tagLine}: <${candidate.tagName} part="${shown}"> -- selector "${offense.selector}" sets ` +
+              `${offense.property}: ${offense.raw} (${offense.resolved.kind === 'unresolved' ? 'unresolved, cannot confirm it meets the floor' : `resolves to ${offense.resolved.px}px`}), below the ${FLOOR_PX}px floor (${ICON_BUTTON_TOKEN})`,
+          );
+        }
+        continue;
+      }
+      const anyFound = guards.find(({ guard }) => guard.found);
+      if (!anyFound) {
         errors.push(
-          `${relPath}:${tagLine}: <${candidate.tagName} part="${partName}"> has no [part='${partName}'] rule at all ` +
-            `in its styles file -- no min-inline-size/min-block-size guard, floor is ${FLOOR_PX}px (${ICON_BUTTON_TOKEN})`,
+          `${relPath}:${tagLine}: <${candidate.tagName} part="${shown}"> has no rule at all for any of its part ` +
+            `tokens in its styles file -- no min-inline-size/min-block-size guard, floor is ${FLOOR_PX}px (${ICON_BUTTON_TOKEN})`,
         );
         continue;
       }
-      if (!guard.sawInline || !guard.sawBlock) {
-        const missing = [
-          !guard.sawInline && 'min-inline-size',
-          !guard.sawBlock && 'min-block-size',
-        ]
-          .filter(Boolean)
-          .join(' and ');
-        errors.push(
-          `${relPath}:${tagLine}: <${candidate.tagName} part="${partName}"> is missing ${missing} on its [part='${partName}'] rule(s) -- floor is ${FLOOR_PX}px (${ICON_BUTTON_TOKEN})`,
-        );
-      }
-      for (const offense of guard.offending) {
-        errors.push(
-          `${relPath}:${tagLine}: <${candidate.tagName} part="${partName}"> -- selector "${offense.selector}" sets ` +
-            `${offense.property}: ${offense.raw} (${offense.resolved.kind === 'unresolved' ? 'unresolved, cannot confirm it meets the floor' : `resolves to ${offense.resolved.px}px`}), below the ${FLOOR_PX}px floor (${ICON_BUTTON_TOKEN})`,
-        );
+      const missing = [
+        !guards.some(({ guard }) => guard.sawInline) && 'min-inline-size',
+        !guards.some(({ guard }) => guard.sawBlock) && 'min-block-size',
+      ]
+        .filter(Boolean)
+        .join(' and ');
+      errors.push(
+        `${relPath}:${tagLine}: <${candidate.tagName} part="${shown}"> is missing ${missing} across all of its ` +
+          `part tokens -- floor is ${FLOOR_PX}px (${ICON_BUTTON_TOKEN})`,
+      );
+      for (const { partName, guard } of guards) {
+        for (const offense of guard.offending) {
+          errors.push(
+            `${relPath}:${tagLine}: <${candidate.tagName} part="${shown}"> -- [part='${partName}'] selector ` +
+              `"${offense.selector}" sets ${offense.property}: ${offense.raw} (${offense.resolved.kind === 'unresolved' ? 'unresolved, cannot confirm it meets the floor' : `resolves to ${offense.resolved.px}px`}), below the ${FLOOR_PX}px floor (${ICON_BUTTON_TOKEN})`,
+          );
+        }
       }
     }
   }

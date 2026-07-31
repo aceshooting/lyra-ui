@@ -40,6 +40,8 @@ function createNoopInternals(): ElementInternals {
 }
 
 export interface LyraSwitchEventMap {
+  input: CustomEvent<undefined>;
+  change: CustomEvent<undefined>;
   'lr-change': CustomEvent<{ checked: boolean }>;
   focus: CustomEvent<undefined>;
   blur: CustomEvent<undefined>;
@@ -70,7 +72,12 @@ export interface LyraSwitchEventMap {
  * accessible name.
  * @slot hint - Custom hint content.
  * @slot error - Custom error content.
- * @event lr-change - The user toggled the switch (click or Space/Enter). `detail: { checked }`.
+ * @event input - The user toggled the switch; bubbling and composed like a native form event.
+ * @event change - Fired immediately after `input` for the same user toggle, matching the native
+ * checkbox/radio contract a form library expects from a boolean control.
+ * @event lr-change - Compatibility alias fired after `input` and `change` (click, Space/Enter, or
+ * the programmatic `click()` activation path). `detail: { checked }`. Not fired for a plain
+ * `.checked` property assignment, `form.reset()`, or session-state restoration.
  * @event focus - The internal switch control received focus. Bridges the internal element's
  * non-bubbling native `focus`, re-dispatched as bubbling and composed.
  * @event blur - The internal switch control lost focus. Bridges the internal element's
@@ -325,6 +332,13 @@ export class LyraSwitch extends LyraElement<LyraSwitchEventMap> {
   private toggle(): void {
     if (this.effectiveDisabled) return;
     this.checked = !this.checked;
+    // Native `input` then `change`, then the library alias -- the same order (and the same
+    // rationale) as `<lr-checkbox>`'s `toggle()`. A boolean control that emitted only the
+    // `lr-`-prefixed alias is invisible to every form library, validation helper, and
+    // `<form>`-level `change` listener that binds the native names, which is the ordinary way a
+    // consumer observes a control they did not write.
+    this.emit('input');
+    this.emit('change');
     this.emit('lr-change', { checked: this.checked });
   }
 

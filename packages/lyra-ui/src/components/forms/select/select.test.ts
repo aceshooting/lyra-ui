@@ -1762,3 +1762,501 @@ describe('ElementInternals fallback (lr-select)', () => {
     );
   });
 });
+
+
+// -- Multi-select, tags, clear, placement, appearance -----------------------
+
+const multi = () => html`
+  <lr-select multiple>
+    <lr-option value="a">Apple</lr-option>
+    <lr-option value="b">Banana</lr-option>
+    <lr-option value="c">Cherry</lr-option>
+  </lr-select>
+`;
+
+/** Every rendered tag, including the "+N" overflow chip (which carries both part names). */
+function tags(el: LyraSelect): HTMLElement[] {
+  return [...el.shadowRoot!.querySelectorAll('[part~="tag"]')] as HTMLElement[];
+}
+
+function overflowTag(el: LyraSelect): HTMLElement | null {
+  return el.shadowRoot!.querySelector('[part~="tag-overflow"]');
+}
+
+function clearButton(el: LyraSelect): HTMLButtonElement | null {
+  return el.shadowRoot!.querySelector('[part="clear-button"]');
+}
+
+/** Resolve a token expression inside the component's own shadow scope, so a computed
+ *  `rgb(...)` can be compared against a `var(--lr-*)` declaration like-for-like. */
+function resolved(el: LyraSelect, property: string, declaration: string): string {
+  const probe = document.createElement('span');
+  probe.setAttribute('style', `${property}: ${declaration}`);
+  el.shadowRoot!.appendChild(probe);
+  const value = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return value;
+}
+
+describe('multiple', () => {
+  it('exposes an array value and keeps the listbox open while picking several options', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    expect(el.multiple).to.be.true;
+    expect(el.value).to.deep.equal([]);
+
+    el.open = true;
+    await el.updateComplete;
+    rows(el)[0].click();
+    await el.updateComplete;
+    expect(el.open, 'the listbox stays open in multiple mode').to.be.true;
+    rows(el)[2].click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['a', 'c']);
+    expect([...rows(el)].map((row) => row.getAttribute('aria-selected'))).to.deep.equal([
+      'true',
+      'false',
+      'true',
+    ]);
+  });
+
+  it('toggles a already-selected row back off and emits the new array', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    el.open = true;
+    await el.updateComplete;
+
+    const detail: unknown[] = [];
+    el.addEventListener('change', (e) => detail.push((e as CustomEvent).detail));
+    rows(el)[0].click();
+    await el.updateComplete;
+
+    expect(el.value).to.deep.equal(['b']);
+    expect(detail).to.deep.equal([{ value: ['b'] }]);
+  });
+
+  it('renders one tag per selected option instead of a single label', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    expect(tags(el).map((tag) => tag.textContent!.trim())).to.deep.equal(['Apple', 'Banana']);
+  });
+
+  it('marks the listbox as multi-selectable, rendering both ARIA states', async () => {
+    const single = (await fixture(basic())) as LyraSelect;
+    expect(single.shadowRoot!.querySelector('[part="listbox"]')!.getAttribute('aria-multiselectable')).to.equal('false');
+    const el = (await fixture(multi())) as LyraSelect;
+    expect(el.shadowRoot!.querySelector('[part="listbox"]')!.getAttribute('aria-multiselectable')).to.equal('true');
+  });
+
+  it('submits every selected value under the control name', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="fruit" multiple>
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    expect(new FormData(form).getAll('fruit')).to.deep.equal(['a', 'b']);
+  });
+
+  it('contributes no form entry at all while unnamed', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select multiple>
+          <lr-option value="a">Apple</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    el.value = ['a'];
+    await el.updateComplete;
+    expect([...new FormData(form).keys()]).to.deep.equal([]);
+  });
+
+  it('restores a multiple selection from persisted state, and a plain string in single mode', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.formStateRestoreCallback('["a","c"]', 'restore');
+    expect(el.value).to.deep.equal(['a', 'c']);
+    expect(() => el.formStateRestoreCallback('{"not":"an array"}', 'restore')).to.not.throw();
+    expect(el.value).to.deep.equal([]);
+
+    const single = (await fixture(basic())) as LyraSelect;
+    single.formStateRestoreCallback('b', 'restore');
+    expect(single.value).to.equal('b');
+  });
+
+  it('stays invalid while required and empty, and validates once anything is selected', async () => {
+    const el = (await fixture(html`
+      <lr-select multiple required>
+        <lr-option value="a">Apple</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+    expect(el.validity.valueMissing).to.be.true;
+    el.value = ['a'];
+    expect(el.validity.valueMissing).to.be.false;
+  });
+
+  it('seeds every declaratively-selected option and restores them all on form.reset()', async () => {
+    const form = (await fixture(html`
+      <form>
+        <lr-select name="fruit" multiple>
+          <lr-option value="a" selected>Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+          <lr-option value="c" selected>Cherry</lr-option>
+        </lr-select>
+      </form>
+    `)) as HTMLFormElement;
+    const el = form.querySelector('lr-select') as LyraSelect;
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a', 'c']);
+
+    el.value = ['b'];
+    form.reset();
+    expect(el.value).to.deep.equal(['a', 'c']);
+  });
+
+  it('removes the last selected value with Backspace on the trigger', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    let changes = 0;
+    el.addEventListener('change', () => changes++);
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+    expect(changes).to.equal(1);
+  });
+
+  it('never removes an already-selected option through closed-state type-ahead', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.value = ['a'];
+    await el.updateComplete;
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a']);
+
+    // Let the ~500ms type-ahead buffer lapse, so the next keystroke starts a fresh search
+    // instead of extending this one into 'ab'.
+    await aTimeout(600);
+    trigger(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'B', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.deep.equal(['a', 'b']);
+  });
+
+  it('is accessible with tags rendered and the listbox open', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.label = 'Fruit';
+    el.value = ['a', 'b'];
+    el.open = true;
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('max-options-visible', () => {
+  const many = async (): Promise<LyraSelect> =>
+    (await fixture(html`
+      <lr-select multiple>
+        <lr-option value="a">Apple</lr-option>
+        <lr-option value="b">Banana</lr-option>
+        <lr-option value="c">Cherry</lr-option>
+        <lr-option value="d">Date</lr-option>
+        <lr-option value="e">Elderberry</lr-option>
+      </lr-select>
+    `)) as LyraSelect;
+
+  it('defaults to three tags and collapses the rest behind a "+N" indicator', async () => {
+    const el = await many();
+    expect(el.maxOptionsVisible).to.equal(3);
+    el.strings = { selectSelectedOverflow: '+{n} more' };
+    el.value = ['a', 'b', 'c', 'd', 'e'];
+    await el.updateComplete;
+
+    expect(tags(el).length).to.equal(4);
+    expect(overflowTag(el)!.textContent!.trim()).to.equal('+2 more');
+  });
+
+  it('shows every tag with no indicator when set to 0', async () => {
+    const el = await many();
+    el.maxOptionsVisible = 0;
+    el.value = ['a', 'b', 'c', 'd', 'e'];
+    await el.updateComplete;
+    expect(tags(el).length).to.equal(5);
+    expect(overflowTag(el)).to.equal(null);
+  });
+
+  it('falls back to three for a non-finite attribute value', async () => {
+    const el = await many();
+    el.setAttribute('max-options-visible', 'not-a-number');
+    await el.updateComplete;
+    expect(el.maxOptionsVisible).to.equal(3);
+  });
+
+  it('formats the hidden count with the effective locale', async () => {
+    const el = await many();
+    el.locale = 'ar-EG';
+    el.strings = { selectSelectedOverflow: '+{n}' };
+    el.value = ['a', 'b', 'c', 'd', 'e'];
+    await el.updateComplete;
+    expect(overflowTag(el)!.textContent!.trim()).to.equal(`+${new Intl.NumberFormat('ar-EG').format(2)}`);
+  });
+});
+
+describe('with-clear', () => {
+  it('renders no clear button until there is something to clear', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    await el.updateComplete;
+    expect(clearButton(el)).to.equal(null);
+
+    el.value = 'b';
+    await el.updateComplete;
+    expect(clearButton(el)).to.not.equal(null);
+  });
+
+  it('stays absent while unset, even with a value', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.value = 'b';
+    await el.updateComplete;
+    expect(clearButton(el)).to.equal(null);
+  });
+
+  it('clears the selection and announces it once', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+
+    const seen: string[] = [];
+    for (const type of ['input', 'change', 'lr-change', 'lr-clear']) {
+      el.addEventListener(type, () => seen.push(type));
+    }
+    clearButton(el)!.click();
+    await el.updateComplete;
+
+    expect(el.value).to.equal('');
+    expect(seen).to.deep.equal(['input', 'change', 'lr-change', 'lr-clear']);
+    expect(clearButton(el)).to.equal(null);
+  });
+
+  it('clears every value at once in multiple mode', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.withClear = true;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(el.value).to.deep.equal([]);
+  });
+
+  it('does not open the listbox when the clear button is pressed', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+    clearButton(el)!.click();
+    await el.updateComplete;
+    expect(el.open).to.be.false;
+  });
+
+  it('carries a localized accessible name and the shared icon-button hit-area floor', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    el.strings = { clear: 'Alles löschen' };
+    await el.updateComplete;
+
+    const button = clearButton(el)!;
+    expect(button.getAttribute('aria-label')).to.equal('Alles löschen');
+    const box = button.getBoundingClientRect();
+    expect(box.width).to.be.at.least(40);
+    expect(box.height).to.be.at.least(40);
+  });
+
+  it('disables the clear button alongside the rest of the control', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.withClear = true;
+    el.value = 'b';
+    el.disabled = true;
+    await el.updateComplete;
+    expect(clearButton(el)!.disabled).to.be.true;
+  });
+
+  it('reserves an inline-end band on the trigger so its content never runs under the button', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const base = getComputedStyle(trigger(el)).paddingInlineEnd;
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).paddingInlineEnd).to.equal('40px');
+    expect(base).to.not.equal('40px');
+  });
+
+  it('moves the clear button to the trailing edge under RTL', async () => {
+    const ltr = (await fixture(basic())) as LyraSelect;
+    ltr.withClear = true;
+    ltr.value = 'b';
+    await ltr.updateComplete;
+    const ltrTrigger = trigger(ltr).getBoundingClientRect();
+    expect(clearButton(ltr)!.getBoundingClientRect().right).to.be.closeTo(ltrTrigger.right, 2);
+
+    const wrapper = await fixture(html`
+      <div dir="rtl">
+        <lr-select with-clear>
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const rtl = wrapper.querySelector('lr-select') as LyraSelect;
+    rtl.value = 'b';
+    await rtl.updateComplete;
+    const rtlTrigger = trigger(rtl).getBoundingClientRect();
+    expect(clearButton(rtl)!.getBoundingClientRect().left).to.be.closeTo(rtlTrigger.left, 2);
+  });
+
+  it('gives the clear button a :hover rule alongside its :focus-visible ring', () => {
+    const css = styles.cssText.replace(/\s+/g, ' ');
+    expect(css).to.match(/\[part='clear-button'\]:hover\s*\{[^}]*color:/);
+    expect(css).to.match(/\[part='clear-button'\]:focus-visible\s*\{[^}]*outline:/);
+  });
+
+  it('is accessible with the clear button rendered', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.label = 'Fruit';
+    el.withClear = true;
+    el.value = 'b';
+    await el.updateComplete;
+    await expect(el).to.be.accessible();
+  });
+});
+
+describe('getTag', () => {
+  it('renders a consumer-supplied chip per selected option, with its index', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.getTag = (option, index) => html`<span class="custom" data-index=${index}>${option.label.toUpperCase()}</span>`;
+    el.value = ['a', 'b'];
+    await el.updateComplete;
+
+    const custom = [...el.shadowRoot!.querySelectorAll('.custom')] as HTMLElement[];
+    expect(custom.map((node) => node.textContent)).to.deep.equal(['APPLE', 'BANANA']);
+    expect(custom.map((node) => node.dataset['index'])).to.deep.equal(['0', '1']);
+    expect(el.shadowRoot!.querySelector('[part="tag-label"]')).to.equal(null);
+  });
+
+  it('renders a returned string as text, never as markup', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.getTag = () => '<b>bold</b>';
+    el.value = ['a'];
+    await el.updateComplete;
+    const container = el.shadowRoot!.querySelector('[part="tags"]') as HTMLElement;
+    expect(container.querySelector('b')).to.equal(null);
+    expect(container.textContent).to.contain('<b>bold</b>');
+  });
+
+  it('still collapses past max-options-visible', async () => {
+    const el = (await fixture(multi())) as LyraSelect;
+    el.getTag = (option) => option.value;
+    el.maxOptionsVisible = 1;
+    el.strings = { selectSelectedOverflow: '+{n}' };
+    el.value = ['a', 'b', 'c'];
+    await el.updateComplete;
+    expect(overflowTag(el)!.textContent!.trim()).to.equal('+2');
+  });
+});
+
+describe('placement', () => {
+  it('defaults to bottom-start and reflects', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    expect(el.placement).to.equal('bottom-start');
+    await el.updateComplete;
+    expect(el.getAttribute('placement')).to.equal('bottom-start');
+  });
+
+  it('positions the listbox above the trigger when asked to', async () => {
+    const wrapper = await fixture(html`
+      <div style="padding-block-start: 320px;">
+        <lr-select placement="top-start">
+          <lr-option value="a">Apple</lr-option>
+          <lr-option value="b">Banana</lr-option>
+        </lr-select>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-select') as LyraSelect;
+    el.open = true;
+    await el.updateComplete;
+    await aTimeout(60);
+
+    const listbox = el.shadowRoot!.querySelector('[part="listbox"]')!.getBoundingClientRect();
+    const anchor = trigger(el).getBoundingClientRect();
+    expect(listbox.bottom).to.be.at.most(anchor.top + 1);
+  });
+});
+
+describe('appearance and pill', () => {
+  it('defaults to outlined and reflects the attribute', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    expect(el.appearance).to.equal('outlined');
+    await el.updateComplete;
+    expect(el.getAttribute('appearance')).to.equal('outlined');
+  });
+
+  it('fills the trigger for filled and filled-outlined, keeping the border only for the latter', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const raised = resolved(el, 'background-color', 'var(--lr-color-surface-raised)');
+    const border = resolved(el, 'color', 'var(--lr-color-border)');
+
+    el.appearance = 'filled';
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(raised);
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal('rgba(0, 0, 0, 0)');
+
+    el.appearance = 'filled-outlined';
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).backgroundColor).to.equal(raised);
+    expect(getComputedStyle(trigger(el)).borderTopColor).to.equal(border);
+  });
+
+  it('drops both the fill and the border for plain', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.appearance = 'plain';
+    await el.updateComplete;
+    const cs = getComputedStyle(trigger(el));
+    expect(cs.backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    expect(cs.borderTopColor).to.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('paints accent with the loud brand fill and its on-brand text color', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    const brand = resolved(el, 'background-color', 'var(--lr-color-brand)');
+    const onBrand = resolved(el, 'color', 'var(--lr-color-on-brand)');
+    el.appearance = 'accent';
+    await el.updateComplete;
+    const cs = getComputedStyle(trigger(el));
+    expect(cs.backgroundColor).to.equal(brand);
+    expect(cs.color).to.equal(onBrand);
+  });
+
+  it('rounds the trigger fully with pill, through the same radius property', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.pill = true;
+    await el.updateComplete;
+    expect(getComputedStyle(trigger(el)).borderRadius).to.equal('999px');
+    expect(el.getAttribute('pill')).to.equal('');
+  });
+
+  it('is accessible in every appearance', async () => {
+    for (const appearance of ['accent', 'filled', 'outlined', 'filled-outlined', 'plain'] as const) {
+      const el = (await fixture(basic())) as LyraSelect;
+      el.label = 'Fruit';
+      el.appearance = appearance;
+      await el.updateComplete;
+      await expect(el).to.be.accessible();
+    }
+  });
+});
