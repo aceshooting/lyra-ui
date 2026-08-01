@@ -194,11 +194,7 @@ export class LyraNodePalette extends LyraElement<LyraNodePaletteEventMap> {
       const count = this.filtered.length;
       const countText = getNumberFormat(this.effectiveLocale).format(count);
       this.announcer.announce(
-        this.localize(
-          count === 1 ? 'nodePaletteResultCount' : 'nodePaletteResultCountPlural',
-          undefined,
-          { count: countText },
-        ),
+        this.localize('nodePaletteResultCount', undefined, { count: countText, pluralCount: count }),
       );
     }
   }

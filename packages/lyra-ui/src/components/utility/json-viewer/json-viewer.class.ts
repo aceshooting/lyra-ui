@@ -196,18 +196,15 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   private previewText(type: 'object' | 'array', count: number): string {
     // {count} is interpolated via the values arg (not string-concatenated) --
-    // same "{count} tool"/"{count} tools" template pattern as toolCount/
-    // toolCountPlural, so the count's position relative to the noun stays
-    // translatable rather than fixed to English's "number space noun" order.
+    // same pluralized-message pattern as toolCount, so the count's position
+    // relative to the noun stays translatable rather than fixed to English's
+    // "number space noun" order. `count` carries the locale-grouped string for
+    // display; `pluralCount` carries the raw number that selects the category.
     const localizedCount = getNumberFormat(this.effectiveLocale).format(count);
     if (type === 'array') {
-      return this.localize(count === 1 ? 'jsonItemCount' : 'jsonItemCountPlural', undefined, {
-        count: localizedCount,
-      });
+      return this.localize('jsonItemCount', undefined, { count: localizedCount, pluralCount: count });
     }
-    return this.localize(count === 1 ? 'jsonKeyCount' : 'jsonKeyCountPlural', undefined, {
-      count: localizedCount,
-    });
+    return this.localize('jsonKeyCount', undefined, { count: localizedCount, pluralCount: count });
   }
 
   private isExpanded(pathKey: string, depth: number, forceExpand: Set<string>): boolean {

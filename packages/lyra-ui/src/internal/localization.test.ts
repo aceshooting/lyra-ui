@@ -7,6 +7,7 @@ import {
   subscribeLyraLocale,
   LYRA_DEFAULT_STRINGS,
   resolveLocalizedParts,
+  resolveLyraString,
 } from './localization.js';
 import '../components/data/sparkline/sparkline.js';
 import type { LyraSparkline } from '../components/data/sparkline/sparkline.js';
@@ -96,8 +97,10 @@ it('defines the JSON viewer resource-limit message', () => {
 });
 
 it('defines whole retrieval result-count and row-selection messages', () => {
-  expect(LYRA_DEFAULT_STRINGS.nodePaletteResultCount).to.equal('{count} item');
-  expect(LYRA_DEFAULT_STRINGS.nodePaletteResultCountPlural).to.equal('{count} items');
+  expect(LYRA_DEFAULT_STRINGS.nodePaletteResultCount).to.deep.equal({
+    one: '{count} item',
+    other: '{count} items',
+  });
   expect(LYRA_DEFAULT_STRINGS.retrievalResultsSelectRow).to.equal('Select {label}');
 });
 
@@ -194,4 +197,134 @@ it('registerLyraLocale still only notifies subscribeLyraLocale listeners for the
     unsubscribeActive();
     setLyraLocale('en');
   }
+});
+
+// ---------------------------------------------------------------------------
+// Plural rules (Intl.PluralRules categories)
+// ---------------------------------------------------------------------------
+
+/** A host carrying an explicit `locale`, which `resolveLyraLocale()` reads ahead of `lang`. */
+function localeHost(locale: string): Promise<HTMLElement> {
+  return fixture<HTMLElement>(html`<div locale=${locale}></div>`);
+}
+
+it('models every pluralized DEFAULT_STRINGS entry as a CLDR category object with a required "other"', () => {
+  const pluralized = Object.entries(LYRA_DEFAULT_STRINGS).filter(([, message]) => typeof message === 'object');
+  expect(pluralized.length).to.be.greaterThan(0);
+  for (const [key, message] of pluralized) {
+    expect(Object.keys(message as object), key).to.deep.equal(['one', 'other']);
+    expect((message as { other: string }).other, key).to.be.a('string');
+  }
+});
+
+it('drops the legacy two-key "…Plural" scheme entirely', () => {
+  expect(Object.keys(LYRA_DEFAULT_STRINGS).filter((key) => key.endsWith('Plural'))).to.deep.equal([]);
+});
+
+it('selects the English one/other categories from values.count', async () => {
+  const host = await localeHost('en');
+  expect(resolveLyraString(host, 'toolCount', undefined, undefined, { count: 1 })).to.equal('1 tool');
+  expect(resolveLyraString(host, 'toolCount', undefined, undefined, { count: 0 })).to.equal('0 tools');
+  expect(resolveLyraString(host, 'toolCount', undefined, undefined, { count: 7 })).to.equal('7 tools');
+});
+
+it('selects Russian one/few/many through real Intl.PluralRules categories', async () => {
+  registerLyraLocale('ru', {
+    'x-plural-probe': {
+      one: '{count} инструмент',
+      few: '{count} инструмента',
+      many: '{count} инструментов',
+      other: '{count} инструмента',
+    },
+  });
+  const host = await localeHost('ru');
+  const at = (count: number) => resolveLyraString(host, 'x-plural-probe', undefined, undefined, { count });
+  expect(at(1)).to.equal('1 инструмент');
+  expect(at(3)).to.equal('3 инструмента');
+  expect(at(5)).to.equal('5 инструментов');
+  expect(at(21)).to.equal('21 инструмент');
+});
+
+it('selects all six Arabic categories', async () => {
+  registerLyraLocale('ar', {
+    'x-plural-probe': {
+      zero: 'ZERO',
+      one: 'ONE',
+      two: 'TWO',
+      few: 'FEW {count}',
+      many: 'MANY {count}',
+      other: 'OTHER {count}',
+    },
+  });
+  const host = await localeHost('ar');
+  const at = (count: number) => resolveLyraString(host, 'x-plural-probe', undefined, undefined, { count });
+  expect(at(0)).to.equal('ZERO');
+  expect(at(1)).to.equal('ONE');
+  expect(at(2)).to.equal('TWO');
+  expect(at(3)).to.equal('FEW 3');
+  expect(at(11)).to.equal('MANY 11');
+  expect(at(100)).to.equal('OTHER 100');
+});
+
+it('widens a missing category through the documented fallback chain', async () => {
+  registerLyraLocale('ru', {
+    'x-chain-many-only': { many: 'MANY', other: 'OTHER' },
+    'x-chain-few-only': { few: 'FEW', other: 'OTHER' },
+    'x-chain-other-only': { other: 'OTHER' },
+  });
+  registerLyraLocale('ar', { 'x-chain-few-only': { few: 'FEW', other: 'OTHER' } });
+  const ru = await localeHost('ru');
+  const ar = await localeHost('ar');
+  // few -> many
+  expect(resolveLyraString(ru, 'x-chain-many-only', undefined, undefined, { count: 3 })).to.equal('MANY');
+  // many -> few
+  expect(resolveLyraString(ru, 'x-chain-few-only', undefined, undefined, { count: 5 })).to.equal('FEW');
+  // two -> few
+  expect(resolveLyraString(ar, 'x-chain-few-only', undefined, undefined, { count: 2 })).to.equal('FEW');
+  // anything -> other
+  expect(resolveLyraString(ru, 'x-chain-other-only', undefined, undefined, { count: 1 })).to.equal('OTHER');
+  expect(resolveLyraString(ru, 'x-chain-other-only', undefined, undefined, { count: 3 })).to.equal('OTHER');
+});
+
+it('falls back to "other" when no numeric count drives the selection', async () => {
+  const host = await localeHost('en');
+  expect(resolveLyraString(host, 'toolCount', undefined, undefined, {})).to.equal('{count} tools');
+  expect(resolveLyraString(host, 'toolCount')).to.equal('{count} tools');
+  expect(resolveLyraString(host, 'toolCount', undefined, undefined, { count: Number.NaN })).to.equal('NaN tools');
+});
+
+it('accepts a numeric pluralCount alongside a pre-formatted {count}', async () => {
+  const host = await localeHost('en');
+  expect(resolveLyraString(host, 'toolCount', undefined, undefined, { count: '1', pluralCount: 1 })).to.equal(
+    '1 tool',
+  );
+  expect(
+    resolveLyraString(host, 'toolCount', undefined, undefined, { count: '1,024', pluralCount: 1024 }),
+  ).to.equal('1,024 tools');
+});
+
+it('lets a per-instance override -- plain string or category object -- win over the pluralized default', async () => {
+  const host = await localeHost('en');
+  expect(resolveLyraString(host, 'toolCount', { toolCount: '{count} outils' }, undefined, { count: 1 })).to.equal(
+    '1 outils',
+  );
+  expect(
+    resolveLyraString(
+      host,
+      'toolCount',
+      { toolCount: { one: '{count} outil', other: '{count} outils' } },
+      undefined,
+      { count: 1 },
+    ),
+  ).to.equal('1 outil');
+});
+
+it('leaves non-plural keys, fallbacks, and interpolation completely unchanged', async () => {
+  const host = await localeHost('en');
+  expect(resolveLyraString(host, 'close')).to.equal('Close');
+  expect(resolveLyraString(host, 'legendTypeShown', undefined, undefined, { label: 'Revenue' })).to.equal(
+    'Revenue shown',
+  );
+  expect(resolveLyraString(host, 'legendTypeShown', undefined, 'Explicit')).to.equal('Explicit');
+  expect(resolveLyraString(host, 'notAKeyAtAll')).to.equal('notAKeyAtAll');
 });

@@ -717,7 +717,7 @@ describe('data mode', () => {
             { id: 'one', title: 'ISPARTA' },
             { id: 'two', title: 'IĞDIR' },
           ]}
-          .strings=${{ threadListMatchAnnouncePlural: 'MATCHES {count}' }}
+          .strings=${{ threadListMatchAnnounce: 'MATCHES {count}' }}
         ></lr-thread-list>
       `)) as LyraThreadList;
       const liveRegion = el.shadowRoot!.querySelector('lr-live-region')!;

@@ -799,10 +799,8 @@ describe('lr-textarea with-count', () => {
     );
     expect(el.getAttribute('with-count')).to.equal('');
     el.strings = {
-      textareaCharacterCount: '{count} caractère',
-      textareaCharacterCountPlural: '{count} caractères',
-      textareaCharactersRemaining: '{count} restant',
-      textareaCharactersRemainingPlural: '{count} restants',
+      textareaCharacterCount: { one: '{count} caractère', other: '{count} caractères' },
+      textareaCharactersRemaining: { one: '{count} restant', other: '{count} restants' },
     };
     await el.updateComplete;
     expect(countOf(el).textContent!.trim()).to.equal('4 caractères');
@@ -820,7 +818,7 @@ describe('lr-textarea with-count', () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea with-count maxlength="3" aria-label="Notes"></lr-textarea>`,
     );
-    el.strings = { textareaCharactersRemaining: '{count} left', textareaCharactersRemainingPlural: '{count} left' };
+    el.strings = { textareaCharactersRemaining: '{count} left' };
     el.value = 'abcdef';
     await el.updateComplete;
     expect(countOf(el).textContent!.trim()).to.equal('0 left');
@@ -830,7 +828,7 @@ describe('lr-textarea with-count', () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea with-count value="ab" maxlength="oops" aria-label="Notes"></lr-textarea>`,
     );
-    el.strings = { textareaCharacterCountPlural: '{count} chars' };
+    el.strings = { textareaCharacterCount: '{count} chars' };
     await el.updateComplete;
     expect(countOf(el).textContent!.trim()).to.equal('2 chars');
   });
@@ -887,7 +885,7 @@ describe('lr-textarea with-count live announcement', () => {
     const el = await fixture<LyraTextarea>(
       html`<lr-textarea with-count aria-label="Notes"></lr-textarea>`,
     );
-    el.strings = { textareaCharacterCountPlural: '{count} chars' };
+    el.strings = { textareaCharacterCount: '{count} chars' };
     await el.updateComplete;
     const live = el.shadowRoot!.querySelector('[aria-live="polite"]') as HTMLElement;
     const textarea = el.shadowRoot!.querySelector('textarea') as HTMLTextAreaElement;

@@ -255,8 +255,9 @@ export class LyraDiffView extends LyraElement<LyraDiffViewEventMap> {
   }
 
   private foldMarker(count: number): TemplateResult {
-    const text = this.localize(count === 1 ? 'diffViewHiddenLines' : 'diffViewHiddenLinesPlural', undefined, {
+    const text = this.localize('diffViewHiddenLines', undefined, {
       count: getNumberFormat(this.effectiveLocale).format(count),
+      pluralCount: count,
     });
     return html`<div part="line" data-type="fold">${text}</div>`;
   }

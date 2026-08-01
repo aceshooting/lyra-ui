@@ -329,15 +329,15 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
     const max = this.countMaxlength();
     if (max !== undefined) {
       const remaining = Math.max(0, max - this.value.length);
-      return this.localize(
-        remaining === 1 ? 'textareaCharactersRemaining' : 'textareaCharactersRemainingPlural',
-        undefined,
-        { count: format.format(remaining) },
-      );
+      return this.localize('textareaCharactersRemaining', undefined, {
+        count: format.format(remaining),
+        pluralCount: remaining,
+      });
     }
     const length = this.value.length;
-    return this.localize(length === 1 ? 'textareaCharacterCount' : 'textareaCharacterCountPlural', undefined, {
+    return this.localize('textareaCharacterCount', undefined, {
       count: format.format(length),
+      pluralCount: length,
     });
   }
 
