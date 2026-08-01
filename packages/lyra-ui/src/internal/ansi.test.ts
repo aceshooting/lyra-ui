@@ -43,7 +43,9 @@ describe('createAnsiParser', () => {
   it('maps a bright background color (SGR 104 = bright blue bg)', () => {
     const parser = createAnsiParser();
     const segments = parser.push('\x1b[104mtext');
-    expect(segments[0].styles.bg).to.equal('var(--lr-terminal-color-bright-blue)');
+    // Background codes read the SEPARATE background set: it is solved against the panel's default
+    // text rather than against the panel, because one set cannot be legible in both roles.
+    expect(segments[0].styles.bg).to.equal('var(--lr-terminal-bg-bright-blue)');
   });
 
   it('resolves 256-color (38;5;n) to the named var for n < 16 and rgb() for n >= 16', () => {
@@ -160,13 +162,13 @@ describe('createAnsiParser', () => {
       'var(--lr-terminal-color-white)',
     );
     expect(createAnsiParser().push('\x1b[47mwhite-bg')[0].styles.bg).to.equal(
-      'var(--lr-terminal-color-white)',
+      'var(--lr-terminal-bg-white)',
     );
     expect(createAnsiParser().push('\x1b[90mbright-black')[0].styles.fg).to.equal(
       'var(--lr-terminal-color-bright-black)',
     );
     expect(createAnsiParser().push('\x1b[107mbright-white-bg')[0].styles.bg).to.equal(
-      'var(--lr-terminal-color-bright-white)',
+      'var(--lr-terminal-bg-bright-white)',
     );
   });
 
@@ -174,7 +176,9 @@ describe('createAnsiParser', () => {
     const parser = createAnsiParser();
     const colored = parser.push('\x1b[31;41mtext');
     expect(colored[0].styles.fg).to.equal('var(--lr-terminal-color-red)');
-    expect(colored[0].styles.bg).to.equal('var(--lr-terminal-color-red)');
+    // Same SGR name, different role, therefore a different token -- 31 and 41 no longer resolve to
+    // one shared value, which is what made an explicit background unreadable.
+    expect(colored[0].styles.bg).to.equal('var(--lr-terminal-bg-red)');
     const cleared = parser.push('\x1b[39;49mtext');
     expect(cleared[0].styles.fg).to.be.undefined;
     expect(cleared[0].styles.bg).to.be.undefined;

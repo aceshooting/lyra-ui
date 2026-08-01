@@ -51,7 +51,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font-size: var(--lr-font-size-xs);
     white-space: nowrap;
-    box-shadow: var(--lr-shadow);
+    box-shadow: var(--lr-shadow-m);
     pointer-events: none;
     z-index: var(--lr-layer-content);
   }

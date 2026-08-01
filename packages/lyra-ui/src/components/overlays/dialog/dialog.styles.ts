@@ -68,10 +68,17 @@ export const styles = css`
        old shrink-to-fit cap -- the viewport (100%) is still a hard limit. */
     max-inline-size: min(var(--lr-dialog-max-width, var(--lr-dialog-width, var(--lr-size-32rem))), 100%);
     max-block-size: 100%;
-    background: var(--lr-color-surface);
+    /* The modal-panel surface, NOT the page surface. In dark mode --lr-color-surface is the same
+       near-black as the page behind the scrim, so a dialog painted with it reads as a scrim with
+       text floating on it and no panel at all. In light mode the token still resolves to the page
+       surface, so nothing changes there. */
+    background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, and the deepest one: a centered dialog floats free on all four edges over a
+       scrim, so it takes the top step of the elevation scale. lr-drawer, which extends this rule,
+       steps back down to --lr-shadow-l because three of its edges are flush with the viewport. */
+    box-shadow: var(--lr-shadow-xl);
     overflow: auto;
     /* Duration and easing are referenced as SEPARATE tokens: the compound --lr-transition-*
        tokens expand to a duration plus a timing function, which makes an animation shorthand

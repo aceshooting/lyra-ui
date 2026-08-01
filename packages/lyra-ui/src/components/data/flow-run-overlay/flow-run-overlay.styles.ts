@@ -16,7 +16,10 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, despite the element's name: this is an in-flow status strip (the host is a
+       plain display:block box with no positioning of its own, and it is usually dropped into a
+       toolbar next to the canvas), not a layer floating above the page. */
+    box-shadow: var(--lr-shadow-s);
     font-size: var(--lr-font-size-xs);
     min-inline-size: 0;
     max-inline-size: 100%;

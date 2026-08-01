@@ -81,6 +81,19 @@
        backs full-bleed media chrome. Set them separately. */
     --lr-theme-color-overlay: rgb(0 0 0 / 0.5);
     --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.92);
+    /* The surface a modal panel paints itself with. In light mode it is the page surface: a white
+       dialog on a white page is separated by the scrim drawn around it. In dark mode it must not
+       be, or the panel and the page are the same near-black and there is no panel. */
+    --lr-theme-color-surface-overlay: #ffffff;
+
+    /* Elevation. The colour is an `r g b` triplet so each step can set its own alpha against it,
+       and so a theme can tint every shadow at once by setting the colour alone. */
+    --lr-theme-shadow-color: 0 0 0;
+    --lr-theme-shadow-xs: 0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.12);
+    --lr-theme-shadow-s: 0 1px 4px rgb(var(--lr-theme-shadow-color) / 0.14);
+    --lr-theme-shadow-m: 0 2px 8px rgb(var(--lr-theme-shadow-color) / 0.15);
+    --lr-theme-shadow-l: 0 6px 16px rgb(var(--lr-theme-shadow-color) / 0.18);
+    --lr-theme-shadow-xl: 0 12px 32px rgb(var(--lr-theme-shadow-color) / 0.22);
     --lr-theme-font-family-body: system-ui, sans-serif;
     --lr-theme-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
@@ -153,22 +166,38 @@
 
     /* The 16-color ANSI/SGR palette rendered by lr-terminal. */
     /* terminal ramp: generated (light) -- see scripts/generate-terminal-palette.mjs */
-    --lr-theme-terminal-color-black: #4d4d4d;
+    --lr-theme-terminal-color-black: #2b2b2b;
     --lr-theme-terminal-color-red: #901114;
     --lr-theme-terminal-color-green: #015e15;
     --lr-theme-terminal-color-yellow: #5f4a03;
     --lr-theme-terminal-color-blue: #06489c;
     --lr-theme-terminal-color-magenta: #67298c;
     --lr-theme-terminal-color-cyan: #02585f;
-    --lr-theme-terminal-color-white: #4d4d4d;
-    --lr-theme-terminal-color-bright-black: #636363;
+    --lr-theme-terminal-color-white: #555555;
+    --lr-theme-terminal-color-bright-black: #404040;
     --lr-theme-terminal-color-bright-red: #b32322;
     --lr-theme-terminal-color-bright-green: #01791e;
     --lr-theme-terminal-color-bright-yellow: #796005;
     --lr-theme-terminal-color-bright-blue: #145ec1;
     --lr-theme-terminal-color-bright-magenta: #823bae;
     --lr-theme-terminal-color-bright-cyan: #04717a;
-    --lr-theme-terminal-color-bright-white: #636363;
+    --lr-theme-terminal-color-bright-white: #6c6c6c;
+    --lr-theme-terminal-bg-black: #868686;
+    --lr-theme-terminal-bg-red: #d2918a;
+    --lr-theme-terminal-bg-green: #89b18a;
+    --lr-theme-terminal-bg-yellow: #b6a372;
+    --lr-theme-terminal-bg-blue: #88a6d4;
+    --lr-theme-terminal-bg-magenta: #b497cb;
+    --lr-theme-terminal-bg-cyan: #77b0b6;
+    --lr-theme-terminal-bg-white: #b7b7b7;
+    --lr-theme-terminal-bg-bright-black: #9e9e9e;
+    --lr-theme-terminal-bg-bright-red: #f9aea5;
+    --lr-theme-terminal-bg-bright-green: #a4d2a4;
+    --lr-theme-terminal-bg-bright-yellow: #d8c288;
+    --lr-theme-terminal-bg-bright-blue: #a2c6fb;
+    --lr-theme-terminal-bg-bright-magenta: #d6b4f0;
+    --lr-theme-terminal-bg-bright-cyan: #8dd2da;
+    --lr-theme-terminal-bg-bright-white: #d1d1d1;
     /* terminal ramp: end */
   }
 
@@ -233,6 +262,20 @@
        re-set here, or .lr-dark keeps the light value and disagrees with the
        prefers-color-scheme: dark fallbacks the components ship. */
     --lr-theme-color-surface-raised: #22272e;
+    --lr-theme-color-surface-overlay: #2b3038;
+    /* A 50% black scrim over an already-dark page barely darkens it, so the boundary the scrim
+       exists to draw disappears. Both scrims go heavier here. */
+    --lr-theme-color-overlay: rgb(0 0 0 / 0.72);
+    --lr-theme-color-overlay-strong: rgb(0 0 0 / 0.95);
+    /* Elevation is a luminance difference, and a 12%-alpha black shadow on a near-black surface is
+       not one. The alphas roughly triple so each step stays a visible step; the geometry of the two
+       largest steps grows too, since a wider, softer shadow is what still reads as depth when the
+       surface underneath it is already dark. */
+    --lr-theme-shadow-xs: 0 1px 2px rgb(var(--lr-theme-shadow-color) / 0.34);
+    --lr-theme-shadow-s: 0 1px 4px rgb(var(--lr-theme-shadow-color) / 0.4);
+    --lr-theme-shadow-m: 0 2px 8px rgb(var(--lr-theme-shadow-color) / 0.46);
+    --lr-theme-shadow-l: 0 8px 20px rgb(var(--lr-theme-shadow-color) / 0.56);
+    --lr-theme-shadow-xl: 0 16px 40px rgb(var(--lr-theme-shadow-color) / 0.66);
     /* chart ramp: generated (dark) -- see scripts/generate-chart-palette.mjs */
     --lr-theme-color-chart-1: #bbff94;
     --lr-theme-color-chart-2: #ffbce8;
@@ -256,22 +299,38 @@
        the light block, so a dark terminal rendered light-mode colours on a near-black panel and
        ten of the sixteen fell below 4.5:1 -- `black` at 1.02:1, i.e. invisible. */
     /* terminal ramp: generated (dark) -- see scripts/generate-terminal-palette.mjs */
-    --lr-theme-terminal-color-black: #a4a4a4;
+    --lr-theme-terminal-color-black: #929292;
     --lr-theme-terminal-color-red: #f9786c;
     --lr-theme-terminal-color-green: #67bb6b;
     --lr-theme-terminal-color-yellow: #c7a01e;
     --lr-theme-terminal-color-blue: #69a5fe;
     --lr-theme-terminal-color-magenta: #c385ef;
     --lr-theme-terminal-color-cyan: #17bac8;
-    --lr-theme-terminal-color-white: #a4a4a4;
-    --lr-theme-terminal-color-bright-black: #c4c4c4;
+    --lr-theme-terminal-color-white: #c4c4c4;
+    --lr-theme-terminal-color-bright-black: #ababab;
     --lr-theme-terminal-color-bright-red: #ffaba1;
     --lr-theme-terminal-color-bright-green: #7cdf81;
     --lr-theme-terminal-color-bright-yellow: #ecbe24;
     --lr-theme-terminal-color-bright-blue: #a0c6fe;
     --lr-theme-terminal-color-bright-magenta: #dcaefe;
     --lr-theme-terminal-color-bright-cyan: #00ddef;
-    --lr-theme-terminal-color-bright-white: #c4c4c4;
+    --lr-theme-terminal-color-bright-white: #dedede;
+    --lr-theme-terminal-bg-black: #292929;
+    --lr-theme-terminal-bg-red: #733a35;
+    --lr-theme-terminal-bg-green: #335735;
+    --lr-theme-terminal-bg-yellow: #5c4b1a;
+    --lr-theme-terminal-bg-blue: #324e76;
+    --lr-theme-terminal-bg-magenta: #5a406e;
+    --lr-theme-terminal-bg-cyan: #1c565d;
+    --lr-theme-terminal-bg-white: #525252;
+    --lr-theme-terminal-bg-bright-black: #3d3d3d;
+    --lr-theme-terminal-bg-bright-red: #904e47;
+    --lr-theme-terminal-bg-bright-green: #456f46;
+    --lr-theme-terminal-bg-bright-yellow: #756127;
+    --lr-theme-terminal-bg-bright-blue: #446493;
+    --lr-theme-terminal-bg-bright-magenta: #73548a;
+    --lr-theme-terminal-bg-bright-cyan: #286f76;
+    --lr-theme-terminal-bg-bright-white: #696969;
     /* terminal ramp: end */
   }
 }

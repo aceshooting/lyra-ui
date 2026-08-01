@@ -55,7 +55,10 @@ export const styles = css`
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal tier, not the anchored-panel tier its "popover" name suggests: this panel sits on the
+       modal layer above a full-viewport backdrop scrim (and centers itself like a dialog when
+       unanchored), so it needs the separation a menu next to live page content does not. */
+    box-shadow: var(--lr-shadow-l);
     pointer-events: auto;
     overflow: auto;
   }

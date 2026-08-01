@@ -57,7 +57,9 @@ export const styles = css`
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, not an overlay: a knob riding on its own track, so it sits one step above
+       the track rather than at the anchored-panel tier. */
+    box-shadow: var(--lr-shadow-s);
     transform: translate(-50%, -50%);
     cursor: grab;
     touch-action: none;
@@ -108,7 +110,9 @@ export const styles = css`
      lr-radio's identical [part='circle'] hover rule, so neither a disabled nor a read-only thumb
      shows interactive feedback for a gesture that cannot change anything. */
   :host(:not(:disabled):not([readonly])) [part~='thumb']:hover {
-    box-shadow: var(--lr-shadow), 0 0 0 var(--lr-size-4px) var(--lr-color-brand-quiet);
+    /* Same elevation tier as the resting thumb -- hover adds the ring, it must not also change
+       how high the thumb reads. */
+    box-shadow: var(--lr-shadow-s), 0 0 0 var(--lr-size-4px) var(--lr-color-brand-quiet);
   }
   [part~='thumb']:active {
     cursor: grabbing;

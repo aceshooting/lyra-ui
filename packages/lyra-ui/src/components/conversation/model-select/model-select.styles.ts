@@ -162,7 +162,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     /* Closed state: invisible + slightly raised. visibility (not
        display:none) so opacity/transform can actually transition; hit-testing
        and a11y exposure stay off since this part is already position:fixed. */

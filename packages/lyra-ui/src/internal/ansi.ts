@@ -66,13 +66,22 @@ function ansiVar(index: number): string {
   return `var(--lr-terminal-color-${ANSI_16_VAR_NAMES[index]})`;
 }
 
+/** SGR 40-47/100-107 read a SEPARATE token set from SGR 30-37/90-97. The two roles are solved
+ *  against opposite references — foregrounds against the terminal panel, backgrounds against the
+ *  default text that lands on them — because one set cannot satisfy both: once the foregrounds were
+ *  solved to be legible on a light panel they were all dark, and `ESC[41m` painted a near-black red
+ *  behind near-black default text. See scripts/generate-terminal-palette.mjs. */
+function ansiBgVar(index: number): string {
+  return `var(--lr-terminal-bg-${ANSI_16_VAR_NAMES[index]})`;
+}
+
 const FG_VARS: Record<number, string> = {};
 const BG_VARS: Record<number, string> = {};
 for (let i = 0; i < 8; i++) {
   FG_VARS[30 + i] = ansiVar(i);
   FG_VARS[90 + i] = ansiVar(8 + i);
-  BG_VARS[40 + i] = ansiVar(i);
-  BG_VARS[100 + i] = ansiVar(8 + i);
+  BG_VARS[40 + i] = ansiBgVar(i);
+  BG_VARS[100 + i] = ansiBgVar(8 + i);
 }
 
 const CUBE_LEVELS = [0, 95, 135, 175, 215, 255];
@@ -83,11 +92,13 @@ function clampByte(n: number): number {
 }
 
 /** xterm 256-color palette: 0-15 resolve to the same 16 named/retheme-able vars as the base SGR
- *  codes (so an extended-color sequence picking "red" still retheme with the palette); 16-231 are
- *  the 6x6x6 color cube; 232-255 are the grayscale ramp. */
-function ansi256ToColor(n: number): string {
-  if (!Number.isInteger(n) || n < 0) return ansiVar(0);
-  if (n < 16) return ansiVar(n);
+ *  codes (so an extended-color sequence picking "red" still retheme with the palette) — through the
+ *  ROLE-matching set, so `ESC[48;5;1m` gets the background red rather than the foreground one;
+ *  16-231 are the 6x6x6 color cube; 232-255 are the grayscale ramp. */
+function ansi256ToColor(n: number, role: 'fg' | 'bg' = 'fg'): string {
+  const named = role === 'bg' ? ansiBgVar : ansiVar;
+  if (!Number.isInteger(n) || n < 0) return named(0);
+  if (n < 16) return named(n);
   if (n <= 231) {
     const i = n - 16;
     const r = CUBE_LEVELS[Math.floor(i / 36) % 6];
@@ -99,7 +110,7 @@ function ansi256ToColor(n: number): string {
     const v = 8 + (n - 232) * 10;
     return `rgb(${v}, ${v}, ${v})`;
   }
-  return ansiVar(0);
+  return named(0);
 }
 
 const CSI_FINAL_BYTE = /[\x40-\x7e]/;
@@ -134,7 +145,7 @@ export function createAnsiParser(): AnsiParser {
         const mode = list[i + 1];
         const idx = list[i + 2];
         if (mode === 5 && idx !== undefined) {
-          const color = ansi256ToColor(idx);
+          const color = ansi256ToColor(idx, isFg ? 'fg' : 'bg');
           styles = isFg ? { ...styles, fg: color } : { ...styles, bg: color };
           i += 2;
         } else if (mode === 2) {

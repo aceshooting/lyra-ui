@@ -20,7 +20,8 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a floating toolbar pinned to the current selection, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     transform: translate(-50%, calc(-100% - var(--lr-space-xs)));
   }
 

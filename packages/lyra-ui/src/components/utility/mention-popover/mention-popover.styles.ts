@@ -26,7 +26,8 @@ export const styles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed listbox floating over page content, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
     visibility: hidden;
     opacity: 0;
     transform: translateY(var(--lr-size-neg-0-25rem));

@@ -62,7 +62,14 @@ export const styles = css`
   [part='base'].overlay [part='panel'] {
     inline-size: 100%;
     block-size: 100%;
-    box-shadow: var(--lr-shadow);
+    /* Only the OVERLAY presentations repaint the panel: docked/inline is resting chrome in the
+       page's own flow and must keep the page surface, while an overlay sits over a scrim and in
+       dark mode would otherwise be the same near-black as the page behind it. The bottom-sheet
+       rule below narrows this same selector, so it inherits both declarations. */
+    background: var(--lr-color-surface-overlay);
+    /* Modal layer, lower step: the panel is flush with every viewport edge (bottom-sheet with all
+       but one), so there is no free edge for a deeper shadow to read against. */
+    box-shadow: var(--lr-shadow-l);
     overflow: auto;
   }
 

@@ -30,7 +30,9 @@ export const styles = css`
      !important. */
   :where([part='base'][href]):hover {
     border-color: var(--lr-color-brand);
-    box-shadow: var(--lr-shadow);
+    /* One step of lift on an otherwise flat resting card -- a hovered tile is still resting chrome,
+       not an overlay, so it stops at the card step. */
+    box-shadow: var(--lr-shadow-s);
   }
   [part='base'][href]:focus-visible {
     outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);

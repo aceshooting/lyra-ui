@@ -76,7 +76,9 @@ export const styles = css`
     border: none;
     border-radius: var(--lr-radius-pill);
     padding: var(--lr-space-2xs) var(--lr-space-s);
-    box-shadow: var(--lr-shadow);
+    /* Overlay step, not a card step: this pill is absolutely positioned over live scrollback rather
+       than resting in the layout, so it has to read as a layer above the lines it covers. */
+    box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     z-index: var(--lr-layer-content);
     transition: opacity var(--lr-transition-fast);

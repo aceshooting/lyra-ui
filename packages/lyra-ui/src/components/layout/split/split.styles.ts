@@ -119,7 +119,7 @@ export const styles = css`
     pointer-events: none;
   }
   /* The 'floating' collapse state's overlay "card" look -- geometry
-     (position/inset-*/inline-size) is set inline by split.ts's updated(),
+     (position, the inset-* longhands, inline-size) is set inline by split.ts's updated(),
      matching how the ordinary flex/order styling is applied; only the
      visual/stacking treatment lives here. z-index is above [part="backdrop"]
      (below), so the drawer renders on top of its own scrim. */
@@ -127,7 +127,9 @@ export const styles = css`
     z-index: var(--lr-layer-content);
     background: var(--lr-color-surface);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal step: this is a drawer rendered above its own scrim (see [part='backdrop'] below), not
+       an anchored popup, so it takes the modal tier. */
+    box-shadow: var(--lr-shadow-l);
   }
   /* The 'floating' drawer's scrim -- only rendered while collapseState is
      'floating' and open (see split.ts's render()). Scoped to [part="base"]

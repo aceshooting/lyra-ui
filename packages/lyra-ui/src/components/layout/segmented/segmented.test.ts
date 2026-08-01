@@ -594,8 +594,11 @@ describe("selected-state cssprops", () => {
         "font-weight"
       )
     );
+    // The selected thumb is resting chrome riding inside its own track, not a floating panel, so
+    // it sits at the lowest step of the elevation scale rather than the mid one every site used to
+    // share.
     expect(checked.boxShadow).to.equal(
-      resolvedInShadow(el, "box-shadow: var(--lr-shadow)", "box-shadow")
+      resolvedInShadow(el, "box-shadow: var(--lr-shadow-xs)", "box-shadow")
     );
   });
 

@@ -52,11 +52,16 @@ export const styles = css`
     padding: var(--lr-toast-padding);
     padding-inline-start: calc(var(--lr-toast-padding) + var(--lr-toast-accent-width));
     font-size: var(--lr-toast-font-size);
-    background: var(--lr-color-surface);
+    /* Modal-layer surface: a toast floats over arbitrary page content at the toast layer, so it
+       must not share the page surface token -- in dark mode both resolve to the same near-black
+       and the toast loses its edges against whatever it covers. */
+    background: var(--lr-color-surface-overlay);
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
+       the two modal steps. */
+    box-shadow: var(--lr-shadow-l);
     opacity: 0;
     transform: translateY(var(--lr-size-neg-8px));
     transition:

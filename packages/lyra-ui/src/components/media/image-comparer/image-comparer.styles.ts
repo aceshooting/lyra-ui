@@ -52,7 +52,9 @@ export const styles = css`
     inset-inline-start: var(--lr-comparer-position, 50%);
     inline-size: var(--lr-size-1px);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Card step, not the overlay step: the shadow here only has to keep a hairline legible against
+       arbitrary imagery on both sides -- a wider blur reads as a smudge along the seam. */
+    box-shadow: var(--lr-shadow-s);
     pointer-events: none;
   }
   [part='base'][data-orientation='vertical'] [part='divider'] {

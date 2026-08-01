@@ -62,7 +62,9 @@ export const styles = css`
   [part="cell"][data-dragging],
   [part="cell"][data-resizing] {
     z-index: var(--lr-layer-content);
-    box-shadow: var(--lr-dashboard-grid-interaction-shadow, var(--lr-shadow));
+    /* A tile being dragged or resized has left the resting plane and is riding above its
+       neighbours, so it takes the overlay step rather than the card step its siblings use. */
+    box-shadow: var(--lr-dashboard-grid-interaction-shadow, var(--lr-shadow-m));
   }
 
   [part="cell"][data-collision] {

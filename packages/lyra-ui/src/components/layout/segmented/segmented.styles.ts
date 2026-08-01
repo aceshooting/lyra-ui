@@ -137,6 +137,8 @@ export const styles = css`
       --lr-segmented-selected-font-weight,
       var(--lr-font-weight-semibold)
     );
-    box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow));
+    /* Smallest step in the scale: the checked segment is a thumb lifted a hair off its own track,
+       the shallowest piece of resting chrome the library has. */
+    box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow-xs));
   }
 `;

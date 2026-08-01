@@ -202,7 +202,9 @@ export const styles = css`
     position: fixed;
     inset: var(--lr-widget-fullscreen-inset, 0);
     z-index: calc(var(--lr-overlay-stack-index, var(--lr-layer-modal)) + 1);
-    box-shadow: var(--lr-shadow);
+    /* Top of the scale: fullscreen is a modal layer sitting above [part="backdrop"], and it is the
+       only state in which this widget stops being resting chrome. */
+    box-shadow: var(--lr-shadow-xl);
   }
   :host([fullscreen]) [part="body"] {
     overflow: auto;

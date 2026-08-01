@@ -126,9 +126,15 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     inline-size: min(var(--lr-app-rail-mobile-width), 85vw);
-    background: var(--lr-color-surface);
+    /* [part="panel"] is the mobile OVERLAY promotion of this element (see the note above the
+       [part="base"] rule) -- a modal drawer over a scrim, so it takes the modal-panel surface.
+       [part="base"], the docked rail in the page's own layout flow, deliberately keeps
+       --lr-color-surface: it is resting chrome, not an overlay. */
+    background: var(--lr-color-surface-overlay);
     padding-block-end: var(--lr-safe-area-bottom);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, lower step: an edge-anchored drawer flush with three viewport edges, matching
+       lr-drawer rather than a free-floating centered dialog. */
+    box-shadow: var(--lr-shadow-l);
     overflow-y: auto;
     /* Pin the cross axis (see [part="base"]): overflow-y alone forces overflow-x to auto. */
     overflow-x: clip;

@@ -28,6 +28,7 @@ import { fileURLToPath } from 'node:url';
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const palettePath = join(packageDir, 'src', 'internal', 'tokens', 'palette.styles.ts');
 const themePath = join(packageDir, 'src', 'theme.css');
+const tokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5; // WCAG 2.2 SC 1.4.3, normal-size text
 const NON_TEXT_CONTRAST = 3; // WCAG 2.2 SC 1.4.11, UI component boundaries
@@ -184,6 +185,29 @@ function perceptualDistance(a, b) {
   return Math.hypot(l1 - l2, a1 - a2, b1 - b2);
 }
 
+/**
+ * The SAME palettes as they ship to a consumer who never imports `theme.css`. `tokens.styles.ts`
+ * carries a hardcoded fallback for every `--lr-theme-*` hook, in a `:host` block for light and a
+ * `@media (prefers-color-scheme: dark)` block for dark — and nothing read that file, so the dark
+ * fallbacks could be (and were) entirely absent while every gate stayed green. A component dropped
+ * unstyled onto a dark page is the DEFAULT integration, not an edge case.
+ */
+function readTokenFallbacks(text, prefix) {
+  const darkAnchor = text.indexOf('@media (prefers-color-scheme: dark)');
+  if (darkAnchor < 0) throw new Error('could not find the prefers-color-scheme block in tokens.styles.ts');
+  const grab = (region) => {
+    const map = new Map();
+    const pattern = new RegExp(`(--lr-${prefix}[a-z0-9-]*):\\s*var\\(--lr-theme-[a-z0-9-]+,\\s*(#[0-9a-f]{6})\\)`, 'gi');
+    for (const match of region.matchAll(pattern)) map.set(match[1], match[2]);
+    return map;
+  };
+  const light = grab(text.slice(0, darkAnchor));
+  // A dark block only re-declares what differs, exactly as the cascade behaves.
+  const dark = new Map(light);
+  for (const [key, value] of grab(text.slice(darkAnchor))) dark.set(key, value);
+  return { light, dark };
+}
+
 const { light, dark } = readGrids(readFileSync(palettePath, 'utf8'));
 const themeText = readFileSync(themePath, 'utf8');
 const surfaces = readSurfaces(themeText);
@@ -282,17 +306,97 @@ for (const [mode, ramp] of [['light', chart.light], ['dark', chart.dark]]) {
   }
 }
 
-// Terminal output is text: 4.5:1 against the surface it renders on, in both modes. That surface is
-// `--lr-color-surface-raised`, not the page surface -- `<lr-terminal>` paints its own panel, so
-// measuring the ANSI palette against the page would be checking it against a background it is never
-// drawn on.
-for (const [mode, ramp] of [['light', terminal.light], ['dark', terminal.dark]]) {
-  const surface = raisedSurfaces[mode] ?? surfaces[mode];
-  for (const [token, value] of ramp) {
+// --- the ANSI palette, in both roles and from both sources ---------------------------------------
+//
+// Terminal output is text: 4.5:1 in both modes, for both of the palette's two jobs.
+//
+//   foreground (`--lr-terminal-color-*`, SGR 30-37/90-97) against `--lr-color-surface-raised` --
+//     the panel `<lr-terminal>` paints for itself, not the page surface, which it is never drawn on
+//   background (`--lr-terminal-bg-*`, SGR 40-47/100-107) against the DEFAULT TEXT colour, which is
+//     the foreground actually in effect whenever a program sets a background and no explicit colour
+//
+// Checked from BOTH sources: `theme.css` (what a themed page gets) and `tokens.styles.ts`'s
+// hardcoded fallbacks (what an unstyled component on a dark page gets). Only the first was ever
+// read, which is how the dark ANSI fallbacks came to be missing from `tokens.styles.ts` entirely
+// while this gate reported a clean run.
+const tokensText = readFileSync(tokensPath, 'utf8');
+const fallbackTerminalFg = readTokenFallbacks(tokensText, 'terminal-color-');
+const fallbackTerminalBg = readTokenFallbacks(tokensText, 'terminal-bg-');
+const themeTerminalBg = readThemeRamps(themeText, 'terminal-bg-');
+const fallbackRaised = readTokenFallbacks(tokensText, 'color-surface-raised');
+const fallbackText = readTokenFallbacks(tokensText, 'color-text');
+
+const terminalCases = [
+  ['theme.css foreground', terminal, raisedSurfaces, TEXT_CONTRAST, 'raised surface'],
+  [
+    'tokens.styles.ts foreground',
+    fallbackTerminalFg,
+    {
+      light: fallbackRaised.light.get('--lr-color-surface-raised'),
+      dark: fallbackRaised.dark.get('--lr-color-surface-raised'),
+    },
+    TEXT_CONTRAST,
+    'raised surface',
+  ],
+  [
+    'theme.css background',
+    themeTerminalBg,
+    {
+      light: readThemeRamps(themeText, 'color-text-normal').light.get('--lr-theme-color-text-normal'),
+      dark: readThemeRamps(themeText, 'color-text-normal').dark.get('--lr-theme-color-text-normal'),
+    },
+    TEXT_CONTRAST,
+    'default text',
+  ],
+  [
+    'tokens.styles.ts background',
+    fallbackTerminalBg,
+    { light: fallbackText.light.get('--lr-color-text'), dark: fallbackText.dark.get('--lr-color-text') },
+    TEXT_CONTRAST,
+    'default text',
+  ],
+];
+
+for (const [label, ramps, references, floor, referenceName] of terminalCases) {
+  for (const mode of ['light', 'dark']) {
+    const ramp = ramps[mode];
+    const reference = references[mode];
+    if (!reference) {
+      findings.push(`${label}: could not resolve the ${mode} ${referenceName} to measure against`);
+      continue;
+    }
+    // A ramp that parses empty is a gate that passes vacuously. That is precisely the failure this
+    // section exists to have caught, so it is an error rather than a silent skip.
+    if (ramp.size !== 16) {
+      findings.push(`${label}: parsed ${ramp.size} ${mode} entries, expected 16 — the file shape changed`);
+      continue;
+    }
+    for (const [token, value] of ramp) {
+      checks += 1;
+      const ratio = contrastRatio(value, reference);
+      if (ratio < floor) {
+        findings.push(`${mode}: ${label} ${token} (${value}) against the ${mode} ${referenceName} ${reference} is ${ratio.toFixed(2)}:1, below WCAG 1.4.3's ${floor}:1`);
+      }
+    }
+  }
+}
+
+// `theme.css` and the `tokens.styles.ts` fallbacks must stay byte-identical: the theme is optional,
+// so importing it would otherwise silently change colours that are supposed to be the same.
+for (const [label, themeRamp, fallbackRamp, stripPrefix] of [
+  ['foreground', terminal, fallbackTerminalFg, '--lr-theme-'],
+  ['background', themeTerminalBg, fallbackTerminalBg, '--lr-theme-'],
+]) {
+  for (const mode of ['light', 'dark']) {
     checks += 1;
-    const ratio = contrastRatio(value, surface);
-    if (ratio < TEXT_CONTRAST) {
-      findings.push(`${mode}: ${token} (${value}) on the ${mode} raised surface ${surface} is ${ratio.toFixed(2)}:1, below WCAG 1.4.3's ${TEXT_CONTRAST}:1`);
+    for (const [token, value] of themeRamp[mode]) {
+      const mirrored = fallbackRamp[mode].get(token.replace(stripPrefix, '--lr-'));
+      if (mirrored !== value) {
+        findings.push(
+          `${mode}: ANSI ${label} ${token} is ${value} in theme.css but ${mirrored ?? 'absent'} in ` +
+            `tokens.styles.ts — run \`node scripts/generate-terminal-palette.mjs\``,
+        );
+      }
     }
   }
 }

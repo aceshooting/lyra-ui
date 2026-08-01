@@ -47,6 +47,10 @@ export const tokens = css`
     --lr-color-on-warning: var(--lr-color-warning-on-loud);
     --lr-color-on-danger: var(--lr-color-danger-on-loud);
     --lr-color-on-neutral: var(--lr-color-neutral-on-loud);
+    /* The surface a modal panel (dialog, drawer, lightbox, command palette) paints itself with.
+       Separate from --lr-color-surface because in dark mode a panel that shares the page surface
+       token is invisible against the page; light mode keeps the page surface as its default. */
+    --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, var(--lr-color-surface));
     --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.5));
     /* Own input, chained through --lr-theme-color-overlay for back-compat: both scrims
        previously read the same input, so defining it flattened the strong scrim's 0.92
@@ -114,25 +118,45 @@ export const tokens = css`
     --lr-graph-cat-6: var(--lr-theme-graph-cat-6, #f470b8);
     --lr-graph-cat-7: var(--lr-theme-graph-cat-7, #52d6e8);
     --lr-graph-cat-8: var(--lr-theme-graph-cat-8, #c9d1d9);
-    /* The 16-color ANSI/SGR palette (<lr-terminal>'s CSI-30..37/90..97 foreground and
-       CSI-40..47/100..107 background codes render via these, see internal/ansi.ts's FG_VARS/BG_VARS) --
-       each independently themeable via its own --lr-theme-terminal-color-* hook. */
-    --lr-terminal-color-black: var(--lr-theme-terminal-color-black, #4d4d4d);
+    /* The ANSI/SGR palette (<lr-terminal>'s CSI-30..37/90..97 foreground and CSI-40..47/100..107
+       background codes render via these, see internal/ansi.ts's FG_VARS/BG_VARS) -- each
+       independently themeable via its own --lr-theme-terminal-* hook. Foregrounds and backgrounds
+       are separate sets solved against opposite references; see the header of
+       scripts/generate-terminal-palette.mjs for why sharing one set made backgrounds unreadable. */
+    /* terminal ramp: generated (light) -- see scripts/generate-terminal-palette.mjs */
+    --lr-terminal-color-black: var(--lr-theme-terminal-color-black, #2b2b2b);
     --lr-terminal-color-red: var(--lr-theme-terminal-color-red, #901114);
     --lr-terminal-color-green: var(--lr-theme-terminal-color-green, #015e15);
     --lr-terminal-color-yellow: var(--lr-theme-terminal-color-yellow, #5f4a03);
     --lr-terminal-color-blue: var(--lr-theme-terminal-color-blue, #06489c);
     --lr-terminal-color-magenta: var(--lr-theme-terminal-color-magenta, #67298c);
     --lr-terminal-color-cyan: var(--lr-theme-terminal-color-cyan, #02585f);
-    --lr-terminal-color-white: var(--lr-theme-terminal-color-white, #4d4d4d);
-    --lr-terminal-color-bright-black: var(--lr-theme-terminal-color-bright-black, #636363);
+    --lr-terminal-color-white: var(--lr-theme-terminal-color-white, #555555);
+    --lr-terminal-color-bright-black: var(--lr-theme-terminal-color-bright-black, #404040);
     --lr-terminal-color-bright-red: var(--lr-theme-terminal-color-bright-red, #b32322);
     --lr-terminal-color-bright-green: var(--lr-theme-terminal-color-bright-green, #01791e);
     --lr-terminal-color-bright-yellow: var(--lr-theme-terminal-color-bright-yellow, #796005);
     --lr-terminal-color-bright-blue: var(--lr-theme-terminal-color-bright-blue, #145ec1);
     --lr-terminal-color-bright-magenta: var(--lr-theme-terminal-color-bright-magenta, #823bae);
     --lr-terminal-color-bright-cyan: var(--lr-theme-terminal-color-bright-cyan, #04717a);
-    --lr-terminal-color-bright-white: var(--lr-theme-terminal-color-bright-white, #636363);
+    --lr-terminal-color-bright-white: var(--lr-theme-terminal-color-bright-white, #6c6c6c);
+    --lr-terminal-bg-black: var(--lr-theme-terminal-bg-black, #868686);
+    --lr-terminal-bg-red: var(--lr-theme-terminal-bg-red, #d2918a);
+    --lr-terminal-bg-green: var(--lr-theme-terminal-bg-green, #89b18a);
+    --lr-terminal-bg-yellow: var(--lr-theme-terminal-bg-yellow, #b6a372);
+    --lr-terminal-bg-blue: var(--lr-theme-terminal-bg-blue, #88a6d4);
+    --lr-terminal-bg-magenta: var(--lr-theme-terminal-bg-magenta, #b497cb);
+    --lr-terminal-bg-cyan: var(--lr-theme-terminal-bg-cyan, #77b0b6);
+    --lr-terminal-bg-white: var(--lr-theme-terminal-bg-white, #b7b7b7);
+    --lr-terminal-bg-bright-black: var(--lr-theme-terminal-bg-bright-black, #9e9e9e);
+    --lr-terminal-bg-bright-red: var(--lr-theme-terminal-bg-bright-red, #f9aea5);
+    --lr-terminal-bg-bright-green: var(--lr-theme-terminal-bg-bright-green, #a4d2a4);
+    --lr-terminal-bg-bright-yellow: var(--lr-theme-terminal-bg-bright-yellow, #d8c288);
+    --lr-terminal-bg-bright-blue: var(--lr-theme-terminal-bg-bright-blue, #a2c6fb);
+    --lr-terminal-bg-bright-magenta: var(--lr-theme-terminal-bg-bright-magenta, #d6b4f0);
+    --lr-terminal-bg-bright-cyan: var(--lr-theme-terminal-bg-bright-cyan, #8dd2da);
+    --lr-terminal-bg-bright-white: var(--lr-theme-terminal-bg-bright-white, #d1d1d1);
+    /* terminal ramp: end */
     --lr-layer-base: var(--lr-theme-z-index-base, 0);
     --lr-layer-content: var(--lr-theme-z-index-content, 1);
     --lr-layer-dropdown: var(--lr-theme-z-index-dropdown, 900);
@@ -351,6 +375,57 @@ export const tokens = css`
       --lr-graph-cat-6: var(--lr-theme-graph-cat-6, #ff91c8);
       --lr-graph-cat-7: var(--lr-theme-graph-cat-7, #79e2ef);
       --lr-graph-cat-8: var(--lr-theme-graph-cat-8, #e4e7eb);
+      /* A modal panel cannot share the page surface token in dark mode: both resolve to the same
+         near-black, so an open dialog reads as a scrim with text floating on it and no panel at
+         all. Light mode keeps the page surface deliberately -- a white dialog on a white page is
+         separated by the scrim around it, and changing it would be churn for no legibility gain. */
+      --lr-color-surface-overlay: var(--lr-theme-color-surface-overlay, #2b3038);
+      /* A 50% black scrim over an already-dark page barely darkens it, so the modal/non-modal
+         boundary the scrim exists to draw disappears. Both scrims go heavier in dark mode. */
+      --lr-color-overlay: var(--lr-theme-color-overlay, rgb(0 0 0 / 0.72));
+      --lr-color-overlay-strong: var(--lr-theme-color-overlay-strong, var(--lr-theme-color-overlay, rgb(0 0 0 / 0.95)));
+      /* Elevation is a luminance difference, and a 12%-alpha black shadow against a near-black
+         surface is not one -- dark mode shipped with no elevation at all. The alphas roughly
+         triple so each step stays a visible step. */
+      --lr-shadow-xs: var(--lr-theme-shadow-xs, 0 1px 2px rgb(var(--lr-shadow-color) / 0.34));
+      --lr-shadow-s: var(--lr-theme-shadow-s, 0 1px 4px rgb(var(--lr-shadow-color) / 0.4));
+      --lr-shadow-m: var(--lr-theme-shadow-m, 0 2px 8px rgb(var(--lr-shadow-color) / 0.46));
+      --lr-shadow-l: var(--lr-theme-shadow-l, 0 8px 20px rgb(var(--lr-shadow-color) / 0.56));
+      --lr-shadow-xl: var(--lr-theme-shadow-xl, 0 16px 40px rgb(var(--lr-shadow-color) / 0.66));
+      /* terminal ramp: generated (dark) -- see scripts/generate-terminal-palette.mjs */
+    --lr-terminal-color-black: var(--lr-theme-terminal-color-black, #929292);
+    --lr-terminal-color-red: var(--lr-theme-terminal-color-red, #f9786c);
+    --lr-terminal-color-green: var(--lr-theme-terminal-color-green, #67bb6b);
+    --lr-terminal-color-yellow: var(--lr-theme-terminal-color-yellow, #c7a01e);
+    --lr-terminal-color-blue: var(--lr-theme-terminal-color-blue, #69a5fe);
+    --lr-terminal-color-magenta: var(--lr-theme-terminal-color-magenta, #c385ef);
+    --lr-terminal-color-cyan: var(--lr-theme-terminal-color-cyan, #17bac8);
+    --lr-terminal-color-white: var(--lr-theme-terminal-color-white, #c4c4c4);
+    --lr-terminal-color-bright-black: var(--lr-theme-terminal-color-bright-black, #ababab);
+    --lr-terminal-color-bright-red: var(--lr-theme-terminal-color-bright-red, #ffaba1);
+    --lr-terminal-color-bright-green: var(--lr-theme-terminal-color-bright-green, #7cdf81);
+    --lr-terminal-color-bright-yellow: var(--lr-theme-terminal-color-bright-yellow, #ecbe24);
+    --lr-terminal-color-bright-blue: var(--lr-theme-terminal-color-bright-blue, #a0c6fe);
+    --lr-terminal-color-bright-magenta: var(--lr-theme-terminal-color-bright-magenta, #dcaefe);
+    --lr-terminal-color-bright-cyan: var(--lr-theme-terminal-color-bright-cyan, #00ddef);
+    --lr-terminal-color-bright-white: var(--lr-theme-terminal-color-bright-white, #dedede);
+    --lr-terminal-bg-black: var(--lr-theme-terminal-bg-black, #292929);
+    --lr-terminal-bg-red: var(--lr-theme-terminal-bg-red, #733a35);
+    --lr-terminal-bg-green: var(--lr-theme-terminal-bg-green, #335735);
+    --lr-terminal-bg-yellow: var(--lr-theme-terminal-bg-yellow, #5c4b1a);
+    --lr-terminal-bg-blue: var(--lr-theme-terminal-bg-blue, #324e76);
+    --lr-terminal-bg-magenta: var(--lr-theme-terminal-bg-magenta, #5a406e);
+    --lr-terminal-bg-cyan: var(--lr-theme-terminal-bg-cyan, #1c565d);
+    --lr-terminal-bg-white: var(--lr-theme-terminal-bg-white, #525252);
+    --lr-terminal-bg-bright-black: var(--lr-theme-terminal-bg-bright-black, #3d3d3d);
+    --lr-terminal-bg-bright-red: var(--lr-theme-terminal-bg-bright-red, #904e47);
+    --lr-terminal-bg-bright-green: var(--lr-theme-terminal-bg-bright-green, #456f46);
+    --lr-terminal-bg-bright-yellow: var(--lr-theme-terminal-bg-bright-yellow, #756127);
+    --lr-terminal-bg-bright-blue: var(--lr-theme-terminal-bg-bright-blue, #446493);
+    --lr-terminal-bg-bright-magenta: var(--lr-theme-terminal-bg-bright-magenta, #73548a);
+    --lr-terminal-bg-bright-cyan: var(--lr-theme-terminal-bg-bright-cyan, #286f76);
+    --lr-terminal-bg-bright-white: var(--lr-theme-terminal-bg-bright-white, #696969);
+      /* terminal ramp: end */
     }
   }
 

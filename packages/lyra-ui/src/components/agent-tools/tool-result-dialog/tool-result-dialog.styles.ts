@@ -50,10 +50,14 @@ export const styles = css`
     flex-direction: column;
     inline-size: min(var(--lr-size-48rem), 100%);
     max-block-size: 100%;
-    background: var(--lr-color-surface);
+    /* Modal-panel surface, not the page surface -- in dark mode the two resolve to the same
+       near-black and the dialog reads as a scrim with floating text instead of a panel. */
+    background: var(--lr-color-surface-overlay);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    box-shadow: var(--lr-shadow);
+    /* Modal layer, top step: a centered, scrimmed dialog floating free on all four edges --
+       the same role as lr-dialog, so the same elevation. */
+    box-shadow: var(--lr-shadow-xl);
     overflow: hidden;
     transition:
       inline-size var(--lr-transition-base),

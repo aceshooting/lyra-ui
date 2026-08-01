@@ -131,7 +131,8 @@ export const styles = css`
     border-radius: 50%;
     background: var(--lr-color-brand);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, not an overlay: a knob riding on its own track, matching lr-slider's thumb. */
+    box-shadow: var(--lr-shadow-s);
     transform: translateX(-50%);
     cursor: grab;
     touch-action: none;

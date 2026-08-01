@@ -32,7 +32,8 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed popup floating over page content, not a modal layer. */
+    box-shadow: var(--lr-shadow-m);
   }
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; transform: translateY(var(--lr-size-neg-0-25rem)); }
   [part='popup'] { opacity: 1; transform: translateY(0); transition: opacity var(--lr-transition-fast), transform var(--lr-transition-fast), visibility var(--lr-transition-fast); }
@@ -64,7 +65,7 @@ export const tooltipStyles = css`
   /* position: fixed from the start, same reasoning as overlay [part='popup'] above -- see its
      comment. Physical top/left there too, for the same RTL over-constraint reason. */
   /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */
-  [part='popup'] { position: fixed; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--lr-tooltip-max-inline-size, var(--lr-size-20rem)), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-background, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow); }
+  [part='popup'] { position: fixed; top: 0; left: 0; z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover)); min-inline-size: 0; max-inline-size: min(var(--lr-tooltip-max-inline-size, var(--lr-size-20rem)), var(--lr-positioner-available-inline-size, 100vi)); max-block-size: var(--lr-positioner-available-block-size, 100vb); overflow-x: clip; overflow-y: auto; overflow-wrap: anywhere; padding: var(--lr-space-xs) var(--lr-space-s); border-radius: var(--lr-radius-xs); background: var(--lr-tooltip-background, var(--lr-color-neutral)); color: var(--lr-tooltip-color, var(--lr-color-on-neutral)); font-size: var(--lr-font-size-sm); line-height: var(--lr-line-height-compact); box-shadow: var(--lr-shadow-m); }
   [part='popup'][data-hidden] { visibility: hidden; opacity: 0; pointer-events: none; }
   [part='popup'] { opacity: 1; transition: opacity var(--lr-transition-fast), visibility var(--lr-transition-fast); }
   /* A tooltip popup has no inner scroll wrapper to move the overflow onto, so switching it to

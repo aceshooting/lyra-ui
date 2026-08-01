@@ -125,6 +125,31 @@ function expectPaletteContrast(mode: PaletteMode): void {
   expect(failures.join('\n')).to.equal('');
 }
 
+/** The elevation scale, smallest to largest. `--lr-shadow` is an alias for the `m` step. */
+const ELEVATION_STEPS = ['xs', 's', 'm', 'l', 'xl'] as const;
+
+/** The 16 ANSI/SGR slots, each of which has both a foreground and a background ramp entry. */
+const TERMINAL_SLOTS = [
+  'black',
+  'red',
+  'green',
+  'yellow',
+  'blue',
+  'magenta',
+  'cyan',
+  'white',
+  'bright-black',
+  'bright-red',
+  'bright-green',
+  'bright-yellow',
+  'bright-blue',
+  'bright-magenta',
+  'bright-cyan',
+  'bright-white',
+] as const;
+
+const squash = (value: string) => value.trim().replace(/\s+/g, ' ');
+
 it('defines the new motion tokens with the documented fallback values', async () => {
   expect(await probeVar('--lr-transition-fast')).to.equal('120ms ease-out');
   expect(await probeVar('--lr-transition-base')).to.equal('180ms ease-out');
@@ -318,6 +343,23 @@ async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
   }
 }
 
+/**
+ * Read several tokens off ONE fixture mounted under `themeClass`.
+ *
+ * A fixture per token is ~200x slower, and — more importantly — reading a whole related set off a
+ * single mounted host is what makes "these five values are all different from each other" an
+ * assertion about one real rendered element rather than about five unrelated ones.
+ */
+async function probeVarsUnder(themeClass: string, names: readonly string[]): Promise<Map<string, string>> {
+  const wrapper = (await fixture(
+    html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
+  )) as HTMLElement;
+  const probe = wrapper.querySelector(tag('token-probe')) as TokenProbe;
+  await probe.updateComplete;
+  const computed = getComputedStyle(probe);
+  return new Map(names.map((name) => [name, squash(computed.getPropertyValue(name))]));
+}
+
 async function probeVarUnder(themeClass: string, name: string): Promise<string> {
   const wrapper = (await fixture(
     html`<div class=${themeClass}><lr-token-probe></lr-token-probe></div>`,
@@ -334,28 +376,21 @@ const REQUIRED_THEME_INPUTS = [
   '--lr-theme-color-surface-raised',
   '--lr-theme-color-overlay',
   '--lr-theme-color-overlay-strong',
+  // The surface a MODAL panel paints itself with. A separate input from the page surface because
+  // in dark mode it must NOT equal it: a dialog painted the page's near-black read as a scrim
+  // with floating text and no panel at all.
+  '--lr-theme-color-surface-overlay',
+  // Elevation. The colour is its own input so a theme can tint all five steps at once.
+  '--lr-theme-shadow-color',
+  ...ELEVATION_STEPS.map((step) => `--lr-theme-shadow-${step}`),
   ...['2xs', 'xs', 'sm', 'md-sm', 'm', 'md', 'lg', 'xl', '2xl', '3xl'].map((step) => `--lr-theme-font-size-${step}`),
   ...['2xs', 'xs', 's', 'm', 'l', '2xl'].map((step) => `--lr-theme-space-${step}`),
   ...['base', 'content', 'dropdown', 'popover', 'modal', 'toast'].map((layer) => `--lr-theme-z-index-${layer}`),
   ...Array.from({ length: 8 }, (_, index) => `--lr-theme-color-chart-${index + 1}`),
-  ...[
-    'black',
-    'red',
-    'green',
-    'yellow',
-    'blue',
-    'magenta',
-    'cyan',
-    'white',
-    'bright-black',
-    'bright-red',
-    'bright-green',
-    'bright-yellow',
-    'bright-blue',
-    'bright-magenta',
-    'bright-cyan',
-    'bright-white',
-  ].map((slot) => `--lr-theme-terminal-color-${slot}`),
+  // Foregrounds and backgrounds are two independent ramps: one shared set made a background slot
+  // the same colour as the text drawn on it.
+  ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-color-${slot}`),
+  ...TERMINAL_SLOTS.map((slot) => `--lr-theme-terminal-bg-${slot}`),
 ];
 
 it('declares every documented theme input in theme.css', async () => {
@@ -403,7 +438,16 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
     ['--lr-color-chart-1', '#0e006e'],
     ['--lr-color-chart-8', '#8f81d3'],
     ['--lr-terminal-color-red', '#901114'],
-    ['--lr-terminal-color-bright-white', '#636363'],
+    ['--lr-terminal-color-bright-white', '#6c6c6c'],
+    // The background ramp is generated in the same pass and drifts the same way, so it needs its
+    // own samples; the foreground entries above cannot detect a background gone stale.
+    ['--lr-terminal-bg-red', '#d2918a'],
+    ['--lr-terminal-bg-bright-white', '#d1d1d1'],
+    // Elevation, sampled at both ends. A custom property's computed value is its token stream after
+    // var() substitution, not a box-shadow serialization, so the shadow COLOUR appears here already
+    // resolved from the --lr-shadow-color triplet.
+    ['--lr-shadow-xs', '0 1px 2px rgb(0 0 0 / 0.12)'],
+    ['--lr-shadow-xl', '0 12px 32px rgb(0 0 0 / 0.22)'],
   ];
   await withThemeCss(async () => {
     const failures: string[] = [];
@@ -458,4 +502,100 @@ it('changes no bridged token value anywhere when theme.css is imported', async (
     themed.get(name) === baseline.get(name) ? [] : [`${name}: ${themed.get(name)} !== ${baseline.get(name)}`],
   );
   expect(failures.join('\n')).to.equal('');
+});
+
+// --- elevation ------------------------------------------------------------------------
+//
+// One shadow token served the whole library, so a chip, a menu and a dialog all sat at the same
+// depth and elevation carried no information. Five steps only mean anything while they stay five
+// DIFFERENT values, which is a rendered-result question: each step chains through its own
+// --lr-theme-shadow-* input and a shared --lr-shadow-color triplet, and a broken link anywhere in
+// that chain collapses a step to the empty string — invisibly to every other gate.
+
+const ELEVATION_TOKENS = ELEVATION_STEPS.map((step) => `--lr-shadow-${step}`);
+
+it('resolves the elevation scale to five distinct, non-empty steps', async () => {
+  const values = await probeVarsUnder('lr-light', ELEVATION_TOKENS);
+  const resolved = ELEVATION_TOKENS.map((name) => values.get(name)!);
+
+  const empty = ELEVATION_TOKENS.filter((name) => values.get(name) === '');
+  expect(empty.join('\n'), 'elevation steps that resolve to nothing').to.equal('');
+  expect(new Set(resolved).size, `collapsed elevation steps: ${resolved.join(' | ')}`).to.equal(
+    ELEVATION_TOKENS.length,
+  );
+
+  // --lr-shadow is the alias every pre-8.0.0 site still uses; it must stay the mid step.
+  const alias = await probeVarsUnder('lr-light', ['--lr-shadow', '--lr-shadow-m']);
+  expect(alias.get('--lr-shadow'), 'the --lr-shadow alias must resolve to a real value').to.not.equal('');
+  expect(alias.get('--lr-shadow')).to.equal(alias.get('--lr-shadow-m'));
+});
+
+it('keeps the elevation scale distinct, and visibly heavier than light, under a dark ancestor', async () => {
+  await withThemeCss(async () => {
+    const dark = await probeVarsUnder('lr-dark', ELEVATION_TOKENS);
+    const light = await probeVarsUnder('lr-light', ELEVATION_TOKENS);
+    const resolved = ELEVATION_TOKENS.map((name) => dark.get(name)!);
+
+    const empty = ELEVATION_TOKENS.filter((name) => dark.get(name) === '');
+    expect(empty.join('\n'), 'dark elevation steps that resolve to nothing').to.equal('');
+    expect(new Set(resolved).size, `collapsed dark elevation steps: ${resolved.join(' | ')}`).to.equal(
+      ELEVATION_TOKENS.length,
+    );
+
+    // Proves the dark ancestor actually reached the host. A step left at its light value would
+    // satisfy the distinctness check above while rendering a shadow nobody can see on a dark page.
+    const unchanged = ELEVATION_TOKENS.filter((name) => dark.get(name) === light.get(name));
+    expect(unchanged.join('\n'), 'elevation steps that did not darken').to.equal('');
+  });
+});
+
+// --- terminal palette, dark mode ------------------------------------------------------
+//
+// The 16-colour ANSI ramp once existed only in the light block, so a dark terminal drew light-mode
+// colours on a near-black panel. `black` and `white` also shared one hex per mode, which made
+// `ESC[30;47m` — black on white — text painted in its own background colour.
+
+it('resolves the terminal ramp to its dark values under a dark ancestor', async () => {
+  const sample = ['black', 'white', 'red', 'green', 'blue', 'bright-white'].map(
+    (slot) => `--lr-terminal-color-${slot}`,
+  );
+  await withThemeCss(async () => {
+    const dark = await probeVarsUnder('lr-dark', sample);
+    const light = await probeVarsUnder('lr-light', sample);
+
+    const empty = sample.filter((name) => dark.get(name) === '');
+    expect(empty.join('\n'), 'terminal slots that resolve to nothing in dark').to.equal('');
+    // Compared at runtime rather than against hardcoded hexes, so regenerating the ramp
+    // (scripts/generate-terminal-palette.mjs) cannot make this test lie.
+    const stuck = sample.filter((name) => dark.get(name) === light.get(name));
+    expect(stuck.join('\n'), 'terminal slots still showing their light value under .lr-dark').to.equal('');
+  });
+});
+
+it('keeps terminal black and white apart in both modes, and backgrounds off the foreground ramp', async () => {
+  const names = [
+    '--lr-terminal-color-black',
+    '--lr-terminal-color-white',
+    '--lr-terminal-bg-black',
+    '--lr-terminal-bg-white',
+  ];
+  await withThemeCss(async () => {
+    const failures: string[] = [];
+    for (const mode of ['lr-light', 'lr-dark']) {
+      const values = await probeVarsUnder(mode, names);
+      const [foregroundBlack, foregroundWhite, backgroundBlack, backgroundWhite] = names.map((n) => values.get(n)!);
+      // ESC[30;47m: black text on a white cell. One shared hex per slot made that invisible.
+      if (foregroundBlack === foregroundWhite) {
+        failures.push(`${mode}: terminal black and white foregrounds are both ${foregroundBlack}`);
+      }
+      // The background ramp is generated separately so a cell never matches the glyph drawn on it.
+      if (backgroundBlack === foregroundBlack) {
+        failures.push(`${mode}: bg-black equals color-black (${backgroundBlack})`);
+      }
+      if (backgroundWhite === foregroundWhite) {
+        failures.push(`${mode}: bg-white equals color-white (${backgroundWhite})`);
+      }
+    }
+    expect(failures.join('\n')).to.equal('');
+  });
 });

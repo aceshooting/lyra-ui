@@ -48,7 +48,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome: a node card sits on the canvas, so it takes a card step -- s rather than xs
+       because it has to separate from a patterned/gridded canvas background, not a flat panel. */
+    box-shadow: var(--lr-shadow-s);
   }
   /* Density escape -- same convention as lr-source-card's compact. The tuned values sit behind
      inline var() fallbacks (rather than a :host declaration, which every instance re-declares and

@@ -32,8 +32,12 @@ export const styles = css`
     overflow: hidden;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Modal-panel surface, not the page surface -- in dark mode the two would be the same
+       near-black and the palette would read as a scrim with a floating list on it. */
+    background: var(--lr-color-surface-overlay);
+    /* Modal layer, top step: the palette floats free on all four edges over its own scrim,
+       exactly like a centered lr-dialog. */
+    box-shadow: var(--lr-shadow-xl);
     color: var(--lr-color-text);
   }
   [part="search"] {

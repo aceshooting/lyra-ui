@@ -753,7 +753,7 @@ describe('lr-terminal', () => {
     const inverse = byText('inverse');
     // \x1b[41m set an explicit background (red); inverse swaps it into `color`, and the unset
     // foreground's own fallback var into `background-color`.
-    expect(inverse.style.color).to.equal('var(--lr-terminal-color-red)');
+    expect(inverse.style.color).to.equal('var(--lr-terminal-bg-red)');
     expect(inverse.style.backgroundColor).to.equal('var(--lr-color-text)');
   });
 

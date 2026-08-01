@@ -12,7 +12,9 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Overlay step: this cluster's job is to float over a flow canvas as a toolbar, which is why the
+       plain escape below strips the whole surface treatment when it is embedded in real chrome. */
+    box-shadow: var(--lr-shadow-m);
   }
   :host([orientation='vertical']) [part='base'] {
     flex-direction: column;

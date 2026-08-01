@@ -99,7 +99,9 @@ export const styles = css`
     border-radius: var(--lr-radius-pill);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
-    box-shadow: var(--lr-shadow);
+    /* Overlay step: the pill floats over the transcript it scrolls, so it is an anchored layer
+       rather than resting chrome. */
+    box-shadow: var(--lr-shadow-m);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;

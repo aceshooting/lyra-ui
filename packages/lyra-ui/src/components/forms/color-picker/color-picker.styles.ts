@@ -140,7 +140,8 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-color-picker-radius);
     background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
+    /* Anchored overlay: a positioner-placed picker panel floating over page content. */
+    box-shadow: var(--lr-shadow-m);
     max-inline-size: var(--lr-positioner-available-inline-size, none);
   }
   [part~='panel'][hidden] {
@@ -185,7 +186,9 @@ export const styles = css`
     block-size: var(--lr-color-picker-grid-handle-size);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
     border-radius: 50%;
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, not an overlay: a knob riding directly on the grid it edits, inside a panel
+       that is itself the anchored overlay -- it has to stay a step below its own container. */
+    box-shadow: var(--lr-shadow-s);
     transform: translate(-50%, -50%);
     cursor: grab;
   }
@@ -236,7 +239,8 @@ export const styles = css`
     block-size: var(--lr-color-picker-slider-handle-size);
     border: var(--lr-border-width-medium) solid var(--lr-color-surface);
     border-radius: 50%;
-    box-shadow: var(--lr-shadow);
+    /* Resting chrome, same tier as the grid handle above: a knob on a track, not a floating panel. */
+    box-shadow: var(--lr-shadow-s);
     background-color: var(--lr-color-picker-swatch-color);
     transform: translate(-50%, -50%);
     cursor: grab;

@@ -1146,3 +1146,103 @@ describe('header chrome', () => {
     el.close('api');
   });
 });
+
+// --- dark-mode panel separation -----------------------------------------------------
+//
+// A modal panel cannot share the page surface token in dark mode: both resolve to the same
+// near-black, so an open dialog reads as a scrim with text floating on it and no panel at all.
+// The panel therefore paints --lr-color-surface-overlay, which dark mode moves off the page
+// surface. Both colours are read back at runtime from the component's own scope -- a hardcoded
+// literal here would assert the generated palette instead of this component's token wiring.
+
+let darkThemeSheetPromise: Promise<CSSStyleSheet> | undefined;
+
+function loadThemeSheet(): Promise<CSSStyleSheet> {
+  darkThemeSheetPromise ??= fetch(new URL('../../../theme.css', import.meta.url))
+    .then((response) => response.text())
+    .then((text) => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(text);
+      return sheet;
+    });
+  return darkThemeSheetPromise;
+}
+
+async function withThemeCss<T>(run: () => Promise<T>): Promise<T> {
+  const sheet = await loadThemeSheet();
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+  try {
+    return await run();
+  } finally {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet);
+  }
+}
+
+// Custom properties resolve to their authored syntax (#1a1a1a), while backgroundColor resolves to
+// rgb(). Round-tripping the token value through a real element normalizes both into the same space
+// so the two colour STRINGS are actually comparable.
+function toComputedColor(rawTokenValue: string): string {
+  const probe = document.createElement('div');
+  probe.style.backgroundColor = rawTokenValue;
+  document.body.append(probe);
+  try {
+    return getComputedStyle(probe).backgroundColor;
+  } finally {
+    probe.remove();
+  }
+}
+
+it('paints its panel a surface distinct from the page surface in dark mode', async () => {
+  await withThemeCss(async () => {
+    const wrapper = (await fixture(
+      html`<div class="lr-dark"><lr-dialog label="Untitled" open>body</lr-dialog></div>`,
+    )) as HTMLElement;
+    const el = wrapper.querySelector('lr-dialog') as LyraDialog;
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+
+    const pageSurface = toComputedColor(getComputedStyle(el).getPropertyValue('--lr-color-surface').trim());
+    const overlaySurface = toComputedColor(
+      getComputedStyle(el).getPropertyValue('--lr-color-surface-overlay').trim(),
+    );
+    const panelBackground = getComputedStyle(panel).backgroundColor;
+
+    // Guards a mistyped token name resolving to the empty string, which would make every
+    // comparison below vacuous.
+    expect(pageSurface, 'page surface resolved').to.match(/^rgba?\(/);
+    expect(overlaySurface, 'overlay surface resolved').to.match(/^rgba?\(/);
+    expect(overlaySurface, 'dark mode moves the overlay surface off the page surface').to.not.equal(pageSurface);
+
+    expect(panelBackground).to.equal(overlaySurface);
+    expect(panelBackground).to.not.equal(pageSurface);
+    el.close('api');
+  });
+});
+
+// Same normalization trick as toComputedColor, for the elevation scale: a shadow token expands to
+// a length triple plus an rgb(), while computed boxShadow reorders it and resolves the colour.
+function toComputedShadow(rawTokenValue: string): string {
+  const probe = document.createElement('div');
+  probe.style.boxShadow = rawTokenValue;
+  document.body.append(probe);
+  try {
+    return getComputedStyle(probe).boxShadow;
+  } finally {
+    probe.remove();
+  }
+}
+
+it('elevates its panel at the modal tier, not the default anchored-overlay one', async () => {
+  const el = (await fixture(html`<lr-dialog label="Untitled" open>body</lr-dialog>`)) as LyraDialog;
+  await el.updateComplete;
+  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const scope = getComputedStyle(el);
+
+  const modalTier = toComputedShadow(scope.getPropertyValue('--lr-shadow-xl').trim());
+  const defaultTier = toComputedShadow(scope.getPropertyValue('--lr-shadow').trim());
+
+  expect(modalTier, 'the xl step resolved').to.not.equal('none');
+  expect(modalTier, 'the modal tier is a distinct step from the default').to.not.equal(defaultTier);
+  expect(getComputedStyle(panel).boxShadow).to.equal(modalTier);
+  el.close('api');
+});
