@@ -144,7 +144,10 @@ blank instead of reporting a misleading zero.
 **Themeable custom properties:** `--lr-chart-height` (same host-level property as `lr-chart`);
 `--lr-chart-grid-color`, `--lr-chart-tick-color`, `--lr-chart-legend-color` — same token
 *names* as `lr-chart`, so a host already theming `lr-chart` themes this for free;
-`--lr-lite-chart-selected-outline-color` (default `var(--lr-color-brand)`) — the stroke drawn on
+`--lr-chart-color-1` … `--lr-chart-color-8` (each defaulting to the matching
+`var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
+without moving the library-wide ramp; `--lr-lite-chart-selected-outline-color` (default
+`var(--lr-color-brand)`) — the stroke drawn on
 selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndex`.
 Unlike `lr-chart` (canvas-rendered, needs `getComputedStyle`-based re-theming on every draw), this
 is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolution step, and no
@@ -168,9 +171,11 @@ is plain SVG/DOM and reads these via native CSS `var()` — no JS-side resolutio
 - No `horizontal` mode (unlike `lr-chart`) — deliberately cut from scope, not a stub: bars are
   always vertical.
 - No dual y-axis (`Series.axis: 'y2'`) — every series shares one y-axis/domain.
-- Series colors default to a fixed built-in 8-color categorical palette (round-robin by dataset
-  index) when `color` is unset or invalid — not configurable beyond passing a valid CSS `color`
-  per series.
+- Series colors default to the shared categorical ramp (round-robin by dataset index) when `color`
+  is unset or invalid — the same eight `--lr-color-chart-1..8` tokens `lr-chart` uses, so both
+  chart implementations agree on the palette and both follow a `--lr-theme-color-chart-*` retheme.
+  Being plain SVG, they resolve through native `var()` at paint time, so a theme or color-scheme
+  change needs no JS-side redraw pass here.
 - Bar/point elements are real focusable DOM nodes (`role="button"` with one roving `tabindex="0"`);
   each native SVG `<title>` is the mark's sole accessible name and tooltip. The `<svg>` itself uses
   `role="group"`, not `role="img"` — an image role would conflict with genuinely interactive

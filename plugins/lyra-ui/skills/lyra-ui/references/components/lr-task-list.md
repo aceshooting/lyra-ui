@@ -27,10 +27,11 @@ line; `children` is exactly **one** level of sub-steps — a child's own `childr
 `collapsible: boolean = true`. `compact: boolean = false` (reflected) — tighter header/body padding
 and item gap for dense contexts (a plan tracker nested in an already-padded transcript row), same
 convention as `<lr-agent-run>`'s/`<lr-source-card>`'s `compact`; purely a density knob, the border
-and background stay. `appearance: 'card' | 'plain' = 'card'` (reflected) — mirrors `lr-card`'s
-`appearance` vocabulary; `'plain'` removes `[part="base"]`'s border, background, and corner radius so
-a list embedded in a frame that already draws a border (an agent-run panel, a message bubble) doesn't
-double it.
+and background stay. `frame: LyraFrame = 'card'` (reflected) — container treatment, in the
+library-wide `frame` vocabulary (`'card' | 'plain'`); `'plain'` removes `[part="base"]`'s border,
+background, and corner radius so a list embedded in a container that already draws a border (an
+agent-run panel, a message bubble) doesn't double it. The exported alias `TaskListAppearance` is
+retained as a name for the same union.
 
 **Slots:** `detail-<id>` — dynamic, one per item id (e.g. `slot="detail-step-3"`); rich detail under
 that item's label, typically a `<lr-tool-call-chip>` or file `<lr-chip>`.

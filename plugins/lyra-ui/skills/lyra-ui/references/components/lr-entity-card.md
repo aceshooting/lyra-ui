@@ -32,11 +32,12 @@ itself — `lr-entity-activate` is a request a host routes into `lr-graph`'s own
   dossier rendered in a sidebar, a result list) — the same convention as `lr-empty`'s `compact` and
   as this component's sibling `lr-community-card`. Purely a density knob: the border and background
   stay. `false` (the default) keeps the full card padding.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
-  removes the border, background, padding and corner radius, so a card nested inside a container
-  that already draws a border doesn't double the frame. `plain` wins over `compact` when both are
-  set — there is nothing left to tighten.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
+  `'plain'` removes the border, background, padding and corner radius, so a card nested inside a
+  container that already draws a border doesn't double it. `plain` wins over `compact` when both are
+  set — there is nothing left to tighten. The exported alias `EntityCardAppearance` is retained as a
+  name for the same union.
 
 **Events:** `lr-entity-activate` (`detail: { id }`, the built-in focus button was activated).
 

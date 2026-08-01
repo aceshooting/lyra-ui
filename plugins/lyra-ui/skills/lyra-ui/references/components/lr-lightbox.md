@@ -26,7 +26,7 @@ trap, Escape/backdrop dismissal, scroll lock, and focus return.
 - `index: number = 0` (reflected) — clamped defensively for rendering and silently re-synced (no
   event) when `images` shrinks.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
-- `noLightDismiss: boolean = false` (attribute `no-light-dismiss`) — opts out of backdrop dismissal.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
 - `showCounter: boolean = true` (attribute `show-counter`) — shows the visible `[part="counter"]`.
   The independent `[part="live-region"]` announcement remains active when the counter is hidden.
 - `minZoom: number = 0.5`, `maxZoom: number = 4`, `zoomStep: number = 0.25` (attributes `min-zoom`/

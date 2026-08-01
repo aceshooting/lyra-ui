@@ -6,7 +6,7 @@
 - **Class** `LyraCallout`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/callout/callout.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 7 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +17,11 @@ An inline status, warning, or error surface. Set `inline` for lightweight reacti
 errors without panel chrome.
 
 **Properties:** `variant: 'neutral'|'brand'|'success'|'warning'|'danger' = 'neutral'` (reflected —
-also picks `[part="base"]`'s role: `alert` for `danger`, `status` otherwise), `heading: string = ''`,
+also picks `[part="base"]`'s role: `alert` for `danger`, `status` otherwise),
+`size: LyraSize = 'm'` (reflected — **new in 8.0.0**; visual density on the library's shared ladder,
+accepting both spellings of every tier (`s`/`small`, `m`/`medium`, `l`/`large`) so markup migrated
+from `wa-callout`/`sl-alert` needs no attribute rewrite. `m` reproduces the panel this component had
+before `size` existed), `heading: string = ''`,
 `closable: boolean = false` (reflected), `inline: boolean = false` (reflected), `open: boolean = true`
 (reflected — `false` renders nothing at all), and `accessibleLabel: string = ''`
 (`accessible-label`; falls back to a plain host `aria-label` attribute when unset).
@@ -33,11 +37,24 @@ at least `--lr-icon-button-size` in both the panel and `inline` treatments), `cl
 visible "×" glyph inside it — this is what shrinks under `inline`, so the hit target never does).
 
 **Themeable custom properties:** `--lr-callout-background`, `--lr-callout-color`,
-`--lr-callout-border` — the trio each `:host([variant])` rule rewrites (same
-surface/text/border → `*-quiet`/loud/loud scheme as `lr-badge`). `inline` drops the border,
-background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
+`--lr-callout-border` — the trio one `:host([variant]:not([variant='neutral']))` rule rewrites to
+`var(--lr-color-fill-quiet)` / `var(--lr-color-fill-loud)` / `var(--lr-color-fill-loud)`, the
+generic slots the shared variants sheet has already re-pointed at the active variant's row of the
+semantic grid; the same quiet-fill/loud-text/loud-border scheme `lr-badge` uses. `inline` drops the
+border, background, and panel padding regardless of what these are set to. `--lr-callout-close-hover-bg`
 (default `var(--lr-color-brand-quiet)`) — the close button's `:hover` background, deliberately
 decoupled from `--lr-callout-background` (which every non-neutral `variant` also retargets for the
 panel itself) so a consumer can retint the hover fill — e.g. to keep it visibly distinct from a
 `variant="brand"` panel, which shares the same default token — without a collateral effect on the
 panel background, and vice versa.
+
+Three more, all new in 8.0.0: `--lr-callout-font-size` (default
+`var(--lr-form-control-font-size)` — the callout's text size; each `size` tier sets it from the
+shared ladder), `--lr-callout-padding` (default `var(--lr-form-control-padding-inline)` — the
+panel's padding on *both* axes; each `size` tier sets it from the ladder's inline-padding knob,
+because a panel's block rhythm is generous like a control's inline padding rather than tight like
+its block padding, which only exists to fit text inside a fixed control height; `inline` removes it
+entirely) and `--lr-callout-gap` (default `var(--lr-space-s)` — the space between the icon, the
+content and the close action. It deliberately does *not* vary by `size`: it separates three adjacent
+boxes rather than setting the panel's density, and shrinking it at the small tiers only crowds
+them).

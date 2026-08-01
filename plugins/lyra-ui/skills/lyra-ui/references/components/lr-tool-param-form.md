@@ -66,6 +66,17 @@ and makes the form invalid instead of being silently accepted.
   `ElementInternals.reportValidity()`. If `required` contains an unmet key absent from
   `properties`, there is no generated control to focus, so a localized, programmatically focusable
   root error names that dangling key instead.
+- `setCustomValidity(message: string): void` — the standard channel for a rejection the schema
+  cannot express ("the tool rejected these arguments"). A non-empty `message` raises `customError`
+  and becomes `validationMessage`, so the form fails `checkValidity()`, blocks submission, and
+  matches `:state(invalid)`; `''` clears it. Two independent layers: this control already raises
+  `customError` intrinsically for a malformed schema or an unsupported field type, and
+  `setCustomValidity('')` clears only the consumer's layer — a still-malformed schema stays invalid
+  with its own message restored, and clearing never forces a form with an unmet `required` property
+  valid. The consumer's error survives every intrinsic recomputation in between (each field edit
+  re-runs the validity sync) and a `form.reset()`, matching a native control. The message is
+  whole-control state, so it is deliberately absent from `errors`, which is keyed by schema
+  property; it is caller-supplied content and is used verbatim, never localized.
 
 **Events:** `lr-input` (`detail: { value: Record<string, unknown> }` — the full current value
 object, every property with defaults resolved, not just the field that changed), `lr-validity-change`

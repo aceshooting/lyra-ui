@@ -138,12 +138,20 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/form-radio--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/form-rating--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-knowndate--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-otp-input--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-phoneinput--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/forms-radio-button--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/gauge--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/generationstatus--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/graph--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/graph-legend--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/grounding-summary--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-events--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-forms--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-getting-started--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-localization-and-rtl--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-migrating-from-web-awesome-or-shoelace--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/guides-theming--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/handoffdivider--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/heatmap--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/icon--docs</loc></url>
@@ -162,6 +170,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledge-graph-graph-query-builder--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/knowledgebaseadmin--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-divider--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-menu-label--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/layout-scroller--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/lightbox--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/liveregion--docs</loc></url>
@@ -197,6 +206,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-popover--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-positioned-surfaces--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlay-tooltip--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/overlays-popup--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/pagination--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/path-strip--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/playback--docs</loc></url>
@@ -275,6 +285,7 @@
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-mutation-observer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-relative-time--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utilities-resize-observer--docs</loc></url>
+  <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/utility-visually-hidden--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/viewers-ebook-viewer--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/virtuallist--docs</loc></url>
   <url><loc>https://aceshooting.github.io/lyra-ui/?path=/docs/voice-picker--docs</loc></url>

@@ -37,11 +37,17 @@ final.
   shadow root) — same contract as `<lr-document-preview>`'s identically-named prop. Values that do
   not parse as CSS `max-height`, contain declaration breaks, or contain `url()` are ignored, leaving
   the stylesheet token in control.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring
-  `<lr-source-card>`'s `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled
-  box. `'plain'` removes `[part="base"]`'s border, background, padding, and corner radius, so a
-  card inside a dense chat transcript (or any container already drawing its own separation between
-  attachments) doesn't double the frame.
+- `frame: 'card' | 'plain' = 'card'` (reflected) — container treatment, on the library-wide `frame`
+  vocabulary. `'card'` (the default) keeps the bordered, filled box. `'plain'` removes
+  `[part="base"]`'s border, background, padding, and corner radius, so a card inside a dense chat
+  transcript (or any container already drawing its own separation between attachments) doesn't
+  double the frame.
+
+**Renamed in 8.0.0 — breaking:** this was `appearance`. Library-wide, `appearance` now means only
+"how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";
+this property was always the second. There is no alias — `appearance` on `<lr-media-card>` is simply
+an unknown attribute now, so a card left on `appearance="plain"` silently renders the full card
+chrome again.
 
 **Events:** `lr-open` (`detail: { src: string; filename: string }`, cancelable) — fired when the
 card (or, for `kind="video"`, its separate `open-button`) is activated. `detail.src` is whichever
@@ -64,7 +70,7 @@ an `<a>` or `<span>` for the file-chip fallback depending on href safety), `medi
 `<video>`), `file-icon`, `filename` (file-chip fallback only), `open-button` (video only — see
 below).
 
-**Themeable custom properties:** `--lr-media-card-max-height` (default `20rem` — caps `[part="media"]`'s
+**Themeable custom properties:** `--lr-media-card-max-height` (default `var(--lr-size-20rem)` — caps `[part="media"]`'s
 block-size so one oversized image/video can't blow out a chat bubble; same naming/contract as
 `<lr-document-preview>`'s identical `--lr-document-preview-max-height`; override per-instance via
 the `max-height` attribute instead of this property directly). Plus shared tokens

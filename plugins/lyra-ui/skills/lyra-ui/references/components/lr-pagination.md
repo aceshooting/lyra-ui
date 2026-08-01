@@ -6,16 +6,26 @@
 - **Class** `LyraPagination`, also available unregistered from `@aceshooting/lyra-ui/components/data/pagination/pagination.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-pagination`
 
-Controlled page navigation for server-side or client-side data sets: previous/next buttons, a
-validated numeric page jump, a localized item-range summary, and a polite announcement after the
-host applies a requested page. The component owns no data fetching and never mutates `page`.
+Controlled page navigation for server-side or client-side data sets: a numbered page list with
+elided runs, previous/next and optional first/last buttons, an opt-in localized item-range summary,
+a compact layout that swaps the list for a validated numeric page jump, and a polite announcement
+after the host applies a requested page. The component owns no data fetching and never mutates
+`page`.
+
+**Renamed in 8.0.0 — both are breaking:**
+- `total-items` is now `total` (property `totalItems` → `total`). The old attribute no longer binds
+  to anything: a pager left on `total-items` keeps `total` at its `0` default and silently renders
+  the empty state with every control disabled.
+- `hide-summary` is now `with-summary`, which **inverts the default**. The summary used to render
+  unless you opted out; it is now hidden unless you opt in. Drop `hide-summary` wherever it appears,
+  and add `with-summary` to every pager that was relying on the old show-by-default behavior.
 
 **Properties and getters:**
 - `page: number = 1` (reflected) — the currently applied page. Runtime values are presented within
@@ -23,16 +33,40 @@ host applies a requested page. The component owns no data fetching and never mut
   rewritten by the component
 - `pageSize: number = 20` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
-- `totalItems: number = 0` (attribute `total-items`) — total item count; finite values are truncated
+- `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations
-- `pageCount: number` (readonly getter) — `ceil(totalItems / pageSize)` after the normalization
+- `pageCount: number` (readonly getter) — `ceil(total / pageSize)` after the normalization
   above, or `0` when either normalized input is zero
 - `disabled: boolean = false` (reflected)
 - `loading: boolean = false` (reflected) — disables all controls and sets `aria-busy="true"` on the
   internal navigation landmark
-- `hideSummary: boolean = false` (attribute `hide-summary`, reflected) — omits the built-in range
-  summary while retaining the controls
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — changes control height and type size
+- `withSummary: boolean = false` (attribute `with-summary`, reflected) — renders the built-in range
+  summary while retaining the controls. Opt-in since 8.0.0; see the rename note above
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected) — control footprint, on the library's shared
+  six-step ladder: `--lr-pagination-control-size` and `--lr-pagination-font-size` read the same
+  `--lr-form-control-height`/`--lr-form-control-font-size` knobs `lr-button`/`lr-input`/`lr-select`
+  sit on, so a pager in a toolbar row lines up with its neighbours at every tier.
+  `'small'`/`'medium'`/`'large'` are accepted as exact synonyms of `'s'`/`'m'`/`'l'` — no attribute
+  rewrite when migrating from an upstream that spells them that way
+- `format: 'standard'|'compact' = 'standard'` (reflected) — `standard` renders the numbered page
+  list; `compact` replaces it with the single page-jump input and a `/ pageCount` readout, for a
+  toolbar or card footer. Previous/next and the `with-edges` buttons render in both
+- `siblingCount: number = 2` (attribute `sibling-count`) — pages shown either side of the current
+  page in the numbered list. Read as a non-negative integer clamped to `0..25`; non-finite input
+  falls back to `2`
+- `boundaryCount: number = 1` (attribute `boundary-count`) — pages always pinned at the start and
+  the end of the numbered list. Same normalization, fallback `1`
+- `withEdges: boolean = false` (attribute `with-edges`, reflected) — adds first-page and last-page
+  buttons outside previous/next, each drawn with a doubled chevron
+- `hrefTemplate: string | ((page: number) => string) = ''` (attribute `href-template`) — renders
+  each numbered page as an `<a>` instead of a `<button>`, so the pager works before hydration and
+  for crawlers. A string uses `{page}` as the placeholder (`/products?page={page}`); a function
+  receives the page number and returns the URL and can only be assigned from JavaScript
+- `appearance: 'accent'|'filled'|'outlined'|'filled-outlined'|'plain' = 'outlined'` (reflected) —
+  the resting fill and border of the first/previous/next/last buttons and the numbered pages (not the
+  compact page-jump input), applied through the two custom properties below. The applied page stays a
+  solid brand chip in all five, so the appearance never decides whether the current page is
+  identifiable
 - `itemLabel: string = ''` (attribute `item-label`) — custom item noun used in the summary; empty
   selects the localized singular `item` or plural `items` key
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — host accessible-name override
@@ -41,26 +75,51 @@ host applies a requested page. The component owns no data fetching and never mut
 - `pageLabel: string = 'Page'` (attribute `page-label`) — accessible name for the page-jump input
 - `previousLabel: string = 'Previous'` (attribute `previous-label`), `nextLabel: string = 'Next'`
   (attribute `next-label`) — accessible names for the icon-only directional buttons
+- `firstLabel: string = 'First page'` (attribute `first-label`), `lastLabel: string = 'Last page'`
+  (attribute `last-label`) — accessible names for the icon-only edge buttons rendered by
+  `with-edges`
 
 Built-in property defaults resolve through the locale registry. A property value customized away
 from its built-in default is treated as an explicit per-instance wording override.
 
 **Events:** `lr-page-change` (`detail: { page: number }`, bubbles and composes, non-cancelable) —
-emitted for a valid, different requested page. The host applies `event.detail.page` back to `page`
+emitted for a valid, different requested page, from a numbered page button, previous/next,
+first/last, or the compact page-jump input. The host applies `event.detail.page` back to `page`
 after routing, fetching, or any other policy decision.
-The internal page input's `focus` and `blur` are also bridged as bubbling, composed host events.
+`focus` and `blur` are re-dispatched as bubbling, composed host events from whichever internal
+control the user reached — a page button or link, previous/next, first/last, or the page input —
+because the internal originals do not cross the shadow boundary.
 
-**Methods:** `focus(options?)` and `blur()` forward to the numeric page input.
+**Methods:** `focus(options?)`, `blur()` and `click()` all target the page-jump input, which only
+exists in `format="compact"`; in the default `standard` layout there is no such input and the three
+are no-ops. `click()` additionally does nothing while the controls are disabled.
 
 **Slots:** none.
 
-**CSS parts:** `base`, `summary`, `controls`, `previous-button`, `previous-icon`, `page-field`,
-`page-input`, `page-count`, `next-button`, `next-icon`, `live-region`.
+**CSS parts:** `base`, `summary`, `controls`, `pages`, `page`, `page-current`, `ellipsis`,
+`first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `page-input`,
+`page-count`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+
+`pages` is the `role="list"` wrapper, `page` one numbered control inside it (a `<button>`, or an
+`<a>` under `href-template`), and `ellipsis` a non-interactive `aria-hidden` marker standing in for
+a skipped run of pages. The applied page's control carries a second part token, so
+`::part(page-current)` selects it and `::part(page)` still selects every page including the current
+one — the state lives in the part name because `::part(page)[aria-current='page']` is invalid CSS
+and would silently never match. `first-button`/`first-icon` and `last-button`/`last-icon` exist only
+while `with-edges` is set.
 
 **Themeable custom properties:** `--lr-pagination-control-size` and
-`--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-padding` (default
-`var(--lr-space-xs)`) — inner padding of the previous/next buttons and the page input, deliberately
-uniform across every `size` tier because the control's outer footprint is already fixed by
+`--lr-pagination-font-size` (both default from `size`), `--lr-pagination-control-bg` (default
+`var(--lr-color-surface)`) and `--lr-pagination-control-border-color` (default
+`var(--lr-color-border)`) — the resting fill and border shared by the first/previous/next/last
+buttons and the numbered pages, which is what `appearance` re-points: `filled` → `var(--lr-color-surface-raised)` + `transparent`,
+`filled-outlined` → `var(--lr-color-surface-raised)` + `var(--lr-color-border)`, `plain` →
+`transparent` + `transparent`, `accent` → `var(--lr-color-brand-quiet)` +
+`var(--lr-color-brand)`; set either property yourself to theme past the five presets —
+`--lr-pagination-control-radius` (default `var(--lr-radius)`) — border radius of the navigation
+buttons, the numbered pages and the page input — `--lr-pagination-control-padding` (default
+`var(--lr-space-xs)`) — inner padding of those same controls, deliberately uniform across every
+`size` tier because the control's outer footprint is already fixed by
 `--lr-pagination-control-size`, so this only adjusts the icon/digit inset —
 `--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
@@ -70,7 +129,7 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
 **Optional peer deps:** none.
 
 ```html
-<lr-pagination total-items="237" page-size="20"></lr-pagination>
+<lr-pagination total="237" page-size="20" with-summary with-edges></lr-pagination>
 <script>
   const pagination = document.querySelector('lr-pagination');
   pagination.addEventListener('lr-page-change', async (event) => {
@@ -78,6 +137,24 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
     pagination.page = event.detail.page;
   });
 </script>
+
+<!-- Link mode: real anchors, so the pager is crawlable and works before hydration. -->
+<lr-pagination
+  total="237"
+  page-size="20"
+  page="3"
+  with-edges
+  href-template="/products?page={page}"
+></lr-pagination>
+```
+
+A function template builds the URL itself, which is where any dynamic segment gets encoded:
+
+```js
+const pagination = document.querySelector('lr-pagination');
+const query = new URLSearchParams(location.search).get('q') ?? '';
+pagination.hrefTemplate = (page) =>
+  `/products?${new URLSearchParams({ q: query, page: String(page) })}`;
 ```
 
 **Known gotchas:**
@@ -88,13 +165,36 @@ CSS — plus shared color, spacing, border, radius, disabled-opacity, and focus-
   drafts expose `aria-invalid="true"` and emit nothing
 - zero items, zero page size, `disabled`, and `loading` all disable the navigation controls. The
   empty summary is still rendered via the localized `paginationEmptySummary` message
-  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) unless `hide-summary` is set
-- below a 20rem container allocation the summary and controls stack; the breakpoint responds to
-  the component's own inline size, not the viewport. Previous/next icons also mirror under RTL
-
-**Additional API surface:**
-
-- `click()` — Forward host activation to the primary editable page control.
-- `--lr-pagination-control-radius` — Border radius of navigation buttons and the page input. Default: `var(--lr-radius)`.
+  (`'{total} {itemLabel}'`, producing `0 items` in the default locale) only when `with-summary` is set
+- below a 20rem container allocation the summary and controls stack; the breakpoint responds to the
+  component's own inline size, not the viewport. The control group and the page list wrap onto
+  further rows at any width rather than overflowing. Previous/next and first/last icons all mirror
+  under RTL
+- link mode moves navigation out of your handler. A numbered page rendered from `href-template` is a
+  plain anchor with no click handler: activating it navigates and emits **no** `lr-page-change`.
+  Previous/next and first/last stay buttons and keep emitting it, so a link-mode pager still needs
+  its `lr-page-change` listener for those
+- `href-template` is interpolated, not encoded. `{page}` is replaced with `String(page)` — always a
+  plain integer, never the localized digits shown in the label — and the rest of the template is
+  placed in the `href` verbatim: it is neither URL-encoded nor otherwise escaped. The only check
+  applied is a scheme allowlist on the resolved URL (`http:`, `https:`, `blob:`, `mailto:`, and
+  relative URLs); a `javascript:`, `data:` or unparseable result fails closed to a `<button>` for
+  that page instead of being rendered. Treat the template as trusted application input and encode
+  any dynamic segment yourself before it reaches the template — a function template is the
+  straightforward place to do that
+- the current page never gets an `href` (nor does any page while `disabled` or `loading` — those
+  anchors carry `aria-disabled="true"` instead). An anchor without `href` is not focusable, so in
+  link mode the current page is skipped by Tab, while in the default button layout it stays a
+  focusable button that does nothing when activated
+- `href-template` has no effect under `format="compact"`: there is no numbered list to render as
+  links, only the page-jump input
+- the numbered list keeps a constant slot count as the reader pages through, so the control does not
+  jitter: `siblingCount`/`boundaryCount` fix the budget, every page renders when the page count fits
+  inside it, and otherwise a side that turns out to need no gap hands its slot back as one more page
+  number. Both counts are clamped to `25` and the render-every-page budget is capped at 101 slots, so
+  however large you set them the list never renders more than 103 slots
+- `appearance` does not reach the compact page-jump input — `[part="page-input"]` always draws with
+  the shared surface and border tokens. Style `::part(page-input)` directly when a non-default
+  appearance needs it to match
 
 ---

@@ -6,7 +6,7 @@
 - **Class** `LyraImageViewer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 13 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -58,8 +58,12 @@ carries. Highlight tone styling is exposed through `--lr-image-viewer-highlight-
 `--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
 `--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
 `--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
-properties. These properties are declared as inline `var()` fallbacks at the point of use rather
-than on `:host`, so each can be set on the element *or on any ancestor*:
+properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='highlight']` actually
+renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
+taken from that value, so setting it directly retints all three states of one highlight at once —
+retint a whole tone through the matching `-bg` knob instead. These properties are declared as inline
+`var()` fallbacks at the point of use rather than on `:host`, so each can be set on the element *or
+on any ancestor*:
 `::part(highlight)[data-active]` is invalid CSS — Shadow Parts forbids an attribute selector after
 `::part()` — which previously left overriding the library-wide
 `--lr-color-brand`/`--lr-color-brand-quiet` tokens as the only lever, repainting every other

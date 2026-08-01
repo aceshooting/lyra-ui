@@ -6,16 +6,19 @@
 - **Class** `LyraCarousel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/carousel/carousel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 11 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 11 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-carousel`
 
-Accessible carousel for arbitrary slotted slide elements. It shows one assigned element at a time,
-adds slide semantics and localized position labels, and provides keyboard, button, and indicator
-navigation.
+Accessible carousel for arbitrary slotted slide elements. Mirrors `wa-carousel` / `sl-carousel`. It
+shows one assigned element at a time and provides keyboard, button, and indicator navigation. Slide
+semantics (`role="group"`, a localized "slide" role description, and a localized "Slide N of M"
+label) are added only to `<lr-carousel-item>` children — an arbitrary slotted element keeps its own
+native or authored semantics untouched, and an explicit `role`/`aria-label` on an
+`<lr-carousel-item>` wins over the generated one.
 
 **Properties:**
 - `index: number = 0` (attribute `index`, reflected) — active slide index
@@ -29,10 +32,35 @@ navigation.
 **Methods:** `next()`, `previous()`, and `goTo(index)` update the active index and emit
 `lr-slide-change` (`detail: { index }`).
 
-**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes.
+**Events:** `lr-slide-change` (`detail: { index }`) — emitted after the active slide changes,
+whether from a button, a key, an indicator, autoplay, or the user swiping the track to rest on
+another slide.
+
+**Touch, swipe, and scroll snapping (new in 8.0.0).** The slides live in a native scroll-snap
+track, so touch swiping, trackpad panning, momentum, and rubber-banding all come from the platform
+rather than a synthetic pointer-drag. `viewport` is the real scroll port (`overflow-x: auto`,
+`overflow-y: hidden`, `scroll-snap-type: inline mandatory`, `overscroll-behavior-inline: contain`,
+native scrollbar hidden), and every assigned slide is one snap area (`scroll-snap-align: start`).
+Scrolling to a slide by hand is therefore a first-class way to change the active slide: once the
+scroller comes to rest — on `scrollend` where the engine implements it, otherwise after a short
+quiet period — the resting slide is adopted, `index` updates, and `lr-slide-change` fires exactly
+once for the whole gesture rather than once per slide the finger flicked past. Correspondingly, a
+programmatic change (a control, a key, `goTo()`, or writing `index`) scrolls the track to that
+slide instead of swapping it in place. The first alignment after mount is instant, so an `index`
+set in markup does not read as the carousel sliding into place on load, and under
+`prefers-reduced-motion` every alignment is instant. Every slide other than the one at `index`
+keeps its box — the track needs something to scroll between — but stays `inert` with
+`aria-hidden="true"`, so a link two slides away is never reachable by Tab while it is scrolled out
+of view. (An author's own `inert`/`aria-hidden` on the active slide is preserved rather than
+cleared.) Nothing sets
+`scroll-snap-stop: always`, so `goTo()`, Home, and End travel all the way to their target instead
+of stopping at the first slide they cross. Positions are measured from rectangles rather than
+`scrollLeft`, which keeps the whole mechanism correct under RTL, where the inline start is the
+right edge and the scroll offset itself is negative.
 
 **CSS parts:** `base` (the `role="region"` landmark), `viewport` (the keyboard-focusable slide
-viewport), `track`, `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
+viewport, and the scroll-snap scroll port), `track` (the slotted-slide wrapper, laid out as the
+inline snap track), `controls`, `previous-button`, `next-button`, `previous-glyph`/`next-glyph` (the
 chevron inside each, mirrored under RTL), `indicators`, `indicator` (one indicator's hit target,
 sized to the shared minimum tappable size), and `indicator-dot` (the compact visible dot inside it).
 
@@ -45,10 +73,26 @@ ancestor; unset, each falls back to the token the rule used before. This shape i
 current indicator addressable at all — `::part(indicator)[aria-current='true']` is invalid CSS, so
 hijacking a library-wide color token was previously the only lever.
 
+`--lr-carousel-slide-basis` (default `100%`, new in 8.0.0) — the flex basis of every slide in the
+snap track. The default gives one slide per view; a smaller value shows several at once while the
+snap positions still land on each slide's inline start. Note that the inertness above is keyed to
+`index`, not to visibility: in a multi-per-view layout the neighbouring slides are on screen but
+still `inert`/`aria-hidden`, so reserve it for slides whose content is not interactive.
+
 ```html
 <lr-carousel aria-label="Screenshots">
   <img alt="Dashboard overview" src="overview.png">
   <img alt="Dashboard details" src="details.png">
+</lr-carousel>
+```
+
+```html
+<!-- Three slides per view, snapping one slide at a time. -->
+<lr-carousel aria-label="Projects" style="--lr-carousel-slide-basis: 33.333%">
+  <lr-card>Solar</lr-card>
+  <lr-card>Wind</lr-card>
+  <lr-card>Battery</lr-card>
+  <lr-card>Hydro</lr-card>
 </lr-carousel>
 ```
 

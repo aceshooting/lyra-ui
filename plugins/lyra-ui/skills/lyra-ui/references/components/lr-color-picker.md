@@ -6,30 +6,188 @@
 - **Class** `LyraColorPicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/color-picker/color-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 6 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-color-picker`
 
-A form-associated native color picker with label, hint, and error chrome. **Properties:** the shared
+A form-associated colour picker with label, hint and error chrome: a compact swatch trigger that
+opens a popover holding a saturation/brightness grid, a hue slider, an optional alpha slider, a text
+field accepting any parseable CSS colour, an optional predefined palette, and — where the browser
+supports it — a screen eyedropper.
+
+**Rewritten in 8.0.0.** It used to wrap a bare native `<input type="color">`; it is now a real
+picker built from the pieces above. Two consequences for existing code:
+
+- **`::part(input)` now names the panel's text field, not the swatch.** The swatch is
+  `::part(trigger)`. A stylesheet that targeted `input` to size or tint the visible control has to
+  move to `trigger`.
+- The visible control is a `<button>` (`[part="trigger"]`), so `focus()`/`blur()`/`click()` target
+  it, and there is no native colour input in the shadow tree to reach for.
+
+`value` is always serialized in the active `format` (`hex` by default), so reading it back after any
+interaction gives a canonical string in exactly one syntax; switching `format`, `opacity` or
+`uppercase` **re-serializes the same colour** rather than reinterpreting it. Input is far more
+permissive than output: hex (3/4/6/8 digit), `rgb()`/`rgba()`, `hsl()`/`hsla()`, `hsv()`/`hsva()`,
+CSS colour names, and any other colour syntax the browser itself parses are all accepted. A value
+that is not a colour at all is **kept verbatim** rather than silently replaced, so a consumer's own
+sentinel survives a round trip. An element with neither a `value` attribute nor a value defaults to
+`#000000`, and `form.reset()` returns to the declarative `value` attribute (or to `#000000`).
+
+Colour is never the only channel carrying state: the trigger's `aria-describedby` points at a
+visually-hidden span spelling the current value out in text, the panel shows it in an editable
+field, and the selected palette swatch is marked with `aria-pressed` plus a check mark rather than
+a tint alone.
+
+**Not the same control as `lr-swatch-picker`.** This one is freeform: `swatches` is a shortcut row
+*beside* a saturation grid, a hue ramp and a text field, and the committed value can be any colour
+the browser parses. `<lr-swatch-picker>` offers exactly its `options` and nothing else, with
+`radiogroup` semantics rather than a popover. Reach for it when the answer must be one of N
+designer-chosen colours; reach for this when it must not.
+
+**Properties:** the shared
 form properties `name`, `value`, `disabled`, and `required`, plus `label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), and `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'`
-(reflected — same scale as `lr-input`'s `size`, for compact swatch rendering at every density tier).
-**Slots:** `label`, `hint`, `error`. **Events:**
-composed `input` and `change`, `lr-change` with `{ value }`, and `focus`/`blur` (re-dispatched from
-the internal `<input>`'s own `focus`/`blur`, bubbling and composed unlike the native events). **CSS
-parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for back-compat),
-`input`, `hint`, `error`.
+(reflected — same scale as `lr-input`'s `size`, for compact swatch rendering at every density tier),
+and:
 
-**Themeable custom properties:** `--lr-color-picker-swatch-size` — the swatch's inline and block size,
+- `format: 'hex' | 'rgb' | 'hsl' | 'hsv' = 'hex'` — the syntax `value` is **written** in. Parsing is
+  always permissive regardless of it. The format button cycles through the four in that order
+- `opacity: boolean = false` — enables the alpha channel: an opacity slider appears in the panel and
+  the serialized value gains its alpha-carrying twin (`hexa`/`rgba`/`hsla`/`hsva`). With it unset,
+  picking a palette entry forces alpha back to 1
+- `uppercase: boolean = false` — serializes `value` in upper case (`#FF0000` rather than `#ff0000`);
+  applies to the whole string, function names included (`RGB(255, 0, 0)`)
+- `swatches: string | string[] | LyraColorPickerSwatch[] = ''` — a predefined palette, given as a
+  `;`-separated string, an array of colour strings, or an array of
+  `{ color: string; label?: string }` objects. Any colour the picker can parse is accepted; blank
+  entries are dropped. An entry that is *not* parseable is kept in the list and still renders a
+  swatch — it just paints no colour (the bare checkerboard) and clicking it does nothing, so filter
+  the palette yourself if that matters. `label` becomes the swatch's accessible name — without one
+  the raw colour string is announced. The palette container renders only while the normalized list
+  is non-empty
+- `withoutFormatToggle: boolean = false` (attribute `without-format-toggle`) — removes the button
+  that cycles between formats
+- `placement: Placement = 'bottom-start'` (reflected) — preferred panel placement, from the Floating
+  UI vocabulary. The resolved side still flips/shifts to stay in the viewport, and the
+  `left`/`right` component is swapped under RTL
+- `open: boolean = false` (reflected) — whether the panel is showing. Assigning `true` while the
+  control is effectively disabled is ignored, and a `disabled` that flips on while the panel is
+  already open closes it
+
+**Methods:** `show()` opens the panel (a no-op while effectively disabled), `hide()` closes it and
+returns focus to the trigger, and `click()`/`focus(options?)`/`blur()` forward to the trigger.
+`getFormattedValue(format?)` returns the current colour in any of the eight output formats —
+`'hex' | 'hexa' | 'rgb' | 'rgba' | 'hsl' | 'hsla' | 'hsv' | 'hsva'`, defaulting to `'hex'` —
+independently of `format`/`opacity`, honouring `uppercase`. Use it to read, say, an `rgba()` string
+out of a picker configured to store hex, without touching `value`.
+
+**Slots:** `label`, `hint`, `error`. **Events:**
+composed `input` (fired for every colour change during an interaction) and `change` (fired once an
+interaction commits: pointer release, key release, swatch click, text entry, eyedropper result),
+`lr-change` with `{ value }` (the newly serialized value), `lr-show` and `lr-hide` (the panel opened
+or closed — never emitted for a declaratively-open picker's first render, nor for a close caused by
+disconnection), and `focus`/`blur` (re-dispatched from
+the trigger's own `focus`/`blur`, bubbling and composed unlike the native events). A change that
+doesn't move the serialized value emits nothing, so dragging within a single rounded colour is
+silent.
+
+**Keyboard.** The grid handle, hue handle and opacity handle are each a real `role="slider"` with a
+localized name and `aria-valuetext`. Arrow keys step by 1 (percent or degree), Shift+Arrow by 10,
+and Home/End jump to that axis' extremes; ArrowLeft/ArrowRight swap meaning under RTL, ArrowUp/Down
+never do. One discrete press pairs a keydown (`input`) with a keyup (`change`); OS key repeat
+re-fires `input` but still commits once. The panel is Escape-dismissible and returns focus to the
+trigger; a pointerdown outside the element closes it too.
+
+**CSS parts:** `form-control`, `form-control-label` (the label; `label` is an alias kept for
+back-compat), `trigger-container` (the row wrapping the trigger), `trigger` (the swatch button that
+opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
+saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
+`slider` and `slider-handle` (carried by **both** ramps), `hue-slider` / `hue-slider-handle` and
+`opacity-slider` / `opacity-slider-handle` (each also carrying the shared `slider`/`slider-handle`
+token, so `::part(slider)` styles both ramps while `::part(hue-slider)` reaches only one; the
+opacity pair renders only with `opacity` set), `preview` (the current-colour dot beside the ramps),
+`input` (the text field holding the serialized value), `format-button` (the format-cycling button,
+absent with `without-format-toggle`), `eyedropper-button` (rendered only where the browser exposes
+the EyeDropper API), `swatches` (the palette container, rendered only when the normalized `swatches`
+list is non-empty), `swatch` (one palette entry), `swatch-selected` (a token **added to** the
+swatch matching the current value — state after `::part()` never matches, so write
+`::part(swatch-selected)`), `hint`, `error`.
+
+**Themeable custom properties:** `--lr-color-picker-swatch-size` — the trigger's inline and block size,
 auto-swapped per `size` tier (default `'m'` reads `2.5rem`, `'2xs'` reads `1.25rem`, etc.), matching
-the size ladder `lr-input` uses.
+the size ladder `lr-input` uses. The panel's geometry has its own set, all declared on `:host`:
+
+- `--lr-color-picker-grid-inline-size` (default `var(--lr-size-15rem)`) and
+  `--lr-color-picker-grid-block-size` (default `var(--lr-size-8rem)`) — the saturation/brightness
+  square's width and height. The first also caps the palette row's width.
+- `--lr-color-picker-grid-handle-size` (default `var(--lr-size-1rem)`) — diameter of the grid handle.
+- `--lr-color-picker-slider-block-size` (default `var(--lr-size-0-75rem)`) — thickness of the
+  **visible** hue/opacity ramp. The slider's own pointer target stays floored at 24px regardless, so
+  thinning the ramp never shrinks the touch target.
+- `--lr-color-picker-slider-handle-size` (default `var(--lr-size-1-25rem)`) — diameter of a slider
+  handle.
+- `--lr-color-picker-palette-swatch-size` (default `var(--lr-size-1-5rem)`) — size of a palette
+  swatch, and of the `preview` dot.
+- `--lr-color-picker-checker-color` (default `var(--lr-color-border)`) and
+  `--lr-color-picker-checker-size` (default `var(--lr-size-0-5rem)`) — tint and cell size of the
+  alpha checkerboard drawn behind the trigger, preview, swatches and opacity ramp.
+- `--lr-color-picker-hue-stops` — the hue ramp's own gradient stops, defaulting to the six-stop sRGB
+  hue wheel. Both text directions read the same list; only the gradient's direction differs.
+  Override it to theme a wide-gamut or perceptually-uniform ramp.
+
+Three more are **state, not configuration** — the component rewrites each inline on every render, so
+setting them from a stylesheet has no lasting effect: `--lr-color-picker-swatch-color` (the live
+colour painted on the trigger, preview, slider handles and palette swatches),
+`--lr-color-picker-grid-hue` (the grid's fully-saturated base hue), and
+`--lr-color-picker-opacity-gradient` (the opacity ramp's transparent-to-opaque gradient, built from
+the current colour and text direction). Read them if you need the resolved colour; don't assign them.
 
 **Additional API surface:**
 
-- `click()` — Activates the internal color input.
-- `--lr-color-picker-gap` — Gap between field chrome. Default: `var(--lr-space-xs)`.
-- `--lr-color-picker-radius` — Swatch corner radius. Default: `var(--lr-radius)`.
-- `--lr-color-picker-hover-border-color` — Hover border color. Default: `var(--lr-color-brand)`.
+- `click()` — Activates the internal trigger button, opening or closing the panel.
+- `--lr-color-picker-gap` — Gap between field chrome and panel rows. Default: `var(--lr-space-xs)`.
+- `--lr-color-picker-radius` — Trigger, grid, field and panel corner radius. Default: `var(--lr-radius)`.
+- `--lr-color-picker-hover-border-color` — Hover border color, shared by the trigger, handles, text
+  field, format/eyedropper buttons and palette swatches. Default: `var(--lr-color-brand)`.
+
+```html
+<lr-color-picker
+  name="accent"
+  label="Accent colour"
+  hint="Used for links and primary buttons."
+  format="rgb"
+  opacity
+  uppercase
+  placement="bottom-end"
+  swatches="#e11d48;#2563eb;#16a34a"
+></lr-color-picker>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/color-picker/color-picker.js';
+  const picker = document.querySelector('lr-color-picker');
+  // Objects give each entry a real accessible name:
+  picker.swatches = [
+    { color: '#e11d48', label: 'Rose' },
+    { color: '#2563eb', label: 'Blue' },
+  ];
+  picker.addEventListener('change', () => {
+    console.log(picker.value);                    // e.g. "RGBA(225, 29, 72, 1.00)"
+    console.log(picker.getFormattedValue('hexa')); // e.g. "#E11D48FF"
+  });
+  picker.show();
+</script>
+```
+
+**Known gotchas:**
+- **The `input` CSS part moved.** It is the panel's text field as of 8.0.0; the swatch is `trigger`.
+- The eyedropper button is only in the DOM where `window.EyeDropper` exists (feature-detected once,
+  at connect). Dismissing the eyedropper rejects the platform promise, which is treated as a
+  cancellation, not an error — nothing is surfaced and nothing changes.
+- A non-colour `value` is preserved verbatim, so `value` is not guaranteed to be parseable as a
+  colour just because the element accepted it. `getFormattedValue()` always reports the picker's
+  own working colour, which in that case is whatever was last understood.
+- A disconnect/reconnect cycle (a drag-and-drop reparent, a virtualized list reordering) closes the
+  panel rather than leaving it rendered at a stale, frozen position, and an abandoned half-typed
+  entry in the text field is discarded rather than reappearing on the next open.

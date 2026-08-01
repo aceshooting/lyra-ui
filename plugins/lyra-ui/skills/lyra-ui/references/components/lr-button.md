@@ -6,7 +6,7 @@
 - **Class** `LyraButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/button/button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
 - **Optional peers** none
-- **Themeable via** 5 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 31 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -39,21 +39,41 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `download?: string` — native anchor `download` attribute, used only while `href` resolves to a
   link. Ignored in `<button>` mode
 - `variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' = 'neutral'` (reflected)
-- `appearance: 'accent' | 'filled' | 'outlined' | 'plain' | 'quiet' | 'link' = 'filled'` (reflected)
-  — `'accent'` is a
-  loud, high-contrast filled tier,
-  distinct from `'filled'` for `variant="neutral"` specifically (`'filled'` reads the ambient
-  surface color there; `'accent'` reads a solid neutral fill). `'quiet'` is a de-emphasized tier:
-  transparent background with a bordered, muted-text chrome that fills to `--lr-color-surface` on
-  hover; its text/border tokens are **not** variant-swapped, so `variant` has no effect on it.
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' | 'quiet' | 'link' =
+  'accent'` (reflected) — the library's shared fill vocabulary plus this component's own two extra
+  tiers. **Breaking in 8.0.0: the default moved from `'filled'` to `'accent'`**, so a bare
+  `<lr-button>` now paints the loud fill it used to need `appearance="accent"` for. The two are no
+  longer near-duplicates: `'accent'` takes the active `variant`'s **loud** fill
+  (`--lr-button-accent-fill`) with the foreground guaranteed legible on it, while `'filled'` takes
+  that variant's **quiet** tint (`--lr-button-fill`) — a secondary-action fill that still reads as a
+  fill rather than as the page surface. Before 8.0.0 every chromatic variant's `'filled'` and
+  `'accent'` resolved to the same loud token and rendered identically, while `variant="neutral"`'s
+  `'filled'` was the page surface, i.e. no fill at all. `'filled-outlined'` is `'filled'`'s fill and
+  foreground carrying the outlined tier's border colour, for a filled button that must still read as
+  bounded on a same-toned surface. `'quiet'` is a de-emphasized tier:
+  transparent background with a bordered, muted-text chrome; its text/border tokens are **not**
+  variant-swapped, so `variant` has no effect on it.
   `'link'` is a true inline-link tier:
   zero chrome (no padding, border, border-radius, or `min-block-size` floor), underlined
   (`text-underline-offset: var(--lr-size-0-15rem)`), colored from `--lr-button-accent` (the same token `'plain'`
   uses, so `variant` still selects the link color) and inheriting the surrounding font-size/weight
   — for a text link that flows within a sentence rather than a button-shaped control. Declared
   after the per-`size` rules, so it overrides them whatever `size` is set
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — `'2xs'` is the tightest tier,
-  below `'xs'`, for dense chrome; `'m'` is the standard one
+- `size: LyraSize = 'm'` (reflected) — the shared control ladder. `'2xs'` is the tightest tier,
+  below `'xs'`, for dense chrome; `'m'` is the standard one. Both spellings of every tier are
+  accepted — `2xs`/`xs`/`s`/`m`/`l`/`xl` and `small`/`medium`/`large` — and the same ladder drives
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-date-input`, so same-`size` controls share a height by
+  construction rather than by two lists agreeing
+- `pill: boolean = false` (reflected) — fully rounded ends. It re-assigns `--lr-button-radius` to
+  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
+  single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
+  zero chrome, pill or not
+- `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
+  chevron (`[part="caret"]`, `aria-hidden`) marking the button as a dropdown/menu trigger. It
+  carries no accessible name of its own: the button's label already names the action, and the popup
+  relationship is expressed by a host `aria-haspopup`/`aria-expanded`, which are forwarded to the
+  internal control. Like the label and the two adornment slots it fades to `opacity: 0` while
+  `loading`, so the spinner has the button to itself
 - `type: 'button' | 'submit' | 'reset' = 'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
@@ -62,8 +82,34 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   reactively to the internal native button or anchor; changing or removing the attribute after
   mount updates the actual focused control
 
-The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
-`100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
+**Submitter overrides (`type="submit"` in `<button>` mode).** `name`/`value` plus the five native
+`form*` overrides describe the submission this button triggers, not the button itself:
+
+- `formAction?: string` (attribute `formaction`) — overrides the form owner's `action`. Unset by
+  default, leaving the form's own `action` in place; an empty string is deliberately *not*
+  forwarded, since an empty `formaction` resolves against the document URL and would silently
+  redirect the submission
+- `formEnctype?: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'`
+  (attribute `formenctype`) — overrides the form owner's `enctype`
+- `formMethod?: 'get' | 'post' | 'dialog'` (attribute `formmethod`) — overrides the form owner's
+  `method`; `'dialog'` closes an ancestor `<dialog>` instead of submitting
+- `formNoValidate: boolean = false` (attribute `formnovalidate`) — skips the form owner's
+  constraint validation. Without it an invalid form is reported and not submitted, exactly as with
+  a native submit button
+- `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
+  from `target`, which is the anchor target used in link mode
+
+All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
+submission runs through a **transient native `<button type="submit">`** inserted directly after the
+host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
+`finally`, so a throwing or validation-blocked submission can't leave it behind). That is what makes
+the name/value pair reach the submitted `FormData` and the overrides reach the real submission:
+`requestSubmit()` only accepts a submitter the form actually owns, and a custom element is never
+one. While that stand-in exists it *is* the form's submitter, so **`SubmitEvent.submitter` is the
+transient native button, not this host**. With none of those properties set, submission stays a
+plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
+
+Each size tier's `min-block-size` floor is exposed as its own token (see below).
 
 **Getters/methods:** `click()`, `focus(options?)`, and `blur()` — forwarded to the internal base
 element (the `<button>`, or the `<a>` in anchor mode); `click()` also runs the component's
@@ -75,39 +121,75 @@ unmodified; disabled while `disabled` or `loading`).
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
 
 **CSS parts:** `base` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe
-link), `label`, `start`, `end`, `spinner` (present only while `loading`).
+link), `label`, `start`, `end`, `caret` (the decorative dropdown chevron, present only while
+`with-caret` is set), `spinner` (present only while `loading`).
 
-**Themeable custom properties:** `--lr-button-width`, `--lr-button-accent`, `--lr-button-fill`,
-`--lr-button-on-fill`, `--lr-button-border` (each swapped by the active `variant`, default
-`neutral` falls back to plain text/surface/border tokens), `--lr-button-accent-fill`,
-`--lr-button-accent-on-fill` (the `appearance="accent"` fill/foreground pair; `neutral` falls
-back to `--lr-color-neutral`/`--lr-color-on-neutral`, every other variant reuses that variant's own
-loud fill token), `--lr-button-outlined-border` (default `--lr-color-border-strong`, the
-`appearance="outlined"` border color — variant-independent, unlike `--lr-button-border`),
-`--lr-button-quiet-text` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
-`--lr-color-border`) — the `appearance="quiet"` foreground/border pair, also variant-independent,
-`--lr-button-hover-brightness` (default `1.08`, the `:hover` filter intensity),
-`--lr-button-active-scale` (default `0.9875`, the `:active` press-scale, disabled under
-`prefers-reduced-motion`), `--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e.
-`1.8s ease-in-out`, the `loading` spinner's rotation period; that token itself collapses to
-`0.001ms linear` under `prefers-reduced-motion`, so the spinner effectively stops),
-`--lr-button-outlined-fill` (default `transparent`, the `appearance="outlined"` background — also
-variant-independent; set it to tint an outlined button with, say, a faint surface wash behind the
-outline, without a `::part(base)` rule. Note that the `:hover` `filter: brightness()` applies to
-whatever fill is set, so a tinted outlined button visibly brightens on hover where a transparent
-one did not),
-and the per-`size`
-`min-block-size` floors `--lr-button-size-2xs` (`var(--lr-size-1-25rem)`, 1.25rem),
-`--lr-button-size-xs` (`var(--lr-size-1-5rem)`, 1.5rem), `--lr-button-size-s`
-(`var(--lr-size-1-875rem)`, 1.875rem), `--lr-button-size-m` (`var(--lr-size-2-5rem)`, 2.5rem),
-`--lr-button-size-l` (`var(--lr-size-3rem)`, 3rem), `--lr-button-size-xl`
-(`var(--lr-size-3-5rem)`, 3.5rem) — each read only by its own `size` tier, and all ignored by
-`appearance="link"`. The `s`/`m`/`l`/`xl` floors are deliberately at or above the
-`--lr-icon-button-size` (2.5rem) hit-area minimum from `m` upward; they resolve through shared
-`--lr-size-*` tokens rather than literal rem values, so a retheme moves them together. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
-and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
-both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
-by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
+**Themeable custom properties.** The colour slots below are re-pointed at the active `variant`'s row
+of the library's shared semantic colour grid, so the component carries no `:host([variant='…'])`
+block of its own — the ones marked variant-independent are the exceptions:
+
+- `--lr-button-accent` (default `--lr-color-fill-loud`) — text/glyph colour for the chrome-less
+  tiers (`outlined`, `plain`, `link`), i.e. the variant's loud fill borrowed as a foreground.
+  `variant="neutral"` is the one exception: its loud fill is a mid grey picked to carry *light*
+  text, so reusing it as dark-on-surface text would wash out every plain and link button — neutral
+  keeps `--lr-color-text` instead.
+- `--lr-button-fill` (default `--lr-color-fill-quiet`) and `--lr-button-on-fill` (default
+  `--lr-color-on-quiet`) — the `appearance="filled"`/`"filled-outlined"` fill and its
+  guaranteed-legible foreground.
+- `--lr-button-accent-fill` (default `--lr-color-fill-loud`) and `--lr-button-accent-on-fill`
+  (default `--lr-color-on-loud`) — the same pair for `appearance="accent"`, the default tier. The
+  accent fill is also that tier's border colour.
+- `--lr-button-border` (default `--lr-color-border-normal`) — the border colour, from the active
+  variant's row.
+- `--lr-button-outlined-border` (default `--lr-color-border-strong`) — the border colour of
+  `appearance="outlined"` *and* `"filled-outlined"`, overriding `--lr-button-border`. Deliberately
+  variant-independent.
+- `--lr-button-outlined-fill` (default `transparent`) — the `appearance="outlined"` background, also
+  variant-independent. Set it to tint an outlined button (a faint surface wash behind the outline)
+  without a `::part(base)` rule, and point `--lr-button-hover-base` at the same colour so the hover
+  and press states keep moving away from what is actually painted.
+- `--lr-button-quiet-text` (default `--lr-color-text-quiet`) and `--lr-button-quiet-border` (default
+  `--lr-color-border`) — the `appearance="quiet"` foreground/border pair, variant-independent too.
+
+Hover and press are **colour mixes, not a filter** — `--lr-button-hover-base` (default
+`--lr-color-surface`) is the colour both move away from, and each painted tier re-points it at the
+fill it actually paints (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill`
+for `accent`); the chrome-less tiers paint nothing, so they mix from the page surface.
+`--lr-button-hover-background` (default `color-mix(in oklab, var(--lr-button-hover-base),
+var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
+`--lr-button-active-background` the same mix at the stronger `--lr-color-mix-active` share, so a
+press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
+instead of taking a background. **Breaking in 8.0.0:** this replaced `--lr-button-hover-brightness`,
+which no longer exists — a `filter: brightness()` multiplies every channel, so it moved a mid-toned
+fill but did nothing at all to a pure white or pure black one, and it dimmed the label and icons
+along with the box. Retuning `--lr-button-fill` or `--lr-button-accent-fill` now retunes that tier's
+hover and press with it.
+
+`--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
+own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
+(default `0.9875`) is the `:active` press-scale, dropped under `prefers-reduced-motion`.
+`--lr-button-spinner-duration` (default `var(--lr-transition-ambient)`, i.e. `1.8s ease-in-out`) is
+the `loading` spinner's rotation period; that token itself collapses to `0.001ms linear` under
+`prefers-reduced-motion`, so the spinner effectively stops.
+
+The per-`size` `min-block-size` floors are `--lr-button-size-2xs`, `--lr-button-size-xs`,
+`--lr-button-size-s`, `--lr-button-size-m`, `--lr-button-size-l` and
+`--lr-button-size-xl`. Each defaults to the matching tier of the shared form-control ladder
+(`--lr-form-control-height-2xs` … `-xl`, i.e. 1.25rem, 1.5rem, 1.875rem, 2.5rem, 3rem, 3.5rem), so a
+button is the same height as an input, select, combobox or date input of the same tier *by
+construction* rather than by two hand-maintained lists agreeing — which is exactly how they drifted
+apart before 8.0.0. Each is read only by its own tier (`--lr-button-size-s` also serves
+`size="small"`, and so on for the other two aliases), and all are ignored by `appearance="link"`.
+Retheming `--lr-theme-form-control-height-*` moves every control on the ladder together.
+
+`--lr-button-gap` (default `--lr-form-control-gap`, the gap between the icon/label and any slotted
+content) does not vary by tier. `--lr-button-radius` (default `--lr-form-control-radius`, the corner
+radius) *does* follow the tier — the two tightest tiers take a smaller radius, since a 6px corner on
+a 20px-tall control reads as a lozenge. Both are retunable without a `::part(base)` rule;
+`appearance="link"` ignores the radius (it renders with zero), and `pill` re-assigns it to
+`--lr-radius-pill`. `--lr-button-caret-size` (default `var(--lr-size-0-75em)`) is the `with-caret`
+chevron's font size — declared in `em`, so it tracks every `size` tier through the button's own font
+size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
 elevated/floating action button) without a `::part(base)` rule.
@@ -116,14 +198,14 @@ elevated/floating action button) without a `::part(base)` rule.
 the active tier's geometry, and every `:host([size='…'])` rule does nothing but re-assign them — no
 per-tier rule ever declares a property on `[part='base']`. Overriding one therefore retunes
 whatever tier is active (e.g. pinning a `size="s"` button into a compact toolbar row), the same
-pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Their defaults
-below are the `m` tier's values, because `size` reflects and defaults to `m`, so the `:host`
-declarations *are* the `m` tier:
+pattern `lr-input`/`lr-select`/`lr-combobox`/`lr-segmented`/`lr-date-input` follow. Each defaults to
+the shared ladder's value for the active tier, which at the default `m` tier resolves to the values
+in brackets:
 
-- `--lr-button-padding-block` (default `--lr-space-xs`)
-- `--lr-button-padding-inline` (default `--lr-space-m`)
-- `--lr-button-font-size` (default `--lr-font-size-m`)
-- `--lr-button-min-height` (default `--lr-button-size-m`) — the active tier's `min-block-size`
+- `--lr-button-padding-block` (default `--lr-form-control-padding-block`; `--lr-space-xs` at `m`)
+- `--lr-button-padding-inline` (default `--lr-form-control-padding-inline`; `--lr-space-m` at `m`)
+- `--lr-button-font-size` (default `--lr-form-control-font-size`; `--lr-font-size-m` at `m`)
+- `--lr-button-min-height` (default `--lr-form-control-height`) — the active tier's `min-block-size`
   floor, re-assigned per tier to that tier's own `--lr-button-size-*` token, and used as the
   fallback when `--lr-button-height` is unset.
 - `--lr-button-height` — an **exact** height (both floor and cap), for pinning the button to a
@@ -137,10 +219,22 @@ box no matter what tier or override is in play.
 **Optional peer deps:** none.
 
 ```html
-<lr-button variant="brand" appearance="filled">Save</lr-button>
-<lr-button variant="neutral" appearance="accent">Save</lr-button>
+<!-- appearance defaults to "accent": the loud fill, for the one primary action in a view. -->
+<lr-button variant="brand">Save</lr-button>
+<!-- "filled" is the quiet tint of the same tone, for a secondary action beside it. -->
+<lr-button variant="brand" appearance="filled">Save a copy</lr-button>
 <lr-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lr-button>
 <p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
+
+<lr-button pill with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
+
+<form action="/save" method="post">
+  <lr-input name="title" label="Title" required></lr-input>
+  <lr-button type="submit" name="intent" value="draft" formnovalidate formaction="/save-draft">
+    Save draft
+  </lr-button>
+  <lr-button type="submit" name="intent" value="publish">Publish</lr-button>
+</form>
 ```
 
 **Known gotchas:**
@@ -158,5 +252,11 @@ box no matter what tier or override is in play.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
+- **`SubmitEvent.submitter` is not this element** whenever `name`/`value` or any `form*` override is
+  set: it is the transient native `<button>` described above, which has already been removed from
+  the DOM by the time a `submit` listener runs. Read the submitted entry from the `FormData`, or
+  the override off your own component, rather than identity-checking the submitter.
+- The `form*` overrides and `type` are all inert while `href` renders the anchor — native navigation
+  is the activation there, and an anchor has no submit/reset concept.
 
 ---

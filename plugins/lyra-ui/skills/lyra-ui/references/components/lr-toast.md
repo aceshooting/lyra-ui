@@ -34,7 +34,9 @@ One per page recommended — the region.
 **CSS parts:** `stack`
 
 **Themeable custom properties:** `--lr-toast-gap` (default `var(--lr-space-s)`),
-`--lr-toast-width` (default `28rem`) — set directly on the `<lr-toast>` element.
+`--lr-toast-width` (default `var(--lr-size-28rem)`) — set directly on the `<lr-toast>` element.
+Every `<lr-toast-item>` property below is also documented on the region, because custom properties
+inherit into the items slotted inside it: one declaration on `<lr-toast>` retunes the whole stack.
 
 **Optional peer deps:** none.
 
@@ -44,8 +46,8 @@ A single notification.
 
 **Properties:**
 - `duration: number = 5000` (ms; `Infinity` or `<= 0` disables auto-dismiss)
-- `size: 'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lr-toast-padding` and the toast's own
-  font-size via `:host([size=...])`, from a compact `xs` up to a roomier `xl`)
+- `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — drives both `--lr-toast-padding` and the
+  toast's own font-size via `:host([size=...])`, from a compact `2xs` up to a roomier `xl`)
 - `variant: 'brand'|'success'|'warning'|'danger'|'neutral' = 'neutral'` (reflected)
 - `withIcon: boolean = false` (attribute `with-icon`)
 
@@ -58,13 +60,13 @@ DOM.
 
 **CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`
 
-**Themeable custom properties:** `--lr-toast-accent-width` (4px),
+**Themeable custom properties:** `--lr-toast-accent-width` (default `var(--lr-size-4px)`),
 `--lr-toast-show-duration`/`--lr-toast-hide-duration`
 (`var(--lr-transition-base, 180ms ease-out)` — the show/hide lifecycle reads the resolved computed
 transition duration and uses it for its completion fallback), `--lr-toast-padding`
-(`var(--lr-space-m)`), `--lr-toast-font-size` (`1rem`) — both are auto-swapped per `size`, from a
-compact `xs` up to a roomier `xl` — `--lr-toast-accent-color` (defaults to `--lr-color-border`,
-auto-swapped per `variant` to `--lr-color-brand/-success/-warning/-danger`).
+(`var(--lr-space-m)`), `--lr-toast-font-size` (`var(--lr-font-size-m)`) — both are auto-swapped per
+`size`, from a compact `2xs` up to a roomier `xl` — `--lr-toast-accent-color` (default
+`var(--lr-color-border)`, auto-swapped per `variant` to that variant's loud fill).
 
 **Optional peer deps:** none.
 

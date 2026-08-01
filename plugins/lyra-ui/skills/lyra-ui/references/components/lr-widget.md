@@ -14,7 +14,7 @@
 ## `lr-widget`
 
 A titled panel shell with an optional collapse toggle and an optional fullscreen-expand toggle.
-First-party invention (no Web Awesome equivalent). Fullscreen promotes the same host element in
+First-party invention (no `wa-*`/`sl-*` counterpart). Fullscreen promotes the same host element in
 place (a CSS state, not a clone/portal), so slotted content (a chart, a running simulation, scroll
 position) survives the transition.
 

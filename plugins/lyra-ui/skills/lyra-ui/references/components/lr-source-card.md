@@ -63,12 +63,13 @@ while collapsed).
 - `compact: boolean = false` (reflected) — tighter root padding and row gap, for the dense citation
   lists these cards usually render in — the same convention as `lr-empty`'s `compact`. Purely a
   density knob: the border and background stay. `false` (the default) keeps the full card padding.
-- `appearance: 'card' | 'plain' = 'card'` (reflected) — visual chrome, mirroring `lr-card`'s
-  `appearance` vocabulary. `'card'` (the default) keeps the bordered, filled, padded box; `'plain'`
-  removes the border, background, padding and corner radius, so a card inside a `<lr-source-list>`
-  (or any container already drawing its own border/dividers) doesn't double the frame. `plain` wins
-  over `compact` when both are set — nothing left to tighten. The title and toggle keep their brand
-  color and hover underline under `plain`, since neither ever depended on the card chrome.
+- `frame: LyraFrame = 'card'` (reflected) — container treatment, in the library-wide `frame`
+  vocabulary (`'card' | 'plain'`). `'card'` (the default) keeps the bordered, filled, padded box;
+  `'plain'` removes the border, background, padding and corner radius, so a card inside a
+  `<lr-source-list>` (or any container already drawing its own border/dividers) doesn't double it.
+  `plain` wins over `compact` when both are set — nothing left to tighten. The title and toggle keep
+  their brand color and hover underline under `plain`, since neither ever depended on the card
+  chrome. The exported alias `SourceCardAppearance` is retained as a name for the same union.
 
 **Events:**
 - `lr-expand` (`detail: { sourceId: string; expanded: boolean }`) — the per-card "Show

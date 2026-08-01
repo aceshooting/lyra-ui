@@ -196,7 +196,7 @@ export const WithoutHeader: Story = {
   },
   render: (_args, context) => html`
     <lr-dialog .open=${context.viewMode !== 'docs'} heading="Never rendered" closable without-header label="Custom chrome">
-      <p style="margin: 0;">No header row is rendered even though `heading` and `closable` are both set.</p>
+      <p style="margin: 0;">No header row is rendered even though heading and closable are both set.</p>
     </lr-dialog>
   `,
 };

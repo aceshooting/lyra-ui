@@ -22,9 +22,13 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Properties:**
 - `multiple: boolean = false` (reflected)
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected — same scale as `lr-select`'s `size`;
-  also scales the "+N" overflow tag and decorative expand icon; `size="s"` shares its outer
-  control height with `lr-input`, `lr-select`, and `lr-segmented` without part overrides)
+- `size: LyraSize = 'm'` (reflected — the shared control ladder, so both `2xs`/`xs`/`s`/`m`/`l`/`xl`
+  and the `small`/`medium`/`large` spellings are accepted; also scales the "+N" overflow tag and
+  decorative expand icon; `size="s"` shares its outer control height with `lr-input`, `lr-select`,
+  and `lr-segmented` without part overrides)
+- `pill: boolean = false` (reflected) — rounds the trigger row's corners to a full pill, mirroring
+  `lr-input`'s own `pill`. It only re-assigns `--lr-combobox-radius` to `--lr-radius-pill`, so a
+  consumer setting that property directly still wins for a bespoke shape
 - `placeholder: string = ''`
 - `disabled: boolean = false` (reflected)
 - `required: boolean = false` (reflected — enforced via `internals.setValidity()`; also reflected as
@@ -39,8 +43,10 @@ shared `FormAssociated` mixin — see gotchas).
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or *visible* filter text. See
   "the clear button covers two axes" below
-- `withClear: boolean = false` (attribute `with-clear`) — deprecated compatibility alias for
-  `clearable`; either property enables the same clear button
+- `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
+  either one enables the same clear button. Not deprecated: Web Awesome names this attribute
+  `with-clear` and Shoelace names it `clearable`, so honouring both is what keeps a mechanical tag
+  rename from silently dropping the control
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
   `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = true`,
   `autocapitalize: string = ''`, and `autoCorrect: string = ''` (attribute `autocorrect`) — native
@@ -81,6 +87,12 @@ shared `FormAssociated` mixin — see gotchas).
 
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
+`setCustomValidity(message)` carries a rejection no client-side constraint can express ("that option
+is no longer available"): a non-empty message raises `customError`, becomes `validationMessage`, and
+blocks submission; `''` clears it and restores the control's own computed validity, so a `required`
+combobox with nothing chosen goes back to `valueMissing` rather than to valid. The message survives
+every selection change and a `form.reset()` — like a native control, only another
+`setCustomValidity('')` clears it — and is used verbatim, never localized.
 
 `ComboboxSourceRow = { value: string; label: string; sub?: string; icon?: unknown; badge?: string |
 number; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
@@ -259,8 +271,8 @@ collection, while `form.reset()` still returns to the declarative selected defau
 synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Known gotchas:**
-- `with-clear` remains supported for compatibility, but new code should use the mirrored
-  `clearable` property/attribute.
+- `with-clear` and `clearable` are equivalent and both are supported indefinitely; prefer
+  `clearable` in new code. `lr-input` and `lr-select` accept both spellings too.
 - a host-level `aria-label` attribute on `<lr-combobox>` now takes priority over `label`/
   `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
   previously it was silently ignored. Matches the same fallback on `<lr-select>`.

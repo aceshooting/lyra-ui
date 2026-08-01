@@ -28,7 +28,11 @@ free-form heading override for non-tool proposals; wins over `toolName`. `args: 
 (attribute: false) — shown read-only inside a collapsed `lr-details` + `lr-json-viewer` when
 defined. `decision: 'approved' | 'denied' | null = null` (reflected) — decided state, set by the
 component on activation and host-writable (an externally-resolved decision renders identically but
-emits nothing). `tone: 'neutral' | 'danger' = 'neutral'` (reflected). `compact: boolean = false`
+emits nothing). `variant: ConfirmBarVariant = 'neutral'` (reflected) — `'neutral' | 'danger'`, a
+genuine two-member subset of the library-wide `LyraVariant` vocabulary (spelled as an `Extract` of
+it, so the two can never drift): a confirmation is either routine or destructive, and
+`brand`/`success`/`warning` have no meaning for a proposal awaiting a yes/no. The exported alias
+`ConfirmBarTone` is retained as a name for the same union. `compact: boolean = false`
 (reflected) — collapses the bar from a full card (bordered, padded, `display: block` surface) to a
 single inline row with no chrome of its own, for a confirmation that has to live inside an existing
 container: a table cell, a card's action row, a toolbar. The host becomes `inline-flex`, and the
@@ -79,8 +83,11 @@ repainting everything else that reads them.
 - `[part="status"]` is always rendered and must never be given `display: none`. Deciding moves focus
   to it synchronously, before the Deny/Approve buttons unmount, so hiding it would drop focus to
   `<body>`. The shipped `:empty` rule on it has never matched, and that is load-bearing.
-- `[part="deny-button"]`/`[part="approve-button"]` are `<lr-button>` hosts (`variant="neutral"`/
-  `"brand"`, `"danger"` under `tone="danger"`) — `--lr-button-*` theming reaches them directly. A
+- `[part="deny-button"]`/`[part="approve-button"]` are `<lr-button>` hosts. Deny is
+  `variant="neutral" appearance="outlined"`; Approve is `variant="brand"` (`"danger"` under this
+  component's own `variant="danger"`) at `lr-button`'s default `appearance="accent"`, so the
+  destructive-or-primary action is the loud one and the safe action recedes. `--lr-button-*` theming
+  reaches both directly. A
   consumer previously styling `::part(deny-button)`/`::part(approve-button)` for
   padding/border/font/`:hover`/`:focus-visible` must move that CSS onto the re-exported
   `deny-button-base`/`approve-button-base` sub-parts instead — the outer part now resolves to the

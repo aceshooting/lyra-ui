@@ -16,7 +16,7 @@
 A single-select button row with the WAI-ARIA APG `radiogroup` contract built in:
 `role="radiogroup"`/`role="radio"`, roving tabindex, automatic activation (click or arrow-key move
 both select immediately, like a native radio group), cyclic Arrow/Home/End navigation among
-non-disabled items. First-party invention (no Web Awesome equivalent) — "choose exactly one of N
+non-disabled items. First-party invention (no `wa-*`/`sl-*` counterpart) — "choose exactly one of N
 labeled options, rendered as a button row" is ubiquitous settings/filter-panel UI.
 
 **Properties:**
@@ -26,9 +26,14 @@ labeled options, rendered as a button row" is ubiquitous settings/filter-panel U
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — accessible name copied to the internal `role="radiogroup"`; when empty, a
   host-level `aria-label` is used as a fallback.
-- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — visual size, matching
-  `lr-select`/`lr-combobox`'s `xs`-`xl` scale plus `lr-input`'s `2xs` tier. `m` (the default) is
-  unchanged from this component's pre-`size` rendering.
+- `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large' = 'm'` (reflected) —
+  visual size on the library's **shared** ladder, the same `--lr-form-control-*` scale
+  `lr-input`/`lr-select`/`lr-combobox`/`lr-button` resolve, so a row of mixed controls set to one
+  `size` lines up at a matching height. Both spellings of every tier are accepted (`s`/`small`,
+  `m`/`medium`, `l`/`large`), so migrating from either upstream is a tag rename with no attribute
+  rewrite. Before 8.0.0 this component carried its own six-tier scale that had drifted from that
+  one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
+  and font sizes rather than to this component's former private values.
 
 **Events:** `lr-change` (`detail: { value }`) — fired when the selected value changes via click or
 keyboard.
@@ -47,11 +52,14 @@ keyboard.
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
-that fits is never dimmed). `--lr-segmented-track-min-height`,
-`--lr-segmented-segment-padding`, and `--lr-segmented-font-size` are the three knobs `size` swaps
-(`m` defaults: `auto`, `var(--lr-size-0-125rem) var(--lr-space-s)`, `var(--lr-font-size-sm)`) —
-override them on the host for a size tier the scale doesn't cover, since a `:host([size])` rule
-wins over the `:host` default.
+that fits is never dimmed). `--lr-segmented-track-min-height` (default
+`var(--lr-form-control-height)`), `--lr-segmented-segment-padding` (default
+`var(--lr-form-control-padding-block) var(--lr-form-control-padding-inline)`), and
+`--lr-segmented-font-size` (default `var(--lr-form-control-font-size)`) are the three knobs the
+`size` tier moves — each points at the shared ladder rather than carrying a per-tier value of its
+own, so retuning one tier for this component alone is a one-line override instead of a fork. All
+three are declared on `:host`, so set them on the element itself for a density the ladder doesn't
+cover; an ancestor rule is shadowed.
 
 `--lr-segmented-track-height` pins the `base` track's exact height at every `size` tier (it sets
 both `block-size` and `min-block-size`), for a row that has to sit flush beside a hard-sized toolbar
@@ -59,15 +67,18 @@ control. It is **genuinely undeclared by default** — not `auto` — and that i
 exact-height hatch only works as an undeclared sentinel, because `auto` is itself a valid value that
 would always win and would silently turn every tier's `--lr-segmented-track-min-height` floor into
 dead code. While it is unset, each tier keeps its own floor and the track grows with its content.
-The compact `2xs` track has a 24px minimum block size, and every `2xs`/`xs` segment retains at least
-a 24×24px activation target even when its label is very short.
+The floor at the two compact tiers is the ladder's own (20px at `2xs`, 24px at `xs`), but every
+`2xs`/`xs` *segment* separately carries a 24×24px minimum box, so the tappable target holds even
+when a label is a single character and the track ends up taller than its nominal floor.
 
 `--lr-segmented-selected-bg` (default `var(--lr-color-surface)`), `--lr-segmented-selected-color`
 (default `var(--lr-color-text)`), `--lr-segmented-selected-font-weight` (default
-`var(--lr-font-weight-semibold)`) and `--lr-segmented-selected-shadow` (default `var(--lr-shadow)`)
-style the checked segment's pill; `--lr-segmented-hover-color` (default `var(--lr-color-text)`)
-styles a hovered segment that is neither checked nor disabled, independently of the four above — so
-recoloring the checked pill never bleeds onto hover. All five are inline `var()` fallbacks at the
+`var(--lr-font-weight-semibold)`) and `--lr-segmented-selected-shadow` (default
+`var(--lr-shadow-xs)` — the shallowest step in the elevation scale, since the checked segment is a
+thumb lifted a hair off its own track) style the checked segment's pill;
+`--lr-segmented-hover-color` (default `var(--lr-color-text)`) styles a hovered segment that is
+neither checked nor disabled, independently of the four above — so recoloring the checked pill never
+bleeds onto hover. All five are inline `var()` fallbacks at the
 point of use rather than `:host` declarations, so each can be set on the element *or on any
 ancestor*; unset, each falls back to the token its rule used before. They exist because
 `::part(segment)[aria-checked='true']` is invalid CSS — Shadow Parts forbids an attribute selector
@@ -76,8 +87,9 @@ after `::part()` — which previously left hijacking the library-wide
 repainting every other element that read them.
 
 Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
-`-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-space-s`, `--lr-shadow`,
-`--lr-opacity-disabled`, `--lr-focus-ring-*`.
+`-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-shadow-xs`,
+`--lr-opacity-disabled`, `--lr-focus-ring-*`, and the `--lr-form-control-*` knobs the `size` tier
+resolves.
 
 **Optional peer deps:** none.
 

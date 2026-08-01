@@ -18,8 +18,21 @@ relationship and node-type filters, hop limits, validation, and saved queries.
 
 **Properties:** `value`, `label`, `labels`, `name`, `disabled`, `effectiveDisabled`, `nodeTypeOptions`,
 `relationshipTypeOptions`, `hopLimit`, `savedQueries`, `errors`, `form`, `validity`,
-`validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `formDisabledCallback`,
-`formResetCallback`, `formStateRestoreCallback`. **Events:** `lr-input`, `lr-validity-change`,
+`validationMessage`, `willValidate`, `checkValidity`, `reportValidity`, `setCustomValidity`,
+`formDisabledCallback`, `formResetCallback`, `formStateRestoreCallback`.
+
+`setCustomValidity(message)` (new in 8.0.0) is the standard channel for a server-side rejection
+("no graph is loaded for that tenant") that neither of the control's own constraints can express. A
+non-empty `message` raises `customError` and becomes `validationMessage`, so the builder fails
+`checkValidity()`, blocks submission and matches `:state(invalid)`; `''` clears it. Clearing
+restores the control's own computed validity rather than forcing it valid — a query with no
+`startId` stays `valueMissing` — and the custom error survives both intrinsic recomputation (every
+field edit) and `form.reset()`, exactly like a native control, where only another
+`setCustomValidity('')` clears it. The message is caller-supplied and is used verbatim, never
+localized, and it is whole-control state: it does not land in `errors`, which is keyed by the
+csspart of the field a message belongs to.
+
+**Events:** `lr-input`, `lr-validity-change`,
 `lr-query-run`, `lr-query-save`, `lr-query-load`, `lr-query-delete`. **Slots:** `actions`. **CSS
 parts:** `base`, `label`, `hint`, `error` (the three form-control chrome parts every
 form-associated control in this library exposes — see `lr-select`), `path-fields`, `start-input`,
