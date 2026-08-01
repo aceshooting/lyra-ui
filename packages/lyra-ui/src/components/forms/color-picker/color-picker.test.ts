@@ -673,3 +673,21 @@ it('leaves the closed, unconfigured render free of every opt-in surface', async 
   expect(count(el, 'swatches')).to.equal(0);
   expect(part(el, 'panel').hidden).to.be.true;
 });
+
+it('paints the live colour on both slider handles, not just the trigger and preview', async () => {
+  // The stylesheet fills `[part~='slider-handle']` from `--lr-color-picker-swatch-color`, but that
+  // property is only ever written inline on the trigger, the preview and each parsed palette
+  // swatch. Nothing set it on the handles, so they inherited the `transparent` declared on `:host`
+  // and the documented "live colour painted on ... slider handles" never rendered.
+  const el = await opened(html`<lr-color-picker label="Accent" opacity value="#e11d48"></lr-color-picker>`);
+  // The preview paints the live colour on its ::after, so that pseudo-element -- not the preview
+  // box itself, which stays on the checkerboard -- is the like-for-like baseline.
+  const expected = getComputedStyle(part(el, 'preview'), '::after').backgroundColor;
+  expect(expected).to.equal('rgb(225, 29, 72)');
+  for (const name of ['hue-slider-handle', 'opacity-slider-handle']) {
+    const handle = part(el, name);
+    const painted = getComputedStyle(handle).backgroundColor;
+    expect(painted, name).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(painted, name).to.equal(expected);
+  }
+});

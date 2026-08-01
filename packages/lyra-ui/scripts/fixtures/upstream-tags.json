@@ -215,7 +215,7 @@
     },
     {
       "component": "lr-combobox",
-      "from": "clearable",
+      "from": "with-clear",
       "to": "with-clear",
       "upstream": "wa-combobox"
     }

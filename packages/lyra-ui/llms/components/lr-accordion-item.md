@@ -16,9 +16,54 @@
 
 `lr-details` is a native-semantics disclosure panel. `lr-accordion` coordinates slotted
 details panels and closes siblings unless `multiple` is true. `lr-accordion-item` is an
-accordion-compatible alias.
+accordion-compatible alias — the same class under a second tag name, so every property, method,
+event, slot and part documented for `lr-details` applies to it verbatim.
 
-**Properties:** `open`, `disabled`, and `summary` on details/items; `multiple` on accordion.
-**Events:** `lr-toggle` with `{ open }` from details/items. **Slots:** `summary` and default
-content on details/items; default panels on accordion. **CSS parts:** `base`, `summary`, `content`
-on details/items; `base` on accordion.
+**Properties:** `open: boolean = false` (reflected), `disabled: boolean = false` (reflected), and
+`summary: string = ''` on details/items; `multiple: boolean = false` (reflected) on accordion.
+
+**Methods (details/items, new in 8.0.0):** `show()` expands the panel; `hide()` collapses it. Each
+is a no-op when the panel is already in that state, and `show()` is additionally a no-op while
+`disabled`. Assigning `open` runs the identical sequence, as does clicking or keyboard-activating
+the summary, so the property, the reflected attribute and the two methods can never disagree.
+
+**Events:** `lr-show` and `lr-hide` (no detail payload, so `event.detail` is `null`; both
+**cancelable** — calling
+`preventDefault()` leaves the panel exactly where it was, including for a summary click, which is
+intercepted so a vetoed open cannot flash the panel expanded first), then `lr-toggle`
+(`detail: { open }` — the one event that reports which way the panel went), then `lr-after-show` or
+`lr-after-hide` (also no detail payload, never cancelable) once the panel has rendered and its marker
+transition has finished. The full order is `lr-show` → `lr-toggle` → `lr-after-show` when opening,
+and `lr-hide` → `lr-toggle` → `lr-after-hide` when closing. Markup that renders `open` from the
+start emits none of them, and a transition interrupted by the opposite one drops its own pending
+after-event rather than announcing a state the panel has already left.
+
+Only `lr-toggle` existed before 8.0.0; the four lifecycle events are new, and are the same
+`show`/`hide` vocabulary the overlays family uses. `lr-toggle` is kept alongside them because it is
+what an enclosing `lr-accordion` listens to in order to close a newly-opened panel's siblings.
+
+**Slots:** `summary` and default content on details/items; default panels on accordion. A
+`slot="summary"` child takes priority over the `summary` property; with neither set, the summary
+shows the localized `"Details"` fallback.
+
+**CSS parts:** `base` (the native `<details>`), `summary` (the summary control), `content` (the
+panel body) on details/items; `base` on accordion.
+
+**Themeable custom properties:** shared tokens only — the disclosure marker animates through
+`--lr-transition-fast`, which the token layer flattens under `prefers-reduced-motion`, so the
+`lr-after-*` events still settle promptly in that branch.
+
+```html
+<lr-details summary="Advanced options">Panel content</lr-details>
+<script type="module">
+  const panel = document.querySelector('lr-details');
+  let ready = false;
+  // Cancelable: veto the open until some precondition is met.
+  panel.addEventListener('lr-show', (e) => {
+    if (!ready) e.preventDefault();
+  });
+  panel.addEventListener('lr-after-show', () => panel.querySelector('input')?.focus());
+  ready = true;
+  panel.show();
+</script>
+```

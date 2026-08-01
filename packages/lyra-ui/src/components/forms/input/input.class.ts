@@ -121,6 +121,9 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
   @property() placeholder = '';
   /** Shows a built-in clear action for non-empty `text` and `search` inputs. */
   @property({ type: Boolean, reflect: true }) clearable = false;
+  /** Web Awesome's spelling of {@link clearable}, accepted so a mechanical `wa-` → `lr-` rename
+   *  does not silently drop the clear action. Prefer `clearable` in new code. */
+  @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   /** Forwards native read-only behavior to the internal input and disables the clear action. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';
@@ -518,7 +521,10 @@ export class LyraInput extends FormAssociated(LyraInputBase) {
     const isPassword = this.type === 'password';
     const showPasswordToggle = isPassword && this.passwordToggle;
     const nativeType = isPassword && this.passwordVisible ? 'text' : this.type;
-    const canClear = this.clearable && (this.type === 'text' || this.type === 'search') && this.value !== '';
+    const canClear =
+      (this.clearable || this.withClear) &&
+      (this.type === 'text' || this.type === 'search') &&
+      this.value !== '';
     return html`
       <div part="form-control">
         <label part="form-control-label" for="input" ?hidden=${!hasLabel}>

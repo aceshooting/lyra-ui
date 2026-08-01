@@ -14,30 +14,55 @@
 ## `lr-copy-button`
 
 A standalone icon-only copy-to-clipboard button for a plain text `value` — swaps its icon to a
-checkmark for ~1.5s on activation. Takes no positioning opinion of its own; a consumer
-wraps/positions the host element (e.g. absolutely positioned in the corner of a `wa-textarea` or a
-read-only output field). Unlike `lr-code-block`'s or `lr-json-viewer`'s own built-in copy
-buttons, this has no code/JSON content model to adopt just to reuse the copy affordance.
+checkmark for ~1.5s once the clipboard write resolves, or to a distinct failure glyph if it doesn't.
+Takes no positioning opinion of its own; a consumer wraps/positions the host element (e.g.
+absolutely positioned in the corner of a `wa-textarea` or a read-only output field). Unlike
+`lr-code-block`'s or `lr-json-viewer`'s own built-in copy buttons, this has no code/JSON content
+model to adopt just to reuse the copy affordance.
 
 **Properties:**
 - `value: string = ''` — the plain text to copy.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — overrides the localized
-  Copy/Copied accessible name without changing the icon
+  Copy/Copied/Copy-failed accessible name without changing the icon
 - `disabled: boolean = false` (reflected)
 - `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
-  copied checkmark returns to the copy icon; finite values are clamped at zero
+  confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
+  `1500` rather than leaving the state stuck; a negative one clamps to `0`
 
-**Methods:** `focus(options?)` and `blur()` forward to the native button.
+**Methods:** `focus(options?)`, `blur()` and `click()` forward to the native button.
 
-**Events:** `lr-copy` (`detail: { text: string }`) — fires on activation, always with the current
-`value`, regardless of whether the OS clipboard write actually succeeded (same convention as
-`lr-code-block`'s/`lr-json-viewer`'s own copy buttons).
+**Events:**
+- `lr-copy` (`detail: { text: string }`) — fires on every activation with the current `value`,
+  before the clipboard write is attempted and regardless of its outcome (same convention as
+  `lr-code-block`'s/`lr-json-viewer`'s own copy buttons)
+- `lr-copy-error` (`detail: { text: string; reason: LyraCopyErrorReason; error: unknown }`) — the
+  clipboard write failed. `reason` is `'unsupported'` (no Clipboard API in this context — an
+  insecure origin, or an older browser), `'denied'` (the browser refused: a `NotAllowedError`/
+  `SecurityError`, typically a denied permission or an unfocused document) or `'failed'` (anything
+  else the platform reported). Under `'denied'`/`'failed'` `error` is the platform error itself,
+  unwrapped (a `DOMException` for a real rejection); under `'unsupported'` no write was attempted,
+  so `error` is a component-created `Error` named `ClipboardUnsupportedError`
 
 **Slots:** none.
 
-**CSS parts:** `base` — the button itself.
+**CSS parts:**
+- `base` — the button itself, in every state.
+- `base-success` — added to the button's part list while the confirmation shows
+  (`part="base base-success"`), so `::part(base)` rules keep applying alongside it.
+- `base-error` — the same, while the failure state shows (`part="base base-error"`). It only sets
+  `color: var(--lr-color-danger)`, deliberately after the hover rule, so hovering a failed button
+  still lights its background without repainting the failure colour away.
+- `copy-icon`, `success-icon`, `error-icon` — the resting, confirmation and failure glyphs. Exactly
+  one is rendered at a time; all three are `aria-hidden`.
+- `feedback` — the visually hidden `role="status"` region that announces the outcome. Empty at rest,
+  so nothing is announced before a real outcome.
 
-**Themeable custom properties:** shared tokens only.
+State lives in the part *name*: style the failure with `::part(base-error)`. `::part(base)[…]` and
+`::part(base) .child` are invalid CSS and silently never match.
+
+**Themeable custom properties:** shared tokens only — `--lr-icon-button-size` (the minimum hit
+area), `--lr-color-text-quiet`/`--lr-color-text` (resting and hover ink), `--lr-color-danger` (the
+failure ink) and `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
 
@@ -45,15 +70,47 @@ buttons, this has no code/JSON content model to adopt just to reuse the copy aff
 <lr-copy-button value="npm install @aceshooting/lyra-ui"></lr-copy-button>
 ```
 
+Handling the failure path — the button already shows and announces it, so a listener is only needed
+for an application-level fallback:
+
+```html
+<lr-copy-button id="copy" value="npm install @aceshooting/lyra-ui"></lr-copy-button>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.js';
+
+  const button = document.getElementById('copy');
+  button.addEventListener('lr-copy', () => trackCopyAttempt()); // your own instrumentation
+  button.addEventListener('lr-copy-error', (event) => {
+    // event.detail.reason is 'unsupported' | 'denied' | 'failed'
+    if (event.detail.reason === 'unsupported') selectTextForManualCopy(event.detail.text);
+  });
+</script>
+```
+
+`LyraCopyErrorReason` is exported alongside the class for TypeScript consumers:
+
+```ts
+import type { LyraCopyErrorReason } from '@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js';
+```
+
 **Known gotchas:**
-- best-effort clipboard write: `navigator.clipboard` is absent in insecure contexts/older browsers,
-  and some engines throw synchronously rather than rejecting — either way `lr-copy` still fires
-  with the intended text so a consumer can always show its own confirmation/fallback UI.
-- Changing `value` clears any in-progress "Copied" feedback immediately, so the confirmation can
-  never describe stale text.
-
-**Additional API surface:**
-
-- `click()` — Activates the native button, matching the host focus/blur forwarding contract.
+- **Changed in 8.0.0:** the button used to enter the "Copied" confirmation on activation whether or
+  not the clipboard write succeeded. It now waits for `navigator.clipboard.writeText()` to settle: a
+  rejection renders the failure glyph instead, announces the localized failure text through the
+  `feedback` region, and emits `lr-copy-error`. `lr-copy` still fires for every activation, so
+  existing wiring keeps working — but code that treated `lr-copy` as proof the text reached the
+  clipboard must now pair it with `lr-copy-error` to tell the two outcomes apart.
+- `navigator.clipboard` is absent in insecure contexts/older browsers, and some engines throw
+  synchronously rather than rejecting. Both arrive at the same failure path (`unsupported` for the
+  missing API, `denied`/`failed` for a real rejection) — there is no silent success left.
+- Changing `value`, or disconnecting, clears any in-progress confirmation/failure immediately, and a
+  write that settles *after* that change is discarded: no stale glyph, and no late `lr-copy-error`
+  describing text the button no longer shows.
+- The failure is signalled on four channels — a different glyph, a different accessible name, the
+  live-region announcement, and only then colour — so it survives a monochrome or high-contrast
+  rendering.
+- Copy affordance strings are localizable: `copy` (`'Copy'`), `copied` (`'Copied!'`) and
+  `copyFailed` (`'Copy failed'`), overridable per instance through `.strings` or app-wide through
+  `registerLyraLocale()` (see `llms/shared.md`).
 
 ---

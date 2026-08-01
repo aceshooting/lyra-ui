@@ -721,7 +721,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         aria-valuenow=${hue}
         aria-valuetext=${this.localize('colorPickerHueValue', undefined, { hue: this.formatNumber(hue) })}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-        style=${styleMap({ insetInlineStart: `${(hue / 360) * 100}%` })}
+        style=${styleMap({
+          insetInlineStart: `${(hue / 360) * 100}%`,
+          '--lr-color-picker-swatch-color': cssColor(this.color),
+        })}
         @keydown=${this.onHueKeyDown}
         @keyup=${this.onControlKeyUp}
       ></div>
@@ -753,7 +756,10 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           opacity: this.formatNumber(percent),
         })}
         aria-disabled=${this.effectiveDisabled ? 'true' : 'false'}
-        style=${styleMap({ insetInlineStart: `${percent}%` })}
+        style=${styleMap({
+          insetInlineStart: `${percent}%`,
+          '--lr-color-picker-swatch-color': cssColor(this.color),
+        })}
         @keydown=${this.onAlphaKeyDown}
         @keyup=${this.onControlKeyUp}
       ></div>

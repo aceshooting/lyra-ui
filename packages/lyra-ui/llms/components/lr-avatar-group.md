@@ -21,8 +21,12 @@ excess into a localized "+N" badge. Composed over `<lr-avatar>` via plain light-
 - `max?: number` — how many assigned children stay visible before the rest collapse behind the
   badge. Unset (the default) means no limit. Any assigned value is sanitized to a finite,
   non-negative integer. Flattened slot-forwarded children count the same as direct children.
-- `size: AvatarSize = 'md'` (reflected) — `'sm' | 'md' | 'lg'`, reused from `<lr-avatar>`.
-- `shape: AvatarShape = 'circle'` (reflected) — `'circle' | 'square'`.
+- `size: AvatarSize = 'md'` (reflected) — `'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'`,
+  reused verbatim from `<lr-avatar>`'s own union, so both spellings of a tier drive the same
+  avatar-size/overlap/badge-font-size swap here too. The default stays `'md'`, which renders
+  identically to `'medium'`.
+- `shape: AvatarShape = 'circle'` (reflected) — `'circle' | 'rounded' | 'square'`, also reused from
+  `<lr-avatar>`; it shapes the overflow badge only.
 - `tone: AvatarTone = 'neutral'` (reflected) — `'neutral' | 'brand' | 'success' | 'warning' |
   'danger'`; recolors the overflow badge only.
 - `label: string = ''` — the group's `role="group"` accessible name. A host-level `aria-label` wins

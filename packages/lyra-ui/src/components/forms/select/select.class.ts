@@ -237,6 +237,9 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
   @property({ reflect: true }) placement: Placement = 'bottom-start';
   /** Show a button that empties the selection while there is anything selected. */
   @property({ type: Boolean, reflect: true, attribute: 'with-clear' }) withClear = false;
+  /** Shoelace's spelling of {@link withClear}, accepted so a mechanical `sl-` → `lr-` rename does
+   *  not silently drop the clear button. Prefer `with-clear` in new code. */
+  @property({ type: Boolean }) clearable = false;
   /** Renders a selected option's chip in `multiple` mode; see `LyraSelectTagRenderer`. */
   @property({ attribute: false }) getTag?: LyraSelectTagRenderer;
   /**
@@ -1042,7 +1045,7 @@ export class LyraSelect extends LyraElement<LyraSelectEventMap> {
     const shownValues =
       this.maxOptionsVisible > 0 ? this._selected.slice(0, this.maxOptionsVisible) : this._selected;
     const overflow = this._selected.length - shownValues.length;
-    const showClear = this.withClear && hasValue;
+    const showClear = (this.withClear || this.clearable) && hasValue;
     const hasHint = this.hasHintSlot || this.hint.length > 0;
     const hasError = this.hasErrorSlot || this.errorText.length > 0;
     const hasLabel = this.hasLabelSlot || this.label.length > 0;

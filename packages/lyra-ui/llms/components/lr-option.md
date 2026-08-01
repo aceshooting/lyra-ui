@@ -39,8 +39,10 @@ shared `FormAssociated` mixin — see gotchas).
 - `clearable: boolean = false` (reflected) — displays the clear button while there is something to
   clear on **either** axis this control owns: a committed selection, or *visible* filter text. See
   "the clear button covers two axes" below
-- `withClear: boolean = false` (attribute `with-clear`) — deprecated compatibility alias for
-  `clearable`; either property enables the same clear button
+- `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
+  either one enables the same clear button. Not deprecated: Web Awesome names this attribute
+  `with-clear` and Shoelace names it `clearable`, so honouring both is what keeps a mechanical tag
+  rename from silently dropping the control
 - `autocomplete: string = 'off'`, `inputMode: string = ''` (attribute `inputmode`),
   `enterKeyHint: string = ''` (attribute `enterkeyhint`), `spellcheck: boolean = true`,
   `autocapitalize: string = ''`, and `autoCorrect: string = ''` (attribute `autocorrect`) — native
@@ -259,8 +261,8 @@ collection, while `form.reset()` still returns to the declarative selected defau
 synchronous and fires no `input`/`change`/`lr-change` event.
 
 **Known gotchas:**
-- `with-clear` remains supported for compatibility, but new code should use the mirrored
-  `clearable` property/attribute.
+- `with-clear` and `clearable` are equivalent and both are supported indefinitely; prefer
+  `clearable` in new code. `lr-input` and `lr-select` accept both spellings too.
 - a host-level `aria-label` attribute on `<lr-combobox>` now takes priority over `label`/
   `placeholder`/`"Combobox"` when resolving the accessible name on `[part="combobox-input"]` —
   previously it was silently ignored. Matches the same fallback on `<lr-select>`.

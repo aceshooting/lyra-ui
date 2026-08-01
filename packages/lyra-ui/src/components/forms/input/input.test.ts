@@ -1033,3 +1033,25 @@ describe('lr-input unset-regression for the 8.0 opt-ins', () => {
     expect(wrapper.querySelectorAll('button').length).to.equal(0);
   });
 });
+
+describe('lr-input clear-button spelling parity', () => {
+  // Web Awesome spells this `with-clear`, Shoelace `clearable`. Accepting only one of the two
+  // makes a mechanical `wa-` -> `lr-` rename drop the clear button with no error at all, which is
+  // the exact failure mode the migration table exists to prevent.
+  it('renders the clear button for either upstream spelling', async () => {
+    for (const markup of [
+      html`<lr-input type="search" clearable value="query" aria-label="Search"></lr-input>`,
+      html`<lr-input type="search" with-clear value="query" aria-label="Search"></lr-input>`,
+    ]) {
+      const el = (await fixture(markup)) as LyraInput;
+      expect(el.shadowRoot!.querySelector('[part="clear-button"]'), el.outerHTML).to.exist;
+    }
+  });
+
+  it('leaves the clear button absent when neither spelling is set', async () => {
+    const el = (await fixture(
+      html`<lr-input type="search" value="query" aria-label="Search"></lr-input>`,
+    )) as LyraInput;
+    expect(el.shadowRoot!.querySelector('[part="clear-button"]')).to.not.exist;
+  });
+});

@@ -94,7 +94,7 @@ type-directed composition), use the matching `.class.js` entry, such as
 custom-element registry.
 
 ```html
-<lr-combobox label="Fruit" with-clear>
+<lr-combobox label="Fruit" clearable>
   <lr-option value="a">Apple</lr-option>
   <lr-option value="b">Banana</lr-option>
 </lr-combobox>
@@ -165,7 +165,9 @@ For a component marked with a `wa-*` counterpart in the "Mirrors" column, Lyra k
 public vocabulary where practical: attributes, slots, events, CSS parts, and custom properties use
 the same names under the `lr-` prefix. This makes many migrations a predictable import and tag-name
 change, while the component notes remain authoritative for intentional differences. For example,
-Lyra's combobox uses `with-clear`, while Web Awesome's equivalent uses `clearable`.
+Where the two upstreams disagree on a name, Lyra accepts both rather than forcing a rewrite: the
+clear button is spelled `with-clear` by Web Awesome and `clearable` by Shoelace, and
+`lr-input`, `lr-select` and `lr-combobox` each honour either spelling.
 
 ```
 <wa-combobox value="x" multiple with-clear>  →  <lr-combobox value="x" multiple with-clear>
@@ -187,10 +189,9 @@ node packages/lyra-ui/scripts/migrate-wa.mjs path/to/your/src             # appl
 It only rewrites a tag or import that this page documents a `lr-*`/`@aceshooting/lyra-ui`
 equivalent for — a component's `— (extra)` row (no Web Awesome/Shoelace counterpart) and any
 `wa-*`/`sl-*` text that isn't an actual tag usage (comments, unrelated identifiers) are left alone.
-It does not rewrite attribute-name differences (e.g. Web Awesome's `clearable` vs. Lyra's
-`with-clear`) or deep import subpaths (`.../dist/components/button/button.js`, since Lyra's own
-subpath layout doesn't mirror Shoelace's or Web Awesome's) — those are flagged instead, and still
-need the component notes below.
+It does not rewrite attribute names or deep import subpaths
+(`.../dist/components/button/button.js`, since Lyra's own subpath layout doesn't mirror Shoelace's
+or Web Awesome's) — those are flagged instead, and still need the component notes below.
 
 Shoelace is now a historical predecessor to Web Awesome, but its component vocabulary remains
 familiar to many teams. Lyra provides a conceptual migration path rather than claiming a drop-in

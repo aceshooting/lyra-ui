@@ -2260,3 +2260,25 @@ describe('appearance and pill', () => {
     }
   });
 });
+
+describe('lr-select clear-button spelling parity', () => {
+  // Mirror of the lr-input parity test: `with-clear` is Web Awesome's spelling and `clearable`
+  // Shoelace's, so a select that honours only one silently loses the control for half the
+  // migrations the README promises are mechanical.
+  it('renders the clear button for either upstream spelling', async () => {
+    for (const attribute of ['with-clear', 'clearable']) {
+      const el = (await fixture(basic())) as LyraSelect;
+      el.setAttribute(attribute, '');
+      el.value = 'b';
+      await el.updateComplete;
+      expect(clearButton(el), attribute).to.not.equal(null);
+    }
+  });
+
+  it('leaves the clear button absent when neither spelling is set', async () => {
+    const el = (await fixture(basic())) as LyraSelect;
+    el.value = 'b';
+    await el.updateComplete;
+    expect(clearButton(el)).to.equal(null);
+  });
+});

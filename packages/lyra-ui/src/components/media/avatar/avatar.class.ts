@@ -41,6 +41,8 @@ export interface LyraAvatarEventMap {
  *   has assigned content that is currently winning the fallback order.
  * @csspart image - The `<img>`, only rendered while `image` is set and has not failed to load (and
  *   no default-slot glyph is provided).
+ * @csspart initials - The initials text, only rendered once every glyph and image fallback ahead of
+ *   it in the priority order has been ruled out.
  * @cssprop [--lr-avatar-size=var(--lr-size-2rem)] - Inline and block size of the container. `size`
  *   swaps it to `var(--lr-size-1-5rem)` (`small`) or `var(--lr-size-2-5rem)` (`large`).
  * @cssprop [--lr-avatar-bg=var(--lr-color-border)] - Container background. Each non-neutral `tone`

@@ -214,9 +214,11 @@ export class LyraCombobox extends LyraElement<LyraComboboxEventMap> {
    *  mode — a closed single-select shows the selected label, not the query, so a stale query alone
    *  never surfaces the button). Clearing a selection emits `input`/`change`/`lr-clear`; clearing
    *  filter text emits `lr-filter` with an empty `value`; each fires only for the axis that
-   *  actually changed. Mirrors `wa-combobox`'s public name. */
+   *  actually changed. Named after Shoelace's `clearable`; Web Awesome spells the same idea
+   *  `with-clear`, which is accepted as an alias so either migration keeps working. */
   @property({ type: Boolean, reflect: true }) clearable = false;
-  /** @deprecated Use `clearable`. Retained as a compatibility alias. */
+  /** Web Awesome's spelling of {@link clearable}, accepted so a mechanical `wa-` → `lr-` rename
+   *  does not silently drop the clear button. Prefer `clearable` in new code. */
   @property({ type: Boolean, attribute: 'with-clear' }) withClear = false;
   /** Native editing-assistance attributes forwarded to the wrapped input. */
   @property() autocomplete = 'off';

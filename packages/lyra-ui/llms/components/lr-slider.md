@@ -20,22 +20,71 @@ ergonomic numeric accessor (matching native `<input type=range>`'s IDL attribute
 in sync with it in both directions. Clicking anywhere on `[part="base"]` (not just the thumb) jumps the
 thumb to that point and continues the same gesture as a drag, matching native `<input type=range>`
 click-to-seek — the thumb is also `.focus()`ed on that click, so keyboard interaction can continue
-seamlessly right after. First-party invention (no Web Awesome equivalent).
+seamlessly right after. Mirrors the core `<wa-slider>` API under the `lr-` prefix.
+
+**Two-handle `range` mode.** `range` turns the control into a selection between `minValue` and
+`maxValue`. Each handle is a separately focusable `role="slider"` with its own localized accessible
+name, and each reports the *reachable* sub-range through `aria-valuemin`/`aria-valuemax` — bounded
+by its sibling rather than by the full domain, because the handles may meet but never cross. When
+they meet, both report the same number, the indicator has zero length, and each handle can still
+travel away from the meeting point in its own direction. A track click moves whichever handle is
+nearer the clicked position. `[part="base"]` then carries `role="group"`, named from
+`label`/`aria-label`, so the pair is announced as one control.
+
+A range slider **does not submit a value**: two numbers cannot be expressed through the
+single-string `FormAssociated` contract, so while `range` is set the control removes itself from its
+form's `FormData` entirely (matching `<lr-time-range>`) rather than submitting a value it isn't
+showing. Read `minValue`/`maxValue`, or the event detail. Turning `range` back off restores normal
+single-value submission.
 
 **Properties:**
 - `min: number = 0`
 - `max: number = 100`
-- `step: number = 1`
-- `label: string = ''` — accessible name set as `aria-label` on the `role="slider"` thumb; a plain
-  `aria-label` attribute on the host itself is honored as a fallback when this is left unset (matching
-  `<lr-checkbox>`/`<lr-switch>`).
-- `valueFormatter?: SliderValueFormatter` (attribute: false) — maps the finite, clamped
-  `aria-valuenow` number to optional human-readable `aria-valuetext`. The formatter may return
-  `string | null | undefined`; a nullish result omits `aria-valuetext`. Leaving the property unset
-  preserves the existing numeric `aria-valuetext`.
+- `step: number = 1` — a zero or negative value is kept as an explicit "unstepped" mode
+- `range: boolean = false` (reflected) — two-handle mode; see above
+- `minValue: number` (attribute `min-value`) — the lower handle's value in `range` mode. Unset, it
+  resolves to `min`, so an untouched range slider selects its whole domain whatever `min`/`max`
+  happen to be. Assigning past `maxValue` stops at `maxValue`
+- `maxValue: number` (attribute `max-value`) — the upper handle's value. Unset, it resolves to
+  `max`; assigning below `minValue` stops at `minValue`. Only the `min-value`/`max-value`
+  *attributes* are captured as the `form.reset()` defaults, so a later property assignment never
+  redefines what a reset restores to
+- `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) — which axis carries the
+  value. `'horizontal'` maps values to the inline axis (mirroring under RTL); `'vertical'` maps them
+  to the block axis with the domain minimum at the block **end** (so "up" always means "more"),
+  switches the primary keys to ArrowUp/ArrowDown, and exposes `aria-orientation="vertical"` on every
+  handle
+- `readonly: boolean = false` (reflected) — the value is displayed but not changeable. Unlike
+  `disabled`, a read-only slider stays focusable, fully legible, and **still submits its value**; it
+  renders `aria-readonly` in both states and withdraws the grab cursor
+- `withMarkers: boolean = false` (attribute `with-markers`, reflected) — draws a tick mark at every
+  `step` position along the track. Purely decorative (`aria-hidden`). Nothing is drawn for an
+  unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
+  be visually indistinguishable and would hang the page, so the grid is dropped rather than
+  half-drawn
+- `withTooltip: boolean = false` (attribute `with-tooltip`, reflected) — shows a live value bubble
+  above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
+  result when one is supplied, otherwise the locale-formatted number
+- `hint: string = ''` — plain-text description of what the slider controls, rendered below the track
+  and wired to every handle through `aria-describedby`. Use the `hint` slot for rich content.
+  Deliberately the only visible-chrome property here: there is no visible label or error surface (a
+  labeled-field consumer wraps this element in their own layout), but a slider's units frequently
+  need a written explanation with nowhere else to live
+- `label: string = ''` — accessible name set as `aria-label` on the `role="slider"` thumb (or on the
+  `role="group"` wrapping both range handles, since each handle then owns its own start/end name); a
+  plain `aria-label` attribute on the host itself wins over it, and with neither set the localized
+  generic `sliderLabel` message applies so the focusable thumb is never nameless.
+- `valueFormatter?: SliderValueFormatter` (attribute: false) —
+  `(value: number, handle: 'value' | 'min' | 'max') => string | null | undefined`. Maps the finite,
+  clamped `aria-valuenow` number to optional human-readable `aria-valuetext`, and supplies the
+  `with-tooltip` bubble's text. The second argument identifies which handle is being formatted
+  (`'value'` on a single-handle slider). A nullish result omits `aria-valuetext`. Leaving the
+  property unset preserves the numeric `aria-valuetext`.
 - `showValue: boolean = true` (attribute `show-value`) — whether to render the current numeric value as
-  visible text next to the track. Not reflected; toggle it off via the `.showValue=${false}` property
-  binding or a plain `show-value="false"` content attribute.
+  visible text next to the track. In `range` mode the readout is both handle values joined by an en
+  dash. Not reflected, and `true`-defaulting: toggle it off via the `.showValue=${false}` property
+  binding or a plain `show-value="false"` content attribute — `?show-value=${false}` and a removed
+  attribute both leave it `true`.
 - Inherited from `FormAssociated`: `name: string = ''`, `value: string` (form-submitted string form),
   `disabled: boolean = false` (reflected), `required: boolean = false` (reflected).
 
@@ -44,25 +93,46 @@ number, even if `value` is momentarily `""` (e.g. right after `form.reset()`, be
 default reseeds it), by falling back to the midpoint of `[min, max]`. Writing clamps/snaps the input and
 stringifies the result back into `value`.
 
-**Events:** `lr-input` (`detail: { value: number }` — fired continuously during an active drag or a
+**Events:** `lr-input` — fired continuously during an active drag or a
 keyboard step, including OS key-repeat while a key is held, mirroring native `<input type=range>`'s
-`input` event), `lr-change` (`detail: { value: number }` — fired once an interaction commits: on
+own `input` event — and `lr-change`, fired once an interaction commits: on
 pointerup for a drag, or on keyup for a keyboard step, so a single Arrow/Home/End/PageUp/PageDown press
-fires both `lr-input` and `lr-change`, mirroring native `<input type=range>`'s own `change`-on-every-
-committed-step behavior)
+fires both, mirroring native `<input type=range>`'s own `change`-on-every-committed-step behavior.
+**Breaking in 8.0.0:** both details widened from `{ value: number }` to
+`{ value: number; minValue: number; maxValue: number; handle: 'value' | 'min' | 'max' }`. `value` is
+the value of the handle that moved and `handle` says which one that was (`'value'` on a
+single-handle slider); `minValue`/`maxValue` always carry both range-handle positions. Existing
+`e.detail.value` readers keep working unchanged.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal `[part="thumb"]`
 control — without them the host's own `focus()`/`blur()`/`click()` would be no-ops, because the
-`role="slider"` element they need to reach lives in the shadow root.
+`role="slider"` element they need to reach lives in the shadow root. In `range` mode all three
+target the **lower** handle.
 
-**Slots:** none.
+**Slots:** `hint` — rich hint content, replacing the plain-text `hint` property. The hint region is
+hidden and contributes no `aria-describedby` while neither the property nor the slot has content.
 
-**CSS parts:** `base` (row wrapping the track and optional value readout), `track`, `fill` (filled
-portion from `min` up to the current value), `thumb` (`role="slider"`), `value` (numeric readout, shown
-when `show-value` is true)
+**CSS parts:** `base` (row wrapping the track and optional value readout; carries `role="group"` in
+`range` mode), `track` (the full-length background line), `indicator` (the filled portion of the
+track: from `min` up to the current value, or between the two handles in `range` mode),
+`markers` (the tick container, present only with `with-markers`) and `marker` (one `step`-grid
+tick), `thumb` (a draggable handle, `role="slider"` — present on every handle including both range
+ones), `thumb-min` and `thumb-max` (the lower and upper range handles; each carries `thumb` as
+well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one), `tooltip` (the
+live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added *to the
+`tooltip` element's part list* while that handle is focused or dragged — visibility is encoded in
+the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
+`::part(tooltip-visible)`), `value` (numeric readout, shown when `show-value` is true), `hint` (the
+hint region).
 
-**Themeable custom properties:** shared tokens only — `--lr-space-s`,
-`--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
+**Breaking in 8.0.0:** the `fill` part was **renamed to `indicator`**, matching `wa-slider`. A
+`::part(fill)` rule silently matches nothing now — rename it.
+
+**Themeable custom properties:** `--lr-slider-track-length` (default `var(--lr-size-10rem)`) is the
+track's length in `orientation="vertical"`; a horizontal track fills its container instead, so the
+token is inert there. It is declared as an inline `var()` fallback and never on `:host`, so a
+consumer value set on any ancestor is never shadowed. Everything else is shared tokens —
+`--lr-space-s`, `--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
 **Optional peer deps:** none.
@@ -74,10 +144,26 @@ when `show-value` is true)
   max="2"
   step="0.1"
   label="Temperature"
+  hint="Higher values make replies more varied."
+  with-markers
+  with-tooltip
   .valueAsNumber=${0.7}
-  .valueFormatter=${(value) => `${value * 100}%`}
+  .valueFormatter=${(value, handle) => `${value * 100}%`}
   @lr-input=${(e) => setDraftTemperature(e.detail.value)}
   @lr-change=${(e) => commitTemperature(e.detail.value)}
+></lr-slider>
+
+<!-- Two handles, vertical. Range mode submits nothing: read minValue/maxValue. -->
+<lr-slider
+  range
+  orientation="vertical"
+  min="0"
+  max="1000"
+  step="50"
+  min-value="200"
+  max-value="800"
+  label="Price"
+  @lr-change=${(e) => applyPriceFilter(e.detail.minValue, e.detail.maxValue)}
 ></lr-slider>
 ```
 
@@ -99,6 +185,25 @@ native range input either.
   numeric string rendered by earlier versions; a nullish formatter result omits it.
 - A pointer drag fires `lr-input` continuously and a single `lr-change` on release; a keyboard step
   fires exactly one of each per press, but OS key-repeat while a key is held re-fires `lr-input` on
-  every repeat while still only committing `lr-change` once, on the eventual keyup.
+  every repeat while still only committing `lr-change` once, on the eventual keyup. A gesture that
+  ends without a pointerup (`pointercancel`, lost pointer capture, the element being removed
+  mid-drag) tears down cleanly and commits nothing.
+- **`::part(fill)` no longer matches** — the part is `indicator` as of 8.0.0.
+- **A `range` slider contributes no form entry.** `new FormData(form)` simply has no key for it, and
+  `value`/`valueAsNumber` keep tracking the single-handle value that isn't being shown. Read
+  `minValue`/`maxValue`.
+- `min-value`/`max-value` are clamped against the domain, snapped to `step`, and re-sanitized once
+  every declarative attribute has landed, so narrowing `min`/`max` after mount can silently move
+  both handles. Only the attributes seed the `form.reset()` defaults.
+- Vertical sliders put the domain minimum at the block **end**: ArrowUp increases. ArrowUp/ArrowDown
+  are never mirrored under RTL, which is exactly what makes them the stable primary keys there.
+- `with-markers` silently draws nothing when `step` is 0/negative or when the domain implies more
+  than 100 intervals. That is a deliberate ceiling, not a bug — check the rendered `[part="marker"]`
+  count rather than assuming the ticks are there.
+- The visible thumb is a 16px dot, deliberately below the library's usual 40px icon-button floor: a
+  transparent 28px `::before` carries the hit/drag area, which clears WCAG 2.5.8's 24px minimum,
+  while a 40px *visible* thumb would make two range handles overlap across 40px of track and hijack
+  track clicks. The pseudo-element has no DOM node of its own, so a pointerdown inside it still
+  reports the thumb as `e.target`.
 
 ---

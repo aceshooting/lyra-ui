@@ -1416,7 +1416,7 @@
         },
         {
           "name": "lr-avatar",
-          "description": "`<lr-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an\nimage, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order\n(whichever's set takes over from the next). Mirrors `wa-avatar`'s public surface\n(`image`/`initials`/`loading`/`shape`, the `icon` slot, the image-load error event) and adds\nthis library's own `size`/`tone` vocabulary. Purely presentational, no built-in interactivity;\na consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to mark a chat message avatar as \"AI\" vs. \"user\" with a role glyph instead of a photo or initials. Takes priority over `image`, the `icon` slot, and `initials`. The glyph itself is treated as decorative (`aria-hidden`); set `alt` alongside it for an accessible name. |\n| `icon` | A fallback glyph shown only when there is no default-slotted content and no loadable `image` — the same role `wa-avatar`'s `icon` slot fills, i.e. a stand-in for the `initials` text rather than an override of the photo. Also decorative (`aria-hidden`), so set `alt` alongside it. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer circle/rounded/square container. |\n| `icon` | Wrapper around whichever glyph slot is active. Only rendered while one of them has assigned content that is currently winning the fallback order. |\n| `image` | The `<img>`, only rendered while `image` is set and has not failed to load (and no default-slot glyph is provided). |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-avatar-size` (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`small`) or `var(--lr-size-2-5rem)` (`large`).\n- `--lr-avatar-bg` (default: `var(--lr-color-border)`) — Container background. Each non-neutral `tone` sets it to that tone's `-quiet` tint.\n- `--lr-avatar-color` (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `tone` sets it to that tone's loud color.\n- `--lr-avatar-font-size` (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`small`) or `var(--lr-font-size-md)` (`large`), so the initials track the circle instead of staying at one fixed size across every tier.",
+          "description": "`<lr-avatar>` — a small, fixed-size identity marker: default-slotted icon/glyph content, an\nimage, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order\n(whichever's set takes over from the next). Mirrors `wa-avatar`'s public surface\n(`image`/`initials`/`loading`/`shape`, the `icon` slot, the image-load error event) and adds\nthis library's own `size`/`tone` vocabulary. Purely presentational, no built-in interactivity;\na consumer wraps it in their own `<button>`/`<lr-menu>` trigger for a user-menu affordance.\n\n---\n\n**Slots**\n\n| Name | Description |\n| --- | --- |\n| (default) | Icon/glyph content (e.g. an inline SVG) shown in place of the image/initials, e.g. to mark a chat message avatar as \"AI\" vs. \"user\" with a role glyph instead of a photo or initials. Takes priority over `image`, the `icon` slot, and `initials`. The glyph itself is treated as decorative (`aria-hidden`); set `alt` alongside it for an accessible name. |\n| `icon` | A fallback glyph shown only when there is no default-slotted content and no loadable `image` — the same role `wa-avatar`'s `icon` slot fills, i.e. a stand-in for the `initials` text rather than an override of the photo. Also decorative (`aria-hidden`), so set `alt` alongside it. |\n\n---\n\n**CSS Shadow Parts**\n\n| Name | Description |\n| --- | --- |\n| `base` | The outer circle/rounded/square container. |\n| `icon` | Wrapper around whichever glyph slot is active. Only rendered while one of them has assigned content that is currently winning the fallback order. |\n| `image` | The `<img>`, only rendered while `image` is set and has not failed to load (and no default-slot glyph is provided). |\n| `initials` | The initials text, only rendered once every glyph and image fallback ahead of it in the priority order has been ruled out. |\n\n---\n\n**CSS Custom Properties**\n\n- `--lr-avatar-size` (default: `var(--lr-size-2rem)`) — Inline and block size of the container. `size` swaps it to `var(--lr-size-1-5rem)` (`small`) or `var(--lr-size-2-5rem)` (`large`).\n- `--lr-avatar-bg` (default: `var(--lr-color-border)`) — Container background. Each non-neutral `tone` sets it to that tone's `-quiet` tint.\n- `--lr-avatar-color` (default: `var(--lr-color-text)`) — Initials/glyph color. Each non-neutral `tone` sets it to that tone's loud color.\n- `--lr-avatar-font-size` (default: `var(--lr-font-size-sm)`) — Font size of the initials fallback (and of any `em`-sized slotted glyph). `size` swaps it to `var(--lr-font-size-xs)` (`small`) or `var(--lr-font-size-md)` (`large`), so the initials track the circle instead of staying at one fixed size across every tier.",
           "attributes": [
             {
               "name": "alt",
@@ -4346,7 +4346,7 @@
             },
             {
               "name": "clearable",
-              "description": "Show a clear button while the combobox has something to clear on either axis: a committed\nselection, or visible filter text (the open listbox in single-select, any time in `multiple`\nmode — a closed single-select shows the selected label, not the query, so a stale query alone\nnever surfaces the button). Clearing a selection emits `input`/`change`/`lr-clear`; clearing\nfilter text emits `lr-filter` with an empty `value`; each fires only for the axis that\nactually changed. Mirrors `wa-combobox`'s public name.\n\nType: `boolean`  \nDefault: `false`",
+              "description": "Show a clear button while the combobox has something to clear on either axis: a committed\nselection, or visible filter text (the open listbox in single-select, any time in `multiple`\nmode — a closed single-select shows the selected label, not the query, so a stale query alone\nnever surfaces the button). Clearing a selection emits `input`/`change`/`lr-clear`; clearing\nfilter text emits `lr-filter` with an empty `value`; each fires only for the axis that\nactually changed. Named after Shoelace's `clearable`; Web Awesome spells the same idea\n`with-clear`, which is accepted as an alias so either migration keeps working.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
@@ -4544,7 +4544,7 @@
             },
             {
               "name": "with-clear",
-              "description": "Type: `boolean`  \nDefault: `false`",
+              "description": "Web Awesome's spelling of clearable, accepted so a mechanical `wa-` → `lr-` rename\ndoes not silently drop the clear button. Prefer `clearable` in new code.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
                 "type": [
                   "boolean"
@@ -9729,6 +9729,15 @@
               }
             },
             {
+              "name": "with-clear",
+              "description": "Web Awesome's spelling of clearable, accepted so a mechanical `wa-` → `lr-` rename\ndoes not silently drop the clear action. Prefer `clearable` in new code.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "without-spin-buttons",
               "description": "`type=\"number\"` only — suppresses the browser's own increment/decrement spin buttons. Left\nunset, the platform's spinners render exactly as they do on a bare `<input type=\"number\">`.\n`<lr-number-input>` defaults it the other way, since it draws its own stepper pair.\n\nType: `boolean`  \nDefault: `false`",
               "value": {
@@ -12204,6 +12213,15 @@
                   "'number'",
                   "'time'",
                   "'search'"
+                ]
+              }
+            },
+            {
+              "name": "with-clear",
+              "description": "Web Awesome's spelling of clearable, accepted so a mechanical `wa-` → `lr-` rename\ndoes not silently drop the clear action. Prefer `clearable` in new code.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },
@@ -15990,6 +16008,15 @@
               }
             },
             {
+              "name": "clearable",
+              "description": "Shoelace's spelling of withClear, accepted so a mechanical `sl-` → `lr-` rename does\nnot silently drop the clear button. Prefer `with-clear` in new code.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
+                ]
+              }
+            },
+            {
               "name": "disabled",
               "description": "Type: `boolean`",
               "value": {
@@ -18733,6 +18760,15 @@
                   "'number'",
                   "'time'",
                   "'search'"
+                ]
+              }
+            },
+            {
+              "name": "with-clear",
+              "description": "Web Awesome's spelling of clearable, accepted so a mechanical `wa-` → `lr-` rename\ndoes not silently drop the clear action. Prefer `clearable` in new code.\n\nType: `boolean`  \nDefault: `false`",
+              "value": {
+                "type": [
+                  "boolean"
                 ]
               }
             },

@@ -54,6 +54,16 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
   after the per-`size` rules, so it overrides them whatever `size` is set
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected) — `'2xs'` is the tightest tier,
   below `'xs'`, for dense chrome; `'m'` is the standard one
+- `pill: boolean = false` (reflected) — fully rounded ends. It re-assigns `--lr-button-radius` to
+  `--lr-radius-pill` rather than declaring a radius on `[part="base"]`, so that property stays the
+  single corner-radius knob and a consumer override still wins. `appearance="link"` renders with
+  zero chrome, pill or not
+- `withCaret: boolean = false` (attribute `with-caret`, reflected) — renders a decorative trailing
+  chevron (`[part="caret"]`, `aria-hidden`) marking the button as a dropdown/menu trigger. It
+  carries no accessible name of its own: the button's label already names the action, and the popup
+  relationship is expressed by a host `aria-haspopup`/`aria-expanded`, which are forwarded to the
+  internal control. Like the label and the two adornment slots it fades to `opacity: 0` while
+  `loading`, so the spinner has the button to itself
 - `type: 'button' | 'submit' | 'reset' = 'button'`
 - `loading: boolean = false` (reflected) — shows an internal spinner and disables the button without
   clearing `disabled`
@@ -61,6 +71,33 @@ it is neither focusable nor navigable; an unsafe/unparseable `href` falls back t
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — accessible name forwarded
   reactively to the internal native button or anchor; changing or removing the attribute after
   mount updates the actual focused control
+
+**Submitter overrides (`type="submit"` in `<button>` mode).** `name`/`value` plus the five native
+`form*` overrides describe the submission this button triggers, not the button itself:
+
+- `formAction?: string` (attribute `formaction`) — overrides the form owner's `action`. Unset by
+  default, leaving the form's own `action` in place; an empty string is deliberately *not*
+  forwarded, since an empty `formaction` resolves against the document URL and would silently
+  redirect the submission
+- `formEnctype?: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain'`
+  (attribute `formenctype`) — overrides the form owner's `enctype`
+- `formMethod?: 'get' | 'post' | 'dialog'` (attribute `formmethod`) — overrides the form owner's
+  `method`; `'dialog'` closes an ancestor `<dialog>` instead of submitting
+- `formNoValidate: boolean = false` (attribute `formnovalidate`) — skips the form owner's
+  constraint validation. Without it an invalid form is reported and not submitted, exactly as with
+  a native submit button
+- `formTarget?: string` (attribute `formtarget`) — overrides the form owner's `target`. Distinct
+  from `target`, which is the anchor target used in link mode
+
+All five are `undefined`/`false` by default. When any of them — or `name`/`value` — is set, the
+submission runs through a **transient native `<button type="submit">`** inserted directly after the
+host, used as `requestSubmit()`'s submitter and removed again in the same synchronous step (in a
+`finally`, so a throwing or validation-blocked submission can't leave it behind). That is what makes
+the name/value pair reach the submitted `FormData` and the overrides reach the real submission:
+`requestSubmit()` only accepts a submitter the form actually owns, and a custom element is never
+one. While that stand-in exists it *is* the form's submitter, so **`SubmitEvent.submitter` is the
+transient native button, not this host**. With none of those properties set, submission stays a
+plain `requestSubmit()` with a `null` submitter, and all of it is inert in link mode.
 
 The shared `m` size uses `--lr-font-size-m`. The internal button follows the host's inline size through `--lr-button-width` (default
 `100%`), and each size tier's `min-block-size` floor is exposed as its own token (see below).
@@ -75,7 +112,8 @@ unmodified; disabled while `disabled` or `loading`).
 **Slots:** default (label content), `start` (leading icon/content), `end` (trailing icon/content).
 
 **CSS parts:** `base` (the internal native `<button>`, or an `<a>` when `href` resolves to a safe
-link), `label`, `start`, `end`, `spinner` (present only while `loading`).
+link), `label`, `start`, `end`, `caret` (the decorative dropdown chevron, present only while
+`with-caret` is set), `spinner` (present only while `loading`).
 
 **Themeable custom properties:** `--lr-button-width`, `--lr-button-accent`, `--lr-button-fill`,
 `--lr-button-on-fill`, `--lr-button-border` (each swapped by the active `variant`, default
@@ -107,7 +145,10 @@ and the per-`size`
 `--lr-size-*` tokens rather than literal rem values, so a retheme moves them together. `--lr-button-gap` (default `--lr-space-2xs`, the gap between the icon/label
 and any slotted content) and `--lr-button-radius` (default `--lr-radius`, the corner radius) are
 both retunable without a `::part(base)` rule but — unlike the four size knobs below — do not vary
-by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius).
+by `size` tier; `appearance="link"` ignores `--lr-button-radius` (it renders with zero radius), and
+`pill` re-assigns it to `--lr-radius-pill`. `--lr-button-caret-size` (default
+`var(--lr-size-0-75em)`) is the `with-caret` chevron's font size — declared in `em`, so it tracks
+every `size` tier through the button's own font size instead of needing a per-tier value.
 `--lr-button-shadow` is **undeclared by default**, so `box-shadow` falls back to `none` —
 byte-identical to before this property existed — set it to add a drop shadow (e.g. an
 elevated/floating action button) without a `::part(base)` rule.
@@ -141,6 +182,16 @@ box no matter what tier or override is in play.
 <lr-button variant="neutral" appearance="accent">Save</lr-button>
 <lr-button appearance="plain" aria-label="Close dialog"><svg slot="start">...</svg></lr-button>
 <p>The message failed. <lr-button appearance="link" variant="brand">Retry</lr-button></p>
+
+<lr-button pill with-caret aria-haspopup="menu" aria-expanded="false">Actions</lr-button>
+
+<form action="/save" method="post">
+  <lr-input name="title" label="Title" required></lr-input>
+  <lr-button type="submit" name="intent" value="draft" formnovalidate formaction="/save-draft">
+    Save draft
+  </lr-button>
+  <lr-button type="submit" name="intent" value="publish">Publish</lr-button>
+</form>
 ```
 
 **Known gotchas:**
@@ -158,5 +209,11 @@ box no matter what tier or override is in play.
 - Is form-associated (`static formAssociated = true` + `attachInternals()`), so it participates in
   an ancestor `<form>.elements` the same way `wa-button` does — a sibling text field's own
   Enter-to-submit lookup (which scans `form.elements` for a `type === 'submit'` control) finds it.
+- **`SubmitEvent.submitter` is not this element** whenever `name`/`value` or any `form*` override is
+  set: it is the transient native `<button>` described above, which has already been removed from
+  the DOM by the time a `submit` listener runs. Read the submitted entry from the `FormData`, or
+  the override off your own component, rather than identity-checking the submitter.
+- The `form*` overrides and `type` are all inert while `href` renders the anchor — native navigation
+  is the activation there, and an anchor has no submit/reset concept.
 
 ---

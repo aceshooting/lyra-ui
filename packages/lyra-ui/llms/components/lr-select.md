@@ -23,8 +23,31 @@ Session-history/autofill restoration assigns the stored string through the same 
 value/form/validity path as a programmatic value write and does not emit `input`, `change`, or
 `lr-change`.
 
-Single-select only, with no `filter`/`source`/`with-clear`/`max-options-visible`/`empty-text`/
-`max-render`/`multiple` surface — reach for `<lr-combobox>` instead whenever any of those apply.
+There is no typing-to-filter and no `filter`/`source`/`empty-text`/`max-render` surface — reach for
+`<lr-combobox>` instead whenever any of those apply. Everything else a closed list needs is here:
+`multiple`, `max-options-visible`, `with-clear`, `getTag`, `placement`, `appearance`, and `pill`.
+
+**Multi-select (`multiple`, new in 8.0.0, default `false`).** Setting it re-shapes `value` from a
+`string` into a `string[]` and renders one chip per selection inside the trigger — a `[part="tags"]`
+row holding one `[part="tag"]` each. Because the trigger is a real `<button>`, the chips are
+deliberately non-interactive: a nested remove button would be invalid interactive-content nesting
+and unreachable by keyboard or assistive tech anyway, since the outer button intercepts every
+click/Enter/Space first. Removal has three affordances instead — pick a selected row again to
+toggle it off, press Backspace or Delete on the focused trigger to drop the most recent selection,
+or use the `with-clear` button to drop all of them at once. Turning `multiple` back off collapses
+the selection to its first entry, so the single-mode string and the submitted entry can never
+disagree with what the trigger shows.
+
+A `multiple` select submits **one form entry per selected value** under its `name`, so
+`new FormData(form).getAll(name)` behaves like a native multi-value control rather than returning a
+joined string. An unnamed multi-select contributes nothing to the form at all, matching a nameless
+native `<select multiple>`. Session-history/autofill state is a JSON string array in `multiple` mode
+and the plain submitted string in single mode; malformed state restores an empty selection. The
+listbox renders `aria-multiselectable` in **both** states (`"true"` and `"false"`), never omitting it.
+
+**Breaking in 8.0.0:** `value` is now typed `string | string[]` even in single mode. A TypeScript
+consumer that read it as a plain string needs a narrowing step —
+`const v = el.value; const single = typeof v === 'string' ? v : (v[0] ?? '');`
 
 **Single-option auto-commit.** Opt-in via `autoCommitSingleOption` (default `false` — a select always
 renders the normal combobox/listbox/chevron trigger unless enabled, matching pre-1.3.0 behavior).
@@ -49,18 +72,56 @@ exactly like the multi-option case, until the trigger is actually activated.
 - `open: boolean = false` (reflected)
 - `size: '2xs'|'xs'|'s'|'m'|'l'|'xl' = 'm'` (reflected — same scale as `lr-input`/`lr-combobox`'s
   `size`, for compact toolbar placements that don't fit the default trigger height)
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
+  (reflected) — the library's shared field-surface vocabulary. `outlined` (the default) is a
+  bordered surface; `filled` swaps the border for a raised fill; `filled-outlined` keeps both;
+  `plain` drops both; `accent` paints the loud brand fill with on-brand text (the placeholder,
+  expand icon, adornments and chips all ride that on-brand color rather than the quiet-text
+  tokens). Every value keeps the same box, border width and radius, and each restates its own
+  `:hover` feedback. Note the default differs from `<lr-input>`/`<lr-textarea>`, which default to
+  `filled-outlined`
+- `pill: boolean = false` (reflected) — fully-rounded trigger corners. It only re-assigns
+  `--lr-select-radius` to `--lr-radius-pill`, so a consumer's own `--lr-select-radius` (inline or
+  from an outer-tree rule) still wins over it
+- `placement: Placement = 'bottom-start'` (reflected) — preferred listbox placement, from the
+  Floating UI vocabulary (`'top'`, `'bottom-end'`, …). `flip`/`shift` may still move the popup to
+  keep it in view, and the `left`/`right` component is swapped under RTL
+- `multiple: boolean = false` (reflected) — several options selectable at once; see "Multi-select"
+  above. Flipping it re-shapes `value` and the submitted form entry, so it is normally set once
+  declaratively
+- `maxOptionsVisible: number = 3` (attribute `max-options-visible`) — how many chips render in
+  `multiple` mode before the rest collapse behind a localized "+N" chip. `0` removes the cap
+  entirely. Sanitized to a finite, non-negative integer: a fractional value truncates, a negative
+  one clamps to `0` (i.e. uncapped), and a non-finite one falls back to `3`
+- `withClear: boolean = false` (attribute `with-clear`, reflected) — renders a clear button while
+  anything is selected (and nothing at all while the selection is empty). It sits in the trigger's
+  inline-end band as a **sibling** of the trigger rather than a child of it — same nesting reason as
+  the chips — so pressing it clears the selection without opening the listbox
+- `clearable: boolean = false` — Shoelace's spelling of `withClear`; either one renders the same
+  button. Present so a mechanical `sl-select` → `lr-select` rename keeps the clear control
+- `getTag?: (option: LyraOption, index: number) => unknown` (attribute: false) — renders one
+  selected option's chip in `multiple` mode. Whatever it returns replaces the whole built-in
+  `[part="tag"]` element, so re-declare `part="tag"` on your own root node to keep the default
+  styling hooks. A returned **string renders as text, never as markup** (it lands in an ordinary
+  Lit child position), and the same non-interactive-content constraint applies to whatever you
+  return. Overflow past `max-options-visible` still collapses into the built-in "+N" chip
 - `autoCommitSingleOption: boolean = false` (attribute `auto-commit-single-option`) — opts in to the
   single-option auto-commit behavior described above
-- `value: string` — a getter/setter; always a single string (no `multiple` mode)
+- `value: string | string[]` — a getter/setter: a plain `string` in single mode (empty when nothing
+  is selected), a `string[]` in `multiple` mode
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal trigger button.
 
 **Events:** `change` (native-style — selection changed), `input` (fired alongside `change` on every
 selection change — a native `<select>` doesn't meaningfully distinguish the two either), and
 `lr-change` (a prefixed compatibility alias fired after both, mirroring `<lr-checkbox>`'s
-`lr-change`). All three carry `detail: { value: string }` (the new selection) and fire only on a
-real change, never on a programmatic `value` write. Plus `lr-show`, `lr-hide`, and bubbling,
-composed `focus`/`blur` events re-dispatched from the internal trigger.
+`lr-change`). All three carry `detail: { value: string | string[] }` — the new committed selection,
+a string in single mode and a `string[]` in `multiple` mode — and fire only on a real change, never
+on a programmatic `value` write, `form.reset()`, or session-state restoration. Plus
+`lr-clear` (no detail; emitted by the `with-clear` button *after* its `input`/`change`/`lr-change`
+trio, and never when there was nothing to clear, so it never announces a no-op),
+`lr-show`, `lr-hide`, and bubbling, composed `focus`/`blur` events re-dispatched from the internal
+trigger.
 
 **Slots:** default (`<lr-option>` children), `label`, `hint`, `error` (overrides the `errorText`
 attribute when provided), `start` (non-interactive adornment before the selected-value label), and
@@ -72,7 +133,13 @@ When hint/error content is present, the trigger's `aria-describedby` references 
 IDs for both messages (error first, then hint), so the visible supporting text is part of the
 control's accessible description.
 
-**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `listbox`,
+**CSS parts:** `form-control`, `form-control-label`, `trigger`, `start`, `end`, `tags` (the
+`multiple`-mode chip row inside the trigger), `tag` (one selected-value chip), `tag-label` (a chip's
+ellipsis-safe label), `tag-overflow` (the "+N" chip standing in for the selections past
+`max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
+chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
+is encoded in the part name instead), `clear-button` (the `with-clear` button, present only while
+there is a selection to clear), `listbox`,
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — a presentational `<div>`, not a `role="group"`; options with an empty `group`
 get no heading),
@@ -84,7 +151,10 @@ get no heading),
 `lr-toast-item`'s `--lr-toast-padding`/`--lr-toast-font-size` use. `--lr-select-gap` (default
 `--lr-space-xs`, the gap inside `[part='trigger']`) and `--lr-select-radius` (default `--lr-radius`,
 its corner radius) are both retunable without a `::part(trigger)` rule but, unlike the four above,
-do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern.
+do not vary by `size` — the same `--lr-button-gap`/`-radius` pattern. `--lr-select-tag-padding`
+(default `var(--lr-space-2xs) var(--lr-space-xs)`) and `--lr-select-tag-font-size` (default
+`var(--lr-font-size-sm)`) size a `multiple`-mode chip; like gap and radius they are declared once on
+`:host` and do **not** vary by `size` tier.
 
 `--lr-select-trigger-min-height` is live at **every** tier, the default `m` included, where it is
 `2.5rem` — byte-identical to `lr-input`'s and `lr-combobox`'s own `m` floor, so the three controls
@@ -125,6 +195,23 @@ invalid CSS and never matches — which is exactly why these tokens exist.
 </lr-select>
 <script type="module">
   document.getElementById('sel').addEventListener('change', (e) => console.log(e.target.value));
+</script>
+```
+
+```html
+<!-- Multi-select with chips, a cap, and a clear button: -->
+<lr-select id="tags" label="Labels" multiple with-clear max-options-visible="2" appearance="filled" pill>
+  <lr-option value="bug">Bug</lr-option>
+  <lr-option value="docs">Docs</lr-option>
+  <lr-option value="perf">Performance</lr-option>
+</lr-select>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/select/select.js';
+  const sel = document.getElementById('tags');
+  // A custom chip: return a node, and re-declare part="tag" to keep the built-in styling hooks.
+  sel.getTag = (option, index) => `${index + 1}. ${option.label}`; // a string renders as text
+  sel.addEventListener('change', (e) => console.log(e.detail.value)); // string[] in multiple mode
+  sel.addEventListener('lr-clear', () => console.log('selection emptied'));
 </script>
 ```
 

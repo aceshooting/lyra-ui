@@ -15,4 +15,10 @@ export {
   subscribeLyraLocaleRegistry,
   LYRA_DEFAULT_STRINGS,
 } from './internal/localization.js';
-export type { LyraLocaleStrings, LyraMessageKey } from './internal/localization.js';
+export type {
+  LyraLocaleStrings,
+  LyraMessage,
+  LyraMessageKey,
+  LyraPluralCategory,
+  LyraPluralMessage,
+} from './internal/localization.js';

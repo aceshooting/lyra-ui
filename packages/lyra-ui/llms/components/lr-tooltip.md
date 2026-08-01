@@ -13,21 +13,79 @@
 
 ## `lr-tooltip`
 
-A hover/focus tooltip positioned with the shared Floating UI positioner.
+A tooltip for a consumer-owned trigger, positioned with the shared Floating UI positioner. Which
+interactions open it is configurable as of 8.0.0; by default it is still hover and focus.
 
-**Properties:** `open`, `manual`, `delay`, `placement`, `distance`, `content`, and
-`accessibleLabel` (`aria-label`). **Methods:** `showAt(rect: { x, y, width?, height?,
-contextElement? }, options?: { returnFocusTo?: HTMLElement })` — same virtual-anchor contract as
-`lr-popover.showAt()` above (anchors to an arbitrary rectangle instead of the slotted `trigger`,
-`width`/`height` default to `0`, `contextElement` gives `autoUpdate()` something to observe,
-Escape returns focus to `options.returnFocusTo` or skips focus-return, re-call with fresh
-coordinates to re-anchor a moving point). Opens immediately, bypassing `delay`/`manual` (both are
-hover-debounce concerns for a slotted trigger, not a deliberate programmatic call); close it the
-same way any tooltip closes, by setting `open = false`. Non-finite coordinates or dimensions are a
-no-op. **Slots:** `trigger`, default content.
-**CSS parts:** `trigger`, `popup`. **Themeable custom properties:** `--lr-tooltip-max-inline-size`
-(default `--lr-size-20rem`), `--lr-tooltip-background` (default `--lr-color-neutral`), and
-`--lr-tooltip-color` (default `--lr-color-on-neutral`).
+**Properties:**
+- `open: boolean = false` (reflected) — assigning it runs the same lifecycle as `show()`/`hide()`.
+  Assigning `false` also cancels a delayed open that has not fired yet, even when the tooltip is
+  already closed, so a pending timer can't reopen it behind the caller's back.
+- `trigger: string = 'hover focus'` — **new in 8.0.0.** A *space-separated* list of `hover`,
+  `focus`, `click` and `manual`. `manual` (or an empty list) leaves the tooltip entirely under
+  programmatic control. Note the name collision: this string property and the `trigger` *slot* are
+  different things — the slot holds the element, this property says which of its interactions count.
+- `manual: boolean = false` — equivalent to including `manual` in `trigger`; kept because it reads
+  better on a tooltip that is only ever driven from script
+- `showDelay: number = 150` (attribute `show-delay`) and `hideDelay: number = 0` (attribute
+  `hide-delay`) — **breaking in 8.0.0:** the single `delay` property is gone, split into these two
+  independent milliseconds values, so a tooltip can linger after the pointer leaves without also
+  being slow to appear. `showDelay` keeps the old `delay` default of 150ms; `hideDelay` defaults to
+  `0`, so leaving the trigger now closes the tooltip at once, where 7.x's single `delay` also held
+  it open for 150ms first. A non-finite value falls back to the default; a negative one clamps to
+  `0` (immediate) and an oversized one to the largest delay `setTimeout` can represent, so neither
+  can hang the tooltip open.
+- `placement: Placement = 'top'` (reflected) — the full Floating UI vocabulary, mirrored under RTL
+- `distance: number = 6` — anchor-offset distance in px; identical semantics to
+  `<lr-popover>.distance` (both wrap the same `place()`/`offset()` middleware)
+- `skidding: number = 0` — offset along the anchor's edge, in px. New in 8.0.0.
+- `for: string = ''` (reflected) — id of an element in this tooltip's own root to position against
+  instead of the slotted trigger; the trigger keeps owning the interaction listeners and
+  `aria-describedby`. New in 8.0.0.
+- `arrow: boolean = false` (reflected), `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'`
+  (attribute `arrow-placement`) and `arrowPadding: number = 0` (attribute `arrow-padding`) — the
+  same arrow trio `<lr-popover>` documents above, new in 8.0.0
+- `content: string = ''` — plain-text tooltip content, used when nothing is slotted
+- `accessibleLabel: string = ''` (attribute **`aria-label`**)
+
+**Methods:**
+- `show(): void` — open immediately, bypassing `show-delay` and whatever `trigger` allows. New in
+  8.0.0.
+- `hide(): void` — close immediately, bypassing `hide-delay`. New in 8.0.0.
+- `showAt(rect: { x, y, width?, height?, contextElement? }, options?: { returnFocusTo?: HTMLElement })`
+  — same virtual-anchor contract as `lr-popover.showAt()` above (anchors to an arbitrary rectangle
+  instead of the slotted `trigger`, `width`/`height` default to `0`, `contextElement` gives
+  `autoUpdate()` something to observe, Escape returns focus to `options.returnFocusTo` or skips
+  focus-return, re-call with fresh coordinates to re-anchor a moving point). Opens immediately,
+  bypassing `show-delay`/`trigger`/`manual` (all are interaction-debounce concerns for a slotted
+  trigger, not a deliberate programmatic call); close it with `hide()` or `open = false`. Non-finite
+  coordinates or dimensions are a no-op.
+
+**Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide` — the
+same four-event contract, timing and veto semantics `<lr-popover>` documents above, and all four are
+new to this component in 8.0.0. A vetoed `lr-show` leaves the tooltip closed whether the delay
+elapsed, `show()` was called, or `open` was assigned.
+
+**Slots:** `trigger` (the element that receives the configured interaction listeners), default
+(tooltip content, overriding the `content` property).
+
+**CSS parts:** `trigger`, `popup`, and `arrow` (rendered only when `arrow` is set; its part
+attribute also carries the resolved side — `arrow-top`, `arrow-bottom`, `arrow-left`,
+`arrow-right`).
+
+**Themeable custom properties:** `--lr-tooltip-max-inline-size` (default `--lr-size-20rem`),
+`--lr-tooltip-background` (default `--lr-color-neutral`), `--lr-tooltip-color` (default
+`--lr-color-on-neutral`), and `--lr-tooltip-arrow-size` (default `--lr-size-0-375rem` — *half* the
+arrow square's width; the arrow also picks up `--lr-tooltip-background`, so retinting the tooltip
+retints its arrow). A tooltip popup has no inner scroll wrapper to move overflow onto, so setting
+`arrow` switches the popup to `overflow: visible` and trades internal scrolling for a visible arrow
+— reach for `<lr-popover>` when a floating surface needs both.
+
+```html
+<lr-tooltip trigger="hover focus click" show-delay="0" hide-delay="400" arrow placement="right">
+  Copied to clipboard
+  <button slot="trigger" type="button">Copy</button>
+</lr-tooltip>
+```
 
 While open, trigger `aria-describedby` points to a hidden text proxy in the tooltip's light DOM,
 not the shadow-private popup. Native triggers resolve that ID directly. `lr-button` and

@@ -17,109 +17,198 @@ General-purpose modal/overlay plus a promise-based confirmation helper built on 
 
 ### `lr-dialog`
 
-A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or a backdrop
-click, and scroll-locks the document for as long as it's open. Chrome stays minimal by default — no
-built-in title bar or close button; a consumer supplies a heading and any close affordance itself via
-the default/`footer` slots. `heading`/`closable` are an opt-in convenience for the common case where
-hand-building that chrome isn't worth it.
+A modal/overlay: `role="dialog"`, focus-trapped while open, dismissible via Escape or (opt-in) a
+backdrop click, and scroll-locks the document for as long as it's open. Chrome stays minimal by
+default — no built-in title bar or close button; a consumer supplies a heading and any close
+affordance itself via the default/`footer` slots. `heading`, the `label` slot, `header-actions` and
+`closable` are opt-in conveniences for the common case where hand-building that chrome isn't worth
+it.
 
 **Properties:**
-- `open: boolean = false` (reflected) — there is no separate `show()`/`hide()` pair; set this (or
-  call `close()`)
-- `label: string = ''` — accessible name used only when no heading is slotted and `heading` is unset
-  (see below)
+- `open: boolean = false` (reflected) — **changed in 8.0.0:** `lr-dialog` now also has a
+  `show()`/`hide()` pair, and assigning `open` runs exactly the same lifecycle as calling them, so
+  the property, the reflected attribute and the two methods can never disagree. `el.open = false`
+  therefore emits the full close lifecycle and can be vetoed, where it used to be a silent state
+  flip. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
+- `label: string = ''` — screen-reader-only accessible name, used only when no heading is slotted
+  and neither `heading` nor the `label` *slot* is set (see the priority order below). The `label`
+  property and the `label` slot are separate knobs: the slot is rich visible header content, the
+  property is an invisible name.
 - `heading?: string` — visible header text (rendered in `[part="header"]`/`[part="heading"]`), used
   only when no light-DOM heading is slotted into the default slot; has no effect (renders nothing)
-  when a heading element *is* slotted, which keeps working completely unchanged either way
+  when a heading element *is* slotted, and the richer `label` slot wins over it when both are set
 - `closable: boolean = false` (attribute `closable`) — renders a built-in close (X) button in the
-  header row (creating one, with no heading text, if `heading` is unset), wired to the same
-  `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
-- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click
-  closing the dialog; Escape and explicit `close()` calls remain available
+  header row (creating one, with no heading text, if `heading` and the `label` slot are unset),
+  wired to the same `close()` path Escape/backdrop-dismiss already use, with reason `'close-button'`
+- `withoutHeader: boolean = false` (attribute `without-header`, reflected) — **new in 8.0.0.**
+  Suppresses the header row entirely, whatever `heading`, `closable`, the `label` slot or the
+  `header-actions` slot would otherwise render — for a dialog that owns its own chrome. Because it
+  defaults to `false`, `without-header="false"` is not a way to turn it back off; remove the
+  attribute, or assign `.withoutHeader = false`.
+- `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to a backdrop click closing
+  the dialog; Escape and explicit `close()`/`hide()` calls remain available. **Changed in 8.0.0:**
+  this was previously spelled `no-light-dismiss`, an opt-*out* whose default left backdrop dismissal
+  on. The polarity now matches `wa-dialog` exactly, so a mechanical rename no longer flips what the
+  markup does.
 
 Also settable as a plain `aria-label` attribute (not a public JS property): overrides the panel's
-computed accessible name outright, winning over every other source below (a slotted heading,
-`heading`, `label`) — matching `<lr-date-input>`'s `accessibleLabel` pattern. It changes naming
-only: a `heading` property still renders its visible header chrome. Left unset, the existing
-three-tier fallback below is unchanged.
+computed accessible name outright, winning over every other source below (a slotted heading, the
+`label` slot, `heading`, the `label` property) — matching `<lr-date-input>`'s `accessibleLabel`
+pattern. It changes naming only: a `heading` property or `label` slot still renders its visible
+header chrome. Left unset, the fallback order below is unchanged.
 
-**Methods:** `close(reason: DialogCloseReason = 'api'): void` — closes the dialog, emits
-`lr-dialog-close` with `reason`, and returns focus to whatever had it right before the dialog
-opened. `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
-`'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers; `'close-button'`
-by the built-in header close button (rendered when `closable` is set); `'unmount'` is emitted
-automatically if the dialog is removed from the DOM while still `open` by anything other than its
-own `close()` (a consumer's own cleanup code, a parent re-render that drops it); any other string is
-whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or `confirm()`'s
-own `'confirm'`/`'cancel'`).
+**Methods:**
+- `show(): void` — opens the dialog, running the full lifecycle below. No-op when already open.
+- `hide(): void` — identical to `close('api')`; it exists so every Lyra overlay exposes the same
+  `show()`/`hide()`/`open` surface. No-op when already closed.
+- `close(reason: DialogCloseReason = 'api'): void` — closes the dialog and returns focus to whatever
+  had it right before the dialog opened.
+  `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
+  `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
+  `'close-button'` by the built-in header close button (rendered when `closable` is set); `'api'`
+  covers `close()` with no argument, `hide()`, and `open = false`; `'unmount'` is emitted
+  automatically if the dialog is removed from the DOM while still `open` by anything other than its
+  own `close()` (a consumer's own cleanup code, a parent re-render that drops it); any other string
+  is whatever a caller passes (e.g. a footer Cancel button calling `dlg.close('cancel')`, or
+  `confirm()`'s own `'confirm'`/`'cancel'`).
 
-**Events:** `lr-dialog-close` (`detail: DialogCloseReason`) — a cancelable event fired on every
-dismissal path (Escape, backdrop click, the built-in close button, any `close()` call, or an
-`'unmount'` removal as above). Calling `preventDefault()` keeps a connected dialog open for every
-dismissal path; `'unmount'` cannot practically be vetoed because removal already happened.
+**Events:** `lr-show` (cancelable — `preventDefault()` leaves the dialog closed and re-syncs the
+reflected `open` attribute to the unchanged property, so an `open`/`?open=` binding that triggered
+the vetoed transition doesn't leave a stale attribute behind), `lr-after-show` (the enter animation
+has finished), `lr-hide` (cancelable,
+fired for every dismissal path — `preventDefault()` keeps the dialog open *and* stops
+`lr-dialog-close` from firing at all), `lr-dialog-close` (`detail: DialogCloseReason`, cancelable —
+fires after `lr-hide` and carries the one thing `lr-hide` does not: which affordance asked to
+close), `lr-after-hide` (the exit animation has finished). None carries a detail except
+`lr-dialog-close`; the two `lr-after-*` events are never cancelable.
 
-**Stacking:** participates in the shared per-document overlay stack described above. A dialog can be
-stacked with another dialog or any other modal family; only the visually topmost overlay receives
-Escape, Tab trapping, or backdrop dismissal, while overlays beneath remain open until the top one
-closes.
+The open sequence is `lr-show` → `lr-after-show`; the close sequence is `lr-hide` →
+`lr-dialog-close` → `lr-after-hide`. **Both pre-events fire *before* the state changes**, so reading
+`el.open` inside an `lr-show`/`lr-hide` handler returns the *old* value — this is the polarity
+`wa-show`/`wa-hide` already had, and the opposite of what Lyra 7.x's own `lr-show`/`lr-hide` did on
+`lr-popover`/`lr-dropdown`. The `wa-*` → `lr-*` migration table treats the rename as mechanical, and
+as of 8.0.0 that is finally true for these four names: `wa-show`/`wa-after-show`/`wa-hide`/
+`wa-after-hide` map to `lr-show`/`lr-after-show`/`lr-hide`/`lr-after-hide` with matching timing and
+matching cancelability. Code written against Lyra 7.x that read `el.open` in a handler, or assumed
+the events were informational rather than vetoable, has to be re-read.
 
-**Slots:** default (the dialog body), `footer` (action buttons, rendered in a bottom row, hidden
-entirely when empty)
+`lr-after-show`/`lr-after-hide` resolve by awaiting the panel's and backdrop's
+`Element.getAnimations()`, so they still fire under `prefers-reduced-motion: reduce` — the duration
+tokens flatten to an imperceptible value there rather than the animation being skipped. Because
+dialogs now animate on close too, `lr-after-hide` is deferred by roughly one animation. A removal
+while open emits `lr-hide`, `lr-dialog-close` (reason `'unmount'`) and `lr-after-hide` in that
+order, none of them cancelable, since the element is already gone.
+
+**Stacking and the top layer:** an open dialog is promoted into the browser **top layer** (via
+`popover="manual"`), new in 8.0.0. That means it escapes every ancestor stacking context and every
+ancestor `overflow` clip: a `transform`ed parent, an `isolation: isolate` wrapper or a
+`z-index: 2147483647` sticky header can no longer render on top of it or crop it, which no `z-index`
+value alone can guarantee. The `z-index` in the stylesheet remains only as the fallback for a user
+agent without popover support, and `popover="manual"` is deliberate — light dismiss and Escape stay
+this component's own contract rather than the user agent's, where an `auto` popover would close on
+the user agent's terms instead. What a consumer sees: the host gains a `popover="manual"` attribute
+while open (component-owned bookkeeping — don't set or remove it), any `z-index` you were fighting
+with becomes irrelevant, and the panel is no longer clipped by an ancestor's `overflow: hidden`.
+Beyond that, the dialog participates in the shared per-document overlay stack: only the topmost
+overlay receives Escape, Tab trapping, or backdrop dismissal, while overlays beneath stay open until
+the top one closes.
+
+**Slots:** default (the dialog body), `label` (rich header content — an element, markup, anything;
+rendered inside `[part="heading"]` and used as the panel's accessible name, winning over the
+plain-string `heading`), `header-actions` (extra header controls, rendered in the header row *before*
+the built-in close button), `footer` (action buttons, rendered in a bottom row, hidden entirely when
+empty). The `label` and `header-actions` slots are new in 8.0.0.
 
 **CSS parts:** `backdrop` (the full-viewport scrim), `panel` (the dialog panel, `role="dialog"`
-while open; its max-inline-size is controlled by `--lr-dialog-max-width`), `header` (the header
-row, rendered when `heading` is set — and no heading is slotted — and/or `closable` is `true`),
-`heading` (the visible `heading`-text element inside `header`, rendered only when `heading` is set
-and no heading is slotted), `close-button` (the built-in close button inside `header`, rendered only
-when `closable` is `true`), `label` (the invisible label-text element used for `aria-labelledby`
-when no heading is slotted and `heading` is unset), `body` (wrapper around the default slot),
-`footer` (wrapper around the `footer` slot)
+while open; its max-inline-size is controlled by `--lr-dialog-max-width`), `header` (the header row,
+rendered when the `label` slot is filled, `heading` is set — and no heading is slotted into the
+default slot — `header-actions` is filled, and/or `closable` is `true`; never when `withoutHeader`
+is set), `heading` (the visible heading element inside `header`, wrapping the `label` slot and
+falling back to the `heading` text), `header-actions` (the wrapper around the `header-actions` slot),
+`close-button` (the built-in close button inside `header`, rendered only when `closable` is `true`),
+`label` (the invisible `label`-property element used for `aria-labelledby` when no heading is
+slotted and neither `heading` nor the `label` slot is set), `body` (wrapper around the default
+slot), `footer` (wrapper around the `footer` slot)
 
-**Themeable custom properties:** `--lr-dialog-overlay-color` (default `rgb(0 0 0 / 0.5)` — the
-backdrop scrim color; component-specific since no shared `--lr-*` overlay token exists),
-`--lr-dialog-width` (default unset/`auto` — the panel shrink-wraps to content, unchanged; set it
-for an assertive width instead), `--lr-dialog-max-width` (default `32rem` — the panel's
-max-inline-size cap, via `min(var(--lr-dialog-max-width, var(--lr-dialog-width, 32rem)), 100%)`;
-when `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls
-back to the requested width itself — not the `32rem` default — so an assertive width isn't silently
-clipped; the viewport is still a hard limit either way), plus shared tokens `--lr-space-l/-m/-s`,
-`--lr-color-surface/-border`, `--lr-radius`, `--lr-shadow`.
+**Themeable custom properties:** `--lr-dialog-overlay-color` (default `var(--lr-color-overlay)` —
+the backdrop scrim color), `--lr-dialog-backdrop-filter` (default `none` — a `backdrop-filter` on
+the scrim, e.g. `blur(3px)`, for a frosted-glass treatment over the page behind it),
+`--lr-dialog-width` (default `auto` — the panel shrink-wraps to content; set it for an assertive
+width instead), `--lr-dialog-max-width` (default `var(--lr-dialog-width, var(--lr-size-32rem))` —
+the panel's max-inline-size cap, applied as
+`min(var(--lr-dialog-max-width, var(--lr-dialog-width, var(--lr-size-32rem))), 100%)`; when
+`--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
+the requested width itself — not the 32rem default — so an assertive width isn't silently clipped;
+the viewport is still a hard limit either way), `--lr-dialog-spacing` (default `var(--lr-space-l)` —
+the padding inside `[part="body"]` and the *inline* padding of the header and footer rows),
+`--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the *block* padding of the header and
+footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
+`var(--lr-duration-base)` — the panel's enter/exit animation duration) and
+`--lr-dialog-backdrop-duration` (default `var(--lr-duration-fast)` — the backdrop's fade duration).
+The last four plus the backdrop filter are new in 8.0.0. Otherwise shared tokens
+`--lr-space-l/-m/-s`, `--lr-color-surface/-border`, `--lr-radius`, `--lr-shadow`,
+`--lr-easing-standard`.
 
 **Optional peer deps:** none.
 
 ```html
-<lr-dialog id="dlg">
-  <h2>Delete item?</h2>
+<lr-dialog id="dlg" closable>
+  <span slot="label">Delete item?</span>
+  <button slot="header-actions" type="button">Help</button>
   <p>This cannot be undone.</p>
   <div slot="footer">
-    <button id="cancel">Cancel</button>
-    <button id="confirm">Delete</button>
+    <button id="cancel" type="button">Cancel</button>
+    <button id="confirm" type="button">Delete</button>
   </div>
 </lr-dialog>
 <script type="module">
+  import '@aceshooting/lyra-ui/components/overlays/dialog/dialog.js';
+
   const dlg = document.getElementById('dlg');
-  dlg.open = true;
+  // Listeners first: `lr-show` is emitted synchronously inside show().
+  dlg.addEventListener('lr-show', () => console.log('opening; el.open is still', dlg.open));
+  dlg.addEventListener('lr-after-show', () => console.log('enter animation done'));
   dlg.addEventListener('lr-dialog-close', (e) => console.log('closed:', e.detail));
+  dlg.addEventListener('lr-after-hide', () => console.log('exit animation done'));
   document.getElementById('cancel').addEventListener('click', () => dlg.close('cancel'));
+  dlg.show(); // identical to dlg.open = true
 </script>
+```
+
+A dialog with no chrome of Lyra's own, animating faster and blurring the page behind it:
+
+```html
+<lr-dialog
+  without-header
+  label="Preview"
+  light-dismiss
+  style="--lr-dialog-backdrop-filter: blur(4px); --lr-dialog-panel-duration: 120ms;
+         --lr-dialog-backdrop-duration: 80ms; --lr-dialog-spacing: 0"
+>
+  <img src="/poster.jpg" alt="Poster" />
+</lr-dialog>
 ```
 
 Accessible name / visible header, in priority order: (0) if the host element itself has an
 `aria-label` attribute set, its value becomes `aria-label` on the panel outright, overriding every
-source below (including a slotted heading) while leaving visible `heading` chrome intact — the
+source below (including a slotted heading) while leaving visible header chrome intact — the
 standard ARIA convention for a consumer that wants full control over the announced name regardless
 of whatever `heading`/`label` props are also set; (1) otherwise, if a heading element (`h1`–`h6` or
-`[role="heading"]`) is a *direct child* (not inside `slot="footer"`), its text content becomes
-`aria-label` on the panel — takes priority over `heading` below so an existing consumer that already
-slots its own heading keeps rendering it exactly as before; (2) otherwise, when `heading` is set, a
-visible header row (`[part="header"]`) renders containing that text (`[part="heading"]`), which
-becomes the `aria-labelledby` target; (3) otherwise, when `label` is set, an invisible (`.sr-only`,
-exposed as the `label` part) element carrying that text is rendered inside the panel and
-`aria-labelledby` points at it instead. Only one of cases 2/3 supplies `aria-labelledby` at a time;
-case 0 can coexist with case 2's visible heading, but its explicit `aria-label` remains the name.
-`label` itself never renders visible chrome on its own — `::part(label)` can be restyled to make the
-sr-only text visible, or `heading` can be set instead, for visible chrome without slotting a real
-heading element.
+`[role="heading"]`) is an *unslotted direct child* (one carrying any `slot` attribute — `footer`,
+`label`, `header-actions` — is skipped), its text content becomes `aria-label` on the panel — takes
+priority over `heading` below so an existing consumer that already slots its own heading keeps
+rendering it exactly as before; (2) otherwise, when the `label` slot is filled or `heading` is set, a
+visible header row (`[part="header"]`) renders containing that content (`[part="heading"]`), which
+becomes the `aria-labelledby` target — the slot wins over the plain-string `heading` when both are
+supplied, since it is the richer of the two; (3) otherwise, when the `label` *property* is set, an
+invisible (`.sr-only`, exposed as the `label` part) element carrying that text is rendered inside the
+panel and `aria-labelledby` points at it instead. Only one of cases 2/3 supplies `aria-labelledby` at
+a time; case 0 can coexist with case 2's visible heading, but its explicit `aria-label` remains the
+name. Setting `withoutHeader` suppresses the header row in case 2 outright, which also removes that
+naming source — pair it with `label` or a host `aria-label`. The `label` property itself never
+renders visible chrome on its own — `::part(label)` can be restyled to make the sr-only text
+visible, or `heading`/the `label` slot can be used instead, for visible chrome without slotting a
+real heading element.
 The slotted-heading case (1) deliberately uses `aria-label` (a copied string) rather than
 `aria-labelledby` pointing at the heading's `id`, because the heading is light-DOM content while
 `[part="panel"]` lives in shadow DOM and an ID-reference attribute can't resolve across that
@@ -129,10 +218,20 @@ root it labels.
 **Known gotchas:**
 - `role="dialog"`/`aria-modal="true"` are only present on `[part="panel"]` while `open` is `true` —
   inspecting closed markup won't show them.
+- An `[autofocus]` element anywhere in the slotted content takes initial focus instead of the first
+  focusable element, including one inside a slotted custom element's own open shadow root — so
+  `<lr-input autofocus>` behaves like `<input autofocus>`. With nothing marked, the first focusable
+  element still wins, unchanged.
+- The host gains a `popover="manual"` attribute the first time it opens and keeps it from then on —
+  only top-layer membership (`:popover-open`) tracks `open`, not the attribute — and carries
+  `data-closing` for exactly as long as the exit animation runs (pointer events are dead for that
+  window, so a dismissing dialog can't swallow a click meant for the page underneath). Both are
+  component-owned bookkeeping — don't set or remove them.
 - Heading detection observes child, subtree, and character-data changes, so mutating an
   already-slotted direct heading's text updates the copied panel `aria-label` live.
-- Only *direct* children are scanned for a heading — one nested several layers deep, or inside a
-  slotted custom element's own shadow root, is left to the consumer to label explicitly via `label`.
+- Only *unslotted direct* children are scanned for a heading — one nested several layers deep,
+  inside a slotted custom element's own shadow root, or carrying a `slot` attribute, is left to the
+  consumer to label explicitly via `label` or the `label` slot.
 - A reconnect that preserves the same element instance (e.g. a drag-and-drop reparent) resumes its
   shared overlay registration and re-acquires the scroll lock if `open` was still `true` across the
   move — `disconnectedCallback`/`connectedCallback` fire back-to-back with no update in between, so
@@ -162,7 +261,9 @@ if (ok) deleteConversation();
 `ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; tone?: 'neutral' | 'danger' /* = 'neutral' */ }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
-button all resolve `false`. Mounts a transient `<lr-dialog>` on `document.body` for the duration
+button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
+backdrop-click branch survives 8.0.0's flip of that property's own default to `false`. Mounts a
+transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it once settled, rather than reusing a persistent page-level region
 (contrast `lr-toast`'s `toaster.ts`): a confirmation modal has no stacking/queueing concerns —
 only one is ever meant to be open at a time — so a mount-and-remove per call keeps its lifetime

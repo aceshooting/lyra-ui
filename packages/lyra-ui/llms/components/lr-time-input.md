@@ -17,12 +17,18 @@ A migration-friendly time alias of `lr-input` — the same subclassing shape as 
 with the constructor and `connectedCallback()` setting `type = 'time'`. Its only own API is a
 re-typed `min`/`max` pair (below); every other property, event, slot and part is `lr-input`'s.
 
-**Properties:** `size` (`2xs`…`xl`), `placeholder`, `readonly`, `label`, `hint`, `errorText`
+**Properties:** `size` (`2xs`…`xl`), `appearance`, `pill`, `autofocus`, `placeholder`, `readonly`,
+`label`, `hint`, `errorText`
 (`error-text`), `accessibleLabel` (`aria-label`), `autocomplete`, `spellcheck`, `autocapitalize`,
-`autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`).
-`clearable`, `passwordVisible` (`password-visible`), and `minlength`/`maxlength`/`pattern` are
+`autoCorrect` (`autocorrect`), `inputMode` (`inputmode`), and `enterKeyHint` (`enterkeyhint`) — all
+inherited from `lr-input` with identical meaning and identical defaults (`appearance` is
+`'filled-outlined'`, `pill` and `autofocus` are `false`).
+`clearable` (and its `with-clear` spelling), `passwordVisible` (`password-visible`),
+`withoutSpinButtons` (`without-spin-buttons`), and `minlength`/`maxlength`/`pattern` are
 inherited but inert, exactly as on `lr-number-input` — the platform ignores all three length/pattern
-constraints on `type="time"` as well.
+constraints on `type="time"` as well, and there are no spin buttons on a time field to suppress.
+Unlike `lr-number-input`, this component does **not** flip `without-spin-buttons`' default: it stays
+`false`, and there are no `steppers` here.
 
 `step` is forwarded verbatim to the native time input, where it means seconds (`step="1"` reveals
 the seconds field, `'any'` disables step validation).
@@ -46,10 +52,16 @@ native input's own constraint validation reports `rangeUnderflow`/`rangeOverflow
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, and `--lr-input-radius` (all
+`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
+`--lr-input-fill`, and `--lr-input-border-color` (all
 but `--lr-input-control-height` swap per `size`; that one stays undeclared until you pin an exact
-row height, and `--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
+row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance`, and
+`--lr-input-gap`/`--lr-input-radius` — like `--lr-button-gap`/`-radius` — never
 vary by `size` at all).
+
+`showPicker()` (inherited) is the supported way to open the browser's own time picker
+programmatically; it is a no-op without user activation, while `disabled`, while `readonly`, and in
+engines that don't implement it, rather than throwing.
 
 **Known gotchas:** the same two as `lr-number-input` — the inert clear/password surface, and `type`
 only being re-forced on connect. The native `type="time"` UI (spinners, AM/PM, picker) is the

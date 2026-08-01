@@ -31,8 +31,14 @@ control's visible, clickable label (same as `<lr-checkbox>`).
 - `errorText: string = ''` (attribute `error-text`) — error text below the switch (overridden by
   slotted `error` content). Unset: no error chrome renders.
 
-**Events:** `lr-change` (`detail: { checked: boolean }`) — fired on a user toggle (click or
-Space/Enter); not fired for a programmatic `.checked` assignment. The internal control's native
+**Events:** a user toggle (click, Space/Enter, or the programmatic `click()` activation path) emits
+`input`, then `change`, then `lr-change` (`detail: { checked: boolean }`) — in that order, matching
+the native checkbox/radio contract. The two native-style events are **new in 8.0.0**: a boolean
+control that emitted only the `lr-`-prefixed alias was invisible to every form library, validation
+helper, and `<form>`-level `change` listener that binds the native names, which is the ordinary way
+a consumer observes a control they didn't write. Both bubble and compose, and neither carries a
+detail — read `event.target.checked`. None of the three fires for a programmatic `.checked`
+assignment, `form.reset()`, or session-state restoration. The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
 
 **Methods:** `focus(options?)`, `blur()`, and `click()` forward to the internal switch control.
@@ -61,9 +67,10 @@ a radius well past the shared `--lr-radius` default — plus shared tokens
 ```html
 <lr-switch name="notifications" checked>Enable notifications</lr-switch>
 <script type="module">
-  document
-    .querySelector('lr-switch')
-    .addEventListener('lr-change', (e) => console.log(e.detail.checked));
+  import '@aceshooting/lyra-ui/components/forms/switch/switch.js';
+  const sw = document.querySelector('lr-switch');
+  sw.addEventListener('lr-change', (e) => console.log(e.detail.checked)); // prefixed alias
+  sw.addEventListener('change', (e) => console.log(e.target.checked));    // native-style, no detail
 </script>
 ```
 

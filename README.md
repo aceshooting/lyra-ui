@@ -88,7 +88,7 @@ import '@aceshooting/lyra-ui/components/forms/combobox/option.js';
 ```
 
 ```html
-<lr-combobox label="Fruit" with-clear>
+<lr-combobox label="Fruit" clearable>
   <lr-option value="a">Apple</lr-option>
   <lr-option value="b">Banana</lr-option>
 </lr-combobox>
@@ -174,7 +174,7 @@ Lyra ships plain custom elements — no framework-specific wrapper package neede
 // React 19+
 import '@aceshooting/lyra-ui/components/forms/combobox/combobox.js';
 
-<lr-combobox label="Fruit" with-clear>
+<lr-combobox label="Fruit" clearable>
   <lr-option value="a">Apple</lr-option>
 </lr-combobox>
 ```

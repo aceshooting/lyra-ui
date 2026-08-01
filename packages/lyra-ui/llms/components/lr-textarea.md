@@ -20,6 +20,14 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 
 ```html
 <lr-textarea placeholder="Notes" rows="4"></lr-textarea>
+<lr-textarea label="Bio" maxlength="280" with-count appearance="outlined" size="s" resize="auto"></lr-textarea>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/textarea/textarea.js';
+  const bio = document.querySelector('lr-textarea[label="Bio"]');
+  await bio.updateComplete;                    // both calls are no-ops before the first render
+  bio.scrollPosition({ top: 0 });              // pin a restored draft back to the top
+  console.log(bio.scrollPosition());           // -> { top: 0, left: 0 }
+</script>
 ```
 
 ### Properties
@@ -28,7 +36,10 @@ submission/validation/reset via `name`/`value`/`disabled`/`required`/`checkValid
 | --- | --- | --- | --- | --- |
 | `value` | `value` | `string` | `''` | The current text value. |
 | `rows` | `rows` | `number` | `3` | Visible text rows. |
-| `resize` | `resize` | `'none' \| 'vertical' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
+| `resize` | `resize` | `'none' \| 'vertical' \| 'horizontal' \| 'both' \| 'auto'` | `'vertical'` | Native CSS `resize` behavior, plus `'auto'` (`ResizeObserver`-driven grow-to-content, no manual handle). An invalid runtime value falls back to `'vertical'`; `'auto'` maps native CSS resize to `none`. |
+| `size` | `size` | `'2xs' \| 'xs' \| 's' \| 'm' \| 'l' \| 'xl'` | `'m'` | Visual size — the same scale as `lr-input`/`lr-select`. Governs the field's padding and font size. Reflected. |
+| `appearance` | `appearance` | `'accent' \| 'filled' \| 'outlined' \| 'filled-outlined' \| 'plain'` | `'filled-outlined'` | Visual treatment of the field, with the same meanings as `lr-input`'s `appearance`: `filled-outlined` draws both fill and border, `outlined` drops the fill, `filled` drops the border, `plain` drops both, `accent` tints both with the brand color. Each value does nothing but swap `--lr-textarea-fill`/`--lr-textarea-border-color`. Reflected. |
+| `withCount` | `with-count` | `boolean` | `false` | Renders a character count below the field, inside `[part="footer"]`. With `maxlength` set it counts *down* the remaining characters instead of up from zero. Reflected. |
 | `placeholder` | `placeholder` | `string` | `''` | Placeholder text. |
 | `readonly` | `readonly` | `boolean` | `false` | Native read-only behavior: prevents user edits while preserving focus, selection/copy, form submission, and silent programmatic editing methods. Reflected. |
 | `label` | `label` | `string` | `''` | Visible label text. Unset: no label chrome renders. |
@@ -92,6 +103,7 @@ the shadow boundary.
 | `select()` | Select all text. |
 | `setSelectionRange(start, end, direction?)` | Set the native selection range and optional direction. |
 | `setRangeText(replacement, start?, end?, selectMode?)` | Apply a native range edit, then synchronize the component `value`, form value, validity, and auto-grown size without emitting a user event. |
+| `scrollPosition(position?)` | Read or write the internal textarea's scroll offsets. Called with no argument it returns the current `{ top, left }`; called with a partial `{ top?, left? }` it writes only the axes present and returns `undefined`. Returns `undefined` either way before the internal textarea has rendered, and a non-finite offset leaves that axis alone. This is the one piece of scroll state no other public member reaches — use it to restore a draft, or to pin a long value to its end. |
 | `setFormValue(value)` | Set the reactive and submitted value synchronously. |
 | `checkValidity()` / `reportValidity()` | Run native constraint validation through `ElementInternals`. |
 
@@ -125,15 +137,35 @@ original declarative `value`, matching native `defaultValue` behavior.
 | --- | --- |
 | `form-control` | The outer wrapper around label, textarea, error and hint. |
 | `form-control-label` | The `<label>` element. |
+| `textarea-wrapper` | A plain block box around the native `<textarea>`. It deliberately imposes no size of its own — the native resize grip writes inline `width`/`height` onto the `<textarea>` itself, so the field drives the box. Use it to place chrome alongside the field; the padding/border/fill live on `textarea`. |
 | `textarea` | The native `<textarea>` element. |
+| `footer` | The row below the field carrying the character count. Always in the DOM but `hidden` without `with-count`. |
+| `count` | The character count text, rendered only with `with-count`. |
 | `hint` | The hint message. |
 | `error` | The error message. |
+
+The visible `[part="count"]` is `aria-hidden`; a separate polite live region beside it republishes
+the same text about a second after the user stops typing, so a screen reader is not told the count
+on every keystroke. Lengths count UTF-16 code units (one emoji counts as two), matching the native
+`maxlength` the count reports against, and the remaining count floors at zero — only a
+script-assigned value can exceed `maxlength`, and the `tooLong` validity flag already reports that
+state better than a negative number would. An unparseable `maxlength` (`maxlength="oops"`) is
+dropped rather than rendered as `NaN`, and the count counts up from zero instead.
 
 ### Themeable custom properties
 
 - `--lr-textarea-max-block-size` (default `none`) — bounds `resize="auto"`; content beyond the
   bound scrolls inside the native textarea. Auto-resize remeasures after user edits, programmatic
   `value`/`rows` changes, range edits, and container-width changes.
+- `--lr-textarea-padding` (default `var(--lr-space-s)`) and `--lr-textarea-font-size` (default
+  `var(--lr-font-size-md-sm)`) — the native textarea's padding and font size, both auto-swapped per
+  `size` tier (`2xs`…`xl`); the documented defaults are the `m` tier's.
+- `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
+  `var(--lr-color-border)`) — the field's background and border color, both swapped per
+  `appearance` rather than per `size`. The documented defaults are `appearance="filled-outlined"`'s
+  values, and both are also declared bare on `:host` so an element whose `appearance` attribute
+  hasn't reflected yet still paints the committed default. Set either directly to retune the
+  surface without a `::part(textarea)` rule.
 
 **Additional API surface:**
 

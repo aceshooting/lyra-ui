@@ -18,13 +18,33 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 `label`/`hint`/`errorText` form-control chrome as `lr-textarea`/`lr-select`, and the same
 `size` scale as `lr-select`/`lr-combobox`.
 
+Pressing Enter submits the ancestor `<form>` — the implicit submission a native `<input>` performs.
+The internal input lives in a shadow root and has no form owner of its own, so the platform can
+never do it here. It goes through `requestSubmit()` (not `submit()`), so the `submit` event fires
+and interactive constraint validation runs; it is suppressed while `disabled` or `readonly`, during
+IME composition, and when the keydown was already `defaultPrevented` by a listener above.
+
 **Properties:**
 - `type: 'text' | 'password' | 'email' | 'number' | 'time' | 'search' = 'text'`
 - `size: '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' = 'm'` (reflected)
+- `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'filled-outlined'`
+  (reflected) — the shared field-surface vocabulary. `filled-outlined` (the default) draws both a
+  surface fill and a border; `outlined` drops the fill, `filled` drops the border, `plain` drops
+  both, and `accent` tints both with the brand color. Each value does nothing but swap
+  `--lr-input-fill`/`--lr-input-border-color`, so either can be retuned without a
+  `::part(input-wrapper)` rule
+- `pill: boolean = false` (reflected) — rounds the control row to a full pill by swapping
+  `--lr-input-radius` to `--lr-radius-pill`
+- `autofocus: boolean = false` — forwarded to the internal native `<input>` rather than left on the
+  host, so the browser's own autofocus algorithm targets the real text control (the custom-element
+  host is not focusable). Left unset, the native attribute is omitted entirely
 - `value: string = ''` (from `FormAssociated`)
 - `placeholder: string = ''`
 - `clearable: boolean = false` (reflected) — shows a localized clear action while a `text` or
   `search` input has a value; clearing preserves input focus
+- `withClear: boolean = false` (attribute `with-clear`) — Web Awesome's spelling of `clearable`;
+  either one shows the same action. Inherited by `lr-number-input` and `lr-time-input`, where it is
+  inert for the same reason `clearable` is (neither type renders a clear action)
 - `readonly: boolean = false` (reflected) — forwarded to the native input and disables clearing
 - `label: string = ''`
 - `hint: string = ''`
@@ -51,7 +71,19 @@ form-associated via the same `FormAssociated` mixin as `lr-textarea`. Ships the 
 - `pattern?: string` (attribute `pattern`) — a regular expression the value must match in full,
   forwarded to the native input and reported as `validity.patternMismatch`. Anchored to the whole
   value by the platform, so no `^`/`$` is needed; an empty value never violates it
-- `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only)
+- `passwordToggle: boolean = false` (attribute `password-toggle`, reflected — `type="password"`
+  only) — renders the built-in show/hide-password button. **Breaking in 8.0.0: this is now opt-in.**
+  Before, `type="password"` always rendered the toggle and there was no way to remove it; a consumer
+  whose threat model or visual design excludes one had to hide it with CSS. Add `password-toggle`
+  to keep the old rendering
+- `passwordVisible: boolean = false` (attribute `password-visible` — `type="password"` only) —
+  whether the field currently reveals its raw text. Toggled by the built-in button, and also
+  settable up front with or without that button being rendered
+- `withoutSpinButtons: boolean = false` (attribute `without-spin-buttons`, reflected —
+  `type="number"` only) — suppresses the browser's own increment/decrement spin buttons.
+  **Breaking in 8.0.0:** `type="number"` used to hide them unconditionally; left unset, the
+  platform's spinners now render exactly as they do on a bare `<input type="number">`.
+  `<lr-number-input>` defaults this the other way (`true`), so its rendering is unchanged
 - `name`/`disabled`/`required` (from `FormAssociated`)
 
 **Getters/methods:** `input: HTMLInputElement | null` (the internal native `<input>`, for direct DOM
@@ -64,6 +96,25 @@ matching the native `<input>`'s own contract), `setSelectionRange(start, end, di
 for an unsupported `type`), and `setRangeText(replacement, start?, end?, selectMode?)` (no-op
 before render; syncs `value` afterward without emitting a user event).
 
+Three more native passthroughs:
+
+- `showPicker(): void` — opens the browser's own picker for the current `type` (the time picker, and
+  whatever chooser the platform offers for the other types), delegating to the internal native
+  `<input>`. Deliberately failure-tolerant: the platform method throws for environmental reasons a
+  component can neither detect up front nor usefully report (no user activation →
+  `NotAllowedError`, a cross-origin document → `SecurityError`, a non-mutable control →
+  `InvalidStateError`), and engines that predate it don't define it at all. A picker that cannot
+  open is a **no-op here rather than an exception** you must wrap every call in. Also a no-op while
+  `disabled` or `readonly`.
+- `stepUp(steps = 1): void` / `stepDown(steps = 1): void` — increment/decrement by `steps` × the
+  effective `step`, through the native `<input>`'s own `stepUp()`/`stepDown()`, so `min`/`max`
+  clamping and decimal handling stay the platform's. **Silent, like the native methods**: they
+  update `value`, the submitted form value and validity, but emit no `input`/`change`. A
+  non-finite `steps` falls back to `1`; `0` is a no-op, as is a `type` with no allowed value step
+  (every non-numeric type, and `step="any"`), while `disabled` and while `readonly`.
+  `<lr-number-input>`'s stepper buttons build on these and *do* emit, because a button press is a
+  user edit.
+
 **Events:** native-style composed `input` and `change`, plus `lr-input` (`detail: { value }`,
 fired on every user-driven edit) and `lr-change` (`detail: { value }`, fired on the native
 `change` timing), `blur`/`focus` (re-dispatched bubbling + composed from the internal native input's
@@ -74,8 +125,8 @@ own `blur`/`focus`), and `lr-clear` (no detail, fired after the clear action's `
 input and built-in actions).
 
 **CSS parts:** `form-control`, `form-control-label`, `input-wrapper`, `input`, `password-toggle`
-(present only when `type="password"`), `start`, `end`, `clear-button` (non-empty clearable
-`text`/`search` inputs only), `hint`, `error`.
+(present only when `type="password"` **and** `password-toggle` is set), `start`, `end`,
+`clear-button` (non-empty clearable `text`/`search` inputs only), `hint`, `error`.
 
 **Themeable custom properties:** `--lr-input-padding-block`, `--lr-input-padding-inline`,
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four auto-swapped per `size`
@@ -88,6 +139,14 @@ grow. `--lr-input-gap` (default `--lr-space-xs`, the gap inside `[part='input-wr
 `--lr-input-radius` (default `--lr-radius`, its corner radius) are both retunable without a
 `::part(input-wrapper)` rule but, unlike the four properties above, do not vary by `size` — the same
 `--lr-button-gap`/`-radius` pattern; `lr-number-input`/`lr-time-input` inherit both unchanged.
+`pill` re-assigns `--lr-input-radius` to `--lr-radius-pill`.
+
+`--lr-input-fill` (default `var(--lr-color-surface)`) is the control row's background and
+`--lr-input-border-color` (default `var(--lr-color-border)`) its border color. Both are swapped by
+`appearance` rather than by `size`, and the documented defaults are `appearance="filled-outlined"`'s
+values (they are also declared bare on `:host`, so an element whose `appearance` attribute hasn't
+reflected yet still paints the committed default). Setting either directly retunes the surface
+without a `::part(input-wrapper)` rule and without leaving the `appearance` vocabulary behind.
 
 ### Exact-height hatches — the one rule that applies to all of them
 
@@ -116,11 +175,25 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
 **Optional peer deps:** none.
 
 ```html
-<lr-input type="password" label="Password"></lr-input>
+<lr-input type="password" label="Password" password-toggle></lr-input>
 <lr-input type="email" label="Email" required></lr-input>
 <lr-input size="s" placeholder="Compact"></lr-input>
+<lr-input appearance="plain" pill placeholder="Pill, no chrome"></lr-input>
+<lr-input type="number" min="0" max="10" step="0.5" without-spin-buttons label="Weight"></lr-input>
 <lr-input type="search" clearable value="workflow" aria-label="Search"><span slot="start">⌕</span></lr-input>
+<lr-input type="time" label="Reminder" id="reminder"></lr-input>
+<button type="button" id="open-picker">Pick a time</button>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/forms/input/input.js';
+  const time = document.getElementById('reminder');
+  // showPicker() needs user activation, so drive it from a real click.
+  document.getElementById('open-picker').addEventListener('click', () => time.showPicker());
+</script>
 ```
+
+`password-toggle`, `pill` and `without-spin-buttons` all default to `false`, so the plain
+attribute form is enough to turn each on. `autofocus` is likewise `false`-defaulting — none of
+these four needs the property form to be reset.
 
 **Known gotchas:**
 - `type="email"`/`type="number"` delegate constraint validation to the internal native `<input>`'s
@@ -138,7 +211,17 @@ Several controls expose the same pair: a per-`size` `*-min-height` **floor**, an
   value, and the localized `valueInvalid` string when only the script-value check did.
 - An empty value is never `tooShort` and never a `patternMismatch` — both native constraints skip
   the empty string, and `required` is what rejects it.
-- `type="password"` always renders the `password-toggle` button; there is no separate opt-out.
+- **The `password-toggle` button is opt-in as of 8.0.0.** A bare `type="password"` now ships no
+  toggle at all, and the `password-toggle` part is absent from the shadow tree with it — a
+  `::part(password-toggle)` rule, or a test that queries for it, silently matches nothing until the
+  attribute is set. The toggle never renders for a non-password `type`, opted in or not.
+- **`type="number"` no longer hides the native spin buttons on its own.** Set
+  `without-spin-buttons` (or use `<lr-number-input>`, which defaults it to `true` and draws its own
+  stepper pair) to get the previous rendering back.
+- `showPicker()` swallows every platform failure by design, so it returns without telling you the
+  picker didn't open. Don't build a flow that assumes a picker is now on screen.
+- `stepUp()`/`stepDown()` are silent — they emit no `input`/`change`. Emit your own, or drive the
+  value through a real user affordance, if downstream state depends on those events.
 
 **Additional API surface:**
 

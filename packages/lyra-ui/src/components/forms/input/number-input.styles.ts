@@ -38,9 +38,11 @@ export const styles = css`
   [part='stepper-up']:disabled {
     cursor: not-allowed;
   }
-  /* The shared chevron glyph points inline-end; rotating the *wrapping button* (never the svg)
-     keeps the icon set direction-free, matching internal/icons.ts's stated contract. Both
-     rotations are block-axis, so neither needs to flip under RTL. */
+  /* The shared chevron glyph points inline-end, so each stepper rotates it onto the block axis.
+     The rotation is applied to the svg rather than the button because the button owns the focus
+     ring and the hit area, and neither should turn with the glyph. Rotating the wrapping part --
+     internal/icons.ts's usual advice -- exists for RTL *mirroring*; both rotations here are
+     block-axis, so nothing flips under RTL either way. */
   [part='stepper-up'] > svg {
     transform: rotate(-90deg);
   }
